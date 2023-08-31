@@ -1,0 +1,57 @@
+[GameType "Base"]
+[Date "2023.03.16"]
+[Event ""]
+[Site "boardspace.net"]
+[Round ""]
+[White "Goozi"]
+[Black "Dumbot"]
+[Result "0-1"]
+
+1. wS1
+2. bG1 /wS1
+3. wS2 wS1-
+4. bS1 -bG1
+5. wQ wS2/
+6. bQ -bS1
+7. wA1 \wS1
+8. bG2 bG1\
+9. wA1 \bQ
+10. bB1 -bG2
+11. wB1 -wQ
+12. bB2 bG2-
+13. wS2 bB2-
+14. bA1 /bB2
+15. wG1 \wA1
+16. bS2 -bA1
+17. wG1 bQ\
+18. bS1 \wB1
+19. wB2 wA1/
+20. bA1 \wB2
+21. wG2 -wA1
+22. bS2 wS2\
+23. wG2 bQ/
+24. bA2 -bS1
+25. wA2 -wA1
+26. bA2 wQ\
+27. wA2 -bQ
+28. bS1 wQ-
+29. wG3 /wG1
+30. bA3 /bB2
+31. wA3 -wA2
+32. bA3 \wA3
+33. wG2 /bQ
+34. bQ wB2\
+35. wG3 bQ\
+36. bQ wB2-
+37. wG3 /bG2
+38. bA1 wQ/
+39. wG3 \bB1
+40. bB1 bG1
+41. pass
+42. bG3 bA1-
+43. pass
+44. bG3 \wQ
+45. pass
+46. bB1 wS1
+47. pass
+48. bB1 /wQ

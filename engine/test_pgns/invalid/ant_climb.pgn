@@ -1,0 +1,21 @@
+[GameType "Base+MLP"]
+[Date "2023.01.17"]
+[Event ""]
+[Site "boardspace.net"]
+[Round ""]
+[White "JonasK"]
+[Black "HappyKiwi"]
+[Result "1/2-1/2"]
+
+1. wL
+2. bP /wL
+3. wA1 wL/
+4. bM /bP
+5. wM wA1/
+6. bQ \bM
+7. wQ \wL
+8. bA1 bP\
+9. wM \bQ
+10. bA2 bM\
+11. wA1 /bA2
+12. bA1 bP

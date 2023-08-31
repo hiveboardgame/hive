@@ -1,0 +1,36 @@
+[GameType "Base+M"]
+[Date "2008.06.10"]
+[Event ""]
+[Site "boardspace.net"]
+[Round ""]
+[White "a2na"]
+[Black "mort"]
+[Result "error parsing result"]
+
+1. wS1
+2. bQ wS1\
+3. wA1 wS1/
+4. bS1 bQ-
+5. wQ -wS1
+6. bS2 /bQ
+7. wA1 bS2-
+8. bS2 -wQ
+9. wB1 /wA1
+10. bS1 wB1\
+11. wB2 wA1-
+12. bB1 /bS2
+13. wB2 wA1
+14. bA1 \bS2
+15. wB2 bQ
+16. bA1 wA1-
+17. wG1 wQ\
+18. bA2 bA1/
+19. wG2 wB2/
+20. bA2 /wG1
+21. wA2 wG2-
+22. bA1 wA2\
+23. wG3 wS1/
+24. bA2 \wG3
+25. wS2 wG1\
+26. bA2 wG3/
+27. wB2 wA1/

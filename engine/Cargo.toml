@@ -1,0 +1,26 @@
+[package]
+name = "hive"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "hive_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "hive_bin"
+path = "src/main.rs" # replace bin.rs with name of your file
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+lazy_static = "*"
+regex = "*"
+serde_json = "*"
+serde = { version = "*", features = ["derive"] }
+serde_with = "3.0.0"
+thiserror = "*"
+bitfield-struct = "0.3"
+itertools = "0.10.5"
+
+[profile.release]
+debug = true

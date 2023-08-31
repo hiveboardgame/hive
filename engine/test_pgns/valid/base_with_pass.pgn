@@ -1,0 +1,128 @@
+[GameType "Base"]
+[Date "2008.04.24"]
+[Event ""]
+[Site "boardspace.net"]
+[Round ""]
+[White "guest"]
+[Black "Dumbot"]
+[Result "1-0"]
+
+1. wQ
+2. bB1 wQ\
+3. wA1 wQ/
+4. bG1 /bB1
+5. wA2 -wA1
+6. bQ bG1\
+7. wA2 bQ\
+8. bB2 bQ/
+9. wS1 wA2-
+10. bS1 bB2/
+11. wS1 bS1-
+12. bS2 -bG1
+13. wA1 -bS2
+14. bB2 wA2/
+15. wA2 bB2\
+16. bG2 bQ/
+17. wQ bB1/
+18. bG3 bS2\
+19. wG1 wS1\
+20. bG3 wQ/
+21. wG1 bS1/
+22. bA1 bS2/
+23. wQ -bG3
+24. bB1 bA1/
+25. wQ \bB1
+26. bA2 bG1/
+27. wA1 -bA1
+28. bA3 bS2\
+29. wA2 /bA3
+30. bG1 bB2/
+31. wG2 wS1/
+32. bG3 bG1-
+33. wG2 bQ\
+34. bG2 \wQ
+35. wG1 bG3\
+36. bQ bA3/
+37. wS1 wG1-
+38. bQ bA3-
+39. wB1 /wG2
+40. bQ bA2\
+41. wB1 wG2
+42. bQ bA3-
+43. wB1 bQ
+44. bS1 wQ/
+45. wA1 wA2-
+46. bS1 bA2-
+47. wB1 bB2
+48. bQ bA3/
+49. wG3 wG2\
+50. bA1 bB1/
+51. wA1 -bS2
+52. bA1 wA1\
+53. wA1 -bA1
+54. bA3 wB1-
+55. wB1 bA3
+56. bG3 wG3/
+57. wS1 wG3-
+58. bG3 wA2-
+59. wA2 /bG3
+60. bG2 bQ-
+61. wB2 \wA1
+62. bG1 wA1/
+63. wB2 bG1
+64. bS1 wQ/
+65. wA1 /bA1
+66. bS1 bG2/
+67. wA3 -wQ
+68. bS1 wQ/
+69. wA3 bS1/
+70. pass
+71. wS2 -wB2
+72. pass
+73. wB2 bS2
+74. pass
+75. wB2 bQ
+76. pass
+77. wB1 bB2
+78. pass
+79. wB1 bG2
+80. pass
+81. wS1 wG1\
+82. pass
+83. wG3 bG3/
+84. pass
+85. wS1 wG2\
+86. pass
+87. wS1 /wA2
+88. pass
+89. wS1 -wA1
+90. pass
+91. wS1 -wS2
+92. pass
+93. wS1 bG1/
+94. pass
+95. wS1 -wQ
+96. pass
+97. wS1 bG1/
+98. pass
+99. wS1 -wS2
+100. pass
+101. wS1 -wA1
+102. pass
+103. wS1 /wA2
+104. pass
+105. wS1 wG2\
+106. pass
+107. wS1 wG1\
+108. pass
+109. wS1 bA3/
+110. pass
+111. wB1 wB2
+112. bG2 wG2-
+113. wG1 bA1-
+114. bS2 -wQ
+115. wB1 bA1/
+116. bS2 bG1/
+117. wA2 wG3/
+118. bG2 -bS1
+119. wB2 wB1/

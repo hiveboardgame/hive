@@ -1,0 +1,58 @@
+[GameType "Base+MLP"]
+[Date "2023.01.17"]
+[Event ""]
+[Site "boardspace.net"]
+[Round ""]
+[White "JonasK"]
+[Black "HappyKiwi"]
+[Result "1/2-1/2"]
+
+1. wL
+2. bP /wL
+3. wA1 wL/
+4. bM /bP
+5. wM wA1/
+6. bQ \bM
+7. wQ \wL
+8. bA1 bP\
+9. wM \bQ
+10. bA2 bM\
+11. wA1 /bA2
+12. bB1 /bQ
+13. wP \wM
+14. bB1 bQ
+15. wA2 wP/
+16. bB1 wM
+17. wA2 /bQ
+18. bB1 wP
+19. wA3 wL-
+20. bA3 \bB1
+21. wA3 bA1-
+22. bM wL\
+23. wA3 bM-
+24. bS1 bA3-
+25. wG1 wA3-
+26. bS1 wQ/
+27. wB1 \wG1
+28. bB2 \bS1
+29. wB1 wA3
+30. bB2 \wQ
+31. wB1 bM
+32. bB2 wQ
+33. wB1 bP
+34. bL \bB2
+35. wG1 -bQ
+36. bL wL-
+37. wG2 -wA2
+38. bS2 \bB2
+39. wG3 /wA2
+40. bA3 /wG3
+41. wG2 bQ\
+42. bM wB1
+43. wA3 bA1-
+44. bB2 wL
+45. wB2 \wG3
+46. bL -wQ
+47. wA3 \bA3
+48. bA3 wQ-
+49. wG3 bQ/

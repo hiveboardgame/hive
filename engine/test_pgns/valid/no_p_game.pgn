@@ -1,0 +1,27 @@
+[GameType "Base+ML"]
+[Date "2018.08.10"]
+[Event ""]
+[Site "boardspace.net"]
+[Round ""]
+[White "Akshers123"]
+[Black "aash23"]
+[Result "0-1"]
+
+1. wA1
+2. bA1 wA1-
+3. wA2 /wA1
+4. bQ bA1\
+5. wQ \wA2
+6. bG1 bQ/
+7. wM wQ/
+8. bG1 -wQ
+9. wM -bQ
+10. bM bQ/
+11. wG1 /wM
+12. bM wQ/
+13. wL -wG1
+14. bA1 /wQ
+15. wL /bQ
+16. bL bM/
+17. wG1 bQ\
+18. bL \wQ

@@ -1,0 +1,20 @@
+[GameType "Base+MLP"]
+[White "NA"]
+[Black "na"]
+[Result "1/2-1/2"]
+
+1. wL
+2. bL wL\
+3. wQ wL/
+4. bQ /bL
+5. wG1 \wQ
+6. bG1 bQ\
+7. wG2 wG1/
+8. bG2 /bG1 
+9. wG3 \wG2
+10. bG3 bG2\
+11. wS1 wG3/
+12. bS1 /bG3
+13. wS2 \wS1
+14. bS2 bS1\
+15. wS3 wS2/

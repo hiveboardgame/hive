@@ -1,0 +1,41 @@
+[GameType "Base+P"]
+[Date "2018.04.02"]
+[Event ""]
+[Site "boardspace.net"]
+[Round ""]
+[White "Dumbot"]
+[Black "guest"]
+[Result "0-1"]
+
+1. wG1
+2. bP /wG1
+3. wQ wG1/
+4. bQ /bP
+5. wQ wG1-
+6. bA1 bQ-
+7. wQ wG1/
+8. bA1 wQ-
+9. wS1 -wQ
+10. bB1 bA1-
+11. wS2 \wQ
+12. bB1 bA1
+13. wS1 -bQ
+14. bA2 bB1\
+15. wB1 /wS1
+16. bG1 bB1-
+17. wB1 /bQ
+18. bG1 -wQ
+19. wS2 \bP
+20. bB2 bQ-
+21. wA1 -wB1
+22. bA2 \wQ
+23. wB2 -wS2
+24. bG2 bB1\
+25. wA1 bB2\
+26. bB1 wQ
+27. wP -wB1
+28. bG3 \bA1
+29. wG1 bG3/
+30. bS1 -bG2
+31. wG2 \wP
+32. bG2 wS2-
