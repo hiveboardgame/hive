@@ -10,8 +10,7 @@ leptos.workspace = true
 leptos_meta.workspace = true
 leptos_router.workspace = true
 leptos_actix = { workspace = true, optional = true }
-# styled.workspace = true
-# stylist.workspace = true
+stylers.workspace = true
 
 http.workspace = true
 cfg-if.workspace = true

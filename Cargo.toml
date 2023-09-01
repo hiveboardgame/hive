@@ -14,9 +14,7 @@ leptos_meta = { version = "0.4", features = ["nightly"] }
 leptos_router = { version = "0.4", features = ["nightly"] }
 leptos_actix = { version = "0.4" }
 
-# styled = "0.1.41"
-# stylist = "0.12.1"
-
+stylers = { git = "https://github.com/abishekatp/stylers.git", rev="1023730" }
 actix-web = { version = "4", features = ["macros"] }
 actix-files = { version = "0.6" }
 cfg-if = "1.0.0"

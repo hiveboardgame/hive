@@ -1,6 +1,7 @@
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use stylers::style;
 
 pub mod error_template;
 
@@ -67,9 +68,29 @@ fn Piece(cx: Scope) -> impl IntoView {
 
 #[component]
 fn Hex(cx: Scope) -> impl IntoView {
-    view! { cx,
-        <g>
-            <use_ href="#destination" transform="scale(0.56, 0.56) translate(-46.608, -52.083)" />
+    let styler_class = style! { "hex",
+            #destination {
+                color: #6c71c4;
+            }
+            #destination:hover {
+                color: #268bd2;
+            }
+            .destination {
+                color: #6c71c4;
+            }
+            .destination:hover {
+                color: #268bd2;
+            }
+            g {
+                color: #6c71c4;
+            }
+            g:hover {
+                color: #268bd2;
+            }
+    };
+    view! { cx, class = styler_class,
+        <g class="destination">
+            <use_ class="destination" href="#destination" transform="scale(0.56, 0.56) translate(-46.608, -52.083)" />
         </g>
     }
 }

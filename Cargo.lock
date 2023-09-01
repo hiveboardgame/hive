@@ -297,6 +297,7 @@ dependencies = [
  "leptos_actix",
  "leptos_meta",
  "leptos_router",
+ "stylers",
  "thiserror",
 ]
 
@@ -1112,6 +1113,12 @@ name = "gimli"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fb8d784f27acf97159b40fc4db5ecd8aa23b9ad5ef69cdd136d3bc80665f0c0"
+
+[[package]]
+name = "glob"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
 name = "gloo-net"
@@ -2665,6 +2672,38 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
+
+[[package]]
+name = "stylers"
+version = "1.0.0-alpha"
+source = "git+https://github.com/abishekatp/stylers.git?rev=1023730#1023730900cb38223f968ccb2fde8414d8e7a401"
+dependencies = [
+ "glob",
+ "proc-macro2",
+ "stylers_core",
+ "stylers_macro",
+ "syn 2.0.29",
+]
+
+[[package]]
+name = "stylers_core"
+version = "1.0.0-alpha"
+source = "git+https://github.com/abishekatp/stylers.git?rev=1023730#1023730900cb38223f968ccb2fde8414d8e7a401"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "rand",
+ "rand_chacha",
+]
+
+[[package]]
+name = "stylers_macro"
+version = "1.0.0-alpha"
+source = "git+https://github.com/abishekatp/stylers.git?rev=1023730#1023730900cb38223f968ccb2fde8414d8e7a401"
+dependencies = [
+ "quote",
+ "stylers_core",
+]
 
 [[package]]
 name = "syn"
