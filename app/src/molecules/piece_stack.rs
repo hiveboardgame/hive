@@ -1,8 +1,7 @@
 use crate::common::piece_type::PieceType;
 use crate::molecules::piece::Piece;
-use crate::common::svg_pos::SvgPos;
 use hive_lib::{
-    board::Board, bug::Bug, color::Color, game_type::GameType, piece::Piece, position::Position,
+    piece::Piece, position::Position,
 };
 use leptos::*;
 

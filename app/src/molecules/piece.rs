@@ -1,4 +1,4 @@
-use hive_lib::{board::Board, bug::Bug, color::Color, piece::Piece, position::Position, game_type::GameType};
+use hive_lib::{piece::Piece, position::Position};
 use crate::common::{svg_pos::SvgPos, piece_type::PieceType};
 use leptos::*;
 
@@ -8,9 +8,9 @@ pub fn Piece(cx: Scope, piece: Piece, position: Position, level: usize, #[prop(o
     let center = svg_pos.center_from_level(level);
     let transform = format!("translate({},{})", center.0, center.1);
 
-    let mut filter = "filter: drop-shadow(0.3px 0.3px 0.3px #000)";
+    let mut filter = String::from("filter: drop-shadow(0.3px 0.3px 0.3px #000)");
     if piece_type == PieceType::Inactive {
-        filter = "filter: sepia(1)";
+        filter.push_str(" sepia(1)");
     }
     let color = piece.color().to_string();
     let bug = piece.bug().to_string();

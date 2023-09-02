@@ -2,11 +2,9 @@ use std::str::FromStr;
 
 use crate::atoms::svgs::Svgs;
 use crate::common::piece_type::PieceType;
-use crate::molecules::piece::Piece;
 use crate::molecules::piece_stack::PieceStack;
 use hive_lib::{
-    board::Board, bug::Bug, color::Color, game_type::GameType, piece::Piece, position::Position,
-    state::State,
+    bug::Bug, color::Color, game_type::GameType, piece::Piece, position::Position, state::State,
 };
 use leptos::*;
 

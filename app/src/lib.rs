@@ -2,18 +2,14 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 
-pub mod error_template;
 pub mod atoms;
 pub mod common;
+pub mod error_template;
 pub mod molecules;
 pub mod organisms;
 
-// use crate::organisms::board::Board;
 use crate::organisms::reserve::Reserve;
-use hive_lib::{
-    board::Board, bug::Bug, color::Color, game_type::GameType, piece::Piece, position::Position,
-    state::State,
-};
+use hive_lib::color::Color;
 
 #[component]
 pub fn App(cx: Scope) -> impl IntoView {
