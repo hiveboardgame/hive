@@ -70,6 +70,20 @@ impl FromStr for Bug {
 }
 
 impl Bug {
+    pub fn all() -> impl Iterator<Item = Bug> {
+        [
+            Bug::Ant,
+            Bug::Beetle,
+            Bug::Grasshopper,
+            Bug::Ladybug,
+            Bug::Mosquito,
+            Bug::Pillbug,
+            Bug::Queen,
+            Bug::Spider,
+        ]
+        .into_iter()
+    }
+
     pub fn as_str(&self) -> &'static str {
         &self.name()[0..=0]
     }

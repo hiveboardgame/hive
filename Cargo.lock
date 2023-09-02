@@ -292,6 +292,7 @@ name = "app"
 version = "0.1.0"
 dependencies = [
  "cfg-if",
+ "hive",
  "http",
  "leptos",
  "leptos_actix",

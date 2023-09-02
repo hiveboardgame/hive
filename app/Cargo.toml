@@ -10,11 +10,13 @@ leptos.workspace = true
 leptos_meta.workspace = true
 leptos_router.workspace = true
 leptos_actix = { workspace = true, optional = true }
+# try this again when 1.0 is released
 stylers.workspace = true
 
 http.workspace = true
 cfg-if.workspace = true
 thiserror.workspace = true
+hive = { path = "../engine" }
 
 [features]
 default = []
