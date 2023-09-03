@@ -52,16 +52,10 @@ fn HomePage(cx: Scope) -> impl IntoView {
         <h1>"Navigation bar and banner goes here"</h1>
         // <button on:click=on_click>"Click Me: " {count}</button>
         <div>
-            <div class="row" style="width: 100%;">
-                <div class="column" style="float:left; width: 10%">
-                    <Reserve color=white />
-                </div>
-                <div class="column" style="float:left; width: 80%">
-                    <Board />
-                </div>
-                <div class="column" style="float:right; width: 10%">
-                    <Reserve color=black />
-                </div>
+            <div class="row" style="width: 99vw; height: 89vh; display:flex;">
+                <Reserve color=white />
+                <Board />
+                <Reserve color=black />
             </div>
         </div>
     }

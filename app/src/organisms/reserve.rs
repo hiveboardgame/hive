@@ -60,7 +60,7 @@ pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
         .collect_view(cx);
 
     view! { cx,
-        <svg viewBox="10 100 100 100" width="10vw" height="90vh" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="10 100 100 100" style ="flex: 0 0 10%" xmlns="http://www.w3.org/2000/svg">
             <Svgs/>
             { pieces_view }
             //<LastMove/>
