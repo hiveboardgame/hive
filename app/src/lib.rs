@@ -10,6 +10,7 @@ pub mod organisms;
 
 use crate::organisms::reserve::Reserve;
 use hive_lib::color::Color;
+use crate::organisms::board::Board;
 
 #[component]
 pub fn App(cx: Scope) -> impl IntoView {
@@ -44,12 +45,25 @@ fn HomePage(cx: Scope) -> impl IntoView {
     // Creates a reactive value to update the button
     //let (count, set_count) = create_signal(cx, 0);
     //let on_click = move |_| set_count.update(|count| *count += 1);
-    let color = Color::White;
+    let white = Color::White;
+    let black = Color::Black;
 
     view! { cx,
         <h1>"Navigation bar and banner goes here"</h1>
         // <button on:click=on_click>"Click Me: " {count}</button>
-        <Reserve color/>
+        <div>
+            <div class="row" style="width: 100%;">
+                <div class="column" style="float:left; width: 10%">
+                    <Reserve color=white />
+                </div>
+                <div class="column" style="float:left; width: 80%">
+                    <Board />
+                </div>
+                <div class="column" style="float:right; width: 10%">
+                    <Reserve color=black />
+                </div>
+            </div>
+        </div>
     }
 }
 

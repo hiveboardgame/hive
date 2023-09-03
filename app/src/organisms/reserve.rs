@@ -51,34 +51,19 @@ pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
             } else {
                 Vec::new()
             }
-        })
-        .collect::<Vec<Vec<(Piece, Position, PieceType)>>>();
+        });
 
     let pieces_view = pieces
-        .into_iter()
         .map(|v| {
             view! {cx, <PieceStack pieces=v/>}
         })
         .collect_view(cx);
 
     view! { cx,
-    <svg viewBox="0 0 1072 900" >
-    //<svg viewBox="0 0 100 100" width="100vw" height="90vh" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="10 100 100 100" width="10vw" height="90vh" xmlns="http://www.w3.org/2000/svg">
             <Svgs/>
             { pieces_view }
             //<LastMove/>
         </svg>
     }
 }
-
-//      html! { <svg viewBox={vb}>
-//          <Bugs />
-//          {
-//              for pos_pieces.iter().map(|(pos, piecetype, pieces)| {
-//                  html_nested! {
-//                      <StackedPieces pieces={pieces.clone()} position={pos.clone()} piecetype={piecetype.clone()} />
-//                  }
-//              })
-//          }
-//          </svg>
-//      }

@@ -8,23 +8,17 @@ use leptos::*;
 #[component]
 pub fn PieceStack(cx: Scope, pieces: Vec<(Piece, Position, PieceType)>) -> impl IntoView {
     let len = pieces.len() - 1;
-
-    let stack = pieces
+    pieces
         .into_iter()
         .enumerate()
         .map(|(i, (piece, position, piece_type))| {
-            let piecetype = if i == len {
-                piece_type.clone()
-            } else {
-                PieceType::Covered
+            let mut piecetype = PieceType::Covered;
+            if i == len {
+                piecetype = piece_type;
             };
             view! {cx,
                 <Piece piece=piece position=position level=i piece_type=piecetype/>
             }
         })
-        .collect_view(cx);
-
-    view! {cx,
-        { stack }
-    }
+        .collect_view(cx)
 }

@@ -3,15 +3,16 @@ use hive_lib::position::Position;
 use hive_lib::piece::Piece;
 
 pub enum HexType {
-    Piece,
-    Destination,
+    // The Game piece and its type
+    Tile(Piece, PieceType),
+    // spawn or move
+    Target, 
+    // Last made move
     LastMove,
 }
 
 pub struct Hex {
     pub kind: HexType,
-    pub piece: Option<Piece>,
     pub position: Position,
-    pub piece_type: PieceType,
     pub level: usize,
 }
