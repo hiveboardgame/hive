@@ -8,9 +8,9 @@ pub mod error_template;
 pub mod molecules;
 pub mod organisms;
 
-use crate::organisms::reserve::Reserve;
-use hive_lib::color::Color;
 use crate::organisms::board::Board;
+use crate::organisms::reserve::Reserve;
+use hive_lib::{color::Color, game_type::GameType, history::History, state::State};
 
 #[component]
 pub fn App(cx: Scope) -> impl IntoView {
@@ -47,16 +47,16 @@ fn HomePage(cx: Scope) -> impl IntoView {
     //let on_click = move |_| set_count.update(|count| *count += 1);
     let white = Color::White;
     let black = Color::Black;
+    let history = History::from_filepath("engine/test_pgns/valid/descend.pgn").unwrap();
+    let state = State::new_from_history(&history).unwrap();
 
     view! { cx,
         <h1>"Navigation bar and banner goes here"</h1>
         // <button on:click=on_click>"Click Me: " {count}</button>
-        <div>
-            <div class="row" style="width: 99vw; height: 89vh; display:flex;">
-                <Reserve color=white />
-                <Board />
-                <Reserve color=black />
-            </div>
+        <div class="row" style="width: 99vw; height: 89vh; display:flex;">
+                <Reserve color=white state=state.clone()/>
+                <Board state=state.clone()/>
+                <Reserve color=black state=state.clone()/>
         </div>
     }
 }

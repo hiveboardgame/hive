@@ -30,7 +30,7 @@ impl Position {
     }
 
     pub fn initial_spawn_position() -> Self {
-        Self { q: 0, r: 0 }
+        Self { q: 16, r: 16 }
     }
 
     fn wrap_around(num: i32) -> i32 {
