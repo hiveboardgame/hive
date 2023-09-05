@@ -4,7 +4,7 @@ use crate::{atoms::svgs::Svgs, common::game_state::GameState};
 use crate::common::piece_type::PieceType;
 use crate::molecules::piece_stack::PieceStack;
 use hive_lib::{
-    bug::Bug, color::Color, game_type::GameType, piece::Piece, position::Position, state::State,
+    bug::Bug, color::Color, piece::Piece, position::Position, state::State,
 };
 use leptos::*;
 
@@ -30,8 +30,8 @@ fn piece_active(state: &State, piece: &Piece) -> bool {
 pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
     let game_state = use_context::<RwSignal<GameState>>(cx)
         .expect("there to be a `GameState` signal provided");
-    let state = game_state.get().state.get();
-    let reserve = game_state.get().state.get().board.reserve(color, state.game_type);
+    let state = move || game_state.get().state.get();
+    let reserve = state().board.reserve(color, state().game_type);
     // let len = reserve.iter().fold(0, |acc, (_, bugs)| acc + bugs.len());
     let mut seen = -1;
     let pieces = Bug::all().map(|bug| {
@@ -41,7 +41,7 @@ pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
                 .iter()
                 .map(|piece_str| {
                     let piece = Piece::from_str(piece_str).unwrap();
-                    let piecetype = if piece_active(&state, &piece) {
+                    let piecetype = if piece_active(&state(), &piece) {
                         PieceType::Reserve
                     } else {
                         PieceType::Inactive

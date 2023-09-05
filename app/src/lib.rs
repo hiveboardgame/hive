@@ -10,7 +10,7 @@ pub mod organisms;
 pub mod pages;
 
 use crate::pages::play::Play;
-use hive_lib::{color::Color, game_type::GameType, history::History, state::State};
+
 
 #[component]
 pub fn App(cx: Scope) -> impl IntoView {
@@ -44,7 +44,10 @@ pub fn App(cx: Scope) -> impl IntoView {
 /// Renders the home page of your application.
 #[component]
 fn HomePage(cx: Scope) -> impl IntoView {
+
+    let onclick = move |_| log!("button");
     view! { cx,
+        <button on:click=onclick title="foo">hi</button>
         <h1>"Navigation bar and banner goes here"</h1>
         <Play />
     }
