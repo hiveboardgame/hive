@@ -1,21 +1,27 @@
 use crate::atoms::svgs::Svgs;
+use crate::common::game_state::GameState;
 use crate::common::piece_type::PieceType;
 use crate::molecules::piece_stack::PieceStack;
-use hive_lib::bug_stack::BugStack;
 use hive_lib::piece::Piece;
 use hive_lib::position::Position;
-use hive_lib::state::State;
 use leptos::*;
 
 #[component]
-pub fn Board(cx: Scope, state: State) -> impl IntoView {
+pub fn Board(cx: Scope) -> impl IntoView {
+    let game_state = use_context::<RwSignal<GameState>>(cx)
+        .expect("there to be a `GameState` signal provided");
+
     let mut board = Vec::new();
-    for (pos, bug_stack) in state.board.display_iter() {
+    for (pos, bug_stack) in game_state
+        .get()
+        .state
+        .get()
+        .board
+        .display_iter()
+    {
         board.push(
             (0..bug_stack.len())
-                .map(|i| {
-                    (bug_stack.pieces[i].clone(), pos, PieceType::Board)
-                })
+                .map(|i| (bug_stack.pieces[i].clone(), pos, PieceType::Board))
                 .collect::<Vec<(Piece, Position, PieceType)>>(),
         );
     }

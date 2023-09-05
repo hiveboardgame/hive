@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::atoms::svgs::Svgs;
+use crate::{atoms::svgs::Svgs, common::game_state::GameState};
 use crate::common::piece_type::PieceType;
 use crate::molecules::piece_stack::PieceStack;
 use hive_lib::{
@@ -27,8 +27,11 @@ fn piece_active(state: &State, piece: &Piece) -> bool {
 }
 
 #[component]
-pub fn Reserve(cx: Scope, color: Color, state: State) -> impl IntoView {
-    let reserve = state.board.reserve(color, state.game_type);
+pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
+    let game_state = use_context::<RwSignal<GameState>>(cx)
+        .expect("there to be a `GameState` signal provided");
+    let state = game_state.get().state.get();
+    let reserve = game_state.get().state.get().board.reserve(color, state.game_type);
     // let len = reserve.iter().fold(0, |acc, (_, bugs)| acc + bugs.len());
     let mut seen = -1;
     let pieces = Bug::all().map(|bug| {
