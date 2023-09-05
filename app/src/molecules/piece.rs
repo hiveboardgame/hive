@@ -1,4 +1,4 @@
-use hive_lib::{piece::Piece, position::Position};
+use hive_lib::{piece::Piece, position::Position, color::Color};
 use crate::common::{svg_pos::SvgPos, piece_type::PieceType};
 use leptos::*;
 
@@ -8,7 +8,13 @@ pub fn Piece(cx: Scope, piece: Piece, position: Position, level: usize, #[prop(o
     let center = svg_pos.center_from_level(level);
     let transform = format!("translate({},{})", center.0, center.1);
 
-    let mut filter = String::from("filter: drop-shadow(0.3px 0.3px 0.3px #000)");
+    let mut filter = String::from("filter: drop-shadow(0.3px 0.3px 0.3px");
+    if piece.color() == Color::White {
+        filter.push_str(" #000)");
+    } else {
+        filter.push_str(" #FFF)");
+    }
+    //let mut filter = String::from("filter: drop-shadow(0.3px 0.3px 0.3px #000)");
     if piece_type == PieceType::Inactive {
         filter.push_str(" sepia(1)");
     }

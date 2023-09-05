@@ -1,0 +1,23 @@
+[GameType "Base+MLP"]
+[Date "2023.09.04"]
+[Event ""]
+[Site ""]
+[Round ""]
+[White "noi"]
+[Black "noi"]
+[Result "WhiteWins"]
+
+1. wL
+2. bL wL/
+3. wQ wL\
+4. bQ \bL
+5. wQ bL\
+6. bQ /bQ
+7. wP wL\
+8. bQ /bQ
+9. wS1 wP\
+10. bA1 -bQ
+11. wS1 bQ\
+12. bA1 -bL
+
+WhiteWins

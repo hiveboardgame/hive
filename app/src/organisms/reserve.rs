@@ -27,31 +27,29 @@ fn piece_active(state: &State, piece: &Piece) -> bool {
 }
 
 #[component]
-pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
-    let state = State::new(GameType::MLP, true);
+pub fn Reserve(cx: Scope, color: Color, state: State) -> impl IntoView {
     let reserve = state.board.reserve(color, state.game_type);
     // let len = reserve.iter().fold(0, |acc, (_, bugs)| acc + bugs.len());
     let mut seen = -1;
-    let pieces = Bug::all()
-        .map(|bug| {
-            if let Some(piece_strings) = reserve.get(&bug) {
-                seen += 1;
-                piece_strings
-                    .iter()
-                    .map(|piece_str| {
-                        let piece = Piece::from_str(piece_str).unwrap();
-                        let piecetype = if piece_active(&state, &piece) {
-                            PieceType::Reserve
-                        } else {
-                            PieceType::Inactive
-                        };
-                        (piece, Position::new(1, 1 * seen), piecetype)
-                    })
-                    .collect::<Vec<(Piece, Position, PieceType)>>()
-            } else {
-                Vec::new()
-            }
-        });
+    let pieces = Bug::all().map(|bug| {
+        if let Some(piece_strings) = reserve.get(&bug) {
+            seen += 1;
+            piece_strings
+                .iter()
+                .map(|piece_str| {
+                    let piece = Piece::from_str(piece_str).unwrap();
+                    let piecetype = if piece_active(&state, &piece) {
+                        PieceType::Reserve
+                    } else {
+                        PieceType::Inactive
+                    };
+                    Some((piece, Position::new(1, 1 * seen), piecetype))
+                })
+                .collect::<Option<Vec<(Piece, Position, PieceType)>>>()
+        } else {
+            None
+        }
+    }).flatten();
 
     let pieces_view = pieces
         .map(|v| {

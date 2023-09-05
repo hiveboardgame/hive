@@ -98,6 +98,22 @@ impl Board {
         }
     }
 
+    pub fn display_iter(&self) -> impl Iterator<Item = (Position, BugStack)> {
+        let mut ret = Vec::new();
+        for r in 0..BOARD_SIZE {
+            for q in 0..BOARD_SIZE {
+                let position = Position::new(q, r);
+                let bug_stack = self.board.get(position);
+                if !bug_stack.is_empty() {
+                    // shift every second row by 1
+                    let position = Position::new(q + r / 2, r);
+                    ret.push((position, bug_stack.clone()));
+                }
+            }
+        }
+        ret.into_iter()
+    }
+
     pub fn game_result(&self) -> GameResult {
         let black = self
             .position_of_piece(Piece::new_from(Bug::Queen, Color::White, 0))
