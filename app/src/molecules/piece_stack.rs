@@ -8,6 +8,7 @@ use leptos::*;
 #[component]
 pub fn PieceStack(cx: Scope, pieces: Vec<(Piece, Position, PieceType)>) -> impl IntoView {
     let len = pieces.len() - 1;
+    let onclick = move |_| log!("piece stack");
     pieces
         .into_iter()
         .enumerate()
@@ -17,7 +18,7 @@ pub fn PieceStack(cx: Scope, pieces: Vec<(Piece, Position, PieceType)>) -> impl 
                 piecetype = piece_type;
             };
             view! {cx,
-                <Piece piece=piece position=position level=i piece_type=piecetype/>
+                <Piece on:click=onclick piece=piece position=position level=i piece_type=piecetype/>
             }
         })
         .collect_view(cx)
