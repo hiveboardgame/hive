@@ -1,4 +1,7 @@
-use crate::{organisms::{board::Board, reserve::Reserve}, common::game_state::GameState};
+use crate::{
+    common::game_state::GameState,
+    organisms::{board::Board, reserve::Reserve},
+};
 use hive_lib::color::Color;
 use leptos::*;
 

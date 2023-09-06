@@ -44,10 +44,9 @@ pub fn App(cx: Scope) -> impl IntoView {
 /// Renders the home page of your application.
 #[component]
 fn HomePage(cx: Scope) -> impl IntoView {
-
     let onclick = move |_| log!("button");
     view! { cx,
-        <button on:click=onclick title="foo">hi</button>
+        <button on:click=onclick>hi</button>
         <h1>"Navigation bar and banner goes here"</h1>
         <Play />
     }

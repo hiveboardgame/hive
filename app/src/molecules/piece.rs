@@ -1,5 +1,14 @@
-use crate::common::{game_state::GameState, piece_type::PieceType, svg_pos::SvgPos};
-use hive_lib::{color::Color, piece::Piece, position::Position};
+use crate::common::{
+    game_state::{GameState, self},
+    piece_type::{self, PieceType},
+    svg_pos::SvgPos,
+};
+use hive_lib::{
+    color::Color,
+    game_type::{self, GameType},
+    piece::Piece,
+    position::Position,
+};
 use leptos::*;
 
 #[component]
@@ -31,9 +40,23 @@ pub fn Piece(
     let game_state =
         use_context::<RwSignal<GameState>>(cx).expect("there to be a `GameState` signal provided");
 
+    let onclick = move |_| match piece_type {
+        PieceType::Board => {
+            log!("Piece a board piece and {}", piece_type);
+            // game_state.get().show_moves(piece);
+            // log!("Move positions are: {:?}", game_state.get().target_positions.get());
+        }
+        PieceType::Reserve => {
+            log!("Piece is a reserve piece and {}", piece_type);
+            game_state.get().show_spawns(piece);
+            log!("Spawn positions are: {:?}", game_state.get().target_positions.get());
+        }
+        _ => log!("Piece is {}", piece_type),
+    };
+
     view! { cx,
-        <g on:click = move |_| {log!("piece")} class="piece" style={filter}>
-           <g id="Ant" on:click = move |_| {log!("inner peace")} transform=format!("{}", transform)>
+        <g on:click = onclick class="piece" style={filter}>
+           <g id="Ant" transform=format!("{}", transform)>
                 <use_ href=format!("#{}", color) transform="scale(0.56, 0.56) translate(-45, -50)" />
                 <use_ href=format!("#{}", bug) transform="scale(0.56, 0.56) translate(-50, -45)"/>
                 // <use_ href=format!("#{}", order) transform="scale(0.56, 0.56) translate(-50, -45)"/>
