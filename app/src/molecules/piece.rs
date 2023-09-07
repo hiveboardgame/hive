@@ -1,6 +1,6 @@
 use crate::common::{
-    game_state::{GameState},
-    piece_type::{PieceType},
+    game_state::GameState,
+    piece_type::PieceType,
     svg_pos::SvgPos,
 };
 use hive_lib::{
