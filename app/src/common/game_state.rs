@@ -1,4 +1,4 @@
-use hive_lib::{history::History, piece::Piece, position::Position, state::State, game_type::GameType};
+use hive_lib::{piece::Piece, position::Position, state::State, game_type::GameType};
 use leptos::*;
 
 #[derive(Clone, Debug, Copy)]

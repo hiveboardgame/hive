@@ -1,11 +1,10 @@
 use crate::common::{
-    game_state::{GameState, self},
-    piece_type::{self, PieceType},
+    game_state::{GameState},
+    piece_type::{PieceType},
     svg_pos::SvgPos,
 };
 use hive_lib::{
     color::Color,
-    game_type::{self, GameType},
     piece::Piece,
     position::Position,
 };

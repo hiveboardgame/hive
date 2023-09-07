@@ -15,7 +15,6 @@ path = "src/main.rs" # replace bin.rs with name of your file
 [dependencies]
 lazy_static = "*"
 regex = "*"
-serde_json = "*"
 serde = { version = "*", features = ["derive"] }
 serde_with = "3.3.0"
 thiserror = "*"
