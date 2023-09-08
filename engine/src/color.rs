@@ -52,6 +52,16 @@ impl Color {
             Self::White => "white",
         }
     }
+    // This has to be a const fn
+    pub const fn into_bits(self) -> u8 {
+        self as _
+    }
+    pub const fn from_bits(value: u8) -> Self {
+        match value {
+            0 => Self::White,
+            _ => Self::Black,
+        }
+    }
 }
 
 impl fmt::Display for Color {

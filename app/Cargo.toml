@@ -12,9 +12,6 @@ leptos_actix = { version = "0.4", optional = true }
 leptos.workspace = true 
 leptos_meta.workspace = true
 leptos_router.workspace = true
-# try this again when 1.0 is released
-stylers.workspace = true
-
 serde.workspace = true
 wasm-bindgen.workspace = true
 web-sys.workspace = true

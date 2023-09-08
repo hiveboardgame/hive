@@ -14,6 +14,4 @@ actix-web.workspace = true
 actix-files.workspace = true
 simple_logger.workspace = true
 tokio.workspace = true
-tower.workspace = true
-tower-http.workspace = true
 log.workspace = true

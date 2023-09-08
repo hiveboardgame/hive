@@ -83,7 +83,23 @@ impl Bug {
         ]
         .into_iter()
     }
-
+    // This has to be a const fn
+    pub const fn into_bits(self) -> u8 {
+        self as _
+    }
+    pub const fn from_bits(value: u8) -> Self {
+        match value {
+            0 => Self::Ant,
+            1 => Self::Beetle,
+            2 => Self::Grasshopper,
+            3 => Self::Ladybug,
+            4 => Self::Mosquito,
+            5 => Self::Pillbug,
+            6 => Self::Queen,
+            7 => Self::Spider,
+            _ => panic!(),
+        }
+    }
     pub fn as_str(&self) -> &'static str {
         &self.name()[0..=0]
     }
