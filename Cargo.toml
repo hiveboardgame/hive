@@ -13,20 +13,16 @@ leptos = { version = "0.4", features = ["nightly"] }
 leptos_meta = { version = "0.4", features = ["nightly"] }
 leptos_router = { version = "0.4", features = ["nightly"] }
 leptos_actix = { version = "0.4" }
-
-stylers = { git = "https://github.com/abishekatp/stylers.git", rev="1023730" }
 actix-web = { version = "4", features = ["macros"] }
 actix-files = { version = "0.6" }
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 http = "0.2.9"
-log = "0.4.17"
-simple_logger = "4.1.0"
-thiserror = "1.0.40"
-tokio = { version = "1.26.0", features = ["full"] }
-tower = { version = "0.4.13", features = ["full"] }
-tower-http = { version = "0.4.0", features = ["full"] }
+log = "0.4.20"
+simple_logger = "4.2.0"
+thiserror = "1.0.48"
+tokio = { version = "1.32.0", features = ["full"] }
 wasm-bindgen = "=0.2.87"
 
 # See https://github.com/akesson/cargo-leptos for documentation of all the parameters.

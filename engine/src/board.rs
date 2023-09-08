@@ -479,7 +479,7 @@ impl Board {
                 if let Some(number_of_bugs) = bugs_for_game_type.get(&piece.bug()) {
                     if (*number_of_bugs as usize) > (i % 3) {
                         res.entry(piece.bug())
-                            .or_insert(Vec::new())
+                            .or_default()
                             .push(piece.to_string());
                     }
                 }
