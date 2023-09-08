@@ -6,20 +6,32 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-leptos.workspace = true
+actix-web = { version = "4", optional = true, features = ["macros"] }
+actix-files = { version = "0.6", optional = true }
+leptos_actix = { version = "0.4", optional = true }
+leptos.workspace = true 
 leptos_meta.workspace = true
 leptos_router.workspace = true
-leptos_actix = { workspace = true, optional = true }
 # try this again when 1.0 is released
 stylers.workspace = true
 
+serde.workspace = true
+wasm-bindgen.workspace = true
+web-sys.workspace = true
 http.workspace = true
 cfg-if.workspace = true
 thiserror.workspace = true
 hive = { path = "../engine" }
 
+
 [features]
 default = []
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
-ssr = ["leptos/ssr", "leptos_meta/ssr", "leptos_router/ssr", "dep:leptos_actix"]
-
+ssr = [
+  "dep:actix-files",
+  "dep:actix-web",
+  "dep:leptos_actix",
+  "leptos/ssr",
+  "leptos_meta/ssr",
+  "leptos_router/ssr",
+]
