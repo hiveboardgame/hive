@@ -39,9 +39,8 @@ pub fn Piece(
 
     let onclick = move |_| match piece_type {
         PieceType::Board => {
-            log!("Piece a board piece and {}", piece_type);
-            // game_state.get().show_moves(piece);
-            // log!("Move positions are: {:?}", game_state.get().target_positions.get());
+            log!("Board piece");
+            game_state.get().show_moves(piece.get(), position.get());
         }
         PieceType::Reserve => {
             log!("Piece is a reserve piece and {}", piece_type);

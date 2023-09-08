@@ -37,6 +37,10 @@ impl State {
         }
     }
 
+    pub fn get_board(&self) -> Board {
+        self.board.clone()
+    }
+
     pub fn new_from_history(history: &History) -> Result<Self, GameError> {
         let mut tournament = true;
         // Did white open with a Queen?
