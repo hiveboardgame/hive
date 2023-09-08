@@ -9,22 +9,20 @@ pub mod molecules;
 pub mod organisms;
 pub mod pages;
 
+use crate::organisms::darkmode::DarkModeToggle;
 use crate::pages::play::Play;
-
 
 #[component]
 pub fn App(cx: Scope) -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context(cx);
 
-    view! {
-        cx,
-
+    view! { cx,
         // injects a stylesheet into the document <head>
         // id=leptos means cargo-leptos will hot-reload this stylesheet
         <Stylesheet id="leptos" href="/pkg/start-actix-workspace.css"/>
 
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
         // sets the document title
         <Title text="Welcome to Hive"/>
 
@@ -39,16 +37,13 @@ pub fn App(cx: Scope) -> impl IntoView {
     }
 }
 
-
-
 /// Renders the home page of your application.
 #[component]
 fn HomePage(cx: Scope) -> impl IntoView {
-    let onclick = move |_| log!("button");
     view! { cx,
-        <button on:click=onclick>hi</button>
         <h1>"Navigation bar and banner goes here"</h1>
-        <Play />
+        <DarkModeToggle/>
+        <Play/>
     }
 }
 
@@ -57,7 +52,7 @@ fn LastMove(cx: Scope) -> impl IntoView {
     view! { cx,
         <g class="lastmove">
             <g id="lastmove">
-                <use_ href="#lastmove" transform="scale(0.56, 0.56) translate(-45, -50)" />
+                <use_ href="#lastmove" transform="scale(0.56, 0.56) translate(-45, -50)"></use_>
             </g>
         </g>
     }
