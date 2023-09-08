@@ -70,7 +70,7 @@ impl FromStr for Bug {
 }
 
 impl Bug {
-    pub fn all() -> impl Iterator<Item = Bug> {
+    pub const fn all() -> [Self; 8] {
         [
             Bug::Ant,
             Bug::Beetle,
@@ -81,7 +81,6 @@ impl Bug {
             Bug::Queen,
             Bug::Spider,
         ]
-        .into_iter()
     }
     // This has to be a const fn
     pub const fn into_bits(self) -> u8 {

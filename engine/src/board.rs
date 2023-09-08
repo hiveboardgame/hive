@@ -98,7 +98,7 @@ impl Board {
         }
     }
 
-    pub fn display_iter(&self) -> impl Iterator<Item = (Position, BugStack)> {
+    pub fn display_iter(&self) -> Vec<(Position, BugStack)> {
         let mut ret = Vec::new();
         for r in 0..BOARD_SIZE {
             for q in 0..BOARD_SIZE {
@@ -111,7 +111,7 @@ impl Board {
                 }
             }
         }
-        ret.into_iter()
+        ret
     }
 
     pub fn game_result(&self) -> GameResult {
@@ -344,6 +344,10 @@ impl Board {
 
     pub fn moves(&self, color: Color) -> HashMap<(Piece, Position), Vec<Position>> {
         let mut moves: HashMap<(Piece, Position), Vec<Position>> = HashMap::default();
+        match self.game_result() {
+            GameResult::Unknown => {}
+            _ => return moves,
+        }
         if !self.queen_played(color) {
             return moves;
         }
@@ -478,9 +482,7 @@ impl Board {
                 let piece = self.offset_to_piece(i + 24 * color as usize);
                 if let Some(number_of_bugs) = bugs_for_game_type.get(&piece.bug()) {
                     if (*number_of_bugs as usize) > (i % 3) {
-                        res.entry(piece.bug())
-                            .or_default()
-                            .push(piece.to_string());
+                        res.entry(piece.bug()).or_default().push(piece.to_string());
                     }
                 }
             }

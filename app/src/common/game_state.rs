@@ -33,7 +33,9 @@ impl GameState {
         if let (Some(active), Some(position)) = (self.active.get(), self.position.get()) {
             self.state.update(|s| match s.play_turn(active, position) {
                 Err(e) => log!("Could not play turn: {} {} {}", active, position, e),
-                _ => log!("Positions is now {:?}", s.board.positions),
+                _ => {log!("Positions is now {:?}", s.board.positions);
+                    log!("Reserve is now: {:?}", s.board.reserve(hive_lib::color::Color::White, GameType::MLP));
+                },
             });
         }
         self.reset()
