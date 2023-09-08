@@ -106,7 +106,7 @@ impl Board {
                 let bug_stack = self.board.get(position);
                 if !bug_stack.is_empty() {
                     // shift every second row by 1
-                    let position = Position::new(q + r / 2, r);
+                    // let position = Position::new(q + r / 2, r);
                     ret.push((position, bug_stack.clone()));
                 }
             }

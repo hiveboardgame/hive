@@ -1,4 +1,4 @@
-use hive_lib::{piece::Piece, position::Position, state::State, game_type::GameType};
+use hive_lib::{game_type::GameType, piece::Piece, position::Position, state::State};
 use leptos::*;
 
 #[derive(Clone, Debug, Copy)]
@@ -31,9 +31,10 @@ impl GameState {
 
     pub fn spawn_active_piece(&mut self) {
         if let (Some(active), Some(position)) = (self.active.get(), self.position.get()) {
-            if !self.state.get().play_turn(active, position).is_ok() {
-                log!("Could not play turn: {} {}", active, position);
-            };
+            self.state.update(|s| match s.play_turn(active, position) {
+                Err(e) => log!("Could not play turn: {} {} {}", active, position, e),
+                _ => log!("Positions is now {:?}", s.board.positions),
+            });
         }
         self.reset()
     }

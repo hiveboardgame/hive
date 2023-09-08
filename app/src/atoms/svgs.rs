@@ -5,7 +5,7 @@ pub fn Svgs(cx: Scope) -> impl IntoView {
     view! { cx,
         <svg visibility="hidden" xmlns="http://www.w3.org/2000/svg">
             <g
-               id="destination"
+               id="target"
                transform="translate(-55.302105,-46.379573)">
               <path
                  style="fill:#3a3a3a;fill-opacity:0;stroke:currentColor;stroke-width:2.28225;stroke-dasharray:none;stroke-opacity:1"
