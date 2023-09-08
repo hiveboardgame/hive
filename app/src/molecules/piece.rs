@@ -13,27 +13,25 @@ use leptos::*;
 #[component]
 pub fn Piece(
     cx: Scope,
-    piece: Piece,
-    position: Position,
-    level: usize,
-    #[prop(optional)] piece_type: PieceType,
+    #[prop(into)] piece: MaybeSignal<Piece>,
+    #[prop(into)] position: MaybeSignal<Position>,
+    #[prop(into)] level: MaybeSignal<usize>,
+    #[prop(optional, into)] piece_type: PieceType,
 ) -> impl IntoView {
-    let svg_pos = SvgPos::new(position.q, position.r);
-    let center = svg_pos.center_from_level(level);
+    let center = SvgPos::center_for_level(position.get(), level.get());
     let transform = format!("translate({},{})", center.0, center.1);
 
     let mut filter = String::from("filter: drop-shadow(0.3px 0.3px 0.3px");
-    if piece.color() == Color::White {
+    if piece.get().color() == Color::White {
         filter.push_str(" #000)");
     } else {
         filter.push_str(" #FFF)");
     }
-    //let mut filter = String::from("filter: drop-shadow(0.3px 0.3px 0.3px #000)");
     if piece_type == PieceType::Inactive {
         filter.push_str(" sepia(1)");
     }
-    let color = piece.color().to_string();
-    let bug = piece.bug().to_string();
+    let color = piece.get().color().to_string();
+    let bug = piece.get().bug().to_string();
     // let order = piece.order().to_string();
 
     let game_state =
@@ -47,8 +45,19 @@ pub fn Piece(
         }
         PieceType::Reserve => {
             log!("Piece is a reserve piece and {}", piece_type);
-            game_state.get().show_spawns(piece);
-            log!("Spawn positions are: {:?}", game_state.get().target_positions.get());
+            game_state.get().show_spawns(piece.get());
+            log!(
+                "Spawn positions are: {:?}",
+                game_state.get().target_positions.get()
+            );
+        }
+        PieceType::Spawn => {
+            log!("Spawning piece {}", piece.get());
+            game_state.get().spawn_active_piece();
+            log!(
+                "Spawn positions are: {:?}",
+                game_state.get().target_positions.get()
+            );
         }
         _ => log!("Piece is {}", piece_type),
     };

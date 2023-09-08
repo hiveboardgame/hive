@@ -30,11 +30,12 @@ fn piece_active(state: &State, piece: &Piece) -> bool {
 pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
     let game_state = use_context::<RwSignal<GameState>>(cx)
         .expect("there to be a `GameState` signal provided");
-    let state = move || game_state.get().state.get();
+    let a_store = move || game_state.get();
+    let state = move || a_store().state.get();
     let reserve = state().board.reserve(color, state().game_type);
     // let len = reserve.iter().fold(0, |acc, (_, bugs)| acc + bugs.len());
     let mut seen = -1;
-    let pieces = Bug::all().map(|bug| {
+    let pieces = Bug::all().filter_map(|bug| {
         if let Some(piece_strings) = reserve.get(&bug) {
             seen += 1;
             piece_strings
@@ -46,13 +47,13 @@ pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
                     } else {
                         PieceType::Inactive
                     };
-                    Some((piece, Position::new(1, 1 * seen), piecetype))
+                    Some((piece, Position::new(4 - seen / 2, seen), piecetype))
                 })
                 .collect::<Option<Vec<(Piece, Position, PieceType)>>>()
         } else {
             None
         }
-    }).flatten();
+    });
 
     let pieces_view = pieces
         .map(|v| {
@@ -61,7 +62,7 @@ pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
         .collect_view(cx);
 
     view! { cx,
-        <svg viewBox="10 100 100 100" style ="flex: 0 0 10%" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="180 110 100 100" style ="flex: 0 0 10%" xmlns="http://www.w3.org/2000/svg">
             <Svgs/>
             { pieces_view }
             //<LastMove/>
