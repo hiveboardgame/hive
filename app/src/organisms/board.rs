@@ -1,8 +1,6 @@
 use crate::atoms::svgs::Svgs;
-use crate::molecules::{
-    active_piece::ActivePiece, board_pieces::BoardPieces,  target::Targets,
-};
-
+use crate::molecules::{active_piece::ActivePiece, board_pieces::BoardPieces, target::Targets};
+use crate::organisms::history::History;
 use leptos::*;
 
 #[component]
@@ -13,7 +11,8 @@ pub fn Board(cx: Scope) -> impl IntoView {
             <BoardPieces/>
             <Targets/>
             <ActivePiece/>
-            // <LastMove/>
+        // <LastMove/>
         </svg>
+        <History/>
     }
 }

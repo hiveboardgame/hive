@@ -23,7 +23,11 @@ impl fmt::Display for History {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut his = String::new();
         for (i, (piece, pos)) in self.moves.iter().enumerate() {
-            his += &format!("{}. {piece} {pos}", i + 1);
+            if i == 0 {
+                his += &format!("{}. {piece} ", i + 1);
+            } else {
+                his += &format!("{}. {piece} {pos} ", i + 1);
+            }
         }
         write!(f, "{his}")
     }
