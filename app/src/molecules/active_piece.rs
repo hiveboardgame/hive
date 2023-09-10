@@ -1,6 +1,6 @@
 use crate::common::game_state::GameState;
 use crate::common::piece_type::PieceType;
-use crate::molecules::piece::Piece;
+use crate::atoms::piece::Piece;
 use hive_lib::piece::Piece;
 use hive_lib::position::Position;
 use leptos::*;

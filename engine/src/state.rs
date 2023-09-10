@@ -169,6 +169,7 @@ impl State {
         }
         self.board
             .move_piece(piece, current_position, target_position, self.turn)?;
+        self.board.last_move = (Some(current_position), Some(target_position));
         Ok(())
     }
 
@@ -198,6 +199,7 @@ impl State {
         }
         if self.board.spawnable(piece.color(), target_position) {
             self.board.insert(target_position, piece);
+            self.board.last_move = (None, Some(target_position));
         } else {
             err.update_reason(format!("{} is not allowed to spawn here.", self.turn_color));
             return Err(err);

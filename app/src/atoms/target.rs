@@ -23,19 +23,3 @@ pub fn Target(cx: Scope, position: Position, level: usize) -> impl IntoView {
         </g>
     }
 }
-
-#[component]
-pub fn Targets(cx: Scope) -> impl IntoView {
-    let game_state =
-        use_context::<RwSignal<GameState>>(cx).expect("there to be a `GameState` signal provided");
-    let targets = move || game_state.get().target_positions.get();
-    view! {cx,
-        <For
-        each=targets
-        key=|target| (target.q, target.r)
-        view=move |cx, target: Position| {
-            view! {cx, <Target position=target level=0/>}
-        }
-      />
-    }
-}

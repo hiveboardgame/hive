@@ -1,5 +1,5 @@
 use crate::common::piece_type::PieceType;
-use crate::molecules::piece::Piece;
+use crate::atoms::piece::Piece;
 use hive_lib::{
     piece::Piece, position::Position,
 };
