@@ -39,6 +39,7 @@ pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
                     seen += 1;
                     piece_strings
                         .iter()
+                        .rev()
                         .map(|piece_str| {
                             let piece = Piece::from_str(piece_str).unwrap();
                             let piecetype = if piece_active(&state(), &piece) {
