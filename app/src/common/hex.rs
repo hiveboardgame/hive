@@ -2,13 +2,13 @@ use crate::common::piece_type::PieceType;
 use hive_lib::position::Position;
 use hive_lib::piece::Piece;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Direction {
     From,
     To
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum HexType {
     // The Game piece and its type
     Tile(Piece, PieceType),

@@ -21,6 +21,7 @@ impl HexStack {
             }],
         }
     }
+
     pub fn new_from_bugstack(bug_stack: &BugStack, position: Position) -> Self {
         let last = bug_stack.len() - 1;
         HexStack {
@@ -45,12 +46,31 @@ impl HexStack {
         }
     }
 
+    pub fn new_from_last_move(position: Position) -> Self {
+        Self {
+            position,
+            hexes: vec![Hex {
+                kind: HexType::LastMove,
+                position: position,
+                level: 0,
+            }],
+        }
+    }
+
     pub fn add_target(&mut self) {
-        self.hexes.push(Hex {
-            kind: HexType::Target,
-            position: self.position,
-            level: self.hexes.len() + 1,
-        })
+        if self.hexes.iter().any(|hex| hex.kind == HexType::LastMove ) {
+            self.hexes.push(Hex {
+                kind: HexType::Target,
+                position: self.position,
+                level: self.hexes.len() - 1,
+            })
+        } else {
+            self.hexes.push(Hex {
+                kind: HexType::Target,
+                position: self.position,
+                level: self.hexes.len() + 1,
+            })
+        }
     }
 
     pub fn add_last_move(&mut self, direction: Direction) {
@@ -69,7 +89,7 @@ impl HexStack {
             Direction::From => self.hexes.push(Hex {
                 kind: HexType::LastMove,
                 position: self.position,
-                level: self.hexes.len() + 1,
+                level: self.hexes.len(),
             }),
         }
     }
