@@ -82,7 +82,10 @@ impl Default for Board {
 pub struct Board {
     pub board: TorusArray<BugStack>,
     pub neighbor_count: TorusArray<u8>,
+    // last moved contains the piece that was last moved
     pub last_moved: Option<(Piece, Position)>,
+    // last move contains a from and to position of the last move
+    pub last_move: (Option<Position>, Option<Position>),
     pub positions: [Option<Position>; 48],
     pinned: [bool; 48],
 }
@@ -93,25 +96,10 @@ impl Board {
             board: TorusArray::new(BugStack::new()),
             neighbor_count: TorusArray::new(0),
             last_moved: None,
+            last_move: (None, None),
             positions: [None; 48],
             pinned: [false; 48],
         }
-    }
-
-    pub fn display_iter(&self) -> Vec<(Position, BugStack)> {
-        let mut ret = Vec::new();
-        for r in 0..BOARD_SIZE {
-            for q in 0..BOARD_SIZE {
-                let position = Position::new(q, r);
-                let bug_stack = self.board.get(position);
-                if !bug_stack.is_empty() {
-                    // shift every second row by 1
-                    // let position = Position::new(q + r / 2, r);
-                    ret.push((position, bug_stack.clone()));
-                }
-            }
-        }
-        ret
     }
 
     pub fn game_result(&self) -> GameResult {

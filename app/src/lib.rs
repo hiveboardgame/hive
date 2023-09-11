@@ -1,4 +1,4 @@
-use common::game_state::GameState;
+use common::game_state::GameStateSignal;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
@@ -18,7 +18,7 @@ pub fn App(cx: Scope) -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context(cx);
     log!("Setting up game state");
-    provide_context(cx, create_rw_signal(cx, GameState::new(cx)));
+    provide_context(cx, create_rw_signal(cx, GameStateSignal::new(cx)));
 
     view! { cx,
         // injects a stylesheet into the document <head>
