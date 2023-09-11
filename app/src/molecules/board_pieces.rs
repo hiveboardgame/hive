@@ -2,7 +2,7 @@ use crate::common::game_state::GameStateSignal;
 use crate::common::hex::Direction;
 use crate::common::hex_stack::HexStack;
 
-use hive_lib::position::Position;
+use hive_lib::{position::Position, color::Color};
 use leptos::*;
 
 use super::hex_stack::HexStack as HexStackView;
@@ -15,7 +15,6 @@ pub fn BoardPieces(cx: Scope) -> impl IntoView {
     // TODO get the BOARD_SIZE from board
 
     let board = move || {
-        log!("Rendering Board");
         let mut board = Vec::new();
         let game_state = game_state_signal.get().signal.get();
         let targets = game_state.target_positions;
