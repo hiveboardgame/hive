@@ -59,7 +59,7 @@ impl State {
         }
         let mut state = State::new(history.game_type, tournament);
         for (piece, pos) in history.moves.iter() {
-            state.play_turn_from_notation(piece, pos)?;
+            state.play_turn_from_history(piece, pos)?;
         }
         Ok(state)
     }
@@ -68,17 +68,12 @@ impl State {
         self.turn > 1 || !self.tournament
     }
 
-    pub fn play_turn_from_notation(
-        &mut self,
-        piece: &str,
-        position: &str,
-    ) -> Result<(), GameError> {
+    pub fn play_turn_from_history(&mut self, piece: &str, position: &str) -> Result<(), GameError> {
         match piece {
             "pass" => {
                 if self.board.moves(self.turn_color).is_empty() {
                     self.pass();
                 } else {
-                    println!("Moves are: {:?}", self.board.moves(self.turn_color));
                     return Err(GameError::InvalidMove {
                         piece: "NA".to_string(),
                         from: "NA".to_string(),
@@ -93,6 +88,39 @@ impl State {
                 let target_position = Position::from_string(position, &self.board)?;
                 self.play_turn(piece, target_position)?;
             }
+        }
+        Ok(())
+    }
+
+    pub fn play_turn_from_notation(
+        &mut self,
+        piece: &str,
+        position: &str,
+    ) -> Result<(), GameError> {
+        match piece {
+            "pass" => {
+                println!("Pass is only allowed in play_turn_from_history")
+            }
+            _ => {
+                let piece = piece.parse()?;
+                let target_position = Position::from_string(position, &self.board)?;
+                self.play_turn(piece, target_position)?;
+                if self.board.is_shutout(self.turn_color) {
+                    self.pass();
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn play_turn_from_position(
+        &mut self,
+        piece: Piece,
+        position: Position,
+    ) -> Result<(), GameError> {
+        self.play_turn(piece, position)?;
+        if self.board.is_shutout(self.turn_color) {
+            self.pass();
         }
         Ok(())
     }
@@ -118,6 +146,7 @@ impl State {
         self.turn_color = Color::from(self.turn_color.opposite());
         self.turn += 1;
         self.board.last_moved = None;
+        self.board.last_move = (None, None);
     }
 
     fn next_turn(&mut self) {
@@ -207,7 +236,16 @@ impl State {
         Ok(())
     }
 
-    pub fn play_turn(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {
+    fn play_turn(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {
+        if let GameStatus::Finished(_) = self.game_status {
+            return Err(GameError::InvalidMove {
+                piece: piece.to_string(),
+                from: "NA".to_string(),
+                to: target_position.to_string(),
+                turn: self.turn,
+                reason: "Game is already over".to_string(),
+            });
+        }
         // TODO check for GameStatus::Finished
         if self.board.piece_already_played(piece) {
             self.turn_move(piece, target_position)?

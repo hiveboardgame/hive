@@ -102,6 +102,10 @@ impl Board {
         }
     }
 
+    pub fn is_shutout(&self, color: Color) -> bool {
+        self.moves(color).is_empty() && self.spawnable_positions(color).next().is_none()
+    }
+
     pub fn game_result(&self) -> GameResult {
         let black = self
             .position_of_piece(Piece::new_from(Bug::Queen, Color::White, 0))
@@ -333,7 +337,7 @@ impl Board {
     pub fn moves(&self, color: Color) -> HashMap<(Piece, Position), Vec<Position>> {
         let mut moves: HashMap<(Piece, Position), Vec<Position>> = HashMap::default();
         match self.game_result() {
-            GameResult::Unknown => {}
+            GameResult::Unknown => {},
             _ => return moves,
         }
         if !self.queen_played(color) {
@@ -484,6 +488,10 @@ impl Board {
     }
 
     pub fn spawnable(&self, color: Color, position: Position) -> bool {
+        match self.game_result() {
+            GameResult::Unknown => {},
+            _ => return false,
+        }
         if self.occupied(position) {
             return false;
         }

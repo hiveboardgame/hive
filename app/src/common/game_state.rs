@@ -66,7 +66,7 @@ impl GameState {
 
     pub fn spawn_active_piece(&mut self) {
         if let (Some(active), Some(position)) = (self.active, self.position) {
-            match self.state.play_turn(active, position) {
+            match self.state.play_turn_from_position(active, position) {
                 Err(e) => log!("Could not play turn: {} {} {}", active, position, e),
                 _ => {}
             };
