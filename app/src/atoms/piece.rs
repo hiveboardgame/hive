@@ -1,13 +1,5 @@
-use crate::common::{
-    game_state::GameState,
-    piece_type::PieceType,
-    svg_pos::SvgPos,
-};
-use hive_lib::{
-    color::Color,
-    piece::Piece,
-    position::Position,
-};
+use crate::common::{game_state::GameStateSignal, piece_type::PieceType, svg_pos::SvgPos};
+use hive_lib::{color::Color, piece::Piece, position::Position};
 use leptos::*;
 
 #[component]
@@ -34,31 +26,26 @@ pub fn Piece(
     let bug = piece.get().bug().to_string();
     // let order = piece.order().to_string();
 
-    let game_state =
-        use_context::<RwSignal<GameState>>(cx).expect("there to be a `GameState` signal provided");
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+        .expect("there to be a `GameState` signal provided");
 
-    let onclick = move |_| match piece_type {
-        PieceType::Board => {
-            log!("Board piece");
-            game_state.get().show_moves(piece.get(), position.get());
+    let onclick = move |_| {
+        let mut game_state = game_state_signal.get();
+        match piece_type {
+            PieceType::Board => {
+                log!("Board piece");
+                game_state.show_moves(piece.get(), position.get());
+            }
+            PieceType::Reserve => {
+                log!("Reserve piece");
+                game_state.show_spawns(piece.get());
+            }
+            PieceType::Spawn => {
+                log!("Spawning piece {}", piece.get());
+                game_state.spawn_active_piece();
+            }
+            _ => log!("Piece is {}", piece_type),
         }
-        PieceType::Reserve => {
-            log!("Piece is a reserve piece and {}", piece_type);
-            game_state.get().show_spawns(piece.get());
-            log!(
-                "Spawn positions are: {:?}",
-                game_state.get().target_positions.get()
-            );
-        }
-        PieceType::Spawn => {
-            log!("Spawning piece {}", piece.get());
-            game_state.get().spawn_active_piece();
-            log!(
-                "Spawn positions are: {:?}",
-                game_state.get().target_positions.get()
-            );
-        }
-        _ => log!("Piece is {}", piece_type),
     };
 
     view! { cx,

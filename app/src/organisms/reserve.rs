@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::common::piece_type::PieceType;
 use crate::molecules::piece_stack::PieceStack;
-use crate::{atoms::svgs::Svgs, common::game_state::GameState};
+use crate::{atoms::svgs::Svgs, common::game_state::GameStateSignal};
 use hive_lib::{bug::Bug, color::Color, piece::Piece, position::Position, state::State};
 use leptos::*;
 
@@ -26,22 +26,24 @@ fn piece_active(state: &State, piece: &Piece) -> bool {
 
 #[component]
 pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
-    let game_state =
-        use_context::<RwSignal<GameState>>(cx).expect("there to be a `GameState` signal provided");
-    let state = move || game_state.get().state.get();
-    let reserve = move || state().board.reserve(color, state().game_type);
+    let game_state_signal =
+        use_context::<RwSignal<GameStateSignal>>(cx).expect("there to be a `GameState` signal provided");
+
     let stacked_pieces = move || {
+        let game_state = game_state_signal.get().signal.get();
+        let reserve = game_state.state.board.reserve(color, game_state.state.game_type.clone());
         let mut seen = -1;
         Bug::all()
             .into_iter()
             .filter_map(|bug| {
-                if let Some(piece_strings) = reserve().get(&bug) {
+                if let Some(piece_strings) = reserve.get(&bug) {
                     seen += 1;
                     piece_strings
                         .iter()
+                        .rev()
                         .map(|piece_str| {
                             let piece = Piece::from_str(piece_str).unwrap();
-                            let piecetype = if piece_active(&state(), &piece) {
+                            let piecetype = if piece_active(&game_state.state, &piece) {
                                 PieceType::Reserve
                             } else {
                                 PieceType::Inactive
@@ -56,11 +58,16 @@ pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
             .collect::<Vec<Vec<(Piece, Position, PieceType)>>>()
     };
 
-    let pieces_view = move || stacked_pieces().into_iter().map(|pieces| {
-        view! { cx,
-            <PieceStack pieces=pieces/>
-        }
-    }).collect_view(cx);
+    let pieces_view = move || {
+        stacked_pieces()
+            .into_iter()
+            .map(|pieces| {
+                view! { cx,
+                    <PieceStack pieces=pieces/>
+                }
+            })
+            .collect_view(cx)
+    };
 
     view! { cx,
         <svg viewBox="180 110 100 100" style ="flex: 0 0 10%" xmlns="http://www.w3.org/2000/svg">
