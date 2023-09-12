@@ -9,9 +9,7 @@ pub mod error_template;
 pub mod molecules;
 pub mod organisms;
 pub mod pages;
-
-use crate::organisms::darkmode::DarkModeToggle;
-use crate::pages::play::Play;
+use crate::pages::{play::PlayPage,home::Home};
 
 #[component]
 pub fn App(cx: Scope) -> impl IntoView {
@@ -33,18 +31,11 @@ pub fn App(cx: Scope) -> impl IntoView {
         <Router>
             <main>
                 <Routes>
-                    <Route path="" view=|cx| view! { cx, <HomePage/> }/>
+                    <Route path="" view=|cx| view! { cx, <Home/> }/>
+                    <Route path="/play" view=|cx| view! {cx, <PlayPage/>}/>
                 </Routes>
             </main>
         </Router>
     }
 }
 
-#[component]
-fn HomePage(cx: Scope) -> impl IntoView {
-    view! { cx,
-        <h1>"Navigation bar and banner goes here"</h1>
-        <DarkModeToggle/>
-        <Play/>
-    }
-}
