@@ -220,10 +220,12 @@ impl Bug {
         position: Position,
         board: &'a MidMoveBoard<'a>,
     ) -> impl Iterator<Item = Position> + 'a {
-        position
-            .positions_around()
-            .filter(|pos| board.is_negative_space(*pos))
-            .filter(move |pos| !board.gated(1, position, *pos))
+        position.positions_around().filter(move |pos| {
+            let (pos1, pos2) = position.common_adjacent_positions(*pos);
+            (!board.get(pos1).is_empty() || !board.get(pos2).is_empty())
+                && board.is_negative_space(*pos)
+                && !board.gated(1, position, *pos)
+        })
     }
 
     fn crawl(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
@@ -403,6 +405,7 @@ impl Bug {
         let board = MidMoveBoard::new(board, board.top_piece(position).unwrap(), position);
         let mut res = Vec::new();
         for pos1 in Bug::crawl_negative_space(position, &board) {
+            println!("Pos is: {}", pos1);
             for pos2 in Bug::crawl_negative_space(pos1, &board).filter(move |pos| *pos != position)
             {
                 for pos3 in Bug::crawl_negative_space(pos2, &board).filter(move |pos| *pos != pos1)
