@@ -25,9 +25,10 @@ impl GameStateSignal {
         self.signal.update(|s| s.show_moves(piece, position))
     }
 
-    pub fn show_spawns(&mut self, piece: Piece) {
-        self.signal.update(|s| s.show_spawns(piece))
+    pub fn show_spawns(&mut self, piece: Piece, position: Position) {
+        self.signal.update(|s| s.show_spawns(piece, position))
     }
+
     pub fn set_target(&mut self, position: Position) {
         self.signal.update(|s| s.set_target(position))
     }
@@ -37,8 +38,20 @@ impl GameStateSignal {
 pub struct GameState {
     pub state: State,
     pub target_positions: Vec<Position>,
+    // the piece (either from reserve or board) that has been clicked last
     pub active: Option<Piece>,
-    pub position: Option<Position>,
+    // the position of the piece that has been clicked last
+    pub current_position: Option<Position>,
+    // the position of the target that got clicked last
+    pub target_position: Option<Position>,
+    // the position of the reserve piece that got clicked last
+    pub reserve_position: Option<Position>,
+}
+
+impl Default for GameState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GameState {
@@ -49,27 +62,29 @@ impl GameState {
             state,
             target_positions: vec![],
             active: None,
-            position: None,
+            target_position: None,
+            current_position: None,
+            reserve_position: None,
         }
     }
 
     pub fn set_target(&mut self, position: Position) {
-        self.position = Some(position);
-        self.target_positions.clear();
+        self.target_position = Some(position);
     }
 
     pub fn reset(&mut self) {
         self.target_positions.clear();
         self.active = None;
-        self.position = None;
+        self.target_position = None;
+        self.current_position = None;
+        self.reserve_position = None;
     }
 
     pub fn spawn_active_piece(&mut self) {
-        if let (Some(active), Some(position)) = (self.active, self.position) {
-            match self.state.play_turn_from_position(active, position) {
-                Err(e) => log!("Could not play turn: {} {} {}", active, position, e),
-                _ => {}
-            };
+        if let (Some(active), Some(position)) = (self.active, self.target_position) {
+            if let Err(e) = self.state.play_turn_from_position(active, position) {
+                log!("Could not play turn: {} {} {}", active, position, e);
+            }
         }
         self.reset()
     }
@@ -83,6 +98,7 @@ impl GameState {
             }
         }
         self.reset();
+        self.current_position = Some(position);
         let moves = self.state.board.moves(self.state.turn_color);
         if let Some(positions) = moves.get(&(piece, position)) {
             self.target_positions = positions.to_owned();
@@ -90,7 +106,7 @@ impl GameState {
         }
     }
 
-    pub fn show_spawns(&mut self, piece: Piece) {
+    pub fn show_spawns(&mut self, piece: Piece, position: Position) {
         self.reset();
         self.target_positions = self
             .state
@@ -98,5 +114,6 @@ impl GameState {
             .spawnable_positions(self.state.turn_color)
             .collect::<Vec<Position>>();
         self.active = Some(piece);
+        self.reserve_position = Some(position);
     }
 }
