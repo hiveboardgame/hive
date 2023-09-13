@@ -1,3 +1,4 @@
+pub mod active;
 pub mod hex;
 pub mod last_move;
 pub mod piece;

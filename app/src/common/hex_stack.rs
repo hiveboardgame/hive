@@ -39,36 +39,47 @@ impl HexStack {
         self.hexes.len()
     }
 
-    pub fn add_active(&mut self, piece: Piece) {
+    pub fn is_empty(&self) -> bool {
+        self.hexes.len() == 0
+    }
+
+    pub fn add_active(&mut self, target_selected: bool) {
+        let mut len = self.len();
         if self.hexes.iter().any(|hex| hex.kind == HexType::LastMove) {
-            self.hexes.push(Hex {
-                kind: HexType::Tile(piece, PieceType::Spawn),
-                position: self.position,
-                level: self.hexes.len() - 1,
-            })
-        } else {
-            self.hexes.push(Hex {
-                kind: HexType::Tile(piece, PieceType::Spawn),
-                position: self.position,
-                level: self.hexes.len(),
-            })
+            len -= 1
         }
+        if target_selected {
+            self.hexes.pop();
+        }
+        self.hexes.push(Hex {
+            kind: HexType::Active,
+            position: self.position,
+            level: len.saturating_sub(1),
+        });
+    }
+
+    pub fn add_tile(&mut self, piece: Piece) {
+        let mut len = self.len();
+        if self.hexes.iter().any(|hex| hex.kind == HexType::LastMove) {
+            len -= 1;
+        }
+        self.hexes.push(Hex {
+            kind: HexType::Tile(piece, PieceType::Spawn),
+            position: self.position,
+            level: len,
+        })
     }
 
     pub fn add_target(&mut self) {
+        let mut len = self.len();
         if self.hexes.iter().any(|hex| hex.kind == HexType::LastMove) {
-            self.hexes.push(Hex {
-                kind: HexType::Target,
-                position: self.position,
-                level: self.hexes.len() - 1,
-            })
-        } else {
-            self.hexes.push(Hex {
-                kind: HexType::Target,
-                position: self.position,
-                level: self.hexes.len(),
-            })
+            len -= 1
         }
+        self.hexes.push(Hex {
+            kind: HexType::Target,
+            position: self.position,
+            level: len,
+        })
     }
 
     pub fn add_last_move(&mut self, direction: Direction) {

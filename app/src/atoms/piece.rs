@@ -38,7 +38,7 @@ pub fn Piece(
             }
             PieceType::Reserve => {
                 log!("Reserve piece");
-                game_state.show_spawns(piece.get());
+                game_state.show_spawns(piece.get(), position.get());
             }
             PieceType::Spawn => {
                 log!("Spawning piece {}", piece.get());
