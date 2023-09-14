@@ -1,5 +1,5 @@
 use crate::organisms::header::Header;
-use crate::organisms::{board::Board, reserve::Reserve};
+use crate::organisms::{board::Board, reserve::{Reserve, Orientation}};
 use hive_lib::color::Color;
 use leptos::*;
 
@@ -10,9 +10,9 @@ pub fn PlayPage(cx: Scope) -> impl IntoView {
     view! { cx,
         <Header/>
         <div class="row" style="width: 99vw; height: 89vh; display:flex;">
-                <Reserve color=Color::White/>
+                <Reserve color=Color::White orientation=Orientation::Vertical/>
                 <Board />
-                <Reserve color=Color::Black/>
+                <Reserve color=Color::Black orientation=Orientation::Vertical/>
         </div>
     }
 }
