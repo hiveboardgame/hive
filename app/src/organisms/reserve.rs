@@ -27,8 +27,14 @@ fn piece_active(state: &State, piece: &Piece) -> bool {
     true
 }
 
+#[derive(PartialEq, Eq, Debug)]
+pub enum Orientation {
+    Horizontal,
+    Vertical,
+}
+
 #[component]
-pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
+pub fn Reserve(cx: Scope, color: Color, orientation: Orientation) -> impl IntoView {
     let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
         .expect("there to be a `GameState` signal provided");
 
@@ -48,7 +54,11 @@ pub fn Reserve(cx: Scope, color: Color) -> impl IntoView {
         for bug in Bug::all().into_iter() {
             if let Some(piece_strings) = reserve.get(&bug) {
                 seen += 1;
-                let position = Position::new(4 - seen / 2, seen);
+                let position = if orientation == Orientation::Vertical {
+                    Position::new(4 - seen / 2, seen)
+                } else {
+                    Position::new(seen % 4, seen / 4)
+                };
                 let bs = BugStack::new();
                 let mut hs = HexStack::new(&bs, position);
                 for (i, piece_str) in piece_strings.iter().rev().enumerate() {
