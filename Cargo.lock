@@ -297,6 +297,7 @@ dependencies = [
  "hive",
  "http",
  "leptos",
+ "leptos-use",
  "leptos_actix",
  "leptos_meta",
  "leptos_router",
@@ -810,6 +811,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "836a9bbc7ad63342d6d6e7b815ccab164bc77a2d95d84bc3117a8c0d5c98e2d5"
 dependencies = [
  "darling_core 0.20.3",
+ "quote",
+ "syn 2.0.31",
+]
+
+[[package]]
+name = "default-struct-builder"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d935de49bbc61cf2487127ec53de614d7aabe0e5932cb6b1880f386976e9b4a"
+dependencies = [
+ "darling 0.20.3",
+ "proc-macro2",
  "quote",
  "syn 2.0.31",
 ]
@@ -1456,6 +1469,22 @@ dependencies = [
  "server_fn",
  "tracing",
  "typed-builder",
+]
+
+[[package]]
+name = "leptos-use"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "690450449ac844745a4074a0a10b47a33f270ded89b5deb1e9785440627419df"
+dependencies = [
+ "cfg-if",
+ "default-struct-builder",
+ "js-sys",
+ "lazy_static",
+ "leptos",
+ "paste",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
