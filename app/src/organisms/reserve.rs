@@ -48,7 +48,6 @@ pub fn Reserve(cx: Scope, color: Color, orientation: Orientation) -> impl IntoVi
         if color == game_state.state.turn_color {
             clicked_position = game_state.reserve_position;
         }
-
         let mut seen = -1;
         let mut res = Vec::new();
         for bug in Bug::all().into_iter() {
