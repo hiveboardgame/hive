@@ -82,7 +82,7 @@ pub fn Board(cx: Scope) -> impl IntoView {
     view! { cx,
         <svg
             viewBox=view_box_string
-            style="flex: 1"
+            style="flex: 1; touch-action: none;"
             ref=viewbox_ref
             xmlns="http://www.w3.org/2000/svg"
         >
