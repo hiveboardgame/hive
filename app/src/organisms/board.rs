@@ -47,7 +47,7 @@ pub fn Board(cx: Scope) -> impl IntoView {
     };
 
     create_effect(cx, move |_| {
-        use_event_listener(cx, viewbox_ref, pointerdown, move |evt| {
+        _ = use_event_listener(cx, viewbox_ref, pointerdown, move |evt| {
             is_panning.update_untracked(|b| *b = true);
             let ref_point = svg_point_from_event(viewbox_ref, evt);
             viewbox_signal.update(|view_box_controls: &mut ViewBoxControls| {
@@ -56,7 +56,7 @@ pub fn Board(cx: Scope) -> impl IntoView {
             });
         });
 
-        use_event_listener(cx, viewbox_ref, pointermove, move |evt| {
+        _ = use_event_listener(cx, viewbox_ref, pointermove, move |evt| {
             if is_panning.get_untracked() {
                 let moved_point = svg_point_from_event(viewbox_ref, evt);
                 viewbox_signal.update(|view_box_controls: &mut ViewBoxControls| {
@@ -66,15 +66,15 @@ pub fn Board(cx: Scope) -> impl IntoView {
             }
         });
 
-        use_event_listener(cx, viewbox_ref, pointerup, move |_| {
+        _ = use_event_listener(cx, viewbox_ref, pointerup, move |_| {
             is_panning.update_untracked(|b| *b = false);
         });
 
-        use_event_listener(cx, viewbox_ref, pointerleave, move |_| {
+        _ = use_event_listener(cx, viewbox_ref, pointerleave, move |_| {
             is_panning.update_untracked(|b| *b = false);
         });
 
-        use_event_listener(cx, viewbox_ref, contextmenu, move |evt| {
+        _ = use_event_listener(cx, viewbox_ref, contextmenu, move |evt| {
             evt.prevent_default();
         });
     });
