@@ -20,10 +20,10 @@ struct ViewBoxControls {
 impl ViewBoxControls {
     pub fn new() -> Self {
         ViewBoxControls {
-            x: 1000.0,
-            y: 450.0,
-            height: 700.0,
-            width: 700.0,
+            x: 1160.0,
+            y: 525.0,
+            height: 550.0,
+            width: 550.0,
             drag_start_x: 0.0,
             drag_start_y: 0.0,
         }
@@ -41,8 +41,8 @@ pub fn Board(cx: Scope) -> impl IntoView {
             "{} {} {} {}",
             viewbox_signal().x,
             viewbox_signal().y,
-            viewbox_signal().height,
-            viewbox_signal().width
+            viewbox_signal().width,
+            viewbox_signal().height
         )
     };
 
@@ -82,7 +82,7 @@ pub fn Board(cx: Scope) -> impl IntoView {
     view! { cx,
         <svg
             viewBox=view_box_string
-            style="flex: 1; touch-action: none;"
+            class="touch-none h-screen w-screen"
             ref=viewbox_ref
             xmlns="http://www.w3.org/2000/svg"
         >

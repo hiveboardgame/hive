@@ -13,14 +13,14 @@ pub fn Piece(
     let center = SvgPos::center_for_level(position.get(), level.get());
     let transform = format!("translate({},{})", center.0, center.1);
 
-    let mut filter = String::from("filter: drop-shadow(0.3px 0.3px 0.3px");
+    let mut filter = String::from("drop-shadow-[0.3px_0.3px_0.3px");
     if piece.get().color() == Color::White {
-        filter.push_str(" #000)");
+        filter.push_str(" _#000])");
     } else {
-        filter.push_str(" #FFF)");
+        filter.push_str(" _#FFF])");
     }
     if piece_type == PieceType::Inactive {
-        filter.push_str(" sepia(1)");
+        filter.push_str(" ] sepia");
     }
     let color = piece.get().color().to_string();
     let bug = piece.get().bug().to_string();
@@ -49,7 +49,7 @@ pub fn Piece(
     };
 
     view! { cx,
-        <g on:click = onclick class="piece" style={filter}>
+        <g on:click = onclick class={filter}>
            <g id="Ant" transform=format!("{}", transform)>
                 <use_ href=format!("#{}", color) transform="scale(0.56, 0.56) translate(-45, -50)" />
                 <use_ href=format!("#{}", bug) transform="scale(0.56, 0.56) translate(-50, -45)"/>

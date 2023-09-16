@@ -9,7 +9,7 @@ pub mod error_template;
 pub mod molecules;
 pub mod organisms;
 pub mod pages;
-use crate::pages::{play::PlayPage,home::Home};
+use crate::pages::{home::Home, play::PlayPage};
 
 #[component]
 pub fn App(cx: Scope) -> impl IntoView {
@@ -38,4 +38,3 @@ pub fn App(cx: Scope) -> impl IntoView {
         </Router>
     }
 }
-
