@@ -100,7 +100,8 @@ pub fn Reserve(cx: Scope, color: Color, orientation: Orientation) -> impl IntoVi
     };
 
     view! { cx,
-        <svg viewBox="180 -50 100 1000" class="col-start-1 col-span-1" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="-50 -70 300 300"  xmlns="http://www.w3.org/2000/svg">
+
             <Svgs/>
             { pieces_view }
         </svg>
