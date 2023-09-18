@@ -1,9 +1,9 @@
 { pkgs ? import <nixpkgs> {} }:
 with pkgs; mkShell rec {
-  nativeBuildInputs = [
-    pkgconfig
-    llvmPackages.bintools # To use lld linker
-  ];
+  # nativeBuildInputs = [
+  #   pkgconfig
+  #   llvmPackages.bintools # To use lld linker
+  # ];
   buildInputs = [
     dart-sass
     openssl

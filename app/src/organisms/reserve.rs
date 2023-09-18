@@ -60,10 +60,15 @@ pub fn Reserve(cx: Scope, color: Color, orientation: Orientation) -> impl IntoVi
                 };
                 let bs = BugStack::new();
                 let mut hs = HexStack::new(&bs, position);
+                let stack_height = piece_strings.len() - 1;
                 for (i, piece_str) in piece_strings.iter().rev().enumerate() {
                     let piece = Piece::from_str(piece_str).unwrap();
                     let piece_type = if piece_active(&game_state.state, &piece) {
-                        PieceType::Reserve
+                        if i == stack_height {
+                            PieceType::Reserve
+                        } else {
+                            PieceType::Nope
+                        }
                     } else {
                         PieceType::Inactive
                     };
@@ -83,6 +88,10 @@ pub fn Reserve(cx: Scope, color: Color, orientation: Orientation) -> impl IntoVi
                     }
                 }
                 res.push(hs);
+            } else {
+                if orientation == Orientation::Horizontal {
+                    seen += 1;
+                }
             }
         }
         res
@@ -101,7 +110,6 @@ pub fn Reserve(cx: Scope, color: Color, orientation: Orientation) -> impl IntoVi
 
     view! { cx,
         <svg viewBox="-50 -70 300 300"  xmlns="http://www.w3.org/2000/svg">
-
             <Svgs/>
             { pieces_view }
         </svg>

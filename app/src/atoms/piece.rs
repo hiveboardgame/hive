@@ -1,5 +1,5 @@
 use crate::common::{game_state::GameStateSignal, piece_type::PieceType, svg_pos::SvgPos};
-use hive_lib::{color::Color, piece::Piece, position::Position};
+use hive_lib::{color::Color, piece::Piece, position::Position, bug::Bug};
 use leptos::*;
 
 #[component]
@@ -13,18 +13,24 @@ pub fn Piece(
     let center = SvgPos::center_for_level(position.get(), level.get());
     let transform = format!("translate({},{})", center.0, center.1);
 
-    let mut filter = String::new();
-    if piece.get().color() == Color::White {
-        filter.push_str("drop-shadow-w");
-    } else {
-        filter.push_str("drop-shadow-b");
-    }
+    // drop-shadow-b drop-shadow-w leave this comment for TW
+    let mut filter = String::from("drop-shadow-");
+    filter.push_str(&piece.get().color().to_string());
     if piece_type == PieceType::Inactive {
         filter.push_str(" sepia");
     }
     let color = piece.get().color().to_string();
     let bug = piece.get().bug().to_string();
-    // let order = piece.order().to_string();
+    let order = piece.get().order().to_string();
+
+    let mut dot_color = String::from(" color: #");
+    dot_color.push_str(match piece.get().bug() {
+        Bug::Ant => "3574a5",
+        Bug::Beetle => "7a4fab",
+        Bug::Grasshopper => "3f9b3a",
+        Bug::Spider => "993c1e",
+        _ => "FF0000",
+    });
 
     let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
         .expect("there to be a `GameState` signal provided");
@@ -49,11 +55,11 @@ pub fn Piece(
     };
 
     view! { cx,
-        <g on:click = onclick class={filter}>
+        <g on:click = onclick class={filter} style={dot_color}>
            <g transform=format!("{}", transform)>
                 <use_ href=format!("#{}", color) transform="scale(0.56, 0.56) translate(-45, -50)" />
                 <use_ href=format!("#{}", bug) transform="scale(0.56, 0.56) translate(-50, -45)"/>
-                // <use_ href=format!("#{}", order) transform="scale(0.56, 0.56) translate(-50, -45)"/>
+                <use_ href=format!("#{}", order) transform="scale(0.56, 0.56) translate(-45, -50)"/>
             </g>
         </g>
     }
