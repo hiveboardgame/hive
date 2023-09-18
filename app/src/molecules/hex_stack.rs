@@ -8,9 +8,7 @@ pub fn HexStack(cx: Scope, hex_stack: HexStack) -> impl IntoView {
         .hexes
         .into_iter()
         .map(|hex| {
-            view! {cx,
-                <Hex hex=hex />
-            }
+            view! { cx, <Hex hex=hex/> }
         })
         .collect_view(cx)
 }

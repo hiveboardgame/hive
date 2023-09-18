@@ -1,4 +1,5 @@
 use crate::organisms::reserve::{Orientation, Reserve};
+use crate::organisms::history::History;
 use hive_lib::color::Color;
 use leptos::*;
 
@@ -14,22 +15,28 @@ pub fn OverlayTabs(cx: Scope) -> impl IntoView {
     };
 
     view! { cx,
-        <div
-        class ="select-none">
+        <div class="select-none">
             <div class="flex justify-around">
-            <button class=move || format!("grow hover:bg-blue-300 {}", button_color().0) on:click=move |_| {
+                <button
+                    class=move || format!("grow hover:bg-blue-300 {}", button_color().0)
+                    on:click=move |_| {
+                        set_active_history(false);
+                    }
+                >
 
-                set_active_history(false);
-            }>
+                    "Reserve"
+                </button>
 
-                "Reserve"
-            </button>
-            <button class=move || format!("grow hover:bg-blue-300 {}", button_color().1) on:click=move |_| {
-                set_active_history(true);
-            }>
+                <button
+                    class=move || format!("grow hover:bg-blue-300 {}", button_color().1)
+                    on:click=move |_| {
+                        set_active_history(true);
+                    }
+                >
 
-                "History"
-            </button>
+                    "History"
+                </button>
+
             </div>
             <Show
                 when=move || active_history()
@@ -42,7 +49,8 @@ pub fn OverlayTabs(cx: Scope) -> impl IntoView {
                     }
                 }
             >
-            History
+
+                <History/>
             </Show>
         </div>
     }

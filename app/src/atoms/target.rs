@@ -16,9 +16,12 @@ pub fn Target(cx: Scope, position: Position, level: usize) -> impl IntoView {
     };
 
     view! { cx,
-        <g on:click = onclick class="target">
-           <g id="Target" transform=format!("{}", transform)>
-                <use_ href="#target" transform="scale(0.56, 0.56) translate(-46.608, -52.083)"/>
+        <g on:click=onclick class="target">
+            <g id="Target" transform=format!("{}", transform)>
+                <use_
+                    href="#target"
+                    transform="scale(0.56, 0.56) translate(-46.608, -52.083)"
+                ></use_>
             </g>
         </g>
     }

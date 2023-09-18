@@ -1,5 +1,5 @@
 use crate::common::{game_state::GameStateSignal, piece_type::PieceType, svg_pos::SvgPos};
-use hive_lib::{color::Color, piece::Piece, position::Position, bug::Bug};
+use hive_lib::{piece::Piece, position::Position, bug::Bug};
 use leptos::*;
 
 #[component]
@@ -55,11 +55,20 @@ pub fn Piece(
     };
 
     view! { cx,
-        <g on:click = onclick class={filter} style={dot_color}>
-           <g transform=format!("{}", transform)>
-                <use_ href=format!("#{}", color) transform="scale(0.56, 0.56) translate(-45, -50)" />
-                <use_ href=format!("#{}", bug) transform="scale(0.56, 0.56) translate(-50, -45)"/>
-                <use_ href=format!("#{}", order) transform="scale(0.56, 0.56) translate(-45, -50)"/>
+        <g on:click=onclick class=filter style=dot_color>
+            <g transform=format!("{}", transform)>
+                <use_
+                    href=format!("#{}", color)
+                    transform="scale(0.56, 0.56) translate(-45, -50)"
+                ></use_>
+                <use_
+                    href=format!("#{}", bug)
+                    transform="scale(0.56, 0.56) translate(-50, -45)"
+                ></use_>
+                <use_
+                    href=format!("#{}", order)
+                    transform="scale(0.56, 0.56) translate(-45, -50)"
+                ></use_>
             </g>
         </g>
     }
