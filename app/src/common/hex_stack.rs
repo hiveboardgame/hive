@@ -35,6 +35,19 @@ impl HexStack {
         }
     }
 
+    pub fn new_history(bug_stack: &BugStack, position: Position) -> Self {
+        HexStack {
+            position,
+            hexes: (0..bug_stack.len())
+                .map(|i| Hex {
+                    kind: HexType::Tile(bug_stack.pieces[i], PieceType::Nope),
+                    position,
+                    level: i,
+                })
+                .collect(),
+        }
+    }
+
     pub fn len(&self) -> usize {
         self.hexes.len()
     }

@@ -1,13 +1,17 @@
-use crate::organisms::reserve::{Orientation, Reserve};
-use crate::organisms::history::History;
+use crate::{organisms::{
+    history::History,
+    reserve::{Orientation, Reserve},
+}, common::game_state::{View, GameStateSignal}};
 use hive_lib::color::Color;
 use leptos::*;
 
 #[component]
 pub fn OverlayTabs(cx: Scope) -> impl IntoView {
-    let (active_history, set_active_history) = create_signal(cx, false);
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+        .expect("there to be a `GameState` signal provided");
+
     let button_color = move || {
-        if active_history.get() {
+        if let View::History = game_state_signal.get().signal.get().view {
             ("bg-inherit", "bg-slate-400")
         } else {
             ("bg-slate-400", "bg-inherit")
@@ -20,7 +24,7 @@ pub fn OverlayTabs(cx: Scope) -> impl IntoView {
                 <button
                     class=move || format!("grow hover:bg-blue-300 {}", button_color().0)
                     on:click=move |_| {
-                        set_active_history(false);
+                        game_state_signal.get().view_game();
                     }
                 >
 
@@ -30,7 +34,7 @@ pub fn OverlayTabs(cx: Scope) -> impl IntoView {
                 <button
                     class=move || format!("grow hover:bg-blue-300 {}", button_color().1)
                     on:click=move |_| {
-                        set_active_history(true);
+                        game_state_signal.get().view_history();
                     }
                 >
 
@@ -39,7 +43,7 @@ pub fn OverlayTabs(cx: Scope) -> impl IntoView {
 
             </div>
             <Show
-                when=move || active_history()
+                when=move || View::History == game_state_signal.get().signal.get().view
                 fallback=|cx| {
                     view! { cx,
                         <div class="">
