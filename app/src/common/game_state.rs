@@ -32,6 +32,32 @@ impl GameStateSignal {
     pub fn set_target(&mut self, position: Position) {
         self.signal.update(|s| s.set_target(position))
     }
+
+    pub fn show_history_turn(&mut self, turn: usize) {
+        self.signal.update(|s| s.show_history_turn(turn))
+    }
+
+    pub fn next_history_turn(&mut self) {
+        self.signal.update(|s| s.next_history_turn())
+    }
+
+    pub fn previous_history_turn(&mut self) {
+        self.signal.update(|s| s.previous_history_turn())
+    }
+
+    pub fn view_game(&mut self) {
+        self.signal.update(|s| s.view_game())
+    }
+
+    pub fn view_history(&mut self) {
+        self.signal.update(|s| s.view_history())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum View {
+    History,
+    Game,
 }
 
 #[derive(Clone, Debug)]
@@ -46,6 +72,10 @@ pub struct GameState {
     pub target_position: Option<Position>,
     // the position of the reserve piece that got clicked last
     pub reserve_position: Option<Position>,
+    // the turn we want to display the history at
+    pub history_turn: Option<usize>,
+    // show history or
+    pub view: View,
 }
 
 impl Default for GameState {
@@ -65,6 +95,8 @@ impl GameState {
             target_position: None,
             current_position: None,
             reserve_position: None,
+            history_turn: None,
+            view: View::Game,
         }
     }
 
@@ -115,5 +147,39 @@ impl GameState {
             .collect::<Vec<Position>>();
         self.active = Some(piece);
         self.reserve_position = Some(position);
+    }
+
+    pub fn show_history_turn(&mut self, turn: usize) {
+        self.history_turn = Some(turn);
+    }
+
+    pub fn view_history(&mut self) {
+        self.view = View::History;
+    }
+
+    pub fn view_game(&mut self) {
+        self.view = View::Game;
+    }
+
+    pub fn next_history_turn(&mut self) {
+        self.view = View::History;
+        if let Some(turn) = self.history_turn {
+            self.history_turn = Some(std::cmp::min(turn + 1, self.state.turn - 1));
+        } else {
+            if self.state.turn > 0 {
+                self.history_turn = Some(0);
+            }
+        }
+    }
+
+    pub fn previous_history_turn(&mut self) {
+        log!("history_turn: {:?}", self.history_turn);
+        self.view = View::History;
+        if let Some(turn) = self.history_turn {
+            self.history_turn = Some(turn.saturating_sub(1));
+            if turn == 0 {
+                self.history_turn = None;
+            }
+        }
     }
 }

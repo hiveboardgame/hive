@@ -1,5 +1,6 @@
 use crate::atoms::svgs::Svgs;
-use crate::molecules::board_pieces::BoardPieces;
+use crate::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces};
+use crate::common::game_state::{View, GameStateSignal};
 use ::wasm_bindgen::JsCast;
 use ::web_sys::PointerEvent;
 use leptos::ev::{contextmenu, pointerdown, pointerleave, pointermove, pointerup};
@@ -35,7 +36,6 @@ pub fn Board(cx: Scope) -> impl IntoView {
     let is_panning = create_rw_signal(cx, false);
     let viewbox_signal = create_rw_signal(cx, ViewBoxControls::new());
     let viewbox_ref = create_node_ref::<svg::Svg>(cx);
-
     let view_box_string = move || {
         format!(
             "{} {} {} {}",
@@ -79,6 +79,9 @@ pub fn Board(cx: Scope) -> impl IntoView {
         });
     });
 
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+        .expect("there to be a `GameState` signal provided");
+
     view! { cx,
         <svg
             viewBox=view_box_string
@@ -87,7 +90,15 @@ pub fn Board(cx: Scope) -> impl IntoView {
             xmlns="http://www.w3.org/2000/svg"
         >
             <Svgs/>
-            <BoardPieces/>
+            <Show
+                when=move || View::History == game_state_signal.get().signal.get().view
+                fallback=|cx| {
+                    view! { cx, <BoardPieces/> }
+                }
+            >
+
+                <HistoryPieces/>
+            </Show>
         </svg>
     }
 }

@@ -1,11 +1,9 @@
-use crate::common::game_state::GameStateSignal;
-use crate::common::hex::Direction;
-use crate::common::hex_stack::HexStack;
-
-use hive_lib::{position::Position};
+use crate::{
+    common::{game_state::GameStateSignal, hex::Direction, hex_stack::HexStack},
+    molecules::hex_stack::HexStack as HexStackView,
+};
+use hive_lib::position::Position;
 use leptos::*;
-
-use super::hex_stack::HexStack as HexStackView;
 
 #[component]
 pub fn BoardPieces(cx: Scope) -> impl IntoView {
