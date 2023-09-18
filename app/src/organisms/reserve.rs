@@ -101,17 +101,15 @@ pub fn Reserve(cx: Scope, color: Color, orientation: Orientation) -> impl IntoVi
         stacked_pieces()
             .into_iter()
             .map(|hex_stack| {
-                view! { cx,
-                    <HexStack hex_stack=hex_stack/>
-                }
+                view! { cx, <HexStack hex_stack=hex_stack/> }
             })
             .collect_view(cx)
     };
 
     view! { cx,
-        <svg viewBox="-50 -70 300 300"  xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="-50 -70 300 300" xmlns="http://www.w3.org/2000/svg">
             <Svgs/>
-            { pieces_view }
+            {pieces_view}
         </svg>
     }
 }

@@ -10,7 +10,7 @@ pub fn PlayPage(cx: Scope) -> impl IntoView {
             <div class="grid grid-cols-10  items-stretch">
                 <Board/>
                 <div class="col-start-9 col-span-2 border-2 border-blue-200 h-3/4 mt-20">
-                <OverlayTabs/>
+                    <OverlayTabs/>
                 </div>
             </div>
 

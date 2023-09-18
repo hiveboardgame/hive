@@ -79,12 +79,7 @@ pub fn DarkModeToggle(cx: Scope) -> impl IntoView {
         <Meta name="color-scheme" content=color_scheme/>
         <ActionForm action=toggle_dark_mode_action>
             <input type="hidden" name="prefers_dark" value=move || (!prefers_dark()).to_string()/>
-            <input
-                type="submit"
-                value=move || {
-                    if prefers_dark() { "🔆" } else { "🌙" }
-                }
-            />
+            <input type="submit" value=move || { if prefers_dark() { "🔆" } else { "🌙" } }/>
 
         </ActionForm>
     }

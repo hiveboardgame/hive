@@ -12,7 +12,10 @@ pub fn LastMove(cx: Scope, position: Position, level: usize) -> impl IntoView {
     view! { cx,
         <g on:click=onclick class="lastmove">
             <g id="Lastmove" transform=format!("{}", transform)>
-                <use_ href="#lastmove" transform="scale(0.56, 0.56) translate(-46.608, -52.083)"/>
+                <use_
+                    href="#lastmove"
+                    transform="scale(0.56, 0.56) translate(-46.608, -52.083)"
+                ></use_>
             </g>
         </g>
     }

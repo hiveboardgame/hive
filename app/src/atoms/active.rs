@@ -16,7 +16,10 @@ pub fn Active(cx: Scope, position: Position, level: usize) -> impl IntoView {
     view! { cx,
         <g on:click=onclick class="active">
             <g id="Active" transform=format!("{}", transform)>
-                <use_ href="#active" transform="scale(0.56, 0.56) translate(-46.608, -52.083)"/>
+                <use_
+                    href="#active"
+                    transform="scale(0.56, 0.56) translate(-46.608, -52.083)"
+                ></use_>
             </g>
         </g>
     }
