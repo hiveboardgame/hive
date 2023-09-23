@@ -1,7 +1,10 @@
-use crate::{organisms::{
-    history::History,
-    reserve::{Orientation, Reserve},
-}, common::game_state::{View, GameStateSignal}};
+use crate::{
+    common::game_state::{GameStateSignal, View},
+    organisms::{
+        history::History,
+        reserve::{Orientation, Reserve},
+    },
+};
 use hive_lib::color::Color;
 use leptos::*;
 
@@ -20,9 +23,9 @@ pub fn OverlayTabs(cx: Scope) -> impl IntoView {
 
     view! { cx,
         <div class="select-none">
-            <div class="flex justify-around">
+            <div class="grid grid-cols-2 gap-1">
                 <button
-                    class=move || format!("grow hover:bg-blue-300 {}", button_color().0)
+                    class=move || format!("hover:bg-blue-300 {}", button_color().0)
                     on:click=move |_| {
                         game_state_signal.get().view_game();
                     }
@@ -32,7 +35,7 @@ pub fn OverlayTabs(cx: Scope) -> impl IntoView {
                 </button>
 
                 <button
-                    class=move || format!("grow hover:bg-blue-300 {}", button_color().1)
+                    class=move || format!("hover:bg-blue-300 {}", button_color().1)
                     on:click=move |_| {
                         game_state_signal.get().view_history();
                     }
