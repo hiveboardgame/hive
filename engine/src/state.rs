@@ -71,7 +71,7 @@ impl State {
     pub fn play_turn_from_history(&mut self, piece: &str, position: &str) -> Result<(), GameError> {
         match piece {
             "pass" => {
-                if self.board.moves(self.turn_color).is_empty() {
+                if self.board.is_shutout(self.turn_color, self.game_type) {
                     self.pass();
                 } else {
                     return Err(GameError::InvalidMove {
@@ -105,7 +105,7 @@ impl State {
                 let piece = piece.parse()?;
                 let target_position = Position::from_string(position, &self.board)?;
                 self.play_turn(piece, target_position)?;
-                if self.board.is_shutout(self.turn_color) {
+                if self.board.is_shutout(self.turn_color, self.game_type) {
                     self.pass();
                 }
             }
@@ -119,7 +119,7 @@ impl State {
         position: Position,
     ) -> Result<(), GameError> {
         self.play_turn(piece, position)?;
-        if self.board.is_shutout(self.turn_color) {
+        if self.board.is_shutout(self.turn_color, self.game_type) {
             self.pass();
         }
         Ok(())
@@ -141,8 +141,7 @@ impl State {
     }
 
     fn pass(&mut self) {
-        self.history
-            .record_move(self.turn_color.to_string(), "pass");
+        self.history.record_move("pass", "");
         self.turn_color = Color::from(self.turn_color.opposite());
         self.turn += 1;
         self.board.last_moved = None;
@@ -153,21 +152,19 @@ impl State {
         if self.turn == 1 {
             self.game_status = GameStatus::InProgress;
         }
+        self.turn += 1;
         match self.board.game_result() {
             GameResult::Winner(color) => {
                 self.game_status = GameStatus::Finished(GameResult::Winner(color));
-                self.history.record_move(color.to_string(), "won");
                 return;
             }
             GameResult::Draw => {
                 self.game_status = GameStatus::Finished(GameResult::Draw);
-                self.history.record_move("It's a draw", "");
                 return;
             }
             GameResult::Unknown => {}
         }
         self.turn_color = Color::from(self.turn_color.opposite());
-        self.turn += 1;
     }
 
     fn turn_move(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {

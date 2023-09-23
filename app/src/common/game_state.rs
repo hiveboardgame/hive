@@ -37,6 +37,10 @@ impl GameStateSignal {
         self.signal.update(|s| s.show_history_turn(turn))
     }
 
+    pub fn first_history_turn(&mut self) {
+        self.signal.update(|s| s.first_history_turn())
+    }
+
     pub fn next_history_turn(&mut self) {
         self.signal.update(|s| s.next_history_turn())
     }
@@ -118,7 +122,8 @@ impl GameState {
                 log!("Could not play turn: {} {} {}", active, position, e);
             }
         }
-        self.reset()
+        self.reset();
+        self.history_turn = Some(self.state.turn - 1)
     }
 
     // TODO refactor to not take a position, the position and piece are in self already
@@ -155,6 +160,16 @@ impl GameState {
 
     pub fn view_history(&mut self) {
         self.view = View::History;
+        if self.state.turn > 0 {
+            self.history_turn = Some(self.state.turn - 1);
+        }
+    }
+
+    pub fn is_last_turn(&self) -> bool {
+        if self.state.turn == 0 {
+            return true;
+        }
+        self.history_turn == Some(self.state.turn - 1)
     }
 
     pub fn view_game(&mut self) {
@@ -165,21 +180,27 @@ impl GameState {
         self.view = View::History;
         if let Some(turn) = self.history_turn {
             self.history_turn = Some(std::cmp::min(turn + 1, self.state.turn - 1));
-        } else {
-            if self.state.turn > 0 {
-                self.history_turn = Some(0);
-            }
+        } else if self.state.turn > 0 {
+            self.history_turn = Some(0);
         }
     }
 
     pub fn previous_history_turn(&mut self) {
-        log!("history_turn: {:?}", self.history_turn);
         self.view = View::History;
         if let Some(turn) = self.history_turn {
             self.history_turn = Some(turn.saturating_sub(1));
             if turn == 0 {
                 self.history_turn = None;
             }
+        }
+    }
+
+    pub fn first_history_turn(&mut self) {
+        self.view = View::History;
+        if self.state.turn > 0 {
+            self.history_turn = Some(0)
+        } else {
+            self.history_turn = None;
         }
     }
 }

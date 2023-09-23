@@ -1,6 +1,6 @@
 use crate::atoms::svgs::Svgs;
+use crate::common::game_state::{GameStateSignal, View};
 use crate::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces};
-use crate::common::game_state::{View, GameStateSignal};
 use ::wasm_bindgen::JsCast;
 use ::web_sys::PointerEvent;
 use leptos::ev::{contextmenu, pointerdown, pointerleave, pointermove, pointerup};
@@ -91,7 +91,10 @@ pub fn Board(cx: Scope) -> impl IntoView {
         >
             <Svgs/>
             <Show
-                when=move || View::History == game_state_signal.get().signal.get().view
+                when=move || {
+                    View::History == game_state_signal.get().signal.get().view
+                        && !game_state_signal.get().signal.get().is_last_turn()
+                }
                 fallback=|cx| {
                     view! { cx, <BoardPieces/> }
                 }

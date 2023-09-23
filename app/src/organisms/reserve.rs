@@ -88,10 +88,8 @@ pub fn Reserve(cx: Scope, color: Color, orientation: Orientation) -> impl IntoVi
                     }
                 }
                 res.push(hs);
-            } else {
-                if orientation == Orientation::Horizontal {
-                    seen += 1;
-                }
+            } else if orientation == Orientation::Horizontal {
+                seen += 1;
             }
         }
         res
