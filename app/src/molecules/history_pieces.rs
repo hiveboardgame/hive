@@ -4,10 +4,11 @@ use crate::{
 };
 use hive_lib::{history::History, position::Position, state::State};
 use leptos::*;
+use leptos::logging::log;
 
 #[component]
-pub fn HistoryPieces(cx: Scope) -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+pub fn HistoryPieces() -> impl IntoView {
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
     let history_pieces = move || {
@@ -35,8 +36,8 @@ pub fn HistoryPieces(cx: Scope) -> impl IntoView {
         history_pieces()
             .into_iter()
             .map(|hs| {
-                view! { cx, <HexStackView hex_stack=hs/> }
+                view! {  <HexStackView hex_stack=hs/> }
             })
-            .collect_view(cx)
+            .collect_view()
     }
 }
