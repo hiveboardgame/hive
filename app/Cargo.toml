@@ -19,6 +19,7 @@ web-sys.workspace = true
 http.workspace = true
 cfg-if.workspace = true
 thiserror.workspace = true
+uuid.workspace = true
 hive = { path = "../engine" }
 
 

@@ -11,6 +11,9 @@ pub fn Header(cx: Scope) -> impl IntoView {
             <a href="/play">
                 Play
             </a>
+            <a href="/hws">
+                WebSocket
+            </a>
             <DarkModeToggle/>
         </header>
     }
