@@ -34,8 +34,8 @@ pub enum Orientation {
 }
 
 #[component]
-pub fn Reserve(cx: Scope, color: Color, orientation: Orientation) -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+pub fn Reserve(color: Color, orientation: Orientation) -> impl IntoView {
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
     let stacked_pieces = move || {
@@ -99,12 +99,12 @@ pub fn Reserve(cx: Scope, color: Color, orientation: Orientation) -> impl IntoVi
         stacked_pieces()
             .into_iter()
             .map(|hex_stack| {
-                view! { cx, <HexStack hex_stack=hex_stack/> }
+                view! { <HexStack hex_stack=hex_stack/> }
             })
-            .collect_view(cx)
+            .collect_view()
     };
 
-    view! { cx,
+    view! {
         <svg viewBox="-50 -70 300 300" xmlns="http://www.w3.org/2000/svg">
             <Svgs/>
             {pieces_view}

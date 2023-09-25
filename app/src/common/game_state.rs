@@ -1,15 +1,22 @@
 use hive_lib::{game_type::GameType, piece::Piece, position::Position, state::State};
 use leptos::*;
+use leptos::logging::log;
 
 #[derive(Clone, Debug, Copy)]
 pub struct GameStateSignal {
     pub signal: RwSignal<GameState>,
 }
 
+impl Default for GameStateSignal {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GameStateSignal {
-    pub fn new(cx: Scope) -> Self {
+    pub fn new() -> Self {
         Self {
-            signal: create_rw_signal(cx, GameState::new()),
+            signal: create_rw_signal(GameState::new()),
         }
     }
 

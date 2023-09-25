@@ -9,8 +9,8 @@ use hive_lib::color::Color;
 use leptos::*;
 
 #[component]
-pub fn OverlayTabs(cx: Scope) -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+pub fn OverlayTabs() -> impl IntoView {
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
     let button_color = move || {
@@ -21,7 +21,7 @@ pub fn OverlayTabs(cx: Scope) -> impl IntoView {
         }
     };
 
-    view! { cx,
+    view! {
         <div class="select-none w-full h-full">
             <div class="grid grid-cols-2 gap-1">
                 <button
@@ -47,8 +47,8 @@ pub fn OverlayTabs(cx: Scope) -> impl IntoView {
             </div>
             <Show
                 when=move || View::History == game_state_signal.get().signal.get().view
-                fallback=|cx| {
-                    view! { cx,
+                fallback=|| {
+                    view! {
                         <div class="">
                             <Reserve color=Color::White orientation=Orientation::Horizontal/>
                             <Reserve color=Color::Black orientation=Orientation::Horizontal/>

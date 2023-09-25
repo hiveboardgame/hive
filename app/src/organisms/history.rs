@@ -3,8 +3,8 @@ use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
 use leptos::*;
 
 #[component]
-pub fn HistoryMove(cx: Scope, turn: usize, piece: String, position: String) -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+pub fn HistoryMove(turn: usize, piece: String, position: String) -> impl IntoView {
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
     let onclick = move |_| {
@@ -20,17 +20,16 @@ pub fn HistoryMove(cx: Scope, turn: usize, piece: String, position: String) -> i
         }
         class
     };
-    view! { cx,
+    view! {
         <div class=get_class on:click=onclick>
             {format!("{}. {piece} {position}", turn + 1)}
-
         </div>
     }
 }
 
 #[component]
-pub fn History(cx: Scope) -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+pub fn History() -> impl IntoView {
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
     let history_moves = move || {
@@ -96,9 +95,8 @@ pub fn History(cx: Scope) -> impl IntoView {
         game_state_signal.get().view_history();
     };
 
-    view! { cx,
+    view! {
         <div class="grid grid-cols-4 gap-1 ">
-
             <button
                 class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
                 on:click=first
@@ -137,13 +135,12 @@ pub fn History(cx: Scope) -> impl IntoView {
             <For
                 each=history_moves
                 key=|a_move| (a_move.0)
-                view=move |cx, a_move| {
-                    view! { cx, <HistoryMove turn=a_move.0 piece=a_move.1 position=a_move.2/> }
+                view=move |a_move| {
+                    view! { <HistoryMove turn=a_move.0 piece=a_move.1 position=a_move.2/> }
                 }
             />
 
-            <Show when=is_finished fallback=|_| {}>
-
+            <Show when=is_finished fallback=|| {}>
                 <div class="col-span-4 text-center">{format!("{}", game_result())}</div>
             </Show>
         </div>

@@ -3,8 +3,8 @@ use crate::organisms::{board::Board, overlay_container::OverlayTabs};
 use leptos::*;
 
 #[component]
-pub fn PlayPage(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PlayPage() -> impl IntoView {
+    view! {
         <div class="h-full w-full">
             <Header/>
             <div class="grid grid-cols-10 grid-rows-6 h-full w-full">

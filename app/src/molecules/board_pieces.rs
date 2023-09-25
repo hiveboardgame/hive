@@ -6,8 +6,8 @@ use hive_lib::position::Position;
 use leptos::*;
 
 #[component]
-pub fn BoardPieces(cx: Scope) -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+pub fn BoardPieces() -> impl IntoView {
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
     // TODO get the BOARD_SIZE from board
@@ -62,8 +62,8 @@ pub fn BoardPieces(cx: Scope) -> impl IntoView {
         board()
             .into_iter()
             .map(|hs| {
-                view! { cx, <HexStackView hex_stack=hs/> }
+                view! { <HexStackView hex_stack=hs/> }
             })
-            .collect_view(cx)
+            .collect_view()
     }
 }

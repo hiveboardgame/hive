@@ -4,13 +4,13 @@ use crate::common::{
     svg_pos::SvgPos,
 };
 use crate::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces};
-use ::wasm_bindgen::JsCast;
-use ::web_sys::PointerEvent;
 use hive_lib::position::Position;
 use leptos::ev::{contextmenu, pointerdown, pointerleave, pointermove, pointerup};
 use leptos::svg::Svg;
 use leptos::*;
 use leptos_use::use_event_listener;
+use wasm_bindgen::JsCast;
+use web_sys::PointerEvent;
 
 #[derive(Debug, Clone)]
 struct ViewBoxControls {
@@ -43,11 +43,11 @@ impl ViewBoxControls {
 }
 
 #[component]
-pub fn Board(cx: Scope) -> impl IntoView {
-    let is_panning = create_rw_signal(cx, false);
-    let viewbox_signal = create_rw_signal(cx, ViewBoxControls::new());
-    let viewbox_ref = create_node_ref::<svg::Svg>(cx);
-    let div_ref = create_node_ref::<html::Div>(cx);
+pub fn Board() -> impl IntoView {
+    let is_panning = create_rw_signal(false);
+    let viewbox_signal = create_rw_signal(ViewBoxControls::new());
+    let viewbox_ref = create_node_ref::<svg::Svg>();
+    let div_ref = create_node_ref::<html::Div>();
     let viewbox_string = move || {
         format!(
             "{} {} {} {}",
@@ -68,8 +68,8 @@ pub fn Board(cx: Scope) -> impl IntoView {
 
     let initial_position = Position::initial_spawn_position();
     let svg_pos = SvgPos::center_for_level(initial_position, 0);
-    create_effect(cx, move |_| {
-        div_ref.on_load(cx, move |_| {
+    create_effect(move |_| {
+        div_ref.on_load(move |_| {
             let div = div_ref.get_untracked().expect("Div should already exist");
             viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                 viewbox_controls.width = div.offset_width() as f32;
@@ -79,7 +79,7 @@ pub fn Board(cx: Scope) -> impl IntoView {
             });
         });
 
-        _ = use_event_listener(cx, viewbox_ref, pointerdown, move |evt| {
+        _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
             is_panning.update_untracked(|b| *b = true);
             let ref_point = svg_point_from_event(viewbox_ref, evt);
             viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
@@ -88,7 +88,7 @@ pub fn Board(cx: Scope) -> impl IntoView {
             });
         });
 
-        _ = use_event_listener(cx, viewbox_ref, pointermove, move |evt| {
+        _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
             if is_panning.get_untracked() {
                 let moved_point = svg_point_from_event(viewbox_ref, evt);
                 viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
@@ -98,23 +98,23 @@ pub fn Board(cx: Scope) -> impl IntoView {
             }
         });
 
-        _ = use_event_listener(cx, viewbox_ref, pointerup, move |_| {
+        _ = use_event_listener(viewbox_ref, pointerup, move |_| {
             is_panning.update_untracked(|b| *b = false);
         });
 
-        _ = use_event_listener(cx, viewbox_ref, pointerleave, move |_| {
+        _ = use_event_listener(viewbox_ref, pointerleave, move |_| {
             is_panning.update_untracked(|b| *b = false);
         });
 
-        _ = use_event_listener(cx, viewbox_ref, contextmenu, move |evt| {
+        _ = use_event_listener(viewbox_ref, contextmenu, move |evt| {
             evt.prevent_default();
         });
     });
 
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
-    view! { cx,
+    view! {
         <div ref=div_ref class="col-span-8 row-span-6">
         <svg
             viewBox=viewbox_string
@@ -129,8 +129,8 @@ pub fn Board(cx: Scope) -> impl IntoView {
                     View::History == game_state_signal.get().signal.get().view
                         && !game_state_signal.get().signal.get().is_last_turn()
                 }
-                fallback=|cx| {
-                    view! { cx, <BoardPieces/> }
+                fallback=|| {
+                    view! { <BoardPieces/> }
                 }
             >
 

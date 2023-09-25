@@ -1,10 +1,10 @@
 use crate::common::{game_state::GameStateSignal, piece_type::PieceType, svg_pos::SvgPos};
 use hive_lib::{bug::Bug, piece::Piece, position::Position};
+use leptos::logging::log;
 use leptos::*;
 
 #[component]
 pub fn Piece(
-    cx: Scope,
     #[prop(into)] piece: MaybeSignal<Piece>,
     #[prop(into)] position: MaybeSignal<Position>,
     #[prop(into)] level: MaybeSignal<usize>,
@@ -31,7 +31,7 @@ pub fn Piece(
         _ => "FF0000",
     });
 
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
     let onclick = move |_| {
@@ -53,7 +53,7 @@ pub fn Piece(
         }
     };
 
-    view! { cx,
+    view! {
         <g on:click=onclick class=filter style=dot_color>
             <g transform=format!("{}", transform)>
                 <use_

@@ -22,7 +22,6 @@ thiserror.workspace = true
 uuid.workspace = true
 hive = { path = "../engine" }
 
-
 [features]
 default = []
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]

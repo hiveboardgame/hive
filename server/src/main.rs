@@ -1,18 +1,14 @@
 use crate::lobby::Lobby;
-use crate::messages::{ClientActorMessage, Connect, Disconnect, WsMessage};
+
 use actix::Actor;
-use actix::{fut, Context, Handler, Message, Recipient, Running, StreamHandler, WrapFuture};
+
 use actix_files::Files;
 use actix_web::*;
 use app::*;
 use leptos::*;
 use leptos_actix::{generate_route_list, LeptosRoutes};
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::format,
-    time::{Duration, Instant},
-};
-use uuid::Uuid;
+
+
 mod lobby;
 mod messages;
 mod start_connection;
@@ -24,7 +20,7 @@ async fn main() -> std::io::Result<()> {
 
     let conf = get_configuration(None).await.unwrap();
     let addr = conf.leptos_options.site_addr;
-    let routes = generate_route_list(|cx| view! { cx, <App/> });
+    let routes = generate_route_list(|| view! { <App/> });
     let chat_server = Lobby::default().start();
 
     HttpServer::new(move || {
@@ -44,7 +40,7 @@ async fn main() -> std::io::Result<()> {
             .leptos_routes(
                 leptos_options.to_owned(),
                 routes.to_owned(),
-                |cx| view! { cx, <App/> },
+                || view! { <App/> },
             )
             .app_data(web::Data::new(leptos_options.to_owned()))
         //.wrap(middleware::Compress::default())

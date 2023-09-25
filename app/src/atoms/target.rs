@@ -3,10 +3,10 @@ use hive_lib::position::Position;
 use leptos::*;
 
 #[component]
-pub fn Target(cx: Scope, position: Position, level: usize) -> impl IntoView {
+pub fn Target(position: Position, level: usize) -> impl IntoView {
     let center = SvgPos::center_for_level(position, level);
     let transform = format!("translate({},{})", center.0, center.1);
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>(cx)
+    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
     // Select the target position
@@ -15,7 +15,7 @@ pub fn Target(cx: Scope, position: Position, level: usize) -> impl IntoView {
         game_state.set_target(position);
     };
 
-    view! { cx,
+    view! {
         <g on:click=onclick class="target">
             <g id="Target" transform=format!("{}", transform)>
                 <use_

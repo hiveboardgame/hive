@@ -2,8 +2,8 @@ use crate::organisms::darkmode::DarkModeToggle;
 use leptos::*;
 
 #[component]
-pub fn Header(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn Header() -> impl IntoView {
+    view! {
         <header class="sticky top-0 flex justify-between">
             <a href="/">
                 Home

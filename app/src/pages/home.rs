@@ -2,9 +2,9 @@ use leptos::*;
 use crate::organisms::header::Header;
 
 #[component]
-pub fn Home(cx: Scope) -> impl IntoView {
+pub fn Home() -> impl IntoView {
 
-    view! { cx,
+    view! {
         <Header/>
         Welcome to our Hive
     }
