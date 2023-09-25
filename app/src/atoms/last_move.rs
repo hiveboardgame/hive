@@ -6,7 +6,6 @@ use leptos::*;
 pub fn LastMove(cx: Scope, position: Position, level: usize) -> impl IntoView {
     let center = SvgPos::center_for_level(position, level);
     let transform = format!("translate({},{})", center.0, center.1);
-
     let onclick = move |_| {};
 
     view! { cx,

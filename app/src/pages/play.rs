@@ -5,11 +5,11 @@ use leptos::*;
 #[component]
 pub fn PlayPage(cx: Scope) -> impl IntoView {
     view! { cx,
-        <div class="h-screen w-screen overflow-hidden">
+        <div class="h-full w-full">
             <Header/>
-            <div class="grid grid-cols-10  items-stretch">
+            <div class="grid grid-cols-10 grid-rows-6 h-full w-full">
                 <Board/>
-                <div class="col-start-9 col-span-2 border-2 border-blue-200 h-3/4 mt-20">
+                <div class="col-start-9 col-span-2 border-2 border-blue-200 row-span-4 row-start-2">
                     <OverlayTabs/>
                 </div>
             </div>

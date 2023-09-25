@@ -22,7 +22,7 @@ pub fn OverlayTabs(cx: Scope) -> impl IntoView {
     };
 
     view! { cx,
-        <div class="select-none">
+        <div class="select-none w-full h-full">
             <div class="grid grid-cols-2 gap-1">
                 <button
                     class=move || format!("hover:bg-blue-300 {}", button_color().0)
