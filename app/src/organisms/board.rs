@@ -1,8 +1,12 @@
 use crate::atoms::svgs::Svgs;
-use crate::common::game_state::{GameStateSignal, View};
+use crate::common::{
+    game_state::{GameStateSignal, View},
+    svg_pos::SvgPos,
+};
 use crate::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces};
 use ::wasm_bindgen::JsCast;
 use ::web_sys::PointerEvent;
+use hive_lib::position::Position;
 use leptos::ev::{contextmenu, pointerdown, pointerleave, pointermove, pointerup};
 use leptos::svg::Svg;
 use leptos::*;
@@ -10,10 +14,15 @@ use leptos_use::use_event_listener;
 
 #[derive(Debug, Clone)]
 struct ViewBoxControls {
+    // The coordinates svg_pos gives to start spawn position at 16 16 that will scale based on initial size of the viewbox
+    x_transform: f32,
+    y_transform: f32,
+    // Min_x, min_y, width and height to be used for the viewbox
     x: f32,
     y: f32,
     height: f32,
     width: f32,
+    // Panning numbers
     drag_start_x: f32,
     drag_start_y: f32,
 }
@@ -21,8 +30,10 @@ struct ViewBoxControls {
 impl ViewBoxControls {
     pub fn new() -> Self {
         ViewBoxControls {
-            x: 1160.0,
-            y: 525.0,
+            x_transform: 0.0,
+            y_transform: 0.0,
+            x: 0.0,
+            y: 0.0,
             height: 550.0,
             width: 550.0,
             drag_start_x: 0.0,
@@ -36,7 +47,8 @@ pub fn Board(cx: Scope) -> impl IntoView {
     let is_panning = create_rw_signal(cx, false);
     let viewbox_signal = create_rw_signal(cx, ViewBoxControls::new());
     let viewbox_ref = create_node_ref::<svg::Svg>(cx);
-    let view_box_string = move || {
+    let div_ref = create_node_ref::<html::Div>(cx);
+    let viewbox_string = move || {
         format!(
             "{} {} {} {}",
             viewbox_signal().x,
@@ -46,23 +58,43 @@ pub fn Board(cx: Scope) -> impl IntoView {
         )
     };
 
+    let transform = move || {
+        format!(
+            "translate({},{})",
+            viewbox_signal().x_transform,
+            viewbox_signal().y_transform
+        )
+    };
+
+    let initial_position = Position::initial_spawn_position();
+    let svg_pos = SvgPos::center_for_level(initial_position, 0);
     create_effect(cx, move |_| {
+        div_ref.on_load(cx, move |_| {
+            let div = div_ref.get_untracked().expect("Div should already exist");
+            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                viewbox_controls.width = div.offset_width() as f32;
+                viewbox_controls.height = div.offset_height() as f32;
+                viewbox_controls.x_transform = -(svg_pos.0 - (div.offset_width() as f32 / 2.0));
+                viewbox_controls.y_transform = -(svg_pos.1 - (div.offset_height() as f32 / 2.0));
+            });
+        });
+
         _ = use_event_listener(cx, viewbox_ref, pointerdown, move |evt| {
             is_panning.update_untracked(|b| *b = true);
             let ref_point = svg_point_from_event(viewbox_ref, evt);
-            viewbox_signal.update(|view_box_controls: &mut ViewBoxControls| {
-                view_box_controls.drag_start_x = ref_point.x();
-                view_box_controls.drag_start_y = ref_point.y();
+            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                viewbox_controls.drag_start_x = ref_point.x();
+                viewbox_controls.drag_start_y = ref_point.y();
             });
         });
 
         _ = use_event_listener(cx, viewbox_ref, pointermove, move |evt| {
             if is_panning.get_untracked() {
                 let moved_point = svg_point_from_event(viewbox_ref, evt);
-                viewbox_signal.update(|view_box_controls: &mut ViewBoxControls| {
-                    view_box_controls.x -= moved_point.x() - view_box_controls.drag_start_x;
-                    view_box_controls.y -= moved_point.y() - view_box_controls.drag_start_y;
-                });
+                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                    viewbox_controls.x -= moved_point.x() - viewbox_controls.drag_start_x;
+                    viewbox_controls.y -= moved_point.y() - viewbox_controls.drag_start_y;
+                })
             }
         });
 
@@ -83,13 +115,15 @@ pub fn Board(cx: Scope) -> impl IntoView {
         .expect("there to be a `GameState` signal provided");
 
     view! { cx,
+        <div ref=div_ref class="col-span-8 row-span-6">
         <svg
-            viewBox=view_box_string
-            class="touch-none h-screen w-screen"
+            viewBox=viewbox_string
+            class="touch-none"
             ref=viewbox_ref
             xmlns="http://www.w3.org/2000/svg"
         >
             <Svgs/>
+            <g transform=transform>
             <Show
                 when=move || {
                     View::History == game_state_signal.get().signal.get().view
@@ -102,7 +136,9 @@ pub fn Board(cx: Scope) -> impl IntoView {
 
                 <HistoryPieces/>
             </Show>
+            </g>
         </svg>
+        </div>
     }
 }
 

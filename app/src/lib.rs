@@ -29,7 +29,7 @@ pub fn App(cx: Scope) -> impl IntoView {
 
         // content for this welcome page
         <Router>
-            <main>
+            <main class="h-screen w-screen overflow-hidden">
                 <Routes>
                     <Route path="" view=|cx| view! { cx, <Home/> }/>
                     <Route path="/play" view=|cx| view! { cx, <PlayPage/> }/>

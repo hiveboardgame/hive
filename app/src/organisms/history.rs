@@ -12,10 +12,10 @@ pub fn HistoryMove(cx: Scope, turn: usize, piece: String, position: String) -> i
         game_state.show_history_turn(turn);
     };
     let get_class = move || {
-        let mut class = "ml-3 hover:bg-blue-300 col-span-2";
+        let mut class = "ml-3 hover:bg-blue-300 col-span-2 min-w-full";
         if let Some(history_turn) = game_state_signal.get().signal.get().history_turn {
             if turn == history_turn {
-                class = "ml-3 hover:bg-blue-300 col-span-2 bg-orange-300"
+                class = "ml-3 hover:bg-blue-300 col-span-2 bg-orange-300 min-w-full"
             }
         }
         class
@@ -97,7 +97,7 @@ pub fn History(cx: Scope) -> impl IntoView {
     };
 
     view! { cx,
-        <div class="grid grid-cols-4 gap-1">
+        <div class="grid grid-cols-4 gap-1 ">
 
             <button
                 class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
