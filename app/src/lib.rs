@@ -1,4 +1,5 @@
 use common::game_state::GameStateSignal;
+use common::reactive_screensize::ScreenSize;
 use common::web_socket::provide_websocket;
 use leptos::logging::log;
 use leptos::*;
@@ -19,6 +20,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
     log!("Setting up game state");
     provide_context(create_rw_signal(GameStateSignal::new()));
+    provide_context(create_rw_signal(ScreenSize::new()));
 
     let url = "ws://127.0.0.1:3000/ws/67e55044-10b1-426f-9247-bb680e5fe0c8";
     provide_websocket(url);

@@ -1,4 +1,5 @@
 use crate::atoms::svgs::Svgs;
+use crate::common::reactive_screensize::ScreenSize;
 use crate::common::{
     game_state::{GameStateSignal, View},
     svg_pos::SvgPos,
@@ -114,8 +115,12 @@ pub fn Board() -> impl IntoView {
     let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
+    let screensize_signal =
+        use_context::<RwSignal<ScreenSize>>().expect("there to be a ScreenSize signal provided");
+
     view! {
         <div ref=div_ref class="col-span-8 row-span-6">
+        <code>{move || format!("Screensize is {:?}",screensize_signal.get().screensize.current().get())}</code>
         <svg
             viewBox=viewbox_string
             class="touch-none"
