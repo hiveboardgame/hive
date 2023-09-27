@@ -14,6 +14,12 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
             <a href="/hws">
                 WebSocket
             </a>
+            <a href="/user">
+                User
+            </a>
+            <a href="/user_get">
+                UserGet
+            </a>
             <DarkModeToggle/>
         </header>
     }

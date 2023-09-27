@@ -1,0 +1,28 @@
+[package]
+name = "db"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "db_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "db_bin"
+path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bb8.workspace = true
+diesel.workspace = true
+diesel-async.workspace = true
+diesel_migrations.workspace = true
+uuid.workspace = true
+dotenvy.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+tokio.workspace = true
+hive = { path = "../engine/" }
+skillratings.workspace = true
+chrono.workspace = true

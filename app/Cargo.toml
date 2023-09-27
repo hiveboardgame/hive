@@ -20,12 +20,15 @@ http.workspace = true
 cfg-if.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
+cookie.workspace = true
 hive = { path = "../engine" }
+db = { path = "../db", optional = true }
 
 [features]
 default = []
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
+hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate",]
 ssr = [
+  "db",
   "dep:actix-files",
   "dep:actix-web",
   "dep:leptos_actix",

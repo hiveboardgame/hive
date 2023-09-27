@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 app = { path = "../app", default-features = false, features = ["ssr"] }
+db = { path = "../db" }
 leptos = { workspace = true, features = [ "ssr" ]}
 leptos_actix.workspace = true
 
@@ -20,3 +21,4 @@ tokio.workspace = true
 log.workspace = true
 uuid.workspace = true
 serde = { workspace = true, features = ["derive"] }
+
