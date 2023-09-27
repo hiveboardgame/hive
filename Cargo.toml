@@ -1,5 +1,5 @@
 [workspace]
-members = ["app", "frontend", "server", "engine"]
+members = ["app", "frontend", "server", "engine", "db"]
 resolver = "2"
 
 # need to be applied only to wasm build
@@ -26,11 +26,21 @@ console_log = "1.0.0"
 http = "0.2.9"
 log = "0.4.20"
 simple_logger = "4.2.0"
-thiserror = "1.0.48"
+thiserror = "1"
 tokio = { version = "1.32.0", features = ["full"] }
 wasm-bindgen = "=0.2.87"
 web-sys = {version = "0.3.6", features = ["AbortController", "AbortSignal", "HtmlDocument", "SvgPoint","SvgsvgElement", "SvgGraphicsElement", "SvgMatrix"] }
-uuid = { version = "1.4.1", features = ["v4", "wasm-bindgen", "serde"] }
+bb8 = { version = "0.8" }
+diesel = { version = "2.1", features = ["postgres", "chrono", "uuid"] }
+diesel-async = { version = "0.4", features = ["postgres", "bb8"] }
+diesel_migrations = { version = "2.1", features = ["postgres"]}
+uuid = { version = "1.4", features = ["v4", "wasm-bindgen", "serde"] }
+dotenvy = "0.15"
+lazy_static = "1.4"
+rand = "0.8"
+cookie = "0.17"
+skillratings = "0.25"
+chrono = { version = "0.4", features = ["serde"] }
 
 # See https://github.com/akesson/cargo-leptos for documentation of all the parameters.
 

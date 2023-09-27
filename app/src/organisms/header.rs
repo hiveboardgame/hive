@@ -14,6 +14,12 @@ pub fn Header() -> impl IntoView {
             <a href="/hws">
                 WebSocket
             </a>
+            <a href="/user">
+                User
+            </a>
+            <a href="/user_get">
+                UserGet
+            </a>
             <DarkModeToggle/>
         </header>
     }

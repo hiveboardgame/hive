@@ -8,10 +8,12 @@ use leptos_router::*;
 pub mod atoms;
 pub mod common;
 pub mod error_template;
+#[cfg(feature = "ssr")]
+pub mod functions;
 pub mod molecules;
 pub mod organisms;
 pub mod pages;
-use crate::pages::{home::Home, play::PlayPage, ws::WsPage};
+use crate::pages::{home::Home, play::PlayPage, ws::WsPage, user_create::UserCreate, user_get::UserGet};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -39,6 +41,8 @@ pub fn App() -> impl IntoView {
                     <Route path="" view=|| view! { <Home/> }/>
                     <Route path="/play" view=|| view! { <PlayPage/> }/>
                     <Route path="/hws" view=|| view! { <WsPage/> }/>
+                    <Route path="/user" view=|| view! { <UserCreate/> }/>
+                    <Route path="/user_get" view=|| view! { <UserGet/> }/>
                 </Routes>
             </main>
         </Router>

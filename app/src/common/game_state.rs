@@ -24,8 +24,8 @@ impl GameStateSignal {
         self.signal.update(|s| s.reset())
     }
 
-    pub fn spawn_active_piece(&mut self) {
-        self.signal.update(|s| s.spawn_active_piece())
+    pub fn play_active_piece(&mut self) {
+        self.signal.update(|s| s.play_active_piece())
     }
 
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
@@ -123,7 +123,7 @@ impl GameState {
         self.reserve_position = None;
     }
 
-    pub fn spawn_active_piece(&mut self) {
+    pub fn play_active_piece(&mut self) {
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);

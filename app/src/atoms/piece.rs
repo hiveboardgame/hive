@@ -47,7 +47,7 @@ pub fn Piece(
             }
             PieceType::Spawn => {
                 log!("Spawning piece {}", piece.get());
-                game_state.spawn_active_piece();
+                game_state.play_active_piece();
             }
             _ => log!("Piece is {}", piece_type),
         }
