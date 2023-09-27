@@ -3,13 +3,17 @@ use hive_lib::position::Position;
 use leptos::*;
 
 #[component]
-pub fn LastMove( position: Position, level: usize) -> impl IntoView {
+pub fn LastMove(
+    position: Position,
+    level: usize,
+    #[prop(default = "")] extend_tw_classes: &'static str,
+) -> impl IntoView {
     let center = SvgPos::center_for_level(position, level);
     let transform = format!("translate({},{})", center.0, center.1);
     let onclick = move |_| {};
 
-    view! { 
-        <g on:click=onclick class="lastmove">
+    view! {
+        <g on:click=onclick class=format!("{extend_tw_classes}")>
             <g id="Lastmove" transform=format!("{}", transform)>
                 <use_
                     href="#lastmove"

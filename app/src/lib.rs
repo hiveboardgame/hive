@@ -37,7 +37,7 @@ pub fn App() -> impl IntoView {
             <main class="h-screen w-screen overflow-hidden">
                 <Routes>
                     <Route path="" view=|| view! { <Home/> }/>
-                    <Route path="/play" view=|| view! { <PlayPage/> }/>
+                    <Route path="/play" view=|| view! { <PlayPage extend_tw_classes="h-full w-full"/> }/>
                     <Route path="/hws" view=|| view! { <WsPage/> }/>
                 </Routes>
             </main>

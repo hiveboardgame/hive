@@ -43,7 +43,10 @@ impl ViewBoxControls {
 }
 
 #[component]
-pub fn Board() -> impl IntoView {
+pub fn Board(
+    #[prop(default = "")] extend_tw_classes: &'static str,
+    #[prop(optional)] overwrite_tw_classes: &'static str,
+) -> impl IntoView {
     let is_panning = create_rw_signal(false);
     let viewbox_signal = create_rw_signal(ViewBoxControls::new());
     let viewbox_ref = create_node_ref::<svg::Svg>();
@@ -68,8 +71,8 @@ pub fn Board() -> impl IntoView {
 
     let initial_position = Position::initial_spawn_position();
     let svg_pos = SvgPos::center_for_level(initial_position, 0);
-    create_effect(move |_| {
-        div_ref.on_load(move |_| {
+    div_ref.on_load(move |_| {
+        create_effect(move |_| {
             let div = div_ref.get_untracked().expect("Div should already exist");
             viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                 viewbox_controls.width = div.offset_width() as f32;
@@ -77,37 +80,37 @@ pub fn Board() -> impl IntoView {
                 viewbox_controls.x_transform = -(svg_pos.0 - (div.offset_width() as f32 / 2.0));
                 viewbox_controls.y_transform = -(svg_pos.1 - (div.offset_height() as f32 / 2.0));
             });
-        });
 
-        _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
-            is_panning.update_untracked(|b| *b = true);
-            let ref_point = svg_point_from_event(viewbox_ref, evt);
-            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                viewbox_controls.drag_start_x = ref_point.x();
-                viewbox_controls.drag_start_y = ref_point.y();
-            });
-        });
-
-        _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
-            if is_panning.get_untracked() {
-                let moved_point = svg_point_from_event(viewbox_ref, evt);
+            _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
+                is_panning.update_untracked(|b| *b = true);
+                let ref_point = svg_point_from_event(viewbox_ref, evt);
                 viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                    viewbox_controls.x -= moved_point.x() - viewbox_controls.drag_start_x;
-                    viewbox_controls.y -= moved_point.y() - viewbox_controls.drag_start_y;
-                })
-            }
-        });
+                    viewbox_controls.drag_start_x = ref_point.x();
+                    viewbox_controls.drag_start_y = ref_point.y();
+                });
+            });
 
-        _ = use_event_listener(viewbox_ref, pointerup, move |_| {
-            is_panning.update_untracked(|b| *b = false);
-        });
+            _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
+                if is_panning.get_untracked() {
+                    let moved_point = svg_point_from_event(viewbox_ref, evt);
+                    viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                        viewbox_controls.x -= moved_point.x() - viewbox_controls.drag_start_x;
+                        viewbox_controls.y -= moved_point.y() - viewbox_controls.drag_start_y;
+                    })
+                }
+            });
 
-        _ = use_event_listener(viewbox_ref, pointerleave, move |_| {
-            is_panning.update_untracked(|b| *b = false);
-        });
+            _ = use_event_listener(viewbox_ref, pointerup, move |_| {
+                is_panning.update_untracked(|b| *b = false);
+            });
 
-        _ = use_event_listener(viewbox_ref, contextmenu, move |evt| {
-            evt.prevent_default();
+            _ = use_event_listener(viewbox_ref, pointerleave, move |_| {
+                is_panning.update_untracked(|b| *b = false);
+            });
+
+            _ = use_event_listener(viewbox_ref, contextmenu, move |evt| {
+                evt.prevent_default();
+            });
         });
     });
 
@@ -115,29 +118,37 @@ pub fn Board() -> impl IntoView {
         .expect("there to be a `GameState` signal provided");
 
     view! {
-        <div ref=div_ref class="col-span-8 row-span-6">
-        <svg
-            viewBox=viewbox_string
-            class="touch-none"
-            ref=viewbox_ref
-            xmlns="http://www.w3.org/2000/svg"
+        <div
+            ref=div_ref
+            class=if !overwrite_tw_classes.is_empty() {
+                overwrite_tw_classes.to_string()
+            } else {
+                format!("col-span-8 row-span-6 {extend_tw_classes}")
+            }
         >
-            <Svgs/>
-            <g transform=transform>
-            <Show
-                when=move || {
-                    View::History == game_state_signal.get().signal.get().view
-                        && !game_state_signal.get().signal.get().is_last_turn()
-                }
-                fallback=|| {
-                    view! { <BoardPieces/> }
-                }
+            <svg
+                viewBox=viewbox_string
+                class="touch-none"
+                ref=viewbox_ref
+                xmlns="http://www.w3.org/2000/svg"
             >
+                <Svgs/>
+                <g transform=transform>
+                    <Show
+                        when=move || {
+                            View::History == game_state_signal.get().signal.get().view
+                                && !game_state_signal.get().signal.get().is_last_turn()
+                        }
 
-                <HistoryPieces/>
-            </Show>
-            </g>
-        </svg>
+                        fallback=|| {
+                            view! { <BoardPieces/> }
+                        }
+                    >
+
+                        <HistoryPieces/>
+                    </Show>
+                </g>
+            </svg>
         </div>
     }
 }

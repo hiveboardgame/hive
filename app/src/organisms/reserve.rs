@@ -34,7 +34,11 @@ pub enum Orientation {
 }
 
 #[component]
-pub fn Reserve(color: Color, orientation: Orientation) -> impl IntoView {
+pub fn Reserve(
+    color: Color,
+    orientation: Orientation,
+    #[prop(default = "")] extend_tw_classes: &'static str,
+) -> impl IntoView {
     let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
@@ -105,7 +109,7 @@ pub fn Reserve(color: Color, orientation: Orientation) -> impl IntoView {
     };
 
     view! {
-        <svg viewBox="-50 -70 300 300" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="-50 -70 300 300" class=format!("{extend_tw_classes}") xmlns="http://www.w3.org/2000/svg">
             <Svgs/>
             {pieces_view}
         </svg>

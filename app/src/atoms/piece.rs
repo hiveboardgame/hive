@@ -12,7 +12,7 @@ pub fn Piece(
 ) -> impl IntoView {
     let center = SvgPos::center_for_level(position.get(), level.get());
     let transform = format!("translate({},{})", center.0, center.1);
-    // drop-shadow-b drop-shadow-w leave this comment for TW
+    //IMPORTANT drop-shadow-b drop-shadow-w leave this comment for TW
     let mut filter = String::from("drop-shadow-");
     filter.push_str(&piece.get().color().to_string());
     if piece_type == PieceType::Inactive {
