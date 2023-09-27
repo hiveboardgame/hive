@@ -1,17 +1,15 @@
 use crate::organisms::header::Header;
-use crate::organisms::{board::Board, overlay_container::OverlayTabs};
+use crate::organisms::{board::Board, side_board::SideboardTabs};
 use leptos::*;
 
 #[component]
-pub fn PlayPage() -> impl IntoView {
+pub fn PlayPage(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
     view! {
-        <div class="h-full w-full">
+        <div class=format!("{extend_tw_classes}")>
             <Header/>
             <div class="grid grid-cols-10 grid-rows-6 h-full w-full">
                 <Board/>
-                <div class="col-start-9 col-span-2 border-2 border-blue-200 row-span-4 row-start-2">
-                    <OverlayTabs/>
-                </div>
+                <SideboardTabs extend_tw_classes="border-blue-200"/>
             </div>
 
         </div>

@@ -3,7 +3,11 @@ use hive_lib::position::Position;
 use leptos::*;
 
 #[component]
-pub fn Target(position: Position, level: usize) -> impl IntoView {
+pub fn Target(
+    position: Position,
+    level: usize,
+    #[prop(default = "")] extend_tw_classes: &'static str,
+) -> impl IntoView {
     let center = SvgPos::center_for_level(position, level);
     let transform = format!("translate({},{})", center.0, center.1);
     let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
@@ -16,7 +20,7 @@ pub fn Target(position: Position, level: usize) -> impl IntoView {
     };
 
     view! {
-        <g on:click=onclick class="target">
+        <g on:click=onclick class=format!("{extend_tw_classes}")>
             <g id="Target" transform=format!("{}", transform)>
                 <use_
                     href="#target"

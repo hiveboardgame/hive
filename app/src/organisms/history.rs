@@ -28,7 +28,7 @@ pub fn HistoryMove(turn: usize, piece: String, position: String) -> impl IntoVie
 }
 
 #[component]
-pub fn History() -> impl IntoView {
+pub fn History(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
     let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
         .expect("there to be a `GameState` signal provided");
 
@@ -96,7 +96,7 @@ pub fn History() -> impl IntoView {
     };
 
     view! {
-        <div class="grid grid-cols-4 gap-1 ">
+        <div class=format!("grid grid-cols-4 gap-1 {extend_tw_classes}")>
             <button
                 class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
                 on:click=first
