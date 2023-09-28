@@ -13,7 +13,9 @@ pub mod functions;
 pub mod molecules;
 pub mod organisms;
 pub mod pages;
-use crate::pages::{home::Home, play::PlayPage, ws::WsPage, user_create::UserCreate, user_get::UserGet};
+use crate::pages::{
+    home::Home, play::PlayPage, user_create::UserCreate, user_get::UserGet, ws::WsPage,
+};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -22,7 +24,7 @@ pub fn App() -> impl IntoView {
     log!("Setting up game state");
     provide_context(create_rw_signal(GameStateSignal::new()));
 
-    let url = "ws://127.0.0.1:3000/ws/67e55044-10b1-426f-9247-bb680e5fe0c8";
+    let url = "ws://0.0.0.0:3000/ws/67e55044-10b1-426f-9247-bb680e5fe0c8";
     provide_websocket(url);
 
     view! {
