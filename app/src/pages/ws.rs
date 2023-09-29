@@ -1,5 +1,5 @@
 use crate::common::web_socket::{use_websocket};
-use crate::organisms::header::Header;
+use crate::components::organisms::header::Header;
 
 use leptos::*;
 

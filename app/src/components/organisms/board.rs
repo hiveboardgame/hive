@@ -1,9 +1,11 @@
-use crate::atoms::svgs::Svgs;
 use crate::common::{
     game_state::{GameStateSignal, View},
     svg_pos::SvgPos,
 };
-use crate::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces};
+use crate::components::{
+    atoms::svgs::Svgs,
+    molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
+};
 use hive_lib::position::Position;
 use leptos::ev::{contextmenu, pointerdown, pointerleave, pointermove, pointerup, wheel};
 use leptos::logging::*;

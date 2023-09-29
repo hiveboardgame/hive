@@ -58,7 +58,7 @@ diesel::table! {
         uid -> Text,
         username -> Text,
         password -> Text,
-        token -> Text,
+        email -> Text,
     }
 }
 

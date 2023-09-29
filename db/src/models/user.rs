@@ -1,13 +1,15 @@
 use crate::{
-    error::DbError, models::{game::Game, game_user::GameUser, rating::NewRating},
-    schema::{games, ratings, users, users::dsl::users as users_table},
-    get_conn, DbPool
+    error::DbError,
+    get_conn,
+    models::{game::Game, game_user::GameUser, rating::NewRating},
+    schema::{games, ratings, users, users::dsl::users as users_table, users::dsl::username as username_field},
+    DbPool,
 };
 use diesel::{
     query_dsl::BelongingToDsl, result::Error, Identifiable, Insertable, QueryDsl, Queryable,
-    SelectableHelper,
+    SelectableHelper, ExpressionMethods
 };
-use diesel_async::{AsyncConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 
 const MAX_USERNAME_LENGTH: usize = 40;
@@ -54,24 +56,32 @@ pub struct User {
     pub uid: String,
     pub username: String,
     pub password: String,
-    pub token: String,
+    pub email: String,
 }
 
 impl User {
-    pub fn new(uid: &str, username: &str, password: &str, token: &str) -> Result<User, DbError> {
+    pub fn new(uid: &str, username: &str, password: &str, email: &str) -> Result<User, DbError> {
         validate_uid(uid)?;
         validate_username(username)?;
         Ok(User {
             uid: uid.into(),
             username: username.into(),
             password: password.into(),
-            token: token.into(),
+            email: email.into(),
         })
     }
 
     pub async fn find_by_uid(uid: &str, pool: &DbPool) -> Result<User, Error> {
         let conn = &mut get_conn(pool).await?;
         users_table.find(uid).first(conn).await
+    }
+
+    pub async fn find_by_username(username: &str, pool: &DbPool) -> Result<User, Error> {
+        let conn = &mut get_conn(pool).await?;
+        users_table
+            .filter(username_field.eq(username))
+            .first(conn)
+            .await
     }
 
     pub async fn insert(&self, pool: &DbPool) -> Result<(), Error> {

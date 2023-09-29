@@ -1,6 +1,6 @@
 use crate::{
     common::{game_state::GameStateSignal, hex::Direction, hex_stack::HexStack},
-    molecules::hex_stack::HexStack as HexStackView,
+    components::molecules::hex_stack::HexStack as HexStackView,
 };
 use hive_lib::position::Position;
 use leptos::*;

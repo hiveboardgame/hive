@@ -1,5 +1,5 @@
-use crate::organisms::header::Header;
-use crate::organisms::{board::Board, side_board::SideboardTabs};
+use crate::components::organisms::header::Header;
+use crate::components::organisms::{board::Board, side_board::SideboardTabs};
 use leptos::*;
 
 #[component]

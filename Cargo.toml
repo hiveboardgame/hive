@@ -14,12 +14,15 @@ leptos-use = { git = "https://github.com/Synphonyte/leptos-use/", branch = "main
 leptos_meta = { version = "0.5.0-rc3", features = ["nightly"] }
 leptos_router = { version = "0.5.0-rc3", features = ["nightly"] }
 leptos_actix = { version = "0.5.0-rc3" }
-serde = { version = "1", feature = [""]}
 actix-web = { version = "4",  features = ["macros"] }
 actix-files = { version = "0.6" }
 actix-web-actors = { version  = "4.2.0" }
 actix = "0.13.1"
 actix-rt = "2.9.0"
+actix-identity = { version = "0.6" }
+actix-session = { version = "0.8", features = ["cookie-session"] }
+argon2 = "0.5"
+serde = { version = "1", feature = [""]}
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
@@ -38,6 +41,7 @@ uuid = { version = "1.4", features = ["v4", "wasm-bindgen", "serde"] }
 dotenvy = "0.15"
 lazy_static = "1.4"
 rand = "0.8"
+rand_core = "0.6"
 cookie = "0.17"
 skillratings = "0.25"
 chrono = { version = "0.4", features = ["serde"] }
