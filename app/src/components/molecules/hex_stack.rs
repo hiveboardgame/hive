@@ -1,6 +1,5 @@
+use crate::{common::hex_stack::HexStack, components::atoms::hex::Hex};
 use leptos::*;
-
-use crate::{atoms::hex::Hex, common::hex_stack::HexStack};
 
 #[component]
 pub fn HexStack(hex_stack: HexStack) -> impl IntoView {

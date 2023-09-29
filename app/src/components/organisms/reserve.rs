@@ -1,13 +1,14 @@
-use std::str::FromStr;
-
-use crate::common::hex::{Hex, HexType};
-use crate::common::hex_stack::HexStack;
-use crate::common::piece_type::PieceType;
-use crate::molecules::hex_stack::HexStack;
-use crate::{atoms::svgs::Svgs, common::game_state::GameStateSignal};
+use crate::common::{
+    game_state::GameStateSignal,
+    hex::{Hex, HexType},
+    hex_stack::HexStack,
+    piece_type::PieceType,
+};
+use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
 use hive_lib::bug_stack::BugStack;
 use hive_lib::{bug::Bug, color::Color, piece::Piece, position::Position, state::State};
 use leptos::*;
+use std::str::FromStr;
 
 fn piece_active(state: &State, piece: &Piece) -> bool {
     // #TODO make this come from global state

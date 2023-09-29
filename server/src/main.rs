@@ -1,11 +1,11 @@
 use crate::lobby::Lobby;
-
 use actix::Actor;
-
 use actix_files::Files;
-use actix_web::*;
+use actix_identity::IdentityMiddleware;
+use actix_session::{storage::CookieSessionStore, SessionMiddleware};
+use actix_web::{cookie::Key, web, App, HttpServer};
+use actix_web::middleware::Compress;
 use app::*;
-
 use db_lib::get_pool;
 use leptos::*;
 use leptos_actix::{generate_route_list, LeptosRoutes};
@@ -24,11 +24,13 @@ async fn main() -> std::io::Result<()> {
     let routes = generate_route_list(|| view! { <App/> });
     let chat_server = Lobby::default().start();
 
-    // Todo fixme
+    // TODO FIXME
     // let config = DbConfig::from_env().expect("Failed to load config from env");
-
+    // let session_secret = Key::from(config.session_secret.as_bytes());
+    // let secret_key = Key::from(session_secret.as_bytes());
     let database_url = "postgres://hive-dev@localhost:/hive-local";
     let pool = get_pool(database_url).await.expect("Failed to get pool");
+    let key = Key::generate();
 
     HttpServer::new(move || {
         let leptos_options = &conf.leptos_options;
@@ -51,7 +53,13 @@ async fn main() -> std::io::Result<()> {
                 || view! { <App/> },
             )
             .app_data(web::Data::new(leptos_options.to_owned()))
-        //.wrap(middleware::Compress::default())
+            .wrap(Compress::default())
+            // IdentityMiddleware needs to be first
+            .wrap(IdentityMiddleware::default())
+            // Now SessionMiddleware, this is a bit confusing but actix invokes middlesware in
+            // reverse order of registration and the IdentityMiddleware is based on the
+            // SessionMiddleware so SessionMiddleware needs to be present
+            .wrap(SessionMiddleware::new(CookieSessionStore::default(), key.clone()))
     })
     .bind(&addr)?
     .run()

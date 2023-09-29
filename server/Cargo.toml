@@ -11,14 +11,15 @@ db = { path = "../db" }
 leptos = { workspace = true, features = [ "ssr" ]}
 leptos_actix.workspace = true
 
+actix.workspace = true
+actix-files.workspace = true
+actix-identity.workspace = true
+actix-rt.workspace = true
+actix-session.workspace = true
 actix-web.workspace = true
 actix-web-actors.workspace = true
-actix-files.workspace = true
-actix.workspace = true
-actix-rt.workspace = true
 simple_logger.workspace = true
 tokio.workspace = true
 log.workspace = true
 uuid.workspace = true
 serde = { workspace = true, features = ["derive"] }
-

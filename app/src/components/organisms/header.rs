@@ -1,4 +1,4 @@
-use crate::organisms::darkmode::DarkModeToggle;
+use crate::components::organisms::darkmode::DarkModeToggle;
 use leptos::*;
 
 #[component]
@@ -13,9 +13,6 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
             </a>
             <a href="/hws">
                 WebSocket
-            </a>
-            <a href="/user">
-                User
             </a>
             <a href="/user_get">
                 UserGet

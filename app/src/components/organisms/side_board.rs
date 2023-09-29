@@ -1,6 +1,6 @@
 use crate::{
     common::game_state::{GameStateSignal, View},
-    organisms::{
+    components::organisms::{
         history::History,
         reserve::{Orientation, Reserve},
     },

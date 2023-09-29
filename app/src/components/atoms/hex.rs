@@ -1,5 +1,5 @@
 use crate::{
-    atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
+    components::atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
     common::hex::{Hex, HexType},
 };
 

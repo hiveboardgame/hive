@@ -8,6 +8,9 @@ edition = "2021"
 [dependencies]
 actix-web = { workspace = true, optional = true, features = ["macros"] }
 actix-files = { workspace = true, optional = true }
+actix-identity = { workspace = true, optional = true }
+actix-session = { workspace = true, optional = true }
+argon2 = { workspace = true, optional = true }
 leptos_actix = { workspace = true, optional = true }
 leptos.workspace = true
 leptos-use.workspace = true
@@ -21,6 +24,7 @@ cfg-if.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
 cookie.workspace = true
+rand_core.workspace = true
 hive = { path = "../engine" }
 db = { path = "../db", optional = true }
 
@@ -29,6 +33,9 @@ default = []
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate",]
 ssr = [
   "db",
+  "actix-session",
+  "actix-identity",
+  "argon2",
   "dep:actix-files",
   "dep:actix-web",
   "dep:leptos_actix",

@@ -1,10 +1,10 @@
 use crate::{
     common::{game_state::GameStateSignal, hex_stack::HexStack},
-    molecules::hex_stack::HexStack as HexStackView,
+    components::molecules::hex_stack::HexStack as HexStackView,
 };
 use hive_lib::{history::History, position::Position, state::State};
-use leptos::*;
 use leptos::logging::log;
+use leptos::*;
 
 #[component]
 pub fn HistoryPieces() -> impl IntoView {

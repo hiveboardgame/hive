@@ -1,3 +1,4 @@
+use crate::pages::{home::Home, play::PlayPage, user_get::UserGet, ws::WsPage};
 use common::game_state::GameStateSignal;
 use common::web_socket::provide_websocket;
 use leptos::logging::log;
@@ -5,17 +6,11 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 
-pub mod atoms;
 pub mod common;
+pub mod components;
 pub mod error_template;
-#[cfg(feature = "ssr")]
 pub mod functions;
-pub mod molecules;
-pub mod organisms;
 pub mod pages;
-use crate::pages::{
-    home::Home, play::PlayPage, user_create::UserCreate, user_get::UserGet, ws::WsPage,
-};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -43,7 +38,6 @@ pub fn App() -> impl IntoView {
                     <Route path="" view=|| view! { <Home/> }/>
                     <Route path="/play" view=|| view! { <PlayPage extend_tw_classes="h-full w-full"/> }/>
                     <Route path="/hws" view=|| view! { <WsPage/> }/>
-                    <Route path="/user" view=|| view! { <UserCreate/> }/>
                     <Route path="/user_get" view=|| view! { <UserGet/> }/>
                 </Routes>
             </main>

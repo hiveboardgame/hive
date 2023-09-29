@@ -1,5 +1,5 @@
-use crate::organisms::header::Header;
 use leptos::*;
+use crate::components::organisms::header::Header;
 
 #[component]
 pub fn Home(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
