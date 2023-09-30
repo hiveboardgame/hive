@@ -3,8 +3,8 @@ use actix::Actor;
 use actix_files::Files;
 use actix_identity::IdentityMiddleware;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-use actix_web::{cookie::Key, web, App, HttpServer};
 use actix_web::middleware::Compress;
+use actix_web::{cookie::Key, web, App, HttpServer};
 use app::*;
 use db_lib::get_pool;
 use leptos::*;
@@ -53,13 +53,16 @@ async fn main() -> std::io::Result<()> {
                 || view! { <App/> },
             )
             .app_data(web::Data::new(leptos_options.to_owned()))
-            .wrap(Compress::default())
+            //.wrap(Compress::default())
             // IdentityMiddleware needs to be first
             .wrap(IdentityMiddleware::default())
             // Now SessionMiddleware, this is a bit confusing but actix invokes middlesware in
             // reverse order of registration and the IdentityMiddleware is based on the
             // SessionMiddleware so SessionMiddleware needs to be present
-            .wrap(SessionMiddleware::new(CookieSessionStore::default(), key.clone()))
+            .wrap(SessionMiddleware::new(
+                CookieSessionStore::default(),
+                key.clone(),
+            ))
     })
     .bind(&addr)?
     .run()

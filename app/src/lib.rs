@@ -1,4 +1,7 @@
-use crate::pages::{home::Home, play::PlayPage, user_get::UserGet, ws::WsPage};
+use crate::pages::{
+    home::Home, play::PlayPage, sign_in::SignIn, sign_up::SignUp, user_account::UserAccount,
+    ws::WsPage, logout::LogOut,
+};
 use common::game_state::GameStateSignal;
 use common::web_socket::provide_websocket;
 use leptos::logging::log;
@@ -37,8 +40,11 @@ pub fn App() -> impl IntoView {
                 <Routes>
                     <Route path="" view=|| view! { <Home/> }/>
                     <Route path="/play" view=|| view! { <PlayPage extend_tw_classes="h-full w-full"/> }/>
+                    <Route path="/sign_up" view=|| view! { <SignUp/>}/>
+                    <Route path="/sign_in" view=|| view! { <SignIn/>}/>
+                    <Route path="/logout" view=|| view! { <LogOut/>}/>
                     <Route path="/hws" view=|| view! { <WsPage/> }/>
-                    <Route path="/user_get" view=|| view! { <UserGet/> }/>
+                    <Route path="/user_account" view=|| view! { <UserAccount/> }/>
                 </Routes>
             </main>
         </Router>
