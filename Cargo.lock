@@ -2993,6 +2993,7 @@ dependencies = [
  "leptos_actix",
  "log",
  "serde",
+ "sha2",
  "simple_logger",
  "tokio",
  "uuid",

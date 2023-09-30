@@ -28,7 +28,7 @@ pub fn App() -> impl IntoView {
     view! {
         // injects a stylesheet into the document <head>
         // id=leptos means cargo-leptos will hot-reload this stylesheet
-        <Stylesheet id="leptos" href="/pkg/start-actix-workspace.css"/>
+        <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
 
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
         // sets the document title

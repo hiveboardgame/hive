@@ -3,12 +3,13 @@ use actix::Actor;
 use actix_files::Files;
 use actix_identity::IdentityMiddleware;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-use actix_web::middleware::Compress;
+
 use actix_web::{cookie::Key, web, App, HttpServer};
 use app::*;
-use db_lib::get_pool;
+use db_lib::{config::DbConfig, get_pool};
 use leptos::*;
 use leptos_actix::{generate_route_list, LeptosRoutes};
+use sha2::*;
 
 mod lobby;
 mod messages;
@@ -24,13 +25,15 @@ async fn main() -> std::io::Result<()> {
     let routes = generate_route_list(|| view! { <App/> });
     let chat_server = Lobby::default().start();
 
-    // TODO FIXME
-    // let config = DbConfig::from_env().expect("Failed to load config from env");
-    // let session_secret = Key::from(config.session_secret.as_bytes());
-    // let secret_key = Key::from(session_secret.as_bytes());
-    let database_url = "postgres://hive-dev@localhost:/hive-local";
-    let pool = get_pool(database_url).await.expect("Failed to get pool");
-    let key = Key::generate();
+    let config = DbConfig::from_env().expect("Failed to load config from env");
+    let hash: [u8; 64] = Sha512::digest(&config.session_secret)
+        .as_slice()
+        .try_into()
+        .expect("Wrong size");
+    let cookie_key = Key::from(&hash);
+    let pool = get_pool(&config.database_url)
+        .await
+        .expect("Failed to get pool");
 
     HttpServer::new(move || {
         let leptos_options = &conf.leptos_options;
@@ -61,7 +64,7 @@ async fn main() -> std::io::Result<()> {
             // SessionMiddleware so SessionMiddleware needs to be present
             .wrap(SessionMiddleware::new(
                 CookieSessionStore::default(),
-                key.clone(),
+                cookie_key.clone(),
             ))
     })
     .bind(&addr)?
