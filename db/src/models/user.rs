@@ -2,12 +2,15 @@ use crate::{
     error::DbError,
     get_conn,
     models::{game::Game, game_user::GameUser, rating::NewRating},
-    schema::{games, ratings, users, users::dsl::users as users_table, users::dsl::username as username_field},
+    schema::{
+        games, ratings, users, users::dsl::username as username_field,
+        users::dsl::users as users_table,
+    },
     DbPool,
 };
 use diesel::{
-    query_dsl::BelongingToDsl, result::Error, Identifiable, Insertable, QueryDsl, Queryable,
-    SelectableHelper, ExpressionMethods
+    query_dsl::BelongingToDsl, result::Error, ExpressionMethods, Identifiable, Insertable,
+    QueryDsl, Queryable, SelectableHelper,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
@@ -61,7 +64,7 @@ pub struct User {
 
 impl User {
     pub fn new(uid: &str, username: &str, password: &str, email: &str) -> Result<User, DbError> {
-        validate_uid(uid)?;
+        //validate_uid(uid)?;
         validate_username(username)?;
         Ok(User {
             uid: uid.into(),
