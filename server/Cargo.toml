@@ -22,4 +22,5 @@ simple_logger.workspace = true
 tokio.workspace = true
 log.workspace = true
 uuid.workspace = true
+sha2.workspace = true
 serde = { workspace = true, features = ["derive"] }
