@@ -17,7 +17,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
                 format!("{} {}", classes, theme)
             }/>
             <Body class="h-screen w-screen bg-white dark:bg-gray-900 max-h-screen max-w-[100vw] overflow-clip"/>
-            <Stylesheet id="leptos" href="/pkg/start-actix-workspace.css"/>
+            <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
             <Header/>
             <main
             class="h-full w-full"
