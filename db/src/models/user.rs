@@ -3,7 +3,8 @@ use crate::{
     get_conn,
     models::{game::Game, game_user::GameUser, rating::NewRating},
     schema::{
-        games, ratings, users, users::dsl::username as username_field,
+        games, ratings, users, users::dsl::email as email_field,
+        users::dsl::password as password_field, users::dsl::username as username_field,
         users::dsl::users as users_table,
     },
     DbPool,
@@ -72,6 +73,36 @@ impl User {
             password: password.into(),
             email: email.into(),
         })
+    }
+
+    pub async fn edit(
+        &self,
+        new_password: &str,
+        new_email: &str,
+        pool: &DbPool,
+    ) -> Result<User, Error> {
+        let conn = &mut get_conn(pool).await?;
+        return match (new_password.is_empty(), new_email.is_empty()) {
+            (true, true) => users_table.find(&self.uid).first(conn).await,
+            (true, false) => {
+                diesel::update(self)
+                    .set(email_field.eq(new_email))
+                    .get_result(conn)
+                    .await
+            }
+            (false, true) => {
+                diesel::update(self)
+                    .set(password_field.eq(new_password))
+                    .get_result(conn)
+                    .await
+            }
+            (false, false) => {
+                diesel::update(self)
+                    .set((password_field.eq(new_password), email_field.eq(new_email)))
+                    .get_result(conn)
+                    .await
+            }
+        };
     }
 
     pub async fn find_by_uid(uid: &str, pool: &DbPool) -> Result<User, Error> {
