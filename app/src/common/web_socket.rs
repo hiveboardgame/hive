@@ -1,4 +1,3 @@
-use leptos::*;
 use leptos::logging::log;
 use wasm_bindgen::JsValue;
 use web_sys::WebSocket;
@@ -20,7 +19,7 @@ pub struct HiveWebSocket {
 impl HiveWebSocket {
     pub fn chat(&self) {
         if let Some(ws) = &self.ws {
-            ws.send_with_str("Hi from new WS");
+            let _ = ws.send_with_str("Hi from new WS");
         } else {
             log!("empty WS");
         }

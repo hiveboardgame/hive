@@ -1,10 +1,8 @@
-use crate::components::organisms::header::Header;
 use leptos::*;
 
 #[component]
 pub fn UserAccount(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
     view! {
-        <Header/>
         <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>
             <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
                 <div class="mb-4">
@@ -19,23 +17,23 @@ pub fn UserAccount(#[prop(default = "")] extend_tw_classes: &'static str) -> imp
                     />
                 </div>
                 <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="old password">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="old_password">
                         Current Password
                     </label>
                     <input
                         class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-                        id="password"
+                        id="old_password"
                         type="password"
                         placeholder="hunter2"
                     />
                 </div>
                 <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="new password">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="new_password">
                         New Password
                     </label>
                     <input
                         class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-                        id="password"
+                        id="new_password"
                         type="password"
                         placeholder="hunter2!?"
                     />
@@ -44,13 +42,13 @@ pub fn UserAccount(#[prop(default = "")] extend_tw_classes: &'static str) -> imp
                 <div class="mb-6">
                     <label
                         class="block text-gray-700 text-sm font-bold mb-2"
-                        for="confirm password"
+                        for="confirm_password"
                     >
                         Confirm Password
                     </label>
                     <input
                         class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-                        id="password"
+                        id="confirm_password"
                         type="password"
                         placeholder="hunter2!?"
                     />

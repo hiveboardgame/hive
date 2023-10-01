@@ -1,4 +1,4 @@
-use crate::{components::organisms::header::Header, functions::auth::login::Login};
+use crate::functions::auth::login::Login;
 use leptos::*;
 use leptos_router::ActionForm;
 
@@ -6,7 +6,6 @@ use leptos_router::ActionForm;
 pub fn SignIn(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
     let login_action = create_server_action::<Login>();
     view! {
-        <Header/>
         <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>
             <ActionForm action=login_action class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
                 <div class="mb-4">

@@ -19,19 +19,20 @@ use serde::{Deserialize, Serialize};
 const MAX_USERNAME_LENGTH: usize = 40;
 const VALID_USERNAME_CHARS: &str = "-_";
 
-fn valid_uid_char(c: char) -> bool {
-    c.is_ascii_alphanumeric()
-}
+//TODO do we still need to implement this?
+//fn valid_uid_char(c: char) -> bool {
+//    c.is_ascii_alphanumeric()
+//}
 
-fn validate_uid(uid: &str) -> Result<(), DbError> {
-    if !uid.chars().all(valid_uid_char) {
-        return Err(DbError::UserInputError {
-            field: "uid".into(),
-            reason: "invalid characters".into(),
-        });
-    }
-    Ok(())
-}
+//fn validate_uid(uid: &str) -> Result<(), DbError> {
+//    if !uid.chars().all(valid_uid_char) {
+//        return Err(DbError::UserInputError {
+//            field: "uid".into(),
+//            reason: "invalid characters".into(),
+//        });
+//    }
+//    Ok(())
+//}
 
 fn valid_username_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || VALID_USERNAME_CHARS.contains(c)

@@ -23,9 +23,9 @@ pub fn SideboardTabs(#[prop(default = "")] extend_tw_classes: &'static str) -> i
 
     view! {
         <div class=format!(
-            "col-start-9 col-span-2 border-2 row-span-4 row-start-2 {extend_tw_classes}"
+            "select-none w-full h-full col-start-9 col-span-2 border-2 row-span-4 row-start-2 min-h-fit {extend_tw_classes}"
         )>
-            <div class="select-none w-full h-full">
+
                 <div class="grid grid-cols-2 gap-1">
                     <button
                         class=move || format!("hover:bg-blue-300 {}", button_color().0)
@@ -53,16 +53,21 @@ pub fn SideboardTabs(#[prop(default = "")] extend_tw_classes: &'static str) -> i
                     fallback=|| {
                         view! {
                             <div class="">
+                                <div>
+                                <p> White Name 8001 </p>
                                 <Reserve color=Color::White orientation=Orientation::Horizontal/>
+                                </div>
+                                <div>
+                                <p> Black Name 9001 </p>
                                 <Reserve color=Color::Black orientation=Orientation::Horizontal/>
+                                </div>
                             </div>
                         }
                     }
                 >
-
                     <History/>
                 </Show>
-            </div>
+
         </div>
     }
 }

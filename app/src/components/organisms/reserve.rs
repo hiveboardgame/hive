@@ -110,7 +110,7 @@ pub fn Reserve(
     };
 
     view! {
-        <svg viewBox="-50 -70 300 300" class=format!("{extend_tw_classes}") xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="-40 -55 270 150" class=format!("{extend_tw_classes}") xmlns="http://www.w3.org/2000/svg">
             <Svgs/>
             {pieces_view}
         </svg>

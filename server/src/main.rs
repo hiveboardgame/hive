@@ -3,7 +3,6 @@ use actix::Actor;
 use actix_files::Files;
 use actix_identity::IdentityMiddleware;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-
 use actix_web::{cookie::Key, web, App, HttpServer};
 use app::*;
 use db_lib::{config::DbConfig, get_pool};

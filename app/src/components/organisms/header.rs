@@ -1,10 +1,10 @@
-use crate::components::organisms::darkmode::DarkModeToggle;
+use crate::components::organisms::darkmode_toggle::DarkModeToggle;
 use leptos::*;
 
 #[component]
 pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
     view! {
-        <header class=format!("sticky top-0 flex justify-between {extend_tw_classes}")>
+        <header class=format!("w-full sticky top-0 flex justify-between {extend_tw_classes}")>
             <a href="/">
                 Home
             </a>
