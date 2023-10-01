@@ -1,4 +1,3 @@
-use crate::components::organisms::header::Header;
 use crate::functions::users::get::GetUser;
 use leptos::logging::log;
 use leptos::*;
@@ -20,7 +19,6 @@ pub fn UserGet() -> impl IntoView {
     };
 
     view! {
-        <Header/>
         <ActionForm action=get_user_action>
             <input type="submit" value="Get User"/>
         </ActionForm>

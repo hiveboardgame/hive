@@ -155,7 +155,7 @@ pub fn Board(
             class=if !overwrite_tw_classes.is_empty() {
                 overwrite_tw_classes.to_string()
             } else {
-                format!("col-span-8 row-span-6 {extend_tw_classes}")
+                format!("col-span-8 row-span-6 h-full w-full {extend_tw_classes}")
             }
         >
             <svg

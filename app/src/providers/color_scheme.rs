@@ -1,26 +1,5 @@
+use crate::functions::darkmode::ToggleDarkMode;
 use leptos::*;
-use leptos_meta::Meta;
-use leptos_router::ActionForm;
-
-#[server(ToggleDarkMode, "/api")]
-pub async fn toggle_dark_mode( prefers_dark: bool) -> Result<bool, ServerFnError> {
-    use actix_web::http::header::{HeaderMap, HeaderValue, SET_COOKIE};
-    use leptos_actix::{ResponseOptions, ResponseParts};
-
-    let response =
-        use_context::<ResponseOptions>().expect("to have leptos_actix::ResponseOptions provided");
-    let mut response_parts = ResponseParts::default();
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        SET_COOKIE,
-        HeaderValue::from_str(&format!("darkmode={prefers_dark}; Path=/"))
-            .expect("to create header value"),
-    );
-    response_parts.headers = headers;
-
-    response.overwrite(response_parts);
-    Ok(prefers_dark)
-}
 
 #[cfg(not(feature = "ssr"))]
 fn initial_prefers_dark() -> bool {
@@ -46,8 +25,12 @@ fn initial_prefers_dark() -> bool {
         .unwrap_or(false)
 }
 
-#[component]
-pub fn DarkModeToggle() -> impl IntoView {
+#[derive(Clone)]
+pub struct ColorScheme {
+    pub action: Action<ToggleDarkMode, Result<bool, ServerFnError>>,
+    pub prefers_dark: Signal<bool>,
+}
+pub fn provide_color_scheme() -> Signal<bool> {
     let initial = initial_prefers_dark();
 
     let toggle_dark_mode_action = create_server_action::<ToggleDarkMode>();
@@ -56,7 +39,7 @@ pub fn DarkModeToggle() -> impl IntoView {
     // value contains most recently-returned value
     let value = toggle_dark_mode_action.value();
 
-    let prefers_dark = move || {
+    let prefers_dark_fn = move || {
         match (input(), value()) {
             // if there's some current input, use that optimistically
             (Some(submission), _) => submission.prefers_dark,
@@ -66,21 +49,11 @@ pub fn DarkModeToggle() -> impl IntoView {
             _ => initial,
         }
     };
+    let prefers_dark = Signal::derive(prefers_dark_fn);
 
-    let color_scheme = move || {
-        if prefers_dark() {
-            "dark".to_string()
-        } else {
-            "light".to_string()
-        }
-    };
-
-    view! {
-        <Meta name="color-scheme" content=color_scheme/>
-        <ActionForm action=toggle_dark_mode_action>
-            <input type="hidden" name="prefers_dark" value=move || (!prefers_dark()).to_string()/>
-            <input type="submit" value=move || { if prefers_dark() { "🔆" } else { "🌙" } }/>
-
-        </ActionForm>
-    }
+    provide_context(ColorScheme {
+        action: toggle_dark_mode_action,
+        prefers_dark,
+    });
+    prefers_dark
 }
