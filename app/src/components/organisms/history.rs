@@ -135,7 +135,7 @@ pub fn History(#[prop(default = "")] extend_tw_classes: &'static str) -> impl In
             <For
                 each=history_moves
                 key=|a_move| (a_move.0)
-                view=move |a_move| {
+                children=move |a_move| {
                     view! { <HistoryMove turn=a_move.0 piece=a_move.1 position=a_move.2/> }
                 }
             />
