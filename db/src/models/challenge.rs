@@ -5,6 +5,7 @@ use chrono::prelude::*;
 use diesel::prelude::*;
 use diesel::result::Error;
 use diesel_async::RunQueryDsl;
+
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -38,22 +39,12 @@ pub struct Challenge {
 
 impl Challenge {
     pub async fn create(
-        challenger: &User,
         challenge_request: &NewChallenge,
         pool: &DbPool,
     ) -> Result<Challenge, Error> {
         let conn = &mut get_conn(pool).await?;
-        let new_challenge = NewChallenge {
-            challenger_uid: challenger.uid.to_string(),
-            color_choice: challenge_request.color_choice.to_string(),
-            game_type: challenge_request.game_type.to_string(),
-            rated: challenge_request.rated,
-            public: challenge_request.public,
-            tournament_queen_rule: challenge_request.tournament_queen_rule,
-            created_at: Utc::now(),
-        };
         diesel::insert_into(challenges::table)
-            .values(&new_challenge)
+            .values(challenge_request)
             .get_result(conn)
             .await
     }

@@ -1,4 +1,3 @@
-use leptos::ServerFnError;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -18,6 +17,8 @@ use db_lib::{
     models::{rating::Rating, user::User},
     DbPool,
 };
+#[cfg(feature = "ssr")]
+use leptos::*;
 #[cfg(feature = "ssr")]
 impl AccountResponse {
     pub async fn from_uid(uid: &str, pool: &DbPool) -> Result<Self, ServerFnError> {

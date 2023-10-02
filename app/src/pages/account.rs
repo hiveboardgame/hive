@@ -1,10 +1,13 @@
+use crate::functions::accounts::edit::EditAccount;
 use leptos::*;
+use leptos_router::ActionForm;
 
 #[component]
-pub fn UserAccount(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn Account(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
+    let account_action = create_server_action::<EditAccount>();
     view! {
         <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>
-            <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <ActionForm action=account_action class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
                         New Email
@@ -12,8 +15,9 @@ pub fn UserAccount(#[prop(default = "")] extend_tw_classes: &'static str) -> imp
                     <input
                         class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                         id="email"
+                        name="new_email"
                         type="email"
-                        placeholder="New Email"
+                        placeholder="New email"
                     />
                 </div>
                 <div class="mb-6">
@@ -23,8 +27,9 @@ pub fn UserAccount(#[prop(default = "")] extend_tw_classes: &'static str) -> imp
                     <input
                         class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
                         id="old_password"
+                        name="password"
                         type="password"
-                        placeholder="hunter2"
+                        placeholder="Current password"
                     />
                 </div>
                 <div class="mb-6">
@@ -33,9 +38,10 @@ pub fn UserAccount(#[prop(default = "")] extend_tw_classes: &'static str) -> imp
                     </label>
                     <input
                         class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+                        name="new_password"
                         id="new_password"
                         type="password"
-                        placeholder="hunter2!?"
+                        placeholder="New password"
                     />
                 </div>
 
@@ -49,20 +55,20 @@ pub fn UserAccount(#[prop(default = "")] extend_tw_classes: &'static str) -> imp
                     <input
                         class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
                         id="confirm_password"
+                        name="new_password_confirmation"
                         type="password"
-                        placeholder="hunter2!?"
+                        placeholder="New password (again)"
                     />
                 </div>
 
                 <div class="flex items-center justify-between">
-                    <button
+                    <input
+                        type="submit"
                         class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                        type="button"
-                    >
-                        Save Changes
-                    </button>
+                        value="Save"
+                    />
                 </div>
-            </form>
+            </ActionForm>
         </div>
     }
 }

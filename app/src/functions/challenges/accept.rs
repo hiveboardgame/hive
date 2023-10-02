@@ -1,21 +1,29 @@
-#[post("/game/challenge/{id}/accept")]
-pub async fn accept_game_challenge(
-    id: web::Path<Uuid>,
-    auth_user: AuthenticatedUser,
-    pool: web::Data<DbPool>,
-) -> Result<Json<GameStateResponse>, ServerError> {
-    let challenge = GameChallenge::get(&id, &pool).await?;
-    if challenge.challenger_uid == auth_user.uid {
+use leptos::*;
+use crate::functions::games::game_response::GameStateResponse;
+
+#[server(AcceptChallenge)]
+pub async fn accept_challenge(id: String) -> Result<GameStateResponse, ServerFnError> {
+    use db_lib::models::challenge::Challenge;
+    use crate::functions::auth::identity::identity;
+    use crate::functions::db::pool;
+    use crate::functions::challenges::challenge_response::ChallengeError;
+    use db_lib::models::{game::{NewGame, Game}, rating::Rating};
+    use uuid::Uuid;
+    let pool = pool()?;
+    let uid = identity()?.id()?;
+    let uuid = Uuid::parse_str(&id)?;
+    let challenge = Challenge::get(&uuid, &pool).await?;
+    if challenge.challenger_uid == uid {
         return Err(ChallengeError::OwnChallenge.into());
     }
     let (white_uid, black_uid) = match challenge.color_choice.to_lowercase().as_str() {
-        "black" => (auth_user.uid, challenge.challenger_uid.clone()),
-        "white" => (challenge.challenger_uid.clone(), auth_user.uid),
+        "black" => (uid, challenge.challenger_uid.clone()),
+        "white" => (challenge.challenger_uid.clone(), uid),
         _ => {
             if rand::random() {
-                (challenge.challenger_uid.clone(), auth_user.uid)
+                (challenge.challenger_uid.clone(), uid)
             } else {
-                (auth_user.uid, challenge.challenger_uid.clone())
+                (uid, challenge.challenger_uid.clone())
             }
         }
     };
@@ -36,6 +44,5 @@ pub async fn accept_game_challenge(
     };
     let game = Game::create(&new_game, &pool).await?;
     challenge.delete(&pool).await?;
-    let resp = GameStateResponse::new_from_db(&game, &pool).await?;
-    Ok(web::Json(resp))
+    GameStateResponse::new_from_db(&game, &pool).await
 }

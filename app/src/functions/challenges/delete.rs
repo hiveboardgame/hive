@@ -1,11 +1,19 @@
-#[delete("/game/challenge/{id}")]
-pub async fn delete_game_challenge(
-    id: web::Path<Uuid>,
-    auth_user: AuthenticatedUser,
-    pool: web::Data<DbPool>,
-) -> Result<HttpResponse, ServerError> {
-    let challenge = GameChallenge::get(&id, &pool).await?;
-    auth_user.authorize(&challenge.challenger_uid)?;
+use leptos::*;
+use uuid::Uuid;
+
+#[server(DeleteChallenge)]
+pub async fn delete_challenge(id: Uuid) -> Result<(), ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::models::challenge::Challenge;
+    let pool = pool()?;
+    use crate::functions::auth::identity::identity;
+    let user_id = identity()?.id()?;
+    let challenge = Challenge::get(&id, &pool).await?;
+    if challenge.challenger_uid != user_id {
+        return Err(ServerFnError::ServerError(String::from(
+            "Challenge can only be deleted by its creator",
+        )));
+    }
     challenge.delete(&pool).await?;
-    Ok(HttpResponse::NoContent().finish())
+    Ok(())
 }
