@@ -7,6 +7,7 @@ type Socket = Recipient<WsMessage>;
 
 #[derive(Debug)]
 pub struct Lobby {
+    #[allow(dead_code)]
     id: Uuid,
     sessions: HashMap<Uuid, Socket>,
     rooms: HashMap<Uuid, HashSet<Uuid>>,

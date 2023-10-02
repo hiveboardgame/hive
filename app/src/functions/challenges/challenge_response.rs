@@ -1,19 +1,29 @@
-#[derive(Error, Debug)]
+use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::str;
+use chrono::prelude::*;
+use thiserror::Error;
+
+use crate::functions::users::user_response::UserResponse;
+
+#[derive(Clone, Error, Debug)]
 pub enum ChallengeError {
     #[error("Couldn't find challenge creator (uid {0})")]
     MissingChallenger(String),
-    #[error("Players can't accept their own challenges!")]
+    #[error("You can't accept your own challenges!")]
     OwnChallenge,
+    #[error("\"(0)\" is not a valid color choice string")]
+    ColorChoiceError(String),
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub enum ColorChoice {
     White,
     Black,
     Random,
 }
 
-impl Display for ColorChoice {
+impl fmt::Display for ColorChoice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::White => write!(f, "White"),
@@ -23,90 +33,60 @@ impl Display for ColorChoice {
     }
 }
 
-impl FromStr for ColorChoice {
-    type Err = GameError;
+impl str::FromStr for ColorChoice {
+    type Err = ChallengeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "White" => Ok(ColorChoice::White),
             "Black" => Ok(ColorChoice::Black),
             "Random" => Ok(ColorChoice::Random),
-            _ => Err(GameError::ParsingError {
-                found: s.to_string(),
-                typ: "color choice string".to_string(),
-            }),
+            _ => Err(ChallengeError::ColorChoiceError(s.to_string())),
         }
     }
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct NewGameChallengeRequest {
-    // Whether this challenge should be listed publicly
-    pub public: bool,
-
-    // Whether the game will be rated
-    pub rated: bool,
-
-    // Whether the game follows the "tournament" rules, i.e. the queen
-    // cannot be played first.
-    pub tournament_queen_rule: bool,
-
-    // The challenger's color choice
-    pub color_choice: ColorChoice,
-
-    pub game_type: GameType,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct GameChallengeResponse {
-    pub id: Uuid,
-    pub challenger: User,
-    pub game_type: GameType,
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct ChallengeResponse {
+    pub id: String, //Uuid
+    pub challenger: UserResponse,
+    pub game_type: String,
     pub rated: bool,
     pub public: bool,
     pub tournament_queen_rule: bool,
-    pub color_choice: ColorChoice,
+    pub color_choice: String,
     pub created_at: DateTime<Utc>,
     pub challenger_rating: f64,
 }
 
-impl GameChallengeResponse {
-    pub async fn from_model(challenge: &GameChallenge, pool: &DbPool) -> Result<Self, ServerError> {
-        let challenger = match challenge.get_challenger(pool).await {
-            Ok(challenger) => challenger,
-            Err(diesel::result::Error::NotFound) => {
-                let uid = challenge.challenger_uid.clone();
-                return Err(ChallengeError::MissingChallenger(uid).into());
-            }
-            Err(err) => return Err(err.into()),
-        };
-        GameChallengeResponse::from_model_with_user(challenge, challenger, pool).await
+#[cfg(feature = "ssr")]
+use db_lib::{
+    models::{rating::Rating, user::User, challenge::Challenge},
+    DbPool,
+};
+#[cfg(feature = "ssr")]
+use leptos::*;
+#[cfg(feature = "ssr")]
+impl ChallengeResponse {
+    pub async fn from_model(challenge: &Challenge, pool: &DbPool) -> Result<Self, ServerFnError> {
+        let challenger = challenge.get_challenger(pool).await?;
+        ChallengeResponse::from_model_with_user(challenge, challenger, pool).await
     }
 
     pub async fn from_model_with_user(
-        challenge: &GameChallenge,
+        challenge: &Challenge,
         challenger: User,
         pool: &DbPool,
-    ) -> Result<Self, ServerError> {
-        let game_type: GameType = challenge
-            .game_type
-            .parse()
-            .map_err(ServerError::InternalGameError)?;
-        let color_choice: ColorChoice = challenge
-            .color_choice
-            .parse()
-            .map_err(ServerError::InternalGameError)?;
+    ) -> Result<Self, ServerFnError> {
         let challenger_rating = Rating::for_uid(&challenger.uid, pool).await?;
-        Ok(GameChallengeResponse {
-            id: challenge.id,
-            challenger,
-            game_type,
+        Ok(ChallengeResponse {
+            id: challenge.id.to_string(),
+            challenger: UserResponse::from_uid(&challenger.uid, pool).await?,
+            game_type: challenge.game_type.clone(),
             rated: challenge.rated,
             public: challenge.public,
             tournament_queen_rule: challenge.tournament_queen_rule,
-            color_choice,
+            color_choice: challenge.color_choice.clone(),
             created_at: challenge.created_at,
             challenger_rating: challenger_rating.rating,
         })

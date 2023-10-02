@@ -1,4 +1,3 @@
-use leptos::logging::log;
 use leptos::*;
 
 #[server(Signup, "/api")]
@@ -19,7 +18,6 @@ pub async fn signup(
     use rand_core::OsRng;
     use uuid::Uuid;
 
-    log!("We are in line 22");
     if password != password_confirmation {
         return Err(ServerFnError::ServerError(
             "Passwords don't match.".to_string(),
@@ -34,12 +32,9 @@ pub async fn signup(
         .map_err(|e| ServerFnError::ServerError(e.to_string()))?
         .to_string();
 
-    log!("We are in line 37");
     let uid = Uuid::new_v4().to_string();
     let user = User::new(&uid, &username, &hashed_password, &email)?;
-    log!("We are in line 40");
     user.insert(&pool).await?;
-    log!("We are in line 42");
     let user = User::find_by_uid(&user.uid, &pool).await?;
     let req = use_context::<actix_web::HttpRequest>()
         .ok_or("Failed to get HttpRequest")

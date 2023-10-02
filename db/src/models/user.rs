@@ -83,7 +83,7 @@ impl User {
         pool: &DbPool,
     ) -> Result<User, Error> {
         let conn = &mut get_conn(pool).await?;
-        return match (new_password.is_empty(), new_email.is_empty()) {
+        match (new_password.is_empty(), new_email.is_empty()) {
             (true, true) => users_table.find(&self.uid).first(conn).await,
             (true, false) => {
                 diesel::update(self)
@@ -103,7 +103,7 @@ impl User {
                     .get_result(conn)
                     .await
             }
-        };
+        }
     }
 
     pub async fn find_by_uid(uid: &str, pool: &DbPool) -> Result<User, Error> {

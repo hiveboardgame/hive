@@ -1,7 +1,7 @@
 use crate::components::layouts::base_layout::BaseLayout;
 use crate::pages::{
     home::Home, logout::LogOut, play::PlayPage, sign_in::SignIn, sign_up::SignUp,
-    user_account::UserAccount, ws::WsPage,
+    account::Account, ws::WsPage, challenge_create::ChallengeCreate,
 };
 use common::game_state::GameStateSignal;
 use common::web_socket::provide_websocket;
@@ -61,7 +61,8 @@ pub fn App() -> impl IntoView {
                     <Route path="/sign_in" view=|| view! { <SignIn/>}/>
                     <Route path="/logout" view=|| view! { <LogOut/>}/>
                     <Route path="/hws" view=|| view! { <WsPage/> }/>
-                    <Route path="/user_account" view=|| view! { <UserAccount/> }/>
+                    <Route path="/user_account" view=|| view! { <Account/> }/>
+                    <Route path="/create_challenge" view=|| view! { <ChallengeCreate/> }/>
                     </Route>
                 </Routes>
         </Router>

@@ -34,7 +34,7 @@ pub async fn edit_account(
             let parsed_hash = PasswordHash::new(&user.password)
                 .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
 
-            if let Err(_) = argon2.verify_password(password.as_bytes(), &parsed_hash) {
+            if argon2.verify_password(password.as_bytes(), &parsed_hash).is_err() {
                 return Err(ServerFnError::ServerError(
                     "Password does not match.".to_string(),
                 ));
