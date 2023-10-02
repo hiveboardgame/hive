@@ -1,7 +1,8 @@
+use crate::functions::accounts::account_response::AccountResponse;
 use leptos::*;
 
 #[server(Login, "/api")]
-pub async fn login(username: String, password: String) -> Result<(), ServerFnError> {
+pub async fn login(username: String, password: String) -> Result<AccountResponse, ServerFnError> {
     use crate::functions::db::pool;
     use actix_identity::Identity;
     use actix_web::HttpMessage;
@@ -23,7 +24,7 @@ pub async fn login(username: String, password: String) -> Result<(), ServerFnErr
                 .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
             Identity::login(&req.extensions(), user.uid.to_string()).unwrap();
             leptos_actix::redirect("/");
-            Ok(())
+            AccountResponse::from_uid(&user.uid, &pool).await
         }
         Err(_) => Err(ServerFnError::ServerError(
             "Password does not match.".to_string(),

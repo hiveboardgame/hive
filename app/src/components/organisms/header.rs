@@ -26,6 +26,9 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
             <a href="/user_account">
             User Account
             </a>
+            <a href="/create_challenge">
+            New Game
+            </a>
             <DarkModeToggle/>
         </header>
     }
