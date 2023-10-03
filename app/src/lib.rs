@@ -1,7 +1,7 @@
 use crate::components::layouts::base_layout::BaseLayout;
 use crate::pages::{
-    home::Home, logout::LogOut, play::PlayPage, sign_in::SignIn, sign_up::SignUp,
-    account::Account, ws::WsPage, challenge_create::ChallengeCreate, user_get::UserGet,
+    account::Account, challenge_create::ChallengeCreate, home::Home, logout::LogOut,
+    play::PlayPage, sign_in::SignIn, sign_up::SignUp, user_get::UserGet, ws::WsPage,
 };
 use common::game_state::GameStateSignal;
 use common::web_socket::provide_websocket;
@@ -9,7 +9,7 @@ use leptos::logging::log;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use providers::color_scheme::*;
+use providers::{auth_context::*, color_scheme::*};
 
 pub mod common;
 pub mod components;
@@ -20,8 +20,9 @@ pub mod providers;
 
 #[component]
 pub fn App() -> impl IntoView {
+    provide_auth();
+    provide_color_scheme();
     // Provides context that manages stylesheets, titles, meta tags, etc.
-    _ = provide_color_scheme();
     provide_meta_context();
     log!("Setting up game state");
     provide_context(create_rw_signal(GameStateSignal::new()));

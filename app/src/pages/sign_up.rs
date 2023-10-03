@@ -1,14 +1,14 @@
-use crate::functions::auth::signup::Signup;
+use crate::providers::auth_context::AuthContext;
 use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
 pub fn SignUp(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
-    let signup_action = create_server_action::<Signup>();
+    let auth_context = use_context::<AuthContext>().expect("Failed to get AuthContext");
     view! {
         //<Header/>
         <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>
-            <ActionForm action=signup_action class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <ActionForm action=auth_context.signup class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
                 //<div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">
                         Username

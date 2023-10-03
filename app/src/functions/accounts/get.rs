@@ -5,6 +5,7 @@ use leptos::*;
 pub async fn get_account() -> Result<AccountResponse, ServerFnError> {
     use crate::functions::auth::identity::identity;
     use crate::functions::db::pool;
+
     match identity() {
         Ok(identity) => {
             let uuid = identity.id().unwrap();
