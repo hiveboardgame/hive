@@ -1,9 +1,8 @@
 use crate::functions::games::game_response::GameStateResponse;
 use leptos::*;
-use uuid::Uuid;
 
 #[server]
-pub async fn accept_challenge(id: Uuid) -> Result<GameStateResponse, ServerFnError> {
+pub async fn accept_challenge(url: String) -> Result<GameStateResponse, ServerFnError> {
     use crate::functions::auth::identity::uuid;
     use crate::functions::challenges::challenge_response::ChallengeError;
     use crate::functions::db::pool;
@@ -14,18 +13,18 @@ pub async fn accept_challenge(id: Uuid) -> Result<GameStateResponse, ServerFnErr
     };
     let pool = pool()?;
     let uuid = uuid()?;
-    let challenge = Challenge::get(&uuid, &pool).await?;
-    if challenge.challenger_id == id {
+    let challenge = Challenge::find_by_url(&url, &pool).await?;
+    if challenge.challenger_id == uuid {
         return Err(ChallengeError::OwnChallenge.into());
     }
     let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
-        "black" => (id, challenge.challenger_id.clone()),
-        "white" => (challenge.challenger_id.clone(), id),
+        "black" => (uuid, challenge.challenger_id.clone()),
+        "white" => (challenge.challenger_id.clone(), uuid),
         _ => {
             if rand::random() {
-                (challenge.challenger_id.clone(), id)
+                (challenge.challenger_id.clone(), uuid)
             } else {
-                (id, challenge.challenger_id.clone())
+                (uuid, challenge.challenger_id.clone())
             }
         }
     };

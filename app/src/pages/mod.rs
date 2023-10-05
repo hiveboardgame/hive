@@ -1,5 +1,6 @@
 pub mod account;
 pub mod challenge_create;
+pub mod challenge_view;
 pub mod home;
 pub mod login;
 pub mod logout;

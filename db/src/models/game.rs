@@ -290,9 +290,14 @@ impl Game {
             .await
     }
 
-    pub async fn get(uuid: &Uuid, pool: &DbPool) -> Result<Game, Error> {
+    pub async fn find_by_uuid(uuid: &Uuid, pool: &DbPool) -> Result<Game, Error> {
         let conn = &mut get_conn(pool).await?;
         games::table.find(uuid).first(conn).await
+    }
+
+    pub async fn find_by_url(find_url: &str, pool: &DbPool) -> Result<Game, Error> {
+        let conn = &mut get_conn(pool).await?;
+        games::table.filter(url.eq(find_url)).first(conn).await
     }
 
     pub async fn delete(&self, pool: &DbPool) -> Result<(), Error> {

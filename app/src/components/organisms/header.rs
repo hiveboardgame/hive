@@ -50,7 +50,6 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
                         </Show>
                     }
                 }}
-
             </Transition>
             <DarkModeToggle/>
         </header>

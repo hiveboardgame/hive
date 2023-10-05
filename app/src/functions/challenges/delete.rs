@@ -8,7 +8,7 @@ pub async fn delete_challenge(id: Uuid) -> Result<(), ServerFnError> {
     let pool = pool()?;
     use crate::functions::auth::identity::uuid;
     let user_id = uuid()?;
-    let challenge = Challenge::get(&id, &pool).await?;
+    let challenge = Challenge::find_by_uuid(&id, &pool).await?;
     if challenge.challenger_id != user_id {
         return Err(ServerFnError::ServerError(String::from(
             "Challenge can only be deleted by its creator",
