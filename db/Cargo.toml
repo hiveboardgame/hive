@@ -19,6 +19,7 @@ diesel.workspace = true
 diesel-async.workspace = true
 diesel_migrations.workspace = true
 uuid.workspace = true
+nanoid.workspace = true
 dotenvy.workspace = true
 thiserror.workspace = true
 serde.workspace = true

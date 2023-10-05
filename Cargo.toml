@@ -39,6 +39,7 @@ diesel = { version = "2.1", features = ["postgres", "chrono", "uuid"] }
 diesel-async = { version = "0.4", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.1", features = ["postgres"]}
 uuid = { version = "1.4", features = ["v4", "wasm-bindgen", "serde"] }
+nanoid = "0.4"
 dotenvy = "0.15"
 lazy_static = "1.4"
 rand = "0.8"

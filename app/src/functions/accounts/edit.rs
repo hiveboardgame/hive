@@ -8,7 +8,7 @@ pub async fn edit_account(
     new_password_confirmation: String,
     password: String,
 ) -> Result<AccountResponse, ServerFnError> {
-    use crate::functions::auth::identity::identity;
+    use crate::functions::auth::identity::uuid;
     use crate::functions::db::pool;
     use argon2::{
         password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
@@ -25,33 +25,28 @@ pub async fn edit_account(
 
     let pool = pool()?;
 
-    match identity() {
-        Ok(identity) => {
-            let uid = identity.id().unwrap();
-            let user = User::find_by_uid(&uid, &pool).await?;
+    let uuid = uuid()?;
+    let user = User::find_by_uuid(&uuid, &pool).await?;
 
-            let argon2 = Argon2::default();
-            let parsed_hash = PasswordHash::new(&user.password)
-                .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
+    let argon2 = Argon2::default();
+    let parsed_hash =
+        PasswordHash::new(&user.password).map_err(|e| ServerFnError::ServerError(e.to_string()))?;
 
-            if argon2
-                .verify_password(password.as_bytes(), &parsed_hash)
-                .is_err()
-            {
-                return Err(ServerFnError::ServerError(
-                    "Password does not match.".to_string(),
-                ));
-            }
-
-            let salt = SaltString::generate(&mut OsRng);
-            let hashed_password = argon2
-                .hash_password(new_password.as_bytes(), &salt)
-                .map_err(|e| ServerFnError::ServerError(e.to_string()))?
-                .to_string();
-
-            user.edit(&hashed_password, &new_email, &pool).await?;
-            AccountResponse::from_uid(&user.uid, &pool).await
-        }
-        Err(e) => Err(e),
+    if argon2
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_err()
+    {
+        return Err(ServerFnError::ServerError(
+            "Password does not match.".to_string(),
+        ));
     }
+
+    let salt = SaltString::generate(&mut OsRng);
+    let hashed_password = argon2
+        .hash_password(new_password.as_bytes(), &salt)
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))?
+        .to_string();
+
+    user.edit(&hashed_password, &new_email, &pool).await?;
+    AccountResponse::from_uuid(&user.id, &pool).await
 }

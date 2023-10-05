@@ -13,12 +13,14 @@ use hive_lib::{
     color::Color, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
 };
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use std::str::FromStr;
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = games)]
 pub struct NewGame {
-    pub black_uid: String, // uid of user
+    pub url: String,
+    pub black_id: Uuid, // uid of user
     pub game_status: String,
     pub game_type: String,
     pub history: String,
@@ -26,7 +28,7 @@ pub struct NewGame {
     pub rated: bool,
     pub tournament_queen_rule: bool,
     pub turn: i32,
-    pub white_uid: String, // uid of user
+    pub white_id: Uuid, // uid of user
     pub white_rating: Option<f64>,
     pub black_rating: Option<f64>,
     pub white_rating_change: Option<f64>,
@@ -39,8 +41,9 @@ pub struct NewGame {
 #[diesel(primary_key(id))]
 #[diesel(table_name = games)]
 pub struct Game {
-    pub id: i32,
-    pub black_uid: String, // uid of user
+    pub id: Uuid,
+    pub url: String,
+    pub black_id: Uuid, // uid of user
     pub game_status: String,
     pub game_type: String,
     pub history: String, //"piece pos;piece pos;piece pos;"
@@ -48,7 +51,7 @@ pub struct Game {
     pub rated: bool,
     pub tournament_queen_rule: bool,
     pub turn: i32,
-    pub white_uid: String, // uid of user
+    pub white_id: Uuid, // uid of user
     pub white_rating: Option<f64>,
     pub black_rating: Option<f64>,
     pub white_rating_change: Option<f64>,
@@ -59,9 +62,9 @@ impl Game {
     pub async fn create(new_game: &NewGame, pool: &DbPool) -> Result<Game, Error> {
         let conn = &mut get_conn(pool).await?;
         let game: Game = new_game.insert_into(games::table).get_result(conn).await?;
-        let game_user_white = GameUser::new(game.id, game.white_uid.clone());
+        let game_user_white = GameUser::new(game.id, game.white_id);
         game_user_white.insert(pool).await?;
-        let game_user_black = GameUser::new(game.id, game.black_uid.clone());
+        let game_user_black = GameUser::new(game.id, game.black_id);
         game_user_black.insert(pool).await?;
         Ok(game)
     }
@@ -100,8 +103,8 @@ impl Game {
                             } else {
                                 Rating::update(
                                     self.rated,
-                                    self.white_uid.clone(),
-                                    self.black_uid.clone(),
+                                    self.white_id,
+                                    self.black_id,
                                     game_result,
                                     conn,
                                 )
@@ -206,8 +209,8 @@ impl Game {
                         GameStatus::Finished(game_result) => {
                             Rating::update(
                                 self.rated,
-                                self.white_uid.clone(),
-                                self.black_uid.clone(),
+                                self.white_id,
+                                self.black_id,
                                 game_result.clone(),
                                 conn,
                             )
@@ -251,8 +254,8 @@ impl Game {
                 async move {
                     let changes: Option<(f64, f64)> = Rating::update(
                         self.rated,
-                        self.white_uid.clone(),
-                        self.black_uid.clone(),
+                        self.white_id,
+                        self.black_id,
                         GameResult::Draw,
                         conn,
                     )
@@ -287,9 +290,9 @@ impl Game {
             .await
     }
 
-    pub async fn get(other_id: i32, pool: &DbPool) -> Result<Game, Error> {
+    pub async fn get(uuid: &Uuid, pool: &DbPool) -> Result<Game, Error> {
         let conn = &mut get_conn(pool).await?;
-        games::table.find(other_id).first(conn).await
+        games::table.find(uuid).first(conn).await
     }
 
     pub async fn delete(&self, pool: &DbPool) -> Result<(), Error> {

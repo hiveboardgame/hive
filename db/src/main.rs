@@ -1,5 +1,5 @@
 use db_lib::config::DbConfig;
-use db_lib::models::user::User;
+use db_lib::models::user::{User, NewUser};
 use db_lib::get_pool;
 
 #[tokio::main]
@@ -8,16 +8,9 @@ async fn main() {
     let pool = &get_pool(&config.database_url)
         .await
         .expect("Failed to get pool");
-    let uuid = "unique";
-    let user = User::new(uuid, "leex", "hunter2", "token").expect("Failed to make user");
-    user.insert(pool).await.expect("Failed to insert User");
+    let new_user = NewUser::new("leex", "hunter2", "leex").expect("Failed to make new_user");
+    let user = User::create(&new_user, pool).await.expect("Failed to create user");
     println!("{:?}", user);
-    let found = User::find_by_uid(uuid, pool)
-        .await
-        .expect("Couldn't find user");
-    println!("{:?}", found);
-    // let deleted = found.delete(pool).await.expect("Failed to delete user");
-    // println!("{:?}", deleted);
+    let deleted = user.delete(pool).await.expect("Failed to delete user");
+    println!("{:?}", deleted);
 }
-
-
