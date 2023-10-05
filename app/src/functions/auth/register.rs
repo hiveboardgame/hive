@@ -1,7 +1,7 @@
 use leptos::*;
 
-#[server(Signup, "/api")]
-pub async fn signup(
+#[server]
+pub async fn register(
     username: String,
     email: String,
     password: String,

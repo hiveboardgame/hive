@@ -1,20 +1,21 @@
 use crate::{
-    common::{game_state::GameStateSignal, hex::Direction, hex_stack::HexStack},
+    common::{hex::Direction, hex_stack::HexStack},
     components::molecules::hex_stack::HexStack as HexStackView,
+    providers::game_state::GameStateSignal,
 };
 use hive_lib::position::Position;
 use leptos::*;
 
 #[component]
 pub fn BoardPieces() -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
-        .expect("there to be a `GameState` signal provided");
+    let game_state_signal =
+        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
 
     // TODO get the BOARD_SIZE from board
 
     let board = move || {
         let mut board = Vec::new();
-        let game_state = game_state_signal.get().signal.get();
+        let game_state = game_state_signal.signal.get();
         let targets = game_state.target_positions;
         let last_move = game_state.state.board.last_move;
         let active_piece = (game_state.active, game_state.target_position);

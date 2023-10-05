@@ -8,7 +8,7 @@ pub enum PieceType {
     Covered,
     // not your turn
     Inactive,
-    // 
+    //
     #[default]
     Nope,
     // piece in reserve

@@ -1,4 +1,4 @@
-use crate::common::web_socket::use_websocket;
+use crate::providers::web_socket::use_websocket;
 use leptos::*;
 
 #[component]

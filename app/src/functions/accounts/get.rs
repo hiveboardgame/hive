@@ -1,7 +1,7 @@
 use crate::functions::accounts::account_response::AccountResponse;
 use leptos::*;
 
-#[server(GetAccount)]
+#[server]
 pub async fn get_account() -> Result<AccountResponse, ServerFnError> {
     use crate::functions::auth::identity::identity;
     use crate::functions::db::pool;

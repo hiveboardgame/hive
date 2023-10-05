@@ -1,7 +1,7 @@
 use leptos::*;
 use uuid::Uuid;
 
-#[server(DeleteChallenge)]
+#[server]
 pub async fn delete_challenge(id: Uuid) -> Result<(), ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::models::challenge::Challenge;

@@ -1,15 +1,16 @@
 use crate::components::layouts::base_layout::BaseLayout;
 use crate::pages::{
-    account::Account, challenge_create::ChallengeCreate, home::Home, logout::LogOut,
-    play::PlayPage, sign_in::SignIn, sign_up::SignUp, user_get::UserGet, ws::WsPage,
+    account::Account, challenge_create::ChallengeCreate, home::Home, login::Login, logout::Logout,
+    play::PlayPage, register::Register, user_get::UserGet, ws::WsPage,
 };
-use common::game_state::GameStateSignal;
-use common::web_socket::provide_websocket;
 use leptos::logging::log;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use providers::{auth_context::*, color_scheme::*};
+use providers::{
+    auth_context::provide_auth, color_scheme::provide_color_scheme, game_state::provide_game_state,
+    web_socket::provide_websocket,
+};
 
 pub mod common;
 pub mod components;
@@ -25,8 +26,7 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
     log!("Setting up game state");
-    provide_context(create_rw_signal(GameStateSignal::new()));
-
+    provide_game_state();
     let url = "ws://0.0.0.0:3000/ws/67e55044-10b1-426f-9247-bb680e5fe0c8";
     _ = provide_websocket(url);
 
@@ -58,9 +58,9 @@ pub fn App() -> impl IntoView {
                 >
                     <Route path="" view=|| view! { <Home/> }/>
                     <Route path="/play" view=|| view! { <PlayPage/> }/>
-                    <Route path="/sign_up" view=|| view! { <SignUp/>}/>
-                    <Route path="/sign_in" view=|| view! { <SignIn/>}/>
-                    <Route path="/logout" view=|| view! { <LogOut/>}/>
+                    <Route path="/register" view=|| view! { <Register/>}/>
+                    <Route path="/login" view=|| view! { <Login/>}/>
+                    <Route path="/logout" view=|| view! { <Logout/>}/>
                     <Route path="/hws" view=|| view! { <WsPage/> }/>
                     <Route path="/user_account" view=|| view! { <Account/> }/>
                     <Route path="/get_user" view=|| view! { <UserGet/> }/>

@@ -1,6 +1,6 @@
 use crate::{
-    common::{game_state::GameStateSignal, hex_stack::HexStack},
-    components::molecules::hex_stack::HexStack as HexStackView,
+    common::hex_stack::HexStack, components::molecules::hex_stack::HexStack as HexStackView,
+    providers::game_state::GameStateSignal,
 };
 use hive_lib::{history::History, position::Position, state::State};
 use leptos::logging::log;
@@ -8,12 +8,12 @@ use leptos::*;
 
 #[component]
 pub fn HistoryPieces() -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
-        .expect("there to be a `GameState` signal provided");
+    let game_state_signal =
+        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
 
     let history_pieces = move || {
         let mut history_pieces = Vec::new();
-        let game_state = game_state_signal.get().signal.get();
+        let game_state = game_state_signal.signal.get();
         let mut history = History::new();
         log!("history_turn: {:?}", game_state.history_turn);
         if let Some(turn) = game_state.history_turn {

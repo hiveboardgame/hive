@@ -1,6 +1,6 @@
 use hive_lib::{game_type::GameType, piece::Piece, position::Position, state::State};
-use leptos::*;
 use leptos::logging::log;
+use leptos::*;
 
 #[derive(Clone, Debug, Copy)]
 pub struct GameStateSignal {
@@ -210,4 +210,8 @@ impl GameState {
             self.history_turn = None;
         }
     }
+}
+
+pub fn provide_game_state() {
+    provide_context(GameStateSignal::new())
 }

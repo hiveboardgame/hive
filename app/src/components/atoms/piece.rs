@@ -1,4 +1,5 @@
-use crate::common::{game_state::GameStateSignal, piece_type::PieceType, svg_pos::SvgPos};
+use crate::common::{piece_type::PieceType, svg_pos::SvgPos};
+use crate::providers::game_state::GameStateSignal;
 use hive_lib::{bug::Bug, piece::Piece, position::Position};
 use leptos::logging::log;
 use leptos::*;
@@ -31,23 +32,22 @@ pub fn Piece(
         _ => "FF0000",
     });
 
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
-        .expect("there to be a `GameState` signal provided");
+    let mut game_state_signal =
+        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
 
     let onclick = move |_| {
-        let mut game_state = game_state_signal.get();
         match piece_type {
             PieceType::Board => {
                 log!("Board piece");
-                game_state.show_moves(piece.get(), position.get());
+                game_state_signal.show_moves(piece.get(), position.get());
             }
             PieceType::Reserve => {
                 log!("Reserve piece");
-                game_state.show_spawns(piece.get(), position.get());
+                game_state_signal.show_spawns(piece.get(), position.get());
             }
             PieceType::Spawn => {
                 log!("Spawning piece {}", piece.get());
-                game_state.play_active_piece();
+                game_state_signal.play_active_piece();
             }
             _ => log!("Piece is {}", piece_type),
         }

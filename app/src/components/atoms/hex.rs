@@ -1,6 +1,6 @@
 use crate::{
-    components::atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
     common::hex::{Hex, HexType},
+    components::atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
 };
 
 use leptos::*;

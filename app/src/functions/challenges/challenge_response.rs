@@ -1,7 +1,7 @@
+use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str;
-use chrono::prelude::*;
 use thiserror::Error;
 
 use crate::functions::users::user_response::UserResponse;
@@ -61,7 +61,7 @@ pub struct ChallengeResponse {
 
 #[cfg(feature = "ssr")]
 use db_lib::{
-    models::{rating::Rating, user::User, challenge::Challenge},
+    models::{challenge::Challenge, rating::Rating, user::User},
     DbPool,
 };
 #[cfg(feature = "ssr")]

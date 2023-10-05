@@ -2,7 +2,7 @@ use super::challenge_response::{ChallengeResponse, ColorChoice};
 use hive_lib::game_type::GameType;
 use leptos::*;
 
-#[server(CreateChallenge)]
+#[server]
 pub async fn create_challenge(
     public: bool,
     // Whether the game will be rated

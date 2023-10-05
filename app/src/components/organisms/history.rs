@@ -1,19 +1,18 @@
-use crate::common::game_state::GameStateSignal;
+use crate::providers::game_state::GameStateSignal;
 use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
 use leptos::*;
 
 #[component]
 pub fn HistoryMove(turn: usize, piece: String, position: String) -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
-        .expect("there to be a `GameState` signal provided");
+    let mut game_state_signal =
+        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
 
     let onclick = move |_| {
-        let mut game_state = game_state_signal.get();
-        game_state.show_history_turn(turn);
+        game_state_signal.show_history_turn(turn);
     };
     let get_class = move || {
         let mut class = "ml-3 hover:bg-blue-300 col-span-2 min-w-full";
-        if let Some(history_turn) = game_state_signal.get().signal.get().history_turn {
+        if let Some(history_turn) = game_state_signal.signal.get().history_turn {
             if turn == history_turn {
                 class = "ml-3 hover:bg-blue-300 col-span-2 bg-orange-300 min-w-full"
             }
@@ -29,13 +28,12 @@ pub fn HistoryMove(turn: usize, piece: String, position: String) -> impl IntoVie
 
 #[component]
 pub fn History(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
-        .expect("there to be a `GameState` signal provided");
+    let mut game_state_signal =
+        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
 
     let history_moves = move || {
         let mut his = Vec::new();
         for (i, (piece, pos)) in game_state_signal
-            .get()
             .signal
             .get()
             .state
@@ -55,18 +53,12 @@ pub fn History(#[prop(default = "")] extend_tw_classes: &'static str) -> impl In
 
     let is_finished = move || {
         matches!(
-            game_state_signal
-                .get_untracked()
-                .signal
-                .get()
-                .state
-                .game_status,
+            game_state_signal.signal.get().state.game_status,
             GameStatus::Finished(_)
         )
     };
 
     let game_result = move || match game_state_signal
-        .get_untracked()
         .signal
         .get_untracked()
         .state
@@ -80,19 +72,19 @@ pub fn History(#[prop(default = "")] extend_tw_classes: &'static str) -> impl In
     };
 
     let next = move |_| {
-        game_state_signal.get().next_history_turn();
+        game_state_signal.next_history_turn();
     };
 
     let previous = move |_| {
-        game_state_signal.get().previous_history_turn();
+        game_state_signal.previous_history_turn();
     };
 
     let first = move |_| {
-        game_state_signal.get().first_history_turn();
+        game_state_signal.first_history_turn();
     };
 
     let last = move |_| {
-        game_state_signal.get().view_history();
+        game_state_signal.view_history();
     };
 
     view! {
@@ -134,14 +126,15 @@ pub fn History(#[prop(default = "")] extend_tw_classes: &'static str) -> impl In
             </div>
             <For
                 each=history_moves
-                key=|a_move| (a_move.0)
-                children=move |a_move| {
-                    view! { <HistoryMove turn=a_move.0 piece=a_move.1 position=a_move.2/> }
-                }
-            />
+                key=|history_move| (history_move.0)
+                let:history_move
+
+            >
+            <HistoryMove turn=history_move.0 piece=history_move.1 position=history_move.2/>
+                </For>
 
             <Show when=is_finished fallback=|| {}>
-                <div class="col-span-4 text-center">{format!("{}", game_result())}</div>
+                <div class="col-span-4 text-center">{game_result().to_string()}</div>
             </Show>
         </div>
     }
