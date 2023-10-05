@@ -1,6 +1,6 @@
 use leptos::*;
 
-#[server(ToggleDarkMode, "/api")]
+#[server]
 pub async fn toggle_dark_mode(prefers_dark: bool) -> Result<bool, ServerFnError> {
     use actix_web::http::header::{HeaderMap, HeaderValue, SET_COOKIE};
     use leptos_actix::{ResponseOptions, ResponseParts};

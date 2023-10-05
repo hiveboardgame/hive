@@ -3,7 +3,7 @@ use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
-pub fn SignIn(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn Login(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
     let auth_context = use_context::<AuthContext>().expect("Failed to get AuthContext");
     view! {
         <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>

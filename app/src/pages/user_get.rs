@@ -6,13 +6,9 @@ use leptos_router::ActionForm;
 pub fn UserGet() -> impl IntoView {
     let get_user_action = create_server_action::<GetAccount>();
     let value = get_user_action.value();
-    let username = move || {
-        match value() {
-            Some(Ok(user)) => {
-                user.username
-            }
-            _ => String::from("None yet"),
-        }
+    let username = move || match value() {
+        Some(Ok(user)) => user.username,
+        _ => String::from("None yet"),
     };
 
     view! {

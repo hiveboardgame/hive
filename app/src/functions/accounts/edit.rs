@@ -1,7 +1,7 @@
 use super::account_response::AccountResponse;
 use leptos::*;
 
-#[server(EditAccount, "/api")]
+#[server]
 pub async fn edit_account(
     new_email: String,
     new_password: String,
@@ -34,7 +34,10 @@ pub async fn edit_account(
             let parsed_hash = PasswordHash::new(&user.password)
                 .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
 
-            if argon2.verify_password(password.as_bytes(), &parsed_hash).is_err() {
+            if argon2
+                .verify_password(password.as_bytes(), &parsed_hash)
+                .is_err()
+            {
                 return Err(ServerFnError::ServerError(
                     "Password does not match.".to_string(),
                 ));

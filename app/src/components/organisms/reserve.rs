@@ -1,10 +1,10 @@
 use crate::common::{
-    game_state::GameStateSignal,
     hex::{Hex, HexType},
     hex_stack::HexStack,
     piece_type::PieceType,
 };
 use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
+use crate::providers::game_state::GameStateSignal;
 use hive_lib::bug_stack::BugStack;
 use hive_lib::{bug::Bug, color::Color, piece::Piece, position::Position, state::State};
 use leptos::*;
@@ -40,11 +40,11 @@ pub fn Reserve(
     orientation: Orientation,
     #[prop(default = "")] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
-        .expect("there to be a `GameState` signal provided");
+    let game_state_signal =
+        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
 
     let stacked_pieces = move || {
-        let game_state = game_state_signal.get().signal.get();
+        let game_state = game_state_signal.signal.get();
         let reserve = game_state
             .state
             .board

@@ -2,7 +2,7 @@ use leptos::*;
 
 #[component]
 pub fn Svgs() -> impl IntoView {
-    view! { 
+    view! {
         <svg visibility="hidden" xmlns="http://www.w3.org/2000/svg">
             <g id="1" transform="translate(1.0563118,1.5477791)">
                 // #3574a5

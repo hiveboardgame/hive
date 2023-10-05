@@ -1,6 +1,6 @@
 use leptos::*;
 
-#[server(DeleteAccount)]
+#[server]
 pub async fn delete_account() -> Result<(), ServerFnError> {
     use crate::functions::auth::{identity::identity, logout::logout};
     use crate::functions::db::pool;

@@ -1,7 +1,7 @@
 use super::challenge_response::ChallengeResponse;
 use leptos::*;
 
-#[server(GetPublicChallenges)]
+#[server]
 pub async fn get_public_challenges() -> Result<Vec<ChallengeResponse>, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::models::challenge::Challenge;

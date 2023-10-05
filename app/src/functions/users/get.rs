@@ -1,7 +1,7 @@
 use crate::functions::users::user_response::UserResponse;
 use leptos::*;
 
-#[server(GetUser)]
+#[server]
 pub async fn get_user(uid: String) -> Result<UserResponse, ServerFnError> {
     use crate::functions::db::pool;
     let pool = pool()?;

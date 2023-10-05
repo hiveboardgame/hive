@@ -1,20 +1,20 @@
 use crate::{
-    common::game_state::{GameStateSignal, View},
     components::organisms::{
         history::History,
         reserve::{Orientation, Reserve},
     },
+    providers::game_state::{GameStateSignal, View},
 };
 use hive_lib::color::Color;
 use leptos::*;
 
 #[component]
 pub fn SideboardTabs(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
-        .expect("there to be a `GameState` signal provided");
+    let mut game_state_signal =
+        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
 
     let button_color = move || {
-        if let View::History = game_state_signal.get().signal.get().view {
+        if let View::History = game_state_signal.signal.get().view {
             ("bg-inherit", "bg-slate-400")
         } else {
             ("bg-slate-400", "bg-inherit")
@@ -30,7 +30,7 @@ pub fn SideboardTabs(#[prop(default = "")] extend_tw_classes: &'static str) -> i
                     <button
                         class=move || format!("hover:bg-blue-300 {}", button_color().0)
                         on:click=move |_| {
-                            game_state_signal.get().view_game();
+                            game_state_signal.view_game();
                         }
                     >
 
@@ -40,7 +40,7 @@ pub fn SideboardTabs(#[prop(default = "")] extend_tw_classes: &'static str) -> i
                     <button
                         class=move || format!("hover:bg-blue-300 {}", button_color().1)
                         on:click=move |_| {
-                            game_state_signal.get().view_history();
+                            game_state_signal.view_history();
                         }
                     >
 
@@ -49,7 +49,7 @@ pub fn SideboardTabs(#[prop(default = "")] extend_tw_classes: &'static str) -> i
 
                 </div>
                 <Show
-                    when=move || View::History == game_state_signal.get().signal.get().view
+                    when=move || View::History == game_state_signal.signal.get().view
                     fallback=|| {
                         view! {
                             <div class="">

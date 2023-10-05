@@ -27,10 +27,10 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
                             when=move || user().is_some()
                             fallback=|| {
                                 view! {
-                                    <a href="/sign_up">
-                                        Signup
+                                    <a href="/register">
+                                        Register
                                     </a>
-                                    <a href="/sign_in">
+                                    <a href="/login">
                                         Login
                                     </a>
                                 }

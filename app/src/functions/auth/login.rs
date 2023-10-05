@@ -1,7 +1,7 @@
 use crate::functions::accounts::account_response::AccountResponse;
 use leptos::*;
 
-#[server(Login, "/api")]
+#[server]
 pub async fn login(username: String, password: String) -> Result<AccountResponse, ServerFnError> {
     use crate::functions::db::pool;
     use actix_identity::Identity;

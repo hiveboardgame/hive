@@ -1,11 +1,9 @@
-use crate::common::{
-    game_state::{GameStateSignal, View},
-    svg_pos::SvgPos,
-};
+use crate::common::svg_pos::SvgPos;
 use crate::components::{
     atoms::svgs::Svgs,
     molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
 };
+use crate::providers::game_state::{GameStateSignal, View};
 use hive_lib::position::Position;
 use leptos::ev::{contextmenu, pointerdown, pointerleave, pointermove, pointerup, wheel};
 use leptos::logging::*;
@@ -146,8 +144,8 @@ pub fn Board(
         });
     });
 
-    let game_state_signal = use_context::<RwSignal<GameStateSignal>>()
-        .expect("there to be a `GameState` signal provided");
+    let game_state_signal =
+        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
 
     view! {
         <div
@@ -168,8 +166,8 @@ pub fn Board(
                 <g transform=transform>
                     <Show
                         when=move || {
-                            View::History == game_state_signal.get().signal.get().view
-                                && !game_state_signal.get().signal.get().is_last_turn()
+                            View::History == game_state_signal.signal.get().view
+                                && !game_state_signal.signal.get().is_last_turn()
                         }
 
                         fallback=|| {

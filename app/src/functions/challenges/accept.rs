@@ -1,13 +1,16 @@
-use leptos::*;
 use crate::functions::games::game_response::GameStateResponse;
+use leptos::*;
 
-#[server(AcceptChallenge)]
+#[server]
 pub async fn accept_challenge(id: String) -> Result<GameStateResponse, ServerFnError> {
-    use db_lib::models::challenge::Challenge;
     use crate::functions::auth::identity::identity;
-    use crate::functions::db::pool;
     use crate::functions::challenges::challenge_response::ChallengeError;
-    use db_lib::models::{game::{NewGame, Game}, rating::Rating};
+    use crate::functions::db::pool;
+    use db_lib::models::challenge::Challenge;
+    use db_lib::models::{
+        game::{Game, NewGame},
+        rating::Rating,
+    };
     use uuid::Uuid;
     let pool = pool()?;
     let uid = identity()?.id()?;
