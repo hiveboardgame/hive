@@ -14,11 +14,12 @@ use skillratings::{
     glicko2::{glicko2, Glicko2Config, Glicko2Rating},
     Outcomes,
 };
+use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = ratings)]
 pub struct NewRating {
-    pub user_uid: String,
+    pub user_uid: Uuid,
     pub played: i64,
     pub won: i64,
     pub lost: i64,
@@ -29,9 +30,9 @@ pub struct NewRating {
 }
 
 impl NewRating {
-    pub fn for_uid(user: &str) -> Self {
+    pub fn for_uuid(uuid: &Uuid) -> Self {
         Self {
-            user_uid: user.to_string(),
+            user_uid: uuid.to_owned(),
             played: 0,
             won: 0,
             lost: 0,
@@ -60,7 +61,7 @@ impl NewRating {
 #[diesel(primary_key(id))]
 pub struct Rating {
     pub id: i32,
-    pub user_uid: String,
+    pub user_uid: Uuid,
     pub played: i64,
     pub won: i64,
     pub lost: i64,
@@ -71,15 +72,15 @@ pub struct Rating {
 }
 
 impl Rating {
-    pub async fn for_uid(uid: &str, pool: &DbPool) -> Result<Self, Error> {
+    pub async fn for_uuid(uuid: &Uuid, pool: &DbPool) -> Result<Self, Error> {
         let conn = &mut get_conn(pool).await?;
-        ratings_table.filter(user_uid.eq(uid)).first(conn).await
+        ratings_table.filter(user_uid.eq(uuid)).first(conn).await
     }
 
     pub async fn update(
         rated: bool,
-        white_id: String,
-        black_id: String,
+        white_id: Uuid,
+        black_id: Uuid,
         game_result: GameResult,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
     ) -> Result<Option<(f64, f64)>, Error> {

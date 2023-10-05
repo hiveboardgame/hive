@@ -1,6 +1,6 @@
 create table ratings (
   id int generated always as identity primary key,
-  user_uid text references users(uid) on delete cascade not null,
+  user_uid uuid references users(id) on delete cascade not null,
   -- only PLM will be rated (for now?)
   played int8 not null default 0,
   won int8 not null default 0,

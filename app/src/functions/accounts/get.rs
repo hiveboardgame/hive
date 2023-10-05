@@ -3,14 +3,9 @@ use leptos::*;
 
 #[server]
 pub async fn get_account() -> Result<AccountResponse, ServerFnError> {
-    use crate::functions::auth::identity::identity;
+    use crate::functions::auth::identity::uuid;
     use crate::functions::db::pool;
 
-    match identity() {
-        Ok(identity) => {
-            let uuid = identity.id().unwrap();
-            AccountResponse::from_uid(&uuid, &pool()?).await
-        }
-        Err(e) => Err(e),
-    }
+    let uuid = uuid()?;
+    AccountResponse::from_uuid(&uuid, &pool()?).await
 }

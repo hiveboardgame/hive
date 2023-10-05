@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct UserResponse {
     pub username: String,
-    pub uid: String,
+    pub uid: Uuid,
     pub rating: u64,
     pub played: i64,
     pub win: i64,
@@ -20,13 +21,13 @@ use db_lib::{
 use leptos::ServerFnError;
 #[cfg(feature = "ssr")]
 impl UserResponse {
-    pub async fn from_uid(uid: &str, pool: &DbPool) -> Result<Self, ServerFnError> {
-        let user = User::find_by_uid(uid, pool).await?;
-        let rating = Rating::for_uid(uid, pool).await?;
+    pub async fn from_uuid(id: &Uuid, pool: &DbPool) -> Result<Self, ServerFnError> {
+        let user = User::find_by_uuid(id, pool).await?;
+        let rating = Rating::for_uuid(id, pool).await?;
 
         Ok(Self {
             username: user.username,
-            uid: user.uid,
+            uid: user.id,
             rating: rating.rating.floor() as u64,
             played: rating.played,
             win: rating.won,

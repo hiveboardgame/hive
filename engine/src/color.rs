@@ -73,3 +73,35 @@ impl fmt::Display for Color {
         write!(f, "{color}")
     }
 }
+
+#[derive(Clone, Deserialize, Serialize, Debug)]
+pub enum ColorChoice {
+    White,
+    Black,
+    Random,
+}
+
+impl fmt::Display for ColorChoice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::White => write!(f, "White"),
+            Self::Black => write!(f, "Black"),
+            Self::Random => write!(f, "Random"),
+        }
+    }
+}
+
+impl FromStr for ColorChoice {
+    type Err = GameError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "White" => Ok(ColorChoice::White),
+            "Black" => Ok(ColorChoice::Black),
+            "Random" => Ok(ColorChoice::Random),
+            s => Err(GameError::InvalidColorChoice {
+                found: s.to_string(),
+            }),
+        }
+    }
+}

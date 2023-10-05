@@ -21,6 +21,8 @@ pub enum GameError {
     NoPgnFile,
     #[error("Invalid direction {direction:?}")]
     InvalidDirection { direction: String },
+    #[error("Invalid color choice {found:?}")]
+    InvalidColorChoice { found: String }
 }
 
 impl GameError {

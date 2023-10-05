@@ -22,9 +22,9 @@ pub async fn login(username: String, password: String) -> Result<AccountResponse
             let req = use_context::<actix_web::HttpRequest>()
                 .ok_or("Failed to get HttpRequest")
                 .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
-            Identity::login(&req.extensions(), user.uid.to_string()).unwrap();
+            Identity::login(&req.extensions(), user.id.to_string()).unwrap();
             leptos_actix::redirect("/");
-            AccountResponse::from_uid(&user.uid, &pool).await
+            AccountResponse::from_uuid(&user.id, &pool).await
         }
         Err(_) => Err(ServerFnError::ServerError(
             "Password does not match.".to_string(),

@@ -1,5 +1,6 @@
 use actix_identity::Identity;
 use leptos::*;
+use uuid::Uuid;
 
 pub fn identity() -> Result<Identity, ServerFnError> {
     use actix_identity::IdentityExt;
@@ -8,4 +9,11 @@ pub fn identity() -> Result<Identity, ServerFnError> {
         "Could not get request",
     )))?;
     IdentityExt::get_identity(&req).map_err(|e| ServerFnError::ServerError(e.to_string()))
+}
+
+pub fn uuid() -> Result<Uuid, ServerFnError> {
+    let id_str = identity()?.id()?;
+    Uuid::parse_str(&id_str).map_err(|e| {
+        ServerFnError::ServerError(format!("Could not retrieve Uuid from identity: {e}"))
+    })
 }

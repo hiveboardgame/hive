@@ -1,5 +1,4 @@
 use crate::functions::challenges::create::CreateChallenge;
-use crate::functions::challenges::get_public::GetPublicChallenges;
 use leptos::*;
 use leptos_router::ActionForm;
 

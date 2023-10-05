@@ -1,9 +1,10 @@
 use crate::functions::games::game_response::GameStateResponse;
 use leptos::*;
+use uuid::Uuid;
 
 #[server]
-pub async fn accept_challenge(id: String) -> Result<GameStateResponse, ServerFnError> {
-    use crate::functions::auth::identity::identity;
+pub async fn accept_challenge(id: Uuid) -> Result<GameStateResponse, ServerFnError> {
+    use crate::functions::auth::identity::uuid;
     use crate::functions::challenges::challenge_response::ChallengeError;
     use crate::functions::db::pool;
     use db_lib::models::challenge::Challenge;
@@ -11,28 +12,27 @@ pub async fn accept_challenge(id: String) -> Result<GameStateResponse, ServerFnE
         game::{Game, NewGame},
         rating::Rating,
     };
-    use uuid::Uuid;
     let pool = pool()?;
-    let uid = identity()?.id()?;
-    let uuid = Uuid::parse_str(&id)?;
+    let uuid = uuid()?;
     let challenge = Challenge::get(&uuid, &pool).await?;
-    if challenge.challenger_uid == uid {
+    if challenge.challenger_id == id {
         return Err(ChallengeError::OwnChallenge.into());
     }
-    let (white_uid, black_uid) = match challenge.color_choice.to_lowercase().as_str() {
-        "black" => (uid, challenge.challenger_uid.clone()),
-        "white" => (challenge.challenger_uid.clone(), uid),
+    let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
+        "black" => (id, challenge.challenger_id.clone()),
+        "white" => (challenge.challenger_id.clone(), id),
         _ => {
             if rand::random() {
-                (challenge.challenger_uid.clone(), uid)
+                (challenge.challenger_id.clone(), id)
             } else {
-                (uid, challenge.challenger_uid.clone())
+                (id, challenge.challenger_id.clone())
             }
         }
     };
     let new_game = NewGame {
-        white_uid: white_uid.clone(),
-        black_uid: black_uid.clone(),
+        white_id: white_id.clone(),
+        black_id: black_id.clone(),
+        url: challenge.url.to_owned(),
         game_status: "NotStarted".to_string(),
         game_type: challenge.game_type.clone(),
         history: String::new(),
@@ -40,8 +40,8 @@ pub async fn accept_challenge(id: String) -> Result<GameStateResponse, ServerFnE
         tournament_queen_rule: challenge.tournament_queen_rule,
         turn: 0,
         rated: challenge.rated,
-        white_rating: Some(Rating::for_uid(&white_uid, &pool).await?.rating),
-        black_rating: Some(Rating::for_uid(&black_uid, &pool).await?.rating),
+        white_rating: Some(Rating::for_uuid(&white_id, &pool).await?.rating),
+        black_rating: Some(Rating::for_uuid(&black_id, &pool).await?.rating),
         white_rating_change: None,
         black_rating_change: None,
     };
