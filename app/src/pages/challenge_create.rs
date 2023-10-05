@@ -5,6 +5,11 @@ use leptos_router::ActionForm;
 #[component]
 pub fn ChallengeCreate() -> impl IntoView {
     let create_challenge_action = create_server_action::<CreateChallenge>();
+    let value = create_challenge_action.value();
+    let challenge_url = move || match value() {
+        Some(Ok(challenge)) => challenge.url,
+        _ => String::from("None yet"),
+    };
     view! {
         <ActionForm action=create_challenge_action>
             <div>
@@ -43,5 +48,6 @@ pub fn ChallengeCreate() -> impl IntoView {
                 value="Create new challenge"
             />
         </ActionForm>
+        <p> Challenge Url: { challenge_url } </p>
     }
 }

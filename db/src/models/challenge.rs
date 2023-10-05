@@ -1,6 +1,5 @@
-use crate::models::user::User;
-use crate::schema::{challenges, users};
-use crate::{get_conn, DbPool};
+use crate::schema::challenges::url;
+use crate::{models::user::User, schema::{challenges, users}, get_conn, DbPool};
 use chrono::prelude::*;
 use diesel::prelude::*;
 use diesel::result::Error;
@@ -79,9 +78,14 @@ impl Challenge {
             .await
     }
 
-    pub async fn get(id: &Uuid, pool: &DbPool) -> Result<Challenge, Error> {
+    pub async fn find_by_uuid(id: &Uuid, pool: &DbPool) -> Result<Challenge, Error> {
         let conn = &mut get_conn(pool).await?;
         challenges::table.find(id).first(conn).await
+    }
+
+    pub async fn find_by_url(u: &str, pool: &DbPool) -> Result<Challenge, Error> {
+        let conn = &mut get_conn(pool).await?;
+        challenges::table.filter(url.eq(u)).first(conn).await
     }
 
     pub async fn get_challenger(&self, pool: &DbPool) -> Result<User, Error> {

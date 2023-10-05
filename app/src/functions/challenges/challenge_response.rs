@@ -18,6 +18,7 @@ pub enum ChallengeError {
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ChallengeResponse {
     pub id: Uuid,
+    pub url: String,
     pub challenger: UserResponse,
     pub game_type: String,
     pub rated: bool,
@@ -52,6 +53,7 @@ impl ChallengeResponse {
         let challenger_rating = Rating::for_uuid(&challenger.id, pool).await?;
         Ok(ChallengeResponse {
             id: challenge.id,
+            url: challenge.url.to_owned(),
             challenger: UserResponse::from_uuid(&challenger.id, pool).await?,
             game_type: challenge.game_type.clone(),
             rated: challenge.rated,
