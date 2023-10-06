@@ -38,7 +38,7 @@ pub fn ChallengeView() -> impl IntoView {
                         Err(_) => view! { <pre>"Error"</pre> }.into_view(),
                         Ok(challenge) =>
                             view! {
-                                <p> { challenge.challenger.username }  { challenge.challenger.rating } wants to play a {challenge.game_type } game with you! Do you accept? </p>
+                                <p> { challenge.challenger.username } rating:{ challenge.challenger.rating } wants to play a {challenge.game_type } game with you! Do you accept? </p>
                                 <div>
                                     <ActionForm action=accept_challenge>
                                         <input
