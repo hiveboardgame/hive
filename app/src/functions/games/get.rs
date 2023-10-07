@@ -12,10 +12,10 @@ pub async fn get_game_from_uuid(game_id: Uuid) -> Result<GameStateResponse, Serv
 }
 
 #[server]
-pub async fn get_game_from_url(url: String) -> Result<GameStateResponse, ServerFnError> {
+pub async fn get_game_from_nanoid(nanoid: String) -> Result<GameStateResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::models::game::Game;
     let pool = pool()?;
-    let game = Game::find_by_url(&url, &pool).await?;
+    let game = Game::find_by_nanoid(&nanoid, &pool).await?;
     GameStateResponse::new_from_db(&game, &pool).await
 }

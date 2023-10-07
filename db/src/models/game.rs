@@ -19,7 +19,7 @@ use std::str::FromStr;
 #[derive(Insertable, Debug)]
 #[diesel(table_name = games)]
 pub struct NewGame {
-    pub url: String,
+    pub nanoid: String,
     pub black_id: Uuid, // uid of user
     pub game_status: String,
     pub game_type: String,
@@ -42,7 +42,7 @@ pub struct NewGame {
 #[diesel(table_name = games)]
 pub struct Game {
     pub id: Uuid,
-    pub url: String,
+    pub nanoid: String,
     pub black_id: Uuid, // uid of user
     pub game_status: String,
     pub game_type: String,
@@ -295,9 +295,9 @@ impl Game {
         games::table.find(uuid).first(conn).await
     }
 
-    pub async fn find_by_url(find_url: &str, pool: &DbPool) -> Result<Game, Error> {
+    pub async fn find_by_nanoid(find_nanoid: &str, pool: &DbPool) -> Result<Game, Error> {
         let conn = &mut get_conn(pool).await?;
-        games::table.filter(url.eq(find_url)).first(conn).await
+        games::table.filter(nanoid.eq(find_nanoid)).first(conn).await
     }
 
     pub async fn delete(&self, pool: &DbPool) -> Result<(), Error> {

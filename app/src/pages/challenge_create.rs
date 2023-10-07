@@ -6,8 +6,8 @@ use leptos_router::ActionForm;
 pub fn ChallengeCreate() -> impl IntoView {
     let create_challenge_action = create_server_action::<CreateChallenge>();
     let value = create_challenge_action.value();
-    let challenge_url = move || match value() {
-        Some(Ok(challenge)) => challenge.url,
+    let challenge_nanoid = move || match value() {
+        Some(Ok(challenge)) => challenge.nanoid,
         _ => String::from("None yet"),
     };
     view! {
@@ -50,8 +50,8 @@ pub fn ChallengeCreate() -> impl IntoView {
         </ActionForm>
         <Show when=move || value().is_some() fallback=|| ()>
             <a href=format!(
-                "http://127.0.0.1:3000/challenge/{}", challenge_url()
-            )>Share this link {move || format!("http://127.0.0.1:3000/challenge/{}", challenge_url())}</a>
+                "http://127.0.0.1:3000/challenge/{}", challenge_nanoid()
+            )>Share this link {move || format!("http://127.0.0.1:3000/challenge/{}", challenge_nanoid())}</a>
         </Show>
     }
 }

@@ -2,7 +2,7 @@ use crate::functions::games::game_response::GameStateResponse;
 use leptos::*;
 
 #[server]
-pub async fn accept_challenge(url: String) -> Result<GameStateResponse, ServerFnError> {
+pub async fn accept_challenge(nanoid: String) -> Result<GameStateResponse, ServerFnError> {
     use crate::functions::auth::identity::uuid;
     use crate::functions::challenges::challenge_response::ChallengeError;
     use crate::functions::db::pool;
@@ -13,7 +13,7 @@ pub async fn accept_challenge(url: String) -> Result<GameStateResponse, ServerFn
     };
     let pool = pool()?;
     let uuid = uuid()?;
-    let challenge = Challenge::find_by_url(&url, &pool).await?;
+    let challenge = Challenge::find_by_nanoid(&nanoid, &pool).await?;
     if challenge.challenger_id == uuid {
         return Err(ChallengeError::OwnChallenge.into());
     }
@@ -31,7 +31,7 @@ pub async fn accept_challenge(url: String) -> Result<GameStateResponse, ServerFn
     let new_game = NewGame {
         white_id: white_id.clone(),
         black_id: black_id.clone(),
-        url: challenge.url.to_owned(),
+        nanoid: challenge.nanoid.to_owned(),
         game_status: "NotStarted".to_string(),
         game_type: challenge.game_type.clone(),
         history: String::new(),
