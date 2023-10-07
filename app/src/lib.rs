@@ -1,7 +1,7 @@
 use crate::components::layouts::base_layout::BaseLayout;
 use crate::pages::{
-    account::Account, challenge_create::ChallengeCreate, challenge_view::ChallengeView, home::Home, login::Login, logout::Logout,
-    play::PlayPage, register::Register, user_get::UserGet, ws::WsPage,
+    account::Account, challenge_create::ChallengeCreate, challenge_view::ChallengeView, home::Home,
+    login::Login, play::PlayPage, register::Register, user_get::UserGet, ws::WsPage,
 };
 use leptos::logging::log;
 use leptos::*;
@@ -27,7 +27,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
     log!("Setting up game state");
     provide_game_state();
-    let url = "ws://0.0.0.0:3000/ws/67e55044-10b1-426f-9247-bb680e5fe0c8";
+    let url = "ws://127.0.0.1:3000/ws/67e55044-10b1-426f-9247-bb680e5fe0c8";
     _ = provide_websocket(url);
 
     view! {
@@ -60,7 +60,6 @@ pub fn App() -> impl IntoView {
                     <Route path="/play" view=|| view! { <PlayPage/> }/>
                     <Route path="/register" view=|| view! { <Register/>}/>
                     <Route path="/login" view=|| view! { <Login/>}/>
-                    <Route path="/logout" view=|| view! { <Logout/>}/>
                     <Route path="/hws" view=|| view! { <WsPage/> }/>
                     <Route path="/user_account" view=|| view! { <Account/> }/>
                     <Route path="/get_user" view=|| view! { <UserGet/> }/>
