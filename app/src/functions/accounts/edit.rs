@@ -48,5 +48,6 @@ pub async fn edit_account(
         .to_string();
 
     user.edit(&hashed_password, &new_email, &pool).await?;
+    leptos_actix::redirect("/");
     AccountResponse::from_uuid(&user.id, &pool).await
 }

@@ -16,7 +16,7 @@ pub fn provide_auth() {
     let logout = create_server_action::<Logout>();
     let register = create_server_action::<Register>();
 
-    let user = create_resource(
+    let user = create_blocking_resource(
         move || {
             (
                 login.version().get(),
