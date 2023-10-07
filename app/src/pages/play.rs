@@ -13,14 +13,12 @@ pub fn Play(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoV
 
     // id: || -> usize
     let nanoid = move || {
-        move || {
-            params.with(|params| {
-                params
-                    .as_ref()
-                    .map(|params| params.nanoid.clone())
-                    .unwrap_or_default()
-            })
-        }
+        params.with(|params| {
+            params
+                .as_ref()
+                .map(|params| params.nanoid.clone())
+                .unwrap_or_default()
+        })
     };
 
     view! {

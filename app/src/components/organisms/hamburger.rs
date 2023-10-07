@@ -20,7 +20,13 @@ where
     let children = store_value(children);
     let fallback = store_value(fallback);
     let auth_context = use_context::<AuthContext>().expect("Failed to get AuthContext");
-    let username = auth_context.user.get().unwrap().unwrap().username;
+    let username = move || {
+        if let Some(Ok(user)) = auth_context.user.get() {
+            user.username
+        } else {
+            String::from("not logged in")
+        }
+    };
     view! {
             <div node_ref=target class="inline-block">
             <button on:click=move |_| visible.update(|b| b.0 = !b.0)
