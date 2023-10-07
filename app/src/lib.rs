@@ -1,7 +1,7 @@
 use crate::components::layouts::base_layout::BaseLayout;
 use crate::pages::{
     account::Account, challenge_create::ChallengeCreate, challenge_view::ChallengeView, home::Home,
-    login::Login, play::PlayPage, register::Register, user_get::UserGet, ws::WsPage,
+    login::Login, play::Play, register::Register, user_get::UserGet, ws::WsPage,
 };
 use leptos::logging::log;
 use leptos::*;
@@ -57,14 +57,14 @@ pub fn App() -> impl IntoView {
                     }
                 >
                     <Route path="" view=|| view! { <Home/> }/>
-                    <Route path="/play" view=|| view! { <PlayPage/> }/>
                     <Route path="/register" view=|| view! { <Register/>}/>
                     <Route path="/login" view=|| view! { <Login/>}/>
                     <Route path="/hws" view=|| view! { <WsPage/> }/>
-                    <Route path="/user_account" view=|| view! { <Account/> }/>
+                    <Route path="/account" view=|| view! { <Account/> }/>
                     <Route path="/get_user" view=|| view! { <UserGet/> }/>
-                    <Route path="/create_challenge" view=|| view! { <ChallengeCreate/> }/>
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
+                    <Route path="/challenges/create" view=|| view! { <ChallengeCreate/> }/>
+                    <Route path="/play/:nanoid" view=|| view! { <Play/> }/>
                     </Route>
                 </Routes>
         </Router>

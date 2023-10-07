@@ -16,9 +16,6 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
             <a href="/">
                 Home
             </a>
-            <a href="/play">
-                Play
-            </a>
             <a href="/hws">
                 WebSocket
             </a>
@@ -42,15 +39,14 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
                                 }
                             }
                         >
-
                             <Hamburger fallback= move || ()>
                                 <ul>
-                                    <a href="/create_challenge" on:click=onclick>
+                                    <a href="/challenges/create" on:click=onclick>
                                         New Game
                                     </a>
                                 </ul>
                                 <ul>
-                                    <a href="/user_account" on:click=onclick>
+                                    <a href="/account" on:click=onclick>
                                         User Account
                                     </a>
                                 </ul>
@@ -58,7 +54,6 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
                                     <Logout />
                                 </ul>
                             </Hamburger>
-
                         </Show>
                     }
                 }}

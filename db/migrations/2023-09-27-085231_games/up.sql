@@ -1,6 +1,6 @@
 create table games (
   id uuid default gen_random_uuid() primary key not null,
-  url text not null,
+  nanoid text not null,
   black_id uuid not null,
   game_status text not null,
   game_type text not null,

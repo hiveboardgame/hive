@@ -3,7 +3,7 @@
 diesel::table! {
     challenges (id) {
         id -> Uuid,
-        url -> Text,
+        nanoid -> Text,
         challenger_id -> Uuid,
         game_type -> Text,
         rated -> Bool,
@@ -17,7 +17,7 @@ diesel::table! {
 diesel::table! {
     games (id) {
         id -> Uuid,
-        url -> Text,
+        nanoid -> Text,
         black_id -> Uuid,
         game_status -> Text,
         game_type -> Text,

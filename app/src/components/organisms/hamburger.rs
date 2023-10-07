@@ -1,3 +1,4 @@
+use crate::providers::auth_context::AuthContext;
 use leptos::html::Div;
 use leptos::*;
 use leptos_use::on_click_outside;
@@ -18,11 +19,13 @@ where
     });
     let children = store_value(children);
     let fallback = store_value(fallback);
+    let auth_context = use_context::<AuthContext>().expect("Failed to get AuthContext");
+    let username = auth_context.user.get().unwrap().unwrap().username;
     view! {
             <div node_ref=target class="inline-block">
             <button on:click=move |_| visible.update(|b| b.0 = !b.0)
             class="bg-blue-500 text-white rounded-md px-2 py-1 m-2 hover:bg-blue-600">
-                Hamburger
+            { username }
             </button>
             <Show
                 when=move || visible.get().0

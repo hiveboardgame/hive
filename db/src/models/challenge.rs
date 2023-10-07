@@ -1,4 +1,4 @@
-use crate::schema::challenges::url;
+use crate::schema::challenges::nanoid as nanoid_field;
 use crate::{models::user::User, schema::{challenges, users}, get_conn, DbPool};
 use chrono::prelude::*;
 use diesel::prelude::*;
@@ -12,7 +12,7 @@ use uuid::Uuid;
 #[derive(Insertable, Debug)]
 #[diesel(table_name = challenges)]
 pub struct NewChallenge {
-    pub url: String,
+    pub nanoid: String,
     pub challenger_id: Uuid,
     pub game_type: String,
     pub rated: bool,
@@ -32,7 +32,7 @@ impl NewChallenge {
         color_choice: String,
     ) -> Self {
         Self {
-            url: nanoid!(10),
+            nanoid: nanoid!(10),
             challenger_id,
             game_type: game_type.to_string(),
             rated,
@@ -50,7 +50,7 @@ impl NewChallenge {
 #[diesel(table_name = challenges)]
 pub struct Challenge {
     pub id: Uuid,
-    pub url: String,
+    pub nanoid: String,
     pub challenger_id: Uuid,
     pub game_type: String,
     pub rated: bool,
@@ -83,9 +83,9 @@ impl Challenge {
         challenges::table.find(id).first(conn).await
     }
 
-    pub async fn find_by_url(u: &str, pool: &DbPool) -> Result<Challenge, Error> {
+    pub async fn find_by_nanoid(u: &str, pool: &DbPool) -> Result<Challenge, Error> {
         let conn = &mut get_conn(pool).await?;
-        challenges::table.filter(url.eq(u)).first(conn).await
+        challenges::table.filter(nanoid_field.eq(u)).first(conn).await
     }
 
     pub async fn get_challenger(&self, pool: &DbPool) -> Result<User, Error> {
