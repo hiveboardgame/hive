@@ -2915,6 +2915,8 @@ dependencies = [
  "actix-web-actors",
  "app",
  "db",
+ "diesel",
+ "diesel_migrations",
  "leptos",
  "leptos_actix",
  "log",

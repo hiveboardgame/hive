@@ -6,6 +6,9 @@ use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, web, App, HttpServer};
 use app::*;
 use db_lib::{config::DbConfig, get_pool};
+use diesel::pg::PgConnection;
+use diesel::Connection;
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use leptos::*;
 use leptos_actix::{generate_route_list, LeptosRoutes};
 use sha2::*;
@@ -25,6 +28,12 @@ async fn main() -> std::io::Result<()> {
     let chat_server = Lobby::default().start();
 
     let config = DbConfig::from_env().expect("Failed to load config from env");
+    pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");
+    let database_url = &config.database_url;
+    let mut conn = PgConnection::establish(database_url)
+        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
+    conn.run_pending_migrations(MIGRATIONS).unwrap();
+
     let hash: [u8; 64] = Sha512::digest(&config.session_secret)
         .as_slice()
         .try_into()

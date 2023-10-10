@@ -8,9 +8,7 @@ RUN tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
 RUN cp cargo-binstall /usr/local/cargo/bin
 
 # Install cargo-leptos
-# RUN cargo binstall cargo-leptos -y
-# for now we fall back to normal cargo install
-RUN cargo install --locked cargo-leptos
+RUN cargo binstall cargo-leptos -y
 
 # Add the WASM target
 RUN rustup target add wasm32-unknown-unknown
@@ -25,7 +23,7 @@ RUN cargo leptos build --release -vv
 
 FROM rustlang/rust:nightly-bullseye as runner
 # Copy the server binary to the /app directory
-COPY --from=builder /app/target/server/release/server /app/
+COPY --from=builder /app/target/release/server /app/
 # /target/site contains our JS/WASM/CSS, etc.
 COPY --from=builder /app/target/site /app/site
 # Copy Cargo.toml if it’s needed at runtime
@@ -38,5 +36,6 @@ ENV APP_ENVIRONMENT="production"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:8080"
 ENV LEPTOS_SITE_ROOT="site"
 EXPOSE 8080
+
 # Run the server
 CMD ["/app/server"]
