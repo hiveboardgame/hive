@@ -25,8 +25,6 @@ pub fn App() -> impl IntoView {
     _ = provide_websocket(url);
 
     view! {
-        // injects a stylesheet into the document <head>
-        // id=leptos means cargo-leptos will hot-reload this stylesheet
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
 
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -35,32 +33,33 @@ pub fn App() -> impl IntoView {
 
         // content for this welcome page
         <Router>
-                <Routes>
+            <Routes>
                 <Route
                     path=""
                     view=|| {
                         view! {
                             <BaseLayout>
-                                //<ErrorBoundary fallback=| errors| {
-                                //    view! {  <ErrorTemplate errors=errors/> }
-                                //}>
-                                    <Outlet/>
-                                //</ErrorBoundary>
+                                // <ErrorBoundary fallback=| errors| {
+                                // view! {  <ErrorTemplate errors=errors/> }
+                                // }>
+                                <Outlet/>
+                            // </ErrorBoundary>
                             </BaseLayout>
                         }
                     }
                 >
+
                     <Route path="" view=|| view! { <Home/> }/>
-                    <Route path="/register" view=|| view! { <Register/>}/>
-                    <Route path="/login" view=|| view! { <Login/>}/>
+                    <Route path="/register" view=|| view! { <Register/> }/>
+                    <Route path="/login" view=|| view! { <Login/> }/>
                     <Route path="/hws" view=|| view! { <WsPage/> }/>
                     <Route path="/account" view=|| view! { <Account/> }/>
                     <Route path="/get_user" view=|| view! { <UserGet/> }/>
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
                     <Route path="/challenges/create" view=|| view! { <ChallengeCreate/> }/>
                     <Route path="/play/:nanoid" view=|| view! { <Play/> }/>
-                    </Route>
-                </Routes>
+                </Route>
+            </Routes>
         </Router>
     }
 }

@@ -27,19 +27,22 @@ pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
                 };
                 user().expect("there to be a user").id != challenge.challenger.uid
             }
-            fallback=move || view!{
-            <div class="flex items-center">
-                <p>{&own_challenge_string}</p>
-                <ActionForm action=delete_challenge>
-                    <input type="hidden" name="id" value=stored_challenge().id.to_string()/>
-                    <input
-                        type="submit"
-                        value="Delete"
-                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
-                    />
-                </ActionForm>
-            </div>
-        }
+
+            fallback=move || {
+                view! {
+                    <div class="flex items-center">
+                        <p>{&own_challenge_string}</p>
+                        <ActionForm action=delete_challenge>
+                            <input type="hidden" name="id" value=stored_challenge().id.to_string()/>
+                            <input
+                                type="submit"
+                                value="Delete"
+                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                            />
+                        </ActionForm>
+                    </div>
+                }
+            }
         >
 
             <div class="flex items-center">
