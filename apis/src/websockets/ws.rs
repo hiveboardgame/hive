@@ -1,5 +1,4 @@
-use crate::lobby::Lobby;
-use crate::messages::{ClientActorMessage, Connect, Disconnect, WsMessage};
+use crate::websockets::{lobby::Lobby, messages::{ClientActorMessage, Connect, Disconnect, WsMessage}};
 use actix::{fut, ActorContext, ContextFutureSpawner, WrapFuture, ActorFutureExt};
 use actix::{Actor, Addr, Running, StreamHandler};
 use actix::{AsyncContext, Handler};

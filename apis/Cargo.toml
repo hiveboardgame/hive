@@ -1,0 +1,120 @@
+[package]
+name = "apis"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+actix-files = { workspace = true, optional = true }
+actix-identity = { workspace = true, optional = true }
+actix-rt = { workspace = true, optional = true }
+actix-session = { workspace = true, optional = true }
+actix-web = { workspace = true, optional = true, features = ["macros"] }
+actix-web-actors = { workspace = true, optional = true }
+actix = { workspace = true, optional = true }
+argon2 = { workspace = true, optional = true }
+cfg-if.workspace = true
+chrono.workspace = true
+console_error_panic_hook.workspace = true
+cookie.workspace = true
+db = { path = "../db", optional = true  }
+diesel = { workspace = true, optional = true }
+diesel_migrations = { workspace = true, optional = true }
+hive = { path = "../engine" }
+http.workspace = true
+leptos = { workspace = true }
+leptos-use.workspace = true
+leptos_actix = { workspace = true, optional = true }
+leptos_meta.workspace = true
+leptos_router.workspace = true
+log.workspace = true
+rand.workspace = true
+rand_core.workspace = true
+serde = { workspace = true, features = ["derive"] }
+sha2.workspace = true
+simple_logger.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, optional = true }
+uuid.workspace = true
+wasm-bindgen.workspace = true
+web-sys.workspace = true
+
+[features]
+csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr"]
+hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
+ssr = [
+  "dep:actix",
+  "dep:actix-files",
+  "dep:actix-rt",
+  "dep:actix-identity",
+  "dep:actix-session",
+  "dep:actix-web",
+  "dep:actix-web-actors",
+  "dep:argon2",
+  "dep:db",
+  "dep:diesel",
+  "dep:diesel_migrations",
+  "dep:leptos_actix",
+  "leptos/ssr",
+  "leptos-use/ssr",
+  "leptos_meta/ssr",
+  "leptos_router/ssr",
+]
+
+[package.metadata.leptos]
+# The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name   
+output-name = "HiveGame"
+# The site root folder is where cargo-leptos generate all output. WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
+site-root = "target/site"
+# The site-root relative folder where all compiled output (JS, WASM and CSS) is written
+# Defaults to pkg	
+site-pkg-dir = "pkg"
+# The tailwind input file.
+# Optional, Activates the tailwind build
+tailwind-input-file = "style/tailwind.css"
+# Assets source dir. All files found here will be copied and synchronized to site-root.
+# The assets-dir cannot have a sub directory with the same name/path as site-pkg-dir.
+#
+# Optional. Env: LEPTOS_ASSETS_DIR.
+assets-dir = "assets"
+# The IP and port (ex: 127.0.0.1:3000) where the server serves the content. Use it in your server setup.
+site-addr = "127.0.0.1:3000"
+# The port to use for automatic reload monitoring
+reload-port = 3001
+# [Optional] Command to use when running end2end tests. It will run in the end2end dir.
+#   [Windows] for non-WSL use "npx.cmd playwright test"
+#   This binary name can be checked in Powershell with Get-Command npx
+end2end-cmd = "npx playwright test"
+end2end-dir = "end2end"
+#  The browserlist query used for optimizing the CSS.
+browserquery = "defaults"
+# Set by cargo-leptos watch when building with that tool. Controls whether autoreload JS will be included in the head
+watch = false
+# The environment Leptos will run in, usually either "DEV" or "PROD"
+env = "DEV"
+# The features to use when compiling the bin target
+#
+# Optional. Can be over-ridden with the command line parameter --bin-features
+bin-features = ["ssr"]
+
+# If the --no-default-features flag should be used when compiling the bin target
+#
+# Optional. Defaults to false.
+bin-default-features = false
+
+# The features to use when compiling the lib target
+#
+# Optional. Can be over-ridden with the command line parameter --lib-features
+lib-features = ["hydrate"]
+
+# If the --no-default-features flag should be used when compiling the lib target
+#
+# Optional. Defaults to false.
+lib-default-features = false
+
+# The profile to use for the lib target when compiling for release
+#
+# Optional. Defaults to "release".
+lib-profile-release = "wasm-release"
