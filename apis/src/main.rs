@@ -1,31 +1,31 @@
-use crate::lobby::Lobby;
-use actix::Actor;
-use actix_files::Files;
-use actix_identity::IdentityMiddleware;
-use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-use actix_web::{cookie::Key, web, App, HttpServer};
-use app::*;
-use db_lib::{config::DbConfig, get_pool};
-use diesel::pg::PgConnection;
-use diesel::Connection;
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-use leptos::*;
-use leptos_actix::{generate_route_list, LeptosRoutes};
-use sha2::*;
+#[cfg(feature = "ssr")]
+pub mod websockets;
 
-mod lobby;
-mod messages;
-mod start_connection;
-mod ws;
-
+#[cfg(feature = "ssr")]
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
+    use actix::Actor;
+    use actix_files::Files;
+    use actix_identity::IdentityMiddleware;
+    use actix_session::{storage::CookieSessionStore, SessionMiddleware};
+    use actix_web::{cookie::Key, web, App, HttpServer};
+    use apis::app::App;
+    use crate::websockets::lobby::Lobby;
+    use crate::websockets::start_connection;
+    use db_lib::{config::DbConfig, get_pool};
+    use diesel::Connection;
+    use diesel::pg::PgConnection;
+    use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+    use leptos::*;
+    use leptos_actix::{generate_route_list, LeptosRoutes};
+    use sha2::*;
 
     let conf = get_configuration(None).await.unwrap();
     let addr = conf.leptos_options.site_addr;
-    let routes = generate_route_list(|| view! { <App/> });
+    let routes = generate_route_list(App);
     let chat_server = Lobby::default().start();
+
+    simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
 
     let config = DbConfig::from_env().expect("Failed to load config from env");
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");
@@ -43,6 +43,8 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Failed to get pool");
 
+    println!("listening on http://{}", &addr);
+
     HttpServer::new(move || {
         let leptos_options = &conf.leptos_options;
         let site_root = &leptos_options.site_root;
@@ -58,6 +60,7 @@ async fn main() -> std::io::Result<()> {
             // serve the favicon from /favicon.ico
             .service(favicon)
             .service(start_connection::start_connection)
+            // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(
                 leptos_options.to_owned(),
                 routes.to_owned(),
@@ -74,12 +77,14 @@ async fn main() -> std::io::Result<()> {
                 CookieSessionStore::default(),
                 cookie_key.clone(),
             ))
+        //.wrap(middleware::Compress::default())
     })
     .bind(&addr)?
     .run()
     .await
 }
 
+#[cfg(feature = "ssr")]
 #[actix_web::get("favicon.ico")]
 async fn favicon(
     leptos_options: actix_web::web::Data<leptos::LeptosOptions>,
@@ -89,4 +94,12 @@ async fn favicon(
     Ok(actix_files::NamedFile::open(format!(
         "{site_root}/favicon.ico"
     ))?)
+}
+
+#[cfg(not(any(feature = "ssr", feature = "csr")))]
+pub fn main() {
+    // no client-side main function
+    // unless we want this to work with e.g., Trunk for pure client-side testing
+    // see lib.rs for hydration function instead
+    // see optional feature `csr` instead
 }

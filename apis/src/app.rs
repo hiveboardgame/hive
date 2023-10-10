@@ -3,21 +3,15 @@ use crate::pages::{
     account::Account, challenge_create::ChallengeCreate, challenge_view::ChallengeView, home::Home,
     login::Login, play::Play, register::Register, user_get::UserGet, ws::WsPage,
 };
+
 use leptos::logging::log;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use providers::{
+use crate::providers::{
     auth_context::provide_auth, color_scheme::provide_color_scheme, game_state::provide_game_state,
     web_socket::provide_websocket,
 };
-
-pub mod common;
-pub mod components;
-pub mod error_template;
-pub mod functions;
-pub mod pages;
-pub mod providers;
 
 #[component]
 pub fn App() -> impl IntoView {
