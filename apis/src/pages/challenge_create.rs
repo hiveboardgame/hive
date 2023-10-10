@@ -50,8 +50,12 @@ pub fn ChallengeCreate() -> impl IntoView {
         </ActionForm>
         <Show when=move || value().is_some() fallback=|| ()>
             <a href=format!(
-                "http://127.0.0.1:3000/challenge/{}", challenge_nanoid()
-            )>Share this link {move || format!("http://127.0.0.1:3000/challenge/{}", challenge_nanoid())}</a>
+                "http://127.0.0.1:3000/challenge/{}",
+                challenge_nanoid(),
+            )>
+                Share this link
+                {move || format!("http://127.0.0.1:3000/challenge/{}", challenge_nanoid())}
+            </a>
         </Show>
     }
 }

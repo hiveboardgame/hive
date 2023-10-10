@@ -13,12 +13,8 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
     let onclick = move |_| visible.update(|b| *b = HamburgerDropdown(false));
     view! {
         <header class=format!("w-full sticky top-0 flex justify-between {extend_tw_classes}")>
-            <a href="/">
-                Home
-            </a>
-            <a href="/hws">
-                WebSocket
-            </a>
+            <a href="/">Home</a>
+            <a href="/hws">WebSocket</a>
             <Transition fallback=move || ()>
                 {move || {
                     let user = move || match auth_context.user.get() {
@@ -30,16 +26,13 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
                             when=move || user().is_some()
                             fallback=|| {
                                 view! {
-                                    <a href="/register">
-                                        Register
-                                    </a>
-                                    <a href="/login">
-                                        Login
-                                    </a>
+                                    <a href="/register">Register</a>
+                                    <a href="/login">Login</a>
                                 }
                             }
                         >
-                            <Hamburger fallback= move || ()>
+
+                            <Hamburger fallback=move || ()>
                                 <ul>
                                     <a href="/challenges/create" on:click=onclick>
                                         New Game
@@ -51,12 +44,13 @@ pub fn Header(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
                                     </a>
                                 </ul>
                                 <ul>
-                                    <Logout />
+                                    <Logout/>
                                 </ul>
                             </Hamburger>
                         </Show>
                     }
                 }}
+
             </Transition>
             <DarkModeToggle/>
         </header>

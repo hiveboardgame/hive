@@ -93,45 +93,37 @@ pub fn History(#[prop(default = "")] extend_tw_classes: &'static str) -> impl In
                 class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
                 on:click=first
             >
-                  First
+                First
             </button>
 
             <button
                 class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
                 on:click=previous
             >
-                  Previous
+                Previous
             </button>
 
             <button
                 class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
                 on:click=next
             >
-                  Next
+                Next
             </button>
 
             <button
                 class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
                 on:click=last
             >
-                  Last
+                Last
             </button>
 
-            <div class="ml-3 mt-6 mb-3 col-span-2">
-                  White
-            </div>
+            <div class="ml-3 mt-6 mb-3 col-span-2">White</div>
 
-            <div class="ml-3 mt-6 mb-3 col-span-2">
-                  Black
-            </div>
-            <For
-                each=history_moves
-                key=|history_move| (history_move.0)
-                let:history_move
+            <div class="ml-3 mt-6 mb-3 col-span-2">Black</div>
+            <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
-            >
-            <HistoryMove turn=history_move.0 piece=history_move.1 position=history_move.2/>
-                </For>
+                <HistoryMove turn=history_move.0 piece=history_move.1 position=history_move.2/>
+            </For>
 
             <Show when=is_finished fallback=|| {}>
                 <div class="col-span-4 text-center">{game_result().to_string()}</div>

@@ -12,7 +12,7 @@ pub fn Play(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoV
     let params = use_params::<PlayParams>();
 
     // id: || -> usize
-    let nanoid = move || {
+    let _nanoid = move || {
         params.with(|params| {
             params
                 .as_ref()

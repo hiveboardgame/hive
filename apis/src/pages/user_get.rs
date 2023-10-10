@@ -15,6 +15,6 @@ pub fn UserGet() -> impl IntoView {
         <ActionForm action=get_user_action>
             <input type="submit" value="Get User"/>
         </ActionForm>
-        <p> {username} </p>
+        <p>{username}</p>
     }
 }

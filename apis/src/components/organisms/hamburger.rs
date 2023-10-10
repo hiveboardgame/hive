@@ -28,10 +28,12 @@ where
         }
     };
     view! {
-            <div node_ref=target class="inline-block">
-            <button on:click=move |_| visible.update(|b| b.0 = !b.0)
-            class="bg-blue-500 text-white rounded-md px-2 py-1 m-2 hover:bg-blue-600">
-            { username }
+        <div node_ref=target class="inline-block">
+            <button
+                on:click=move |_| visible.update(|b| b.0 = !b.0)
+                class="bg-blue-500 text-white rounded-md px-2 py-1 m-2 hover:bg-blue-600"
+            >
+                {username}
             </button>
             <Show
                 when=move || visible.get().0

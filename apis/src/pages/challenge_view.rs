@@ -22,22 +22,28 @@ pub fn ChallengeView() -> impl IntoView {
         })
     };
 
-    let challenge = create_resource(move || nanoid(), get_challenge_by_nanoid);
+    let challenge = create_resource(nanoid, get_challenge_by_nanoid);
 
     view! {
         <div>
-            <Transition
-                fallback=move || view! { <p>"Loading..."</p> }
-            >
+            <Transition fallback=move || {
+                view! { <p>"Loading..."</p> }
+            }>
                 {move || {
-                    challenge.get().map(|data| match data {
-                        Err(_) => view! { <pre>"Error"</pre> }.into_view(),
-                        Ok(challenge) =>
-                            // if challenge.challenger.uuid == {}
-                            // TODO make this a delete action if it's the challenge owner
-                            view!{ <DisplayChallenge challenge=challenge/>},
-                    })
+                    challenge
+                        .get()
+                        .map(|data| match data {
+                            Err(_) => view! { <pre>"Error"</pre> }.into_view(),
+                            Ok(challenge) => {
+                                view! {
+                                    // if challenge.challenger.uuid == {}
+                                    // TODO make this a delete action if it's the challenge owner
+                                    <DisplayChallenge challenge=challenge/>
+                                }
+                            }
+                        })
                 }}
+
             </Transition>
         </div>
     }

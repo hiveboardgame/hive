@@ -156,6 +156,7 @@ pub fn Board(
                 format!("col-span-8 row-span-6 h-full w-full {extend_tw_classes}")
             }
         >
+
             <svg
                 viewBox=viewbox_string
                 class="touch-none"
