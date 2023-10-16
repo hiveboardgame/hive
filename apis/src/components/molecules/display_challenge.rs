@@ -25,7 +25,11 @@ pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
                     Some(Ok(user)) => Some(user),
                     _ => None,
                 };
-                user().expect("there to be a user").id != challenge.challenger.uid
+                if user().is_some() {
+                    user().expect("there to be a user").id != challenge.challenger.uid
+                } else {
+                    true
+                }
             }
 
             fallback=move || {
@@ -59,3 +63,4 @@ pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
         </Show>
     }
 }
+
