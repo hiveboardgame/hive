@@ -15,3 +15,6 @@ apis/playwright/.cache/
 engine/flamegraph.svg
 engine/log
 engine/perf.data
+
+#vscode settings
+.vscode/
