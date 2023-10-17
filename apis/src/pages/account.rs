@@ -3,7 +3,7 @@ use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
-pub fn Account(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let account_action = create_server_action::<EditAccount>();
     view! {
         <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>

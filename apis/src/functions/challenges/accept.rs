@@ -2,7 +2,7 @@ use crate::functions::games::game_response::GameStateResponse;
 use leptos::*;
 
 #[server]
-pub async fn accept_challenge(nanoid: String) -> Result<GameStateResponse, ServerFnError> {
+pub async fn accept_challenge(nanoid: String) -> Result<Option<GameStateResponse>, ServerFnError> {
     use crate::functions::auth::identity::uuid;
     use crate::functions::challenges::challenge_response::ChallengeError;
     use crate::functions::db::pool;
@@ -12,7 +12,14 @@ pub async fn accept_challenge(nanoid: String) -> Result<GameStateResponse, Serve
         rating::Rating,
     };
     let pool = pool()?;
-    let uuid = uuid()?;
+    let uuid = match uuid() {
+        Ok(uuid) => uuid,
+        Err(_) => {
+            leptos_actix::redirect("/login");
+            return Ok(None);
+        }
+    };
+    let play_link = &format!("/play/{}", &nanoid);
     let challenge = Challenge::find_by_nanoid(&nanoid, &pool).await?;
     if challenge.challenger_id == uuid {
         return Err(ChallengeError::OwnChallenge.into());
@@ -46,5 +53,7 @@ pub async fn accept_challenge(nanoid: String) -> Result<GameStateResponse, Serve
     };
     let game = Game::create(&new_game, &pool).await?;
     challenge.delete(&pool).await?;
-    GameStateResponse::new_from_db(&game, &pool).await
+    leptos_actix::redirect(play_link);
+    let game_state = GameStateResponse::new_from_db(&game, &pool).await?;
+    Ok(Some(game_state))
 }

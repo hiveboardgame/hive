@@ -22,7 +22,7 @@ pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
         <Show
             when=move || {
                 let user = move || match auth_context.user.get() {
-                    Some(Ok(user)) => Some(user),
+                    Some(Ok(Some(user))) => Some(user),
                     _ => None,
                 };
                 if user().is_some() {

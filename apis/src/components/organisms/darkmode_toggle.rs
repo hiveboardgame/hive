@@ -5,7 +5,7 @@ use leptos_router::ActionForm;
 
 #[component]
 pub fn DarkModeToggle() -> impl IntoView {
-    let color_scheme = use_context::<ColorScheme>().expect("Failed to find ColorSchemeProvider");
+    let color_scheme = expect_context::<ColorScheme>();
     let color_scheme_meta = move || {
         if (color_scheme.prefers_dark)() {
             "dark".to_string()

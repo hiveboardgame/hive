@@ -8,7 +8,7 @@ pub struct AuthContext {
     pub login: Action<Login, Result<AccountResponse, ServerFnError>>,
     pub logout: Action<Logout, Result<(), ServerFnError>>,
     pub register: Action<Register, Result<(), ServerFnError>>,
-    pub user: Resource<(usize, usize, usize), Result<AccountResponse, ServerFnError>>,
+    pub user: Resource<(usize, usize, usize), Result<Option<AccountResponse>, ServerFnError>>,
 }
 /// Get the current user and place it in Context
 pub fn provide_auth() {

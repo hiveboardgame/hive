@@ -8,7 +8,7 @@ struct PlayParams {
 }
 
 #[component]
-pub fn Play(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let params = use_params::<PlayParams>();
 
     // id: || -> usize
@@ -22,7 +22,7 @@ pub fn Play(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoV
     };
 
     view! {
-        <div class=format!("grid grid-cols-10 grid-rows-6 h-full w-full {extend_tw_classes}")>
+        <div class=format!("grid grid-cols-10 grid-rows-6 h-[90%] w-[98%] {extend_tw_classes}")>
             <Board/>
             <SideboardTabs extend_tw_classes="border-blue-200"/>
         </div>

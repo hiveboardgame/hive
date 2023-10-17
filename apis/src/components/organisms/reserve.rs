@@ -38,10 +38,9 @@ pub enum Orientation {
 pub fn Reserve(
     color: Color,
     orientation: Orientation,
-    #[prop(default = "")] extend_tw_classes: &'static str,
+    #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let game_state_signal =
-        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
+    let game_state_signal = expect_context::<GameStateSignal>();
 
     let stacked_pieces = move || {
         let game_state = game_state_signal.signal.get();

@@ -1,25 +1,27 @@
 use leptos::*;
 use leptos_meta::*;
 
-use crate::components::organisms::{hamburger::HamburgerDropdown, header::Header};
+use crate::components::organisms::header::Header;
 use crate::providers::color_scheme::ColorScheme;
 
 #[component]
 pub fn BaseLayout(children: Children) -> impl IntoView {
-    let color_scheme = use_context::<ColorScheme>().expect("Failed to find ColorScheme");
-    provide_context(create_rw_signal(HamburgerDropdown(false)));
+    let color_scheme = expect_context::<ColorScheme>();
     view! {
         <Html class=move || {
-            let classes = "";
+            let classes = "h-screen w-screen max-h-screen max-w-[100vw]";
             let theme = match color_scheme.prefers_dark.get() {
                 true => "dark",
                 false => "",
             };
             format!("{} {}", classes, theme)
         }/>
-        <Body class="h-screen w-screen bg-white dark:bg-gray-900 max-h-screen max-w-[100vw] overflow-clip"/>
+        <Body class="h-full w-full bg-white dark:bg-gray-900"/>
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
-        <Header/>
-        <main class="h-full w-full">{children()}</main>
+        <main class="h-full w-full">
+            <Header/>
+            {children()}
+        </main>
     }
 }
+
