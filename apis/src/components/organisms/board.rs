@@ -45,7 +45,7 @@ impl ViewBoxControls {
 
 #[component]
 pub fn Board(
-    #[prop(default = "")] extend_tw_classes: &'static str,
+    #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] overwrite_tw_classes: &'static str,
 ) -> impl IntoView {
     let is_panning = create_rw_signal(false);
@@ -144,8 +144,7 @@ pub fn Board(
         });
     });
 
-    let game_state_signal =
-        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
+    let game_state_signal = expect_context::<GameStateSignal>();
 
     view! {
         <div

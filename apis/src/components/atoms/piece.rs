@@ -32,25 +32,22 @@ pub fn Piece(
         _ => "FF0000",
     });
 
-    let mut game_state_signal =
-        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
+    let mut game_state_signal = expect_context::<GameStateSignal>();
 
-    let onclick = move |_| {
-        match piece_type {
-            PieceType::Board => {
-                log!("Board piece");
-                game_state_signal.show_moves(piece.get(), position.get());
-            }
-            PieceType::Reserve => {
-                log!("Reserve piece");
-                game_state_signal.show_spawns(piece.get(), position.get());
-            }
-            PieceType::Spawn => {
-                log!("Spawning piece {}", piece.get());
-                game_state_signal.play_active_piece();
-            }
-            _ => log!("Piece is {}", piece_type),
+    let onclick = move |_| match piece_type {
+        PieceType::Board => {
+            log!("Board piece");
+            game_state_signal.show_moves(piece.get(), position.get());
         }
+        PieceType::Reserve => {
+            log!("Reserve piece");
+            game_state_signal.show_spawns(piece.get(), position.get());
+        }
+        PieceType::Spawn => {
+            log!("Spawning piece {}", piece.get());
+            game_state_signal.play_active_piece();
+        }
+        _ => log!("Piece is {}", piece_type),
     };
 
     view! {

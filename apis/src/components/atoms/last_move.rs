@@ -6,7 +6,7 @@ use leptos::*;
 pub fn LastMove(
     position: Position,
     level: usize,
-    #[prop(default = "")] extend_tw_classes: &'static str,
+    #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     let center = SvgPos::center_for_level(position, level);
     let transform = format!("translate({},{})", center.0, center.1);

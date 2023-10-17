@@ -8,8 +8,7 @@ use leptos::*;
 
 #[component]
 pub fn BoardPieces() -> impl IntoView {
-    let game_state_signal =
-        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
+    let game_state_signal = expect_context::<GameStateSignal>();
 
     // TODO get the BOARD_SIZE from board
 

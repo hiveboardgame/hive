@@ -4,17 +4,16 @@ use leptos::*;
 
 #[component]
 pub fn HistoryMove(turn: usize, piece: String, position: String) -> impl IntoView {
-    let mut game_state_signal =
-        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
+    let mut game_state_signal = expect_context::<GameStateSignal>();
 
     let onclick = move |_| {
         game_state_signal.show_history_turn(turn);
     };
     let get_class = move || {
-        let mut class = "ml-3 hover:bg-blue-300 col-span-2 min-w-full";
+        let mut class = "ml-3 hover:bg-blue-300 col-span-2";
         if let Some(history_turn) = game_state_signal.signal.get().history_turn {
             if turn == history_turn {
-                class = "ml-3 hover:bg-blue-300 col-span-2 bg-orange-300 min-w-full"
+                class = "ml-3 hover:bg-blue-300 col-span-2 bg-orange-300"
             }
         }
         class
@@ -27,9 +26,8 @@ pub fn HistoryMove(turn: usize, piece: String, position: String) -> impl IntoVie
 }
 
 #[component]
-pub fn History(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
-    let mut game_state_signal =
-        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
+pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    let mut game_state_signal = expect_context::<GameStateSignal>();
 
     let history_moves = move || {
         let mut his = Vec::new();
@@ -87,39 +85,44 @@ pub fn History(#[prop(default = "")] extend_tw_classes: &'static str) -> impl In
         game_state_signal.view_history();
     };
 
+    let button_styles =
+        "hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
+    let white_black_styles = "ml-3 mt-6 mb-3 col-span-2";
     view! {
         <div class=format!("grid grid-cols-4 gap-1 {extend_tw_classes}")>
-            <button
-                class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
-                on:click=first
-            >
-                First
-            </button>
+            <div class="col-span-4 grid grid-cols-4 gap-1 sticky top-0 dark:bg-gray-900 bg-white">
+                <button
+                    class=button_styles
+                    on:click=first
+                >
+                    First
+                </button>
 
-            <button
-                class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
-                on:click=previous
-            >
-                Previous
-            </button>
+                <button
+                    class=button_styles
+                    on:click=previous
+                >
+                    Previous
+                </button>
 
-            <button
-                class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
-                on:click=next
-            >
-                Next
-            </button>
+                <button
+                    class=button_styles
+                    on:click=next
+                >
+                    Next
+                </button>
 
-            <button
-                class="hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg"
-                on:click=last
-            >
-                Last
-            </button>
+                <button
+                    class=button_styles
+                    on:click=last
+                >
+                    Last
+                </button>
 
-            <div class="ml-3 mt-6 mb-3 col-span-2">White</div>
+                <div class=white_black_styles>White</div>
 
-            <div class="ml-3 mt-6 mb-3 col-span-2">Black</div>
+                <div class=white_black_styles>Black</div>
+            </div>
             <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
                 <HistoryMove turn=history_move.0 piece=history_move.1 position=history_move.2/>

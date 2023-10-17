@@ -8,8 +8,7 @@ use leptos::*;
 
 #[component]
 pub fn HistoryPieces() -> impl IntoView {
-    let game_state_signal =
-        use_context::<GameStateSignal>().expect("there to be a `GameState` signal provided");
+    let game_state_signal = expect_context::<GameStateSignal>();
 
     let history_pieces = move || {
         let mut history_pieces = Vec::new();

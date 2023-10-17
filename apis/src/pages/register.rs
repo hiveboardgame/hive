@@ -3,8 +3,8 @@ use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
-pub fn Register(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
-    let auth_context = use_context::<AuthContext>().expect("Failed to get AuthContext");
+pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    let auth_context = expect_context::<AuthContext>();
     view! {
         <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>
             <ActionForm
@@ -66,11 +66,11 @@ pub fn Register(#[prop(default = "")] extend_tw_classes: &'static str) -> impl I
             </ActionForm>
 
             <a
-                class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
-                href="/sign_in"
-            >
-                Already have an account?
-            </a>
+            class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
+            href="/login"
+        >
+            Already have an account?
+        </a>
         </div>
     }
 }

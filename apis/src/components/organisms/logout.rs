@@ -1,16 +1,12 @@
-use crate::components::organisms::hamburger::HamburgerDropdown;
 use crate::providers::auth_context::AuthContext;
 use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
-pub fn Logout(#[prop(default = "")] extend_tw_classes: &'static str) -> impl IntoView {
-    let auth_context = use_context::<AuthContext>().expect("Failed to get AuthContext");
-    let visible = use_context::<RwSignal<HamburgerDropdown>>().expect("An open/closed context");
-    let onsubmit = move |_| visible.update(|b| *b = HamburgerDropdown(false));
+pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    let auth_context = expect_context::<AuthContext>();
     view! {
         <ActionForm
-            on:submit=onsubmit
             action=auth_context.logout
             class=format!("w-full shadow-md rounded {extend_tw_classes}")
         >
@@ -22,3 +18,4 @@ pub fn Logout(#[prop(default = "")] extend_tw_classes: &'static str) -> impl Int
         </ActionForm>
     }
 }
+

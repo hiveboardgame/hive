@@ -22,10 +22,14 @@ pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
         <Show
             when=move || {
                 let user = move || match auth_context.user.get() {
-                    Some(Ok(user)) => Some(user),
+                    Some(Ok(Some(user))) => Some(user),
                     _ => None,
                 };
-                user().expect("there to be a user").id != challenge.challenger.uid
+                if user().is_some() {
+                    user().expect("there to be a user").id != challenge.challenger.uid
+                } else {
+                    true
+                }
             }
 
             fallback=move || {

@@ -1,4 +1,4 @@
-use crate::functions::challenges::create::CreateChallenge;
+use crate::functions::{challenges::create::CreateChallenge, hostname::hostname_and_port};
 use leptos::*;
 use leptos_router::ActionForm;
 
@@ -10,6 +10,7 @@ pub fn ChallengeCreate() -> impl IntoView {
         Some(Ok(challenge)) => challenge.nanoid,
         _ => String::from("None yet"),
     };
+    let url = move || hostname_and_port().to_string();
     view! {
         <ActionForm action=create_challenge_action>
             <div>
@@ -50,12 +51,8 @@ pub fn ChallengeCreate() -> impl IntoView {
         </ActionForm>
         <Show when=move || value().is_some() fallback=|| ()>
             <a href=format!(
-                "http://127.0.0.1:3000/challenge/{}",
-                challenge_nanoid(),
-            )>
-                Share this link
-                {move || format!("http://127.0.0.1:3000/challenge/{}", challenge_nanoid())}
-            </a>
+                "/challenge/{}", challenge_nanoid()
+            )>{url()}/challenge/{challenge_nanoid()}</a>
         </Show>
     }
 }
