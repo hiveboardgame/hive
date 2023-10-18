@@ -4,7 +4,7 @@ use leptos::*;
 
 #[component]
 pub fn Lobby(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let challenges = create_resource(move || (), move |_| get_public_challenges());
+    let challenges = Resource::once(move || get_public_challenges());
     view! {
         <div class=format!("{extend_tw_classes}")>
             <button
@@ -13,27 +13,29 @@ pub fn Lobby(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
             >
                 Reload challenges
             </button>
-            <Transition fallback=move || ()>
+            <Transition>
                 {move || {
                     let challenges = move || match challenges.get() {
                         Some(Ok(challenge)) => Some(challenge),
                         _ => None,
                     };
                     view! {
-                        <Show when=move || challenges().is_some() fallback=|| {  }>
+                        <Show when=move || {
+                            challenges().is_some()
+                        }>
                             {if !challenges().unwrap().is_empty() {
                                 view! {
                                     <For
                                         each=move || {
                                             challenges().expect("There to be Some challenge")
                                         }
+
                                         key=|challenge| (challenge.id)
                                         let:challenge
                                     >
                                         <DisplayChallenge challenge=challenge/>
                                     </For>
                                 }
-                                    .into_view()
                             } else {
                                 view! {
                                     <p>
@@ -51,3 +53,4 @@ pub fn Lobby(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
         </div>
     }
 }
+
