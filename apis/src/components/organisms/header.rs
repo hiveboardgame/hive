@@ -13,7 +13,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
         <header class=format!("w-full sticky top-0 flex justify-between {extend_tw_classes}")>
             <a href="/">Home</a>
             <a href="/hws">WebSocket</a>
-            <Transition fallback=move || ()>
+            <Transition>
                 {move || {
                     let user = move || match auth_context.user.get() {
                         Some(Ok(Some(user))) => Some(user),
@@ -30,7 +30,15 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             }
                         >
 
-                            <Hamburger hamburger_show=hamburger_show fallback=move || ()>
+                            <Hamburger hamburger_show=hamburger_show>
+                                <ul>
+                                    <a
+                                        href=format!("/@/{}", user().unwrap().username)
+                                        on:click=move |_| onclick()
+                                    >
+                                        Profile
+                                    </a>
+                                </ul>
                                 <ul>
                                     <a href="/account" on:click=move |_| onclick()>
                                         Edit Account

@@ -1,7 +1,7 @@
 use crate::components::layouts::base_layout::BaseLayout;
 use crate::pages::{
     account::Account, challenge_view::ChallengeView, home::Home, login::Login, play::Play,
-    register::Register, user_get::UserGet, ws::WsPage,
+    profile_view::ProfileView, register::Register, user_get::UserGet, ws::WsPage,
 };
 
 use crate::providers::{
@@ -51,13 +51,14 @@ pub fn App() -> impl IntoView {
                 >
 
                     <Route path="" view=|| view! { <Home/> }/>
+                    <Route path="/@/:username" view=|| view! { <ProfileView/> }/>
                     <Route path="/register" view=|| view! { <Register/> }/>
                     <Route path="/login" view=|| view! { <Login/> }/>
                     <Route path="/hws" view=|| view! { <WsPage/> }/>
                     <Route path="/account" view=|| view! { <Account/> }/>
                     <Route path="/get_user" view=|| view! { <UserGet/> }/>
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
-                    <Route path="/play/:nanoid" view=|| view! { <Play/> }/>
+                    <Route path="/game/:nanoid" view=|| view! { <Play/> }/>
                 </Route>
             </Routes>
         </Router>

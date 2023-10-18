@@ -13,6 +13,7 @@ use std::collections::HashMap;
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameStateResponse {
     pub game_id: Uuid,
+    pub nanoid: String,
     pub turn: usize,
     pub game_status: GameStatus,
     pub game_type: GameType,
@@ -77,6 +78,7 @@ impl GameStateResponse {
         };
         Ok(Self {
             game_id: game.id,
+            nanoid: game.nanoid.clone(),
             game_status: GameStatus::from_str(&game.game_status)?,
             game_type: GameType::from_str(&game.game_type)?,
             tournament_queen_rule: state.tournament,

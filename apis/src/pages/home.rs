@@ -16,14 +16,14 @@ pub fn Home(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     };
     view! {
         <div class=format!("{extend_tw_classes}")>
-            <Transition fallback=move || ()>
+            <Transition>
                 {move || {
                     let user = move || match auth_context.user.get() {
                         Some(Ok(user)) => Some(user),
                         _ => None,
                     };
                     view! {
-                        <Show when=move || user().is_some() fallback=move || ()>
+                        <Show when=move || user().is_some()>
                             <button
                                 class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                                 on:click=move |_| open.update(move |b| *b = true)

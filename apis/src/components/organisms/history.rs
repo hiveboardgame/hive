@@ -91,31 +91,19 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     view! {
         <div class=format!("grid grid-cols-4 gap-1 {extend_tw_classes}")>
             <div class="col-span-4 grid grid-cols-4 gap-1 sticky top-0 dark:bg-gray-900 bg-white">
-                <button
-                    class=button_styles
-                    on:click=first
-                >
+                <button class=button_styles on:click=first>
                     First
                 </button>
 
-                <button
-                    class=button_styles
-                    on:click=previous
-                >
+                <button class=button_styles on:click=previous>
                     Previous
                 </button>
 
-                <button
-                    class=button_styles
-                    on:click=next
-                >
+                <button class=button_styles on:click=next>
                     Next
                 </button>
 
-                <button
-                    class=button_styles
-                    on:click=last
-                >
+                <button class=button_styles on:click=last>
                     Last
                 </button>
 
@@ -128,9 +116,10 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 <HistoryMove turn=history_move.0 piece=history_move.1 position=history_move.2/>
             </For>
 
-            <Show when=is_finished fallback=|| {}>
+            <Show when=is_finished>
                 <div class="col-span-4 text-center">{game_result().to_string()}</div>
             </Show>
         </div>
     }
 }
+

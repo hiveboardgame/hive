@@ -4,19 +4,10 @@ use leptos::*;
 use leptos_use::on_click_outside;
 
 #[component]
-pub fn Hamburger<F, IV>(
-    hamburger_show: RwSignal<bool>,
-    fallback: F,
-    children: ChildrenFn,
-) -> impl IntoView
-where
-    F: Fn() -> IV + 'static,
-    IV: IntoView,
-{
+pub fn Hamburger(hamburger_show: RwSignal<bool>, children: ChildrenFn) -> impl IntoView {
     let target = create_node_ref::<Div>();
     let _ = on_click_outside(target, move |_| hamburger_show.update(|b| *b = false));
     let children = store_value(children);
-    let fallback = store_value(fallback);
     let auth_context = expect_context::<AuthContext>();
     let username = move || {
         if let Some(Ok(Some(user))) = auth_context.user.get() {
@@ -33,10 +24,7 @@ where
             >
                 {username}
             </button>
-            <Show
-                when=move || hamburger_show()
-                fallback=move || fallback.with_value(|fallback| fallback())
-            >
+            <Show when=move || hamburger_show()>
                 <div class="block absolute bg-slate-400 text-black border border-gray-300 rounded-md">
                     {children.with_value(|children| children())}
                 </div>
