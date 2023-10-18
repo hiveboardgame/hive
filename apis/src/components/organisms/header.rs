@@ -32,11 +32,6 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
 
                             <Hamburger hamburger_show=hamburger_show fallback=move || ()>
                                 <ul>
-                                    <a href="/challenges/create" on:click=move |_| onclick()>
-                                        New Game
-                                    </a>
-                                </ul>
-                                <ul>
                                     <a href="/account" on:click=move |_| onclick()>
                                         Edit Account
                                     </a>

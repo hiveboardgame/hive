@@ -1,5 +1,5 @@
+use leptos_use::use_window;
 use std::fmt;
-use web_sys;
 
 pub struct Address {
     pub hostname: String,
@@ -23,11 +23,15 @@ impl fmt::Display for Address {
 }
 
 pub fn hostname_and_port() -> Address {
-    let window = web_sys::window().expect("no global `window` exists");
-    let location = window.location();
-    let hostname = location
-        .hostname()
-        .expect("location should have a hostname");
-    let port = location.port().ok().filter(|s| !s.is_empty());
-    Address::new(hostname, port)
+    let window = use_window();
+    if window.is_some() {
+        let location = window.as_ref().unwrap().location();
+        let hostname = location
+            .hostname()
+            .expect("location should have a hostname");
+        let port = location.port().ok().filter(|s| !s.is_empty());
+        return Address::new(hostname, port);
+    }
+    Address::new(String::new(), None)
 }
+
