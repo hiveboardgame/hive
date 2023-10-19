@@ -1,12 +1,15 @@
-use crate::functions::challenges::{get_public::get_public_challenges,challenge_response::ChallengeResponse};
+use crate::functions::challenges::{
+    challenge_response::ChallengeResponse, get_public::get_public_challenges,
+};
 use leptos::*;
 use leptos_query::*;
 use std::time::Duration;
 
-pub fn use_challenge_query() -> QueryResult<Result<Vec<ChallengeResponse>, ServerFnError>, impl RefetchFn> {
-    leptos_query::use_query(
+pub fn use_challenge_query(
+) -> QueryResult<Result<Vec<ChallengeResponse>, ServerFnError>, impl RefetchFn> {
+    use_query(
         || (),
-        |_| async move { get_public_challenges().await },
+        move |_| get_public_challenges(),
         QueryOptions {
             default_value: None,
             refetch_interval: Some(Duration::from_secs(15)),
@@ -16,5 +19,4 @@ pub fn use_challenge_query() -> QueryResult<Result<Vec<ChallengeResponse>, Serve
         },
     )
 }
-
 
