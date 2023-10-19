@@ -11,6 +11,7 @@ use crate::providers::{
 use leptos::logging::log;
 use leptos::*;
 use leptos_meta::*;
+use leptos_query::provide_query_client;
 use leptos_router::*;
 
 #[component]
@@ -19,6 +20,7 @@ pub fn App() -> impl IntoView {
     provide_color_scheme();
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
+    provide_query_client();
     log!("Setting up game state");
     provide_game_state();
     let url = "/ws/67e55044-10b1-426f-9247-bb680e5fe0c8";

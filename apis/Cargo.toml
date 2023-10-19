@@ -29,6 +29,7 @@ leptos-use.workspace = true
 leptos_actix = { workspace = true, optional = true }
 leptos_meta.workspace = true
 leptos_router.workspace = true
+leptos_query.workspace = true
 log.workspace = true
 rand.workspace = true
 rand_core.workspace = true
@@ -43,7 +44,7 @@ web-sys.workspace = true
 
 [features]
 csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr"]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
+hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_query/hydrate",]
 ssr = [
   "dep:actix",
   "dep:actix-files",
@@ -61,6 +62,7 @@ ssr = [
   "leptos-use/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",
+  "leptos_query/ssr",
 ]
 
 [package.metadata.leptos]

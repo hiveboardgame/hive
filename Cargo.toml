@@ -14,6 +14,7 @@ leptos-use = { version = "0.7" }
 leptos_meta = { version = "0.5", features = ["nightly"] }
 leptos_router = { version = "0.5", features = ["nightly"] }
 leptos_actix = { version = "0.5" }
+leptos_query = "0.3"
 actix-web = { version = "4",  features = ["macros"] }
 actix-files = { version = "0.6" }
 actix-web-actors = { version  = "4.2.0" }
