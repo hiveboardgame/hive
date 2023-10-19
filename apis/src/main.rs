@@ -68,7 +68,7 @@ async fn main() -> std::io::Result<()> {
             .leptos_routes(
                 leptos_options.to_owned(),
                 routes.to_owned(),
-                || view! { <App/> }
+                || view! { <App/> },
             )
             .app_data(web::Data::new(leptos_options.to_owned()))
             //.wrap(Compress::default())
@@ -107,7 +107,5 @@ pub fn main() {
     // see lib.rs for hydration function instead
     // see optional feature `csr` instead
 }
-
-
 
 

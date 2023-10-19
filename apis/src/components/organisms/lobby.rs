@@ -1,5 +1,4 @@
 use crate::components::molecules::display_challenge::DisplayChallenge;
-use crate::functions::challenges::get_public::get_public_challenges;
 use crate::providers::queries::use_challenge_query;
 use leptos::*;
 use leptos_query::QueryResult;
@@ -7,9 +6,9 @@ use leptos_query::QueryResult;
 #[component]
 pub fn Lobby(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let QueryResult { data, refetch, .. } = use_challenge_query();
-    //let data = Resource::once(move || get_public_challenges());
     view! {
         <div class=format!("{extend_tw_classes}")>
+            <button on:click=move |_| refetch()>Refetch</button>
             <Transition>
                 {move || {
                     let challenges = move || match data() {
