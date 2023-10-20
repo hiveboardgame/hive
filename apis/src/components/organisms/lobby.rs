@@ -5,10 +5,9 @@ use leptos_query::QueryResult;
 
 #[component]
 pub fn Lobby(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let QueryResult { data, refetch, .. } = use_challenge_query();
+    let QueryResult { data, .. } = use_challenge_query();
     view! {
         <div class=format!("{extend_tw_classes}")>
-            <button on:click=move |_| refetch()>Refetch</button>
             <Transition>
                 {move || {
                     let challenges = move || match data() {

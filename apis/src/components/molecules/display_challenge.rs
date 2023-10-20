@@ -5,10 +5,16 @@ use crate::{
     providers::auth_context::AuthContext,
 };
 use leptos::*;
+use leptos_query::use_query_client;
 use leptos_router::*;
+use web_sys::SubmitEvent;
 
 #[component]
 pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
+    let client = use_query_client();
+    //let onsubmit = move |_: SubmitEvent| {
+    //    client.invalidate_query::<(), Result<Vec<ChallengeResponse>, ServerFnError>>(());
+    //};
     let accept_challenge = create_server_action::<AcceptChallenge>();
     let delete_challenge = create_server_action::<DeleteChallenge>();
     let auth_context = expect_context::<AuthContext>();
