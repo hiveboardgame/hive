@@ -12,7 +12,9 @@ use leptos_router::*;
 pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
     let client = store_value(use_query_client());
     let onsubmit = move |_| {
-        client.with_value(|client| client.invalidate_query::<(), Result<Vec<ChallengeResponse>, ServerFnError>>(()));
+        client.with_value(|client| {
+            client.invalidate_query::<(), Result<Vec<ChallengeResponse>, ServerFnError>>(())
+        });
     };
     let accept_challenge = create_server_action::<AcceptChallenge>();
     let delete_challenge = create_server_action::<DeleteChallenge>();
