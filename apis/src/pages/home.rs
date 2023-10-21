@@ -7,18 +7,17 @@ use leptos_query::use_query_client;
 
 #[component]
 pub fn Home(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let client = use_query_client();
     let open = create_rw_signal(false);
     let auth_context = expect_context::<AuthContext>();
     let dialog_el = create_node_ref::<Dialog>();
-    let onsubmit = move || {
-        client.invalidate_query::<(), Result<Vec<ChallengeResponse>, ServerFnError>>(());
+    let client = store_value(use_query_client());
+    let onsubmit = move |_| {
+        client.with_value(|client| client.invalidate_query::<(), Result<Vec<ChallengeResponse>, ServerFnError>>(()));
         dialog_el
             .get_untracked()
             .expect("dialog to have been created")
             .close();
     };
-    let stored_on_submit = store_value(onsubmit);
     view! {
         <div class=format!("{extend_tw_classes}")>
             <Transition>
@@ -36,7 +35,7 @@ pub fn Home(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                 Create New Game
                             </button>
                             <Modal open=open dialog_el=dialog_el>
-                                <ChallengeCreate on:submit=move |_| stored_on_submit()()/>
+                                <ChallengeCreate on:submit=onsubmit/>
                             </Modal>
                         </Show>
                     }

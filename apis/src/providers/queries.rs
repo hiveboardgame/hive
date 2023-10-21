@@ -12,7 +12,7 @@ pub fn use_challenge_query(
         move |_| get_public_challenges(),
         QueryOptions {
             default_value: None,
-            refetch_interval: None,
+            refetch_interval: Some(Duration::from_secs(15)),
             resource_option: ResourceOption::NonBlocking,
             stale_time: Some(Duration::from_secs(30)),
             cache_time: Some(Duration::from_secs(300)),
