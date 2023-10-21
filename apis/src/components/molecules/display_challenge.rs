@@ -12,9 +12,10 @@ use web_sys::SubmitEvent;
 #[component]
 pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
     let client = use_query_client();
-    //let onsubmit = move |_: SubmitEvent| {
-    //    client.invalidate_query::<(), Result<Vec<ChallengeResponse>, ServerFnError>>(());
-    //};
+    let onsubmit = move || {
+        client.invalidate_query::<(), Result<Vec<ChallengeResponse>, ServerFnError>>(());
+    };
+    let stored_on_submit = store_value(onsubmit);
     let accept_challenge = create_server_action::<AcceptChallenge>();
     let delete_challenge = create_server_action::<DeleteChallenge>();
     let auth_context = expect_context::<AuthContext>();
@@ -42,7 +43,7 @@ pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
                 view! {
                     <div class="flex items-center">
                         <p>{&own_challenge_string}</p>
-                        <ActionForm action=delete_challenge>
+                        <ActionForm action=delete_challenge on:submit=move |_| stored_on_submit()()>
                             <input type="hidden" name="id" value=stored_challenge().id.to_string()/>
                             <input
                                 type="submit"
