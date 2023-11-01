@@ -19,7 +19,7 @@ pub async fn accept_challenge(nanoid: String) -> Result<Option<GameStateResponse
             return Ok(None);
         }
     };
-    let play_link = &format!("/play/{}", &nanoid);
+    let play_link = &format!("/game/{}", &nanoid);
     let challenge = Challenge::find_by_nanoid(&nanoid, &pool).await?;
     if challenge.challenger_id == uuid {
         return Err(ChallengeError::OwnChallenge.into());
