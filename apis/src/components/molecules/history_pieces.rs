@@ -12,7 +12,7 @@ pub fn HistoryPieces() -> impl IntoView {
 
     let history_pieces = move || {
         let mut history_pieces = Vec::new();
-        let game_state = game_state_signal.signal.get();
+        let game_state = (game_state_signal.signal)();
         let mut history = History::new();
         log!("history_turn: {:?}", game_state.history_turn);
         if let Some(turn) = game_state.history_turn {
@@ -40,3 +40,4 @@ pub fn HistoryPieces() -> impl IntoView {
             .collect_view()
     }
 }
+

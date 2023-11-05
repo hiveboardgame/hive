@@ -2,18 +2,26 @@ use crate::common::piece_type::PieceType;
 use hive_lib::piece::Piece;
 use hive_lib::position::Position;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Direction {
     From,
     To,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
+pub enum ActiveState {
+    Board,
+    #[default]
+    Reserve,
+    None,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HexType {
     // Show Active piece
-    Active,
+    Active(ActiveState),
     // Last made move
-    LastMove,
+    LastMove(Direction),
     // spawn or move spot
     Target,
     // The Game piece and its type
@@ -26,3 +34,4 @@ pub struct Hex {
     pub position: Position,
     pub level: usize,
 }
+

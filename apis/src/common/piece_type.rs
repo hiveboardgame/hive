@@ -6,9 +6,11 @@ pub enum PieceType {
     Board,
     // covered piece on the board
     Covered,
+    // piece in history view
+    History,
     // not your turn
     Inactive,
-    //
+    // uninteractive
     #[default]
     Nope,
     // piece in reserve
@@ -23,6 +25,7 @@ impl fmt::Display for PieceType {
             PieceType::Board => "board",
             PieceType::Covered => "covered",
             PieceType::Inactive => "inactive",
+            PieceType::History => "history",
             PieceType::Nope => "nope",
             PieceType::Reserve => "reserve",
             PieceType::Spawn => "spawn",
@@ -30,3 +33,4 @@ impl fmt::Display for PieceType {
         write!(f, "{}", name)
     }
 }
+

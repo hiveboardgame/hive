@@ -1,5 +1,5 @@
 use crate::common::{
-    hex::{Direction, Hex, HexType},
+    hex::{ActiveState, Direction, Hex, HexType},
     piece_type::PieceType,
 };
 use hive_lib::{bug_stack::BugStack, piece::Piece, position::Position};
@@ -40,7 +40,7 @@ impl HexStack {
             position,
             hexes: (0..bug_stack.len())
                 .map(|i| Hex {
-                    kind: HexType::Tile(bug_stack.pieces[i], PieceType::Nope),
+                    kind: HexType::Tile(bug_stack.pieces[i], PieceType::History),
                     position,
                     level: i,
                 })
@@ -58,22 +58,43 @@ impl HexStack {
 
     pub fn add_active(&mut self, target_selected: bool) {
         let mut len = self.len();
-        if self.hexes.iter().any(|hex| hex.kind == HexType::LastMove) {
+        if self.hexes.iter().any(|hex| {
+            hex.kind == HexType::LastMove(Direction::From)
+                || hex.kind == HexType::LastMove(Direction::To)
+        }) {
             len -= 1
         }
         if target_selected {
             self.hexes.pop();
         }
         self.hexes.push(Hex {
-            kind: HexType::Active,
+            kind: HexType::Active(self.active_state()),
             position: self.position,
             level: len.saturating_sub(1),
         });
     }
 
+    pub fn active_state(&self) -> ActiveState {
+        if let Some(hex) = self.hexes.last() {
+            return match &hex.kind {
+                HexType::Target => ActiveState::Board,
+                HexType::Tile(_, piece_type) => match piece_type {
+                    PieceType::Board | PieceType::Spawn => ActiveState::Board,
+                    PieceType::Reserve => ActiveState::Reserve,
+                    _ => ActiveState::None,
+                },
+                _ => ActiveState::None,
+            };
+        };
+        ActiveState::None
+    }
+
     pub fn add_tile(&mut self, piece: Piece) {
         let mut len = self.len();
-        if self.hexes.iter().any(|hex| hex.kind == HexType::LastMove) {
+        if self.hexes.iter().any(|hex| {
+            hex.kind == HexType::LastMove(Direction::From)
+                || hex.kind == HexType::LastMove(Direction::To)
+        }) {
             len -= 1;
         }
         self.hexes.push(Hex {
@@ -85,7 +106,10 @@ impl HexStack {
 
     pub fn add_target(&mut self) {
         let mut len = self.len();
-        if self.hexes.iter().any(|hex| hex.kind == HexType::LastMove) {
+        if self.hexes.iter().any(|hex| {
+            hex.kind == HexType::LastMove(Direction::From)
+                || hex.kind == HexType::LastMove(Direction::To)
+        }) {
             len -= 1
         }
         self.hexes.push(Hex {
@@ -100,7 +124,7 @@ impl HexStack {
             Direction::To => {
                 let top = self.hexes.pop();
                 self.hexes.push(Hex {
-                    kind: HexType::LastMove,
+                    kind: HexType::LastMove(Direction::To),
                     position: self.position,
                     level: self.hexes.len(),
                 });
@@ -109,10 +133,11 @@ impl HexStack {
                 }
             }
             Direction::From => self.hexes.push(Hex {
-                kind: HexType::LastMove,
+                kind: HexType::LastMove(Direction::From),
                 position: self.position,
                 level: self.hexes.len(),
             }),
         }
     }
 }
+

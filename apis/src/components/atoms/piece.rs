@@ -6,13 +6,14 @@ use leptos::*;
 
 #[component]
 pub fn Piece(
+    // WARN piece and position are currently not used in closures and that is temporarily ok because they are passed in as not signals
     #[prop(into)] piece: MaybeSignal<Piece>,
     #[prop(into)] position: MaybeSignal<Position>,
     #[prop(into)] level: MaybeSignal<usize>,
     #[prop(optional, into)] piece_type: PieceType,
 ) -> impl IntoView {
-    let center = SvgPos::center_for_level(position.get(), level.get());
-    let transform = format!("translate({},{})", center.0, center.1);
+    let center = move || SvgPos::center_for_level(position(), level());
+    let transform = move || format!("translate({},{})", center().0, center().1);
     //IMPORTANT drop-shadow-b drop-shadow-w leave this comment for TW
     let mut filter = String::from("drop-shadow-");
     filter.push_str(&piece.get().color().to_string());
@@ -52,7 +53,7 @@ pub fn Piece(
 
     view! {
         <g on:click=onclick class=filter style=dot_color>
-            <g transform=format!("{}", transform)>
+            <g transform=transform>
                 <use_
                     href=format!("#{}", color)
                     transform="scale(0.56, 0.56) translate(-45, -50)"
@@ -69,3 +70,4 @@ pub fn Piece(
         </g>
     }
 }
+
