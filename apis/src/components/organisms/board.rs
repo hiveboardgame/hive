@@ -1,9 +1,12 @@
 use crate::common::svg_pos::SvgPos;
-use crate::components::{
-    atoms::svgs::Svgs,
-    molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
-};
 use crate::providers::game_state::{GameStateSignal, View};
+use crate::{
+    components::{
+        atoms::svgs::Svgs,
+        molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
+    },
+    pages::play::TargetStack,
+};
 use hive_lib::position::Position;
 use leptos::ev::{contextmenu, pointerdown, pointerleave, pointermove, pointerup, wheel};
 use leptos::logging::*;
@@ -48,6 +51,8 @@ pub fn Board(
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] overwrite_tw_classes: &'static str,
 ) -> impl IntoView {
+    let game_state_signal = expect_context::<GameStateSignal>();
+    let target_stack = expect_context::<TargetStack>().0;
     let is_panning = create_rw_signal(false);
     let viewbox_signal = create_rw_signal(ViewBoxControls::new());
     let viewbox_ref = create_node_ref::<svg::Svg>();
@@ -85,14 +90,18 @@ pub fn Board(
                 viewbox_controls.y_transform = -(svg_pos.1 - (div.offset_height() as f32 / 2.0));
             });
 
-            //Start panning and record point where it starts for mouse and touch
-            _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
-                is_panning.update_untracked(|b| *b = true);
-                let ref_point = svg_point_from_pointer(viewbox_ref, &evt);
-                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                    viewbox_controls.drag_start_x = ref_point.x();
-                    viewbox_controls.drag_start_y = ref_point.y();
-                });
+            //Start panning and record point where it starts for mouse on left mouse button hold and touch
+            _ = use_event_listener(viewbox_ref, pointerdown, move |evt| match evt.button() {
+                //When left mouse button is pressed
+                0 => {
+                    is_panning.update_untracked(|b| *b = true);
+                    let ref_point = svg_point_from_pointer(viewbox_ref, &evt);
+                    viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                        viewbox_controls.drag_start_x = ref_point.x();
+                        viewbox_controls.drag_start_y = ref_point.y();
+                    });
+                }
+                _ => {}
             });
 
             //Keep panning while user drags around
@@ -127,9 +136,10 @@ pub fn Board(
                 }
             });
 
-            //Stop panning when user releases touch/click
+            //Stop panning when user releases touch/click AND reset height adjustment on right click release
             _ = use_event_listener(viewbox_ref, pointerup, move |_| {
                 is_panning.update_untracked(|b| *b = false);
+                target_stack.set(None);
             });
 
             //Stop panning when pointer leaves board area
@@ -143,8 +153,6 @@ pub fn Board(
             });
         });
     });
-
-    let game_state_signal = expect_context::<GameStateSignal>();
 
     view! {
         <div
@@ -166,8 +174,8 @@ pub fn Board(
                 <g transform=transform>
                     <Show
                         when=move || {
-                            View::History == game_state_signal.signal.get().view
-                                && !game_state_signal.signal.get().is_last_turn()
+                            View::History == (game_state_signal.signal)().view
+                                && !(game_state_signal.signal)().is_last_turn()
                         }
 
                         fallback=|| {
@@ -207,3 +215,4 @@ fn svg_point_from_coordinates(svg: NodeRef<Svg>, x: f32, y: f32) -> web_sys::Svg
             .expect("matrix not inversed"),
     )
 }
+

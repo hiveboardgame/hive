@@ -1,4 +1,5 @@
 use crate::components::organisms::{board::Board, side_board::SideboardTabs};
+use hive_lib::position::Position;
 use leptos::*;
 use leptos_router::*;
 
@@ -7,8 +8,12 @@ struct PlayParams {
     nanoid: String,
 }
 
+#[derive(Clone)]
+pub struct TargetStack(pub RwSignal<Option<Position>>);
+
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    provide_context(TargetStack(RwSignal::new(None)));
     let params = use_params::<PlayParams>();
 
     // id: || -> usize
@@ -28,3 +33,4 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         </div>
     }
 }
+

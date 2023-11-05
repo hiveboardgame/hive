@@ -73,7 +73,9 @@ pub enum View {
 
 #[derive(Clone, Debug)]
 pub struct GameState {
+    // the gamestate
     pub state: State,
+    // possible destinations of selected piece
     pub target_positions: Vec<Position>,
     // the piece (either from reserve or board) that has been clicked last
     pub active: Option<Piece>,
@@ -85,7 +87,7 @@ pub struct GameState {
     pub reserve_position: Option<Position>,
     // the turn we want to display the history at
     pub history_turn: Option<usize>,
-    // show history or
+    // show history or reserve
     pub view: View,
 }
 
@@ -215,3 +217,4 @@ impl GameState {
 pub fn provide_game_state() {
     provide_context(GameStateSignal::new())
 }
+

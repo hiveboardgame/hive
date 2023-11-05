@@ -6,11 +6,11 @@ use leptos::*;
 #[component]
 pub fn Active(
     position: Position,
-    level: usize,
+    #[prop(into)] level: MaybeSignal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let center = SvgPos::center_for_level(position, level);
-    let transform = format!("translate({},{})", center.0, center.1);
+    let center = move || SvgPos::center_for_level(position, level());
+    let transform = move || format!("translate({},{})", center().0, center().1);
     let mut game_state_signal = expect_context::<GameStateSignal>();
 
     let onclick = move |_| {
@@ -19,7 +19,7 @@ pub fn Active(
 
     view! {
         <g on:click=onclick class=format!("{extend_tw_classes}")>
-            <g id="Active" transform=format!("{}", transform)>
+            <g id="Active" transform=transform>
                 <use_
                     href="#active"
                     transform="scale(0.56, 0.56) translate(-46.608, -52.083)"
@@ -28,3 +28,4 @@ pub fn Active(
         </g>
     }
 }
+

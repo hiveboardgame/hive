@@ -5,16 +5,15 @@ use leptos::*;
 #[component]
 pub fn LastMove(
     position: Position,
-    level: usize,
+    #[prop(into)] level: MaybeSignal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let center = SvgPos::center_for_level(position, level);
-    let transform = format!("translate({},{})", center.0, center.1);
-    let onclick = move |_| {};
+    let center = move || SvgPos::center_for_level(position, level());
+    let transform = move || format!("translate({},{})", center().0, center().1);
 
     view! {
-        <g on:click=onclick class=format!("{extend_tw_classes}")>
-            <g id="Lastmove" transform=format!("{}", transform)>
+        <g class=format!("{extend_tw_classes}")>
+            <g id="Lastmove" transform=transform>
                 <use_
                     href="#lastmove"
                     transform="scale(0.56, 0.56) translate(-46.608, -52.083)"
@@ -23,3 +22,4 @@ pub fn LastMove(
         </g>
     }
 }
+
