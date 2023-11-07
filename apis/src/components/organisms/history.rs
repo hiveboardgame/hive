@@ -1,6 +1,12 @@
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
 use leptos::*;
+use leptos_icons::{
+    AiIcon::{
+        AiFastBackwardFilled, AiFastForwardFilled, AiStepBackwardFilled, AiStepForwardFilled,
+    },
+    Icon,
+};
 
 #[component]
 pub fn HistoryMove(turn: usize, piece: String, position: String) -> impl IntoView {
@@ -86,25 +92,26 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     };
 
     let button_styles =
-        "hover:bg-blue-300 bg-slate-400 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
+        "flex justify-center box-content inline-block text-center cursor-pointer hover:bg-green-300 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
     let white_black_styles = "ml-3 mt-6 mb-3 col-span-2";
+    let icon_style = "center";
     view! {
         <div class=format!("grid grid-cols-4 gap-1 {extend_tw_classes}")>
             <div class="col-span-4 grid grid-cols-4 gap-1 sticky top-0 dark:bg-gray-900 bg-white">
                 <button class=button_styles on:click=first>
-                    First
+                    <Icon icon=Icon::from(AiFastBackwardFilled) style=icon_style/>
                 </button>
 
                 <button class=button_styles on:click=previous>
-                    Previous
+                    <Icon icon=Icon::from(AiStepBackwardFilled) style=icon_style/>
                 </button>
 
                 <button class=button_styles on:click=next>
-                    Next
+                    <Icon icon=Icon::from(AiStepForwardFilled) style=icon_style/>
                 </button>
 
                 <button class=button_styles on:click=last>
-                    Last
+                    <Icon icon=Icon::from(AiFastForwardFilled) style=icon_style/>
                 </button>
 
                 <div class=white_black_styles>White</div>
