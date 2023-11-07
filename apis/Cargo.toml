@@ -29,6 +29,7 @@ leptos-use.workspace = true
 leptos_actix = { workspace = true, optional = true }
 leptos_meta.workspace = true
 leptos_router.workspace = true
+leptos_icons.workspace = true
 log.workspace = true
 rand.workspace = true
 rand_core.workspace = true
@@ -74,6 +75,8 @@ site-pkg-dir = "pkg"
 # The tailwind input file.
 # Optional, Activates the tailwind build
 tailwind-input-file = "style/tailwind.css"
+# Workaround for hot reaload errors, main.scss is empty
+style-file = "style/main.scss"
 # Assets source dir. All files found here will be copied and synchronized to site-root.
 # The assets-dir cannot have a sub directory with the same name/path as site-pkg-dir.
 #
