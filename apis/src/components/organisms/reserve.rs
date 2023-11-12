@@ -5,12 +5,18 @@ use crate::common::{
 };
 use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::bug_stack::BugStack;
-use hive_lib::{bug::Bug, color::Color, piece::Piece, position::Position, state::State};
+use hive_lib::{
+    bug::Bug, bug_stack::BugStack, color::Color, game_status::GameStatus, piece::Piece,
+    position::Position, state::State,
+};
 use leptos::*;
 use std::str::FromStr;
 
 fn piece_active(state: &State, piece: &Piece) -> bool {
+    // game is over
+    if let GameStatus::Finished(_) = state.game_status {
+        return false;
+    }
     // #TODO make this come from global state
     if !piece.is_color(state.turn_color) {
         return false;
@@ -119,3 +125,4 @@ pub fn Reserve(
         </svg>
     }
 }
+

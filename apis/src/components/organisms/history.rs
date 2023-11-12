@@ -62,16 +62,13 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         )
     };
 
-    let game_result = move || match game_state_signal
-        .signal
-        .get_untracked()
-        .state
-        .board
-        .game_result()
-    {
-        GameResult::Draw => "½-½",
-        GameResult::Winner(Color::White) => "1-0",
-        GameResult::Winner(Color::Black) => "0-1",
+    let game_result = move || match (game_state_signal.signal)().state.game_status {
+        GameStatus::Finished(result) => match result {
+            GameResult::Draw => "½-½",
+            GameResult::Winner(Color::White) => "1-0",
+            GameResult::Winner(Color::Black) => "0-1",
+            _ => "",
+        },
         _ => "",
     };
 
@@ -94,24 +91,24 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     let button_styles =
         "flex justify-center box-content inline-block text-center cursor-pointer hover:bg-green-300 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
     let white_black_styles = "ml-3 mt-6 mb-3 col-span-2";
-    let icon_style = "center";
+    let icon_style = "";
     view! {
         <div class=format!("grid grid-cols-4 gap-1 {extend_tw_classes}")>
             <div class="col-span-4 grid grid-cols-4 gap-1 sticky top-0 dark:bg-gray-900 bg-white">
                 <button class=button_styles on:click=first>
-                    <Icon icon=Icon::from(AiFastBackwardFilled) style=icon_style/>
+                    <Icon icon=Icon::from(AiFastBackwardFilled) class=icon_style/>
                 </button>
 
                 <button class=button_styles on:click=previous>
-                    <Icon icon=Icon::from(AiStepBackwardFilled) style=icon_style/>
+                    <Icon icon=Icon::from(AiStepBackwardFilled) class=icon_style/>
                 </button>
 
                 <button class=button_styles on:click=next>
-                    <Icon icon=Icon::from(AiStepForwardFilled) style=icon_style/>
+                    <Icon icon=Icon::from(AiStepForwardFilled) class=icon_style/>
                 </button>
 
                 <button class=button_styles on:click=last>
-                    <Icon icon=Icon::from(AiFastForwardFilled) style=icon_style/>
+                    <Icon icon=Icon::from(AiFastForwardFilled) class=icon_style/>
                 </button>
 
                 <div class=white_black_styles>White</div>

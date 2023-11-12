@@ -7,3 +7,5 @@ pub mod lobby;
 pub mod logout;
 pub mod reserve;
 pub mod side_board;
+pub mod timer;
+
