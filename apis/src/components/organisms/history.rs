@@ -21,7 +21,7 @@ pub fn HistoryMove(
     // scrolls history when new move is made
     // TODO: find a nicer way to do it, maybe do it just on_load and add div_height to scroll_heigt
     div_ref.on_load(move |_| {
-        div_ref
+        let _ = div_ref
             .get_untracked()
             .expect("div to be loaded")
             .on_mount(move |_| {
