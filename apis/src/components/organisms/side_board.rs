@@ -11,9 +11,9 @@ use leptos::*;
 #[component]
 pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let mut game_state_signal = expect_context::<GameStateSignal>();
-
+    let div_ref = create_node_ref::<html::Div>();
     let button_color = move || {
-        if let View::History = game_state_signal.signal.get().view {
+        if let View::History = (game_state_signal.signal)().view {
             ("bg-inherit", "bg-slate-400")
         } else {
             ("bg-slate-400", "bg-inherit")
@@ -39,7 +39,9 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                 <button
                     class=move || format!("hover:bg-blue-300 {}", button_color().1)
                     on:click=move |_| {
+                        let parent_div = div_ref.get_untracked().expect("div to have loaded");
                         game_state_signal.view_history();
+                        parent_div.set_scroll_top(parent_div.scroll_height());
                     }
                 >
 
@@ -47,7 +49,7 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                 </button>
 
             </div>
-            <div class="overflow-auto h-[90%] w-full">
+            <div ref=div_ref class="overflow-auto h-[90%] w-full">
                 <Show
                     when=move || View::History == game_state_signal.signal.get().view
                     fallback=|| {
@@ -72,9 +74,10 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                     }
                 >
 
-                    <History/>
+                    <History parent_div=div_ref/>
                 </Show>
             </div>
         </div>
     }
 }
+
