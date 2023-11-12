@@ -1,9 +1,0 @@
-{
-  "dependencies": {
-    "playwright": "^1.37.1"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.37.1",
-    "tailwindcss": "^3.3.3"
-  }
-}
