@@ -1,6 +1,6 @@
 use crate::common::{piece_type::PieceType, svg_pos::SvgPos};
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::{bug::Bug, piece::Piece, position::Position};
+use hive_lib::{bug::Bug, game_status::GameStatus, piece::Piece, position::Position};
 use leptos::logging::log;
 use leptos::*;
 
@@ -35,20 +35,25 @@ pub fn Piece(
 
     let mut game_state_signal = expect_context::<GameStateSignal>();
 
-    let onclick = move |_| match piece_type {
-        PieceType::Board => {
-            log!("Board piece");
-            game_state_signal.show_moves(piece.get(), position.get());
+    let onclick = move |_| match (game_state_signal.signal)().state.game_status {
+        GameStatus::Finished(_) => { /* Don't attach any on:click for finished games */ }
+        _ => {
+            match piece_type {
+                PieceType::Board => {
+                    log!("Board piece");
+                    game_state_signal.show_moves(piece.get(), position.get());
+                }
+                PieceType::Reserve => {
+                    log!("Reserve piece");
+                    game_state_signal.show_spawns(piece.get(), position.get());
+                }
+                PieceType::Spawn => {
+                    log!("Spawning piece {}", piece.get());
+                    game_state_signal.play_active_piece();
+                }
+                _ => log!("Piece is {}", piece_type),
+            };
         }
-        PieceType::Reserve => {
-            log!("Reserve piece");
-            game_state_signal.show_spawns(piece.get(), position.get());
-        }
-        PieceType::Spawn => {
-            log!("Spawning piece {}", piece.get());
-            game_state_signal.play_active_piece();
-        }
-        _ => log!("Piece is {}", piece_type),
     };
 
     view! {

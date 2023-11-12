@@ -18,7 +18,8 @@ leptos_icons = { version = "0.1", default_features = false, features = [
     "AiFastBackwardFilled",
     "AiStepBackwardFilled",
     "AiFastForwardFilled",
-    "AiStepForwardFilled"
+    "AiStepForwardFilled",
+    "BiInfiniteRegular"
 ] }
 actix-web = { version = "4",  features = ["macros"] }
 actix-files = { version = "0.6" }
