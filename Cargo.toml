@@ -39,7 +39,7 @@ log = "0.4.20"
 simple_logger = "4.2.0"
 thiserror = "1"
 tokio = { version = "1.32.0", features = ["full"] }
-wasm-bindgen = "=0.2.87"
+wasm-bindgen = "=0.2.88"
 web-sys = {version = "0.3.6", features = ["AbortController", "AbortSignal", "HtmlDocument", "SvgPoint","SvgsvgElement", "SvgGraphicsElement", "SvgMatrix"] }
 bb8 = { version = "0.8" }
 diesel = { version = "2.1", features = ["postgres", "chrono", "uuid"] }

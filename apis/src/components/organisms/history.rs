@@ -7,17 +7,34 @@ use leptos_icons::{
     },
     Icon,
 };
+use leptos_use::use_window;
 
 #[component]
-pub fn HistoryMove(turn: usize, piece: String, position: String) -> impl IntoView {
+pub fn HistoryMove(
+    turn: usize,
+    piece: String,
+    position: String,
+    parent_div: NodeRef<html::Div>,
+) -> impl IntoView {
     let mut game_state_signal = expect_context::<GameStateSignal>();
-
+    let div_ref = create_node_ref::<html::Div>();
+    // scrolls history when new move is made
+    // TODO: find a nicer way to do it, maybe do it just on_load and add div_height to scroll_heigt
+    div_ref.on_load(move |_| {
+        div_ref
+            .get_untracked()
+            .expect("div to be loaded")
+            .on_mount(move |_| {
+                let parent_div = parent_div.get_untracked().expect("div to be loaded");
+                parent_div.set_scroll_top(parent_div.scroll_height())
+            });
+    });
     let onclick = move |_| {
         game_state_signal.show_history_turn(turn);
     };
     let get_class = move || {
         let mut class = "ml-3 hover:bg-blue-300 col-span-2";
-        if let Some(history_turn) = game_state_signal.signal.get().history_turn {
+        if let Some(history_turn) = (game_state_signal.signal)().history_turn {
             if turn == history_turn {
                 class = "ml-3 hover:bg-blue-300 col-span-2 bg-orange-300"
             }
@@ -25,21 +42,21 @@ pub fn HistoryMove(turn: usize, piece: String, position: String) -> impl IntoVie
         class
     };
     view! {
-        <div class=get_class on:click=onclick>
+        <div ref=div_ref class=get_class on:click=onclick>
             {format!("{}. {piece} {position}", turn + 1)}
         </div>
     }
 }
 
 #[component]
-pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn History(
+    #[prop(optional)] extend_tw_classes: &'static str,
+    parent_div: NodeRef<html::Div>,
+) -> impl IntoView {
     let mut game_state_signal = expect_context::<GameStateSignal>();
-
     let history_moves = move || {
         let mut his = Vec::new();
-        for (i, (piece, pos)) in game_state_signal
-            .signal
-            .get()
+        for (i, (piece, pos)) in (game_state_signal.signal)()
             .state
             .history
             .moves
@@ -57,7 +74,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
 
     let is_finished = move || {
         matches!(
-            game_state_signal.signal.get().state.game_status,
+            (game_state_signal.signal)().state.game_status,
             GameStatus::Finished(_)
         )
     };
@@ -72,20 +89,48 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         _ => "",
     };
 
+    let window = use_window();
+    let active = Signal::derive(move || {
+        if window.is_some() {
+            window
+                .as_ref()
+                .expect("window to exist")
+                .document()
+                .expect("window to have a document")
+                .query_selector(".bg-orange-300")
+                .ok()
+                .expect("to have an Element or None")
+        } else {
+            None
+        }
+    });
+    let focus = move || match active.get_untracked() {
+        Some(elem) => {
+            elem.scroll_into_view_with_bool(false);
+        }
+        None => {}
+    };
+
     let next = move |_| {
         game_state_signal.next_history_turn();
+        focus();
     };
 
     let previous = move |_| {
         game_state_signal.previous_history_turn();
+        focus();
     };
 
     let first = move |_| {
+        let parent_div = parent_div.get_untracked().expect("div to have loaded");
         game_state_signal.first_history_turn();
+        parent_div.set_scroll_top(0);
     };
 
     let last = move |_| {
+        let parent_div = parent_div.get_untracked().expect("div to have loaded");
         game_state_signal.view_history();
+        parent_div.set_scroll_top(parent_div.scroll_height());
     };
 
     let button_styles =
@@ -117,7 +162,12 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             </div>
             <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
-                <HistoryMove turn=history_move.0 piece=history_move.1 position=history_move.2/>
+                <HistoryMove
+                    turn=history_move.0
+                    piece=history_move.1
+                    position=history_move.2
+                    parent_div=parent_div
+                />
             </For>
 
             <Show when=is_finished>
