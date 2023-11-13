@@ -15,5 +15,9 @@ pub async fn delete_challenge(id: Uuid) -> Result<(), ServerFnError> {
         )));
     }
     challenge.delete(&pool).await?;
+    if !challenge.public {
+        leptos_actix::redirect("/");
+    }
     Ok(())
 }
+
