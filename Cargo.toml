@@ -15,6 +15,7 @@ leptos_meta = { version = "0.5", features = ["nightly"] }
 leptos_router = { version = "0.5", features = ["nightly"] }
 leptos_actix = { version = "0.5" }
 leptos_icons = { version = "0.1", default_features = false, features = [
+    "AiCopyOutlined",
     "AiFastBackwardFilled",
     "AiStepBackwardFilled",
     "AiFastForwardFilled",
@@ -40,7 +41,7 @@ simple_logger = "4.2.0"
 thiserror = "1"
 tokio = { version = "1.32.0", features = ["full"] }
 wasm-bindgen = "0.2.88"
-web-sys = {version = "0.3.6", features = ["AbortController", "AbortSignal", "HtmlDocument", "SvgPoint","SvgsvgElement", "SvgGraphicsElement", "SvgMatrix"] }
+web-sys = {version = "0.3.6", features = ["AbortController", "AbortSignal", "Clipboard", "HtmlDocument", "SvgPoint","SvgsvgElement", "SvgGraphicsElement", "SvgMatrix"] }
 bb8 = { version = "0.8" }
 diesel = { version = "2.1", features = ["postgres", "chrono", "uuid"] }
 diesel-async = { version = "0.4", features = ["postgres", "bb8"] }

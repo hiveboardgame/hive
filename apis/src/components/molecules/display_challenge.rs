@@ -17,7 +17,11 @@ pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
         "{} rated:{} is looking for a {} game!",
         challenge.challenger.username, challenge.challenger.rating, challenge.game_type
     );
-    let own_challenge_string = format!("You are looking for a {} game!", challenge.game_type);
+    let own_challenge_string = if challenge.public {
+        format!("You are looking for a {} game!", challenge.game_type)
+    } else {
+        String::new()
+    };
     view! {
         <Show
             when=move || {
@@ -40,8 +44,8 @@ pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
                             <input type="hidden" name="id" value=stored_challenge().id.to_string()/>
                             <input
                                 type="submit"
-                                value="Delete"
-                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                value="Cancel"
+                                class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                             />
                         </ActionForm>
                     </div>

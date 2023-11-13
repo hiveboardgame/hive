@@ -2,7 +2,9 @@ use crate::components::molecules::display_challenge::DisplayChallenge;
 use crate::functions::{challenges::get::get_challenge_by_nanoid, hostname::hostname_and_port};
 use crate::providers::auth_context::AuthContext;
 use leptos::*;
+use leptos_icons::{AiIcon::AiCopyOutlined, Icon};
 use leptos_router::*;
+use leptos_use::use_window;
 
 #[derive(Params, PartialEq, Eq)]
 struct ChallengeParams {
@@ -24,6 +26,27 @@ pub fn ChallengeView() -> impl IntoView {
     };
 
     let challenge = Resource::once(move || get_challenge_by_nanoid(nanoid()));
+    let challenge_address = move || format!("{}/challenge/{}", hostname_and_port(), nanoid());
+    let button_ref = create_node_ref::<html::Button>();
+    let copy = move |_| {
+        let clipboard = use_window()
+            .as_ref()
+            .expect("window to exist in challenge_view")
+            .navigator()
+            .clipboard()
+            .expect("to have clipboard permission");
+        let _ = clipboard.write_text(&challenge_address());
+        let class_list = button_ref
+            .get_untracked()
+            .expect("div_ref to be loaded by now")
+            .class_list();
+        class_list
+            .remove_2("bg-blue-500", "hover:bg-blue-400")
+            .expect("tw classes to exist");
+        class_list
+            .add_2("bg-green-500", "hover:bg-green-400")
+            .expect("tw classes to be added");
+    };
 
     view! {
         <div>
@@ -49,17 +72,26 @@ pub fn ChallengeView() -> impl IntoView {
                                             false
                                         }
                                     }>
-
                                         <p>"To invite someone to play, give this URL:"</p>
-                                        <a href=format!(
-                                            "/challenge/{}",
-                                            nanoid(),
-                                        )>
-                                            {move || {
-                                                format!("{}/challenge/{}", hostname_and_port(), nanoid())
-                                            }}
-
-                                        </a>
+                                        <div class="flex">
+                                            <input
+                                                id="challenge_link"
+                                                type="text"
+                                                class="w-[35ch]"
+                                                value=challenge_address
+                                                readonly
+                                            />
+                                            <button
+                                                ref=button_ref
+                                                on:click=copy
+                                                class="bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                            >
+                                                <Icon icon=Icon::from(AiCopyOutlined)/>
+                                            </button>
+                                        </div>
+                                        <p>
+                                            "The first person to come to this URL will play with you."
+                                        </p>
                                     </Show>
                                     <DisplayChallenge challenge=challenge/>
                                 }
