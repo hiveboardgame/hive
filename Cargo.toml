@@ -10,7 +10,7 @@ opt-level = 'z'
 
 [workspace.dependencies]
 leptos = { version = "0.5", features = ["nightly"] }
-leptos-use = { version = "0.7" }
+leptos-use = { version = "0.8" }
 leptos_meta = { version = "0.5", features = ["nightly"] }
 leptos_router = { version = "0.5", features = ["nightly"] }
 leptos_actix = { version = "0.5" }
