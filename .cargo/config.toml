@@ -1,6 +1,10 @@
 [unstable]
 codegen-backend = true
-[profile.server-dev]
+[profile.apis-dev]
+codegen-backend = "cranelift"
+[profile.engine-dev]
+codegen-backend = "cranelift"
+[profile.db-dev]
 codegen-backend = "cranelift"
 [build]
 rustflags = ["-Z", "threads=16"]
