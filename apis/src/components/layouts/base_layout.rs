@@ -10,7 +10,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
     view! {
         <Html class=move || {
             let classes = "h-screen w-screen max-h-screen max-w-[100vw]";
-            let theme = match color_scheme.prefers_dark.get() {
+            let theme = match (color_scheme.prefers_dark)() {
                 true => "dark",
                 false => "",
             };

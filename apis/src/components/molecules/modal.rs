@@ -9,7 +9,7 @@ pub fn Modal(
 ) -> impl IntoView {
     let on_click = move |ev: MouseEvent| {
         let rect = dialog_el
-            .get()
+            .get_untracked()
             .expect("dialog to have been created")
             .get_bounding_client_rect();
         let click_is_in_dialog = rect.top() <= ev.client_y() as f64
@@ -25,7 +25,7 @@ pub fn Modal(
     };
 
     create_effect(move |_| {
-        if let Some(dialog) = dialog_el.get() {
+        if let Some(dialog) = dialog_el.get_untracked() {
             if open() {
                 if dialog.show_modal().is_err() {
                     dialog.set_open(true);
@@ -38,7 +38,7 @@ pub fn Modal(
 
     view! {
         <dialog
-            _ref=dialog_el
+            ref=dialog_el
             open=open.get_untracked()
             class="shadow-lg rounded-lg border-8 backdrop:backdrop-blur"
             // clicking on ::backdrop should dismiss modal

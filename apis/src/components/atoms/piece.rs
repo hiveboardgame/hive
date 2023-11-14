@@ -6,26 +6,26 @@ use leptos::*;
 
 #[component]
 pub fn Piece(
-    // WARN piece and position are currently not used in closures and that is temporarily ok because they are passed in as not signals
+    // WARN piece and position are untracked and might break reactivity if passed in as signals in the future
     #[prop(into)] piece: MaybeSignal<Piece>,
     #[prop(into)] position: MaybeSignal<Position>,
     #[prop(into)] level: MaybeSignal<usize>,
     #[prop(optional, into)] piece_type: PieceType,
 ) -> impl IntoView {
-    let center = move || SvgPos::center_for_level(position(), level());
+    let center = move || SvgPos::center_for_level(position.get_untracked(), level());
     let transform = move || format!("translate({},{})", center().0, center().1);
+    let bug = piece.get_untracked().bug();
+    let color = piece.get_untracked().color();
+    let order = piece.get_untracked().order();
     //IMPORTANT drop-shadow-b drop-shadow-w leave this comment for TW
     let mut filter = String::from("drop-shadow-");
-    filter.push_str(&piece.get().color().to_string());
+    filter.push_str(&color.to_string());
     if piece_type == PieceType::Inactive {
         filter.push_str(" sepia");
     }
-    let color = piece.get().color().to_string();
-    let bug = piece.get().bug().to_string();
-    let order = piece.get().order().to_string();
 
     let mut dot_color = String::from(" color: #");
-    dot_color.push_str(match piece.get().bug() {
+    dot_color.push_str(match bug {
         Bug::Ant => "3574a5",
         Bug::Beetle => "7a4fab",
         Bug::Grasshopper => "3f9b3a",
@@ -41,14 +41,14 @@ pub fn Piece(
             match piece_type {
                 PieceType::Board => {
                     log!("Board piece");
-                    game_state_signal.show_moves(piece.get(), position.get());
+                    game_state_signal.show_moves(piece.get_untracked(), position.get_untracked());
                 }
                 PieceType::Reserve => {
                     log!("Reserve piece");
-                    game_state_signal.show_spawns(piece.get(), position.get());
+                    game_state_signal.show_spawns(piece.get_untracked(), position.get_untracked());
                 }
                 PieceType::Spawn => {
-                    log!("Spawning piece {}", piece.get());
+                    log!("Spawning piece {}", piece.get_untracked());
                     game_state_signal.play_active_piece();
                 }
                 _ => log!("Piece is {}", piece_type),

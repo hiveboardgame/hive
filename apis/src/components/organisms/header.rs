@@ -15,7 +15,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
             <a href="/hws">WebSocket</a>
             <Transition>
                 {move || {
-                    let user = move || match auth_context.user.get() {
+                    let user = move || match (auth_context.user)() {
                         Some(Ok(Some(user))) => Some(user),
                         _ => None,
                     };

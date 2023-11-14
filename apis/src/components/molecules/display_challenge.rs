@@ -25,7 +25,7 @@ pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
     view! {
         <Show
             when=move || {
-                let user = move || match auth_context.user.get() {
+                let user = move || match (auth_context.user)() {
                     Some(Ok(Some(user))) => Some(user),
                     _ => None,
                 };

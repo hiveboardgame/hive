@@ -10,7 +10,7 @@ pub fn Hamburger(hamburger_show: RwSignal<bool>, children: ChildrenFn) -> impl I
     let children = store_value(children);
     let auth_context = expect_context::<AuthContext>();
     let username = move || {
-        if let Some(Ok(Some(user))) = auth_context.user.get() {
+        if let Some(Ok(Some(user))) = (auth_context.user)() {
             user.username
         } else {
             String::from("not logged in")

@@ -52,14 +52,13 @@ pub fn ChallengeView() -> impl IntoView {
         <div>
             <Transition>
                 {move || {
-                    challenge
-                        .get()
+                    challenge()
                         .map(|data| match data {
                             Err(_) => {
                                 view! { <pre>"Challenge doesn't seem to exist"</pre> }.into_view()
                             }
                             Ok(challenge) => {
-                                let user = move || match auth_context.user.get() {
+                                let user = move || match (auth_context.user)() {
                                     Some(Ok(Some(user))) => Some(user),
                                     _ => None,
                                 };
