@@ -29,7 +29,7 @@ pub fn ProfileView() -> impl IntoView {
         <div>
             <Transition>
                 {move || {
-                    user.get()
+                    user()
                         .map(|data| match data {
                             Err(_) => view! { <pre>"Page not found"</pre> }.into_view(),
                             Ok(user) => {
@@ -41,7 +41,7 @@ pub fn ProfileView() -> impl IntoView {
             </Transition>
             <Transition>
                 {move || {
-                    let games = move || match games.get() {
+                    let games = move || match games() {
                         Some(Ok(games)) => Some(games),
                         _ => None,
                     };

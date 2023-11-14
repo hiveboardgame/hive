@@ -49,7 +49,7 @@ pub fn Reserve(
     let game_state_signal = expect_context::<GameStateSignal>();
 
     let stacked_pieces = move || {
-        let game_state = game_state_signal.signal.get();
+        let game_state = (game_state_signal.signal)();
         let reserve = game_state
             .state
             .board

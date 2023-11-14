@@ -18,8 +18,8 @@ pub fn Home(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         <div class=format!("{extend_tw_classes}")>
             <Transition>
                 {move || {
-                    let user = move || match auth_context.user.get() {
-                        Some(Ok(user)) => Some(user),
+                    let user = move || match (auth_context.user)() {
+                        Some(Ok(Some(user))) => Some(user),
                         _ => None,
                     };
                     view! {

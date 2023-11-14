@@ -51,7 +51,7 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
             </div>
             <div ref=div_ref class="overflow-auto h-[90%] w-full">
                 <Show
-                    when=move || View::History == game_state_signal.signal.get().view
+                    when=move || View::History == (game_state_signal.signal)().view
                     fallback=|| {
                         view! {
                             <div class="">
