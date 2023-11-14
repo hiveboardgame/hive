@@ -79,86 +79,87 @@ pub fn Board(
     let initial_position = Position::initial_spawn_position();
     let svg_pos = SvgPos::center_for_level(initial_position, 0);
 
-    //on resize make sure to resize the viewbox
-    use_resize_observer(div_ref, move |entries, _observer| {
-        let rect = entries[0].content_rect();
-        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-            viewbox_controls.width = rect.width() as f32;
-            viewbox_controls.height = rect.height() as f32;
-        });
-    });
-
-    create_effect(move |_| {
-        //Make initial piece spawn in center of board
+    //Make initial piece spawn in center of board
+    div_ref.on_load(move |_| {
         let div = div_ref.get_untracked().expect("Div should already exist");
+
         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
             viewbox_controls.width = div.offset_width() as f32;
             viewbox_controls.height = div.offset_height() as f32;
             viewbox_controls.x_transform = -(svg_pos.0 - (div.offset_width() as f32 / 2.0));
             viewbox_controls.y_transform = -(svg_pos.1 - (div.offset_height() as f32 / 2.0));
         });
+    });
 
-        //Start panning and record point where it starts for mouse on left mouse button hold and touch
-        _ = use_event_listener(viewbox_ref, pointerdown, move |evt| match evt.button() {
-            //When left mouse button is pressed
-            0 => {
-                is_panning.update_untracked(|b| *b = true);
-                let ref_point = svg_point_from_pointer(viewbox_ref, &evt);
-                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                    viewbox_controls.drag_start_x = ref_point.x();
-                    viewbox_controls.drag_start_y = ref_point.y();
-                });
-            }
-            _ => {}
+    //on resize make sure to resize the viewbox
+    use_resize_observer(div_ref, move |entries, _observer| {
+        let rect = entries[0].content_rect();
+        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+            viewbox_controls.width = rect.width() as f32;
+            viewbox_controls.height = rect.height() as f32;
+            viewbox_controls.x_transform = -(svg_pos.0 - (rect.width() as f32 / 2.0));
+            viewbox_controls.y_transform = -(svg_pos.1 - (rect.height() as f32 / 2.0));
         });
+    });
 
-        //Keep panning while user drags around
-        _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
-            if is_panning.get_untracked() {
-                let moved_point = svg_point_from_pointer(viewbox_ref, &evt);
-                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                    viewbox_controls.x -= moved_point.x() - viewbox_controls.drag_start_x;
-                    viewbox_controls.y -= moved_point.y() - viewbox_controls.drag_start_y;
-                })
-            }
-        });
+    //Start panning and record point where it starts for mouse on left mouse button hold and touch
+    _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
+        if evt.button() == 0 {
+            is_panning.update_untracked(|b| *b = true);
+            let ref_point = svg_point_from_pointer(viewbox_ref, &evt);
+            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                viewbox_controls.drag_start_x = ref_point.x();
+                viewbox_controls.drag_start_y = ref_point.y();
+            });
+        }
+    });
 
-        //Zoom on point with mousewheel/touchpad
-        _ = use_event_listener(viewbox_ref, wheel, move |evt| {
-            evt.prevent_default();
-            if !is_panning.get_untracked() {
-                let initial_point = svg_point_from_wheel(viewbox_ref, &evt);
-                let scale: f32 = if evt.delta_y() > 0.0 { 0.09 } else { -0.09 };
-                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                    let initial_width = viewbox_controls.width;
-                    let initial_height = viewbox_controls.height;
-                    viewbox_controls.width += initial_width * scale;
-                    viewbox_controls.height += initial_height * scale;
-                    viewbox_controls.x = initial_point.x()
-                        - (initial_point.x() - viewbox_controls.x) / initial_width
-                            * viewbox_controls.width;
-                    viewbox_controls.y = initial_point.y()
-                        - (initial_point.y() - viewbox_controls.y) / initial_height
-                            * viewbox_controls.height;
-                });
-            }
-        });
+    //Keep panning while user drags around
+    _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
+        if is_panning.get_untracked() {
+            let moved_point = svg_point_from_pointer(viewbox_ref, &evt);
+            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                viewbox_controls.x -= moved_point.x() - viewbox_controls.drag_start_x;
+                viewbox_controls.y -= moved_point.y() - viewbox_controls.drag_start_y;
+            })
+        }
+    });
 
-        //Stop panning when user releases touch/click AND reset height adjustment on right click release
-        _ = use_event_listener(viewbox_ref, pointerup, move |_| {
-            is_panning.update_untracked(|b| *b = false);
-            target_stack.set(None);
-        });
+    //Zoom on point with mousewheel/touchpad
+    _ = use_event_listener(viewbox_ref, wheel, move |evt| {
+        evt.prevent_default();
+        if !is_panning.get_untracked() {
+            let initial_point = svg_point_from_wheel(viewbox_ref, &evt);
+            let scale: f32 = if evt.delta_y() > 0.0 { 0.09 } else { -0.09 };
+            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                let initial_width = viewbox_controls.width;
+                let initial_height = viewbox_controls.height;
+                viewbox_controls.width += initial_width * scale;
+                viewbox_controls.height += initial_height * scale;
+                viewbox_controls.x = initial_point.x()
+                    - (initial_point.x() - viewbox_controls.x) / initial_width
+                        * viewbox_controls.width;
+                viewbox_controls.y = initial_point.y()
+                    - (initial_point.y() - viewbox_controls.y) / initial_height
+                        * viewbox_controls.height;
+            });
+        }
+    });
 
-        //Stop panning when pointer leaves board area
-        _ = use_event_listener(viewbox_ref, pointerleave, move |_| {
-            is_panning.update_untracked(|b| *b = false);
-        });
+    //Stop panning when user releases touch/click AND reset height adjustment on right click release
+    _ = use_event_listener(viewbox_ref, pointerup, move |_| {
+        is_panning.update_untracked(|b| *b = false);
+        target_stack.set(None);
+    });
 
-        //Prevent right click/context menu on board
-        _ = use_event_listener(viewbox_ref, contextmenu, move |evt| {
-            evt.prevent_default();
-        });
+    //Stop panning when pointer leaves board area
+    _ = use_event_listener(viewbox_ref, pointerleave, move |_| {
+        is_panning.update_untracked(|b| *b = false);
+    });
+
+    //Prevent right click/context menu on board
+    _ = use_event_listener(viewbox_ref, contextmenu, move |evt| {
+        evt.prevent_default();
     });
 
     view! {
