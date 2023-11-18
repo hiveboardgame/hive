@@ -1,6 +1,6 @@
 use crate::{
-    components::molecules::display_profile::DisplayProfile,
-    functions::users::get::{get_user_by_username, get_user_games},
+    components::organisms::display_profile::DisplayProfile,
+    functions::users::get::get_user_by_username,
 };
 use leptos::*;
 use leptos_router::*;
@@ -22,61 +22,23 @@ pub fn ProfileView() -> impl IntoView {
         })
     };
 
-    let user = Resource::once(move || get_user_by_username(username()));
-    let games = Resource::once(move || get_user_games(username()));
+    let user = Resource::new(username, move |_| get_user_by_username(username()));
 
     view! {
-        <div>
+        <div class="h-full w-full bg-white dark:bg-gray-900 mt-6">
             <Transition>
                 {move || {
                     user()
                         .map(|data| match data {
                             Err(_) => view! { <pre>"Page not found"</pre> }.into_view(),
                             Ok(user) => {
-                                view! { <DisplayProfile user=user/> }
+                                view! { <DisplayProfile user=store_value(user)/> }
                             }
                         })
                 }}
 
             </Transition>
-            <Transition>
-                {move || {
-                    let games = move || match games() {
-                        Some(Ok(games)) => Some(games),
-                        _ => None,
-                    };
-                    view! {
-                        <Show when=move || {
-                            games().is_some()
-                        }>
 
-                            {
-                                view! {
-                                    " "
-                                    {games().unwrap().len()}
-                                    <li>
-                                        <For
-                                            each=move || {
-                                                games().expect("There to be Some challenge")
-                                            }
-
-                                            key=|game| (game.game_id)
-                                            let:game
-                                        >
-
-                                            <ul>
-                                                <a href=format!("/play/{}", game.nanoid)>{game.nanoid}</a>
-                                            </ul>
-                                        </For>
-                                    </li>
-                                }
-                            }
-
-                        </Show>
-                    }
-                }}
-
-            </Transition>
         </div>
     }
 }

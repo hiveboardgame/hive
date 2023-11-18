@@ -23,6 +23,7 @@ pub struct GameStateResponse {
     // #[serde_as(as = "Vec<(_, _)>")]
     pub moves: HashMap<String, Vec<Position>>,
     pub spawns: Vec<Position>,
+    pub rated: bool,
     pub reserve_black: HashMap<Bug, Vec<String>>,
     pub reserve_white: HashMap<Bug, Vec<String>>,
     pub history: Vec<(String, String)>,
@@ -90,6 +91,7 @@ impl GameStateResponse {
                 .board
                 .spawnable_positions(state.turn_color)
                 .collect::<Vec<_>>(),
+            rated: game.rated,
             reserve_black: state
                 .board
                 .reserve(Color::Black, game.game_type.parse().unwrap()),
@@ -132,3 +134,5 @@ impl GameStateResponse {
         mapped
     }
 }
+
+
