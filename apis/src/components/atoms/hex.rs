@@ -46,8 +46,11 @@ pub fn Hex(hex: Hex) -> impl IntoView {
             PieceType::Board | PieceType::Covered | PieceType::History => {
                 view! { <Piece piece=piece position=hex.position level=expanded_level piece_type=piece_type/> }
             }
-            PieceType::Spawn => {
+            PieceType::Move => {
                 view! { <Piece piece=piece position=hex.position level=expanded_sublevel piece_type=piece_type/> }
+            }
+            PieceType::Spawn => {
+                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type/> }
             }
             _ => {
                 view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type/> }

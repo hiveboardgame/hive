@@ -448,6 +448,7 @@ dependencies = [
  "rand",
  "rand_core",
  "serde",
+ "serde_json",
  "sha2",
  "simple_logger",
  "thiserror",

@@ -1,20 +1,23 @@
-#[cfg(feature = "ssr")]
 pub mod websockets;
+pub mod common;
+pub mod functions;
 
-#[cfg(feature = "ssr")]
+use cfg_if::cfg_if;
+cfg_if! { if #[cfg(feature = "ssr")] {
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    use crate::websockets::lobby::Lobby;
+    use crate::websockets::start_connection;
     use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
     use actix_web::{cookie::Key, web, App, HttpServer};
     use apis::app::App;
-    use crate::websockets::lobby::Lobby;
-    use crate::websockets::start_connection;
     use db_lib::{config::DbConfig, get_pool};
-    use diesel::Connection;
     use diesel::pg::PgConnection;
+    use diesel::Connection;
     use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
     use leptos::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
@@ -23,9 +26,9 @@ async fn main() -> std::io::Result<()> {
     let conf = get_configuration(None).await.unwrap();
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
-    let chat_server = Lobby::default().start();
 
-    simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
+    // WARN: This needs to be enabled again
+    // simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
 
     let config = DbConfig::from_env().expect("Failed to load config from env");
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");
@@ -42,6 +45,7 @@ async fn main() -> std::io::Result<()> {
     let pool = get_pool(&config.database_url)
         .await
         .expect("Failed to get pool");
+    let chat_server = Lobby::new(pool.clone()).start();
 
     println!("listening on http://{}", &addr);
 
@@ -84,7 +88,6 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 
-#[cfg(feature = "ssr")]
 #[actix_web::get("favicon.ico")]
 async fn favicon(
     leptos_options: actix_web::web::Data<leptos::LeptosOptions>,
@@ -96,10 +99,9 @@ async fn favicon(
     ))?)
 }
 
+}}
+
 #[cfg(not(any(feature = "ssr", feature = "csr")))]
 pub fn main() {
-    // no client-side main function
-    // unless we want this to work with e.g., Trunk for pure client-side testing
-    // see lib.rs for hydration function instead
-    // see optional feature `csr` instead
+    // trunk stuff
 }

@@ -47,9 +47,13 @@ pub fn Piece(
                     log!("Reserve piece");
                     game_state_signal.show_spawns(piece.get_untracked(), position.get_untracked());
                 }
+                PieceType::Move => {
+                    log!("Moving piece {}", piece.get_untracked());
+                    game_state_signal.move_active();
+                }
                 PieceType::Spawn => {
                     log!("Spawning piece {}", piece.get_untracked());
-                    game_state_signal.play_active_piece();
+                    game_state_signal.spawn_active();
                 }
                 _ => log!("Piece is {}", piece_type),
             };
@@ -75,4 +79,3 @@ pub fn Piece(
         </g>
     }
 }
-

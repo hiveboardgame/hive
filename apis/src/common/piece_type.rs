@@ -10,6 +10,8 @@ pub enum PieceType {
     History,
     // not your turn
     Inactive,
+    // a not yet moved piece on the board
+    Move,
     // uninteractive
     #[default]
     Nope,
@@ -29,6 +31,7 @@ impl fmt::Display for PieceType {
             PieceType::Nope => "nope",
             PieceType::Reserve => "reserve",
             PieceType::Spawn => "spawn",
+            PieceType::Move => "move",
         };
         write!(f, "{}", name)
     }

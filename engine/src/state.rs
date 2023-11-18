@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::bug::Bug;
 use crate::color::Color;
 use crate::game_error::GameError;
@@ -197,6 +199,14 @@ impl State {
             .move_piece(piece, current_position, target_position, self.turn)?;
         self.board.last_move = (Some(current_position), Some(target_position));
         Ok(())
+    }
+
+    pub fn reserve(&self, color: Color) -> HashMap<Bug, Vec<String>> {
+        self.board.reserve(color, self.game_type)
+    }
+
+    pub fn current_reserve(&self) -> HashMap<Bug, Vec<String>> {
+        self.board.reserve(self.turn_color, self.game_type)
     }
 
     pub fn turn_spawn(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {

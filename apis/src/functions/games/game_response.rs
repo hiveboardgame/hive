@@ -34,21 +34,23 @@ pub struct GameStateResponse {
     pub black_rating_change: Option<f64>,
 }
 
-#[cfg(feature = "ssr")]
+use cfg_if::cfg_if;
+cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::{game::Game, rating::Rating},
     DbPool,
 };
-#[cfg(feature = "ssr")]
 use hive_lib::{
     color::Color, game_status::GameStatus::Finished, history::History, piece::Piece, state::State,
 };
-#[cfg(feature = "ssr")]
 use leptos::*;
-#[cfg(feature = "ssr")]
 use std::str::FromStr;
-#[cfg(feature = "ssr")]
 impl GameStateResponse {
+    pub async fn new_from_nanoid(game_id: &str, pool: &DbPool) -> Result<Self, ServerFnError> {
+        let game = Game::find_by_nanoid(game_id, pool).await?;
+        GameStateResponse::new_from_db(&game, pool).await
+    }
+
     pub async fn new_from_db(game: &Game, pool: &DbPool) -> Result<Self, ServerFnError> {
         let history = History::new_from_str(game.history.clone())?;
         let state = State::new_from_history(&history)?;
@@ -134,5 +136,4 @@ impl GameStateResponse {
         mapped
     }
 }
-
-
+}}

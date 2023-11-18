@@ -1,4 +1,8 @@
-use hive_lib::{game_type::GameType, piece::Piece, position::Position, state::State};
+use super::auth_context::AuthContext;
+use super::web_socket::WebsocketContext;
+use crate::common::client_message::ClientMessage;
+use crate::common::game_action::GameAction;
+use hive_lib::{game_type::GameType, piece::Piece, position::Position, state::State, turn::Turn};
 use leptos::logging::log;
 use leptos::*;
 
@@ -20,12 +24,24 @@ impl GameStateSignal {
         }
     }
 
+    pub fn join(&mut self) {
+        self.signal.update(|s| s.join())
+    }
+
+    pub fn set_game_id(&mut self, game_id: String) {
+        self.signal.update(|s| s.game_id = Some(game_id))
+    }
+
     pub fn reset(&mut self) {
         self.signal.update(|s| s.reset())
     }
 
-    pub fn play_active_piece(&mut self) {
-        self.signal.update(|s| s.play_active_piece())
+    pub fn move_active(&mut self) {
+        self.signal.update(|s| s.move_active())
+    }
+
+    pub fn spawn_active(&mut self) {
+        self.signal.update(|s| s.spawn_active())
     }
 
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
@@ -73,6 +89,8 @@ pub enum View {
 
 #[derive(Clone, Debug)]
 pub struct GameState {
+    // game_id is the nanoid of the game
+    pub game_id: Option<String>,
     // the gamestate
     pub state: State,
     // possible destinations of selected piece
@@ -102,6 +120,7 @@ impl GameState {
     pub fn new() -> Self {
         let state = State::new(GameType::MLP, true);
         Self {
+            game_id: None,
             state,
             target_positions: vec![],
             active: None,
@@ -125,10 +144,73 @@ impl GameState {
         self.reserve_position = None;
     }
 
-    pub fn play_active_piece(&mut self) {
+    // TODO: This needs to be reworked, maybe pass in user(!) and game_id(?)
+    pub fn join(&mut self) {
+        let websocket = expect_context::<WebsocketContext>();
+        let auth_context = expect_context::<AuthContext>();
+        let game = String::from("_lIJAAWj5P");
+        // let game = self
+        //     .game_id
+        //     .as_ref()
+        //     .expect("No game_id in gamestate")
+        //     .clone();
+        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+            let msg = ClientMessage {
+                user_id: user.id,
+                game_id: game.clone(),
+                game_action: GameAction::Join(game),
+            };
+            log!("Sending {:?} to WS", msg);
+            websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+        }
+    }
+
+    pub fn move_active(&mut self) {
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
+            } else {
+                let websocket = expect_context::<WebsocketContext>();
+                let auth_context = expect_context::<AuthContext>();
+                if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+                    let msg = ClientMessage {
+                        user_id: user.id,
+                        game_id: self
+                            .game_id
+                            .as_ref()
+                            .expect("No game_id in gamestate")
+                            .clone(),
+                        game_action: GameAction::Move(Turn::Move(active, position)),
+                    };
+                    websocket
+                        .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+                }
+            }
+        }
+        self.reset();
+        self.history_turn = Some(self.state.turn - 1)
+    }
+
+    pub fn spawn_active(&mut self) {
+        if let (Some(active), Some(position)) = (self.active, self.target_position) {
+            if let Err(e) = self.state.play_turn_from_position(active, position) {
+                log!("Could not play turn: {} {} {}", active, position, e);
+            } else {
+                let websocket = expect_context::<WebsocketContext>();
+                let auth_context = expect_context::<AuthContext>();
+                if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+                    let msg = ClientMessage {
+                        user_id: user.id,
+                        game_id: self
+                            .game_id
+                            .as_ref()
+                            .expect("No game_id in gamestate")
+                            .clone(),
+                        game_action: GameAction::Move(Turn::Spawn(active, position)),
+                    };
+                    websocket
+                        .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+                }
             }
         }
         self.reset();
@@ -146,8 +228,10 @@ impl GameState {
         self.reset();
         self.current_position = Some(position);
         let moves = self.state.board.moves(self.state.turn_color);
+        log!("showing moves");
         if let Some(positions) = moves.get(&(piece, position)) {
             self.target_positions = positions.to_owned();
+            log!("{:?}", piece);
             self.active = Some(piece);
         }
     }
@@ -217,4 +301,3 @@ impl GameState {
 pub fn provide_game_state() {
     provide_context(GameStateSignal::new())
 }
-

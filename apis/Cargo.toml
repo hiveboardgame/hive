@@ -34,6 +34,7 @@ log.workspace = true
 rand.workspace = true
 rand_core.workspace = true
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 sha2.workspace = true
 simple_logger.workspace = true
 thiserror.workspace = true
