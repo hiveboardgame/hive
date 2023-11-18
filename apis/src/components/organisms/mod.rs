@@ -1,5 +1,6 @@
 pub mod board;
 pub mod darkmode_toggle;
+pub mod display_profile;
 pub mod hamburger;
 pub mod header;
 pub mod history;

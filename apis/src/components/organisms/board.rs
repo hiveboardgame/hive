@@ -79,19 +79,7 @@ pub fn Board(
     let initial_position = Position::initial_spawn_position();
     let svg_pos = SvgPos::center_for_level(initial_position, 0);
 
-    //Make initial piece spawn in center of board
-    div_ref.on_load(move |_| {
-        let div = div_ref.get_untracked().expect("Div should already exist");
-
-        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-            viewbox_controls.width = div.offset_width() as f32;
-            viewbox_controls.height = div.offset_height() as f32;
-            viewbox_controls.x_transform = -(svg_pos.0 - (div.offset_width() as f32 / 2.0));
-            viewbox_controls.y_transform = -(svg_pos.1 - (div.offset_height() as f32 / 2.0));
-        });
-    });
-
-    //on resize make sure to resize the viewbox
+    //on load and resize make sure to resize the viewbox
     use_resize_observer(div_ref, move |entries, _observer| {
         let rect = entries[0].content_rect();
         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {

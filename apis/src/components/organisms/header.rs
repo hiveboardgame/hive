@@ -10,7 +10,9 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
     let hamburger_show = create_rw_signal(false);
     let onclick = move || hamburger_show.update(|b| *b = false);
     view! {
-        <header class=format!("w-full sticky top-0 flex justify-between {extend_tw_classes}")>
+        <header class=format!(
+            "w-full sticky top-0 flex justify-between bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] {extend_tw_classes}",
+        )>
             <a href="/">Home</a>
             <a href="/hws">WebSocket</a>
             <Transition>

@@ -1655,6 +1655,7 @@ dependencies = [
  "icondata_ai",
  "icondata_bi",
  "icondata_core",
+ "icondata_ri",
 ]
 
 [[package]]
@@ -1680,6 +1681,15 @@ name = "icondata_core"
 version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1640a4c1d5ddd08ab1d9854ffa7a2fa3dc52339492676b6d3031e77ca579f434"
+
+[[package]]
+name = "icondata_ri"
+version = "0.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b1d3adc5b64b22d10ab23a7b1a005f4cb52f3d08909f578fbaa09af9f9c0b7b"
+dependencies = [
+ "icondata_core",
+]
 
 [[package]]
 name = "ident_case"

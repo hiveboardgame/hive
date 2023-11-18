@@ -1,6 +1,7 @@
 use crate::{
     common::time_control::TimeControl,
     components::organisms::{board::Board, side_board::SideboardTabs, timer::DisplayTimer},
+    functions::games::get::get_game_from_nanoid,
 };
 use hive_lib::{color::Color, position::Position};
 use leptos::*;
@@ -20,8 +21,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     provide_context(TargetStack(RwSignal::new(None)));
     let params = use_params::<PlayParams>();
     // TODO: move the time_control to the gamestate
-    let time_control = TimeControl::RealTime(Duration::from_secs(10), Duration::from_secs(3));
-    let _nanoid = move || {
+    let time_control = store_value(TimeControl::RealTime(
+        Duration::from_secs(10),
+        Duration::from_secs(3),
+    ));
+    let nanoid = move || {
         params.with(|params| {
             params
                 .as_ref()
@@ -29,14 +33,31 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 .unwrap_or_default()
         })
     };
+    let game = Resource::new(nanoid, move |_| get_game_from_nanoid(nanoid()));
 
     view! {
-        <div class=format!("grid grid-cols-10 grid-rows-6 h-[90%] w-[98%] {extend_tw_classes}")>
-            <Board/>
-            <DisplayTimer side=Color::White time_control=time_control.clone()/>
-            <SideboardTabs extend_tw_classes="border-blue-200"/>
-            <DisplayTimer side=Color::Black time_control=time_control/>
-        </div>
+        <Transition>
+            {move || {
+                game()
+                    .map(|data| match data {
+                        Err(_) => view! { <pre>"Page not found"</pre> }.into_view(),
+                        Ok(_) => {
+                            view! {
+                                <div class=format!(
+                                    "grid grid-cols-10 grid-rows-6 max-h-[95svh] {extend_tw_classes}",
+                                )>
+                                    <Board/>
+                                    <DisplayTimer side=Color::White time_control=time_control()/>
+                                    <SideboardTabs extend_tw_classes="border-blue-200"/>
+                                    <DisplayTimer side=Color::Black time_control=time_control()/>
+                                </div>
+                            }
+                                .into_view()
+                        }
+                    })
+            }}
+
+        </Transition>
     }
 }
 
