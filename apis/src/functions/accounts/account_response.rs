@@ -13,14 +13,13 @@ pub struct AccountResponse {
     pub draw: i64,
 }
 
-#[cfg(feature = "ssr")]
+use cfg_if::cfg_if;
+cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::{rating::Rating, user::User},
     DbPool,
 };
-#[cfg(feature = "ssr")]
 use leptos::*;
-#[cfg(feature = "ssr")]
 impl AccountResponse {
     pub async fn from_uuid(id: &Uuid, pool: &DbPool) -> Result<Self, ServerFnError> {
         let user = User::find_by_uuid(id, pool).await?;
@@ -38,3 +37,4 @@ impl AccountResponse {
         })
     }
 }
+}}

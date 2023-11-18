@@ -31,6 +31,23 @@ impl GameControl {
     }
 }
 
+// client -> server
+// struct ClientMessage {
+//      user: Uuid,
+//      (auth_)token: String,
+//      game: Nanoid,
+//      message: Message,
+// }
+//
+// server -> client
+// struct ServerMessage {
+//      user: Uuid,
+//      username: String,
+//      game: Nanoid,
+//      game_state: SomeEncodingOfTheState,
+//      message: Message,
+// }
+
 impl fmt::Display for GameControl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let game_control = match self {

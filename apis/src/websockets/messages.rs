@@ -8,22 +8,25 @@ pub struct WsMessage(pub String);
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct Connect {
-    pub lobby_id: Uuid,
     pub addr: Recipient<WsMessage>,
-    pub self_id: Uuid,
+    pub game_id: String,
+    pub user_id: Uuid,
+    pub username: String,
 }
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct Disconnect {
-    pub room_id: Uuid,
-    pub id: Uuid,
+    pub game_id: String,
+    pub user_id: Uuid,
+    pub username: String,
 }
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct ClientActorMessage {
-    pub id: Uuid,
+    pub user_id: Uuid,
+    pub username: String,
     pub msg: String,
-    pub room_id: Uuid,
+    pub game_id: String,
 }

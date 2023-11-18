@@ -89,7 +89,7 @@ impl HexStack {
         ActiveState::None
     }
 
-    pub fn add_tile(&mut self, piece: Piece) {
+    pub fn add_tile(&mut self, piece: Piece, piece_type: PieceType) {
         let mut len = self.len();
         if self.hexes.iter().any(|hex| {
             hex.kind == HexType::LastMove(Direction::From)
@@ -98,7 +98,7 @@ impl HexStack {
             len -= 1;
         }
         self.hexes.push(Hex {
-            kind: HexType::Tile(piece, PieceType::Spawn),
+            kind: HexType::Tile(piece, piece_type),
             position: self.position,
             level: len,
         })

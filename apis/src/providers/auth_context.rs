@@ -10,6 +10,7 @@ pub struct AuthContext {
     pub register: Action<Register, Result<(), ServerFnError>>,
     pub user: Resource<(usize, usize, usize), Result<Option<AccountResponse>, ServerFnError>>,
 }
+
 /// Get the current user and place it in Context
 pub fn provide_auth() {
     let login = create_server_action::<Login>();

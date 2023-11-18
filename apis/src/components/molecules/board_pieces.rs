@@ -1,5 +1,5 @@
 use crate::{
-    common::{hex::Direction, hex_stack::HexStack},
+    common::{hex::Direction, hex_stack::HexStack, piece_type::PieceType},
     components::molecules::hex_stack::HexStack as HexStackView,
     providers::game_state::GameStateSignal,
 };
@@ -45,7 +45,12 @@ pub fn BoardPieces() -> impl IntoView {
                 }
                 if let (Some(piece), Some(target_position)) = active_piece {
                     if position == target_position {
-                        hs.add_tile(piece);
+                        // Check here whether piece is still in reserve?
+                        if game_state.state.current_reserve().contains_key(&piece.bug()) {
+                            hs.add_tile(piece, PieceType::Spawn);
+                        } else {
+                            hs.add_tile(piece, PieceType::Move);
+                        }
                     }
                 }
                 if !hs.is_empty() {
@@ -65,4 +70,3 @@ pub fn BoardPieces() -> impl IntoView {
             .collect_view()
     }
 }
-

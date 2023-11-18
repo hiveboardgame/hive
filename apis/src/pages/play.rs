@@ -2,6 +2,7 @@ use crate::{
     common::time_control::TimeControl,
     components::organisms::{board::Board, side_board::SideboardTabs, timer::DisplayTimer},
     functions::games::get::get_game_from_nanoid,
+    providers::game_state::GameStateSignal,
 };
 use hive_lib::{color::Color, position::Position};
 use leptos::*;
@@ -19,6 +20,8 @@ pub struct TargetStack(pub RwSignal<Option<Position>>);
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
+    let mut game_state = expect_context::<GameStateSignal>();
+
     let params = use_params::<PlayParams>();
     // TODO: move the time_control to the gamestate
     let time_control = store_value(TimeControl::RealTime(
@@ -34,6 +37,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         })
     };
     let game = Resource::new(nanoid, move |_| get_game_from_nanoid(nanoid()));
+
+    // TODO: @ion move set_game_id and join into the transition
+    game_state.set_game_id(nanoid());
+    #[cfg(feature = "hydrate")]
+    game_state.join();
 
     view! {
         <Transition>
@@ -60,4 +68,3 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         </Transition>
     }
 }
-

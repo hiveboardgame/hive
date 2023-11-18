@@ -1,24 +1,30 @@
 use crate::websockets::messages::{ClientActorMessage, Connect, Disconnect, WsMessage};
 use actix::prelude::{Actor, Context, Handler, Recipient};
+use actix::AsyncContext;
+use actix::{fut, ActorContext, ActorFutureExt, ContextFutureSpawner, WrapFuture};
+use db_lib::{models::game::Game, DbPool};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
+use serde::{Deserialize, Serialize};
 
 type Socket = Recipient<WsMessage>;
 
 #[derive(Debug)]
 pub struct Lobby {
     #[allow(dead_code)]
-    id: Uuid,
-    sessions: HashMap<Uuid, Socket>,
-    rooms: HashMap<Uuid, HashSet<Uuid>>,
+    id: String,
+    sessions: HashMap<Uuid, Socket>,       // user_id to (socket_)id
+    games: HashMap<String, HashSet<Uuid>>, // game_id to set of users
+    pool: DbPool,
 }
 
-impl Default for Lobby {
-    fn default() -> Lobby {
+impl Lobby {
+    pub fn new(pool: DbPool) -> Lobby {
         Lobby {
-            id: Uuid::new_v4(),
+            id: String::from("lobby"),
             sessions: HashMap::new(),
-            rooms: HashMap::new(),
+            games: HashMap::new(),
+            pool,
         }
     }
 }
@@ -41,21 +47,22 @@ impl Handler<Disconnect> for Lobby {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
-        if self.sessions.remove(&msg.id).is_some() {
-            self.rooms
-                .get(&msg.room_id)
+        if self.sessions.remove(&msg.user_id).is_some() {
+            println!("Client {} disconnected", msg.user_id);
+            self.games
+                .get(&msg.game_id)
                 .unwrap()
                 .iter()
-                .filter(|conn_id| *conn_id.to_owned() != msg.id)
+                .filter(|conn_id| *conn_id.to_owned() != msg.user_id)
                 .for_each(|user_id| {
-                    self.send_message(&format!("{} disconnected.", &msg.id), user_id)
+                    self.send_message(&format!("{} disconnected.", &msg.user_id), user_id)
                 });
-            if let Some(lobby) = self.rooms.get_mut(&msg.room_id) {
-                if lobby.len() > 1 {
-                    lobby.remove(&msg.id);
+            if let Some(game) = self.games.get_mut(&msg.game_id) {
+                if game.len() > 1 {
+                    game.remove(&msg.user_id);
                 } else {
-                    //only one in the lobby, remove it entirely
-                    self.rooms.remove(&msg.room_id);
+                    //only one in the game, remove it entirely
+                    self.games.remove(&msg.game_id);
                 }
             }
         }
@@ -65,29 +72,38 @@ impl Handler<Disconnect> for Lobby {
 impl Handler<Connect> for Lobby {
     type Result = ();
 
-    fn handle(&mut self, msg: Connect, _: &mut Context<Self>) -> Self::Result {
-        println!("Self is {:?}", self);
-        println!("msg is {:?}", msg);
-        println!("rooms are: {:?}", self.rooms);
-        self.rooms
-            .entry(msg.lobby_id)
+    fn handle(&mut self, msg: Connect, ctx: &mut Context<Self>) -> Self::Result {
+        println!("Client {} connected", msg.user_id);
+        self.games
+            .entry(msg.game_id.clone())
             .or_default()
-            .insert(msg.self_id);
-        println!("rooms are: {:?}", self.rooms);
-        println!("room is {:?}", self.rooms.get(&msg.lobby_id));
-
-        self.rooms
-            .get(&msg.lobby_id)
+            .insert(msg.user_id);
+        self.games
+            .get(&msg.game_id)
             .unwrap()
             .iter()
-            .filter(|conn_id| *conn_id.to_owned() != msg.self_id)
+            .filter(|conn_id| *conn_id.to_owned() != msg.user_id)
             .for_each(|conn_id| {
-                self.send_message(&format!("{} just joined!", msg.self_id), conn_id)
+                self.send_message(&format!("{} just joined!", msg.user_id), conn_id)
             });
+        self.sessions.insert(msg.user_id, msg.addr.clone());
 
-        self.sessions.insert(msg.self_id, msg.addr);
-
-        self.send_message(&format!("your id is {}", msg.self_id), &msg.self_id);
+        // TODO: send the gamestate to the newly joined user
+        if msg.game_id == "lobby" {
+            self.send_message(&format!("You joined {}", msg.game_id), &msg.user_id);
+            return ();
+        }
+        let pool = self.pool.clone();
+        let addr = msg.addr.clone();
+        let future = async move {
+            let game: Game = Game::find_by_nanoid(&msg.game_id, &pool)
+                .await
+                .expect("Could not find game");
+            addr.do_send(WsMessage(format!("You joined {:?}", game)));
+        };
+        let actor_future = future.into_actor(self);
+        ctx.wait(actor_future);
+        //println!("Lobby is {:?}", self);
     }
 }
 
@@ -95,19 +111,17 @@ impl Handler<ClientActorMessage> for Lobby {
     type Result = ();
 
     fn handle(&mut self, msg: ClientActorMessage, _ctx: &mut Context<Self>) -> Self::Result {
-        if msg.msg.starts_with("\\w") {
-            if let Some(id_to) = msg.msg.split(' ').collect::<Vec<&str>>().get(1) {
-                self.send_message(&msg.msg, &Uuid::parse_str(id_to).unwrap());
-            }
-        } else {
-            println!("Room id is: {:?}", &msg.room_id);
-            println!("Users in rooms are: {:?}", self.rooms.get(&msg.room_id).unwrap());
-            println!("Message is: {:?}", &msg.msg);
-            self.rooms
-                .get(&msg.room_id)
-                .unwrap()
-                .iter()
-                .for_each(|client| self.send_message(&msg.msg, client));
-        }
+        println!(
+            "Got message {:?} in {:?} with users: {:?}",
+            &msg.msg,
+            &msg.game_id,
+            self.games.get(&msg.game_id)
+        );
+        // TODO: change message from clientmesssage to servermessage
+        self.games
+            .get(&msg.game_id)
+            .unwrap()
+            .iter()
+            .for_each(|client| self.send_message(&msg.msg, client));
     }
 }

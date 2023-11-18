@@ -8,7 +8,6 @@ use crate::providers::{
     auth_context::provide_auth, color_scheme::provide_color_scheme, game_state::provide_game_state,
     web_socket::provide_websocket,
 };
-use leptos::logging::log;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
@@ -19,10 +18,8 @@ pub fn App() -> impl IntoView {
     provide_color_scheme();
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
-    log!("Setting up game state");
     provide_game_state();
-    let url = "/ws/67e55044-10b1-426f-9247-bb680e5fe0c8";
-
+    let url = "/ws/";
     _ = provide_websocket(url);
 
     view! {
