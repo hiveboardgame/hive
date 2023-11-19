@@ -1,4 +1,5 @@
 use crate::common::{piece_type::PieceType, svg_pos::SvgPos};
+use crate::providers::auth_context::AuthContext;
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::{bug::Bug, game_status::GameStatus, piece::Piece, position::Position};
 use leptos::logging::log;
@@ -34,29 +35,42 @@ pub fn Piece(
     });
 
     let mut game_state_signal = expect_context::<GameStateSignal>();
+    let auth_context = expect_context::<AuthContext>();
+    let user = move || match untrack(auth_context.user) {
+        Some(Ok(Some(user))) => Some(user),
+        _ => None,
+    };
 
-    let onclick = move |_| match (game_state_signal.signal)().state.game_status {
-        GameStatus::Finished(_) => { /* Don't attach any on:click for finished games */ }
-        _ => {
-            match piece_type {
-                PieceType::Board => {
-                    log!("Board piece");
-                    game_state_signal.show_moves(piece.get_untracked(), position.get_untracked());
+    let onclick = move |_| {
+        if user().is_some() {
+            match (game_state_signal.signal)().state.game_status {
+                GameStatus::Finished(_) => { /* Don't attach any on:click for finished games */ }
+                _ => {
+                    match piece_type {
+                        PieceType::Board => {
+                            log!("Board piece");
+                            game_state_signal
+                                .show_moves(piece.get_untracked(), position.get_untracked());
+                        }
+                        PieceType::Reserve => {
+                            log!("Reserve piece");
+                            game_state_signal
+                                .show_spawns(piece.get_untracked(), position.get_untracked());
+                        }
+                        PieceType::Move => {
+                            log!("Moving piece {}", piece.get_untracked());
+                            game_state_signal.move_active(user().expect("User is some").id);
+                        }
+                        PieceType::Spawn => {
+                            {
+                                log!("Spawning piece {}", piece.get_untracked());
+                                game_state_signal.spawn_active(user().expect("User is some").id);
+                            };
+                        }
+                        _ => log!("Piece is {}", piece_type),
+                    };
                 }
-                PieceType::Reserve => {
-                    log!("Reserve piece");
-                    game_state_signal.show_spawns(piece.get_untracked(), position.get_untracked());
-                }
-                PieceType::Move => {
-                    log!("Moving piece {}", piece.get_untracked());
-                    game_state_signal.move_active();
-                }
-                PieceType::Spawn => {
-                    log!("Spawning piece {}", piece.get_untracked());
-                    game_state_signal.spawn_active();
-                }
-                _ => log!("Piece is {}", piece_type),
-            };
+            }
         }
     };
 
@@ -79,3 +93,4 @@ pub fn Piece(
         </g>
     }
 }
+

@@ -1,10 +1,10 @@
-use super::auth_context::AuthContext;
 use super::web_socket::WebsocketContext;
 use crate::common::client_message::ClientMessage;
 use crate::common::game_action::GameAction;
 use hive_lib::{game_type::GameType, piece::Piece, position::Position, state::State, turn::Turn};
 use leptos::logging::log;
 use leptos::*;
+use uuid::Uuid;
 
 #[derive(Clone, Debug, Copy)]
 pub struct GameStateSignal {
@@ -24,24 +24,26 @@ impl GameStateSignal {
         }
     }
 
-    pub fn join(&mut self) {
-        self.signal.update(|s| s.join())
+    pub fn join(&self, user: Uuid) {
+        log!("Joined game");
+        self.signal.get_untracked().join(user)
     }
 
-    pub fn set_game_id(&mut self, game_id: String) {
-        self.signal.update(|s| s.game_id = Some(game_id))
+    pub fn set_game_id(&mut self, game_id: StoredValue<String>) {
+        log!("game id is {}", game_id());
+        self.signal.update_untracked(|s| s.game_id = Some(game_id))
     }
 
     pub fn reset(&mut self) {
         self.signal.update(|s| s.reset())
     }
 
-    pub fn move_active(&mut self) {
-        self.signal.update(|s| s.move_active())
+    pub fn move_active(&mut self, user: Uuid) {
+        self.signal.update(|s| s.move_active(user))
     }
 
-    pub fn spawn_active(&mut self) {
-        self.signal.update(|s| s.spawn_active())
+    pub fn spawn_active(&mut self, user: Uuid) {
+        self.signal.update(|s| s.spawn_active(user))
     }
 
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
@@ -90,7 +92,7 @@ pub enum View {
 #[derive(Clone, Debug)]
 pub struct GameState {
     // game_id is the nanoid of the game
-    pub game_id: Option<String>,
+    pub game_id: Option<StoredValue<String>>,
     // the gamestate
     pub state: State,
     // possible destinations of selected piece
@@ -145,72 +147,50 @@ impl GameState {
     }
 
     // TODO: This needs to be reworked, maybe pass in user(!) and game_id(?)
-    pub fn join(&mut self) {
+    pub fn join(&mut self, user_id: Uuid) {
         let websocket = expect_context::<WebsocketContext>();
-        let auth_context = expect_context::<AuthContext>();
-        let game = String::from("_lIJAAWj5P");
-        // let game = self
-        //     .game_id
-        //     .as_ref()
-        //     .expect("No game_id in gamestate")
-        //     .clone();
-        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
-            let msg = ClientMessage {
-                user_id: user.id,
-                game_id: game,
-                game_action: GameAction::Join,
-            };
-            log!("Sending {:?} to WS", msg);
-            websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
-        }
+        let game_id = self.game_id.expect("Game_id in gamestate");
+        let msg = ClientMessage {
+            user_id: user_id,
+            game_id: game_id(),
+            game_action: GameAction::Join,
+        };
+        log!("Sending {:?} to WS", msg);
+        websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
-    pub fn move_active(&mut self) {
+    pub fn move_active(&mut self, user_id: Uuid) {
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
             } else {
                 let websocket = expect_context::<WebsocketContext>();
-                let auth_context = expect_context::<AuthContext>();
-                if let Some(Ok(Some(user))) = untrack(auth_context.user) {
-                    let msg = ClientMessage {
-                        user_id: user.id,
-                        game_id: self
-                            .game_id
-                            .as_ref()
-                            .expect("No game_id in gamestate")
-                            .clone(),
-                        game_action: GameAction::Move(Turn::Move(active, position)),
-                    };
-                    websocket
-                        .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
-                }
+                let game_id = self.game_id.expect("Game_id in gamestate");
+                let msg = ClientMessage {
+                    user_id: user_id,
+                    game_id: game_id(),
+                    game_action: GameAction::Move(Turn::Move(active, position)),
+                };
+                websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
             }
         }
         self.reset();
         self.history_turn = Some(self.state.turn - 1)
     }
 
-    pub fn spawn_active(&mut self) {
+    pub fn spawn_active(&mut self, user_id: Uuid) {
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
             } else {
                 let websocket = expect_context::<WebsocketContext>();
-                let auth_context = expect_context::<AuthContext>();
-                if let Some(Ok(Some(user))) = untrack(auth_context.user) {
-                    let msg = ClientMessage {
-                        user_id: user.id,
-                        game_id: self
-                            .game_id
-                            .as_ref()
-                            .expect("No game_id in gamestate")
-                            .clone(),
-                        game_action: GameAction::Move(Turn::Spawn(active, position)),
-                    };
-                    websocket
-                        .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
-                }
+                let game_id = self.game_id.expect("Game_id in gamestate");
+                let msg = ClientMessage {
+                    user_id: user_id,
+                    game_id: game_id(),
+                    game_action: GameAction::Move(Turn::Spawn(active, position)),
+                };
+                websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
             }
         }
         self.reset();
@@ -301,3 +281,4 @@ impl GameState {
 pub fn provide_game_state() {
     provide_context(GameStateSignal::new())
 }
+
