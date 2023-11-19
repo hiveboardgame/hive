@@ -157,8 +157,8 @@ impl GameState {
         if let Some(Ok(Some(user))) = untrack(auth_context.user) {
             let msg = ClientMessage {
                 user_id: user.id,
-                game_id: game.clone(),
-                game_action: GameAction::Join(game),
+                game_id: game,
+                game_action: GameAction::Join,
             };
             log!("Sending {:?} to WS", msg);
             websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));

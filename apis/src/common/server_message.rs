@@ -5,27 +5,27 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerMessage {
-    game_action: GameAction,
-    game: GameStateResponse,
-    game_id: String, // nanoid
-    user_id: Uuid,
-    username: String,
+    pub game_action: GameAction,
+    pub game: GameStateResponse,
+    pub game_id: String, // nanoid
+    pub user_id: Uuid,
+    pub username: String,
 }
 
 use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 
-use db_lib::{models::game::Game, DbPool};
+use db_lib::DbPool;
 use leptos::ServerFnError;
 
 impl ServerMessage {
-    pub async fn new(game_id: String, game_action: GameAction, user_id: Uuid, username: String, pool: DbPool) -> Result<ServerMessage, ServerFnError> {
+    pub async fn new(game_id: &str, game_action: GameAction, user_id: &Uuid, username: &str, pool: &DbPool) -> Result<ServerMessage, ServerFnError> {
         Ok(ServerMessage {
             game_action,
-            game: GameStateResponse::new_from_nanoid(&game_id, &pool).await?,
-            game_id,
-            user_id,
-            username,
+            game: GameStateResponse::new_from_nanoid(game_id, pool).await?,
+            game_id: game_id.to_owned(),
+            user_id: user_id.to_owned(),
+            username: username.to_owned(),
         })
     }
 }

@@ -4,7 +4,6 @@ cfg_if! { if #[cfg(feature = "ssr")] {
 
 use crate::common::client_message::ClientMessage;
 use crate::common::game_action::GameAction;
-use crate::common::server_message::ServerMessage;
 use crate::websockets::{
     lobby::Lobby,
     messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
@@ -14,8 +13,7 @@ use actix::{Actor, Addr, Running, StreamHandler};
 use actix::{AsyncContext, Handler};
 use actix_web_actors::ws;
 use actix_web_actors::ws::Message::Text;
-use db_lib::{DbPool, models::{rating::Rating, user::User, game::Game}};
-use serde::{Deserialize, Serialize};
+use db_lib::DbPool;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
@@ -71,7 +69,7 @@ impl Actor for WsConn {
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
         self.lobby_addr.do_send(Disconnect {
             user_id: self.user_uid,
-            game_id: String::from("lobby"), // self.game.clone(),
+            game_id: String::from("lobby"),
             username: self.username.clone(),
         });
         Running::Stop
@@ -126,11 +124,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
                 let user_id = self.user_uid.clone();
                 let username = self.username.clone();
                 let future = async move {
-                    // Your async function call here
-                    // For this example, let's assume it returns a usize
-                    let game: Game = Game::find_by_nanoid(&game_id, &pool).await.expect("foo");
-                    println!("Game in async: {:?}", game);
-
                     let cam = match m.game_action {
                         GameAction::Move(turn) => {
                             // - play the turn on the game
@@ -138,26 +131,16 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
                             //   - play the turn on the game
                             //   - send message back with result
                             println!("Playing move {:?}", turn);
-                            ClientActorMessage {
-                                user_id,
-                                msg: turn.to_string(),
-                                game_id: game_id,
-                                username,
-                            }
+                            ClientActorMessage::new(GameAction::Move(turn), &game_id, user_id, &username, pool).await.expect("Failed to construct ClientActorMessage")
                         },
                         GameAction::Control(control) => {
                             //   - get the game from the db
                             //   - control the game
                             //   - send message back with result
                             println!("Got GameControl {:?}", control);
-                            ClientActorMessage {
-                                user_id,
-                                msg: control.to_string(),
-                                game_id: game_id,
-                                username,
-                            }
+                            ClientActorMessage::new(GameAction::Control(control), &game_id, user_id, &username, pool).await.expect("Failed to construct ClientActorMessage")
                         },
-                        GameAction::Join(game_id) => {
+                        GameAction::Join => {
                             println!("Got join");
                             lobby.do_send(Connect {
                                 addr: addr.recipient(),
@@ -165,31 +148,15 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
                                 user_id,
                                 username: username.clone(),
                             });
-                            ClientActorMessage {
-                                user_id,
-                                msg: format!("{} joined {}", username, game_id),
-                                game_id: game_id,
-                                username,
-                            }
+                            ClientActorMessage::new(GameAction::Join, &game_id, user_id, &username, pool).await.expect("Failed to construct ClientActorMessage")
                         }
                         GameAction::Chat(msg) => {
-                            println!("Got join");
-                            ClientActorMessage {
-                                user_id,
-                                msg,
-                                game_id: game_id,
-                                username,
-                            }
+                            ClientActorMessage::new(GameAction::Chat(msg), &game_id, user_id, &username, pool).await.expect("Failed to construct ClientActorMessage")
                         }
                     };
                     lobby.do_send(cam);
                 };
                 let actor_future = future.into_actor(self);
-                // let actor_future = actor_future.map(|game, _actor, _ctx| {
-                //     // Here you can use the result
-                //     println!("Game in actor_future: {:?}", game);
-                //     // game
-                // });
                 ctx.wait(actor_future);
             }
             Err(e) => {
