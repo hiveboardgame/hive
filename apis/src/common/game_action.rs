@@ -6,5 +6,5 @@ pub enum GameAction {
     Move(Turn),
     Control(GameControl),
     Chat(String),
-    Join(String),
+    Join,
 }

@@ -1,6 +1,7 @@
 use leptos::logging::log;
 use leptos::*;
 use leptos_use::core::ConnectionReadyState;
+use crate::common::game_action::GameAction;
 use leptos_use::*;
 use std::rc::Rc;
 
@@ -41,10 +42,27 @@ impl WebsocketContext {
 }
 
 fn on_message_callback(m: String) {
-    log!("Got message: {m}");
-    // parse the incoming message and update the game or chat
+    match serde_json::from_str::<ServerMessage>(&m) {
+        Ok(server_message) => {
+            log!("Got a server message: {:?}", server_message);
+            match server_message.game_action {
+                GameAction::Move(turn) => {
+                    log!("Playing turn: {turn}");
+                }
+                GameAction::Control(_game_control) => {
+                    log!("We don't do game controls yet");
+                }
+                GameAction::Chat(_msg) => {
+                    log!("We might do chat at one point");
+                }
+                GameAction::Join => {}
+            }
+        }
+        Err(e) => log!("Can't parse: {m}, error is: {e}"),
+    }
 }
 
+use crate::common::server_message::ServerMessage;
 use crate::functions::hostname::hostname_and_port;
 fn fix_wss(url: &str) -> String {
     let address = hostname_and_port();
