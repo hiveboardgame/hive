@@ -42,7 +42,23 @@ pub fn Piece(
     };
 
     let onclick = move |_| {
-        if user().is_some() {
+        let turn = game_state_signal.signal.get_untracked().state.turn;
+        let black_id = game_state_signal.signal.get_untracked().black_id;
+        let white_id = game_state_signal.signal.get_untracked().white_id;
+        if let Some(user) = user() {
+            if turn % 2 == 0 {
+                if let Some(white) = white_id {
+                    if white != user.id {
+                        return;
+                    }
+                }
+            } else {
+                if let Some(black) = black_id {
+                    if black != user.id {
+                        return;
+                    }
+                }
+            }
             match (game_state_signal.signal)().state.game_status {
                 GameStatus::Finished(_) => { /* Don't attach any on:click for finished games */ }
                 _ => {
@@ -59,12 +75,12 @@ pub fn Piece(
                         }
                         PieceType::Move => {
                             log!("Moving piece {}", piece.get_untracked());
-                            game_state_signal.move_active(user().expect("User is some").id);
+                            game_state_signal.move_active(user.id);
                         }
                         PieceType::Spawn => {
                             {
                                 log!("Spawning piece {}", piece.get_untracked());
-                                game_state_signal.spawn_active(user().expect("User is some").id);
+                                game_state_signal.spawn_active(user.id);
                             };
                         }
                         _ => log!("Piece is {}", piece_type),
@@ -93,4 +109,3 @@ pub fn Piece(
         </g>
     }
 }
-

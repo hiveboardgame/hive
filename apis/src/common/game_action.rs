@@ -7,4 +7,5 @@ pub enum GameAction {
     Control(GameControl),
     Chat(String),
     Join,
+    Error(String),
 }

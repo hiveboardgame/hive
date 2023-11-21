@@ -45,15 +45,34 @@ impl History {
         }
         for mov in moves.split_terminator(';') {
             let split = mov.split_whitespace().collect::<Vec<&str>>();
-            let piece = split.first().ok_or(GameError::ParsingError {
+
+            let maybe_piece = split.first().ok_or(GameError::ParsingError {
                 found: "NA".to_string(),
                 typ: "Piece".to_string(),
             })?;
-            let pos = split.get(1).ok_or(GameError::ParsingError {
-                found: "NA".to_string(),
-                typ: "Position".to_string(),
-            })?;
-            history.moves.push((piece.to_string(), pos.to_string()));
+
+            // TODO: make sure both of them are valid Piece and Position strings
+
+            if let Some(position) = split.get(1) {
+                history
+                    .moves
+                    .push((maybe_piece.to_string(), position.to_string()));
+            } else {
+                match *maybe_piece {
+                    "pass" => {
+                        history.moves.push(("pass".to_string(), "".to_string()));
+                    }
+                    _ if history.moves.is_empty() => {
+                        history.moves.push((maybe_piece.to_string(), ".".to_string()));
+                    }
+                    any => {
+                        return Err(GameError::ParsingError {
+                            found: any.to_owned(),
+                            typ: format!("as position at turn {}", history.moves.len()),
+                        })
+                    }
+                }
+            }
         }
         Ok(history)
     }

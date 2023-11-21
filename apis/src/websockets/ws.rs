@@ -13,7 +13,10 @@ use actix::{Actor, Addr, Running, StreamHandler};
 use actix::{AsyncContext, Handler};
 use actix_web_actors::ws;
 use actix_web_actors::ws::Message::Text;
-use db_lib::DbPool;
+use db_lib::{models::game::Game, DbPool};
+use hive_lib::game_type::GameType;
+use hive_lib::{game_status::GameStatus, history::History, state::State, turn::Turn};
+use std::str::FromStr;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
@@ -30,7 +33,12 @@ pub struct WsConn {
 }
 
 impl WsConn {
-    pub fn new(user_uid: Option<Uuid>, username: String, lobby: Addr<Lobby>, pool: DbPool ) -> WsConn {
+    pub fn new(
+        user_uid: Option<Uuid>,
+        username: String,
+        lobby: Addr<Lobby>,
+        pool: DbPool,
+    ) -> WsConn {
         WsConn {
             user_uid: user_uid.unwrap_or(Uuid::new_v4()),
             username,
@@ -113,33 +121,110 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
             Ok(ws::Message::Nop) => (),
             Ok(Text(s)) => {
                 println!("WS message is {:?}", s);
-                // serde deserialize the message
                 let m: ClientMessage = serde_json::from_str(&s.to_string()).unwrap();
-                // later: authorize message
-                // match on it's type
                 let addr = ctx.address();
                 let game_id = m.game_id;
                 let pool = self.pool.clone();
                 let lobby = self.lobby_addr.clone();
                 let user_id = self.user_uid.clone();
                 let username = self.username.clone();
+                // TODO: @leex you hate this code and know what to do make non self functions and
+                // move code into WsConn::non_self_fn's
                 let future = async move {
                     let cam = match m.game_action {
                         GameAction::Move(turn) => {
-                            // - play the turn on the game
-                            //   - get the game from the db
-                            //   - play the turn on the game
-                            //   - send message back with result
+                            let game = Game::find_by_nanoid(&game_id, &pool).await.unwrap();
+                            let cam = if !((game.turn % 2 == 0 && game.white_id == user_id)
+                                || (game.turn % 2 == 1 && game.black_id == user_id))
+                            {
+                                Some(
+                                    ClientActorMessage::new(
+                                        GameAction::Error(format!(
+                                            "{username} is not allowed to play"
+                                        )),
+                                        &game_id,
+                                        user_id,
+                                        &username,
+                                        &pool,
+                                    )
+                                    .await
+                                    .expect("Failed to construct ClientActorMessage"),
+                                )
+                            } else {
+                                if let GameStatus::Finished(_) =
+                                    GameStatus::from_str(&game.game_status).unwrap()
+                                {
+                                    Some(
+                                        ClientActorMessage::new(
+                                            GameAction::Error(format!("Can't play on a finished game")),
+                                            &game_id,
+                                            user_id,
+                                            &username,
+                                            &pool,
+                                        )
+                                        .await
+                                        .expect("Failed to construct ClientActorMessage"),
+                                    )
+                                } else {
+                                    None
+                                }
+                            };
+                            // TODO: the unwraps...
                             println!("Playing move {:?}", turn);
-                            ClientActorMessage::new(GameAction::Move(turn), &game_id, user_id, &username, pool).await.expect("Failed to construct ClientActorMessage")
-                        },
+                            match cam {
+                                None => {
+                                    let (piece, position) = match turn {
+                                        Turn::Move(piece, position) => (piece, position),
+                                        Turn::Spawn(piece, position) => (piece, position),
+                                        _ => unreachable!(),
+                                    };
+                                    let history = History::new_from_str(game.history.clone()).unwrap();
+                                    let mut state = State::new_from_history(&history).unwrap();
+                                    state.game_type = GameType::from_str(&game.game_type).unwrap();
+                                    let current_turn = state.turn;
+                                    state.play_turn_from_position(piece, position).unwrap();
+                                    let (piece, pos) = state.history.moves.get(current_turn).unwrap();
+                                    let board_move = format!("{piece} {pos}");
+                                    game.make_move(format!("{piece} {pos}"), state.game_status.clone(), &pool)
+                                        .await
+                                        .unwrap();
+                                    if "pass" == state.history.moves.last().expect("There needs to be a move here").0 {
+                                        game.make_move(String::from("pass "), state.game_status.clone(), &pool)
+                                            .await
+                                            .unwrap();
+                                    }
+                                    if let Some(error_cam) = cam {
+                                        error_cam
+                                    } else {
+                                        ClientActorMessage::new(
+                                            GameAction::Move(turn),
+                                            &game_id,
+                                            user_id,
+                                            &username,
+                                            &pool,
+                                        )
+                                        .await
+                                        .expect("Failed to construct ClientActorMessage")
+                                    }
+                                },
+                                Some(cam) => cam,
+                            }
+                        }
                         GameAction::Control(control) => {
                             //   - get the game from the db
                             //   - control the game
                             //   - send message back with result
                             println!("Got GameControl {:?}", control);
-                            ClientActorMessage::new(GameAction::Control(control), &game_id, user_id, &username, pool).await.expect("Failed to construct ClientActorMessage")
-                        },
+                            ClientActorMessage::new(
+                                GameAction::Control(control),
+                                &game_id,
+                                user_id,
+                                &username,
+                                &pool,
+                            )
+                            .await
+                            .expect("Failed to construct ClientActorMessage")
+                        }
                         GameAction::Join => {
                             println!("Got join");
                             lobby.do_send(Connect {
@@ -148,12 +233,38 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
                                 user_id,
                                 username: username.clone(),
                             });
-                            ClientActorMessage::new(GameAction::Join, &game_id, user_id, &username, pool).await.expect("Failed to construct ClientActorMessage")
+                            ClientActorMessage::new(
+                                GameAction::Join,
+                                &game_id,
+                                user_id,
+                                &username,
+                                &pool,
+                            )
+                            .await
+                            .expect("Failed to construct ClientActorMessage")
                         }
-                        GameAction::Chat(msg) => {
-                            ClientActorMessage::new(GameAction::Chat(msg), &game_id, user_id, &username, pool).await.expect("Failed to construct ClientActorMessage")
-                        }
+                        GameAction::Chat(msg) => ClientActorMessage::new(
+                            GameAction::Chat(msg),
+                            &game_id,
+                            user_id,
+                            &username,
+                            &pool,
+                        )
+                        .await
+                        .expect("Failed to construct ClientActorMessage"),
+                        GameAction::Error(msg) => ClientActorMessage::new(
+                            GameAction::Error(msg),
+                            &game_id,
+                            user_id,
+                            &username,
+                            &pool,
+                        )
+                        .await
+                        .expect("Failed to construct ClientActorMessage"),
                     };
+                    // if let GameAction::Error(error) = cam.game_action {
+                    //     println!("Server got an error message, what's up with that? {error}");
+                    // };
                     lobby.do_send(cam);
                 };
                 let actor_future = future.into_actor(self);
@@ -162,7 +273,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
             Err(e) => {
                 println!("Got error in WS parsing");
                 std::panic::panic_any(e)
-            },
+            }
         }
     }
 }

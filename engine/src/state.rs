@@ -76,6 +76,10 @@ impl State {
                 if self.board.is_shutout(self.turn_color, self.game_type) {
                     self.pass();
                 } else {
+                    println!(
+                        "Turn is {}\n Turn color is {}\n History is: {:?}",
+                        self.turn, self.turn_color, self.history.moves
+                    );
                     return Err(GameError::InvalidMove {
                         piece: "NA".to_string(),
                         from: "NA".to_string(),
