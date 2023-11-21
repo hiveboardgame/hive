@@ -41,9 +41,9 @@ impl ClientActorMessage {
         game_id: &str,
         user_id: Uuid,
         username: &str,
-        pool: DbPool,
+        pool: &DbPool,
     ) -> Result<Self, ServerFnError> {
-        let server_message = ServerMessage::new(&game_id, game_action.clone(), &user_id, &username, &pool).await?;
+        let server_message = ServerMessage::new(&game_id, game_action.clone(), &user_id, &username, pool).await?;
         let serialized = serde_json::to_string(&server_message)?;
         Ok(Self {
             game_action,

@@ -29,9 +29,24 @@ impl GameStateSignal {
         self.signal.get_untracked().join(user)
     }
 
+    pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
+        self.signal.update(|s| {
+            s.state = state;
+            s.black_id = Some(black_id);
+            s.white_id = Some(white_id);
+        })
+    }
+
     pub fn set_game_id(&mut self, game_id: StoredValue<String>) {
         log!("game id is {}", game_id());
         self.signal.update_untracked(|s| s.game_id = Some(game_id))
+    }
+
+    pub fn play_turn(&mut self, piece: Piece, position: Position) {
+        self.signal.update(|s| {
+            s.play_turn(piece, position);
+            s.reset()
+        })
     }
 
     pub fn reset(&mut self) {
@@ -95,6 +110,8 @@ pub struct GameState {
     pub game_id: Option<StoredValue<String>>,
     // the gamestate
     pub state: State,
+    pub black_id: Option<Uuid>,
+    pub white_id: Option<Uuid>,
     // possible destinations of selected piece
     pub target_positions: Vec<Position>,
     // the piece (either from reserve or board) that has been clicked last
@@ -124,6 +141,8 @@ impl GameState {
         Self {
             game_id: None,
             state,
+            black_id: None,
+            white_id: None,
             target_positions: vec![],
             active: None,
             target_position: None,
@@ -131,6 +150,12 @@ impl GameState {
             reserve_position: None,
             history_turn: None,
             view: View::Game,
+        }
+    }
+
+    pub fn play_turn(&mut self, piece: Piece, position: Position) {
+        if let Err(e) = self.state.play_turn_from_position(piece, position) {
+            log!("Could not play turn: {} {} {}", piece, position, e);
         }
     }
 
@@ -281,4 +306,3 @@ impl GameState {
 pub fn provide_game_state() {
     provide_context(GameStateSignal::new())
 }
-

@@ -26,10 +26,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let auth_context = expect_context::<AuthContext>();
     let params = use_params::<PlayParams>();
     // TODO: move the time_control to the gamestate
-    let time_control = store_value(TimeControl::RealTime(
-        Duration::from_secs(10),
-        Duration::from_secs(3),
-    ));
+    // let time_control = store_value(TimeControl::RealTime(
+    //     Duration::from_secs(60),
+    //     Duration::from_secs(10),
+    // ));
+    let time_control = store_value(TimeControl::Untimed);
     let nanoid = move || {
         params.with_untracked(|params| {
             params
