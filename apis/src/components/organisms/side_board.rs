@@ -1,16 +1,37 @@
 use crate::{
-    components::organisms::{
-        history::History,
-        reserve::{Orientation, Reserve},
+    components::{
+        molecules::control_buttons::ControlButtons,
+        organisms::{
+            history::History,
+            reserve::{Orientation, Reserve},
+        },
     },
-    providers::game_state::{GameStateSignal, View},
+    providers::{
+        auth_context::AuthContext,
+        game_state::{GameStateSignal, View},
+    },
 };
 use hive_lib::color::Color;
+use leptos::logging::log;
 use leptos::*;
 
 #[component]
 pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let mut game_state_signal = expect_context::<GameStateSignal>();
+
+    let auth_context = expect_context::<AuthContext>();
+    let user = move || match untrack(auth_context.user) {
+        Some(Ok(Some(user))) => Some(user),
+        _ => None,
+    };
+    let show_buttons = move || {
+        user().map_or(false, |user| {
+            let game_state = game_state_signal.signal.get();
+            Some(user.id) == game_state.black_id
+                || Some(user.id) == game_state.white_id
+        })
+    };
+
     let div_ref = create_node_ref::<html::Div>();
     let button_color = move || {
         if let View::History = (game_state_signal.signal)().view {
@@ -33,7 +54,7 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                     }
                 >
 
-                    "Reserve"
+                    "Game"
                 </button>
 
                 <button
@@ -49,21 +70,22 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                 </button>
 
             </div>
-            <div ref=div_ref class="overflow-auto h-[90%] w-full">
+            <div ref=div_ref class="overflow-auto h-full w-full">
                 <Show
                     when=move || View::History == (game_state_signal.signal)().view
-                    fallback=|| {
+                    fallback=move || {
                         view! {
-                            <div class="">
-                                <div>
-                                    <p>White Name 8001</p>
+                            <div class="grid grid-rows-3 h-[90%]">
+                                <div class="h-full w-full row-start-1">
                                     <Reserve
                                         color=Color::White
                                         orientation=Orientation::Horizontal
                                     />
                                 </div>
-                                <div>
-                                    <p>Black Name 9001</p>
+                                <Show when=show_buttons>
+                                    <ControlButtons/>
+                                </Show>
+                                <div class="h-full w-full row-start-3">
                                     <Reserve
                                         color=Color::Black
                                         orientation=Orientation::Horizontal
@@ -80,4 +102,3 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
         </div>
     }
 }
-

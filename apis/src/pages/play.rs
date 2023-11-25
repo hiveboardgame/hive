@@ -56,17 +56,27 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 game()
                     .map(|data| match data {
                         Err(_) => view! { <pre>"Page not found"</pre> }.into_view(),
-                        Ok(_) => {
+                        Ok(game) => {
                             game_state.join(user_uuid());
+                            let white_player = store_value(game.white_player);
+                            let black_player = store_value(game.black_player);
                             view! {
                                 <div class=format!(
-                                    "grid grid-cols-10 grid-rows-6 max-h-[95svh] {extend_tw_classes}",
+                                    "grid grid-cols-10 grid-rows-6 max-h-[94svh] {extend_tw_classes}",
                                 )>
 
                                     <Board/>
-                                    <DisplayTimer side=Color::White time_control=time_control()/>
+                                    <DisplayTimer
+                                        side=Color::White
+                                        player=white_player
+                                        time_control=time_control()
+                                    />
                                     <SideboardTabs extend_tw_classes="border-blue-200"/>
-                                    <DisplayTimer side=Color::Black time_control=time_control()/>
+                                    <DisplayTimer
+                                        side=Color::Black
+                                        player=black_player
+                                        time_control=time_control()
+                                    />
                                 </div>
                             }
                                 .into_view()
