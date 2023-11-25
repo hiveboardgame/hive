@@ -68,19 +68,9 @@ pub fn LiveTimer(
                 }
             }
         }
-        // When game finished on the board pause timer and remove running timer style
-        if let GameStatus::Finished(_) = (game_state_signal.signal)().state.game_status {
-            if is_active() {
-                pause();
-                let class_list = parent_div()
-                    .expect("div_ref to be loaded by now")
-                    .class_list();
-                class_list.remove_1("bg-green-700").unwrap();
-            }
-        }
     });
     view! {
-        <div class="flex flex-grow h-full w-full select-none text-8xl resize items-center justify-center">
+        <div class="flex flex-grow resize h-full w-full select-none items-center justify-center text-[4vw] min-h-fit min-w-fit">
             {move || TimeControl::RealTime(time(), increment).to_string()}
         </div>
     }

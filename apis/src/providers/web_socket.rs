@@ -16,6 +16,7 @@ pub struct WebsocketContext {
     send: Rc<dyn Fn(&str)>, // use Rc to make it easily cloneable
     pub ready_state: Signal<ConnectionReadyState>,
     open: Rc<dyn Fn()>,
+    close: Rc<dyn Fn()>,
 }
 
 impl WebsocketContext {
@@ -24,12 +25,14 @@ impl WebsocketContext {
         send: Rc<dyn Fn(&str)>,
         ready_state: Signal<ConnectionReadyState>,
         open: Rc<dyn Fn()>,
+        close: Rc<dyn Fn()>,
     ) -> Self {
         Self {
             message,
             send,
             ready_state,
             open,
+            close,
         }
     }
 
@@ -43,6 +46,12 @@ impl WebsocketContext {
     pub fn open(&self) {
         log!("Opening connection");
         (self.open)()
+    }
+
+    #[inline(always)]
+    pub fn close(&self) {
+        log!("Closing connection");
+        (self.close)()
     }
 }
 
@@ -149,6 +158,7 @@ pub fn provide_websocket(url: &str) {
         send,
         ready_state,
         open,
+        close,
         ..
     } = use_websocket_with_options(
         &url,
@@ -159,5 +169,7 @@ pub fn provide_websocket(url: &str) {
         Rc::new(send),
         ready_state,
         Rc::new(open),
+        Rc::new(close),
     ));
 }
+

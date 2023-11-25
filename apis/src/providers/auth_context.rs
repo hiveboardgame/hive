@@ -3,6 +3,8 @@ use crate::functions::accounts::get::get_account;
 use crate::functions::auth::{login::Login, logout::Logout, register::Register};
 use leptos::*;
 
+use super::web_socket::WebsocketContext;
+
 #[derive(Clone)]
 pub struct AuthContext {
     pub login: Action<Login, Result<AccountResponse, ServerFnError>>,
@@ -13,6 +15,7 @@ pub struct AuthContext {
 
 /// Get the current user and place it in Context
 pub fn provide_auth() {
+    let websocket_context = expect_context::<WebsocketContext>();
     let login = create_server_action::<Login>();
     let logout = create_server_action::<Logout>();
     let register = create_server_action::<Register>();
@@ -25,7 +28,11 @@ pub fn provide_auth() {
                 register.version().get(),
             )
         },
-        move |_| get_account(),
+        move |_| {
+            websocket_context.close();
+            websocket_context.open();
+            get_account()
+        },
     );
 
     provide_context(AuthContext {

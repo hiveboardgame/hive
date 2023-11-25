@@ -16,11 +16,16 @@ leptos_router = { version = "0.5", features = ["nightly"] }
 leptos_actix = { version = "0.5" }
 leptos_icons = { version = "0.1", default_features = false, features = [
     "AiCopyOutlined",
+    "AiFlagOutlined",
     "AiFastBackwardFilled",
+    "AiStopOutlined",
     "AiStepBackwardFilled",
     "AiFastForwardFilled",
     "AiStepForwardFilled",
     "BiInfiniteRegular",
+    "BiUndoRegular",
+    "ChCross",
+    "FaHandshakeSimpleSolid",
     "RiSwordOthersLine"
 ] }
 actix-web = { version = "4",  features = ["macros"] }

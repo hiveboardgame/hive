@@ -14,13 +14,13 @@ use leptos_router::*;
 
 #[component]
 pub fn App() -> impl IntoView {
-    provide_auth();
     provide_color_scheme();
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
     provide_game_state();
     let url = "/ws/";
     _ = provide_websocket(url);
+    provide_auth();
 
     view! {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
