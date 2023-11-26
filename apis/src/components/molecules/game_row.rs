@@ -1,4 +1,7 @@
-use crate::functions::games::game_response::GameStateResponse;
+use crate::{
+    components::{atoms::svgs::Svgs, molecules::thumbnail_pieces::ThumbnailPieces},
+    functions::games::game_response::GameStateResponse,
+};
 use hive_lib::{game_result::GameResult, game_status::GameStatus};
 use leptos::*;
 use leptos_icons::{Icon, RiIcon::RiSwordOthersLine};
@@ -19,8 +22,17 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
 
     view! {
         <article class="hover:bg-blue-300 flex items-stretch h-72 px-2 py-4 border border-gray-800 dark:border-gray-400 relative mx-2 w-3/4">
-            <div class="mx-2 border border-gray-800 dark:border-gray-400">
-                "A representation of the gameboard"
+            <div class="h-60 w-60 mx-2">
+                <svg
+                    viewBox="1100 500 600 400"
+                    class="touch-none h-full w-full"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <Svgs/>
+                    <g class="h-full w-full">
+                        <ThumbnailPieces game=game()/>
+                    </g>
+                </svg>
             </div>
             <div class="flex flex-col justify-between m-2 overflow-hidden w-full">
                 <div class="flex flex-col justify-between">

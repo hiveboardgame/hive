@@ -3,8 +3,8 @@ use uuid::Uuid;
 // use serde_with::serde_as;
 use crate::functions::users::user_response::UserResponse;
 use hive_lib::{
-    bug::Bug, game_control::GameControl, game_status::GameStatus, game_type::GameType,
-    position::Position,
+    bug::Bug, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
+    game_type::GameType, history::History, position::Position, state::State,
 };
 use std::collections::HashMap;
 
@@ -41,7 +41,7 @@ use db_lib::{
     DbPool,
 };
 use hive_lib::{
-    color::Color, game_status::GameStatus::Finished, history::History, piece::Piece, state::State,
+    color::Color, game_status::GameStatus::Finished, piece::Piece,
 };
 use leptos::*;
 use std::str::FromStr;
@@ -137,3 +137,19 @@ impl GameStateResponse {
     }
 }
 }}
+
+impl GameStateResponse {
+    pub fn create_state(self) -> State {
+        let result = match self.game_status {
+            GameStatus::NotStarted | GameStatus::InProgress => GameResult::Unknown,
+            GameStatus::Finished(result) => result,
+        };
+        State::new_from_history(&History::new_from_gamestate(
+            self.history,
+            result,
+            self.game_type,
+        ))
+        .expect("State to be valid, as game was")
+    }
+}
+

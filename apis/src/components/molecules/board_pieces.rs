@@ -46,7 +46,11 @@ pub fn BoardPieces() -> impl IntoView {
                 if let (Some(piece), Some(target_position)) = active_piece {
                     if position == target_position {
                         // Check here whether piece is still in reserve?
-                        if game_state.state.current_reserve().contains_key(&piece.bug()) {
+                        if game_state
+                            .state
+                            .current_reserve()
+                            .contains_key(&piece.bug())
+                        {
                             hs.add_tile(piece, PieceType::Spawn);
                         } else {
                             hs.add_tile(piece, PieceType::Move);
@@ -70,3 +74,4 @@ pub fn BoardPieces() -> impl IntoView {
             .collect_view()
     }
 }
+
