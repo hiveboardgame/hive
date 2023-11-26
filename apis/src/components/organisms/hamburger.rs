@@ -1,6 +1,7 @@
 use crate::providers::auth_context::AuthContext;
 use leptos::html::Div;
 use leptos::*;
+use leptos_icons::{ChIcon::ChMenuHamburger, Icon};
 use leptos_use::on_click_outside;
 
 #[component]
@@ -11,13 +12,13 @@ pub fn Hamburger(hamburger_show: RwSignal<bool>, children: ChildrenFn) -> impl I
     let auth_context = expect_context::<AuthContext>();
     let username = move || {
         if let Some(Ok(Some(user))) = (auth_context.user)() {
-            user.username
+            user.username.into_view()
         } else {
-            String::from("not logged in")
+            view! { <Icon icon=Icon::from(ChMenuHamburger)/> }
         }
     };
     view! {
-        <div node_ref=target class="inline-block">
+        <div node_ref=target class="inline-block mr-16">
             <button
                 on:click=move |_| hamburger_show.update(|b| *b = !*b)
                 class="bg-blue-500 text-white rounded-md px-2 py-1 m-2 hover:bg-blue-600"

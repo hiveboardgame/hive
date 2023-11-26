@@ -7,7 +7,15 @@ use crate::providers::color_scheme::ColorScheme;
 #[component]
 pub fn BaseLayout(children: Children) -> impl IntoView {
     let color_scheme = expect_context::<ColorScheme>();
+    let color_scheme_meta = move || {
+        if (color_scheme.prefers_dark)() {
+            "dark".to_string()
+        } else {
+            "light".to_string()
+        }
+    };
     view! {
+        <Meta name="color-scheme" content=color_scheme_meta/>
         <Html class=move || {
             match (color_scheme.prefers_dark)() {
                 true => "dark",

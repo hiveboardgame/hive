@@ -67,7 +67,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             game_state.join(user_uuid());
                             view! {
                                 <div class=format!(
-                                    "grid grid-cols-10 grid-rows-6 max-h-[94svh] {extend_tw_classes}",
+                                    "grid grid-cols-10 grid-rows-6 max-h-[93svh] {extend_tw_classes}",
                                 )>
 
                                     <Board/>
