@@ -4,7 +4,10 @@ use crate::{
     functions::games::get::get_game_from_nanoid,
     providers::{auth_context::AuthContext, game_state::GameStateSignal},
 };
-use hive_lib::{color::Color, position::Position};
+use hive_lib::{
+    color::Color, game_result::GameResult, game_status::GameStatus, history::History,
+    position::Position, state::State,
+};
 use leptos::logging::log;
 use leptos::*;
 use leptos_router::*;
@@ -22,7 +25,7 @@ pub struct TargetStack(pub RwSignal<Option<Position>>);
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
-    let mut game_state = expect_context::<GameStateSignal>();
+
     let auth_context = expect_context::<AuthContext>();
     let params = use_params::<PlayParams>();
     // TODO: move the time_control to the gamestate
@@ -49,7 +52,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             Uuid::new_v4()
         }
     };
-    game_state.set_game_id(store_value(nanoid()));
+
     view! {
         <Transition>
             {move || {
@@ -57,6 +60,24 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                     .map(|data| match data {
                         Err(_) => view! { <pre>"Page not found"</pre> }.into_view(),
                         Ok(game) => {
+                            let mut game_state = expect_context::<GameStateSignal>();
+                            game_state.set_game_id(store_value(nanoid()));
+                            let result = match game.game_status {
+                                GameStatus::NotStarted | GameStatus::InProgress => {
+                                    GameResult::Unknown
+                                }
+                                GameStatus::Finished(result) => result,
+                            };
+                            let state = State::new_from_history(
+                                    &History::new_from_gamestate(
+                                        game.history,
+                                        result,
+                                        game.game_type,
+                                    ),
+                                )
+                                .expect("State to be valid");
+                            game_state
+                                .set_state(state, game.white_player.uid, game.black_player.uid);
                             game_state.join(user_uuid());
                             let white_player = store_value(game.white_player);
                             let black_player = store_value(game.black_player);

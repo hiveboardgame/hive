@@ -47,7 +47,7 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
                     </div>
                 </div>
                 <div class="flex justify-center items-center w-full gap-1">{result_string}</div>
-                <div>"Do we want a truncated history string?"</div>
+                <div>Turn: {game().turn}</div>
             </div>
             <a
                 class="h-full w-full absolute top-0 left-0 z-10"

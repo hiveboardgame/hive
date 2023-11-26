@@ -38,6 +38,18 @@ impl History {
         }
     }
 
+    pub fn new_from_gamestate(
+        moves: Vec<(String, String)>,
+        result: GameResult,
+        game_type: GameType,
+    ) -> Self {
+        History {
+            moves,
+            result,
+            game_type,
+        }
+    }
+
     pub fn new_from_str(moves: String) -> Result<Self, GameError> {
         let mut history = History::new();
         if moves.is_empty() {
@@ -63,7 +75,9 @@ impl History {
                         history.moves.push(("pass".to_string(), "".to_string()));
                     }
                     _ if history.moves.is_empty() => {
-                        history.moves.push((maybe_piece.to_string(), ".".to_string()));
+                        history
+                            .moves
+                            .push((maybe_piece.to_string(), ".".to_string()));
                     }
                     any => {
                         return Err(GameError::ParsingError {
@@ -195,3 +209,4 @@ impl History {
         }
     }
 }
+
