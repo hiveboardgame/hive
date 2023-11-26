@@ -4,10 +4,7 @@ use crate::{
     functions::games::get::get_game_from_nanoid,
     providers::{auth_context::AuthContext, game_state::GameStateSignal},
 };
-use hive_lib::{
-    color::Color, game_result::GameResult, game_status::GameStatus, history::History,
-    position::Position, state::State,
-};
+use hive_lib::{color::Color, position::Position};
 use leptos::logging::log;
 use leptos::*;
 use leptos_router::*;
@@ -61,26 +58,13 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         Err(_) => view! { <pre>"Page not found"</pre> }.into_view(),
                         Ok(game) => {
                             let mut game_state = expect_context::<GameStateSignal>();
+                            let game = store_value(game);
                             game_state.set_game_id(store_value(nanoid()));
-                            let result = match game.game_status {
-                                GameStatus::NotStarted | GameStatus::InProgress => {
-                                    GameResult::Unknown
-                                }
-                                GameStatus::Finished(result) => result,
-                            };
-                            let state = State::new_from_history(
-                                    &History::new_from_gamestate(
-                                        game.history,
-                                        result,
-                                        game.game_type,
-                                    ),
-                                )
-                                .expect("State to be valid");
-                            game_state
-                                .set_state(state, game.white_player.uid, game.black_player.uid);
+                            let white_player = store_value(game().white_player);
+                            let black_player = store_value(game().black_player);
+                            let state = game().create_state();
+                            game_state.set_state(state, white_player().uid, black_player().uid);
                             game_state.join(user_uuid());
-                            let white_player = store_value(game.white_player);
-                            let black_player = store_value(game.black_player);
                             view! {
                                 <div class=format!(
                                     "grid grid-cols-10 grid-rows-6 max-h-[94svh] {extend_tw_classes}",
