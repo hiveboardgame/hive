@@ -2,7 +2,7 @@ use crate::{
     get_conn,
     models::{game_user::GameUser, rating::Rating},
     schema::games,
-    schema::{games::dsl::*},
+    schema::games::dsl::*,
     DbPool,
 };
 use diesel::{prelude::*, result::Error, Identifiable, Insertable, QueryDsl, Queryable};
@@ -310,11 +310,3 @@ impl Game {
         Ok(())
     }
 }
-
-
-
-
-
-
-
-

@@ -40,11 +40,3 @@ pub async fn create_challenge(
     }
     challenge_response
 }
-
-
-
-
-
-
-
-

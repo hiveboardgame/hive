@@ -1,6 +1,3 @@
-use cfg_if::cfg_if;
-
-use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::time::Duration;
 
