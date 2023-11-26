@@ -18,7 +18,7 @@ pub async fn create_challenge(
     use crate::functions::auth::identity::uuid;
     use crate::functions::db::pool;
     use db_lib::models::challenge::NewChallenge;
-    use db_lib::models::{challenge::Challenge, user::User};
+    use db_lib::models::{challenge::{Challenge, TimeControl}, user::User};
     let uuid = uuid()?;
     let pool = pool()?;
     let user = User::find_by_uuid(&uuid, &pool).await?;
@@ -29,6 +29,7 @@ pub async fn create_challenge(
         public,
         tournament_queen_rule,
         color_choice.to_string(),
+        TimeControl::RealTime,
     );
  
     let challenge = Challenge::create(&new_challenge, &pool).await?;
@@ -39,3 +40,11 @@ pub async fn create_challenge(
     }
     challenge_response
 }
+
+
+
+
+
+
+
+

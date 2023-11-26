@@ -17,6 +17,7 @@ path = "src/main.rs"
 bb8.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
+diesel-derive-enum = {workspace = true, features = ["postgres"]}
 diesel_migrations.workspace = true
 uuid.workspace = true
 nanoid.workspace = true

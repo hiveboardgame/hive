@@ -1,6 +1,15 @@
 // @generated automatically by Diesel CLI.
 
+pub mod sql_types {
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "time_control"))]
+    pub struct TimeControl;
+}
+
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::TimeControl;
+
     challenges (id) {
         id -> Uuid,
         nanoid -> Text,
@@ -11,6 +20,7 @@ diesel::table! {
         tournament_queen_rule -> Bool,
         color_choice -> Text,
         created_at -> Timestamptz,
+        timer -> TimeControl,
     }
 }
 

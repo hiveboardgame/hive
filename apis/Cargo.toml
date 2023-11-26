@@ -21,6 +21,7 @@ console_error_panic_hook.workspace = true
 cookie.workspace = true
 db = { path = "../db", optional = true  }
 diesel = { workspace = true, optional = true }
+diesel-derive-enum = { workspace = true, optional = true, deatures = ["postgres"] }
 diesel_migrations = { workspace = true, optional = true }
 hive = { path = "../engine" }
 http.workspace = true
@@ -58,6 +59,7 @@ ssr = [
   "dep:db",
   "dep:diesel",
   "dep:diesel_migrations",
+  "dep:diesel-derive-enum",
   "dep:leptos_actix",
   "leptos/ssr",
   "leptos-use/ssr",

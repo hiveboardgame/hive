@@ -6,8 +6,18 @@ use diesel::result::Error;
 use diesel_async::RunQueryDsl;
 use hive_lib::game_type::GameType;
 use nanoid::nanoid;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use uuid::Uuid;
+
+#[derive(diesel_derive_enum::DbEnum, Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[ExistingTypePath = "crate::schema::sql_types::TimeControl"]
+pub enum TimeControl {
+    Untimed,
+    // max_time_to_move,
+    Correspondence,
+    // starting_time, increment_per_move
+    RealTime,
+}
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = challenges)]
@@ -20,6 +30,7 @@ pub struct NewChallenge {
     pub tournament_queen_rule: bool,
     pub color_choice: String,
     pub created_at: DateTime<Utc>,
+    pub timer: TimeControl, 
 }
 
 impl NewChallenge {
@@ -30,6 +41,7 @@ impl NewChallenge {
         public: bool,
         tournament_queen_rule: bool,
         color_choice: String,
+        timer: TimeControl,
     ) -> Self {
         Self {
             nanoid: nanoid!(10),
@@ -40,6 +52,7 @@ impl NewChallenge {
             tournament_queen_rule,
             color_choice,
             created_at: Utc::now(),
+            timer,
         }
     }
 }
@@ -59,6 +72,7 @@ pub struct Challenge {
     pub color_choice: String,
     // TODO: periodically cleanup expired challanges
     pub created_at: DateTime<Utc>,
+    pub timer: TimeControl,
 }
 
 impl Challenge {
@@ -101,3 +115,16 @@ impl Challenge {
         Ok(())
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

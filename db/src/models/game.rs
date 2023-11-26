@@ -2,7 +2,7 @@ use crate::{
     get_conn,
     models::{game_user::GameUser, rating::Rating},
     schema::games,
-    schema::games::dsl::*,
+    schema::{games::dsl::*},
     DbPool,
 };
 use diesel::{prelude::*, result::Error, Identifiable, Insertable, QueryDsl, Queryable};
@@ -33,6 +33,7 @@ pub struct NewGame {
     pub black_rating: Option<f64>,
     pub white_rating_change: Option<f64>,
     pub black_rating_change: Option<f64>,
+    //pub timer: TimeControl,
 }
 
 #[derive(
@@ -56,6 +57,7 @@ pub struct Game {
     pub black_rating: Option<f64>,
     pub white_rating_change: Option<f64>,
     pub black_rating_change: Option<f64>,
+    //pub timer: TimeControl,
 }
 
 impl Game {
@@ -308,3 +310,11 @@ impl Game {
         Ok(())
     }
 }
+
+
+
+
+
+
+
+

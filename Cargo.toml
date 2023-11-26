@@ -47,6 +47,7 @@ web-sys = {version = "0.3.6", features = ["AbortController", "AbortSignal", "Cli
 bb8 = { version = "0.8" }
 diesel = { version = "2.1", features = ["postgres", "chrono", "uuid"] }
 diesel-async = { version = "0.4", features = ["postgres", "bb8"] }
+diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }
 diesel_migrations = { version = "2.1", features = ["postgres"]}
 uuid = { version = "1.4", features = ["v4", "wasm-bindgen", "serde"] }
 nanoid = "0.4"
