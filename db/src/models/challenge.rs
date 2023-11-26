@@ -6,10 +6,10 @@ use diesel::result::Error;
 use diesel_async::RunQueryDsl;
 use hive_lib::game_type::GameType;
 use nanoid::nanoid;
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(diesel_derive_enum::DbEnum, Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[derive(diesel_derive_enum::DbEnum, Debug, Serialize)]
 #[ExistingTypePath = "crate::schema::sql_types::TimeControl"]
 pub enum TimeControl {
     Untimed,
