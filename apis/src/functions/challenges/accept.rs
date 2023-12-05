@@ -7,10 +7,7 @@ pub async fn accept_challenge(nanoid: String) -> Result<Option<GameStateResponse
     use crate::functions::challenges::challenge_response::ChallengeError;
     use crate::functions::db::pool;
     use db_lib::models::challenge::Challenge;
-    use db_lib::models::{
-        game::{Game, NewGame},
-        rating::Rating,
-    };
+    use db_lib::models::game::{Game, NewGame};
     let pool = pool()?;
     let uuid = match uuid() {
         Ok(uuid) => uuid,
@@ -46,8 +43,8 @@ pub async fn accept_challenge(nanoid: String) -> Result<Option<GameStateResponse
         tournament_queen_rule: challenge.tournament_queen_rule,
         turn: 0,
         rated: challenge.rated,
-        white_rating: Some(Rating::for_uuid(&white_id, &pool).await?.rating),
-        black_rating: Some(Rating::for_uuid(&black_id, &pool).await?.rating),
+        white_rating: None,
+        black_rating: None,
         white_rating_change: None,
         black_rating_change: None,
     };

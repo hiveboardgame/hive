@@ -85,7 +85,7 @@ impl Rating {
         black_id: Uuid,
         game_result: GameResult,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    ) -> Result<Option<(f64, f64)>, Error> {
+    ) -> Result<((f64, f64), Option<(f64, f64)>), Error> {
         let white_rating: Rating = ratings_table
             .filter(user_uid.eq(white_id))
             .first(conn)
@@ -95,15 +95,18 @@ impl Rating {
             .first(conn)
             .await?;
 
-        match game_result {
-            GameResult::Draw => Rating::draw(rated, &white_rating, &black_rating, conn).await,
-            GameResult::Winner(color) => {
-                Rating::winner(rated, color, &white_rating, &black_rating, conn).await
-            }
-            GameResult::Unknown => unreachable!(
-                "This function should not be called when there's no concrete game result"
-            ),
-        }
+        Ok((
+            (white_rating.rating, black_rating.rating),
+            match game_result {
+                GameResult::Draw => Rating::draw(rated, &white_rating, &black_rating, conn).await,
+                GameResult::Winner(color) => {
+                    Rating::winner(rated, color, &white_rating, &black_rating, conn).await
+                }
+                GameResult::Unknown => unreachable!(
+                    "This function should not be called when there's no concrete game result"
+                ),
+            }?,
+        ))
     }
 
     fn calculate_glicko2(
