@@ -55,7 +55,11 @@ pub fn App() -> impl IntoView {
                     <Route path="/account" view=|| view! { <Account/> }/>
                     <Route path="/get_user" view=|| view! { <UserGet/> }/>
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
-                    <Route path="/game/:nanoid" view=|| view! { <Play/> }/>
+                    <Route
+                        path="/game/:nanoid"
+                        ssr=SsrMode::PartiallyBlocked
+                        view=|| view! { <Play/> }
+                    />
                 </Route>
             </Routes>
         </Router>

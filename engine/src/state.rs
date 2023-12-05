@@ -76,9 +76,7 @@ impl State {
             GameResult::Winner(color) => {
                 state.game_status = GameStatus::Finished(GameResult::Winner(color))
             }
-            GameResult::Draw => {
-                state.game_status = GameStatus::Finished(GameResult::Draw)
-            }
+            GameResult::Draw => state.game_status = GameStatus::Finished(GameResult::Draw),
             GameResult::Unknown => {}
         }
         Ok(state)

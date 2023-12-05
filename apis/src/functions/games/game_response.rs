@@ -153,4 +153,3 @@ impl GameStateResponse {
         .expect("State to be valid, as game was")
     }
 }
-

@@ -74,4 +74,3 @@ pub fn BoardPieces() -> impl IntoView {
             .collect_view()
     }
 }
-

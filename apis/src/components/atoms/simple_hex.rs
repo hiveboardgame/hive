@@ -16,4 +16,3 @@ pub fn SimpleHex(hex: Hex) -> impl IntoView {
         HexType::Target => view! { <Target position=hex.position level=hex.level/> },
     }
 }
-

@@ -209,4 +209,3 @@ impl History {
         }
     }
 }
-

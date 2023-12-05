@@ -4,7 +4,7 @@ use crate::{
     functions::games::get::get_game_from_nanoid,
     providers::{auth_context::AuthContext, game_state::GameStateSignal},
 };
-use hive_lib::{color::Color, position::Position};
+use hive_lib::{color::Color, game_status::GameStatus, position::Position};
 use leptos::logging::log;
 use leptos::*;
 use leptos_router::*;
@@ -22,7 +22,6 @@ pub struct TargetStack(pub RwSignal<Option<Position>>);
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
-
     let auth_context = expect_context::<AuthContext>();
     let params = use_params::<PlayParams>();
     // TODO: move the time_control to the gamestate
@@ -39,7 +38,15 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 .unwrap_or_default()
         })
     };
-    let game = create_local_resource(nanoid, move |_| get_game_from_nanoid(nanoid()));
+    let game_state = expect_context::<GameStateSignal>();
+    let is_finished = move || match (game_state.signal)().state.game_status {
+        GameStatus::Finished(_) => true,
+        _ => false,
+    };
+    let game = create_blocking_resource(
+        move || (nanoid(), is_finished()),
+        move |_| get_game_from_nanoid(nanoid()),
+    );
     let user_uuid = move || match untrack(auth_context.user) {
         Some(Ok(Some(user))) => user.id,
         _ => {
@@ -73,12 +80,14 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                     <Board/>
                                     <DisplayTimer
                                         side=Color::White
+                                        game=game
                                         player=white_player
                                         time_control=time_control()
                                     />
                                     <SideboardTabs extend_tw_classes="border-blue-200"/>
                                     <DisplayTimer
                                         side=Color::Black
+                                        game=game
                                         player=black_player
                                         time_control=time_control()
                                     />

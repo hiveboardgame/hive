@@ -31,9 +31,9 @@ impl FromStr for GameStatus {
         match s {
             "NotStarted" => Ok(GameStatus::NotStarted),
             "InProgress" => Ok(GameStatus::InProgress),
-            "Finished(Winner(b))" => Ok(GameStatus::Finished(GameResult::Winner(Color::Black))),
-            "Finished(Winner(w))" => Ok(GameStatus::Finished(GameResult::Winner(Color::White))),
-            "Finished(Draw)" => Ok(GameStatus::Finished(GameResult::Draw)),
+            "Finished(0-1)" => Ok(GameStatus::Finished(GameResult::Winner(Color::Black))),
+            "Finished(1-0)" => Ok(GameStatus::Finished(GameResult::Winner(Color::White))),
+            "Finished(½-½)" => Ok(GameStatus::Finished(GameResult::Draw)),
             "Finished(Unknown)" => Ok(GameStatus::Finished(GameResult::Unknown)),
             any => Err(GameError::ParsingError {
                 found: any.to_string(),
