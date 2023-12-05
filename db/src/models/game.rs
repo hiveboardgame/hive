@@ -97,10 +97,10 @@ impl Game {
         connection
             .transaction::<_, diesel::result::Error, _>(|conn| {
                 async move {
-                    let changes: Option<(f64, f64)> =
+                    let ((w_rating, b_rating), changes) =
                         if let GameStatus::Finished(game_result) = new_game_status.clone() {
                             if let GameResult::Unknown = game_result {
-                                None
+                                ((0.0, 0.0), None)
                             } else {
                                 Rating::update(
                                     self.rated,
@@ -112,25 +112,35 @@ impl Game {
                                 .await?
                             }
                         } else {
-                            None
+                            ((0.0, 0.0), None)
                         };
-                    let (w_change, b_change) = if let Some((white_change, black_change)) = changes {
-                        (Some(white_change), Some(black_change))
+                    let game = if let Some((w_change, b_change)) = changes {
+                        diesel::update(games::table.find(self.id))
+                            .set((
+                                history.eq(history.concat(board_move)),
+                                turn.eq(turn + 1),
+                                game_status.eq(new_game_status.to_string()),
+                                game_control_history
+                                    .eq(game_control_history.concat(game_control_string)),
+                                white_rating.eq(w_rating),
+                                black_rating.eq(b_rating),
+                                white_rating_change.eq(w_change),
+                                black_rating_change.eq(b_change),
+                            ))
+                            .get_result(conn)
+                            .await?
                     } else {
-                        (None, None)
+                        diesel::update(games::table.find(self.id))
+                            .set((
+                                history.eq(history.concat(board_move)),
+                                turn.eq(turn + 1),
+                                game_status.eq(new_game_status.to_string()),
+                                game_control_history
+                                    .eq(game_control_history.concat(game_control_string)),
+                            ))
+                            .get_result(conn)
+                            .await?
                     };
-                    let game = diesel::update(games::table.find(self.id))
-                        .set((
-                            history.eq(history.concat(board_move)),
-                            turn.eq(turn + 1),
-                            game_status.eq(new_game_status.to_string()),
-                            game_control_history
-                                .eq(game_control_history.concat(game_control_string)),
-                            white_rating_change.eq(w_change),
-                            black_rating_change.eq(b_change),
-                        ))
-                        .get_result(conn)
-                        .await?;
                     Ok(game)
                 }
                 .scope_boxed()
@@ -232,7 +242,7 @@ impl Game {
         connection
             .transaction::<_, diesel::result::Error, _>(|conn| {
                 async move {
-                    let changes: Option<(f64, f64)> = match new_game_status.clone() {
+                    let ((w_rating, b_rating), changes) = match new_game_status.clone() {
                         GameStatus::Finished(game_result) => {
                             Rating::update(
                                 self.rated,
@@ -257,6 +267,8 @@ impl Game {
                             game_status.eq(new_game_status.to_string()),
                             game_control_history
                                 .eq(game_control_history.concat(game_control_string)),
+                            white_rating.eq(w_rating),
+                            black_rating.eq(b_rating),
                             white_rating_change.eq(w_change),
                             black_rating_change.eq(b_change),
                         ))
@@ -279,7 +291,7 @@ impl Game {
         connection
             .transaction::<_, diesel::result::Error, _>(|conn| {
                 async move {
-                    let changes: Option<(f64, f64)> = Rating::update(
+                    let ((w_rating, b_rating), changes) = Rating::update(
                         self.rated,
                         self.white_id,
                         self.black_id,
@@ -297,6 +309,8 @@ impl Game {
                             game_control_history
                                 .eq(game_control_history.concat(game_control_string)),
                             game_status.eq(GameStatus::Finished(GameResult::Draw).to_string()),
+                            white_rating.eq(w_rating),
+                            black_rating.eq(b_rating),
                             white_rating_change.eq(w_change),
                             black_rating_change.eq(b_change),
                         ))
