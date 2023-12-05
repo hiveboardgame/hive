@@ -48,6 +48,7 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
             <div class="grid grid-cols-2 gap-1 sticky top-0 dark:bg-gray-900 bg-white">
                 <button
                     class=move || format!("hover:bg-blue-300 {}", button_color().0)
+
                     on:click=move |_| {
                         game_state_signal.view_game();
                     }

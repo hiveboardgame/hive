@@ -29,4 +29,3 @@ pub fn ThumbnailPieces(game: GameStateResponse) -> impl IntoView {
             .collect_view()
     }
 }
-

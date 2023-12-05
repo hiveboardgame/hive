@@ -1,14 +1,18 @@
 use crate::{
-    components::{atoms::svgs::Svgs, molecules::thumbnail_pieces::ThumbnailPieces},
+    components::{
+        atoms::svgs::Svgs,
+        molecules::{finished_rating::FinishedRating, thumbnail_pieces::ThumbnailPieces},
+    },
     functions::games::game_response::GameStateResponse,
 };
-use hive_lib::{game_result::GameResult, game_status::GameStatus};
+use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
 use leptos::*;
 use leptos_icons::{Icon, RiIcon::RiSwordOthersLine};
 
 #[component]
 pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
     let rated_string = if game().rated { " RATED" } else { " CASUAL" };
+
     let result_string = match game().game_status {
         GameStatus::NotStarted | GameStatus::InProgress => "Playing now".to_string(),
         GameStatus::Finished(res) => match res {
@@ -17,8 +21,14 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
             _ => String::new(),
         },
     };
+
     let white_href = format!("/@/{}", game().white_player.username);
     let black_href = format!("/@/{}", game().black_player.username);
+
+    let is_finished = move || match game().game_status {
+        GameStatus::Finished(_) => true,
+        _ => false,
+    };
 
     view! {
         <article class="hover:bg-blue-300 flex items-stretch h-72 px-2 py-4 border border-gray-800 dark:border-gray-400 relative mx-2 w-3/4">
@@ -46,7 +56,10 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
                             {game().white_player.username}
                         </a>
                         <br/>
-                        {game().white_player.rating}
+                        <Show when=is_finished fallback=move || { game().white_player.rating }>
+                            <FinishedRating game=game() side=Color::White/>
+                        </Show>
+
                     </div>
                     <Icon icon=Icon::from(RiSwordOthersLine) class=""/>
                     <div>
@@ -55,7 +68,9 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
                             {game().black_player.username}
                         </a>
                         <br/>
-                        {game().black_player.rating}
+                        <Show when=is_finished fallback=move || { game().black_player.rating }>
+                            <FinishedRating game=game() side=Color::Black/>
+                        </Show>
                     </div>
                 </div>
                 <div class="flex justify-center items-center w-full gap-1">{result_string}</div>

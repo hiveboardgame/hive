@@ -12,4 +12,3 @@ pub fn SimpleHexStack(hex_stack: HexStack) -> impl IntoView {
         })
         .collect_view()
 }
-

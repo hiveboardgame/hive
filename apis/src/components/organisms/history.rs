@@ -1,5 +1,5 @@
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
+use hive_lib::game_status::GameStatus;
 use leptos::*;
 use leptos_icons::{
     AiIcon::{
@@ -80,13 +80,8 @@ pub fn History(
     };
 
     let game_result = move || match (game_state_signal.signal)().state.game_status {
-        GameStatus::Finished(result) => match result {
-            GameResult::Draw => "½-½",
-            GameResult::Winner(Color::White) => "1-0",
-            GameResult::Winner(Color::Black) => "0-1",
-            _ => "",
-        },
-        _ => "",
+        GameStatus::Finished(result) => result.to_string(),
+        _ => "".to_string(),
     };
 
     let window = use_window();
@@ -176,3 +171,4 @@ pub fn History(
         </div>
     }
 }
+

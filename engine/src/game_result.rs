@@ -16,8 +16,11 @@ impl fmt::Display for GameResult {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let game_result = match self {
             Self::Unknown => "Unknown".to_owned(),
-            Self::Draw => "Draw".to_owned(),
-            Self::Winner(color) => format!("Winner({color})"),
+            Self::Draw => "½-½".to_owned(),
+            Self::Winner(color) => match color {
+                Color::Black => "0-1".to_owned(),
+                Color::White => "1-0".to_owned(),
+            },
         };
         write!(f, "{game_result}")
     }
@@ -29,9 +32,9 @@ impl FromStr for GameResult {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Unknown" => Ok(GameResult::Unknown),
-            "Winner(b)" => Ok(GameResult::Winner(Color::Black)),
-            "Winner(w)" => Ok(GameResult::Winner(Color::White)),
-            "Draw" => Ok(GameResult::Draw),
+            "0-1" => Ok(GameResult::Winner(Color::Black)),
+            "1-0" => Ok(GameResult::Winner(Color::White)),
+            "½-½" => Ok(GameResult::Draw),
             any => Err(GameError::ParsingError {
                 found: any.to_string(),
                 typ: "GameResult string".to_string(),
