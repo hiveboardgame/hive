@@ -42,4 +42,3 @@ pub fn Home(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         </div>
     }
 }
-

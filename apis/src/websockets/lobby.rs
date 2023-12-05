@@ -1,9 +1,5 @@
-use crate::common::game_action::GameAction;
-use crate::common::server_message::ServerMessage;
 use crate::websockets::messages::{ClientActorMessage, Connect, Disconnect, WsMessage};
 use actix::prelude::{Actor, Context, Handler, Recipient};
-use actix::AsyncContext;
-use actix::WrapFuture;
 use db_lib::DbPool;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -17,6 +13,7 @@ pub struct Lobby {
     sessions: HashMap<Uuid, Socket>, // user_id to (socket_)id
     games_users: HashMap<String, HashSet<Uuid>>, // game_id to set of users
     users_games: HashMap<Uuid, HashSet<String>>,
+    #[allow(dead_code)]
     pool: DbPool,
 }
 
@@ -78,7 +75,7 @@ impl Handler<Disconnect> for Lobby {
 impl Handler<Connect> for Lobby {
     type Result = ();
 
-    fn handle(&mut self, msg: Connect, ctx: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: Connect, _ctx: &mut Context<Self>) -> Self::Result {
         self.games_users
             .entry(msg.game_id.clone())
             .or_default()
@@ -101,24 +98,6 @@ impl Handler<Connect> for Lobby {
             self.send_message(&format!("You joined {}", msg.game_id), &msg.user_id);
             return ();
         }
-        // let pool = self.pool.clone();
-        // let addr = msg.addr.clone();
-        // let future = async move {
-        //     let server_message = ServerMessage::new(
-        //         &msg.game_id,
-        //         GameAction::Join,
-        //         &msg.user_id,
-        //         &msg.username,
-        //         &pool,
-        //     )
-        //     .await
-        //     .unwrap();
-        //     let serialized =
-        //         serde_json::to_string(&server_message).expect("Serde_json::to_string failed");
-        //     addr.do_send(WsMessage(serialized));
-        // };
-        // let actor_future = future.into_actor(self);
-        // ctx.wait(actor_future);
     }
 }
 

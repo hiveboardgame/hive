@@ -67,4 +67,3 @@ pub fn DisplayChallenge(challenge: ChallengeResponse) -> impl IntoView {
         </Show>
     }
 }
-

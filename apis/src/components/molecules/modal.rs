@@ -55,4 +55,3 @@ pub fn Modal(
         </dialog>
     }
 }
-

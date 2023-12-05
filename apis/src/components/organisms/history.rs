@@ -176,4 +176,3 @@ pub fn History(
         </div>
     }
 }
-

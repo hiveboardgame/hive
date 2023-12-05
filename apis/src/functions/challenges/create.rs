@@ -30,11 +30,17 @@ pub async fn create_challenge(
         tournament_queen_rule,
         color_choice.to_string(),
     );
- 
+
     let challenge = Challenge::create(&new_challenge, &pool).await?;
-    let challenge_response =ChallengeResponse::from_model(&challenge, &pool).await;
+    let challenge_response = ChallengeResponse::from_model(&challenge, &pool).await;
     if !challenge.public {
-        let redirect_path = &format!("/challenge/{}", challenge_response.as_ref().expect("challenge to have been created").nanoid);
+        let redirect_path = &format!(
+            "/challenge/{}",
+            challenge_response
+                .as_ref()
+                .expect("challenge to have been created")
+                .nanoid
+        );
         leptos_actix::redirect(redirect_path);
     }
     challenge_response

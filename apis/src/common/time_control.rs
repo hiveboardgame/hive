@@ -39,4 +39,3 @@ impl fmt::Display for TimeControl {
         write!(f, "{}", time)
     }
 }
-

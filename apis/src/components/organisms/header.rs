@@ -59,4 +59,3 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
         </header>
     }
 }
-

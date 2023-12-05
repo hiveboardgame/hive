@@ -28,4 +28,3 @@ pub fn Active(
         </g>
     }
 }
-

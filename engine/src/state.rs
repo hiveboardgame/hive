@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use crate::bug::Bug;
 use crate::color::Color;
@@ -43,10 +44,18 @@ impl State {
         self.board.clone()
     }
 
+    pub fn new_from_str(moves: &str, game_type: &str) -> Result<Self, GameError> {
+        let game_type = GameType::from_str(game_type)?;
+        let history = History::new_from_str(moves)?;
+        let mut state = State::new_from_history(&history)?;
+        state.game_type = game_type;
+        Ok(state)
+    }
+
     pub fn new_from_history(history: &History) -> Result<Self, GameError> {
         let mut tournament = true;
         // Did white open with a Queen?
-        if let Some((piece_str, _)) = history.moves.get(0) {
+        if let Some((piece_str, _)) = history.moves.first() {
             let piece: Piece = piece_str.parse()?;
             if piece.bug() == Bug::Queen {
                 tournament = false;
@@ -62,6 +71,15 @@ impl State {
         let mut state = State::new(history.game_type, tournament);
         for (piece, pos) in history.moves.iter() {
             state.play_turn_from_history(piece, pos)?;
+        }
+        match history.result {
+            GameResult::Winner(color) => {
+                state.game_status = GameStatus::Finished(GameResult::Winner(color))
+            }
+            GameResult::Draw => {
+                state.game_status = GameStatus::Finished(GameResult::Draw)
+            }
+            GameResult::Unknown => {}
         }
         Ok(state)
     }
@@ -148,7 +166,7 @@ impl State {
 
     fn pass(&mut self) {
         self.history.record_move("pass", "");
-        self.turn_color = Color::from(self.turn_color.opposite());
+        self.turn_color = self.turn_color.opposite_color();
         self.turn += 1;
         self.board.last_moved = None;
         self.board.last_move = (None, None);
@@ -170,7 +188,7 @@ impl State {
             }
             GameResult::Unknown => {}
         }
-        self.turn_color = Color::from(self.turn_color.opposite());
+        self.turn_color = self.turn_color.opposite_color();
     }
 
     fn turn_move(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {

@@ -45,4 +45,3 @@ pub fn ChallengeCreate() -> impl IntoView {
         </ActionForm>
     }
 }
-

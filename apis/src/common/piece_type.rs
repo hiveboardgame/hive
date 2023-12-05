@@ -36,4 +36,3 @@ impl fmt::Display for PieceType {
         write!(f, "{}", name)
     }
 }
-

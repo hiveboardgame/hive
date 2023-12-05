@@ -50,7 +50,7 @@ impl History {
         }
     }
 
-    pub fn new_from_str(moves: String) -> Result<Self, GameError> {
+    pub fn new_from_str(moves: &str) -> Result<Self, GameError> {
         let mut history = History::new();
         if moves.is_empty() {
             return Ok(history);

@@ -29,24 +29,20 @@ impl GameControl {
             GameControl::TakebackRequest(color) => color,
         }
     }
-}
 
-// client -> server
-// struct ClientMessage {
-//      user: Uuid,
-//      (auth_)token: String,
-//      game: Nanoid,
-//      message: Message,
-// }
-//
-// server -> client
-// struct ServerMessage {
-//      user: Uuid,
-//      username: String,
-//      game: Nanoid,
-//      game_state: SomeEncodingOfTheState,
-//      message: Message,
-// }
+    pub fn allowed_on_turn(&self, turn: usize) -> bool {
+        match self {
+            GameControl::Abort(_) => turn < 2,
+            GameControl::DrawAccept(_) => turn > 2,
+            GameControl::DrawOffer(_) => turn > 2,
+            GameControl::DrawReject(_) => turn > 2,
+            GameControl::Resign(_) => turn > 1,
+            GameControl::TakebackAccept(_) => turn > 1,
+            GameControl::TakebackReject(_) => turn > 1,
+            GameControl::TakebackRequest(_) => turn > 2,
+        }
+    }
+}
 
 impl fmt::Display for GameControl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

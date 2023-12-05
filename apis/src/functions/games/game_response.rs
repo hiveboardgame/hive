@@ -45,6 +45,7 @@ use hive_lib::{
 };
 use leptos::*;
 use std::str::FromStr;
+
 impl GameStateResponse {
     pub async fn new_from_nanoid(game_id: &str, pool: &DbPool) -> Result<Self, ServerFnError> {
         let game = Game::find_by_nanoid(game_id, pool).await?;
@@ -52,7 +53,7 @@ impl GameStateResponse {
     }
 
     pub async fn new_from_db(game: &Game, pool: &DbPool) -> Result<Self, ServerFnError> {
-        let history = History::new_from_str(game.history.clone())?;
+        let history = History::new_from_str(&game.history)?;
         let state = State::new_from_history(&history)?;
         GameStateResponse::new_from(game, &state, pool).await
     }

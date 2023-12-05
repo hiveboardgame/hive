@@ -8,7 +8,7 @@ pub async fn get_account() -> Result<Option<AccountResponse>, ServerFnError> {
 
     let uuid = match uuid() {
         Ok(uuid) => uuid,
-        Err(_) =>  return Ok(None),
+        Err(_) => return Ok(None),
     };
     let account_response = AccountResponse::from_uuid(&uuid, &pool()?).await?;
     Ok(Some(account_response))

@@ -35,7 +35,7 @@ pub fn ConfirmButton(icon: Icon, action: Callback<()>) -> impl IntoView {
                 }
             >
 
-                <Icon icon=Icon::from(icon) class="h-[2vw] w-[2vw]"/>
+                <Icon icon=icon class="h-[2vw] w-[2vw]"/>
 
             </button>
             <Show when=is_clicked>
@@ -50,4 +50,3 @@ pub fn ConfirmButton(icon: Icon, action: Callback<()>) -> impl IntoView {
         </div>
     }
 }
-

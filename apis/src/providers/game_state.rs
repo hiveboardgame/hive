@@ -1,6 +1,9 @@
 use super::web_socket::WebsocketContext;
 use crate::common::client_message::ClientMessage;
 use crate::common::game_action::GameAction;
+use hive_lib::color::Color;
+use hive_lib::game_control::GameControl;
+use hive_lib::game_status::GameStatus;
 use hive_lib::{game_type::GameType, piece::Piece, position::Position, state::State, turn::Turn};
 use leptos::logging::log;
 use leptos::*;
@@ -22,6 +25,35 @@ impl GameStateSignal {
         Self {
             signal: create_rw_signal(GameState::new()),
         }
+    }
+
+    pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
+        self.signal.get_untracked().user_color(user_id)
+    }
+
+    pub fn set_game_status(&self, status: GameStatus) {
+        self.signal.update(|s| {
+            s.state.game_status = status;
+        })
+    }
+
+    pub fn set_pending_gc(&self, gc: GameControl) {
+        self.signal.update(|s| {
+            s.game_control_pending = Some(gc);
+        })
+    }
+
+    pub fn clear_gc(&self) {
+        self.signal.update(|s| {
+            s.game_control_pending = None;
+        })
+    }
+
+    pub fn send_game_control(&self, game_control: GameControl, user: Uuid) {
+        log!("Sending game_control: {game_control}");
+        self.signal
+            .get_untracked()
+            .send_game_control(game_control, user)
     }
 
     pub fn join(&self, user: Uuid) {
@@ -126,6 +158,8 @@ pub struct GameState {
     pub history_turn: Option<usize>,
     // show history or reserve
     pub view: View,
+    // Unanswered game_control
+    pub game_control_pending: Option<GameControl>,
 }
 
 impl Default for GameState {
@@ -150,7 +184,18 @@ impl GameState {
             reserve_position: None,
             history_turn: None,
             view: View::Game,
+            game_control_pending: None,
         }
+    }
+
+    pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
+        if Some(user_id) == self.black_id {
+            return Some(Color::Black);
+        }
+        if Some(user_id) == self.white_id {
+            return Some(Color::White);
+        }
+        None
     }
 
     pub fn play_turn(&mut self, piece: Piece, position: Position) {
@@ -171,12 +216,29 @@ impl GameState {
         self.reserve_position = None;
     }
 
+    pub fn send_game_control(&mut self, game_control: GameControl, user_id: Uuid) {
+        let websocket = expect_context::<WebsocketContext>();
+        let game_id = self.game_id.expect("Game_id in gamestate");
+        if let Some(color) = self.user_color(user_id) {
+            if color != game_control.color() {
+                log!("This is a bug, you should only send GCs of your own color");
+            }
+            let msg = ClientMessage {
+                user_id,
+                game_id: game_id(),
+                game_action: GameAction::Control(game_control),
+            };
+            log!("Sending {:?} to WS", msg);
+            websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+        }
+    }
+
     // TODO: This needs to be reworked, maybe pass in user(!) and game_id(?)
     pub fn join(&mut self, user_id: Uuid) {
         let websocket = expect_context::<WebsocketContext>();
         let game_id = self.game_id.expect("Game_id in gamestate");
         let msg = ClientMessage {
-            user_id: user_id,
+            user_id,
             game_id: game_id(),
             game_action: GameAction::Join,
         };
@@ -192,7 +254,7 @@ impl GameState {
                 let websocket = expect_context::<WebsocketContext>();
                 let game_id = self.game_id.expect("Game_id in gamestate");
                 let msg = ClientMessage {
-                    user_id: user_id,
+                    user_id,
                     game_id: game_id(),
                     game_action: GameAction::Move(Turn::Move(active, position)),
                 };
@@ -200,6 +262,7 @@ impl GameState {
             }
         }
         self.reset();
+        self.game_control_pending = None;
         self.history_turn = Some(self.state.turn - 1)
     }
 
@@ -211,7 +274,7 @@ impl GameState {
                 let websocket = expect_context::<WebsocketContext>();
                 let game_id = self.game_id.expect("Game_id in gamestate");
                 let msg = ClientMessage {
-                    user_id: user_id,
+                    user_id,
                     game_id: game_id(),
                     game_action: GameAction::Move(Turn::Spawn(active, position)),
                 };

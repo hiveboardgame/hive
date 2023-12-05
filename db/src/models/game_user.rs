@@ -1,6 +1,6 @@
-use crate::schema::{games_users, games_users::dsl::games_users as games_users_table};
 use crate::models::{game::Game, user::User};
-use crate::{DbPool, get_conn};
+use crate::schema::{games_users, games_users::dsl::games_users as games_users_table};
+use crate::{get_conn, DbPool};
 use diesel::{prelude::*, result::Error, Identifiable, Insertable, Queryable};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;

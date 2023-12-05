@@ -23,4 +23,3 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         </main>
     }
 }
-

@@ -23,6 +23,7 @@ nanoid.workspace = true
 dotenvy.workspace = true
 thiserror.workspace = true
 serde.workspace = true
+serde_with.workspace = true
 tokio.workspace = true
 hive = { path = "../engine/" }
 skillratings.workspace = true

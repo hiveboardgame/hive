@@ -114,4 +114,3 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
         </div>
     }
 }
-

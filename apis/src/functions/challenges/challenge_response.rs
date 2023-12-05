@@ -1,13 +1,13 @@
 use chrono::prelude::*;
+use hive_lib::color::ColorChoice;
 use serde::{Deserialize, Serialize};
 use std::str;
-use hive_lib::color::ColorChoice;
 use thiserror::Error;
 use uuid::Uuid;
 
 use crate::functions::users::user_response::UserResponse;
 
-#[derive(Clone, Error, Debug)]
+#[derive(Clone, Error, Debug, Deserialize, Serialize)]
 pub enum ChallengeError {
     #[error("Couldn't find challenge creator (uid {0})")]
     MissingChallenger(String),

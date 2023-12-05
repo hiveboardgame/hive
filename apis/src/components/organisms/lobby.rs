@@ -4,7 +4,7 @@ use leptos::*;
 
 #[component]
 pub fn Lobby(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let challenges = Resource::once(move || get_public_challenges());
+    let challenges = Resource::once(get_public_challenges);
     view! {
         <div class=format!("{extend_tw_classes}")>
             <Transition>
@@ -45,4 +45,3 @@ pub fn Lobby(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
         </div>
     }
 }
-

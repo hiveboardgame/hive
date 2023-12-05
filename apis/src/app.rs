@@ -19,7 +19,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
     provide_game_state();
     let url = "/ws/";
-    _ = provide_websocket(url);
+    provide_websocket(url);
     provide_auth();
 
     view! {
@@ -61,4 +61,3 @@ pub fn App() -> impl IntoView {
         </Router>
     }
 }
-

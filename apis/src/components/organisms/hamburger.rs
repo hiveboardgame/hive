@@ -24,7 +24,7 @@ pub fn Hamburger(hamburger_show: RwSignal<bool>, children: ChildrenFn) -> impl I
             >
                 {username}
             </button>
-            <Show when=move || hamburger_show()>
+            <Show when=hamburger_show>
                 <div class="block absolute bg-slate-400 text-black border border-gray-300 rounded-md">
                     {children.with_value(|children| children())}
                 </div>
@@ -32,4 +32,3 @@ pub fn Hamburger(hamburger_show: RwSignal<bool>, children: ChildrenFn) -> impl I
         </div>
     }
 }
-

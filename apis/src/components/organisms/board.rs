@@ -211,4 +211,3 @@ fn svg_point_from_coordinates(svg: NodeRef<Svg>, x: f32, y: f32) -> web_sys::Svg
             .expect("matrix not inversed"),
     )
 }
-

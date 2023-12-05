@@ -34,4 +34,3 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
         })
         .collect_view()
 }
-

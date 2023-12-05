@@ -34,4 +34,3 @@ pub struct Hex {
     pub position: Position,
     pub level: usize,
 }
-

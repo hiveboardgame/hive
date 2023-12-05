@@ -68,4 +68,3 @@ pub fn Hex(hex: Hex) -> impl IntoView {
         }
     }
 }
-

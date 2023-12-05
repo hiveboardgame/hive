@@ -1,4 +1,6 @@
-use crate::functions::{users::user_response::UserResponse, games::game_response::GameStateResponse};
+use crate::functions::{
+    games::game_response::GameStateResponse, users::user_response::UserResponse,
+};
 use leptos::*;
 use uuid::Uuid;
 
@@ -19,10 +21,13 @@ pub async fn get_user_by_username(username: String) -> Result<UserResponse, Serv
 #[server]
 pub async fn get_user_games(username: String) -> Result<Vec<GameStateResponse>, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::models::{user::User, game::Game};
+    use db_lib::models::{game::Game, user::User};
     let pool = pool()?;
-    let games:Vec<Game> = User::find_by_username(&username, &pool).await?.get_games(&pool).await?;
-    let mut results: Vec<GameStateResponse>= Vec::new();
+    let games: Vec<Game> = User::find_by_username(&username, &pool)
+        .await?
+        .get_games(&pool)
+        .await?;
+    let mut results: Vec<GameStateResponse> = Vec::new();
     for game in games.iter() {
         if let Ok(game_response) = GameStateResponse::new_from_db(&game, &pool).await {
             results.push(game_response);

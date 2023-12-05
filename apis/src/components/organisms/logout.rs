@@ -18,4 +18,3 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
         </ActionForm>
     }
 }
-

@@ -1,6 +1,7 @@
 use crate::game_result::GameResult;
+use serde::{Deserialize, Serialize};
 
-#[derive(thiserror::Error, Debug, Clone, PartialEq)]
+#[derive(thiserror::Error, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GameError {
     #[error("Not a valid game move: {reason} turn: {turn}, piece: {piece}, current_position: {from}, target_position: {to}.")]
     InvalidMove {
@@ -22,7 +23,7 @@ pub enum GameError {
     #[error("Invalid direction {direction:?}")]
     InvalidDirection { direction: String },
     #[error("Invalid color choice {found:?}")]
-    InvalidColorChoice { found: String }
+    InvalidColorChoice { found: String },
 }
 
 impl GameError {
