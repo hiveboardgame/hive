@@ -42,4 +42,3 @@ pub fn ProfileView() -> impl IntoView {
         </div>
     }
 }
-

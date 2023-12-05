@@ -34,4 +34,3 @@ pub fn hostname_and_port() -> Address {
     }
     Address::new(String::new(), None)
 }
-

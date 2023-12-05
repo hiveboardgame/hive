@@ -1,5 +1,4 @@
 use crate::{
-    error::DbError,
     get_conn,
     models::{game::Game, game_user::GameUser, rating::NewRating},
     schema::{
@@ -17,29 +16,30 @@ use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-const MAX_USERNAME_LENGTH: usize = 40;
-const VALID_USERNAME_CHARS: &str = "-_";
-
-fn valid_username_char(c: char) -> bool {
-    c.is_ascii_alphanumeric() || VALID_USERNAME_CHARS.contains(c)
-}
-
-fn validate_username(username: &str) -> Result<(), DbError> {
-    if !username.chars().all(valid_username_char) {
-        let reason = format!("invalid username characters: {:?}", username);
-        return Err(DbError::UserInputError {
-            field: "username".into(),
-            reason,
-        });
-    } else if username.len() > MAX_USERNAME_LENGTH {
-        let reason = format!("username must be <= {} chars", MAX_USERNAME_LENGTH);
-        return Err(DbError::UserInputError {
-            field: "username".into(),
-            reason,
-        });
-    }
-    Ok(())
-}
+// TODO: we need to keep handling this somehow
+// const MAX_USERNAME_LENGTH: usize = 40;
+// const VALID_USERNAME_CHARS: &str = "-_";
+//
+// fn valid_username_char(c: char) -> bool {
+//     c.is_ascii_alphanumeric() || VALID_USERNAME_CHARS.contains(c)
+// }
+//
+// fn validate_username(username: &str) -> Result<(), DbError> {
+//     if !username.chars().all(valid_username_char) {
+//         let reason = format!("invalid username characters: {:?}", username);
+//         return Err(DbError::UserInputError {
+//             field: "username".into(),
+//             reason,
+//         });
+//     } else if username.len() > MAX_USERNAME_LENGTH {
+//         let reason = format!("username must be <= {} chars", MAX_USERNAME_LENGTH);
+//         return Err(DbError::UserInputError {
+//             field: "username".into(),
+//             reason,
+//         });
+//     }
+//     Ok(())
+// }
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = users)]
@@ -50,8 +50,7 @@ pub struct NewUser {
 }
 
 impl NewUser {
-    pub fn new(username: &str, password: &str, email: &str) -> Result<Self, DbError> {
-        validate_username(username)?;
+    pub fn new(username: &str, password: &str, email: &str) -> Result<Self, Error> {
         Ok(Self {
             username: username.to_owned(),
             password: password.to_owned(),

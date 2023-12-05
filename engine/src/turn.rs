@@ -1,7 +1,7 @@
-use crate::position::Position;
 use crate::piece::Piece;
-use std::fmt;
+use crate::position::Position;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum Turn {

@@ -17,4 +17,3 @@ pub fn WsPage() -> impl IntoView {
         </div>
     }
 }
-

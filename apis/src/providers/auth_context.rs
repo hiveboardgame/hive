@@ -42,4 +42,3 @@ pub fn provide_auth() {
         register,
     })
 }
-

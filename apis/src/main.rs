@@ -1,6 +1,6 @@
-pub mod websockets;
 pub mod common;
 pub mod functions;
+pub mod websockets;
 
 use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {

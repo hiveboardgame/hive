@@ -20,4 +20,3 @@ pub async fn delete_challenge(id: Uuid) -> Result<(), ServerFnError> {
     }
     Ok(())
 }
-

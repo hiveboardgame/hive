@@ -1,9 +1,9 @@
-use crate::websockets::{lobby::Lobby, ws::WsConn};
+use crate::websockets::{connection::WsConnection, lobby::Lobby};
 use actix::Addr;
 use actix_identity::Identity;
 use actix_web::{get, web::Data, web::Payload, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
-use db_lib::{DbPool, models::user::User};
+use db_lib::{models::user::User, DbPool};
 use uuid::Uuid;
 
 #[get("/ws/")]
@@ -21,7 +21,7 @@ pub async fn start_connection(
             let uuid = Uuid::parse_str(&user.id().unwrap()).unwrap();
             let username = User::find_by_uuid(&uuid, &pool).await.unwrap().username;
             println!("Welcome {}!", username);
-            WsConn::new(
+            WsConnection::new(
                 Some(uuid),
                 username,
                 srv.get_ref().clone(),
@@ -30,7 +30,12 @@ pub async fn start_connection(
         }
         None => {
             println!("Welcome Anonymous!");
-            WsConn::new(None, String::from("Anonymous"), srv.get_ref().clone(), pool.get_ref().clone())
+            WsConnection::new(
+                None,
+                String::from("Anonymous"),
+                srv.get_ref().clone(),
+                pool.get_ref().clone(),
+            )
         }
     };
 

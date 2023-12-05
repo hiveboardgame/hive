@@ -52,11 +52,9 @@ pub fn Piece(
                         return;
                     }
                 }
-            } else {
-                if let Some(black) = black_id {
-                    if black != user.id {
-                        return;
-                    }
+            } else if let Some(black) = black_id {
+                if black != user.id {
+                    return;
                 }
             }
             match (game_state_signal.signal)().state.game_status {

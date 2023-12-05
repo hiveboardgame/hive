@@ -40,4 +40,3 @@ pub fn HistoryPieces() -> impl IntoView {
             .collect_view()
     }
 }
-

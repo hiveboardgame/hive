@@ -68,4 +68,3 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
         </article>
     }
 }
-

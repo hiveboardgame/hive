@@ -38,11 +38,9 @@ pub fn LiveTimer(
         if turn() > 0 {
             if (side == Color::White) == (turn() % 2 == 0) {
                 resume();
-            } else {
-                if is_active() {
-                    pause();
-                    time.update(|t| *t += increment);
-                }
+            } else if is_active() {
+                pause();
+                time.update(|t| *t += increment);
             }
         }
         // When time runs out declare winner and style timer that ran out
@@ -75,4 +73,3 @@ pub fn LiveTimer(
         </div>
     }
 }
-

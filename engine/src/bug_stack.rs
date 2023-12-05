@@ -33,7 +33,6 @@ impl BugStack {
         }
     }
 
-
     pub fn len(&self) -> usize {
         self.size as usize
     }

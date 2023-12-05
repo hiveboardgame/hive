@@ -140,4 +140,3 @@ impl HexStack {
         }
     }
 }
-

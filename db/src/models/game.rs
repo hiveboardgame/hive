@@ -11,10 +11,11 @@ use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
 use hive_lib::{
     color::Color, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
+    history::History, state::State,
 };
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = games)]
@@ -83,10 +84,10 @@ impl Game {
         if self.has_unanswered_game_control() {
             let gc = match self.last_game_control() {
                 Some(GameControl::TakebackRequest(color)) => {
-                    GameControl::TakebackReject(Color::from(color.opposite()))
+                    GameControl::TakebackReject(color.opposite_color())
                 }
                 Some(GameControl::DrawOffer(color)) => {
-                    GameControl::DrawReject(Color::from(color.opposite()))
+                    GameControl::DrawReject(color.opposite_color())
                 }
                 _ => unreachable!(),
             };
@@ -137,6 +138,20 @@ impl Game {
             .await
     }
 
+    pub fn user_is_player(&self, user_id: Uuid) -> bool {
+        self.white_id == user_id || self.black_id == user_id
+    }
+
+    pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
+        if user_id == self.black_id {
+            return Some(Color::Black);
+        }
+        if user_id == self.white_id {
+            return Some(Color::White);
+        }
+        None
+    }
+
     pub fn has_unanswered_game_control(&self) -> bool {
         if let Some(gc) = self.last_game_control() {
             return matches!(
@@ -161,7 +176,7 @@ impl Game {
 
     pub async fn write_game_control(
         &self,
-        game_control: GameControl,
+        game_control: &GameControl,
         pool: &DbPool,
     ) -> Result<Game, Error> {
         let conn = &mut get_conn(pool).await?;
@@ -172,15 +187,29 @@ impl Game {
             .await
     }
 
+    // TODO: get rid of new_game_status and compute it here
     pub async fn accept_takeback(
         &self,
-        new_history: String,
-        new_game_status: String,
-        game_control: GameControl,
+        game_control: &GameControl,
         pool: &DbPool,
     ) -> Result<Game, Error> {
         let conn = &mut get_conn(pool).await?;
         let game_control_string = format!("{}. {game_control};", self.turn);
+
+        let mut moves = self.history.split_terminator(';').collect::<Vec<_>>();
+        if let Some(a_move) = moves.pop() {
+            if a_move.trim() == "pass" {
+                println!("found a pass, will delete another move");
+                moves.pop();
+            }
+        }
+        let mut new_history = moves.join(";");
+        new_history.push(';');
+        // TODO: now we have error problems here... get rid of the expects
+        let his = History::new_from_str(&new_history)
+            .expect("Could not recover History from history string.");
+        let state = State::new_from_history(&his).expect("Could not recover State from History");
+        let new_game_status = state.game_status.to_string();
 
         diesel::update(games::table.find(self.id))
             .set((
@@ -193,14 +222,12 @@ impl Game {
             .await
     }
 
-    pub async fn resign(
-        &self,
-        game_control: GameControl,
-        new_game_status: GameStatus,
-        pool: &DbPool,
-    ) -> Result<Game, Error> {
+    pub async fn resign(&self, game_control: &GameControl, pool: &DbPool) -> Result<Game, Error> {
         let connection = &mut get_conn(pool).await?;
         let game_control_string = format!("{}. {game_control};", self.turn);
+
+        let winner_color = game_control.color().opposite_color();
+        let new_game_status = GameStatus::Finished(GameResult::Winner(winner_color));
 
         connection
             .transaction::<_, diesel::result::Error, _>(|conn| {
@@ -244,7 +271,7 @@ impl Game {
 
     pub async fn accept_draw(
         &self,
-        game_control: GameControl,
+        game_control: &GameControl,
         pool: &DbPool,
     ) -> Result<Game, Error> {
         let connection = &mut get_conn(pool).await?;
@@ -297,7 +324,10 @@ impl Game {
 
     pub async fn find_by_nanoid(find_nanoid: &str, pool: &DbPool) -> Result<Game, Error> {
         let conn = &mut get_conn(pool).await?;
-        games::table.filter(nanoid.eq(find_nanoid)).first(conn).await
+        games::table
+            .filter(nanoid.eq(find_nanoid))
+            .first(conn)
+            .await
     }
 
     pub async fn delete(&self, pool: &DbPool) -> Result<(), Error> {

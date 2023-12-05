@@ -37,11 +37,9 @@ pub fn CorrespondenceTimer(
         if turn() > 0 {
             if (side == Color::White) == (turn() % 2 == 0) {
                 resume();
-            } else {
-                if is_active() {
-                    pause();
-                    time.update(|t| *t = max_time_to_move);
-                }
+            } else if is_active() {
+                pause();
+                time.update(|t| *t = max_time_to_move);
             }
         }
         // When time runs out declare winner and style timer that ran out
@@ -73,4 +71,3 @@ pub fn CorrespondenceTimer(
         </div>
     }
 }
-

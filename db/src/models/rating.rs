@@ -1,13 +1,15 @@
 use crate::models::user::User;
-use crate::schema::ratings::{*, self};
 use crate::schema::ratings::dsl::ratings as ratings_table;
+use crate::schema::ratings::{self, *};
 use crate::{get_conn, DbPool};
+use bb8::PooledConnection;
 use diesel::{
     prelude::*, result::Error, AsChangeset, Associations, Identifiable, Insertable, QueryDsl,
     Queryable, Selectable,
 };
-use bb8::PooledConnection;
-use diesel_async::{RunQueryDsl, pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
+use diesel_async::{
+    pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl,
+};
 use hive_lib::{color::Color, game_result::GameResult};
 use serde::{Deserialize, Serialize};
 use skillratings::{

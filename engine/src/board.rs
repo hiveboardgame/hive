@@ -510,7 +510,7 @@ impl Board {
         }
         !self
             .top_layer_neighbors(position)
-            .any(|piece| color == Color::from(piece.color().opposite()))
+            .any(|piece| color == piece.color().opposite_color())
     }
 
     pub fn negative_space(&self) -> impl Iterator<Item = Position> + '_ {

@@ -1,5 +1,10 @@
 use crate::schema::challenges::nanoid as nanoid_field;
-use crate::{models::user::User, schema::{challenges, users}, get_conn, DbPool};
+use crate::{
+    get_conn,
+    models::user::User,
+    schema::{challenges, users},
+    DbPool,
+};
 use chrono::prelude::*;
 use diesel::prelude::*;
 use diesel::result::Error;
@@ -85,7 +90,10 @@ impl Challenge {
 
     pub async fn find_by_nanoid(u: &str, pool: &DbPool) -> Result<Challenge, Error> {
         let conn = &mut get_conn(pool).await?;
-        challenges::table.filter(nanoid_field.eq(u)).first(conn).await
+        challenges::table
+            .filter(nanoid_field.eq(u))
+            .first(conn)
+            .await
     }
 
     pub async fn get_challenger(&self, pool: &DbPool) -> Result<User, Error> {

@@ -38,6 +38,8 @@ actix-session = { version = "0.8", features = ["cookie-session"] }
 argon2 = "0.5"
 sha2 = "0.10"
 serde = { version = "1", feature = ["derive"] }
+serde_with = { version = "3.4" }
+http-serde = { version = "1" }
 serde_json = { version = "1" }
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
@@ -50,7 +52,7 @@ tokio = { version = "1.32.0", features = ["full"] }
 wasm-bindgen = "0.2.88"
 web-sys = {version = "0.3.6", features = ["AbortController", "AbortSignal", "Clipboard", "HtmlDocument", "SvgPoint","SvgsvgElement", "SvgGraphicsElement", "SvgMatrix"] }
 bb8 = { version = "0.8" }
-diesel = { version = "2.1", features = ["postgres", "chrono", "uuid"] }
+diesel = { version = "2.1", features = ["postgres", "chrono", "uuid", "serde_json"] }
 diesel-async = { version = "0.4", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.1", features = ["postgres"]}
 uuid = { version = "1.4", features = ["v4", "wasm-bindgen", "serde"] }
