@@ -15,7 +15,12 @@ impl Address {
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.port.is_some() {
-            write!(f, "{}:{}", self.hostname, self.port.as_ref().unwrap())
+            write!(
+                f,
+                "{}:{}",
+                self.hostname,
+                self.port.as_ref().expect("Port is some")
+            )
         } else {
             write!(f, "{}", self.hostname)
         }
@@ -25,7 +30,7 @@ impl fmt::Display for Address {
 pub fn hostname_and_port() -> Address {
     let window = use_window();
     if window.is_some() {
-        let location = window.as_ref().unwrap().location();
+        let location = window.as_ref().expect("Window is some").location();
         let hostname = location
             .hostname()
             .expect("location should have a hostname");

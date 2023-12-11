@@ -9,7 +9,6 @@ use crate::{
 };
 use hive_lib::position::Position;
 use leptos::ev::{contextmenu, pointerdown, pointerleave, pointermove, pointerup, wheel};
-use leptos::logging::*;
 use leptos::svg::Svg;
 use leptos::*;
 use leptos_use::{use_event_listener, use_resize_observer};

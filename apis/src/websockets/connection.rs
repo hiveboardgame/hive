@@ -109,7 +109,9 @@ impl WsConnection {
     }
 
     fn not_finished(game: &Game, username: &str) -> Result<(), ServerError> {
-        if let GameStatus::Finished(_) = GameStatus::from_str(&game.game_status).unwrap() {
+        if let GameStatus::Finished(_) =
+            GameStatus::from_str(&game.game_status).expect("GameStatus string parsed")
+        {
             return Err(ServerError::UserInputError {
                 field: format!("{username} can't play on {}", game.nanoid),
                 reason: "Game is over".to_string(),
@@ -410,7 +412,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             Ok(ws::Message::Nop) => (),
             Ok(Text(s)) => {
                 println!("WS message is {:?}", s);
-                let m: ClientMessage = serde_json::from_str(&s.to_string()).unwrap();
+                let m: ClientMessage =
+                    serde_json::from_str(&s.to_string()).expect("ClientMessage from string worked");
                 let addr = ctx.address();
                 let game_id = m.game_id;
                 let pool = self.pool.clone();
@@ -464,7 +467,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                         }),
                         Ok(gar) => ServerResult::Ok(GameUpdate(gar)),
                     };
-                    let serialized = serde_json::to_string(&server_result).unwrap();
+                    let serialized =
+                        serde_json::to_string(&server_result).expect("Server result serialized");
                     let cam = ClientActorMessage::new(&game_id, &serialized, user_id);
                     lobby.do_send(cam);
                 };

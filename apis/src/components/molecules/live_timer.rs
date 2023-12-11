@@ -49,7 +49,7 @@ pub fn LiveTimer(
             let class_list = parent_div()
                 .expect("div_ref to be loaded by now")
                 .class_list();
-            class_list.add_1("bg-red-700").unwrap();
+            class_list.add_1("bg-red-700").expect("Class added");
 
             match side {
                 Color::White => {

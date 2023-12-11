@@ -64,7 +64,7 @@ impl GameStateResponse {
         pool: &DbPool,
     ) -> Result<Self, ServerFnError> {
         let (white_rating, black_rating, white_rating_change, black_rating_change) = {
-            if let Finished(_) = GameStatus::from_str(&game.game_status).unwrap() {
+            if let Finished(_) = GameStatus::from_str(&game.game_status).expect("GameStatus parsed") {
                 (
                     game.white_rating,
                     game.black_rating,
@@ -97,10 +97,10 @@ impl GameStateResponse {
             rated: game.rated,
             reserve_black: state
                 .board
-                .reserve(Color::Black, game.game_type.parse().unwrap()),
+                .reserve(Color::Black, game.game_type.parse().expect("Gametype parsed")),
             reserve_white: state
                 .board
-                .reserve(Color::White, game.game_type.parse().unwrap()),
+                .reserve(Color::White, game.game_type.parse().expect("Gametype parsed")),
             history: state.history.moves.clone(),
             game_control_history: Self::gc_history(&game.game_control_history),
             white_rating,
@@ -117,9 +117,9 @@ impl GameStateResponse {
             let gc: GameControl;
             // TODO: This code is janky
             if let Some(turn_str) = gc_str.split(' ').next() {
-                turn = turn_str.strip_suffix('.').unwrap().parse().unwrap();
+                turn = turn_str.strip_suffix('.').expect("Suffix exists").parse().expect("Turn parsed");
                 if let Some(gc_token) = gc_str.split(' ').nth(1) {
-                    gc = gc_token.parse().unwrap();
+                    gc = gc_token.parse().expect("Token parsed");
                     ret.push((turn, gc));
                 }
             }

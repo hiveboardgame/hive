@@ -18,7 +18,7 @@ pub fn Modal(
             && ev.client_x() as f64 <= rect.left() + rect.width();
         if !click_is_in_dialog {
             ev.target()
-                .unwrap()
+                .expect("Event target")
                 .unchecked_into::<web_sys::HtmlDialogElement>()
                 .close();
         }

@@ -22,7 +22,7 @@ pub async fn login(username: String, password: String) -> Result<AccountResponse
             let req = use_context::<actix_web::HttpRequest>()
                 .ok_or("Failed to get HttpRequest")
                 .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
-            Identity::login(&req.extensions(), user.id.to_string()).unwrap();
+            Identity::login(&req.extensions(), user.id.to_string()).expect("Login");
             leptos_actix::redirect("/");
             AccountResponse::from_uuid(&user.id, &pool).await
         }

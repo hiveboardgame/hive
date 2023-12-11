@@ -18,7 +18,7 @@ pub fn HistoryPieces() -> impl IntoView {
         if let Some(turn) = game_state.history_turn {
             history.moves = game_state.state.history.moves[0..=turn].into();
         }
-        let state = State::new_from_history(&history).unwrap();
+        let state = State::new_from_history(&history).expect("Got state from history");
         for r in 0..32 {
             for q in 0..32 {
                 let position = Position::new(q, r);

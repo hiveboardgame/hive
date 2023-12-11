@@ -52,7 +52,7 @@ impl Handler<Disconnect> for Lobby {
                 for game in games.iter() {
                     self.games_users
                         .get(game)
-                        .unwrap()
+                        .expect("Game exists")
                         .iter()
                         .filter(|conn_id| *conn_id.to_owned() != msg.user_id)
                         .for_each(|user_id| {
@@ -86,7 +86,7 @@ impl Handler<Connect> for Lobby {
             .insert(msg.game_id.clone());
         self.games_users
             .get(&msg.game_id)
-            .unwrap()
+            .expect("Uuid exists")
             .iter()
             .filter(|conn_id| *conn_id.to_owned() != msg.user_id)
             .for_each(|conn_id| {
@@ -111,7 +111,7 @@ impl Handler<ClientActorMessage> for Lobby {
             .insert(cam.user_id);
         self.games_users
             .get(&cam.game_id)
-            .unwrap()
+            .expect("Uuid exists")
             .iter()
             .for_each(|client| self.send_message(&cam.serialized, client));
     }
