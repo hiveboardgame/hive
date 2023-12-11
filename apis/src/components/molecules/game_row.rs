@@ -31,7 +31,7 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
     };
 
     view! {
-        <article class="hover:bg-blue-300 flex items-stretch h-72 px-2 py-4 border border-gray-800 dark:border-gray-400 relative mx-2 w-3/4">
+        <article class="hover:bg-blue-300 flex items-stretch h-72 px-2 py-4 dark:odd:bg-slate-700 dark:even:bg-slate-800 odd:bg-stone-300 even:bg-stone-100 relative mx-2 w-3/4">
             <div class="h-60 w-60 mx-2">
                 <svg
                     viewBox="1100 500 600 400"

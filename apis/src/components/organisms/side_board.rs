@@ -24,6 +24,7 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
         Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
+    // TODO: This is the reason sometimes the buttons don't show I think
     let show_buttons = move || {
         user().map_or(false, |user| {
             let game_state = game_state_signal.signal.get();
@@ -42,12 +43,12 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
 
     view! {
         <div class=format!(
-            "select-none w-full h-full col-start-9 col-span-2 border-2 row-span-4 row-start-2 {extend_tw_classes}",
+            "select-none w-full h-full col-start-9 col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 {extend_tw_classes}",
         )>
 
-            <div class="grid grid-cols-2 gap-1 sticky top-0 dark:bg-gray-900 bg-white">
+            <div class="z-10 border-b-2 border-black dark:border-white grid grid-cols-2 sticky top-0 bg-inherit">
                 <button
-                    class=move || format!("hover:bg-blue-300 {}", button_color().0)
+                    class=move || { format!("hover:bg-blue-300 {}", button_color().0) }
 
                     on:click=move |_| {
                         game_state_signal.view_game();
@@ -58,7 +59,8 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                 </button>
 
                 <button
-                    class=move || format!("hover:bg-blue-300 {}", button_color().1)
+                    class=move || { format!("hover:bg-blue-300 {}", button_color().1) }
+
                     on:click=move |_| {
                         let parent_div = div_ref.get_untracked().expect("div to have loaded");
                         game_state_signal.view_history();

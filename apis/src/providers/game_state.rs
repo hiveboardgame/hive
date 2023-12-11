@@ -171,7 +171,7 @@ impl Default for GameState {
 impl GameState {
     // TODO get the state from URL/game_id via a call
     pub fn new() -> Self {
-        let state = State::new(GameType::MLP, true);
+        let state = State::new(GameType::MLP, false);
         Self {
             game_id: None,
             state,

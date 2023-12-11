@@ -9,13 +9,13 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
         <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>
             <ActionForm
                 action=auth_context.login
-                class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4"
+                class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800 "
             >
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
+                    <label class="block font-bold mb-2" for="username">
                         Username
                         <input
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
                             name="username"
                             id="username"
                             type="text"
@@ -24,10 +24,10 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                     </label>
                 </div>
                 <div class="mb-6">
-                    <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                    <label class="block font-bold mb-2" for="password">
                         Password
                         <input
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 mb-3 leading-tight focus:outline-none"
                             name="password"
                             id="password"
                             type="password"
@@ -37,7 +37,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 </div>
                 <div class="flex items-center justify-between">
                     <input
-                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none"
                         type="submit"
                         value="Sign In"
                     />

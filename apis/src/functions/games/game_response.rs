@@ -85,7 +85,7 @@ impl GameStateResponse {
             nanoid: game.nanoid.clone(),
             game_status: GameStatus::from_str(&game.game_status)?,
             game_type: GameType::from_str(&game.game_type)?,
-            tournament_queen_rule: state.tournament,
+            tournament_queen_rule: game.tournament_queen_rule,
             turn: state.turn,
             white_player: UserResponse::from_uuid(&game.white_id, pool).await?,
             black_player: UserResponse::from_uuid(&game.black_id, pool).await?,

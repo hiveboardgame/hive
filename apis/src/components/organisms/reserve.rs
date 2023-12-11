@@ -23,7 +23,7 @@ fn piece_active(state: &State, piece: &Piece) -> bool {
     };
     // first and second turn
     // -> disable queen
-    if piece.bug() == Bug::Queen && state.turn < 2 {
+    if state.tournament && piece.bug() == Bug::Queen && state.turn < 2 {
         return false;
     };
     // if queen_required

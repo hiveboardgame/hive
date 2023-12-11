@@ -83,6 +83,26 @@ impl Challenge {
             .await
     }
 
+    pub async fn get_own(pool: &DbPool, user: Uuid) -> Result<Vec<Challenge>, Error> {
+        let conn = &mut get_conn(pool).await?;
+        challenges::table
+            .filter(challenges::challenger_id.eq(user))
+            .get_results(conn)
+            .await
+    }
+
+    pub async fn get_public_exclude_user(
+        pool: &DbPool,
+        user: Uuid,
+    ) -> Result<Vec<Challenge>, Error> {
+        let conn = &mut get_conn(pool).await?;
+        challenges::table
+            .filter(challenges::public.eq(true))
+            .filter(challenges::challenger_id.ne(user))
+            .get_results(conn)
+            .await
+    }
+
     pub async fn find_by_uuid(id: &Uuid, pool: &DbPool) -> Result<Challenge, Error> {
         let conn = &mut get_conn(pool).await?;
         challenges::table.find(id).first(conn).await

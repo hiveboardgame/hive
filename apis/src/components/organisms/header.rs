@@ -11,10 +11,11 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
     let onclick = move || hamburger_show.update(|b| *b = false);
     view! {
         <header class=format!(
-            "w-full sticky top-0 flex justify-between bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] {extend_tw_classes}",
+            "w-full sticky top-0 flex justify-between items-center bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] {extend_tw_classes}",
         )>
-            <a href="/">Home</a>
-            <a href="/hws">WebSocket</a>
+            <a class="ml-10" href="/">
+                Home
+            </a>
             <Transition>
                 {move || {
                     let user = move || match (auth_context.user)() {
@@ -25,9 +26,30 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                         <Show
                             when=move || user().is_some()
                             fallback=|| {
+                                let hamburger_show = create_rw_signal(false);
+                                let onclick = move |_| hamburger_show.update(|b| *b = false);
                                 view! {
-                                    <a href="/register">Register</a>
-                                    <a href="/login">Login</a>
+                                    <div>
+                                        <a href="/login" on:click=onclick>
+                                            Login
+                                        </a>
+                                        <Hamburger hamburger_show=hamburger_show>
+
+                                            <ul>
+                                                <a href="/register" on:click=onclick>
+                                                    Register
+                                                </a>
+                                            </ul>
+                                            <ul>
+                                                <a href="/hws" on:click=onclick>
+                                                    WebSocket
+                                                </a>
+                                            </ul>
+                                            <ul>
+                                                <DarkModeToggle/>
+                                            </ul>
+                                        </Hamburger>
+                                    </div>
                                 }
                             }
                         >
@@ -47,15 +69,24 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                     </a>
                                 </ul>
                                 <ul>
+                                    <a href="/hws" on:click=move |_| onclick()>
+                                        WebSocket
+                                    </a>
+                                </ul>
+                                <ul>
+                                    <DarkModeToggle/>
+                                </ul>
+                                <ul>
                                     <Logout on:submit=move |_| onclick()/>
                                 </ul>
+
                             </Hamburger>
                         </Show>
                     }
                 }}
 
             </Transition>
-            <DarkModeToggle/>
+
         </header>
     }
 }

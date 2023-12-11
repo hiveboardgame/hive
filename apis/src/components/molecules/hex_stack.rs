@@ -6,11 +6,13 @@ use crate::{
     components::atoms::hex::Hex,
 };
 use leptos::*;
+use web_sys::MouseEvent;
 
 #[component]
 pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
     let target_stack = expect_context::<TargetStack>().0;
-    let expand_stack = move |_| {
+    let expand_stack = move |evt: MouseEvent| {
+        evt.prevent_default();
         target_stack.set(Some(hex_stack.position));
     };
     hex_stack

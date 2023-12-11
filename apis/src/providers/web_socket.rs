@@ -117,7 +117,8 @@ fn on_message_callback(m: String) {
                         history.result = result.to_owned();
                     }
                     // TODO: check if there an anunsered gc and set it
-                    if let Ok(state) = State::new_from_history(&history) {
+                    if let Ok(mut state) = State::new_from_history(&history) {
+                        state.tournament = gar.game.tournament_queen_rule;
                         game_state.set_state(
                             state,
                             gar.game.black_player.uid,

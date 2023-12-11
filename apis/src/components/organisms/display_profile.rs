@@ -15,7 +15,7 @@ pub enum TabView {
 pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
     let games = Resource::once(move || get_user_games(user().username));
     let tab_view = create_rw_signal(TabView::Playing);
-    let button_styles = "flex justify-center box-content h-fit inline-block text-center cursor-pointer hover:bg-green-300 rounded-md border-cyan-500 border-2 drop-shadow-lg";
+    let button_styles = "z-10 w-fit flex justify-center box-content h-fit inline-block text-center hover:bg-green-300 rounded-md border-cyan-500 border-2 drop-shadow-lg";
     view! {
         <div class="h-full w-full grid grid-cols-6">
             <Transition>
@@ -31,8 +31,8 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                         _ => (Vec::new(), Vec::new()),
                     };
                     view! {
-                        <div class="flex flex-col gap-6 col-span-1 col-start-1 fixed">
-                            <div class="flex gap-6">
+                        <div class="flex flex-col gap-6 col-span-1 col-start-1 absolute">
+                            <div class="flex gap-6 min-w-fit flex-col md:flex-row">
                                 <button
                                     class=move || {
                                         let side = match tab_view() {
@@ -75,7 +75,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                             <p>"Losses " {user().loss}</p>
 
                         </div>
-                        <div class="bg-white dark:bg-gray-900 z-40 gap-6 col-span-5 col-start-2">
+                        <div class="bg-inherit dark:bg-gray-900 gap-6 col-span-5 col-start-2">
 
                             <Show
                                 when=move || { tab_view() == TabView::Playing }
