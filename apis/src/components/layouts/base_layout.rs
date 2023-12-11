@@ -7,7 +7,16 @@ use crate::providers::color_scheme::ColorScheme;
 #[component]
 pub fn BaseLayout(children: Children) -> impl IntoView {
     let color_scheme = expect_context::<ColorScheme>();
+    let color_scheme_meta = move || {
+        if (color_scheme.prefers_dark)() {
+            "dark".to_string()
+        } else {
+            "light".to_string()
+        }
+    };
+
     view! {
+        <Meta name="color-scheme" content=color_scheme_meta/>
         <Html class=move || {
             match (color_scheme.prefers_dark)() {
                 true => "dark",
@@ -17,7 +26,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
 
         <Body/>
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
-        <main class="min-h-screen h-full w-full bg-white dark:bg-gray-900">
+        <main class="min-h-screen h-full w-full bg-stone-200 dark:bg-gray-900 text-xs sm:text-sm md:text-md lg:text-lg xl-text-xl">
             <Header/>
             {children()}
         </main>

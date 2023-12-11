@@ -47,7 +47,7 @@ pub fn App() -> impl IntoView {
                     }
                 >
 
-                    <Route path="" view=|| view! { <Home/> }/>
+                    <Route path="" ssr=SsrMode::InOrder view=|| view! { <Home/> }/>
                     <Route path="/@/:username" view=|| view! { <ProfileView/> }/>
                     <Route path="/register" view=|| view! { <Register/> }/>
                     <Route path="/login" view=|| view! { <Login/> }/>

@@ -34,9 +34,9 @@ pub fn FinishedRating(
     let (sign, diff_style) = if rating_change == 0 {
         ("+", "text-cyan-400")
     } else if rating_change < 0 {
-        ("", "text-red-400")
+        ("", "text-li-red")
     } else {
-        ("+", "text-green-400")
+        ("+", "text-li-green")
     };
     view! {
         <p class=extend_tw_classes>{rating}</p>

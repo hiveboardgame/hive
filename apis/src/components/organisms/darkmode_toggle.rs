@@ -1,21 +1,12 @@
 use crate::providers::color_scheme::ColorScheme;
 use leptos::*;
-use leptos_meta::Meta;
 use leptos_router::ActionForm;
 
 #[component]
 pub fn DarkModeToggle() -> impl IntoView {
     let color_scheme = expect_context::<ColorScheme>();
-    let color_scheme_meta = move || {
-        if (color_scheme.prefers_dark)() {
-            "dark".to_string()
-        } else {
-            "light".to_string()
-        }
-    };
 
     view! {
-        <Meta name="color-scheme" content=color_scheme_meta/>
         <ActionForm action=color_scheme.action>
             <input
                 type="hidden"
@@ -24,7 +15,7 @@ pub fn DarkModeToggle() -> impl IntoView {
             />
             <button
                 type="submit"
-                class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow mx-4 dark:bg-yellow-400 bg-gray-700"
+                class="m-1 inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow mx-4 dark:bg-yellow-400 bg-gray-700"
                 value=move || { if (color_scheme.prefers_dark)() { "dark" } else { "light" } }
                 inner_html=move || {
                     if (color_scheme.prefers_dark)() {

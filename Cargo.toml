@@ -24,7 +24,11 @@ leptos_icons = { version = "0.1", default_features = false, features = [
     "AiStepForwardFilled",
     "BiInfiniteRegular",
     "BiUndoRegular",
+    "BsHexagon",
+    "BsHexagonFill",
+    "BsHexagonHalf",
     "ChCross",
+    "ChMenuHamburger",
     "FaHandshakeSimpleSolid",
     "RiSwordOthersLine"
 ] }

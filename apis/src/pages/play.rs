@@ -39,9 +39,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         })
     };
     let game_state = expect_context::<GameStateSignal>();
-    let is_finished = move || match (game_state.signal)().state.game_status {
-        GameStatus::Finished(_) => true,
-        _ => false,
+    let is_finished = move || {
+        matches!(
+            (game_state.signal)().state.game_status,
+            GameStatus::Finished(_)
+        )
     };
     let game = create_blocking_resource(
         move || (nanoid(), is_finished()),
@@ -74,7 +76,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             game_state.join(user_uuid());
                             view! {
                                 <div class=format!(
-                                    "grid grid-cols-10 grid-rows-6 max-h-[94svh] {extend_tw_classes}",
+                                    "grid grid-cols-10 grid-rows-6 h-full w-full max-h-[93vh] min-h-[93vh] {extend_tw_classes}",
                                 )>
 
                                     <Board/>
@@ -84,7 +86,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                         player=white_player
                                         time_control=time_control()
                                     />
-                                    <SideboardTabs extend_tw_classes="border-blue-200"/>
+                                    <SideboardTabs/>
                                     <DisplayTimer
                                         side=Color::Black
                                         game=game

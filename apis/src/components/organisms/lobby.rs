@@ -1,47 +1,52 @@
-use crate::components::molecules::display_challenge::DisplayChallenge;
-use crate::functions::challenges::get_public::get_public_challenges;
+use crate::{
+    components::molecules::display_challenge::DisplayChallenge,
+    functions::challenges::challenge_response::ChallengeResponse,
+};
 use leptos::*;
 
 #[component]
-pub fn Lobby(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let challenges = Resource::once(get_public_challenges);
+pub fn Lobby(challenges: StoredValue<Vec<ChallengeResponse>>) -> impl IntoView {
+    let th_class = "py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase max-h-[80vh]";
     view! {
-        <div class=format!("{extend_tw_classes}")>
-            <Transition>
-                {move || {
-                    let challenges = move || match challenges() {
-                        Some(Ok(challenges)) => Some(challenges),
-                        _ => None,
-                    };
-                    view! {
-                        <Show
-                            when=move || {
-                                challenges().is_some() && !challenges().unwrap().is_empty()
-                            }
+        <div class="flex col-span-full overflow-x-auto">
+            <table class="grow md:grow-0 md:table-fixed">
+                <thead>
+                    <tr>
+                        <th class=th_class></th>
+                        <th class=th_class>Player</th>
+                        <th class=th_class>Rating</th>
+                        <th class=th_class>Expansions</th>
+                        <th class=th_class>Time</th>
+                        <th class=th_class>Mode</th>
+                        <th class=th_class>Action</th>
+                    </tr>
+                </thead>
+                <Show
+                    when=move || challenges().is_empty()
+                    fallback=move || {
+                        view! {
+                            <tbody>
 
-                            fallback=move || {
-                                view! {
-                                    <p>
-                                        Go create your own challenge, there are none at the moment
-                                    </p>
-                                }
-                            }
-                        >
+                                <For
+                                    each=move || { challenges() }
 
-                            <For
-                                each=move || { challenges().expect("There to be Some challenge") }
+                                    key=|challenge| (challenge.id)
+                                    let:challenge
+                                >
+                                    <DisplayChallenge
+                                        challenge=store_value(challenge)
+                                        single=false
+                                    />
+                                </For>
 
-                                key=|challenge| (challenge.id)
-                                let:challenge
-                            >
-                                <DisplayChallenge challenge=challenge/>
-                            </For>
-
-                        </Show>
+                            </tbody>
+                        }
                     }
-                }}
+                >
 
-            </Transition>
+                    ""
+                </Show>
+            </table>
         </div>
     }
 }

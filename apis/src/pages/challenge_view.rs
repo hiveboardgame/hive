@@ -76,7 +76,7 @@ pub fn ChallengeView() -> impl IntoView {
                                             <input
                                                 id="challenge_link"
                                                 type="text"
-                                                class="w-[35ch]"
+                                                class="w-[50ch]"
                                                 value=challenge_address
                                                 readonly
                                             />
@@ -92,7 +92,7 @@ pub fn ChallengeView() -> impl IntoView {
                                             "The first person to come to this URL will play with you."
                                         </p>
                                     </Show>
-                                    <DisplayChallenge challenge=challenge/>
+                                    <DisplayChallenge challenge=store_value(challenge) single=true/>
                                 }
                                     .into_view()
                             }
@@ -103,3 +103,4 @@ pub fn ChallengeView() -> impl IntoView {
         </div>
     }
 }
+
