@@ -103,4 +103,3 @@ pub fn ChallengeView() -> impl IntoView {
         </div>
     }
 }
-

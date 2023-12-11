@@ -23,7 +23,7 @@ async fn main() -> std::io::Result<()> {
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use sha2::*;
 
-    let conf = get_configuration(None).await.unwrap();
+    let conf = get_configuration(None).await.expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
 
@@ -35,7 +35,7 @@ async fn main() -> std::io::Result<()> {
     let database_url = &config.database_url;
     let mut conn = PgConnection::establish(database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
-    conn.run_pending_migrations(MIGRATIONS).unwrap();
+    conn.run_pending_migrations(MIGRATIONS).expect("Ran migrations");
 
     let hash: [u8; 64] = Sha512::digest(&config.session_secret)
         .as_slice()

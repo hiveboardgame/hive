@@ -48,7 +48,7 @@ pub fn CorrespondenceTimer(
             let class_list = parent_div()
                 .expect("div_ref to be loaded by now")
                 .class_list();
-            class_list.add_1("bg-red-700").unwrap();
+            class_list.add_1("bg-red-700").expect("Added class to div");
             match side {
                 Color::White => {
                     (game_state_signal.signal).update(|s| {

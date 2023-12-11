@@ -18,8 +18,11 @@ pub async fn start_connection(
     let ws = match user {
         Some(user) => {
             // TODO: handle the unwraps
-            let uuid = Uuid::parse_str(&user.id().unwrap()).unwrap();
-            let username = User::find_by_uuid(&uuid, &pool).await.unwrap().username;
+            let uuid = Uuid::parse_str(&user.id().expect("User has id")).expect("Valid uuid");
+            let username = User::find_by_uuid(&uuid, &pool)
+                .await
+                .expect("Username to exist")
+                .username;
             println!("Welcome {}!", username);
             WsConnection::new(
                 Some(uuid),

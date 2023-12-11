@@ -57,7 +57,10 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             <Hamburger hamburger_show=hamburger_show>
                                 <ul>
                                     <a
-                                        href=format!("/@/{}", user().unwrap().username)
+                                        href=format!(
+                                            "/@/{}",
+                                            user().expect("User is some").username,
+                                        )
                                         on:click=move |_| onclick()
                                     >
                                         Profile

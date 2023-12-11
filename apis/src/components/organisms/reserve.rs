@@ -72,7 +72,7 @@ pub fn Reserve(
                 let mut hs = HexStack::new(&bs, position);
                 let stack_height = piece_strings.len() - 1;
                 for (i, piece_str) in piece_strings.iter().rev().enumerate() {
-                    let piece = Piece::from_str(piece_str).unwrap();
+                    let piece = Piece::from_str(piece_str).expect("Parsed piece");
                     let piece_type = if piece_active(&game_state.state, &piece) {
                         if i == stack_height {
                             PieceType::Reserve
