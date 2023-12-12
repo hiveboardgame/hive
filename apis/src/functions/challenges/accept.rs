@@ -51,6 +51,8 @@ pub async fn accept_challenge(nanoid: String) -> Result<Option<GameStateResponse
     let game = Game::create(&new_game, &pool).await?;
     challenge.delete(&pool).await?;
     leptos_actix::redirect(play_link);
-    let game_state = GameStateResponse::new_from_db(&game, &pool).await?;
+    let game_state = GameStateResponse::new_from_db(&game, &pool)
+        .await
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
     Ok(Some(game_state))
 }

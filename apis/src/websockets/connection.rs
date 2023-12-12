@@ -3,7 +3,6 @@ use crate::common::game_action::GameAction;
 use crate::common::server_result::GameActionResponse;
 use crate::common::server_result::{ExternalServerError, ServerOk::GameUpdate, ServerResult};
 use crate::functions::games::game_response::GameStateResponse;
-use crate::websockets::server_error::ServerError;
 use crate::websockets::{
     lobby::Lobby,
     messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
@@ -13,7 +12,9 @@ use actix::{
     Running, StreamHandler, WrapFuture,
 };
 use actix_web_actors::ws::{self, Message::Text};
+use anyhow::Result;
 use db_lib::{models::game::Game, DbPool};
+use hive_lib::game_error::GameError;
 use hive_lib::{game_control::GameControl, game_status::GameStatus, state::State, turn::Turn};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
@@ -93,37 +94,30 @@ impl WsConnection {
         });
     }
 
-    fn users_turn(game: &Game, user_id: Uuid, username: &str) -> Result<(), ServerError> {
+    fn users_turn(game: &Game, user_id: Uuid, username: &str) -> Result<()> {
         if !((game.turn % 2 == 0 && game.white_id == user_id)
             || (game.turn % 2 == 1 && game.black_id == user_id))
         {
-            return Err(ServerError::UserInputError {
-                field: format!(
-                    "{username} can't play on {} at turn {}",
-                    game.nanoid, game.turn
-                ),
-                reason: "It is not their turn".to_string(),
-            });
+            Err(GameError::InvalidTurn {
+                username: username.to_owned(),
+                game: game.nanoid.to_owned(),
+                turn: format!("{}", game.turn),
+            })?;
         }
         Ok(())
     }
 
-    fn not_finished(game: &Game, username: &str) -> Result<(), ServerError> {
-        if let GameStatus::Finished(_) =
-            GameStatus::from_str(&game.game_status).expect("GameStatus string parsed")
-        {
-            return Err(ServerError::UserInputError {
-                field: format!("{username} can't play on {}", game.nanoid),
-                reason: "Game is over".to_string(),
-            });
+    fn not_finished(game: &Game, username: &str) -> Result<()> {
+        if let GameStatus::Finished(_) = GameStatus::from_str(&game.game_status).unwrap() {
+            Err(GameError::GameIsOver {
+                username: username.to_owned(),
+                game: game.nanoid.to_owned(),
+            })?;
         }
         Ok(())
     }
 
-    fn ensure_previous_gc_present(
-        game: &Game,
-        current_game_control: &GameControl,
-    ) -> Result<(), ServerError> {
+    fn ensure_previous_gc_present(game: &Game, current_game_control: &GameControl) -> Result<()> {
         let opposite_color = current_game_control.color().opposite_color();
         let should_be_gc = match current_game_control {
             GameControl::TakebackAccept(_) => GameControl::TakebackRequest(opposite_color),
@@ -137,9 +131,10 @@ impl WsConnection {
                 return Ok(());
             }
         }
-        Err(ServerError::UserInputError {
-            field: format!("{current_game_control}"),
-            reason: "Not allowed".to_string(),
+        Err(GameError::InvalidGc {
+            gc: current_game_control.to_string(),
+            game: game.nanoid.to_owned(),
+            turn: format!("{}", game.turn),
         })?
     }
 
@@ -147,7 +142,7 @@ impl WsConnection {
         game_control: &GameControl,
         game: &Game,
         pool: &DbPool,
-    ) -> Result<Game, ServerError> {
+    ) -> Result<Game> {
         let game = game.write_game_control(game_control, pool).await?;
         Ok(game)
     }
@@ -156,22 +151,18 @@ impl WsConnection {
         game_control: &GameControl,
         game: &Game,
         pool: &DbPool,
-    ) -> Result<Game, ServerError> {
+    ) -> Result<Game> {
         Self::ensure_previous_gc_present(game, game_control)?;
         let game = game.accept_takeback(game_control, pool).await?;
         Ok(game)
     }
 
-    async fn handle_resign(
-        game_control: &GameControl,
-        game: &Game,
-        pool: &DbPool,
-    ) -> Result<Game, ServerError> {
+    async fn handle_resign(game_control: &GameControl, game: &Game, pool: &DbPool) -> Result<Game> {
         let game = game.resign(game_control, pool).await?;
         Ok(game)
     }
 
-    async fn handle_abort(game: &Game, pool: &DbPool) -> Result<(), ServerError> {
+    async fn handle_abort(game: &Game, pool: &DbPool) -> Result<()> {
         Ok(game.delete(pool).await?)
     }
 
@@ -179,7 +170,7 @@ impl WsConnection {
         game_control: &GameControl,
         game: &Game,
         pool: &DbPool,
-    ) -> Result<Game, ServerError> {
+    ) -> Result<Game> {
         Self::ensure_previous_gc_present(game, game_control)?;
         let game = game.write_game_control(game_control, pool).await?;
         Ok(game)
@@ -189,7 +180,7 @@ impl WsConnection {
         game_control: &GameControl,
         game: &Game,
         pool: &DbPool,
-    ) -> Result<Game, ServerError> {
+    ) -> Result<Game> {
         let game = game.write_game_control(game_control, pool).await?;
         Ok(game)
     }
@@ -198,7 +189,7 @@ impl WsConnection {
         game_control: &GameControl,
         game: &Game,
         pool: &DbPool,
-    ) -> Result<Game, ServerError> {
+    ) -> Result<Game> {
         Self::ensure_previous_gc_present(game, game_control)?;
         let game = game.accept_draw(game_control, pool).await?;
         Ok(game)
@@ -208,17 +199,13 @@ impl WsConnection {
         game_control: &GameControl,
         game: &Game,
         pool: &DbPool,
-    ) -> Result<Game, ServerError> {
+    ) -> Result<Game> {
         Self::ensure_previous_gc_present(game, game_control)?;
         let game = game.write_game_control(game_control, pool).await?;
         Ok(game)
     }
 
-    async fn match_control(
-        game_control: &GameControl,
-        game: &Game,
-        pool: &DbPool,
-    ) -> Result<Game, ServerError> {
+    async fn match_control(game_control: &GameControl, game: &Game, pool: &DbPool) -> Result<Game> {
         Ok(match game_control {
             GameControl::Abort(_) => {
                 let game = game.clone();
@@ -245,38 +232,36 @@ impl WsConnection {
         })
     }
 
-    fn ensure_gc_allowed_for_turn(control: &GameControl, turn: i32) -> Result<(), ServerError> {
-        if turn == 0 {
-            Err(ServerError::UserInputError {
-                field: format!("{control}"),
-                reason: "Not not allowed on turn 0".to_string(),
+    fn ensure_gc_allowed_for_turn(control: &GameControl, game: &Game) -> Result<()> {
+        if game.turn == 0 {
+            Err(GameError::InvalidGc {
+                gc: control.to_string(),
+                game: game.nanoid.to_owned(),
+                turn: format!("{}", game.turn),
             })?
         }
         Ok(())
     }
 
-    fn ensure_gc_color(
-        user_id: Uuid,
-        game: &Game,
-        control: &GameControl,
-    ) -> Result<(), ServerError> {
+    fn ensure_gc_color(user_id: Uuid, game: &Game, control: &GameControl) -> Result<()> {
         if let Some(color) = game.user_color(user_id) {
             if color == control.color() {
                 return Ok(());
             }
         }
-        Err(ServerError::UserInputError {
-            field: format!("{}", control.color()),
-            reason: format!("Cannot play for {}", control.color().opposite_color()),
+        Err(GameError::InvalidGc {
+            gc: control.to_string(),
+            game: game.nanoid.to_owned(),
+            turn: format!("{}", game.turn),
         })?
     }
 
-    fn ensure_user_is_player(user_id: Uuid, game: &Game) -> Result<(), ServerError> {
+    fn ensure_user_is_player(user_id: Uuid, username: &str, game: &Game) -> Result<()> {
         if !game.user_is_player(user_id) {
-            Err(ServerError::UserInputError {
-                field: format!("{user_id}"),
-                reason: "Is not a player at the game".to_string(),
-            })?
+            Err(GameError::NotPlayer {
+                username: username.to_owned(),
+                game: game.nanoid.clone(),
+            })?;
         }
         Ok(())
     }
@@ -287,25 +272,21 @@ impl WsConnection {
         user_id: Uuid,
         username: &str,
         pool: &DbPool,
-    ) -> Result<GameActionResponse, ServerError> {
+    ) -> Result<GameActionResponse> {
         let game = Game::find_by_nanoid(&game_id, &pool).await?;
         // make sure the game hasn't finished
         WsConnection::not_finished(&game, username)?;
         // checks: user is player at the game
-        Self::ensure_user_is_player(user_id, &game)?;
+        Self::ensure_user_is_player(user_id, username, &game)?;
         // the GC can be played this turn
-        Self::ensure_gc_allowed_for_turn(&control, game.turn)?;
+        Self::ensure_gc_allowed_for_turn(&control, &game)?;
         // the GC(color) matches the user color
         Self::ensure_gc_color(user_id, &game, &control)?;
         let game = Self::match_control(&control, &game, pool).await?;
         // TODO: this error needs to be fixed
         Ok(GameActionResponse {
             game_id: game_id.to_owned(),
-            game: GameStateResponse::new_from_db(&game, pool)
-                .await
-                .map_err(|_| ServerError::GenericError {
-                    reason: "foo".to_string(),
-                })?,
+            game: GameStateResponse::new_from_db(&game, pool).await?,
             game_action: GameAction::Control(control),
             user_id,
             username: username.to_owned(),
@@ -317,15 +298,11 @@ impl WsConnection {
         user_id: Uuid,
         username: &str,
         pool: &DbPool,
-    ) -> Result<GameActionResponse, ServerError> {
+    ) -> Result<GameActionResponse> {
         let game = Game::find_by_nanoid(&game_id, &pool).await?;
         Ok(GameActionResponse {
             game_id: game_id.to_owned(),
-            game: GameStateResponse::new_from_db(&game, pool)
-                .await
-                .map_err(|_| ServerError::GenericError {
-                    reason: "foo".to_string(),
-                })?,
+            game: GameStateResponse::new_from_db(&game, pool).await?,
             game_action: GameAction::Join,
             user_id,
             username: username.to_owned(),
@@ -338,7 +315,7 @@ impl WsConnection {
         user_id: Uuid,
         username: &str,
         pool: &DbPool,
-    ) -> Result<GameActionResponse, ServerError> {
+    ) -> Result<GameActionResponse> {
         let mut game = Game::find_by_nanoid(&game_id, &pool).await?;
         WsConnection::not_finished(&game, username)?;
         WsConnection::users_turn(&game, user_id, username)?;
@@ -375,11 +352,7 @@ impl WsConnection {
         }
         Ok(GameActionResponse {
             game_id: game_id.to_owned(),
-            game: GameStateResponse::new_from_db(&game, pool)
-                .await
-                .map_err(|_| ServerError::GenericError {
-                    reason: "foo".to_string(),
-                })?,
+            game: GameStateResponse::new_from_db(&game, pool).await?,
             game_action: GameAction::Move(turn),
             user_id,
             username: username.to_owned(),
@@ -463,7 +436,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                         Err(err) => ServerResult::Err(ExternalServerError {
                             field: format!("{}", m.game_action),
                             reason: format!("{err}"),
-                            status_code: err.status_code(),
+                            status_code: http::StatusCode::NOT_IMPLEMENTED, // TODO: @leex fix this
                         }),
                         Ok(gar) => ServerResult::Ok(GameUpdate(gar)),
                     };

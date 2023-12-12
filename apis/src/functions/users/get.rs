@@ -8,14 +8,18 @@ use uuid::Uuid;
 pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError> {
     use crate::functions::db::pool;
     let pool = pool()?;
-    UserResponse::from_uuid(&uuid, &pool).await
+    UserResponse::from_uuid(&uuid, &pool)
+        .await
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))
 }
 
 #[server]
 pub async fn get_user_by_username(username: String) -> Result<UserResponse, ServerFnError> {
     use crate::functions::db::pool;
     let pool = pool()?;
-    UserResponse::from_username(&username, &pool).await
+    UserResponse::from_username(&username, &pool)
+        .await
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))
 }
 
 #[server]

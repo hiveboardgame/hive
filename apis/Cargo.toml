@@ -39,6 +39,7 @@ serde_json = { workspace = true }
 sha2.workspace = true
 simple_logger.workspace = true
 thiserror.workspace = true
+anyhow.workspace = true
 tokio = { workspace = true, optional = true }
 uuid.workspace = true
 wasm-bindgen.workspace = true

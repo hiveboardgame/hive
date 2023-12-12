@@ -8,7 +8,9 @@ pub async fn get_game_from_uuid(game_id: Uuid) -> Result<GameStateResponse, Serv
     use db_lib::models::game::Game;
     let pool = pool()?;
     let game = Game::find_by_uuid(&game_id, &pool).await?;
-    GameStateResponse::new_from_db(&game, &pool).await
+    GameStateResponse::new_from_db(&game, &pool)
+        .await
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))
 }
 
 #[server]
@@ -17,5 +19,7 @@ pub async fn get_game_from_nanoid(nanoid: String) -> Result<GameStateResponse, S
     use db_lib::models::game::Game;
     let pool = pool()?;
     let game = Game::find_by_nanoid(&nanoid, &pool).await?;
-    GameStateResponse::new_from_db(&game, &pool).await
+    GameStateResponse::new_from_db(&game, &pool)
+        .await
+        .map_err(|e| ServerFnError::ServerError(e.to_string()))
 }

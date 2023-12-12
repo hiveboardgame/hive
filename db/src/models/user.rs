@@ -1,4 +1,5 @@
 use crate::{
+    db_error::DbError,
     get_conn,
     models::{game::Game, game_user::GameUser, rating::NewRating},
     schema::{
@@ -9,37 +10,35 @@ use crate::{
     DbPool,
 };
 use diesel::{
-    query_dsl::BelongingToDsl, result::Error, ExpressionMethods, Identifiable, Insertable,
-    QueryDsl, Queryable, SelectableHelper,
+    query_dsl::BelongingToDsl, ExpressionMethods, Identifiable, Insertable, QueryDsl, Queryable,
+    SelectableHelper,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// TODO: we need to keep handling this somehow
-// const MAX_USERNAME_LENGTH: usize = 40;
-// const VALID_USERNAME_CHARS: &str = "-_";
-//
-// fn valid_username_char(c: char) -> bool {
-//     c.is_ascii_alphanumeric() || VALID_USERNAME_CHARS.contains(c)
-// }
-//
-// fn validate_username(username: &str) -> Result<(), DbError> {
-//     if !username.chars().all(valid_username_char) {
-//         let reason = format!("invalid username characters: {:?}", username);
-//         return Err(DbError::UserInputError {
-//             field: "username".into(),
-//             reason,
-//         });
-//     } else if username.len() > MAX_USERNAME_LENGTH {
-//         let reason = format!("username must be <= {} chars", MAX_USERNAME_LENGTH);
-//         return Err(DbError::UserInputError {
-//             field: "username".into(),
-//             reason,
-//         });
-//     }
-//     Ok(())
-// }
+const MAX_USERNAME_LENGTH: usize = 40;
+const VALID_USERNAME_CHARS: &str = "-_";
+fn valid_username_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || VALID_USERNAME_CHARS.contains(c)
+}
+
+fn validate_username(username: &str) -> Result<(), DbError> {
+    if !username.chars().all(valid_username_char) {
+        let reason = format!("invalid username characters: {:?}", username);
+        return Err(DbError::InvalidInput {
+            info: String::from("Username has invalid characters"),
+            error: reason,
+        });
+    } else if username.len() > MAX_USERNAME_LENGTH {
+        let reason = format!("username must be <= {} chars", MAX_USERNAME_LENGTH);
+        return Err(DbError::InvalidInput {
+            info: String::from("Username is too long."),
+            error: reason,
+        });
+    }
+    Ok(())
+}
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = users)]
@@ -50,7 +49,8 @@ pub struct NewUser {
 }
 
 impl NewUser {
-    pub fn new(username: &str, password: &str, email: &str) -> Result<Self, Error> {
+    pub fn new(username: &str, password: &str, email: &str) -> Result<Self, DbError> {
+        validate_username(username)?;
         Ok(Self {
             username: username.to_owned(),
             password: password.to_owned(),
@@ -69,10 +69,10 @@ pub struct User {
 }
 
 impl User {
-    pub async fn create(new_user: &NewUser, pool: &DbPool) -> Result<User, Error> {
+    pub async fn create(new_user: &NewUser, pool: &DbPool) -> Result<User, DbError> {
         let connection = &mut get_conn(pool).await?;
-        connection
-            .transaction::<_, diesel::result::Error, _>(|conn| {
+        Ok(connection
+            .transaction::<_, DbError, _>(|conn| {
                 async move {
                     let user: User = diesel::insert_into(users::table)
                         .values(new_user)
@@ -87,7 +87,7 @@ impl User {
                 }
                 .scope_boxed()
             })
-            .await
+            .await?)
     }
 
     pub async fn edit(
@@ -95,57 +95,57 @@ impl User {
         new_password: &str,
         new_email: &str,
         pool: &DbPool,
-    ) -> Result<User, Error> {
+    ) -> Result<User, DbError> {
         let conn = &mut get_conn(pool).await?;
-        match (new_password.is_empty(), new_email.is_empty()) {
-            (true, true) => users_table.find(&self.id).first(conn).await,
+        Ok(match (new_password.is_empty(), new_email.is_empty()) {
+            (true, true) => users_table.find(&self.id).first(conn).await?,
             (true, false) => {
                 diesel::update(self)
                     .set(email_field.eq(new_email))
                     .get_result(conn)
-                    .await
+                    .await?
             }
             (false, true) => {
                 diesel::update(self)
                     .set(password_field.eq(new_password))
                     .get_result(conn)
-                    .await
+                    .await?
             }
             (false, false) => {
                 diesel::update(self)
                     .set((password_field.eq(new_password), email_field.eq(new_email)))
                     .get_result(conn)
-                    .await
+                    .await?
             }
-        }
+        })
     }
 
-    pub async fn find_by_uuid(uuid: &Uuid, pool: &DbPool) -> Result<User, Error> {
+    pub async fn find_by_uuid(uuid: &Uuid, pool: &DbPool) -> Result<User, DbError> {
         let conn = &mut get_conn(pool).await?;
-        users_table.find(uuid).first(conn).await
+        Ok(users_table.find(uuid).first(conn).await?)
     }
 
-    pub async fn find_by_username(username: &str, pool: &DbPool) -> Result<User, Error> {
+    pub async fn find_by_username(username: &str, pool: &DbPool) -> Result<User, DbError> {
         let conn = &mut get_conn(pool).await?;
-        users_table
+        Ok(users_table
             .filter(username_field.eq(username))
             .first(conn)
-            .await
+            .await?)
     }
 
-    pub async fn delete(&self, pool: &DbPool) -> Result<usize, Error> {
+    pub async fn delete(&self, pool: &DbPool) -> Result<usize, DbError> {
         let conn = &mut get_conn(pool).await?;
-        diesel::delete(users_table.find(&self.id))
+        Ok(diesel::delete(users_table.find(&self.id))
             .execute(conn)
-            .await
+            .await?)
     }
 
-    pub async fn get_games(&self, pool: &DbPool) -> Result<Vec<Game>, Error> {
+    pub async fn get_games(&self, pool: &DbPool) -> Result<Vec<Game>, DbError> {
         let conn = &mut get_conn(pool).await?;
-        GameUser::belonging_to(self)
+        Ok(GameUser::belonging_to(self)
             .inner_join(games::table)
             .select(Game::as_select())
             .get_results(conn)
-            .await
+            .await?)
     }
 }

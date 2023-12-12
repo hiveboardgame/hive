@@ -54,7 +54,9 @@ impl ChallengeResponse {
         Ok(ChallengeResponse {
             id: challenge.id,
             nanoid: challenge.nanoid.to_owned(),
-            challenger: UserResponse::from_uuid(&challenger.id, pool).await?,
+            challenger: UserResponse::from_uuid(&challenger.id, pool)
+                .await
+                .map_err(|e| ServerFnError::ServerError(e.to_string()))?,
             game_type: challenge.game_type.clone(),
             rated: challenge.rated,
             public: challenge.public,

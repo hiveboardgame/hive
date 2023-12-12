@@ -1,11 +1,16 @@
-use crate::models::user::User;
-use crate::schema::ratings::dsl::ratings as ratings_table;
-use crate::schema::ratings::{self, *};
-use crate::{get_conn, DbPool};
+use crate::{
+    db_error::DbError,
+    models::user::User,
+    schema::ratings::{
+        dsl::ratings as ratings_table,
+        {self, *},
+    },
+    {get_conn, DbPool},
+};
 use bb8::PooledConnection;
 use diesel::{
-    prelude::*, result::Error, AsChangeset, Associations, Identifiable, Insertable, QueryDsl,
-    Queryable, Selectable,
+    prelude::*, AsChangeset, Associations, Identifiable, Insertable, QueryDsl, Queryable,
+    Selectable,
 };
 use diesel_async::{
     pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl,
@@ -74,9 +79,9 @@ pub struct Rating {
 }
 
 impl Rating {
-    pub async fn for_uuid(uuid: &Uuid, pool: &DbPool) -> Result<Self, Error> {
+    pub async fn for_uuid(uuid: &Uuid, pool: &DbPool) -> Result<Self, DbError> {
         let conn = &mut get_conn(pool).await?;
-        ratings_table.filter(user_uid.eq(uuid)).first(conn).await
+        Ok(ratings_table.filter(user_uid.eq(uuid)).first(conn).await?)
     }
 
     pub async fn update(
@@ -85,7 +90,7 @@ impl Rating {
         black_id: Uuid,
         game_result: GameResult,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    ) -> Result<((f64, f64), Option<(f64, f64)>), Error> {
+    ) -> Result<((f64, f64), Option<(f64, f64)>), DbError> {
         let white_rating: Rating = ratings_table
             .filter(user_uid.eq(white_id))
             .first(conn)
@@ -156,7 +161,7 @@ impl Rating {
         white_rating: &Rating,
         black_rating: &Rating,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    ) -> Result<Option<(f64, f64)>, Error> {
+    ) -> Result<Option<(f64, f64)>, DbError> {
         if rated {
             let (white_glicko, black_glicko, white_rating_change, black_rating_change) =
                 Rating::calculate_glicko2(white_rating, black_rating, GameResult::Draw);
@@ -202,7 +207,7 @@ impl Rating {
         white_rating: &Rating,
         black_rating: &Rating,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    ) -> Result<Option<(f64, f64)>, Error> {
+    ) -> Result<Option<(f64, f64)>, DbError> {
         let (white_won, white_lost) = {
             if winner == Color::White {
                 (1, 0)
