@@ -8,12 +8,14 @@ use crate::{
     pages::play::TargetStack,
 };
 use hive_lib::position::Position;
-use leptos::ev::{contextmenu, pointerdown, pointerleave, pointermove, pointerup, wheel};
+use leptos::ev::{
+    contextmenu, pointerdown, pointerleave, pointermove, pointerup, touchmove, touchstart, wheel,
+};
 use leptos::svg::Svg;
 use leptos::*;
 use leptos_use::{use_event_listener, use_resize_observer};
 use wasm_bindgen::JsCast;
-use web_sys::{PointerEvent, WheelEvent};
+use web_sys::{PointerEvent, SvgPoint, TouchEvent, WheelEvent};
 
 #[derive(Debug, Clone)]
 struct ViewBoxControls {
@@ -54,6 +56,7 @@ pub fn Board(
     let target_stack = expect_context::<TargetStack>().0;
     let is_panning = create_rw_signal(false);
     let viewbox_signal = create_rw_signal(ViewBoxControls::new());
+    let initial_touch_distance = create_rw_signal::<f32>(0.0);
     let viewbox_ref = create_node_ref::<svg::Svg>();
     let div_ref = create_node_ref::<html::Div>();
 
@@ -133,6 +136,34 @@ pub fn Board(
         }
     });
 
+    //Zoom on pinch
+    _ = use_event_listener(viewbox_ref, touchstart, move |evt| {
+        if evt.touches().length() == 2 {
+            is_panning.update_untracked(|b| *b = false);
+            let initial_point_0 = svg_point_from_touch(viewbox_ref, &evt, 0);
+            let initial_point_1 = svg_point_from_touch(viewbox_ref, &evt, 1);
+            initial_touch_distance
+                .update(move |v| *v = get_touch_distance(initial_point_0, initial_point_1));
+        }
+    });
+
+    _ = use_event_listener(viewbox_ref, touchmove, move |evt| {
+        if evt.touches().length() == 2 {
+            let current_point_0 = svg_point_from_touch(viewbox_ref, &evt, 0);
+            let current_point_1 = svg_point_from_touch(viewbox_ref, &evt, 1);
+            let current_distance = get_touch_distance(current_point_0.clone(), current_point_1);
+            let scale = current_distance / initial_touch_distance();
+            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                viewbox_controls.width = viewbox_controls.width / scale;
+                viewbox_controls.height = viewbox_controls.height / scale;
+                viewbox_controls.x =
+                    current_point_0.x() - (current_point_0.x() - viewbox_controls.x) / scale;
+                viewbox_controls.y =
+                    current_point_0.y() - (current_point_0.y() - viewbox_controls.y) / scale;
+            });
+        }
+    });
+
     //Stop panning when user releases touch/click AND reset height adjustment on right click release
     _ = use_event_listener(viewbox_ref, pointerup, move |_| {
         is_panning.update_untracked(|b| *b = false);
@@ -186,6 +217,20 @@ pub fn Board(
     }
 }
 
+fn svg_point_from_touch(svg: NodeRef<Svg>, evt: &TouchEvent, ind: u32) -> web_sys::SvgPoint {
+    svg_point_from_coordinates(
+        svg,
+        evt.touches()
+            .get(ind)
+            .expect("It was called by a valid touch event")
+            .client_x() as f32,
+        evt.touches()
+            .get(ind)
+            .expect("It was called by a valid touch event")
+            .client_y() as f32,
+    )
+}
+
 fn svg_point_from_pointer(svg: NodeRef<Svg>, evt: &PointerEvent) -> web_sys::SvgPoint {
     svg_point_from_coordinates(svg, evt.x() as f32, evt.y() as f32)
 }
@@ -209,4 +254,10 @@ fn svg_point_from_coordinates(svg: NodeRef<Svg>, x: f32, y: f32) -> web_sys::Svg
             .inverse()
             .expect("matrix not inversed"),
     )
+}
+
+fn get_touch_distance(point_0: SvgPoint, point_1: SvgPoint) -> f32 {
+    let distance_x = point_0.x() - point_1.x();
+    let distance_y = point_0.y() - point_1.y();
+    (distance_x * distance_x + distance_y + distance_y).sqrt()
 }
