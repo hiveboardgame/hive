@@ -1,9 +1,8 @@
 use crate::{
-    components::atoms::{confirm_button::ConfirmButton, gc_button::GcButton},
+    components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
     providers::{auth_context::AuthContext, game_state::GameStateSignal},
 };
 use hive_lib::{game_control::GameControl, game_status::GameStatus};
-use leptos::logging::log;
 use leptos::*;
 use leptos_icons::{
     AiIcon::AiFlagOutlined, AiIcon::AiStopOutlined, BiIcon::BiUndoRegular,
@@ -56,12 +55,9 @@ pub fn ControlButtons() -> impl IntoView {
         _ => false,
     };
 
-    let none = Callback::<()>::from(move |_| log!("No action"));
-
     // TODO: can we refactor this into a generic send_game_control function?
 
     let abort = Callback::<()>::from(move |_| {
-        log!("Abort request");
         if let Some(user) = user() {
             if let Some(color) = game_state.user_color(user.id) {
                 game_state.send_game_control(GameControl::Abort(color), user.id);
@@ -70,7 +66,6 @@ pub fn ControlButtons() -> impl IntoView {
     });
 
     let resign = Callback::<()>::from(move |_| {
-        log!("Resign request");
         if let Some(user) = user() {
             if let Some(color) = game_state.user_color(user.id) {
                 game_state.send_game_control(GameControl::Resign(color), user.id);
@@ -79,7 +74,6 @@ pub fn ControlButtons() -> impl IntoView {
     });
 
     let draw_offer = Callback::<()>::from(move |_| {
-        log!("draw offer");
         if let Some(user) = user() {
             if let Some(color) = game_state.user_color(user.id) {
                 game_state.send_game_control(GameControl::DrawOffer(color), user.id);
@@ -88,7 +82,6 @@ pub fn ControlButtons() -> impl IntoView {
     });
 
     let draw_reject = Callback::<()>::from(move |_| {
-        log!("draw reject");
         if let Some(user) = user() {
             if let Some(color) = game_state.user_color(user.id) {
                 game_state.send_game_control(GameControl::DrawReject(color), user.id);
@@ -97,7 +90,6 @@ pub fn ControlButtons() -> impl IntoView {
     });
 
     let draw_accept = Callback::<()>::from(move |_| {
-        log!("takeback request");
         if let Some(user) = user() {
             if let Some(color) = game_state.user_color(user.id) {
                 game_state.send_game_control(GameControl::DrawAccept(color), user.id);
@@ -106,7 +98,6 @@ pub fn ControlButtons() -> impl IntoView {
     });
 
     let takeback_request = Callback::<()>::from(move |_| {
-        log!("takeback request");
         if let Some(user) = user() {
             if let Some(color) = game_state.user_color(user.id) {
                 game_state.send_game_control(GameControl::TakebackRequest(color), user.id);
@@ -115,7 +106,6 @@ pub fn ControlButtons() -> impl IntoView {
     });
 
     let takeback_accept = Callback::<()>::from(move |_| {
-        log!("takeback request");
         if let Some(user) = user() {
             if let Some(color) = game_state.user_color(user.id) {
                 game_state.send_game_control(GameControl::TakebackAccept(color), user.id);
@@ -124,7 +114,6 @@ pub fn ControlButtons() -> impl IntoView {
     });
 
     let takeback_reject = Callback::<()>::from(move |_| {
-        log!("takeback request");
         if let Some(user) = user() {
             if let Some(color) = game_state.user_color(user.id) {
                 game_state.send_game_control(GameControl::TakebackReject(color), user.id);
@@ -149,6 +138,7 @@ pub fn ControlButtons() -> impl IntoView {
                                 }
                             }
                         >
+
                             <Show
                                 when=pending_takeback
                                 fallback=move || {
@@ -161,25 +151,19 @@ pub fn ControlButtons() -> impl IntoView {
                                 }
                             >
 
-                                <ConfirmButton
-                                    icon=leptos_icons::Icon::Bi(BiUndoRegular)
-                                    action=none
-                                />
-                                <GcButton
-                                    icon=leptos_icons::Icon::Bi(BiUndoRegular)
-                                    red=false
-                                    action=takeback_accept
-                                />
-                                <GcButton
-                                    icon=leptos_icons::Icon::Bi(BiUndoRegular)
-                                    red=true
-                                    action=takeback_reject
-                                />
+                                <div class="relative">
+                                    <AcceptDenyGc
+                                        icon=leptos_icons::Icon::Bi(BiUndoRegular)
+                                        red=false
+                                        action=takeback_accept
+                                    />
+                                    <AcceptDenyGc
+                                        icon=leptos_icons::Icon::Bi(BiUndoRegular)
+                                        red=true
+                                        action=takeback_reject
+                                    />
+                                </div>
                             </Show>
-                            // <ConfirmButton
-                            //     icon=leptos_icons::Icon::Bi(BiUndoRegular)
-                            //     action=takeback
-                            // />
                         </Show>
 
                         <Show
@@ -194,25 +178,20 @@ pub fn ControlButtons() -> impl IntoView {
                             }
                         >
 
-                            <ConfirmButton
-                                icon=leptos_icons::Icon::Fa(FaHandshakeSimpleSolid)
-                                action=none
-                            />
-                            <GcButton
-                                icon=leptos_icons::Icon::Fa(FaHandshakeSimpleSolid)
-                                red=false
-                                action=draw_accept
-                            />
-                            <GcButton
-                                icon=leptos_icons::Icon::Fa(FaHandshakeSimpleSolid)
-                                red=true
-                                action=draw_reject
-                            />
+                            <div class="relative">
+                                <AcceptDenyGc
+                                    icon=leptos_icons::Icon::Fa(FaHandshakeSimpleSolid)
+                                    red=false
+                                    action=draw_accept
+                                />
+                                <AcceptDenyGc
+                                    icon=leptos_icons::Icon::Fa(FaHandshakeSimpleSolid)
+                                    red=true
+                                    action=draw_reject
+                                />
+                            </div>
                         </Show>
-                        <ConfirmButton
-                            icon=leptos_icons::Icon::Ai(AiFlagOutlined)
-                            action=resign
-                        />
+                        <ConfirmButton icon=leptos_icons::Icon::Ai(AiFlagOutlined) action=resign/>
                     </div>
                 }
             }

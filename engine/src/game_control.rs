@@ -30,7 +30,7 @@ impl GameControl {
         }
     }
 
-    pub fn allowed_on_turn(&self, turn: usize) -> bool {
+    pub fn allowed_on_turn(&self, turn: i32) -> bool {
         match self {
             GameControl::Abort(_) => turn < 2,
             GameControl::DrawAccept(_) => turn > 2,
@@ -39,7 +39,7 @@ impl GameControl {
             GameControl::Resign(_) => turn > 1,
             GameControl::TakebackAccept(_) => turn > 1,
             GameControl::TakebackReject(_) => turn > 1,
-            GameControl::TakebackRequest(_) => turn > 2,
+            GameControl::TakebackRequest(_) => turn > 1,
         }
     }
 }

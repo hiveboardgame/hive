@@ -20,11 +20,11 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
     let mut game_state_signal = expect_context::<GameStateSignal>();
 
     let auth_context = expect_context::<AuthContext>();
-    let user = move || match untrack(auth_context.user) {
+    let user = move || match (auth_context.user)() {
         Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
-    // TODO: This is the reason sometimes the buttons don't show I think
+
     let show_buttons = move || {
         user().map_or(false, |user| {
             let game_state = game_state_signal.signal.get();

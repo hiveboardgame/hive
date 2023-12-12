@@ -165,7 +165,7 @@ pub fn History(
             </For>
 
             <Show when=is_finished>
-                <div class="col-span-4 text-center">{game_result().to_string()}</div>
+                <div class="col-span-4 text-center">{game_result}</div>
             </Show>
         </div>
     }

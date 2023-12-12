@@ -233,7 +233,7 @@ impl WsConnection {
     }
 
     fn ensure_gc_allowed_for_turn(control: &GameControl, game: &Game) -> Result<()> {
-        if game.turn == 0 {
+        if !control.allowed_on_turn(game.turn) {
             Err(GameError::InvalidGc {
                 gc: control.to_string(),
                 game: game.nanoid.to_owned(),
