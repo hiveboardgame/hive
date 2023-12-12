@@ -18,9 +18,9 @@ use db_lib::{
     models::{rating::Rating, user::User},
     DbPool,
 };
-use leptos::ServerFnError;
+use anyhow::Result;
 impl UserResponse {
-    pub async fn from_uuid(id: &Uuid, pool: &DbPool) -> Result<Self, ServerFnError> {
+    pub async fn from_uuid(id: &Uuid, pool: &DbPool) -> Result<Self> {
         let user = User::find_by_uuid(id, pool).await?;
         let rating = Rating::for_uuid(id, pool).await?;
 
@@ -35,7 +35,7 @@ impl UserResponse {
         })
     }
 
-    pub async fn from_username(username: &str, pool: &DbPool) -> Result<Self, ServerFnError> {
+    pub async fn from_username(username: &str, pool: &DbPool) -> Result<Self> {
         let user = User::find_by_username(username, pool).await?;
         let rating = Rating::for_uuid(&user.id, pool).await?;
 

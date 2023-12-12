@@ -24,6 +24,22 @@ pub enum GameError {
     InvalidDirection { direction: String },
     #[error("Invalid color choice {found:?}")]
     InvalidColorChoice { found: String },
+    #[error("{username} can't play on {game} at {turn}")]
+    InvalidTurn {
+        username: String,
+        game: String,
+        turn: String,
+    },
+    #[error("{gc} can't be played on {game} at {turn}")]
+    InvalidGc {
+        gc: String,
+        game: String,
+        turn: String,
+    },
+    #[error("{username} can't play on {game}. Game is over.")]
+    GameIsOver { username: String, game: String },
+    #[error("{username} can't play on {game}. It's not their game.")]
+    NotPlayer { username: String, game: String },
 }
 
 impl GameError {

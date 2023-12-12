@@ -1,15 +1,12 @@
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-// use serde_with::serde_as;
 use crate::functions::users::user_response::UserResponse;
 use hive_lib::{
     bug::Bug, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
     game_type::GameType, history::History, position::Position, state::State,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use uuid::Uuid;
 
-// #[serde_as]
-// #[serde_with::skip_serializing_none]
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameStateResponse {
     pub game_id: Uuid,
@@ -43,16 +40,16 @@ use db_lib::{
 use hive_lib::{
     color::Color, game_status::GameStatus::Finished, piece::Piece,
 };
-use leptos::*;
 use std::str::FromStr;
+use anyhow::Result;
 
 impl GameStateResponse {
-    pub async fn new_from_nanoid(game_id: &str, pool: &DbPool) -> Result<Self, ServerFnError> {
+    pub async fn new_from_nanoid(game_id: &str, pool: &DbPool) -> Result<Self> {
         let game = Game::find_by_nanoid(game_id, pool).await?;
         GameStateResponse::new_from_db(&game, pool).await
     }
 
-    pub async fn new_from_db(game: &Game, pool: &DbPool) -> Result<Self, ServerFnError> {
+    pub async fn new_from_db(game: &Game, pool: &DbPool) -> Result<Self> {
         let history = History::new_from_str(&game.history)?;
         let state = State::new_from_history(&history)?;
         GameStateResponse::new_from(game, &state, pool).await
@@ -62,7 +59,7 @@ impl GameStateResponse {
         game: &Game,
         state: &State,
         pool: &DbPool,
-    ) -> Result<Self, ServerFnError> {
+    ) -> Result<Self> {
         let (white_rating, black_rating, white_rating_change, black_rating_change) = {
             if let Finished(_) = GameStatus::from_str(&game.game_status).expect("GameStatus parsed") {
                 (

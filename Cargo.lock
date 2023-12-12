@@ -428,6 +428,7 @@ dependencies = [
  "actix-session",
  "actix-web",
  "actix-web-actors",
+ "anyhow",
  "argon2",
  "cfg-if",
  "chrono",

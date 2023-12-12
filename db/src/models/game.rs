@@ -1,11 +1,12 @@
 use crate::{
+    db_error::DbError,
     get_conn,
     models::{game_user::GameUser, rating::Rating},
     schema::games,
     schema::games::dsl::*,
     DbPool,
 };
-use diesel::{prelude::*, result::Error, Identifiable, Insertable, QueryDsl, Queryable};
+use diesel::{prelude::*, Identifiable, Insertable, QueryDsl, Queryable};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
@@ -60,7 +61,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub async fn create(new_game: &NewGame, pool: &DbPool) -> Result<Game, Error> {
+    pub async fn create(new_game: &NewGame, pool: &DbPool) -> Result<Game, DbError> {
         let conn = &mut get_conn(pool).await?;
         let game: Game = new_game.insert_into(games::table).get_result(conn).await?;
         let game_user_white = GameUser::new(game.id, game.white_id);
@@ -75,7 +76,7 @@ impl Game {
         mut board_move: String,
         new_game_status: GameStatus,
         pool: &DbPool,
-    ) -> Result<Game, Error> {
+    ) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
         if board_move.chars().last().unwrap_or(' ') != ';' {
             board_move = format!("{board_move};");
@@ -94,8 +95,8 @@ impl Game {
             game_control_string = format!("{}. {gc};", self.turn);
         }
 
-        connection
-            .transaction::<_, diesel::result::Error, _>(|conn| {
+        Ok(connection
+            .transaction::<_, DbError, _>(|conn| {
                 async move {
                     let ((w_rating, b_rating), changes) =
                         if let GameStatus::Finished(game_result) = new_game_status.clone() {
@@ -145,7 +146,7 @@ impl Game {
                 }
                 .scope_boxed()
             })
-            .await
+            .await?)
     }
 
     pub fn user_is_player(&self, user_id: Uuid) -> bool {
@@ -188,13 +189,13 @@ impl Game {
         &self,
         game_control: &GameControl,
         pool: &DbPool,
-    ) -> Result<Game, Error> {
+    ) -> Result<Game, DbError> {
         let conn = &mut get_conn(pool).await?;
         let game_control_string = format!("{}. {game_control};", self.turn);
-        diesel::update(games::table.find(self.id))
+        Ok(diesel::update(games::table.find(self.id))
             .set(game_control_history.eq(game_control_history.concat(game_control_string)))
             .get_result(conn)
-            .await
+            .await?)
     }
 
     // TODO: get rid of new_game_status and compute it here
@@ -202,7 +203,7 @@ impl Game {
         &self,
         game_control: &GameControl,
         pool: &DbPool,
-    ) -> Result<Game, Error> {
+    ) -> Result<Game, DbError> {
         let conn = &mut get_conn(pool).await?;
         let game_control_string = format!("{}. {game_control};", self.turn);
 
@@ -216,12 +217,17 @@ impl Game {
         let mut new_history = moves.join(";");
         new_history.push(';');
         // TODO: now we have error problems here... get rid of the expects
-        let his = History::new_from_str(&new_history)
-            .expect("Could not recover History from history string.");
-        let state = State::new_from_history(&his).expect("Could not recover State from History");
+        let his = History::new_from_str(&new_history).map_err(|e| DbError::InvalidInput {
+            info: String::from("Could not recover History from history string."),
+            error: e.to_string(),
+        })?;
+        let state = State::new_from_history(&his).map_err(|e| DbError::InvalidInput {
+            info: String::from("Could not recover State from History."),
+            error: e.to_string(),
+        })?;
         let new_game_status = state.game_status.to_string();
 
-        diesel::update(games::table.find(self.id))
+        Ok(diesel::update(games::table.find(self.id))
             .set((
                 history.eq(new_history),
                 turn.eq(turn - 1),
@@ -229,18 +235,18 @@ impl Game {
                 game_control_history.eq(game_control_history.concat(game_control_string)),
             ))
             .get_result(conn)
-            .await
+            .await?)
     }
 
-    pub async fn resign(&self, game_control: &GameControl, pool: &DbPool) -> Result<Game, Error> {
+    pub async fn resign(&self, game_control: &GameControl, pool: &DbPool) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
         let game_control_string = format!("{}. {game_control};", self.turn);
 
         let winner_color = game_control.color().opposite_color();
         let new_game_status = GameStatus::Finished(GameResult::Winner(winner_color));
 
-        connection
-            .transaction::<_, diesel::result::Error, _>(|conn| {
+        Ok(connection
+            .transaction::<_, DbError, _>(|conn| {
                 async move {
                     let ((w_rating, b_rating), changes) = match new_game_status.clone() {
                         GameStatus::Finished(game_result) => {
@@ -278,18 +284,18 @@ impl Game {
                 }
                 .scope_boxed()
             })
-            .await
+            .await?)
     }
 
     pub async fn accept_draw(
         &self,
         game_control: &GameControl,
         pool: &DbPool,
-    ) -> Result<Game, Error> {
+    ) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
         let game_control_string = format!("{}. {game_control};", self.turn);
-        connection
-            .transaction::<_, diesel::result::Error, _>(|conn| {
+        Ok(connection
+            .transaction::<_, DbError, _>(|conn| {
                 async move {
                     let ((w_rating, b_rating), changes) = Rating::update(
                         self.rated,
@@ -320,31 +326,31 @@ impl Game {
                 }
                 .scope_boxed()
             })
-            .await
+            .await?)
     }
 
-    pub async fn set_status(&self, status: GameStatus, pool: &DbPool) -> Result<Game, Error> {
+    pub async fn set_status(&self, status: GameStatus, pool: &DbPool) -> Result<Game, DbError> {
         let conn = &mut get_conn(pool).await?;
-        diesel::update(games::table.find(self.id))
+        Ok(diesel::update(games::table.find(self.id))
             .set(game_status.eq(status.to_string()))
             .get_result(conn)
-            .await
+            .await?)
     }
 
-    pub async fn find_by_uuid(uuid: &Uuid, pool: &DbPool) -> Result<Game, Error> {
+    pub async fn find_by_uuid(uuid: &Uuid, pool: &DbPool) -> Result<Game, DbError> {
         let conn = &mut get_conn(pool).await?;
-        games::table.find(uuid).first(conn).await
+        Ok(games::table.find(uuid).first(conn).await?)
     }
 
-    pub async fn find_by_nanoid(find_nanoid: &str, pool: &DbPool) -> Result<Game, Error> {
+    pub async fn find_by_nanoid(find_nanoid: &str, pool: &DbPool) -> Result<Game, DbError> {
         let conn = &mut get_conn(pool).await?;
-        games::table
+        Ok(games::table
             .filter(nanoid.eq(find_nanoid))
             .first(conn)
-            .await
+            .await?)
     }
 
-    pub async fn delete(&self, pool: &DbPool) -> Result<(), Error> {
+    pub async fn delete(&self, pool: &DbPool) -> Result<(), DbError> {
         let conn = &mut get_conn(pool).await?;
         diesel::delete(games::table.find(self.id))
             .execute(conn)
