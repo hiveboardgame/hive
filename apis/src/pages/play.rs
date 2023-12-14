@@ -4,7 +4,7 @@ use crate::{
     functions::games::get::get_game_from_nanoid,
     providers::{auth_context::AuthContext, game_state::GameStateSignal},
 };
-use hive_lib::{color::Color, game_status::GameStatus, position::Position};
+use hive_lib::{color::Color, position::Position};
 use leptos::logging::log;
 use leptos::*;
 use leptos_router::*;
@@ -38,17 +38,8 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 .unwrap_or_default()
         })
     };
-    let game_state = expect_context::<GameStateSignal>();
-    let is_finished = move || {
-        matches!(
-            (game_state.signal)().state.game_status,
-            GameStatus::Finished(_)
-        )
-    };
-    let game = create_blocking_resource(
-        move || (nanoid(), is_finished()),
-        move |_| get_game_from_nanoid(nanoid()),
-    );
+
+    let game = create_blocking_resource(nanoid, move |_| get_game_from_nanoid(nanoid()));
     let user_uuid = move || match untrack(auth_context.user) {
         Some(Ok(Some(user))) => user.id,
         _ => {
@@ -66,8 +57,8 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                     .map(|data| match data {
                         Err(_) => view! { <pre>"Page not found"</pre> }.into_view(),
                         Ok(game) => {
-                            let mut game_state = expect_context::<GameStateSignal>();
                             let game = store_value(game);
+                            let mut game_state = expect_context::<GameStateSignal>();
                             game_state.set_game_id(store_value(nanoid()));
                             let white_player = store_value(game().white_player);
                             let black_player = store_value(game().black_player);
@@ -82,14 +73,12 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                     <Board/>
                                     <DisplayTimer
                                         side=Color::White
-                                        game=game
                                         player=white_player
                                         time_control=time_control()
                                     />
                                     <SideboardTabs/>
                                     <DisplayTimer
                                         side=Color::Black
-                                        game=game
                                         player=black_player
                                         time_control=time_control()
                                     />

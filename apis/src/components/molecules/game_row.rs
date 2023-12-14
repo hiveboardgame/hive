@@ -1,7 +1,7 @@
 use crate::{
     components::{
         atoms::svgs::Svgs,
-        molecules::{finished_rating::FinishedRating, thumbnail_pieces::ThumbnailPieces},
+        molecules::{rating_and_change::RatingAndChange, thumbnail_pieces::ThumbnailPieces},
     },
     functions::games::game_response::GameStateResponse,
 };
@@ -57,7 +57,7 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
                         </a>
                         <br/>
                         <Show when=is_finished fallback=move || { game().white_player.rating }>
-                            <FinishedRating game=game() side=Color::White/>
+                            <RatingAndChange game=game() side=Color::White/>
                         </Show>
 
                     </div>
@@ -69,7 +69,7 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
                         </a>
                         <br/>
                         <Show when=is_finished fallback=move || { game().black_player.rating }>
-                            <FinishedRating game=game() side=Color::Black/>
+                            <RatingAndChange game=game() side=Color::Black/>
                         </Show>
                     </div>
                 </div>

@@ -1,10 +1,10 @@
 use crate::{
     common::time_control::TimeControl,
     components::molecules::{
-        correspondence_timer::CorrespondenceTimer, finished_rating::FinishedRating,
-        live_timer::LiveTimer,
+        correspondence_timer::CorrespondenceTimer, live_timer::LiveTimer,
+        rating_and_change::RatingAndChangeDynamic,
     },
-    functions::{games::game_response::GameStateResponse, users::user_response::UserResponse},
+    functions::users::user_response::UserResponse,
     providers::game_state::GameStateSignal,
 };
 use hive_lib::{color::Color, game_status::GameStatus};
@@ -14,7 +14,6 @@ use leptos_icons::{BiIcon::BiInfiniteRegular, Icon};
 #[component]
 pub fn DisplayTimer(
     side: Color,
-    game: StoredValue<GameStateResponse>,
     player: StoredValue<UserResponse>,
     time_control: TimeControl,
 ) -> impl IntoView {
@@ -103,7 +102,7 @@ pub fn DisplayTimer(
                     }
                 >
 
-                    <FinishedRating extend_tw_classes=text_color game=game() side=side/>
+                    <RatingAndChangeDynamic extend_tw_classes=text_color side=side/>
                 </Show>
             </div>
 
