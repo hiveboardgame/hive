@@ -1,17 +1,18 @@
-use crate::functions::accounts::edit::EditAccount;
+use crate::{components::organisms::header::Redirect, functions::accounts::edit::EditAccount};
 use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
 pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let account_action = create_server_action::<EditAccount>();
+    let pathname =
+        move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
     view! {
         <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>
             <ActionForm
                 action=account_action
                 class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800"
             >
-                <div class="mb-4">
                     <label class="block font-bold mb-2" for="email">
                         New Email
                     </label>
@@ -22,8 +23,6 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                         type="email"
                         placeholder="New email"
                     />
-                </div>
-                <div class="mb-6">
                     <label class="block font-bold mb-2" for="old_password">
                         Current Password
                     </label>
@@ -34,8 +33,6 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                         type="password"
                         placeholder="Current password"
                     />
-                </div>
-                <div class="mb-6">
                     <label class="block font-bold mb-2" for="new_password">
                         New Password
                     </label>
@@ -46,9 +43,6 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                         type="password"
                         placeholder="New password"
                     />
-                </div>
-
-                <div class="mb-6">
                     <label class="block font-bold mb-2" for="confirm_password">
                         Confirm Password
                     </label>
@@ -59,15 +53,12 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                         type="password"
                         placeholder="New password (again)"
                     />
-                </div>
-
-                <div class="flex items-center justify-between">
+                    <input type="hidden" name="pathname" value=pathname().0/>
                     <input
                         type="submit"
                         class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none"
                         value="Save"
                     />
-                </div>
             </ActionForm>
         </div>
     }

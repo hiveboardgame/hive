@@ -2,13 +2,16 @@ use crate::functions::accounts::account_response::AccountResponse;
 use leptos::*;
 
 #[server]
-pub async fn login(username: String, password: String) -> Result<AccountResponse, ServerFnError> {
+pub async fn login(
+    username: String,
+    password: String,
+    pathname: String,
+) -> Result<AccountResponse, ServerFnError> {
     use crate::functions::db::pool;
     use actix_identity::Identity;
     use actix_web::HttpMessage;
     use argon2::{password_hash::PasswordHash, Argon2, PasswordVerifier};
     use db_lib::models::user::User;
-
     let pool = pool()?;
     let user: User = User::find_by_username(&username, &pool)
         .await
@@ -23,7 +26,7 @@ pub async fn login(username: String, password: String) -> Result<AccountResponse
                 .ok_or("Failed to get HttpRequest")
                 .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
             Identity::login(&req.extensions(), user.id.to_string()).expect("Login");
-            leptos_actix::redirect("/");
+            leptos_actix::redirect(&pathname);
             AccountResponse::from_uuid(&user.id, &pool).await
         }
         Err(_) => Err(ServerFnError::ServerError(

@@ -1,17 +1,18 @@
-use crate::providers::auth_context::AuthContext;
+use crate::{components::organisms::header::Redirect, providers::auth_context::AuthContext};
 use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
 pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
+    let pathname =
+        move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
     view! {
         <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>
             <ActionForm
                 action=auth_context.register
                 class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800 "
             >
-                // <div class="mb-4">
                 <label class="block font-bold mb-2">
                     Username
                     <input
@@ -21,8 +22,6 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         placeholder="Username"
                     />
                 </label>
-                // </div>
-                // <div class="mb-4">
                 <label class="block font-bold mb-2">
                     Email
                     <input
@@ -32,8 +31,6 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         placeholder="Email(optional)"
                     />
                 </label>
-                // </div>
-                // <div class="mb-6">
                 <label class="block font-bold mb-2">
                     Password
                     <input
@@ -43,8 +40,6 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         placeholder="hunter2"
                     />
                 </label>
-                // </div>
-                // <div class="mb-6">
                 <label class="block font-bold mb-2">
                     Confirm Password
                     <input
@@ -54,15 +49,13 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         placeholder="hunter2"
                     />
                 </label>
-                // </div>
-                // <div class="flex items-center justify-between">
+                <input type="hidden" name="pathname" value=pathname().0/>
                 <input
                     type="submit"
                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none"
                     value="Sign Up"
                 />
 
-            // </div>
             </ActionForm>
 
             <a

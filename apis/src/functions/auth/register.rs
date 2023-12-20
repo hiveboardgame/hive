@@ -6,6 +6,7 @@ pub async fn register(
     email: String,
     password: String,
     password_confirmation: String,
+    pathname: String,
 ) -> Result<(), ServerFnError> {
     use crate::functions::db::pool;
     use actix_identity::Identity;
@@ -37,7 +38,7 @@ pub async fn register(
         .ok_or("Failed to get HttpRequest")
         .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
     Identity::login(&req.extensions(), user.id.to_string()).expect("To have logged in");
-    leptos_actix::redirect("/");
+    leptos_actix::redirect(&pathname);
 
     Ok(())
 }
