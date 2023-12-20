@@ -1,4 +1,5 @@
 use crate::{
+    components::atoms::profile_link::ProfileLink,
     functions::{
         challenges::{
             accept::AcceptChallenge, challenge_response::ChallengeResponse, delete::DeleteChallenge,
@@ -72,7 +73,7 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
     view! {
         <tr class="dark:odd:bg-slate-700 dark:even:bg-slate-800 odd:bg-stone-300 even:bg-stone-100 text-center items-center">
             <td class=td_class>{icon}</td>
-            <td class=td_class>{challenge().challenger.username}</td>
+            <td class=td_class><ProfileLink username=challenge().challenger.username/></td>
             <td class=td_class>{challenge().challenger.rating}</td>
             <td class=td_class>
                 {if challenge().game_type == "Base" { "🚫" } else { "🦟🐞💊" }}

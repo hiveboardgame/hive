@@ -1,8 +1,11 @@
 use crate::{
     common::time_control::TimeControl,
-    components::molecules::{
-        correspondence_timer::CorrespondenceTimer, live_timer::LiveTimer,
-        rating_and_change::RatingAndChangeDynamic,
+    components::{
+        atoms::profile_link::ProfileLink,
+        molecules::{
+            correspondence_timer::CorrespondenceTimer, live_timer::LiveTimer,
+            rating_and_change::RatingAndChangeDynamic,
+        },
     },
     functions::users::user_response::UserResponse,
     providers::game_state::GameStateSignal,
@@ -94,7 +97,7 @@ pub fn DisplayTimer(
                     "min-h-fit min-w-fit flex justify-center leading-5 row-span-2 md:row-span-1 short:row-span-2 items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none {css_grid_row} {bg_color}",
                 )
             }>
-                <p class=format!("{text_color}")>{player().username}</p>
+                <ProfileLink username=player().username extend_tw_classes=text_color/>
                 <Show
                     when=is_finished
                     fallback=move || {

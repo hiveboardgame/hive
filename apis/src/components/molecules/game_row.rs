@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        atoms::svgs::Svgs,
+        atoms::{profile_link::ProfileLink, svgs::Svgs},
         molecules::{rating_and_change::RatingAndChange, thumbnail_pieces::ThumbnailPieces},
     },
     functions::games::game_response::GameStateResponse,
@@ -21,9 +21,6 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
             _ => String::new(),
         },
     };
-
-    let white_href = format!("/@/{}", game().white_player.username);
-    let black_href = format!("/@/{}", game().black_player.username);
 
     let is_finished = move || match game().game_status {
         GameStatus::Finished(_) => true,
@@ -51,10 +48,7 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
                 </div>
                 <div class="flex justify-center items-center w-full gap-1">
                     <div>
-                        <a class="z-20 relative font-bold hover:text-blue-600" href=white_href>
-
-                            {game().white_player.username}
-                        </a>
+                        <ProfileLink username=game().white_player.username/>
                         <br/>
                         <Show when=is_finished fallback=move || { game().white_player.rating }>
                             <RatingAndChange game=game() side=Color::White/>
@@ -63,10 +57,7 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
                     </div>
                     <Icon icon=Icon::from(RiSwordOthersLine) class=""/>
                     <div>
-                        <a class="z-20 relative font-bold hover:text-blue-600" href=black_href>
-
-                            {game().black_player.username}
-                        </a>
+                        <ProfileLink username=game().black_player.username/>
                         <br/>
                         <Show when=is_finished fallback=move || { game().black_player.rating }>
                             <RatingAndChange game=game() side=Color::Black/>
