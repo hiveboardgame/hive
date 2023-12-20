@@ -1,4 +1,4 @@
-use crate::{components::atoms::profile_link::ProfileLink,functions::users::get::get_top_users};
+use crate::{components::atoms::profile_link::ProfileLink, functions::users::get::get_top_users};
 use leptos::*;
 
 #[component]

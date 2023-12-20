@@ -7,6 +7,7 @@ pub async fn edit_account(
     new_password: String,
     new_password_confirmation: String,
     password: String,
+    pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
     use crate::functions::auth::identity::uuid;
     use crate::functions::db::pool;
@@ -48,6 +49,6 @@ pub async fn edit_account(
         .to_string();
 
     user.edit(&hashed_password, &new_email, &pool).await?;
-    leptos_actix::redirect("/");
+    leptos_actix::redirect(&pathname);
     AccountResponse::from_uuid(&user.id, &pool).await
 }
