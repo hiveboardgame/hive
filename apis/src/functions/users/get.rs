@@ -39,3 +39,16 @@ pub async fn get_user_games(username: String) -> Result<Vec<GameStateResponse>, 
     }
     Ok(results)
 }
+
+#[server]
+pub async fn get_top_users(limit: i64) -> Result<Vec<UserResponse>, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::models::{rating::Rating, user::User};
+    let pool = pool()?;
+    let top_users: Vec<(User, Rating)> = User::get_top_users(&pool, limit).await?;
+    let mut results: Vec<UserResponse> = Vec::new();
+    for (user, rating) in top_users.iter() {
+        results.push(UserResponse::from_user_and_rating(user, rating));
+    }
+    Ok(results)
+}

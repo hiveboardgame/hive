@@ -4,6 +4,7 @@ pub mod challenge_view;
 pub mod home;
 pub mod login;
 pub mod play;
+pub mod players;
 pub mod profile_view;
 pub mod register;
 pub mod user_get;

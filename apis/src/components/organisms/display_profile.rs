@@ -75,7 +75,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                             <p>"Losses " {user().loss}</p>
 
                         </div>
-                        <div class="bg-inherit dark:bg-gray-900 gap-6 col-span-5 col-start-2">
+                        <div class="bg-inherit gap-6 col-span-5 col-start-2">
 
                             <Show
                                 when=move || { tab_view() == TabView::Playing }

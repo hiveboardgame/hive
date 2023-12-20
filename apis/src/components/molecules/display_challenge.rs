@@ -71,7 +71,7 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
     let td_class = "py-1 px-1 md:py-2 md:px-2 lg:px-3";
 
     view! {
-        <tr class="dark:odd:bg-slate-700 dark:even:bg-slate-800 odd:bg-stone-300 even:bg-stone-100 text-center items-center">
+        <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center">
             <td class=td_class>{icon}</td>
             <td class=td_class><ProfileLink username=challenge().challenger.username/></td>
             <td class=td_class>{challenge().challenger.rating}</td>

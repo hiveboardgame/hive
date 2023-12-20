@@ -15,6 +15,17 @@ module.exports = {
         current: 'currentColor',
         'li-green': '#629924',
         'li-red': '#c33',
+        'light': '#edebe9',
+        'odd-light': '#f7f6f5',
+        'even-light': '#ffffff',
+        'dark': '#161512',
+        'odd-dark': '#302E2C',
+        'even-dark': '#262421',
+        'hover-blue-light': "#1b78d0",
+        'hover-blue-dark': "#3692e7",
+        'blue-light': "#d1e4f6",
+        'blue-dark': "#293a49",
+
 
       },
       dropShadow: {
