@@ -61,6 +61,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                             "/@/{}",
                                             user().expect("User is some").username,
                                         )
+
                                         on:click=move |_| onclick()
                                     >
                                         Profile

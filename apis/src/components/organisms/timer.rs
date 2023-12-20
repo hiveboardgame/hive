@@ -30,10 +30,10 @@ pub fn DisplayTimer(
         Color::Black => ("row-start-1", "bg-[#3a3a3a]", "text-[#f0ead6]"),
     };
 
-    let is_finished = move || match (game_state.signal)().state.game_status {
+    let is_finished = create_memo(move |_| match (game_state.signal)().state.game_status {
         GameStatus::Finished(_) => true,
         _ => false,
-    };
+    });
 
     let div_ref = create_node_ref::<html::Div>();
     let active_side =

@@ -3,8 +3,12 @@ use crate::{
     get_conn,
     models::{game::Game, game_user::GameUser, rating::NewRating},
     schema::{
-        games, ratings, users, users::dsl::email as email_field,
-        users::dsl::password as password_field, users::dsl::username as username_field,
+        games,
+        ratings::{self, rating},
+        users,
+        users::dsl::email as email_field,
+        users::dsl::password as password_field,
+        users::dsl::username as username_field,
         users::dsl::users as users_table,
     },
     DbPool,
@@ -16,6 +20,8 @@ use diesel::{
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use super::rating::Rating;
 
 const MAX_USERNAME_LENGTH: usize = 40;
 const VALID_USERNAME_CHARS: &str = "-_";
@@ -147,5 +153,19 @@ impl User {
             .select(Game::as_select())
             .get_results(conn)
             .await?)
+    }
+
+    pub async fn get_top_users(pool: &DbPool, limit: i64) -> Result<Vec<(User, Rating)>, DbError> {
+        let conn = &mut get_conn(pool).await?;
+
+        let result = users::table
+            .inner_join(ratings::table)
+            .filter(ratings::played.ne(0))
+            .order_by(rating.desc())
+            .limit(limit)
+            .load::<(User, Rating)>(conn)
+            .await?;
+
+        Ok(result)
     }
 }

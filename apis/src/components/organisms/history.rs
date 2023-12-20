@@ -133,7 +133,7 @@ pub fn History(
     let white_black_styles = "ml-3 mt-6 mb-3 col-span-2";
     view! {
         <div class=format!("grid grid-cols-4 gap-1 {extend_tw_classes}")>
-            <div class="col-span-4 grid grid-cols-4 gap-1 sticky top-0 dark:bg-gray-900 bg-stone-200">
+            <div class="col-span-4 grid grid-cols-4 gap-1 sticky top-0 dark:bg-dark bg-light">
                 <button class=button_styles on:click=first>
                     <Icon icon=Icon::from(AiFastBackwardFilled)/>
                 </button>

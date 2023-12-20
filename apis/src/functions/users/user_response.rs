@@ -24,30 +24,26 @@ impl UserResponse {
         let user = User::find_by_uuid(id, pool).await?;
         let rating = Rating::for_uuid(id, pool).await?;
 
-        Ok(Self {
-            username: user.username,
-            uid: user.id,
-            rating: rating.rating.floor() as u64,
-            played: rating.played,
-            win: rating.won,
-            loss: rating.lost,
-            draw: rating.draw,
-        })
+        Ok(Self::from_user_and_rating(&user, &rating))
     }
 
     pub async fn from_username(username: &str, pool: &DbPool) -> Result<Self> {
         let user = User::find_by_username(username, pool).await?;
         let rating = Rating::for_uuid(&user.id, pool).await?;
 
-        Ok(Self {
-            username: user.username,
+        Ok(Self::from_user_and_rating(&user, &rating))
+    }
+
+    pub fn from_user_and_rating(user:&User, rating:&Rating) -> Self {
+        Self {
+            username: user.username.clone(),
             uid: user.id,
             rating: rating.rating.floor() as u64,
             played: rating.played,
             win: rating.won,
             loss: rating.lost,
             draw: rating.draw,
-        })
+        }
     }
 }
 }}

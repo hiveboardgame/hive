@@ -40,6 +40,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     };
 
     let game = create_blocking_resource(nanoid, move |_| get_game_from_nanoid(nanoid()));
+
     let user_uuid = move || match untrack(auth_context.user) {
         Some(Ok(Some(user))) => user.id,
         _ => {
@@ -63,7 +64,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             let white_player = store_value(game().white_player);
                             let black_player = store_value(game().black_player);
                             let state = game().create_state();
-                            game_state.set_state(state, white_player().uid, black_player().uid);
+                            game_state.set_state(state, black_player().uid, white_player().uid);
                             game_state.join(user_uuid());
                             view! {
                                 <div class=format!(
