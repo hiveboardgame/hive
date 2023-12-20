@@ -15,7 +15,9 @@ use actix_web_actors::ws::{self, Message::Text};
 use anyhow::Result;
 use db_lib::{models::game::Game, DbPool};
 use hive_lib::game_error::GameError;
-use hive_lib::{game_control::GameControl, game_status::GameStatus, state::State, turn::Turn};
+use hive_lib::{
+    color::Color, game_control::GameControl, game_status::GameStatus, state::State, turn::Turn,
+};
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
@@ -232,8 +234,8 @@ impl WsConnection {
         })
     }
 
-    fn ensure_gc_allowed_for_turn(control: &GameControl, game: &Game) -> Result<()> {
-        if !control.allowed_on_turn(game.turn) {
+    fn ensure_gc_allowed_for_turn(control: &GameControl, game: &Game, side: Color) -> Result<()> {
+        if !control.allowed_on_turn(game.turn, side) {
             Err(GameError::InvalidGc {
                 gc: control.to_string(),
                 game: game.nanoid.to_owned(),
@@ -278,8 +280,9 @@ impl WsConnection {
         WsConnection::not_finished(&game, username)?;
         // checks: user is player at the game
         Self::ensure_user_is_player(user_id, username, &game)?;
+        let side = game.user_color(user_id).expect("User is player succeded");
         // the GC can be played this turn
-        Self::ensure_gc_allowed_for_turn(&control, &game)?;
+        Self::ensure_gc_allowed_for_turn(&control, &game, side)?;
         // the GC(color) matches the user color
         Self::ensure_gc_color(user_id, &game, &control)?;
         let game = Self::match_control(&control, &game, pool).await?;

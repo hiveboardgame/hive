@@ -215,7 +215,9 @@ impl Game {
             }
         }
         let mut new_history = moves.join(";");
-        new_history.push(';');
+        if new_history.len() != 0 {
+            new_history.push(';');
+        };
         // TODO: now we have error problems here... get rid of the expects
         let his = History::new_from_str(&new_history).map_err(|e| DbError::InvalidInput {
             info: String::from("Could not recover History from history string."),
