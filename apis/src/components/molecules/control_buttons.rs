@@ -2,124 +2,44 @@ use crate::{
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
     providers::{auth_context::AuthContext, game_state::GameStateSignal},
 };
-use hive_lib::{game_control::GameControl, game_status::GameStatus};
+use hive_lib::{color::Color, game_control::GameControl, game_status::GameStatus};
 use leptos::*;
-use leptos_icons::{
-    AiIcon::AiFlagOutlined, AiIcon::AiStopOutlined, BiIcon::BiUndoRegular,
-    FaIcon::FaHandshakeSimpleSolid,
-};
 
 #[component]
 pub fn ControlButtons() -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let is_started = move || match (game_state.signal)().state.game_status {
-        GameStatus::NotStarted => false,
-        _ => true,
-    };
+
     let is_finished = move || match (game_state.signal)().state.game_status {
         GameStatus::Finished(_) => true,
         _ => false,
     };
 
     let auth_context = expect_context::<AuthContext>();
-    let user = move || match untrack(auth_context.user) {
-        Some(Ok(Some(user))) => Some(user),
+    let user_id = match untrack(auth_context.user) {
+        Some(Ok(Some(user))) => Some(user.id),
         _ => None,
+    }
+    .expect("User is some");
+    let color = game_state
+        .user_color(user_id)
+        .expect("User is either white or black");
+
+    let abort_allowed = move || {
+        let state = (game_state.signal)().state;
+        state.turn == 0 || (state.turn == 1 && color == Color::Black)
     };
 
     let pending_takeback = move || match (game_state.signal)().game_control_pending {
-        Some(GameControl::TakebackRequest(color)) => {
-            if let Some(user) = user() {
-                if let Some(user_color) = game_state.user_color(user.id) {
-                    if color.opposite_color() == user_color {
-                        return true;
-                    }
-                }
-            }
-            false
-        }
+        Some(GameControl::TakebackRequest(gc_color)) => gc_color.opposite_color() == color,
+
         _ => false,
     };
 
     let pending_draw = move || match (game_state.signal)().game_control_pending {
-        Some(GameControl::DrawOffer(color)) => {
-            if let Some(user) = user() {
-                if let Some(user_color) = game_state.user_color(user.id) {
-                    if color.opposite_color() == user_color {
-                        return true;
-                    }
-                }
-            }
-            false
-        }
+        Some(GameControl::DrawOffer(gc_color)) => gc_color.opposite_color() == color,
+
         _ => false,
     };
-
-    // TODO: can we refactor this into a generic send_game_control function?
-
-    let abort = Callback::<()>::from(move |_| {
-        if let Some(user) = user() {
-            if let Some(color) = game_state.user_color(user.id) {
-                game_state.send_game_control(GameControl::Abort(color), user.id);
-            }
-        }
-    });
-
-    let resign = Callback::<()>::from(move |_| {
-        if let Some(user) = user() {
-            if let Some(color) = game_state.user_color(user.id) {
-                game_state.send_game_control(GameControl::Resign(color), user.id);
-            }
-        }
-    });
-
-    let draw_offer = Callback::<()>::from(move |_| {
-        if let Some(user) = user() {
-            if let Some(color) = game_state.user_color(user.id) {
-                game_state.send_game_control(GameControl::DrawOffer(color), user.id);
-            }
-        }
-    });
-
-    let draw_reject = Callback::<()>::from(move |_| {
-        if let Some(user) = user() {
-            if let Some(color) = game_state.user_color(user.id) {
-                game_state.send_game_control(GameControl::DrawReject(color), user.id);
-            }
-        }
-    });
-
-    let draw_accept = Callback::<()>::from(move |_| {
-        if let Some(user) = user() {
-            if let Some(color) = game_state.user_color(user.id) {
-                game_state.send_game_control(GameControl::DrawAccept(color), user.id);
-            }
-        }
-    });
-
-    let takeback_request = Callback::<()>::from(move |_| {
-        if let Some(user) = user() {
-            if let Some(color) = game_state.user_color(user.id) {
-                game_state.send_game_control(GameControl::TakebackRequest(color), user.id);
-            }
-        }
-    });
-
-    let takeback_accept = Callback::<()>::from(move |_| {
-        if let Some(user) = user() {
-            if let Some(color) = game_state.user_color(user.id) {
-                game_state.send_game_control(GameControl::TakebackAccept(color), user.id);
-            }
-        }
-    });
-
-    let takeback_reject = Callback::<()>::from(move |_| {
-        if let Some(user) = user() {
-            if let Some(color) = game_state.user_color(user.id) {
-                game_state.send_game_control(GameControl::TakebackReject(color), user.id);
-            }
-        }
-    });
 
     view! {
         <Show
@@ -128,13 +48,32 @@ pub fn ControlButtons() -> impl IntoView {
                 view! {
                     <div class="flex justify-around items-center min-w-fit min-h-fit">
                         <Show
-                            when=is_started
+                            when=abort_allowed
                             fallback=move || {
                                 view! {
-                                    <ConfirmButton
-                                        icon=leptos_icons::Icon::Ai(AiStopOutlined)
-                                        action=abort
-                                    />
+                                    <Show
+                                        when=pending_takeback
+                                        fallback=move || {
+                                            view! {
+                                                <ConfirmButton
+                                                    game_control=store_value(GameControl::TakebackRequest(color))
+                                                    user_id=user_id
+                                                />
+                                            }
+                                        }
+                                    >
+
+                                        <div class="relative">
+                                            <AcceptDenyGc
+                                                game_control=store_value(GameControl::TakebackAccept(color))
+                                                user_id=user_id
+                                            />
+                                            <AcceptDenyGc
+                                                game_control=store_value(GameControl::TakebackReject(color))
+                                                user_id=user_id
+                                            />
+                                        </div>
+                                    </Show>
                                 }
                             }
                         >
@@ -144,8 +83,8 @@ pub fn ControlButtons() -> impl IntoView {
                                 fallback=move || {
                                     view! {
                                         <ConfirmButton
-                                            icon=leptos_icons::Icon::Bi(BiUndoRegular)
-                                            action=takeback_request
+                                            game_control=store_value(GameControl::Abort(color))
+                                            user_id=user_id
                                         />
                                     }
                                 }
@@ -153,17 +92,16 @@ pub fn ControlButtons() -> impl IntoView {
 
                                 <div class="relative">
                                     <AcceptDenyGc
-                                        icon=leptos_icons::Icon::Bi(BiUndoRegular)
-                                        red=false
-                                        action=takeback_accept
+                                        game_control=store_value(GameControl::TakebackAccept(color))
+                                        user_id=user_id
                                     />
                                     <AcceptDenyGc
-                                        icon=leptos_icons::Icon::Bi(BiUndoRegular)
-                                        red=true
-                                        action=takeback_reject
+                                        game_control=store_value(GameControl::TakebackReject(color))
+                                        user_id=user_id
                                     />
                                 </div>
                             </Show>
+
                         </Show>
 
                         <Show
@@ -171,8 +109,8 @@ pub fn ControlButtons() -> impl IntoView {
                             fallback=move || {
                                 view! {
                                     <ConfirmButton
-                                        icon=leptos_icons::Icon::Fa(FaHandshakeSimpleSolid)
-                                        action=draw_offer
+                                        game_control=store_value(GameControl::DrawOffer(color))
+                                        user_id=user_id
                                     />
                                 }
                             }
@@ -180,18 +118,19 @@ pub fn ControlButtons() -> impl IntoView {
 
                             <div class="relative">
                                 <AcceptDenyGc
-                                    icon=leptos_icons::Icon::Fa(FaHandshakeSimpleSolid)
-                                    red=false
-                                    action=draw_accept
+                                    game_control=store_value(GameControl::DrawAccept(color))
+                                    user_id=user_id
                                 />
                                 <AcceptDenyGc
-                                    icon=leptos_icons::Icon::Fa(FaHandshakeSimpleSolid)
-                                    red=true
-                                    action=draw_reject
+                                    game_control=store_value(GameControl::DrawReject(color))
+                                    user_id=user_id
                                 />
                             </div>
                         </Show>
-                        <ConfirmButton icon=leptos_icons::Icon::Ai(AiFlagOutlined) action=resign/>
+                        <ConfirmButton
+                            game_control=store_value(GameControl::Resign(color))
+                            user_id=user_id
+                        />
                     </div>
                 }
             }
