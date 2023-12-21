@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use hive_lib::color::Color;
 use leptos::*;
 
@@ -34,12 +36,10 @@ pub fn RatingAndChange(
             }
         }
     };
-    let (sign, style) = if rating_change == 0 {
-        ("+", "text-cyan-400")
-    } else if rating_change < 0 {
-        ("", "text-li-red")
-    } else {
-        ("+", "text-li-green")
+    let (sign, style) = match rating_change.cmp(&0_i64) {
+        Ordering::Equal => ("+", "text-cyan-400"),
+        Ordering::Less => ("", "text-li-red"),
+        Ordering::Greater => ("+", "text-li-green"),
     };
 
     view! {

@@ -24,7 +24,7 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
                     *piece_type != PieceType::Reserve && hex.level != 0
                 }
                 HexType::Active(ActiveState::Board) => true,
-                HexType::Target => true && hex.level != 0,
+                HexType::Target => hex.level != 0,
                 _ => false,
             };
 

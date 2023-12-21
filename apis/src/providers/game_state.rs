@@ -68,6 +68,10 @@ impl GameStateSignal {
         })
     }
 
+    pub fn set_next_games(&mut self, games: Vec<String>) {
+        self.signal.update(|s| s.next_games = games)
+    }
+
     pub fn set_game_id(&mut self, game_id: StoredValue<String>) {
         log!("game id is {}", game_id());
         self.signal.update_untracked(|s| s.game_id = Some(game_id))
@@ -159,6 +163,7 @@ pub struct GameState {
     pub view: View,
     // Unanswered game_control
     pub game_control_pending: Option<GameControl>,
+    pub next_games: Vec<String>,
 }
 
 impl Default for GameState {
@@ -184,6 +189,7 @@ impl GameState {
             history_turn: None,
             view: View::Game,
             game_control_pending: None,
+            next_games: vec![],
         }
     }
 

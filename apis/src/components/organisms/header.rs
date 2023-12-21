@@ -1,3 +1,4 @@
+use crate::components::atoms::next_game_button::NextGameButton;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle, hamburger::Hamburger, logout::Logout,
 };
@@ -34,14 +35,21 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                 let onclick = move |_| hamburger_show.update(|b| *b = false);
                                 view! {
                                     <div>
-                                        <a href="/login" on:focus=move |_| set_redirect() on:click=onclick>
+                                        <a
+                                            href="/login"
+                                            on:focus=move |_| set_redirect()
+                                            on:click=onclick
+                                        >
 
                                             Login
                                         </a>
                                         <Hamburger hamburger_show=hamburger_show>
-
                                             <ul>
-                                                <a href="/register" on:focus=move |_| set_redirect() on:click=onclick>
+                                                <a
+                                                    href="/register"
+                                                    on:focus=move |_| set_redirect()
+                                                    on:click=onclick
+                                                >
                                                     Register
                                                 </a>
                                             </ul>
@@ -59,6 +67,10 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             }
                         >
 
+                            <div>
+                                <NextGameButton/>
+                            </div>
+
                             <Hamburger hamburger_show=hamburger_show>
                                 <ul>
                                     <a
@@ -73,7 +85,11 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                     </a>
                                 </ul>
                                 <ul>
-                                    <a href="/account" on:focus=move |_| set_redirect() on:click=move |_| onclick()>
+                                    <a
+                                        href="/account"
+                                        on:focus=move |_| set_redirect()
+                                        on:click=move |_| onclick()
+                                    >
                                         Edit Account
                                     </a>
                                 </ul>
@@ -100,7 +116,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
     }
 }
 
-fn set_redirect() -> () {
+fn set_redirect() {
     let referrer = RwSignal::new(String::from("/"));
     let location = use_location().pathname.get();
     referrer.update(|s| *s = location);

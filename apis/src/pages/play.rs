@@ -27,7 +27,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     // ));
     let time_control = store_value(TimeControl::Untimed);
     let nanoid = move || {
-        params.with_untracked(|params| {
+        params.with(|params| {
             params
                 .as_ref()
                 .map(|params| params.nanoid.clone())
@@ -36,15 +36,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     };
 
     let game = create_blocking_resource(nanoid, move |_| get_game_from_nanoid(nanoid()));
-    // let user_uuid = move || match untrack(auth_context.user) {
-    //     Some(Ok(Some(user))) => Some(user.id),
-    //     _ => {
-    //         log! {
-    //             "Generating random uuid for anon"
-    //         }
-    //         Uuid::new_v4()
-    //     }
-    // };
 
     view! {
         <Transition>

@@ -22,10 +22,7 @@ pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
         },
     };
 
-    let is_finished = move || match game().game_status {
-        GameStatus::Finished(_) => true,
-        _ => false,
-    };
+    let is_finished = move || matches!(game().game_status, GameStatus::Finished(_));
 
     view! {
         <article class="flex items-stretch h-72 px-2 py-4 dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light relative mx-2 w-3/4 hover:bg-blue-light hover:dark:bg-blue-dark">

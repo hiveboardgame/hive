@@ -93,17 +93,15 @@ pub fn History(
                 .document()
                 .expect("window to have a document")
                 .query_selector(".bg-orange-300")
-                .ok()
-                .expect("to have an Element or None")
+                .expect("to have an Element")
         } else {
             None
         }
     });
-    let focus = move || match active.get_untracked() {
-        Some(elem) => {
+    let focus = move || {
+        if let Some(elem) = active.get_untracked() {
             elem.scroll_into_view_with_bool(false);
         }
-        None => {}
     };
 
     let next = move |_| {
