@@ -7,7 +7,6 @@ use crate::{
             rating_and_change::RatingAndChangeDynamic,
         },
     },
-    functions::users::user_response::UserResponse,
     providers::game_state::GameStateSignal,
 };
 use hive_lib::{color::Color, game_status::GameStatus};
@@ -15,11 +14,7 @@ use leptos::*;
 use leptos_icons::{BiIcon::BiInfiniteRegular, Icon};
 
 #[component]
-pub fn DisplayTimer(
-    side: Color,
-    player: StoredValue<UserResponse>,
-    time_control: TimeControl,
-) -> impl IntoView {
+pub fn DisplayTimer(side: Color, time_control: TimeControl) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let (css_grid_row, bg_color, text_color) = match side {
         Color::White => (
@@ -36,6 +31,40 @@ pub fn DisplayTimer(
             GameStatus::Finished(_)
         )
     });
+
+    let username = move || match side {
+        Color::White => {
+            if let Some(white) = game_state.signal.get().white {
+                white.username
+            } else {
+                String::from("None")
+            }
+        }
+        Color::Black => {
+            if let Some(black) = game_state.signal.get().black {
+                black.username
+            } else {
+                String::from("None")
+            }
+        }
+    };
+
+    let rating = move || match side {
+        Color::White => {
+            if let Some(white) = game_state.signal.get().white {
+                white.rating
+            } else {
+                0_u64
+            }
+        }
+        Color::Black => {
+            if let Some(black) = game_state.signal.get().black {
+                black.rating
+            } else {
+                0_u64
+            }
+        }
+    };
 
     let div_ref = create_node_ref::<html::Div>();
     let active_side =
@@ -99,11 +128,11 @@ pub fn DisplayTimer(
                     "min-h-fit min-w-fit flex justify-center leading-5 row-span-2 md:row-span-1 short:row-span-2 items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none {css_grid_row} {bg_color}",
                 )
             }>
-                <ProfileLink username=player().username extend_tw_classes=text_color/>
+                <ProfileLink username=username() extend_tw_classes=text_color/>
                 <Show
                     when=is_finished
                     fallback=move || {
-                        view! { <p class=format!("{text_color}")>{player().rating}</p> }
+                        view! { <p class=format!("{text_color}")>{rating}</p> }
                     }
                 >
 

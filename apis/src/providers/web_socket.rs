@@ -6,6 +6,7 @@ use crate::{
     functions::hostname::hostname_and_port,
     providers::{auth_context::AuthContext, game_state::GameStateSignal},
 };
+
 use hive_lib::{
     game_control::GameControl, game_result::GameResult, game_status::GameStatus, history::History,
     state::State, turn::Turn,
@@ -18,6 +19,7 @@ use leptos_use::core::ConnectionReadyState;
 use leptos_use::*;
 use regex::Regex;
 use std::rc::Rc;
+
 lazy_static! {
     static ref NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
@@ -61,7 +63,7 @@ impl WebsocketContext {
 
     #[inline(always)]
     pub fn send(&self, message: &str) {
-        log!("Sending message: {:?}", message);
+        log!("WS sending message: {:?}", message);
         (self.send)(message)
     }
 
@@ -141,6 +143,7 @@ fn on_message_callback(m: String) {
                 }
                 GameAction::Join => {
                     if Some(gar.user_id) != user_uuid() {
+                        log!("Joined user: {} we: {:?}", gar.user_id, user_uuid());
                         log!("{} joined", gar.username);
                         return;
                     }
@@ -193,7 +196,7 @@ fn reset_game_state(gar: &GameActionResponse) {
         history.result = result.to_owned();
     }
     if let Ok(state) = State::new_from_history(&history) {
-        game_state.set_state(state, gar.game.black_player.uid, gar.game.white_player.uid);
+        game_state.set_state(state, gar.game.black_player.to_owned(), gar.game.white_player.to_owned());
     }
     // TODO: check if there an anunsered gc and set it
 }

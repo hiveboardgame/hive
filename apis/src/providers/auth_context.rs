@@ -29,6 +29,11 @@ pub fn provide_auth() {
             )
         },
         move |_| {
+            // TODO: @leex try this
+            // first we get the account: get_account
+            // then once the account is resolved
+            // we provide the WebsocketContext which then should
+            // already have access to the auth id
             websocket_context.close();
             websocket_context.open();
             get_account()

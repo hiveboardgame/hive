@@ -7,12 +7,15 @@ use crate::{
     },
     providers::{
         auth_context::provide_auth, color_scheme::provide_color_scheme,
-        game_state::provide_game_state, web_socket::provide_websocket,
+        game_controller::provide_game_controller, game_state::provide_game_state,
+        web_socket::provide_websocket,
     },
 };
+use lazy_static::lazy_static;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use regex::Regex;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -20,9 +23,26 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
     provide_game_state();
+    provide_game_controller();
     let url = "/ws/";
     provide_websocket(url);
     provide_auth();
+
+    lazy_static! {
+        static ref NANOID: Regex =
+            Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
+    }
+
+    // create_effect(move |_| {
+    //     let router = expect_context::<RouterContext>();
+    //     let mut game_controller = expect_context::<GameControllerSignal>();
+    //     if let Some(caps) = NANOID.captures(&(router.pathname())()) {
+    //         if let Some(m) = caps.name("nanoid") {
+    //             let nanoid = m.as_str();
+    //             game_controller.join(nanoid.to_string());
+    //         }
+    //     }
+    // });
 
     view! {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>

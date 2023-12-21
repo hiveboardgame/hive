@@ -44,17 +44,16 @@ pub fn Piece(
 
     let onclick = move |_| {
         let turn = game_state_signal.signal.get_untracked().state.turn;
-        let black_id = game_state_signal.signal.get_untracked().black_id;
-        let white_id = game_state_signal.signal.get_untracked().white_id;
-        if let Some(user) = user() {
-            if turn % 2 == 0 {
-                if let Some(white) = white_id {
-                    if white != user.id {
+        if let (Some(black), Some(white)) = (
+            game_state_signal.signal.get_untracked().black,
+            game_state_signal.signal.get_untracked().white,
+        ) {
+            if let Some(user) = user() {
+                if turn % 2 == 0 {
+                    if white.uid != user.id {
                         return;
                     }
-                }
-            } else if let Some(black) = black_id {
-                if black != user.id {
+                } else if black.uid != user.id {
                     return;
                 }
             }

@@ -1,3 +1,4 @@
+use crate::functions::users::user_response::UserResponse;
 use crate::providers::api_requests::ApiRequests;
 use hive_lib::color::Color;
 use hive_lib::game_control::GameControl;
@@ -54,27 +55,23 @@ impl GameStateSignal {
             .send_game_control(game_control, user)
     }
 
-    pub fn join(&self) {
-        log!("Joined game");
-        self.signal.get_untracked().join()
+    pub fn join(&self, nanoid: String) {
+        log!("Game id is: {:?}", self.signal.get().game_id);
+        log!("Nanoid id is: {:?}", nanoid);
+        self.signal.get().join(nanoid)
     }
 
-    pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
+    pub fn set_state(&mut self, state: State, black: UserResponse, white: UserResponse) {
         self.reset();
         self.signal.update(|s| {
             s.state = state;
-            s.black_id = Some(black_id);
-            s.white_id = Some(white_id);
+            s.black = Some(black);
+            s.white = Some(white);
         })
     }
 
     pub fn set_next_games(&mut self, games: Vec<String>) {
         self.signal.update(|s| s.next_games = games)
-    }
-
-    pub fn set_game_id(&mut self, game_id: StoredValue<String>) {
-        log!("game id is {}", game_id());
-        self.signal.update_untracked(|s| s.game_id = Some(game_id))
     }
 
     pub fn play_turn(&mut self, piece: Piece, position: Position) {
@@ -142,11 +139,11 @@ pub enum View {
 #[derive(Clone, Debug)]
 pub struct GameState {
     // game_id is the nanoid of the game
-    pub game_id: Option<StoredValue<String>>,
+    pub game_id: Option<String>,
     // the gamestate
     pub state: State,
-    pub black_id: Option<Uuid>,
-    pub white_id: Option<Uuid>,
+    pub black: Option<UserResponse>,
+    pub white: Option<UserResponse>,
     // possible destinations of selected piece
     pub target_positions: Vec<Position>,
     // the piece (either from reserve or board) that has been clicked last
@@ -179,8 +176,8 @@ impl GameState {
         Self {
             game_id: None,
             state,
-            black_id: None,
-            white_id: None,
+            black: None,
+            white: None,
             target_positions: vec![],
             active: None,
             target_position: None,
@@ -194,11 +191,15 @@ impl GameState {
     }
 
     pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
-        if Some(user_id) == self.black_id {
-            return Some(Color::Black);
+        if let Some(black) = &self.black {
+            if user_id == black.uid {
+                return Some(Color::Black);
+            }
         }
-        if Some(user_id) == self.white_id {
-            return Some(Color::White);
+        if let Some(white) = &self.white {
+            if user_id == white.uid {
+                return Some(Color::White);
+            }
         }
         None
     }
@@ -222,29 +223,32 @@ impl GameState {
     }
 
     pub fn send_game_control(&mut self, game_control: GameControl, user_id: Uuid) {
-        let game_id = self.game_id.expect("Game_id in gamestate")();
-        if let Some(color) = self.user_color(user_id) {
-            if color != game_control.color() {
-                log!("This is a bug, you should only send GCs of your own color");
-            } else {
-                ApiRequests::new().game_control(game_id, game_control)
+        if let Some(game_id) = &self.game_id {
+            if let Some(color) = self.user_color(user_id) {
+                if color != game_control.color() {
+                    log!("This is a bug, you should only send GCs of your own color");
+                } else {
+                    ApiRequests::new().game_control(game_id.to_owned(), game_control)
+                }
             }
         }
     }
 
-    pub fn join(&mut self) {
-        let game_id = self.game_id.expect("Game_id in gamestate")();
-        ApiRequests::new().join(game_id)
+    pub fn join(&mut self, nanoid: String) {
+        if self.game_id == Some(nanoid.to_owned()) {
+            return;
+        }
+        ApiRequests::new().join(nanoid.to_owned());
+        self.game_id = Some(nanoid);
     }
 
     pub fn move_active(&mut self) {
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
-            } else {
-                let game_id = self.game_id.expect("Game_id in gamestate")();
+            } else if let Some(game_id) = &self.game_id {
                 let turn = Turn::Move(active, position);
-                ApiRequests::new().turn(game_id, turn)
+                ApiRequests::new().turn(game_id.to_owned(), turn)
             }
         }
         self.reset();
@@ -256,10 +260,9 @@ impl GameState {
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
-            } else {
-                let game_id = self.game_id.expect("Game_id in gamestate")();
+            } else if let Some(game_id) = &self.game_id {
                 let turn = Turn::Spawn(active, position);
-                ApiRequests::new().turn(game_id, turn)
+                ApiRequests::new().turn(game_id.to_owned(), turn)
             }
         }
         self.reset();

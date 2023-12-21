@@ -61,7 +61,7 @@ pub fn RatingAndChangeDynamic(
         }>
             {move || {
                 let game = Resource::once(move || get_game_from_nanoid(
-                    (game_id().expect("Some game_id"))(),
+                    game_id().expect("Some game_id"),
                 ));
                 view! {
                     <Transition>
