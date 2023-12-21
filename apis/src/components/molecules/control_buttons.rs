@@ -9,9 +9,11 @@ use leptos::*;
 pub fn ControlButtons() -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
 
-    let is_finished = move || match (game_state.signal)().state.game_status {
-        GameStatus::Finished(_) => true,
-        _ => false,
+    let is_finished = move || {
+        matches!(
+            (game_state.signal)().state.game_status,
+            GameStatus::Finished(_)
+        )
     };
 
     let auth_context = expect_context::<AuthContext>();
@@ -56,9 +58,7 @@ pub fn ControlButtons() -> impl IntoView {
                                         fallback=move || {
                                             view! {
                                                 <ConfirmButton
-                                                    game_control=store_value(
-                                                        GameControl::TakebackRequest(color),
-                                                    )
+                                                    game_control=store_value(GameControl::TakebackRequest(color))
                                                     user_id=user_id
                                                 />
                                             }

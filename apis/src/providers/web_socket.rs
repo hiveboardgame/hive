@@ -1,11 +1,7 @@
 use crate::{
     common::{
         game_action::GameAction,
-        server_result::{
-            GameActionResponse,
-            ServerMessage::{self},
-            ServerResult,
-        },
+        server_result::{GameActionResponse, ServerMessage, ServerResult},
     },
     functions::hostname::hostname_and_port,
     providers::{auth_context::AuthContext, game_state::GameStateSignal},
@@ -14,11 +10,28 @@ use hive_lib::{
     game_control::GameControl, game_result::GameResult, game_status::GameStatus, history::History,
     state::State, turn::Turn,
 };
+use lazy_static::lazy_static;
 use leptos::logging::log;
 use leptos::*;
+use leptos_router::RouterContext;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::*;
+use regex::Regex;
 use std::rc::Rc;
+lazy_static! {
+    static ref NANOID: Regex =
+        Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
+}
+
+fn current_page_game_id() -> Option<String> {
+    let router = expect_context::<RouterContext>();
+    if let Some(caps) = NANOID.captures(&(router.pathname().get_untracked())) {
+        if let Some(m) = caps.name("nanoid") {
+            return Some(m.as_str().to_owned());
+        }
+    }
+    None
+}
 
 #[derive(Clone)]
 pub struct WebsocketContext {
@@ -80,11 +93,23 @@ fn on_message_callback(m: String) {
                 _ => None,
             };
 
+            match current_page_game_id() {
+                None => return,
+                Some(current_id) => {
+                    if gar.game_id != current_id {
+                        return;
+                    }
+                }
+            }
+
             match gar.game_action {
                 GameAction::Move(ref turn) => {
                     log!("Playing turn: {turn}");
                     game_state.clear_gc();
                     if Some(gar.user_id) == user_uuid() {
+                        let mut games = game_state.signal.get_untracked().next_games;
+                        games.retain(|g| *g != gar.game_id);
+                        game_state.set_next_games(games);
                         log!("Skipping own turn");
                         return;
                     }
@@ -146,10 +171,15 @@ fn on_message_callback(m: String) {
                 reset_game_state(&gar);
             }
         }
+        Ok(ServerResult::Ok(ServerMessage::GameActionNotification(games))) => {
+            let mut game_state = expect_context::<GameStateSignal>();
+            log!("New games: {:?}", games);
+            game_state.set_next_games(games);
+        }
         Ok(ServerResult::Err(e)) => log!("Got error from server: {e}"),
         Err(e) => log!("Can't parse: {m}, error is: {e}"),
-        foo => {
-            log!("Got {foo:?} which is currently still unimplemented");
+        todo => {
+            log!("Got {todo:?} which is currently still unimplemented");
         } // GameRequiresAction, UserStatusChange, ...
     }
 }

@@ -1,3 +1,4 @@
+use crate::{color::Color, game_error::GameError, game_result::GameResult, game_type::GameType};
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -6,11 +7,6 @@ use std::{
     fs::{File, OpenOptions},
     io::{self, prelude::*, BufRead},
 };
-
-use crate::color::Color;
-use crate::game_error::GameError;
-use crate::game_result::GameResult;
-use crate::game_type::GameType;
 
 #[derive(Debug, Clone, Serialize, Default, Deserialize, PartialEq, Eq)]
 pub struct History {

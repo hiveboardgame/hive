@@ -1,12 +1,13 @@
-use crate::common::client_message::ClientRequest;
-use crate::common::server_result::MessageDestination;
-use crate::common::server_result::{ExternalServerError, ServerResult};
-
-use crate::websockets::request_handler::RequestHandler;
-
-use crate::websockets::{
-    lobby::Lobby,
-    messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
+use crate::{
+    common::{
+        client_message::ClientRequest,
+        server_result::{ExternalServerError, MessageDestination, ServerResult},
+    },
+    websockets::{
+        lobby::Lobby,
+        messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
+        request_handler::RequestHandler,
+    },
 };
 use actix::{
     fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
@@ -15,7 +16,6 @@ use actix::{
 use actix_web_actors::ws::{self, Message::Text};
 use anyhow::Result;
 use db_lib::DbPool;
-
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 

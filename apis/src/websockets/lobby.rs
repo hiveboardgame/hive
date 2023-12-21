@@ -176,11 +176,7 @@ impl Handler<ClientActorMessage> for Lobby {
                     .get(&game_id)
                     .expect("Game to exists")
                     .iter()
-                    .for_each(|client| {
-                        // if *client != cam.from {
-                            self.send_message(&cam.serialized, client)
-                        // }
-                    });
+                    .for_each(|client| self.send_message(&cam.serialized, client));
             }
             MessageDestination::Direct(user_id) => {
                 self.send_message(&cam.serialized, &user_id);

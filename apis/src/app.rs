@@ -1,13 +1,14 @@
-use crate::components::layouts::base_layout::BaseLayout;
-use crate::pages::{
-    account::Account, challenge_view::ChallengeView, home::Home, login::Login, play::Play,
-    players::PlayersView, profile_view::ProfileView, register::Register, user_get::UserGet,
-    ws::WsPage,
-};
-
-use crate::providers::{
-    auth_context::provide_auth, color_scheme::provide_color_scheme, game_state::provide_game_state,
-    web_socket::provide_websocket,
+use crate::{
+    components::layouts::base_layout::BaseLayout,
+    pages::{
+        account::Account, challenge_view::ChallengeView, home::Home, login::Login, play::Play,
+        players::PlayersView, profile_view::ProfileView, register::Register, user_get::UserGet,
+        ws::WsPage,
+    },
+    providers::{
+        auth_context::provide_auth, color_scheme::provide_color_scheme,
+        game_state::provide_game_state, web_socket::provide_websocket,
+    },
 };
 use leptos::*;
 use leptos_meta::*;
