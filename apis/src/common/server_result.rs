@@ -1,4 +1,5 @@
-use http::*;
+use crate::functions::challenges::challenge_response::ChallengeResponse;
+use http::StatusCode;
 use http_serde;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -12,13 +13,13 @@ use super::game_action::GameAction;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerResult {
-    Ok(ServerOk),
+    Ok(ServerMessage),
     Err(ExternalServerError),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExternalServerError {
-    // TODO: this needs user_id or another way to only send this to the user who caused the error
+    pub user_id: Uuid,
     pub field: String,
     pub reason: String,
     #[serde(with = "http_serde::status_code")]
@@ -35,6 +36,43 @@ impl fmt::Display for ExternalServerError {
     }
 }
 
+// TODO: This might be able to be removed and ServerMessage just goes into ServerResult::Ok(...)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InternalServerMessage {
+    pub destination: MessageDestination,
+    pub message: ServerMessage,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MessageDestination {
+    Direct(Uuid), // to a user
+    Game(String), // to everyone in the game
+    Global,       // to everyone online
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ServerMessage {
+    Chat {
+        // Sends a chat message to the game/lobby
+        username: String,
+        game_id: String,
+        message: String,
+    },
+    GameActionNotification(Vec<String>),
+    GameUpdate(GameActionResponse),
+    Challenge(ChallengeUpdate),
+    UserStatus(UserUpdate),
+    // sent to everyone in the game when a user joins the game
+    Join(UserResponse),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ChallengeUpdate {
+    Created(ChallengeResponse), // A new challenge was created
+    Removed(String),            // A challenge was removed
+    Direct(ChallengeResponse),  // Player got directly invited to a game
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameActionResponse {
     pub game_action: GameAction,
@@ -45,16 +83,15 @@ pub struct GameActionResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ServerOk {
-    GameRequiresAction(Vec<String>),
-    GameUpdate(GameActionResponse),
-    UserStatusChange(UserUpdate),
+pub struct UserUpdate {
+    pub status: UserStatus,
+    pub user: Uuid,
+    pub username: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum UserUpdate {
-    Online(UserResponse),
-    Offline(UserResponse),
-    Away(UserResponse),
-    EloChange(UserResponse),
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum UserStatus {
+    Online,
+    Offline,
+    Away,
 }

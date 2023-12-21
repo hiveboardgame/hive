@@ -22,32 +22,18 @@ pub async fn accept_challenge(nanoid: String) -> Result<Option<GameStateResponse
         return Err(ChallengeError::OwnChallenge.into());
     }
     let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
-        "black" => (uuid, challenge.challenger_id.clone()),
-        "white" => (challenge.challenger_id.clone(), uuid),
+        "black" => (uuid, challenge.challenger_id),
+        "white" => (challenge.challenger_id, uuid),
         _ => {
             if rand::random() {
-                (challenge.challenger_id.clone(), uuid)
+                (challenge.challenger_id, uuid)
             } else {
-                (uuid, challenge.challenger_id.clone())
+                (uuid, challenge.challenger_id)
             }
         }
     };
-    let new_game = NewGame {
-        white_id: white_id.clone(),
-        black_id: black_id.clone(),
-        nanoid: challenge.nanoid.to_owned(),
-        game_status: "NotStarted".to_string(),
-        game_type: challenge.game_type.clone(),
-        history: String::new(),
-        game_control_history: String::new(),
-        tournament_queen_rule: challenge.tournament_queen_rule,
-        turn: 0,
-        rated: challenge.rated,
-        white_rating: None,
-        black_rating: None,
-        white_rating_change: None,
-        black_rating_change: None,
-    };
+
+    let new_game = NewGame::new(white_id, black_id, &challenge);
     let game = Game::create(&new_game, &pool).await?;
     challenge.delete(&pool).await?;
     leptos_actix::redirect(play_link);

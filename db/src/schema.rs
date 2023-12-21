@@ -18,7 +18,9 @@ diesel::table! {
     games (id) {
         id -> Uuid,
         nanoid -> Text,
+        current_player_id -> Uuid,
         black_id -> Uuid,
+        finished -> Bool,
         game_status -> Text,
         game_type -> Text,
         history -> Text,
@@ -31,6 +33,8 @@ diesel::table! {
         black_rating -> Nullable<Float8>,
         white_rating_change -> Nullable<Float8>,
         black_rating_change -> Nullable<Float8>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -52,6 +56,8 @@ diesel::table! {
         rating -> Float8,
         deviation -> Float8,
         volatility -> Float8,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -61,6 +67,8 @@ diesel::table! {
         username -> Text,
         password -> Text,
         email -> Text,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 

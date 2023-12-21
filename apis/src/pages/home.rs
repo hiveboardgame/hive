@@ -22,9 +22,9 @@ pub fn Home() -> impl IntoView {
 
     let source_signal: RwSignal<Option<Uuid>> = create_rw_signal(None);
     //blocking resource leads to warning but good performance, local resource leads to no warning but fe is beaving slightly worse
-    let challenges = create_local_resource(source_signal, move |s| get_public_challenges(s));
+    let challenges = create_local_resource(source_signal, get_public_challenges);
     //this one is fine as blocking
-    let own_challenges = create_blocking_resource(source_signal, move |s| get_own_challenges(s));
+    let own_challenges = create_blocking_resource(source_signal, get_own_challenges);
     let button_color = move || {
         if show_public() {
             ("bg-slate-400", "bg-inherit")

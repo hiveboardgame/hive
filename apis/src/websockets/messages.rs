@@ -1,6 +1,8 @@
 use actix::prelude::*;
 use uuid::Uuid;
 
+use crate::common::server_result::MessageDestination;
+
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct WsMessage(pub String);
@@ -25,17 +27,17 @@ pub struct Disconnect {
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct ClientActorMessage {
-    pub game_id: String, // game room to send the message to other users (if needed)
+    pub destination: MessageDestination,
+    pub from: Uuid,
     pub serialized: String, // the serialized message
-    pub user_id: Uuid,   // needed to find the websocket to send the message over
 }
 
 impl ClientActorMessage {
-    pub fn new(game_id: &str, serialized: &str, user_id: Uuid) -> Self {
+    pub fn new(from: Uuid, destination: MessageDestination, serialized: &str) -> Self {
         Self {
-            game_id: game_id.to_owned(),
+            from,
+            destination,
             serialized: serialized.to_owned(),
-            user_id,
         }
     }
 }

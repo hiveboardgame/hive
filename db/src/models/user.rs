@@ -3,16 +3,18 @@ use crate::{
     get_conn,
     models::{game::Game, game_user::GameUser, rating::NewRating},
     schema::{
-        games,
+        games::{self, current_player_id, finished},
         ratings::{self, rating},
         users,
         users::dsl::email as email_field,
         users::dsl::password as password_field,
+        users::dsl::updated_at,
         users::dsl::username as username_field,
         users::dsl::users as users_table,
     },
     DbPool,
 };
+use chrono::{DateTime, Utc};
 use diesel::{
     query_dsl::BelongingToDsl, ExpressionMethods, Identifiable, Insertable, QueryDsl, Queryable,
     SelectableHelper,
@@ -52,6 +54,8 @@ pub struct NewUser {
     pub username: String,
     pub password: String,
     pub email: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl NewUser {
@@ -61,6 +65,8 @@ impl NewUser {
             username: username.to_owned(),
             password: password.to_owned(),
             email: email.to_owned(),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         })
     }
 }
@@ -72,12 +78,14 @@ pub struct User {
     pub username: String,
     pub password: String,
     pub email: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl User {
     pub async fn create(new_user: &NewUser, pool: &DbPool) -> Result<User, DbError> {
         let connection = &mut get_conn(pool).await?;
-        Ok(connection
+        connection
             .transaction::<_, DbError, _>(|conn| {
                 async move {
                     let user: User = diesel::insert_into(users::table)
@@ -93,7 +101,7 @@ impl User {
                 }
                 .scope_boxed()
             })
-            .await?)
+            .await
     }
 
     pub async fn edit(
@@ -107,19 +115,23 @@ impl User {
             (true, true) => users_table.find(&self.id).first(conn).await?,
             (true, false) => {
                 diesel::update(self)
-                    .set(email_field.eq(new_email))
+                    .set((email_field.eq(new_email), updated_at.eq(Utc::now())))
                     .get_result(conn)
                     .await?
             }
             (false, true) => {
                 diesel::update(self)
-                    .set(password_field.eq(new_password))
+                    .set((password_field.eq(new_password), updated_at.eq(Utc::now())))
                     .get_result(conn)
                     .await?
             }
             (false, false) => {
                 diesel::update(self)
-                    .set((password_field.eq(new_password), email_field.eq(new_email)))
+                    .set((
+                        password_field.eq(new_password),
+                        email_field.eq(new_email),
+                        updated_at.eq(Utc::now()),
+                    ))
                     .get_result(conn)
                     .await?
             }
@@ -144,6 +156,31 @@ impl User {
         Ok(diesel::delete(users_table.find(&self.id))
             .execute(conn)
             .await?)
+    }
+
+    pub async fn get_games_with_notifications(&self, pool: &DbPool) -> Result<Vec<Game>, DbError> {
+        let conn = &mut get_conn(pool).await?;
+        Ok(GameUser::belonging_to(self)
+            .inner_join(games::table)
+            .select(Game::as_select())
+            .filter(current_player_id.eq(self.id))
+            .filter(finished.eq(false))
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn get_urgent_nanoids(&self, pool: &DbPool) -> Result<Vec<String>, DbError> {
+        let conn = &mut get_conn(pool).await?;
+        Ok(GameUser::belonging_to(self)
+            .inner_join(games::table)
+            .select(Game::as_select())
+            .filter(current_player_id.eq(self.id))
+            .filter(finished.eq(false))
+            .get_results(conn)
+            .await?
+            .into_iter()
+            .map(|game| game.nanoid)
+            .collect())
     }
 
     pub async fn get_games(&self, pool: &DbPool) -> Result<Vec<Game>, DbError> {

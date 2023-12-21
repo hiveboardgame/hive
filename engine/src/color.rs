@@ -78,7 +78,7 @@ impl fmt::Display for Color {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ColorChoice {
     White,
     Black,

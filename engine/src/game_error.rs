@@ -36,6 +36,12 @@ pub enum GameError {
         game: String,
         turn: String,
     },
+    #[error("{gc} already newest game gontrol on {game} at {turn}")]
+    GcAlreadyPresent {
+        gc: String,
+        game: String,
+        turn: String,
+    },
     #[error("{username} can't play on {game}. Game is over.")]
     GameIsOver { username: String, game: String },
     #[error("{username} can't play on {game}. It's not their game.")]

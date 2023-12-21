@@ -36,7 +36,8 @@ pub fn Piece(
 
     let mut game_state_signal = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
-    let user = move || match untrack(auth_context.user) {
+
+    let user = move || match (auth_context.user)() {
         Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
@@ -73,12 +74,12 @@ pub fn Piece(
                         }
                         PieceType::Move => {
                             log!("Moving piece {}", piece.get_untracked());
-                            game_state_signal.move_active(user.id);
+                            game_state_signal.move_active();
                         }
                         PieceType::Spawn => {
                             {
                                 log!("Spawning piece {}", piece.get_untracked());
-                                game_state_signal.spawn_active(user.id);
+                                game_state_signal.spawn_active();
                             };
                         }
                         _ => log!("Piece is {}", piece_type),

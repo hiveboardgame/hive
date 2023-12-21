@@ -1,7 +1,9 @@
 create table games (
   id uuid default gen_random_uuid() primary key not null,
   nanoid text not null,
+  current_player_id uuid not null,
   black_id uuid not null,
+  finished boolean not null default false,
   game_status text not null,
   game_type text not null,
   history text not null,
@@ -13,5 +15,7 @@ create table games (
   white_rating float8,
   black_rating float8,
   white_rating_change float8,
-  black_rating_change float8
+  black_rating_change float8,
+  created_at timestamp with time zone not null,
+  updated_at timestamp with time zone not null
 );

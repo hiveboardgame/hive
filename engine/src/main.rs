@@ -1,3 +1,4 @@
+use hive_lib::color::Color;
 use hive_lib::game_error::GameError;
 use hive_lib::game_result::GameResult;
 use hive_lib::game_status::GameStatus;
@@ -11,6 +12,7 @@ fn play_game_from_file(file_path: &str) -> Result<(), GameError> {
     let mut state: State = State::new(GameType::default(), false);
     for _ in 0..1 {
         state = State::new_from_history(&history)?;
+        let _foo = state.board.spawnable_positions(Color::White);
     }
     if let GameStatus::Finished(GameResult::Winner(winner)) = state.game_status {
         println!("State says {winner} won!");
@@ -52,7 +54,7 @@ fn play_game_from_file(file_path: &str) -> Result<(), GameError> {
 fn main() {
     let game: Vec<String> = env::args().collect();
     if let Some(game) = game.get(1) {
-        println!("{game}");
+        println!("Playing game: {game}");
         match play_game_from_file(game) {
             Ok(_) => {}
             Err(e) => eprintln!("{e}"),
