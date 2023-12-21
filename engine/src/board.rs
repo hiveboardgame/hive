@@ -508,6 +508,10 @@ impl Board {
         if number_of_positions == 1 {
             return self.is_negative_space(position);
         }
+        // connected to the hive
+        if self.top_layer_neighbors(position).next().is_none() {
+            return false;
+        }
         !self
             .top_layer_neighbors(position)
             .any(|piece| color == piece.color().opposite_color())

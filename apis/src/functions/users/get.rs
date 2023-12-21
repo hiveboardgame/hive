@@ -33,7 +33,7 @@ pub async fn get_user_games(username: String) -> Result<Vec<GameStateResponse>, 
         .await?;
     let mut results: Vec<GameStateResponse> = Vec::new();
     for game in games.iter() {
-        if let Ok(game_response) = GameStateResponse::new_from_db(&game, &pool).await {
+        if let Ok(game_response) = GameStateResponse::new_from_db(game, &pool).await {
             results.push(game_response);
         }
     }

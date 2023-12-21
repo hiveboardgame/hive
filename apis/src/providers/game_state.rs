@@ -1,6 +1,4 @@
-use super::web_socket::WebsocketContext;
-use crate::common::client_message::ClientMessage;
-use crate::common::game_action::GameAction;
+use crate::providers::api_requests::ApiRequests;
 use hive_lib::color::Color;
 use hive_lib::game_control::GameControl;
 use hive_lib::game_status::GameStatus;
@@ -56,12 +54,13 @@ impl GameStateSignal {
             .send_game_control(game_control, user)
     }
 
-    pub fn join(&self, user: Uuid) {
+    pub fn join(&self) {
         log!("Joined game");
-        self.signal.get_untracked().join(user)
+        self.signal.get_untracked().join()
     }
 
     pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
+        self.reset();
         self.signal.update(|s| {
             s.state = state;
             s.black_id = Some(black_id);
@@ -85,12 +84,12 @@ impl GameStateSignal {
         self.signal.update(|s| s.reset())
     }
 
-    pub fn move_active(&mut self, user: Uuid) {
-        self.signal.update(|s| s.move_active(user))
+    pub fn move_active(&mut self) {
+        self.signal.update(|s| s.move_active())
     }
 
-    pub fn spawn_active(&mut self, user: Uuid) {
-        self.signal.update(|s| s.spawn_active(user))
+    pub fn spawn_active(&mut self) {
+        self.signal.update(|s| s.spawn_active())
     }
 
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
@@ -217,48 +216,29 @@ impl GameState {
     }
 
     pub fn send_game_control(&mut self, game_control: GameControl, user_id: Uuid) {
-        let websocket = expect_context::<WebsocketContext>();
-        let game_id = self.game_id.expect("Game_id in gamestate");
+        let game_id = self.game_id.expect("Game_id in gamestate")();
         if let Some(color) = self.user_color(user_id) {
             if color != game_control.color() {
                 log!("This is a bug, you should only send GCs of your own color");
+            } else {
+                ApiRequests::new().game_control(game_id, game_control)
             }
-            let msg = ClientMessage {
-                user_id,
-                game_id: game_id(),
-                game_action: GameAction::Control(game_control),
-            };
-            log!("Sending {:?} to WS", msg);
-            websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
         }
     }
 
-    // TODO: This needs to be reworked, maybe pass in user(!) and game_id(?)
-    pub fn join(&mut self, user_id: Uuid) {
-        let websocket = expect_context::<WebsocketContext>();
-        let game_id = self.game_id.expect("Game_id in gamestate");
-        let msg = ClientMessage {
-            user_id,
-            game_id: game_id(),
-            game_action: GameAction::Join,
-        };
-        log!("Sending {:?} to WS", msg);
-        websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    pub fn join(&mut self) {
+        let game_id = self.game_id.expect("Game_id in gamestate")();
+        ApiRequests::new().join(game_id)
     }
 
-    pub fn move_active(&mut self, user_id: Uuid) {
+    pub fn move_active(&mut self) {
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
             } else {
-                let websocket = expect_context::<WebsocketContext>();
-                let game_id = self.game_id.expect("Game_id in gamestate");
-                let msg = ClientMessage {
-                    user_id,
-                    game_id: game_id(),
-                    game_action: GameAction::Move(Turn::Move(active, position)),
-                };
-                websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+                let game_id = self.game_id.expect("Game_id in gamestate")();
+                let turn = Turn::Move(active, position);
+                ApiRequests::new().turn(game_id, turn)
             }
         }
         self.reset();
@@ -266,19 +246,14 @@ impl GameState {
         self.history_turn = Some(self.state.turn - 1)
     }
 
-    pub fn spawn_active(&mut self, user_id: Uuid) {
+    pub fn spawn_active(&mut self) {
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
             } else {
-                let websocket = expect_context::<WebsocketContext>();
-                let game_id = self.game_id.expect("Game_id in gamestate");
-                let msg = ClientMessage {
-                    user_id,
-                    game_id: game_id(),
-                    game_action: GameAction::Move(Turn::Spawn(active, position)),
-                };
-                websocket.send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+                let game_id = self.game_id.expect("Game_id in gamestate")();
+                let turn = Turn::Spawn(active, position);
+                ApiRequests::new().turn(game_id, turn)
             }
         }
         self.reset();

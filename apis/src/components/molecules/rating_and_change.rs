@@ -20,7 +20,7 @@ pub fn RatingAndChange(
                     game.white_rating.unwrap_or_default() as u64,
                 )
             } else {
-                (0 as i64, game.white_rating.unwrap_or_default() as u64)
+                (0_i64, game.white_rating.unwrap_or_default() as u64)
             }
         }
         Color::Black => {

@@ -6,6 +6,7 @@ use crate::{
     schema::games::dsl::*,
     DbPool,
 };
+use chrono::{DateTime, Utc};
 use diesel::{prelude::*, Identifiable, Insertable, QueryDsl, Queryable};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
@@ -18,11 +19,15 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use uuid::Uuid;
 
+use super::challenge::Challenge;
+
 #[derive(Insertable, Debug)]
 #[diesel(table_name = games)]
 pub struct NewGame {
     pub nanoid: String,
+    pub current_player_id: Uuid,
     pub black_id: Uuid, // uid of user
+    pub finished: bool,
     pub game_status: String,
     pub game_type: String,
     pub history: String,
@@ -35,6 +40,33 @@ pub struct NewGame {
     pub black_rating: Option<f64>,
     pub white_rating_change: Option<f64>,
     pub black_rating_change: Option<f64>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl NewGame {
+    pub fn new(white: Uuid, black: Uuid, challenge: &Challenge) -> Self {
+        Self {
+            nanoid: challenge.nanoid.to_owned(),
+            current_player_id: white,
+            black_id: black,
+            finished: false,
+            game_status: "NotStarted".to_owned(),
+            game_type: challenge.game_type.to_owned(),
+            history: String::new(),
+            game_control_history: String::new(),
+            rated: challenge.rated,
+            tournament_queen_rule: challenge.tournament_queen_rule,
+            turn: 0,
+            white_id: white,
+            white_rating: None,
+            black_rating: None,
+            white_rating_change: None,
+            black_rating_change: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        }
+    }
 }
 
 #[derive(
@@ -45,7 +77,9 @@ pub struct NewGame {
 pub struct Game {
     pub id: Uuid,
     pub nanoid: String,
+    pub current_player_id: Uuid,
     pub black_id: Uuid, // uid of user
+    pub finished: bool,
     pub game_status: String,
     pub game_type: String,
     pub history: String, //"piece pos;piece pos;piece pos;"
@@ -58,6 +92,8 @@ pub struct Game {
     pub black_rating: Option<f64>,
     pub white_rating_change: Option<f64>,
     pub black_rating_change: Option<f64>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl Game {
@@ -95,8 +131,13 @@ impl Game {
             game_control_string = format!("{}. {gc};", self.turn);
         }
 
-        Ok(connection
+        connection
             .transaction::<_, DbError, _>(|conn| {
+                let next_player = if self.current_player_id == self.black_id {
+                    self.white_id
+                } else {
+                    self.black_id
+                };
                 async move {
                     let ((w_rating, b_rating), changes) =
                         if let GameStatus::Finished(game_result) = new_game_status.clone() {
@@ -119,7 +160,9 @@ impl Game {
                         diesel::update(games::table.find(self.id))
                             .set((
                                 history.eq(history.concat(board_move)),
+                                current_player_id.eq(next_player),
                                 turn.eq(turn + 1),
+                                finished.eq(true),
                                 game_status.eq(new_game_status.to_string()),
                                 game_control_history
                                     .eq(game_control_history.concat(game_control_string)),
@@ -127,6 +170,7 @@ impl Game {
                                 black_rating.eq(b_rating),
                                 white_rating_change.eq(w_change),
                                 black_rating_change.eq(b_change),
+                                updated_at.eq(Utc::now()),
                             ))
                             .get_result(conn)
                             .await?
@@ -134,10 +178,12 @@ impl Game {
                         diesel::update(games::table.find(self.id))
                             .set((
                                 history.eq(history.concat(board_move)),
+                                current_player_id.eq(next_player),
                                 turn.eq(turn + 1),
                                 game_status.eq(new_game_status.to_string()),
                                 game_control_history
                                     .eq(game_control_history.concat(game_control_string)),
+                                updated_at.eq(Utc::now()),
                             ))
                             .get_result(conn)
                             .await?
@@ -146,7 +192,7 @@ impl Game {
                 }
                 .scope_boxed()
             })
-            .await?)
+            .await
     }
 
     pub fn user_is_player(&self, user_id: Uuid) -> bool {
@@ -193,7 +239,10 @@ impl Game {
         let conn = &mut get_conn(pool).await?;
         let game_control_string = format!("{}. {game_control};", self.turn);
         Ok(diesel::update(games::table.find(self.id))
-            .set(game_control_history.eq(game_control_history.concat(game_control_string)))
+            .set((
+                game_control_history.eq(game_control_history.concat(game_control_string)),
+                updated_at.eq(Utc::now()),
+            ))
             .get_result(conn)
             .await?)
     }
@@ -215,7 +264,7 @@ impl Game {
             }
         }
         let mut new_history = moves.join(";");
-        if new_history.len() != 0 {
+        if !new_history.is_empty() {
             new_history.push(';');
         };
         // TODO: now we have error problems here... get rid of the expects
@@ -228,13 +277,19 @@ impl Game {
             error: e.to_string(),
         })?;
         let new_game_status = state.game_status.to_string();
-
+        let next_player = if self.current_player_id == self.black_id {
+            self.white_id
+        } else {
+            self.black_id
+        };
         Ok(diesel::update(games::table.find(self.id))
             .set((
+                current_player_id.eq(next_player),
                 history.eq(new_history),
                 turn.eq(turn - 1),
                 game_status.eq(new_game_status),
                 game_control_history.eq(game_control_history.concat(game_control_string)),
+                updated_at.eq(Utc::now()),
             ))
             .get_result(conn)
             .await?)
@@ -247,7 +302,7 @@ impl Game {
         let winner_color = game_control.color().opposite_color();
         let new_game_status = GameStatus::Finished(GameResult::Winner(winner_color));
 
-        Ok(connection
+        connection
             .transaction::<_, DbError, _>(|conn| {
                 async move {
                     let ((w_rating, b_rating), changes) = match new_game_status.clone() {
@@ -272,6 +327,7 @@ impl Game {
 
                     let game = diesel::update(games::table.find(self.id))
                         .set((
+                            finished.eq(true),
                             game_status.eq(new_game_status.to_string()),
                             game_control_history
                                 .eq(game_control_history.concat(game_control_string)),
@@ -279,6 +335,7 @@ impl Game {
                             black_rating.eq(b_rating),
                             white_rating_change.eq(w_change),
                             black_rating_change.eq(b_change),
+                            updated_at.eq(Utc::now()),
                         ))
                         .get_result(conn)
                         .await?;
@@ -286,7 +343,7 @@ impl Game {
                 }
                 .scope_boxed()
             })
-            .await?)
+            .await
     }
 
     pub async fn accept_draw(
@@ -296,7 +353,7 @@ impl Game {
     ) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
         let game_control_string = format!("{}. {game_control};", self.turn);
-        Ok(connection
+        connection
             .transaction::<_, DbError, _>(|conn| {
                 async move {
                     let ((w_rating, b_rating), changes) = Rating::update(
@@ -314,6 +371,7 @@ impl Game {
                     };
                     let game = diesel::update(games::table.find(self.id))
                         .set((
+                            finished.eq(true),
                             game_control_history
                                 .eq(game_control_history.concat(game_control_string)),
                             game_status.eq(GameStatus::Finished(GameResult::Draw).to_string()),
@@ -321,6 +379,7 @@ impl Game {
                             black_rating.eq(b_rating),
                             white_rating_change.eq(w_change),
                             black_rating_change.eq(b_change),
+                            updated_at.eq(Utc::now()),
                         ))
                         .get_result(conn)
                         .await?;
@@ -328,13 +387,16 @@ impl Game {
                 }
                 .scope_boxed()
             })
-            .await?)
+            .await
     }
 
     pub async fn set_status(&self, status: GameStatus, pool: &DbPool) -> Result<Game, DbError> {
         let conn = &mut get_conn(pool).await?;
         Ok(diesel::update(games::table.find(self.id))
-            .set(game_status.eq(status.to_string()))
+            .set((
+                game_status.eq(status.to_string()),
+                updated_at.eq(Utc::now()),
+            ))
             .get_result(conn)
             .await?)
     }

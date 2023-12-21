@@ -1,14 +1,19 @@
-use crate::common::game_action::GameAction;
-use crate::common::server_result::{ServerOk::GameUpdate, ServerResult};
-use crate::functions::hostname::hostname_and_port;
-use crate::providers::auth_context::AuthContext;
-use crate::providers::game_state::GameStateSignal;
-use hive_lib::game_control::GameControl;
-use hive_lib::game_result::GameResult;
-use hive_lib::game_status::GameStatus;
-use hive_lib::history::History;
-use hive_lib::state::State;
-use hive_lib::turn::Turn;
+use crate::{
+    common::{
+        game_action::GameAction,
+        server_result::{
+            GameActionResponse,
+            ServerMessage::{self},
+            ServerResult,
+        },
+    },
+    functions::hostname::hostname_and_port,
+    providers::{auth_context::AuthContext, game_state::GameStateSignal},
+};
+use hive_lib::{
+    game_control::GameControl, game_result::GameResult, game_status::GameStatus, history::History,
+    state::State, turn::Turn,
+};
 use leptos::logging::log;
 use leptos::*;
 use leptos_use::core::ConnectionReadyState;
@@ -63,7 +68,10 @@ impl WebsocketContext {
 fn on_message_callback(m: String) {
     // TODO: @leex this needs to be broken up this is getting out of hand
     match serde_json::from_str::<ServerResult>(&m) {
-        Ok(ServerResult::Ok(GameUpdate(gar))) => {
+        Ok(ServerResult::Ok(ServerMessage::UserStatus(update))) => {
+            log!("{update:?}");
+        }
+        Ok(ServerResult::Ok(ServerMessage::GameUpdate(gar))) => {
             log!("Got a game action response message: {:?}", gar);
             let mut game_state = expect_context::<GameStateSignal>();
             let auth_context = expect_context::<AuthContext>();
@@ -73,7 +81,7 @@ fn on_message_callback(m: String) {
             };
 
             match gar.game_action {
-                GameAction::Move(turn) => {
+                GameAction::Move(ref turn) => {
                     log!("Playing turn: {turn}");
                     game_state.clear_gc();
                     if Some(gar.user_id) == user_uuid() {
@@ -82,27 +90,29 @@ fn on_message_callback(m: String) {
                     }
                     match turn {
                         Turn::Spawn(piece, position) | Turn::Move(piece, position) => {
-                            game_state.play_turn(piece, position)
+                            game_state.play_turn(*piece, *position)
                         }
                         _ => unreachable!(),
                     };
                 }
-                GameAction::Control(game_control) => {
-                    log!("Setting game_control {}", game_control);
+                GameAction::Control(ref game_control) => {
+                    log!("Frontend got game_control {}", game_control);
                     game_state.set_pending_gc(game_control.clone());
                     match game_control {
-                        GameControl::Abort(_) => {} // we need to work out some kind of redirect
+                        GameControl::Abort(_) => {
+                            // TODO: Once we have notifications tell the user the game was aborted
+                            let navigate = leptos_router::use_navigate();
+                            navigate("/", Default::default());
+                        }
                         GameControl::DrawAccept(_) => {
                             game_state.set_game_status(GameStatus::Finished(GameResult::Draw))
                         }
                         GameControl::Resign(color) => game_state.set_game_status(
                             GameStatus::Finished(GameResult::Winner(color.opposite_color())),
                         ),
+                        GameControl::TakebackAccept(_) => reset_game_state(&gar),
                         _ => {}
                     }
-                }
-                GameAction::Chat(_msg) => {
-                    log!("We might do chat at one point");
                 }
                 GameAction::Join => {
                     if Some(gar.user_id) != user_uuid() {
@@ -110,20 +120,16 @@ fn on_message_callback(m: String) {
                         return;
                     }
                     log!("joined the game, reconstructing game state");
-                    let mut history = History::new();
-                    history.moves = gar.game.history.clone();
-                    history.game_type = gar.game.game_type;
-                    if let GameStatus::Finished(ref result) = gar.game.game_status {
-                        history.result = result.to_owned();
-                    }
-                    // TODO: check if there an anunsered gc and set it
-                    if let Ok(mut state) = State::new_from_history(&history) {
-                        state.tournament = gar.game.tournament_queen_rule;
-                        game_state.set_state(
-                            state,
-                            gar.game.black_player.uid,
-                            gar.game.white_player.uid,
-                        );
+                    reset_game_state(&gar);
+                    // TODO: @leex try this again once the play page works correctly.
+                    if let Some((_turn, gc)) = gar.game.game_control_history.last() {
+                        log!("Got a GC: {}", gc);
+                        match gc {
+                            GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
+                                game_state.set_pending_gc(gc.clone())
+                            }
+                            _ => {}
+                        }
                     }
                     // TODO: @leex
                     // Check here whether it's one of your own GCs and only show it when it's not
@@ -137,25 +143,29 @@ fn on_message_callback(m: String) {
                     game_state.signal.get_untracked().state.history.moves
                 );
                 log!("server_message history is: {:?}", gar.game.history);
-                let mut history = History::new();
-                history.moves = gar.game.history;
-                history.game_type = gar.game.game_type;
-                if let GameStatus::Finished(result) = gar.game.game_status {
-                    history.result = result;
-                }
-                if let Ok(state) = State::new_from_history(&history) {
-                    game_state.set_state(
-                        state,
-                        gar.game.black_player.uid,
-                        gar.game.white_player.uid,
-                    );
-                }
+                reset_game_state(&gar);
             }
         }
         Ok(ServerResult::Err(e)) => log!("Got error from server: {e}"),
         Err(e) => log!("Can't parse: {m}, error is: {e}"),
-        _ => unimplemented!(), // GameRequiresAction, UserStatusChange, ...
+        foo => {
+            log!("Got {foo:?} which is currently still unimplemented");
+        } // GameRequiresAction, UserStatusChange, ...
     }
+}
+
+fn reset_game_state(gar: &GameActionResponse) {
+    let mut game_state = expect_context::<GameStateSignal>();
+    let mut history = History::new();
+    history.moves = gar.game.history.to_owned();
+    history.game_type = gar.game.game_type.to_owned();
+    if let GameStatus::Finished(result) = &gar.game.game_status {
+        history.result = result.to_owned();
+    }
+    if let Ok(state) = State::new_from_history(&history) {
+        game_state.set_state(state, gar.game.black_player.uid, gar.game.white_player.uid);
+    }
+    // TODO: check if there an anunsered gc and set it
 }
 
 fn fix_wss(url: &str) -> String {

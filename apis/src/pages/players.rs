@@ -24,7 +24,7 @@ pub fn PlayersView() -> impl IntoView {
                                             let:user
                                         >
                                             <li class=list_class>
-                                                <ProfileLink username=user.username />
+                                                <ProfileLink username=user.username/>
                                                 <p class="ml-2">{user.rating}</p>
                                             </li>
                                         </For>

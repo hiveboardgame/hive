@@ -8,6 +8,7 @@ use crate::{
     {get_conn, DbPool},
 };
 use bb8::PooledConnection;
+use chrono::{DateTime, Utc};
 use diesel::{
     prelude::*, AsChangeset, Associations, Identifiable, Insertable, QueryDsl, Queryable,
     Selectable,
@@ -34,6 +35,8 @@ pub struct NewRating {
     pub rating: f64,
     pub deviation: f64,
     pub volatility: f64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl NewRating {
@@ -47,6 +50,8 @@ impl NewRating {
             rating: 1500.0,
             deviation: 350.0,
             volatility: 0.06,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         }
     }
 }
@@ -76,6 +81,8 @@ pub struct Rating {
     pub rating: f64,
     pub deviation: f64,
     pub volatility: f64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl Rating {
@@ -167,6 +174,7 @@ impl Rating {
                 Rating::calculate_glicko2(white_rating, black_rating, GameResult::Draw);
             diesel::update(ratings::table.find(black_rating.id))
                 .set((
+                    updated_at.eq(Utc::now()),
                     played.eq(played + 1),
                     draw.eq(draw + 1),
                     rating.eq(black_glicko.rating),
@@ -178,6 +186,7 @@ impl Rating {
 
             diesel::update(ratings::table.find(white_rating.id))
                 .set((
+                    updated_at.eq(Utc::now()),
                     played.eq(played + 1),
                     draw.eq(draw + 1),
                     rating.eq(white_glicko.rating),
@@ -189,12 +198,20 @@ impl Rating {
             Ok(Some((white_rating_change, black_rating_change)))
         } else {
             diesel::update(ratings::table.find(black_rating.id))
-                .set((played.eq(played + 1), draw.eq(draw + 1)))
+                .set((
+                    updated_at.eq(Utc::now()),
+                    played.eq(played + 1),
+                    draw.eq(draw + 1),
+                ))
                 .execute(conn)
                 .await?;
 
             diesel::update(ratings::table.find(white_rating.id))
-                .set((played.eq(played + 1), draw.eq(draw + 1)))
+                .set((
+                    updated_at.eq(Utc::now()),
+                    played.eq(played + 1),
+                    draw.eq(draw + 1),
+                ))
                 .execute(conn)
                 .await?;
             Ok(None)
@@ -222,6 +239,7 @@ impl Rating {
 
             diesel::update(ratings::table.find(white_rating.id))
                 .set((
+                    updated_at.eq(Utc::now()),
                     played.eq(played + 1),
                     won.eq(won + white_won),
                     lost.eq(lost + white_lost),
@@ -234,6 +252,7 @@ impl Rating {
 
             diesel::update(ratings::table.find(black_rating.id))
                 .set((
+                    updated_at.eq(Utc::now()),
                     played.eq(played + 1),
                     won.eq(won + white_lost),
                     lost.eq(lost + white_won),

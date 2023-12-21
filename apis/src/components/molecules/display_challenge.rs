@@ -73,7 +73,9 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
     view! {
         <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center">
             <td class=td_class>{icon}</td>
-            <td class=td_class><ProfileLink username=challenge().challenger.username/></td>
+            <td class=td_class>
+                <ProfileLink username=challenge().challenger.username/>
+            </td>
             <td class=td_class>{challenge().challenger.rating}</td>
             <td class=td_class>
                 {if challenge().game_type == "Base" { "🚫" } else { "🦟🐞💊" }}

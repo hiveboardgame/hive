@@ -17,7 +17,7 @@ pub async fn start_connection(
 ) -> Result<HttpResponse, Error> {
     let ws = match user {
         Some(user) => {
-            // TODO: handle the unwraps
+            // TODO: handle the expects
             let uuid = Uuid::parse_str(&user.id().expect("User has id")).expect("Valid uuid");
             let username = User::find_by_uuid(&uuid, &pool)
                 .await

@@ -154,8 +154,8 @@ pub fn Board(
             let current_distance = get_touch_distance(current_point_0.clone(), current_point_1);
             let scale = current_distance / initial_touch_distance();
             viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                viewbox_controls.width = viewbox_controls.width / scale;
-                viewbox_controls.height = viewbox_controls.height / scale;
+                viewbox_controls.width /= scale;
+                viewbox_controls.height /= scale;
                 viewbox_controls.x =
                     current_point_0.x() - (current_point_0.x() - viewbox_controls.x) / scale;
                 viewbox_controls.y =
