@@ -2,7 +2,7 @@ use crate::{
     common::time_control::TimeControl,
     components::organisms::{board::Board, side_board::SideboardTabs, timer::DisplayTimer},
     functions::games::get::get_game_from_nanoid,
-    providers::game_state::GameStateSignal,
+    providers::{game_state::GameStateSignal, games_controller::{self, GamesController}},
 };
 use hive_lib::{color::Color, position::Position};
 use leptos::*;
@@ -36,6 +36,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     };
 
     let game = create_blocking_resource(nanoid, move |_| get_game_from_nanoid(nanoid()));
+    // let mut games_controller = expect_context::<GamesController>();
 
     view! {
         <Transition>
@@ -50,8 +51,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             let white_player = store_value(game().white_player);
                             let black_player = store_value(game().black_player);
                             let state = game().create_state();
-                            game_state.set_state(state, black_player().uid, white_player().uid);
-                            game_state.join();
+                            game_state.set_state(state, black_player(), white_player());
                             view! {
                                 <div class=format!(
                                     "grid grid-cols-10 grid-rows-6 h-full w-full max-h-[93vh] min-h-[93vh] {extend_tw_classes}",
@@ -60,13 +60,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                     <Board/>
                                     <DisplayTimer
                                         side=Color::White
-                                        player=white_player
                                         time_control=time_control()
                                     />
                                     <SideboardTabs/>
                                     <DisplayTimer
                                         side=Color::Black
-                                        player=black_player
                                         time_control=time_control()
                                     />
                                 </div>

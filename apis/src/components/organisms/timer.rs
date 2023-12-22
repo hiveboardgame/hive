@@ -7,7 +7,6 @@ use crate::{
             rating_and_change::RatingAndChangeDynamic,
         },
     },
-    functions::users::user_response::UserResponse,
     providers::game_state::GameStateSignal,
 };
 use hive_lib::{color::Color, game_status::GameStatus};
@@ -15,11 +14,7 @@ use leptos::*;
 use leptos_icons::{BiIcon::BiInfiniteRegular, Icon};
 
 #[component]
-pub fn DisplayTimer(
-    side: Color,
-    player: StoredValue<UserResponse>,
-    time_control: TimeControl,
-) -> impl IntoView {
+pub fn DisplayTimer(side: Color, time_control: TimeControl) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let (css_grid_row, bg_color, text_color) = match side {
         Color::White => (
@@ -28,6 +23,27 @@ pub fn DisplayTimer(
             "text-[#3a3a3a]",
         ),
         Color::Black => ("row-start-1", "bg-[#3a3a3a]", "text-[#f0ead6]"),
+    };
+
+    let user_response = move || match side {
+        Color::Black => game_state.signal.get_untracked().black,
+        Color::White => game_state.signal.get_untracked().white,
+    };
+
+    let username = move || {
+        if let Some(user) = user_response() {
+            user.username
+        } else {
+            String::from("None")
+        }
+    };
+
+    let rating = move || {
+        if let Some(user) = user_response() {
+            user.rating
+        } else {
+            0_u64
+        }
     };
 
     let is_finished = create_memo(move |_| {
@@ -99,11 +115,11 @@ pub fn DisplayTimer(
                     "min-h-fit min-w-fit flex justify-center leading-5 row-span-2 md:row-span-1 short:row-span-2 items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none {css_grid_row} {bg_color}",
                 )
             }>
-                <ProfileLink username=player().username extend_tw_classes=text_color/>
+                <ProfileLink username=username() extend_tw_classes=text_color/>
                 <Show
                     when=is_finished
                     fallback=move || {
-                        view! { <p class=format!("{text_color}")>{player().rating}</p> }
+                        view! { <p class=format!("{text_color}")>{rating()}</p> }
                     }
                 >
 

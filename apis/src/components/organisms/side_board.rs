@@ -27,8 +27,7 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
 
     let show_buttons = move || {
         user().map_or(false, |user| {
-            let game_state = game_state_signal.signal.get();
-            Some(user.id) == game_state.black_id || Some(user.id) == game_state.white_id
+            game_state_signal.user_color(user.id).is_some()
         })
     };
 

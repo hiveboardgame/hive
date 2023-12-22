@@ -193,7 +193,7 @@ fn reset_game_state(gar: &GameActionResponse) {
         history.result = result.to_owned();
     }
     if let Ok(state) = State::new_from_history(&history) {
-        game_state.set_state(state, gar.game.black_player.uid, gar.game.white_player.uid);
+        game_state.set_state(state, gar.game.black_player.to_owned(), gar.game.white_player.to_owned());
     }
     // TODO: check if there an anunsered gc and set it
 }

@@ -1,6 +1,7 @@
 use crate::common::{piece_type::PieceType, svg_pos::SvgPos};
 use crate::providers::auth_context::AuthContext;
 use crate::providers::game_state::GameStateSignal;
+use hive_lib::color::Color;
 use hive_lib::{bug::Bug, game_status::GameStatus, piece::Piece, position::Position};
 use leptos::logging::log;
 use leptos::*;
@@ -44,20 +45,15 @@ pub fn Piece(
 
     let onclick = move |_| {
         let turn = game_state_signal.signal.get_untracked().state.turn;
-        let black_id = game_state_signal.signal.get_untracked().black_id;
-        let white_id = game_state_signal.signal.get_untracked().white_id;
+
         if let Some(user) = user() {
-            if turn % 2 == 0 {
-                if let Some(white) = white_id {
-                    if white != user.id {
-                        return;
-                    }
-                }
-            } else if let Some(black) = black_id {
-                if black != user.id {
-                    return;
-                }
-            }
+            let user_color = game_state_signal.user_color(user.id);
+            match user_color {
+                Some(Color::White) if turn % 2 == 1 => return,
+                Some(Color::Black) if turn % 2 == 0 => return,
+                None => return,
+                _ => {}
+            };
             match (game_state_signal.signal)().state.game_status {
                 GameStatus::Finished(_) => { /* Don't attach any on:click for finished games */ }
                 _ => {

@@ -1,3 +1,4 @@
+use crate::functions::users::user_response::{UserResponse, self};
 use crate::providers::api_requests::ApiRequests;
 use hive_lib::color::Color;
 use hive_lib::game_control::GameControl;
@@ -54,17 +55,12 @@ impl GameStateSignal {
             .send_game_control(game_control, user)
     }
 
-    pub fn join(&self) {
-        log!("Joined game");
-        self.signal.get_untracked().join()
-    }
-
-    pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
+    pub fn set_state(&mut self, state: State, black: UserResponse, white: UserResponse) {
         self.reset();
         self.signal.update(|s| {
             s.state = state;
-            s.black_id = Some(black_id);
-            s.white_id = Some(white_id);
+            s.black = Some(black);
+            s.white = Some(white);
         })
     }
 
@@ -145,8 +141,8 @@ pub struct GameState {
     pub game_id: Option<StoredValue<String>>,
     // the gamestate
     pub state: State,
-    pub black_id: Option<Uuid>,
-    pub white_id: Option<Uuid>,
+    pub black: Option<UserResponse>,
+    pub white: Option<UserResponse>,
     // possible destinations of selected piece
     pub target_positions: Vec<Position>,
     // the piece (either from reserve or board) that has been clicked last
@@ -173,14 +169,13 @@ impl Default for GameState {
 }
 
 impl GameState {
-    // TODO get the state from URL/game_id via a call
     pub fn new() -> Self {
         let state = State::new(GameType::MLP, false);
         Self {
             game_id: None,
             state,
-            black_id: None,
-            white_id: None,
+            black: None,
+            white: None,
             target_positions: vec![],
             active: None,
             target_position: None,
@@ -194,11 +189,15 @@ impl GameState {
     }
 
     pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
-        if Some(user_id) == self.black_id {
-            return Some(Color::Black);
+        if let Some(user) = &self.black {
+            if user.uid == user_id {
+                return Some(Color::Black);
+            };
         }
-        if Some(user_id) == self.white_id {
-            return Some(Color::White);
+        if let Some(user) = &self.white {
+            if user.uid == user_id {
+                return Some(Color::White);
+            };
         }
         None
     }
@@ -230,11 +229,6 @@ impl GameState {
                 ApiRequests::new().game_control(game_id, game_control)
             }
         }
-    }
-
-    pub fn join(&mut self) {
-        let game_id = self.game_id.expect("Game_id in gamestate")();
-        ApiRequests::new().join(game_id)
     }
 
     pub fn move_active(&mut self) {
