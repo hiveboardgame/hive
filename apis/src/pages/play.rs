@@ -5,8 +5,10 @@ use crate::{
     providers::game_state::GameStateSignal,
 };
 use hive_lib::{color::Color, position::Position};
+use leptos::logging::log;
 use leptos::*;
 use leptos_router::*;
+use wasm_bindgen::JsCast;
 
 #[derive(Params, PartialEq, Eq)]
 struct PlayParams {
@@ -19,6 +21,12 @@ pub struct TargetStack(pub RwSignal<Option<Position>>);
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
+    create_effect(move |_| {
+        let doc = web_sys::window().unwrap().document().unwrap();
+        let html = doc.dyn_into::<web_sys::HtmlDocument>().unwrap();
+        let cookie = html.cookie();
+        log!("Cookies are: {:?}", cookie);
+    });
     let params = use_params::<PlayParams>();
     // TODO: move the time_control to the gamestate
     // let time_control = store_value(TimeControl::RealTime(

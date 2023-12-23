@@ -1,3 +1,4 @@
+use wasm_bindgen::JsCast;
 use crate::{
     common::{
         game_action::GameAction,
@@ -79,6 +80,10 @@ impl WebsocketContext {
 }
 
 fn on_message_callback(m: String) {
+    let doc = web_sys::window().unwrap().document().unwrap();
+    let html = doc.dyn_into::<web_sys::HtmlDocument>().unwrap();
+    let cookie = html.cookie();
+    log!("Cookies are: {:?}", cookie);
     // TODO: @leex this needs to be broken up this is getting out of hand
     match serde_json::from_str::<ServerResult>(&m) {
         Ok(ServerResult::Ok(ServerMessage::UserStatus(update))) => {

@@ -23,10 +23,9 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub struct WsConnection {
+    authed: bool,
     user_uid: Uuid,
     username: String,
-    #[allow(dead_code)]
-    authed: bool,
     lobby_addr: Addr<Lobby>,
     hb: Instant, // websocket heartbeat
     pool: DbPool,
