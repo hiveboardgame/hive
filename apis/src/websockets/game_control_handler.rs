@@ -153,7 +153,7 @@ impl GameControlHandler {
         self.ensure_previous_gc_present()?;
         let game = self
             .game
-            .write_game_control(&self.control, &self.pool)
+            .accept_draw(&self.control, &self.pool)
             .await?;
         Ok(game)
     }
