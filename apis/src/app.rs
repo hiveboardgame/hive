@@ -30,8 +30,6 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
 
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
-        // sets the document title
-        <Title text="Welcome to Hive"/>
 
         // content for this welcome page
         <Router>

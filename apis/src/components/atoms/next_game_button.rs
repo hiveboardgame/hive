@@ -1,6 +1,7 @@
 use crate::providers::game_state::GameStateSignal;
 use lazy_static::lazy_static;
 use leptos::*;
+use leptos_meta::Title;
 use leptos_router::RouterContext;
 use regex::Regex;
 lazy_static! {
@@ -28,6 +29,11 @@ pub fn NextGameButton() -> impl IntoView {
         _ => "bg-red-700 text-white rounded-md px-2 py-1 m-2",
     };
 
+    let title_text = move || match next_games().len() {
+        0 => String::from("HiveGame.com"),
+        i => format!("({}) HiveGame.com", i),
+    };
+
     let text = move || match next_games().len() {
         0 => String::new(),
         1 => String::from("Next"),
@@ -46,6 +52,8 @@ pub fn NextGameButton() -> impl IntoView {
     };
 
     view! {
+        <Title text=title_text/>
+
         <div class="relative">
             <button on:click=onclick class=color>
                 {text}
