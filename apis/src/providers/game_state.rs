@@ -61,7 +61,13 @@ impl GameStateSignal {
 
     pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
         self.reset();
+        let turn = if state.turn != 0 {
+            Some(state.turn - 1)
+        } else {
+            None
+        };
         self.signal.update(|s| {
+            s.history_turn = turn;
             s.state = state;
             s.black_id = Some(black_id);
             s.white_id = Some(white_id);

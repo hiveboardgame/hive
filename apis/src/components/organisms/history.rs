@@ -1,12 +1,10 @@
-use crate::providers::game_state::GameStateSignal;
-use hive_lib::game_status::GameStatus;
-use leptos::*;
-use leptos_icons::{
-    AiIcon::{
-        AiFastBackwardFilled, AiFastForwardFilled, AiStepBackwardFilled, AiStepForwardFilled,
-    },
-    Icon,
+use crate::components::{
+    atoms::history_button::{HistoryButton, HistoryNavigation},
+    organisms::reserve::{Alignment, Reserve},
 };
+use crate::providers::game_state::GameStateSignal;
+use hive_lib::{color::Color, game_status::GameStatus};
+use leptos::*;
 use leptos_use::use_window;
 
 #[component]
@@ -49,11 +47,8 @@ pub fn HistoryMove(
 }
 
 #[component]
-pub fn History(
-    #[prop(optional)] extend_tw_classes: &'static str,
-    parent_div: NodeRef<html::Div>,
-) -> impl IntoView {
-    let mut game_state_signal = expect_context::<GameStateSignal>();
+pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    let game_state_signal = expect_context::<GameStateSignal>();
     let history_moves = move || {
         let mut his = Vec::new();
         for (i, (piece, pos)) in (game_state_signal.signal)()
@@ -72,6 +67,7 @@ pub fn History(
         his
     };
 
+    let parent = create_node_ref::<html::Div>();
     let is_finished = move || {
         matches!(
             (game_state_signal.signal)().state.game_status,
@@ -98,73 +94,66 @@ pub fn History(
             None
         }
     });
-    let focus = move || {
+
+    let focus = Callback::new(move |()| {
         if let Some(elem) = active.get_untracked() {
             elem.scroll_into_view_with_bool(false);
         }
-    };
+    });
 
-    let next = move |_| {
-        game_state_signal.next_history_turn();
-        focus();
-    };
-
-    let previous = move |_| {
-        game_state_signal.previous_history_turn();
-        focus();
-    };
-
-    let first = move |_| {
-        let parent_div = parent_div.get_untracked().expect("div to have loaded");
-        game_state_signal.first_history_turn();
-        parent_div.set_scroll_top(0);
-    };
-
-    let last = move |_| {
-        let parent_div = parent_div.get_untracked().expect("div to have loaded");
-        game_state_signal.view_history();
-        parent_div.set_scroll_top(parent_div.scroll_height());
-    };
-
-    let button_styles =
-        "flex justify-center box-content inline-block text-center cursor-pointer hover:bg-green-300 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
-    let white_black_styles = "ml-3 mt-6 mb-3 col-span-2";
+    let nav_buttons_style =
+        "flex justify-center h-fit hover:bg-green-300 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
+    let white_black_styles = "col-span-2";
     view! {
-        <div class=format!("grid grid-cols-4 gap-1 {extend_tw_classes}")>
-            <div class="col-span-4 grid grid-cols-4 gap-1 sticky top-0 dark:bg-dark bg-light">
-                <button class=button_styles on:click=first>
-                    <Icon icon=Icon::from(AiFastBackwardFilled)/>
-                </button>
-
-                <button class=button_styles on:click=previous>
-                    <Icon icon=Icon::from(AiStepBackwardFilled)/>
-                </button>
-
-                <button class=button_styles on:click=next>
-                    <Icon icon=Icon::from(AiStepForwardFilled)/>
-                </button>
-
-                <button class=button_styles on:click=last>
-                    <Icon icon=Icon::from(AiFastForwardFilled)/>
-                </button>
-
-                <div class=white_black_styles>White</div>
-
-                <div class=white_black_styles>Black</div>
-            </div>
-            <For each=history_moves key=|history_move| (history_move.0) let:history_move>
-
-                <HistoryMove
-                    turn=history_move.0
-                    piece=history_move.1
-                    position=history_move.2
-                    parent_div=parent_div
+        <div class=format!("h-[90%] grid grid-cols-4 gap-1 pb-4 {extend_tw_classes}")>
+            <div class="col-span-4 grid grid-cols-4 gap-1 dark:bg-dark bg-light min-h-0">
+                <HistoryButton
+                    nav_buttons_style=nav_buttons_style
+                    action=HistoryNavigation::First
+                    post_action=focus
                 />
-            </For>
 
-            <Show when=is_finished>
-                <div class="col-span-4 text-center">{game_result}</div>
-            </Show>
+                <HistoryButton
+                    nav_buttons_style=nav_buttons_style
+                    action=HistoryNavigation::Previous
+                    post_action=focus
+                />
+                <HistoryButton
+                    nav_buttons_style=nav_buttons_style
+                    action=HistoryNavigation::Next
+                    post_action=focus
+                />
+
+                <HistoryButton
+                    nav_buttons_style=nav_buttons_style
+                    action=HistoryNavigation::Last
+                    post_action=focus
+                />
+                <div class=white_black_styles>
+                    <Reserve alignment=Alignment::DoubleRow color=Color::White/>
+                </div>
+                <div class=white_black_styles>
+                    <Reserve alignment=Alignment::DoubleRow color=Color::Black/>
+                </div>
+            </div>
+            <div
+                ref=parent
+                class="col-span-4 grid grid-cols-4 gap-1 overflow-auto max-h-[inherit] mt-8"
+            >
+                <For each=history_moves key=|history_move| (history_move.0) let:history_move>
+
+                    <HistoryMove
+                        turn=history_move.0
+                        piece=history_move.1
+                        position=history_move.2
+                        parent_div=parent
+                    />
+                </For>
+
+                <Show when=is_finished>
+                    <div class="col-span-4 text-center">{game_result}</div>
+                </Show>
+            </div>
         </div>
     }
 }

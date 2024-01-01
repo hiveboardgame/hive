@@ -49,7 +49,7 @@ pub fn ChallengeView() -> impl IntoView {
     };
 
     view! {
-        <div>
+        <div class="pt-20 mx-auto flex flex-col items-center">
             <Transition>
                 {move || {
                     challenge()
@@ -81,6 +81,7 @@ pub fn ChallengeView() -> impl IntoView {
                                                 readonly
                                             />
                                             <button
+                                                title="Copy link"
                                                 ref=button_ref
                                                 on:click=copy
                                                 class="bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"

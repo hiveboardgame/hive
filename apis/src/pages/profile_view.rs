@@ -25,7 +25,7 @@ pub fn ProfileView() -> impl IntoView {
     let user = Resource::new(username, move |_| get_user_by_username(username()));
 
     view! {
-        <div class="h-full w-full bg-light dark:bg-dark mt-6">
+        <div class="bg-light dark:bg-dark pt-16">
             <Transition>
                 {move || {
                     user()

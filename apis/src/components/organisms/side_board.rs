@@ -3,7 +3,7 @@ use crate::{
         molecules::control_buttons::ControlButtons,
         organisms::{
             history::History,
-            reserve::{Orientation, Reserve},
+            reserve::{Alignment, Reserve},
         },
     },
     providers::{
@@ -16,7 +16,10 @@ use hive_lib::color::Color;
 use leptos::*;
 
 #[component]
-pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn SideboardTabs(
+    player_is_black: Memo<bool>,
+    #[prop(optional)] extend_tw_classes: &'static str,
+) -> impl IntoView {
     let mut game_state_signal = expect_context::<GameStateSignal>();
 
     let auth_context = expect_context::<AuthContext>();
@@ -32,7 +35,6 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
         })
     };
 
-    let div_ref = create_node_ref::<html::Div>();
     let button_color = move || {
         if let View::History = (game_state_signal.signal)().view {
             ("bg-inherit", "bg-slate-400")
@@ -40,10 +42,18 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
             ("bg-slate-400", "bg-inherit")
         }
     };
+    let top_color = Signal::derive(move || {
+        if player_is_black() {
+            Color::White
+        } else {
+            Color::Black
+        }
+    });
+    let bottom_color = Signal::derive(move || top_color().opposite_color());
 
     view! {
         <div class=format!(
-            "select-none w-full h-full col-start-9 col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 {extend_tw_classes}",
+            "select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 {extend_tw_classes}",
         )>
 
             <div class="z-10 border-b-2 border-black dark:border-white grid grid-cols-2 sticky top-0 bg-inherit">
@@ -62,9 +72,7 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                     class=move || { format!("hover:bg-blue-300 {}", button_color().1) }
 
                     on:click=move |_| {
-                        let parent_div = div_ref.get_untracked().expect("div to have loaded");
                         game_state_signal.view_history();
-                        parent_div.set_scroll_top(parent_div.scroll_height());
                     }
                 >
 
@@ -72,33 +80,23 @@ pub fn SideboardTabs(#[prop(optional)] extend_tw_classes: &'static str) -> impl 
                 </button>
 
             </div>
-            <div ref=div_ref class="overflow-auto h-full w-full">
+            <div class="h-full">
                 <Show
                     when=move || View::History == (game_state_signal.signal)().view
                     fallback=move || {
                         view! {
-                            <div class="grid grid-rows-3 h-[90%]">
-                                <div class="h-full w-full row-start-1">
-                                    <Reserve
-                                        color=Color::White
-                                        orientation=Orientation::Horizontal
-                                    />
-                                </div>
+                            <div class="grid h-[95%]">
+                                <Reserve color=top_color alignment=Alignment::DoubleRow/>
                                 <Show when=show_buttons>
                                     <ControlButtons/>
                                 </Show>
-                                <div class="h-full w-full row-start-3">
-                                    <Reserve
-                                        color=Color::Black
-                                        orientation=Orientation::Horizontal
-                                    />
-                                </div>
+                                <Reserve color=bottom_color alignment=Alignment::DoubleRow/>
                             </div>
                         }
                     }
                 >
 
-                    <History parent_div=div_ref/>
+                    <History/>
                 </Show>
             </div>
         </div>

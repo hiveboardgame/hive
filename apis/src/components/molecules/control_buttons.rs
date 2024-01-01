@@ -44,50 +44,78 @@ pub fn ControlButtons() -> impl IntoView {
     };
 
     view! {
-        <Show
-            when=is_finished
-            fallback=move || {
-                view! {
-                    <div class="flex justify-around items-center min-w-fit min-h-fit">
-                        <Show
-                            when=abort_allowed
-                            fallback=move || {
-                                view! {
-                                    <Show
-                                        when=pending_takeback
-                                        fallback=move || {
-                                            view! {
-                                                <ConfirmButton
-                                                    game_control=store_value(
-                                                        GameControl::TakebackRequest(color),
-                                                    )
+        <div class="flex justify-around items-center grow shrink w-full">
+            <Show
+                when=is_finished
+                fallback=move || {
+                    view! {
+                        <div class="flex justify-around items-center grow shrink">
+                            <Show
+                                when=abort_allowed
+                                fallback=move || {
+                                    view! {
+                                        <Show
+                                            when=pending_takeback
+                                            fallback=move || {
+                                                view! {
+                                                    <ConfirmButton
+                                                        game_control=store_value(
+                                                            GameControl::TakebackRequest(color),
+                                                        )
+
+                                                        user_id=user_id
+                                                    />
+                                                }
+                                            }
+                                        >
+
+                                            <div class="relative">
+                                                <AcceptDenyGc
+                                                    game_control=store_value(GameControl::TakebackAccept(color))
                                                     user_id=user_id
                                                 />
-                                            }
-                                        }
-                                    >
-
-                                        <div class="relative">
-                                            <AcceptDenyGc
-                                                game_control=store_value(GameControl::TakebackAccept(color))
-                                                user_id=user_id
-                                            />
-                                            <AcceptDenyGc
-                                                game_control=store_value(GameControl::TakebackReject(color))
-                                                user_id=user_id
-                                            />
-                                        </div>
-                                    </Show>
+                                                <AcceptDenyGc
+                                                    game_control=store_value(GameControl::TakebackReject(color))
+                                                    user_id=user_id
+                                                />
+                                            </div>
+                                        </Show>
+                                    }
                                 }
-                            }
-                        >
+                            >
+
+                                <Show
+                                    when=pending_takeback
+                                    fallback=move || {
+                                        view! {
+                                            <ConfirmButton
+                                                game_control=store_value(GameControl::Abort(color))
+                                                user_id=user_id
+                                            />
+                                        }
+                                    }
+                                >
+
+                                    <div class="relative">
+                                        <AcceptDenyGc
+                                            game_control=store_value(GameControl::TakebackAccept(color))
+                                            user_id=user_id
+                                        />
+                                        <AcceptDenyGc
+                                            game_control=store_value(GameControl::TakebackReject(color))
+                                            user_id=user_id
+                                        />
+                                    </div>
+                                </Show>
+
+                            </Show>
 
                             <Show
-                                when=pending_takeback
+                                when=pending_draw
                                 fallback=move || {
                                     view! {
                                         <ConfirmButton
-                                            game_control=store_value(GameControl::Abort(color))
+                                            game_control=store_value(GameControl::DrawOffer(color))
                                             user_id=user_id
                                         />
                                     }
@@ -96,51 +124,31 @@ pub fn ControlButtons() -> impl IntoView {
 
                                 <div class="relative">
                                     <AcceptDenyGc
-                                        game_control=store_value(GameControl::TakebackAccept(color))
+                                        game_control=store_value(GameControl::DrawAccept(color))
                                         user_id=user_id
                                     />
                                     <AcceptDenyGc
-                                        game_control=store_value(GameControl::TakebackReject(color))
+                                        game_control=store_value(GameControl::DrawReject(color))
                                         user_id=user_id
                                     />
                                 </div>
                             </Show>
-
-                        </Show>
-
-                        <Show
-                            when=pending_draw
-                            fallback=move || {
-                                view! {
-                                    <ConfirmButton
-                                        game_control=store_value(GameControl::DrawOffer(color))
-                                        user_id=user_id
-                                    />
-                                }
-                            }
-                        >
-
-                            <div class="relative">
-                                <AcceptDenyGc
-                                    game_control=store_value(GameControl::DrawAccept(color))
-                                    user_id=user_id
-                                />
-                                <AcceptDenyGc
-                                    game_control=store_value(GameControl::DrawReject(color))
-                                    user_id=user_id
-                                />
-                            </div>
-                        </Show>
-                        <ConfirmButton
-                            game_control=store_value(GameControl::Resign(color))
-                            user_id=user_id
-                        />
-                    </div>
+                            <ConfirmButton
+                                game_control=store_value(GameControl::Resign(color))
+                                user_id=user_id
+                            />
+                        </div>
+                    }
                 }
-            }
-        >
+            >
 
-            Rematch button/new game button
-        </Show>
+                <button class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Rematch
+                </button>
+                <button class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    New game
+                </button>
+            </Show>
+        </div>
     }
 }

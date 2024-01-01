@@ -22,7 +22,7 @@ pub fn Piece(
     let mut filter = String::from("drop-shadow-");
     filter.push_str(&color.to_string());
     if piece_type == PieceType::Inactive {
-        filter.push_str(" sepia");
+        filter.push_str(" sepia-[.75]");
     }
 
     let mut dot_color = String::from(" color: #");

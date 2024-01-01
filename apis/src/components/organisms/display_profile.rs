@@ -17,7 +17,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
     let tab_view = create_rw_signal(TabView::Playing);
     let button_styles = "z-10 w-fit flex justify-center box-content h-fit inline-block text-center hover:bg-green-300 rounded-md border-cyan-500 border-2 drop-shadow-lg";
     view! {
-        <div class="h-full w-full grid grid-cols-6">
+        <div class="grid grid-cols-6">
             <Transition>
                 {move || {
                     let games = move || match games() {

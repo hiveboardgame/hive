@@ -167,7 +167,7 @@ impl History {
         }
         match File::open(file_path) {
             Ok(file) => {
-                for line in io::BufReader::new(file).lines().flatten() {
+                for line in io::BufReader::new(file).lines().map_while(Result::ok) {
                     if line.is_empty() {
                         continue;
                     }

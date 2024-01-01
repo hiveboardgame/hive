@@ -3,7 +3,6 @@ use crate::{
     pages::{
         account::Account, challenge_view::ChallengeView, home::Home, login::Login, play::Play,
         players::PlayersView, profile_view::ProfileView, register::Register, user_get::UserGet,
-        ws::WsPage,
     },
     providers::{
         auth_context::provide_auth, challenges::provide_challenges,
@@ -56,7 +55,6 @@ pub fn App() -> impl IntoView {
                     <Route path="/players" view=|| view! { <PlayersView/> }/>
                     <Route path="/register" view=|| view! { <Register/> }/>
                     <Route path="/login" view=|| view! { <Login/> }/>
-                    <Route path="/hws" view=|| view! { <WsPage/> }/>
                     <Route path="/account" view=|| view! { <Account/> }/>
                     <Route path="/get_user" view=|| view! { <UserGet/> }/>
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
