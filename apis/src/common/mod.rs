@@ -1,3 +1,5 @@
+pub mod challenge_action;
+pub mod challenge_error;
 pub mod client_message;
 pub mod game_action;
 pub mod hex;

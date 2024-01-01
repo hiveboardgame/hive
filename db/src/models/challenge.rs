@@ -2,7 +2,10 @@ use crate::{
     db_error::DbError,
     get_conn,
     models::user::User,
-    schema::{challenges, challenges::nanoid as nanoid_field, users},
+    schema::{
+        challenges, challenges::nanoid as nanoid_field,
+        challenges::opponent_id as opponent_id_field, users,
+    },
     DbPool,
 };
 use chrono::prelude::*;
@@ -18,9 +21,10 @@ use uuid::Uuid;
 pub struct NewChallenge {
     pub nanoid: String,
     pub challenger_id: Uuid,
+    pub opponent_id: Option<Uuid>,
     pub game_type: String,
     pub rated: bool,
-    pub public: bool,
+    pub visibility: String,
     pub tournament_queen_rule: bool,
     pub color_choice: String,
     pub created_at: DateTime<Utc>,
@@ -29,19 +33,20 @@ pub struct NewChallenge {
 impl NewChallenge {
     pub fn new(
         challenger_id: Uuid,
+        opponent_id: Option<Uuid>,
         game_type: GameType,
         rated: bool,
-        public: bool,
-        tournament_queen_rule: bool,
+        visibility: String,
         color_choice: String,
     ) -> Self {
         Self {
             nanoid: nanoid!(10),
             challenger_id,
+            opponent_id,
             game_type: game_type.to_string(),
             rated,
-            public,
-            tournament_queen_rule,
+            visibility,
+            tournament_queen_rule: true,
             color_choice,
             created_at: Utc::now(),
         }
@@ -56,9 +61,10 @@ pub struct Challenge {
     pub id: Uuid,
     pub nanoid: String,
     pub challenger_id: Uuid,
+    pub opponent_id: Option<Uuid>,
     pub game_type: String,
     pub rated: bool,
-    pub public: bool,
+    pub visibility: String,
     pub tournament_queen_rule: bool,
     pub color_choice: String,
     // TODO: periodically cleanup expired challanges
@@ -77,12 +83,12 @@ impl Challenge {
     pub async fn get_public(pool: &DbPool) -> Result<Vec<Challenge>, DbError> {
         let conn = &mut get_conn(pool).await?;
         Ok(challenges::table
-            .filter(challenges::public.eq(true))
+            .filter(challenges::visibility.eq("Public"))
             .get_results(conn)
             .await?)
     }
 
-    pub async fn get_own(pool: &DbPool, user: Uuid) -> Result<Vec<Challenge>, DbError> {
+    pub async fn get_own(user: Uuid, pool: &DbPool) -> Result<Vec<Challenge>, DbError> {
         let conn = &mut get_conn(pool).await?;
         Ok(challenges::table
             .filter(challenges::challenger_id.eq(user))
@@ -91,13 +97,21 @@ impl Challenge {
     }
 
     pub async fn get_public_exclude_user(
-        pool: &DbPool,
         user: Uuid,
+        pool: &DbPool,
     ) -> Result<Vec<Challenge>, DbError> {
         let conn = &mut get_conn(pool).await?;
         Ok(challenges::table
-            .filter(challenges::public.eq(true))
+            .filter(challenges::visibility.eq("Public"))
             .filter(challenges::challenger_id.ne(user))
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn direct_challenges(id: &Uuid, pool: &DbPool) -> Result<Vec<Challenge>, DbError> {
+        let conn = &mut get_conn(pool).await?;
+        Ok(challenges::table
+            .filter(opponent_id_field.eq(id))
             .get_results(conn)
             .await?)
     }

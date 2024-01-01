@@ -1,17 +1,13 @@
-use std::cmp::Ordering;
-
+use crate::responses::game::GameResponse;
+use crate::{functions::games::get::get_game_from_nanoid, providers::game_state::GameStateSignal};
 use hive_lib::color::Color;
 use leptos::*;
-
-use crate::{
-    functions::games::{game_response::GameStateResponse, get::get_game_from_nanoid},
-    providers::game_state::GameStateSignal,
-};
+use std::cmp::Ordering;
 
 #[component]
 pub fn RatingAndChange(
     #[prop(optional)] extend_tw_classes: &'static str,
-    game: GameStateResponse,
+    game: GameResponse,
     side: Color,
 ) -> impl IntoView {
     let (rating_change, rating) = match side {

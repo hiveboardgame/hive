@@ -1,13 +1,14 @@
 use crate::{
     common::server_result::{
-        MessageDestination, ServerMessage, ServerResult, UserStatus, UserUpdate,
+        ChallengeUpdate, MessageDestination, ServerMessage, ServerResult, UserStatus, UserUpdate,
     },
+    responses::challenge::ChallengeResponse,
     websockets::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
 };
 use actix::prelude::{Actor, Context, Handler, Recipient};
 use actix::AsyncContext;
 use actix::WrapFuture;
-use db_lib::{models::user::User, DbPool};
+use db_lib::{models::challenge::Challenge, models::user::User, DbPool};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -117,24 +118,66 @@ impl Handler<Connect> for Lobby {
         let pool = self.pool.clone();
         let address = ctx.address().clone();
         let future = async move {
-            let user = User::find_by_uuid(&user_id, &pool)
-                .await
-                .expect("to find user by uuid");
-            let game_ids = user
-                .get_urgent_nanoids(&pool)
-                .await
-                .expect("to get urgend game_ids");
-            if !game_ids.is_empty() {
-                let message = ServerResult::Ok(ServerMessage::GameActionNotification(game_ids));
-                let serialized =
-                    serde_json::to_string(&message).expect("Failed to serialize a server message");
-                let cam = ClientActorMessage {
-                    destination: MessageDestination::Direct(user_id),
-                    serialized,
-                    from: user_id,
-                };
-                address.do_send(cam);
-            }
+            let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &pool).await {
+                // Send games which require input from the user
+                let game_ids = user
+                    .get_urgent_nanoids(&pool)
+                    .await
+                    .expect("to get urgent game_ids");
+                if !game_ids.is_empty() {
+                    let message = ServerResult::Ok(ServerMessage::GameActionNotification(game_ids));
+                    let serialized = serde_json::to_string(&message)
+                        .expect("Failed to serialize a server message");
+                    let cam = ClientActorMessage {
+                        destination: MessageDestination::Direct(user_id),
+                        serialized,
+                        from: user_id,
+                    };
+                    address.do_send(cam);
+                }
+                // Send challenges on join
+                let mut responses = Vec::new();
+                if let Ok(challenges) = Challenge::get_public_exclude_user(user.id, &pool).await {
+                    for challenge in challenges {
+                        if let Ok(response) = ChallengeResponse::from_model(&challenge, &pool).await
+                        {
+                            responses.push(response);
+                        }
+                    }
+                }
+                if let Ok(challenges) = Challenge::get_own(user.id, &pool).await {
+                    for challenge in challenges {
+                        if let Ok(response) = ChallengeResponse::from_model(&challenge, &pool).await
+                        {
+                            responses.push(response);
+                        }
+                    }
+                }
+                let message = ServerResult::Ok(ServerMessage::Challenge(
+                    ChallengeUpdate::Challenges(responses),
+                ));
+                serde_json::to_string(&message).expect("Failed to serialize a server message")
+            } else {
+                let mut responses = Vec::new();
+                if let Ok(challenges) = Challenge::get_public(&pool).await {
+                    for challenge in challenges {
+                        if let Ok(response) = ChallengeResponse::from_model(&challenge, &pool).await
+                        {
+                            responses.push(response);
+                        }
+                    }
+                }
+                let message = ServerResult::Ok(ServerMessage::Challenge(
+                    ChallengeUpdate::Challenges(responses),
+                ));
+                serde_json::to_string(&message).expect("Failed to serialize a server message")
+            };
+            let cam = ClientActorMessage {
+                destination: MessageDestination::Direct(user_id),
+                serialized,
+                from: user_id,
+            };
+            address.do_send(cam);
         };
 
         let actor_future = future.into_actor(self);

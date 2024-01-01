@@ -13,34 +13,33 @@ pub async fn start_connection(
     // group_id: Path<String>,
     srv: Data<Addr<Lobby>>,
     pool: Data<DbPool>,
-    user: Option<Identity>,
+    identity: Option<Identity>,
 ) -> Result<HttpResponse, Error> {
-    let ws = match user {
-        Some(user) => {
-            // TODO: handle the expects
-            let uuid = Uuid::parse_str(&user.id().expect("User has id")).expect("Valid uuid");
-            let username = User::find_by_uuid(&uuid, &pool)
-                .await
-                .expect("Username to exist")
-                .username;
-            println!("Welcome {}!", username);
-            WsConnection::new(
-                Some(uuid),
-                username,
-                srv.get_ref().clone(),
-                pool.get_ref().clone(),
-            )
-        }
-        None => {
-            println!("Welcome Anonymous!");
-            WsConnection::new(
-                None,
-                String::from("Anonymous"),
-                srv.get_ref().clone(),
-                pool.get_ref().clone(),
-            )
+    if let Some(id) = identity {
+        if let Ok(id_string) = id.id() {
+            if let Ok(uuid) = Uuid::parse_str(&id_string) {
+                if let Ok(user) = User::find_by_uuid(&uuid, &pool).await {
+                    println!("Welcome {}!", user.username);
+                    let ws = WsConnection::new(
+                        Some(uuid),
+                        user.username,
+                        srv.get_ref().clone(),
+                        pool.get_ref().clone(),
+                    );
+                    let resp = ws::start(ws, &req, stream)?;
+                    return Ok(resp);
+                }
+            }
         }
     };
+
+    println!("Welcome Anonymous!");
+    let ws = WsConnection::new(
+        None,
+        String::from("Anonymous"),
+        srv.get_ref().clone(),
+        pool.get_ref().clone(),
+    );
 
     let resp = ws::start(ws, &req, stream)?;
     Ok(resp)

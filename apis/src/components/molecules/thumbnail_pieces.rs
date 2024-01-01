@@ -1,10 +1,10 @@
-use crate::functions::games::game_response::GameStateResponse;
+use crate::responses::game::GameResponse;
 use crate::{common::hex_stack::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
 use hive_lib::position::Position;
 use leptos::*;
 
 #[component]
-pub fn ThumbnailPieces(game: GameStateResponse) -> impl IntoView {
+pub fn ThumbnailPieces(game: GameResponse) -> impl IntoView {
     let state = game.create_state();
     let thumbnail_pieces = move || {
         let mut pieces = Vec::new();

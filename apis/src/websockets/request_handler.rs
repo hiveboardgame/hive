@@ -1,10 +1,11 @@
 use super::{
-    auth_error::AuthError, challenge_handler::ChallengeHandler,
-    game_action_handler::GameActionHandler, user_status_handler::UserStatusHandler,
+    auth_error::AuthError, game_action_handler::GameActionHandler,
+    user_status_handler::UserStatusHandler,
 };
 use crate::common::{
     client_message::ClientRequest, game_action::GameAction, server_result::InternalServerMessage,
 };
+use crate::websockets::api::challenges::handler::ChallengeHandler;
 use anyhow::Result;
 use db_lib::DbPool;
 use uuid::Uuid;
@@ -51,25 +52,25 @@ impl RequestHandler {
                     GameAction::Move(_) | GameAction::Control(_) => self.ensure_auth()?,
                     _ => {}
                 };
-                let handler = GameActionHandler::new(
+                GameActionHandler::new(
                     &game_id,
                     game_action,
                     &self.username,
                     self.user_id,
                     &self.pool,
                 )
-                .await?;
-                handler.handle().await?
+                .await?
+                .handle()
+                .await?
             }
-            ClientRequest::Challenge(_challenge_action) => {
+            ClientRequest::Challenge(challenge_action) => {
                 self.ensure_auth()?;
-                let handler = ChallengeHandler::new().await?;
-                handler.handle().await?
+                ChallengeHandler::new(challenge_action, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
             }
-            ClientRequest::Away => {
-                let handler = UserStatusHandler::new().await?;
-                handler.handle().await?
-            }
+            ClientRequest::Away => UserStatusHandler::new().await?.handle().await?,
         };
         Ok(messages)
     }

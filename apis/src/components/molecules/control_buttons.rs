@@ -58,7 +58,9 @@ pub fn ControlButtons() -> impl IntoView {
                                         fallback=move || {
                                             view! {
                                                 <ConfirmButton
-                                                    game_control=store_value(GameControl::TakebackRequest(color))
+                                                    game_control=store_value(
+                                                        GameControl::TakebackRequest(color),
+                                                    )
                                                     user_id=user_id
                                                 />
                                             }

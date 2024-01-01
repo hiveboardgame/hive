@@ -1,6 +1,6 @@
 use crate::{
-    components::molecules::game_row::GameRow,
-    functions::users::{get::get_user_games, user_response::UserResponse},
+    components::molecules::game_row::GameRow, functions::users::get::get_user_games,
+    responses::user::UserResponse,
 };
 use hive_lib::game_status::GameStatus;
 use leptos::*;

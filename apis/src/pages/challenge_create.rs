@@ -1,47 +1,102 @@
-use crate::functions::challenges::create::CreateChallenge;
+use crate::{
+    common::challenge_action::ChallengeVisibility,
+    providers::{api_requests::ApiRequests, color_scheme::ColorScheme},
+};
+use hive_lib::{color::ColorChoice, game_type::GameType};
 use leptos::*;
-use leptos_router::ActionForm;
+use leptos_icons::{
+    BsIcon::{BsHexagon, BsHexagonFill, BsHexagonHalf},
+    Icon,
+};
+
+#[derive(Debug, Clone)]
+pub struct ChallengeParams {
+    pub rated: bool,
+    pub game_type: GameType,
+    pub visibility: ChallengeVisibility,
+    pub opponent: Option<String>,
+    pub color_choice: ColorChoice,
+}
 
 #[component]
-pub fn ChallengeCreate() -> impl IntoView {
-    let create_challenge_action = create_server_action::<CreateChallenge>();
-    view! {
-        <ActionForm action=create_challenge_action>
-            <div>
-                <div>
-                    <select name="public">
-                        <option value="true">"Public"</option>
-                        <option value="false">"Private"</option>
-                    </select>
-                </div>
-                <div>
-                    <select name="rated">
-                        <option value="true">"Rated"</option>
-                        <option value="false">"Unrated"</option>
-                    </select>
-                </div>
-                <div>
-                    <select name="tournament_queen_rule">
-                        <option value="true">"Tournament rules"</option>
-                        <option value="false">"Queen first"</option>
-                    </select>
-                </div>
-            </div>
+pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
+    let params = RwSignal::new(ChallengeParams {
+        rated: true,
+        game_type: GameType::MLP,
+        visibility: ChallengeVisibility::Public,
+        opponent: None,
+        color_choice: ColorChoice::Random,
+    });
+    let rated = move |_| params.update_untracked(|p| p.rated = true);
+    let unrated = move |_| params.update_untracked(|p| p.rated = false);
+    let base = move |_| params.update_untracked(|p| p.game_type = GameType::Base);
+    let mlp = move |_| params.update_untracked(|p| p.game_type = GameType::MLP);
+    let public = move |_| params.update_untracked(|p| p.visibility = ChallengeVisibility::Public);
+    let private = move |_| params.update_untracked(|p| p.visibility = ChallengeVisibility::Private);
+    let create_challenge = move || {
+        let api = ApiRequests::new();
+        api.challenge_new_with_params(params.get_untracked());
+        close(());
+    };
+    let white = move |_| {
+        params.update_untracked(|p| p.color_choice = ColorChoice::White);
+        create_challenge()
+    };
+    let random = move |_| {
+        params.update_untracked(|p| p.color_choice = ColorChoice::Random);
+        create_challenge()
+    };
+    let black = move |_| {
+        params.update_untracked(|p| p.color_choice = ColorChoice::Black);
+        create_challenge()
+    };
+    let color_context = expect_context::<ColorScheme>;
+    let icon = move |color_choice: ColorChoice| match color_choice {
+        ColorChoice::Random => {
+            view! { <Icon icon=Icon::from(BsHexagonHalf)/> }
+        }
+        ColorChoice::White => {
+            if (color_context().prefers_dark)() {
+                view! { <Icon icon=Icon::from(BsHexagonFill) class="fill-white"/> }
+            } else {
+                view! { <Icon icon=Icon::from(BsHexagon) class="stroke-black"/> }
+            }
+        }
+        ColorChoice::Black => {
+            if (color_context().prefers_dark)() {
+                view! { <Icon icon=Icon::from(BsHexagon) class="stroke-white"/> }
+            } else {
+                view! { <Icon icon=Icon::from(BsHexagonFill) class="fill-black"/> }
+            }
+        }
+    };
+    let create_buttons_style = "mx-1 w-14 h-14 p-2";
 
-            <select name="color_choice">
-                <option value="Random">"Random"</option>
-                <option value="White">"White"</option>
-                <option value="Black">"Black"</option>
-            </select>
-            <select name="game_type">
-                <option value="MLP">"PLM"</option>
-                <option value="Base">"Base"</option>
-            </select>
-            <input
-                type="submit"
-                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 m-2 rounded focus:outline-none focus:shadow-outline"
-                value="Create new challenge"
-            />
-        </ActionForm>
+    view! {
+        <div class="flex flex-col">
+            <div>
+                <button on:click=rated>Rated</button>
+                <button on:click=unrated>Casual</button>
+            </div>
+            <div>
+                <button on:click=base>Base</button>
+                <button on:click=mlp>MLP</button>
+            </div>
+            <div>
+                <button on:click=public>Public</button>
+                <button on:click=private>Private</button>
+            </div>
+            <div>
+                <button class=create_buttons_style on:click=white>
+                    {move || { icon(ColorChoice::White) }}
+                </button>
+                <button class="place-content-center mx-1 w-20 h-20 p-2" on:click=random>
+                    {move || { icon(ColorChoice::Random) }}
+                </button>
+                <button class=create_buttons_style on:click=black>
+                    {move || { icon(ColorChoice::Black) }}
+                </button>
+            </div>
+        </div>
     }
 }

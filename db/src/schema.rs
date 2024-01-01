@@ -5,9 +5,10 @@ diesel::table! {
         id -> Uuid,
         nanoid -> Text,
         challenger_id -> Uuid,
+        opponent_id -> Nullable<Uuid>,
         game_type -> Text,
         rated -> Bool,
-        public -> Bool,
+        visibility -> Text,
         tournament_queen_rule -> Bool,
         color_choice -> Text,
         created_at -> Timestamptz,
@@ -72,7 +73,6 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(challenges -> users (challenger_id));
 diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));

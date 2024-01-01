@@ -1,10 +1,12 @@
 use crate::{
     common::{
         game_action::GameAction,
-        server_result::{GameActionResponse, ServerMessage, ServerResult},
+        server_result::{ChallengeUpdate, GameActionResponse, ServerMessage, ServerResult},
     },
     functions::hostname::hostname_and_port,
-    providers::{auth_context::AuthContext, game_state::GameStateSignal},
+    providers::{
+        auth_context::AuthContext, challenges::ChallengeStateSignal, game_state::GameStateSignal,
+    },
 };
 use hive_lib::{
     game_control::GameControl, game_result::GameResult, game_status::GameStatus, history::History,
@@ -61,7 +63,7 @@ impl WebsocketContext {
 
     #[inline(always)]
     pub fn send(&self, message: &str) {
-        log!("Sending message: {:?}", message);
+        log!("WS sending message: {:?}", message);
         (self.send)(message)
     }
 
@@ -175,6 +177,37 @@ fn on_message_callback(m: String) {
             let mut game_state = expect_context::<GameStateSignal>();
             log!("New games: {:?}", games);
             game_state.set_next_games(games);
+        }
+        Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Challenges(
+            new_challanges,
+        )))) => {
+            for chal in new_challanges.clone() {
+                log!("Got new challenge: {}", chal.nanoid);
+            }
+            let mut challenges = expect_context::<ChallengeStateSignal>();
+            let auth_context = expect_context::<AuthContext>();
+            let user_uuid = move || match untrack(auth_context.user) {
+                Some(Ok(Some(user))) => Some(user.id),
+                _ => None,
+            };
+            log!("User is: {:?}", user_uuid());
+            challenges.add(new_challanges, user_uuid());
+        }
+        Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Created(
+            challenge_response,
+        )))) => {
+            let mut challenges = expect_context::<ChallengeStateSignal>();
+            let auth_context = expect_context::<AuthContext>();
+            let user_uuid = move || match untrack(auth_context.user) {
+                Some(Ok(Some(user))) => Some(user.id),
+                _ => None,
+            };
+            log!("User is: {:?}", user_uuid());
+            challenges.add(vec![challenge_response], user_uuid());
+        }
+        Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Removed(nanoid)))) => {
+            let mut challenges = expect_context::<ChallengeStateSignal>();
+            challenges.remove(nanoid);
         }
         Ok(ServerResult::Err(e)) => log!("Got error from server: {e}"),
         Err(e) => log!("Can't parse: {m}, error is: {e}"),

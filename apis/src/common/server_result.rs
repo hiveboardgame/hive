@@ -1,15 +1,12 @@
-use crate::functions::challenges::challenge_response::ChallengeResponse;
+use super::game_action::GameAction;
+use crate::responses::challenge::ChallengeResponse;
+use crate::responses::game::GameResponse;
+use crate::responses::user::UserResponse;
 use http::StatusCode;
 use http_serde;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
-
-use crate::functions::{
-    games::game_response::GameStateResponse, users::user_response::UserResponse,
-};
-
-use super::game_action::GameAction;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerResult {
@@ -52,6 +49,7 @@ pub enum MessageDestination {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
+    ConnectionUpdated(Uuid, String),
     Chat {
         // Sends a chat message to the game/lobby
         username: String,
@@ -60,6 +58,7 @@ pub enum ServerMessage {
     },
     GameActionNotification(Vec<String>),
     GameUpdate(GameActionResponse),
+    GameNew(GameResponse),
     Challenge(ChallengeUpdate),
     UserStatus(UserUpdate),
     // sent to everyone in the game when a user joins the game
@@ -68,15 +67,16 @@ pub enum ServerMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChallengeUpdate {
-    Created(ChallengeResponse), // A new challenge was created
-    Removed(String),            // A challenge was removed
-    Direct(ChallengeResponse),  // Player got directly invited to a game
+    Created(ChallengeResponse),         // A new challenge was created
+    Removed(String),                    // A challenge was removed
+    Direct(ChallengeResponse),          // Player got directly invited to a game
+    Challenges(Vec<ChallengeResponse>), //
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameActionResponse {
     pub game_action: GameAction,
-    pub game: GameStateResponse,
+    pub game: GameResponse,
     pub game_id: String,
     pub user_id: Uuid,
     pub username: String,

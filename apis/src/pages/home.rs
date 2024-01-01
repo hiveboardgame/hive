@@ -1,7 +1,7 @@
-use crate::components::{molecules::modal::Modal, organisms::lobby::Lobby};
-use crate::functions::challenges::get_challenges::{get_own_challenges, get_public_challenges};
+use crate::components::{molecules::modal::Modal, organisms::challenges::Challenges};
 use crate::pages::challenge_create::ChallengeCreate;
 use crate::providers::auth_context::AuthContext;
+use crate::providers::challenges::ChallengeStateSignal;
 use leptos::{html::Dialog, *};
 use uuid::Uuid;
 
@@ -13,18 +13,17 @@ pub fn Home() -> impl IntoView {
     // if modal is open
     let open = create_rw_signal(false);
     let dialog_el = create_node_ref::<Dialog>();
-    let on_submit = move |_| {
+    let close_modal = Callback::new(move |()| {
         dialog_el
             .get_untracked()
             .expect("dialog to have been created")
             .close();
-    };
+    });
 
     let source_signal: RwSignal<Option<Uuid>> = create_rw_signal(None);
-    //blocking resource leads to warning but good performance, local resource leads to no warning but fe is beaving slightly worse
-    let challenges = create_local_resource(source_signal, get_public_challenges);
-    //this one is fine as blocking
-    let own_challenges = create_blocking_resource(source_signal, get_own_challenges);
+    let challenge_state = expect_context::<ChallengeStateSignal>();
+    let own_challenges = move || challenge_state.signal.get().own;
+    let public_challenges = move || challenge_state.signal.get().public;
     let button_color = move || {
         if show_public() {
             ("bg-slate-400", "bg-inherit")
@@ -47,24 +46,16 @@ pub fn Home() -> impl IntoView {
                     }
                 };
                 let challenge = move || {
-                    if let Some(Ok(challenges)) = challenges() {
-                        view! { <Lobby challenges=store_value(challenges)/> }
-                    } else {
-                        ().into_view()
-                    }
+                    view! { <Challenges challenges=public_challenges()/> }
                 };
                 let own = move || {
-                    if let Some(Ok(Some(own_challenges))) = own_challenges() {
-                        view! { <Lobby challenges=store_value(own_challenges)/> }
-                    } else {
-                        ().into_view()
-                    }
+                    view! { <Challenges challenges=own_challenges()/> }
                 };
                 view! {
                     <div class="flex flex-col md:flex-row justify-center col-span-full min-h-fit">
                         <Show when=move || user().is_some() fallback=challenge>
                             <Modal open=open dialog_el=dialog_el>
-                                <ChallengeCreate on:submit=on_submit/>
+                                <ChallengeCreate close=close_modal/>
                             </Modal>
                             <div class="max-h-[80vh] flex justify-center">
                                 <div class="flex flex-col max-w-fit w-full">

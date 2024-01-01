@@ -1,5 +1,5 @@
+pub mod api;
 pub mod auth_error;
-pub mod challenge_handler;
 pub mod connection;
 pub mod game_action_handler;
 pub mod game_control_handler;
