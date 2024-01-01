@@ -10,3 +10,4 @@ pub mod modal;
 pub mod rating_and_change;
 pub mod simple_hex_stack;
 pub mod thumbnail_pieces;
+pub mod user_with_rating;

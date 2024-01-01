@@ -7,6 +7,7 @@ use crate::{
     },
     pages::play::TargetStack,
 };
+use hive_lib::game_status::GameStatus;
 use hive_lib::position::Position;
 use leptos::ev::{
     contextmenu, pointerdown, pointerleave, pointermove, pointerup, touchmove, touchstart, wheel,
@@ -59,6 +60,19 @@ pub fn Board(
     let initial_touch_distance = create_rw_signal::<f32>(0.0);
     let viewbox_ref = create_node_ref::<svg::Svg>();
     let div_ref = create_node_ref::<html::Div>();
+    let history_style = move || match (game_state_signal.signal)().view {
+        View::Game => "",
+        View::History => match (game_state_signal.signal)().state.game_status {
+            GameStatus::Finished(_) => "",
+            _ => {
+                if (game_state_signal.signal)().is_last_turn() {
+                    ""
+                } else {
+                    "sepia-[.75]"
+                }
+            }
+        },
+    };
 
     let viewbox_string = move || {
         format!(
@@ -186,13 +200,15 @@ pub fn Board(
             class=if !overwrite_tw_classes.is_empty() {
                 overwrite_tw_classes.to_string()
             } else {
-                format!("col-span-8 row-span-6 h-full w-full {extend_tw_classes}")
+                format!("col-span-8 row-span-6 {extend_tw_classes}")
             }
         >
 
             <svg
+                width="100%"
+                height="100%"
                 viewBox=viewbox_string
-                class="touch-none"
+                class=move || format!("touch-none {}", history_style())
                 ref=viewbox_ref
                 xmlns="http://www.w3.org/2000/svg"
             >

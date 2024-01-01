@@ -33,7 +33,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     xmlns="http://www.w3.org/2000/svg"
                 >
                     <Svgs/>
-                    <g class="h-full w-full">
+                    <g>
                         <ThumbnailPieces game=game()/>
                     </g>
                 </svg>

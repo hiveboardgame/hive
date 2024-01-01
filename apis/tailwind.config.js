@@ -10,9 +10,17 @@ module.exports = {
       screens: {
         'short': { 'raw': '(max-height: 700px)' },
       },
+      gridTemplateColumns: {
+        'board-xxl': 'repeat(8, minmax(0, 1fr)) repeat(2, minmax(110px, 1fr))',
+        'board-lg': 'repeat(8, minmax(0, 1fr)) repeat(2, minmax(150px, 1fr))',
+        'board-sm': 'repeat(8, minmax(0, 1fr)) repeat(2, minmax(120px, 1fr))',
+        'board-xs': 'repeat(8, minmax(0, 1fr)) repeat(2, minmax(105px, 1fr))',
+      },
       colors: {
         transparent: 'transparent',
         current: 'currentColor',
+        'hive-white': '#3a3a3a',
+        'hive-black': '#f0ead6',
         'li-green': '#629924',
         'li-red': '#c33',
         'light': '#edebe9',

@@ -8,7 +8,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
     view! {
-        <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>
+        <div class=format!("mx-auto max-w-xs pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=account_action
                 class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800"
@@ -17,7 +17,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     New Email
                 </label>
                 <input
-                    class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
+                    class="shadow appearance-none border rounded py-2 px-3 leading-tight focus:outline-none"
                     id="email"
                     name="new_email"
                     type="email"
@@ -28,6 +28,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 </label>
                 <input
                     class="shadow appearance-none border rounded w-full py-2 px-3 mb-3 leading-tight focus:outline-none"
+                    autofocus=true
                     id="old_password"
                     name="password"
                     type="password"

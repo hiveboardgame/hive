@@ -151,10 +151,7 @@ impl GameControlHandler {
 
     async fn handle_draw_accept(&self) -> Result<Game> {
         self.ensure_previous_gc_present()?;
-        let game = self
-            .game
-            .accept_draw(&self.control, &self.pool)
-            .await?;
+        let game = self.game.accept_draw(&self.control, &self.pool).await?;
         Ok(game)
     }
 

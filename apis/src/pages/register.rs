@@ -8,7 +8,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
     view! {
-        <div class=format!("w-full max-w-xs mx-auto mt-20 {extend_tw_classes}")>
+        <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=auth_context.register
                 class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800 "
@@ -16,6 +16,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <label class="block font-bold mb-2">
                     Username
                     <input
+                        autofocus=true
                         class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
                         name="username"
                         type="text"

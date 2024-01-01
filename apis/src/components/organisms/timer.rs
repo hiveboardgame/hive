@@ -1,11 +1,8 @@
 use crate::{
     common::time_control::TimeControl,
-    components::{
-        atoms::profile_link::ProfileLink,
-        molecules::{
-            correspondence_timer::CorrespondenceTimer, live_timer::LiveTimer,
-            rating_and_change::RatingAndChangeDynamic,
-        },
+    components::molecules::{
+        correspondence_timer::CorrespondenceTimer, live_timer::LiveTimer,
+        user_with_rating::UserWithRating,
     },
     providers::game_state::GameStateSignal,
     responses::user::UserResponse,
@@ -14,28 +11,35 @@ use hive_lib::{color::Color, game_status::GameStatus};
 use leptos::*;
 use leptos_icons::{BiIcon::BiInfiniteRegular, Icon};
 
+pub enum Placement {
+    Top,
+    Bottom,
+}
+
 #[component]
 pub fn DisplayTimer(
     side: Color,
+    #[prop(optional)] placement: Option<Placement>,
     player: StoredValue<UserResponse>,
     time_control: TimeControl,
+    vertical: bool,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let (css_grid_row, bg_color, text_color) = match side {
-        Color::White => (
-            "row-start-1 md:row-start-2",
-            "bg-[#f0ead6]",
-            "text-[#3a3a3a]",
-        ),
-        Color::Black => ("row-start-1", "bg-[#3a3a3a]", "text-[#f0ead6]"),
+    let (bg_color, text_color) = match side {
+        Color::White => ("bg-hive-black", "text-hive-white"),
+        Color::Black => ("bg-hive-white", "text-hive-black"),
     };
-
-    let is_finished = create_memo(move |_| {
-        matches!(
-            (game_state.signal)().state.game_status,
-            GameStatus::Finished(_)
-        )
-    });
+    let css_grid_row = match placement {
+        Some(Placement::Top) => "row-start-1 md:row-start-2",
+        Some(Placement::Bottom) => "row-start-1",
+        _ => "",
+    };
+    let(outer_container_style, timer_container_style, user_container_style) = match vertical {
+        false => ("grid grid-cols-2 grid-rows-2 col-span-2 row-span-1",
+                "border-y-2 border-l-2 col-span-1 row-span-2 md:row-span-1 short:row-span-2 border-black dark:border-white",
+                "h-full flex justify-center md:leading-5 row-span-2 md:row-span-1 short:row-span-2 short:text-xs items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none"),
+        true => ("flex grow justify-end items-center", "w-14 h-14 grow-0 ",""),
+    };
 
     let div_ref = create_node_ref::<html::Div>();
     let active_side =
@@ -53,14 +57,15 @@ pub fn DisplayTimer(
         );
 
     view! {
-        <div class="grid grid-cols-2 grid-rows-2 h-full w-full col-start-9 col-span-2 row-span-1">
+        <div class=outer_container_style>
             <div
                 ref=div_ref
                 class=move || {
-                    format!(
-                        "border-y-2 border-l-2 col-span-1 row-span-2 md:row-span-1 short:row-span-2 border-black dark:border-white {css_grid_row} {}",
-                        active_side(),
-                    )
+                    if vertical {
+                        format!("{timer_container_style} {}", active_side())
+                    } else {
+                        format!("{timer_container_style} {css_grid_row} {}", active_side())
+                    }
                 }
             >
 
@@ -94,22 +99,11 @@ pub fn DisplayTimer(
                 }}
 
             </div>
-            <div class=move || {
-                format!(
-                    "min-h-fit min-w-fit flex justify-center leading-5 row-span-2 md:row-span-1 short:row-span-2 items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none {css_grid_row} {bg_color}",
-                )
-            }>
-                <ProfileLink username=player().username extend_tw_classes=text_color/>
-                <Show
-                    when=is_finished
-                    fallback=move || {
-                        view! { <p class=format!("{text_color}")>{player().rating}</p> }
-                    }
-                >
-
-                    <RatingAndChangeDynamic extend_tw_classes=text_color side=side/>
-                </Show>
-            </div>
+            <Show when=move || !vertical>
+                <div class=move || format!("{user_container_style} {css_grid_row} {bg_color}")>
+                    <UserWithRating player=player side=side text_color=text_color/>
+                </div>
+            </Show>
 
         </div>
     }
