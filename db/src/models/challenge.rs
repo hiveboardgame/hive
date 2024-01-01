@@ -21,13 +21,13 @@ use uuid::Uuid;
 pub struct NewChallenge {
     pub nanoid: String,
     pub challenger_id: Uuid,
-    pub opponent_id: Option<Uuid>,
     pub game_type: String,
     pub rated: bool,
-    pub visibility: String,
     pub tournament_queen_rule: bool,
     pub color_choice: String,
     pub created_at: DateTime<Utc>,
+    pub opponent_id: Option<Uuid>,
+    pub visibility: String,
 }
 
 impl NewChallenge {
@@ -61,14 +61,14 @@ pub struct Challenge {
     pub id: Uuid,
     pub nanoid: String,
     pub challenger_id: Uuid,
-    pub opponent_id: Option<Uuid>,
     pub game_type: String,
     pub rated: bool,
-    pub visibility: String,
     pub tournament_queen_rule: bool,
     pub color_choice: String,
     // TODO: periodically cleanup expired challanges
     pub created_at: DateTime<Utc>,
+    pub opponent_id: Option<Uuid>,
+    pub visibility: String,
 }
 
 impl Challenge {
