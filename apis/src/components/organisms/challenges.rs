@@ -1,12 +1,14 @@
 use crate::{
     components::molecules::display_challenge::DisplayChallenge,
-    functions::challenges::challenge_response::ChallengeResponse,
+    responses::challenge::ChallengeResponse,
 };
 use leptos::*;
+use std::collections::HashMap;
 
 #[component]
-pub fn Lobby(challenges: StoredValue<Vec<ChallengeResponse>>) -> impl IntoView {
+pub fn Challenges(challenges: HashMap<String, ChallengeResponse>) -> impl IntoView {
     let th_class = "py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase max-h-[80vh]";
+    let challenges = store_value(challenges);
     view! {
         <div class="flex col-span-full overflow-x-auto">
             <table class="grow md:grow-0 md:table-fixed">
@@ -29,12 +31,11 @@ pub fn Lobby(challenges: StoredValue<Vec<ChallengeResponse>>) -> impl IntoView {
 
                                 <For
                                     each=move || { challenges() }
-
-                                    key=|challenge| (challenge.id)
-                                    let:challenge
+                                    key=|(key, _)| key.to_owned()
+                                    let:one_challenge
                                 >
                                     <DisplayChallenge
-                                        challenge=store_value(challenge)
+                                        challenge=store_value(one_challenge.1)
                                         single=false
                                     />
                                 </For>

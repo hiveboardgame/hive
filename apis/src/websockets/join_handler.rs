@@ -5,7 +5,8 @@ use crate::{
             GameActionResponse, InternalServerMessage, MessageDestination, ServerMessage,
         },
     },
-    functions::{games::game_response::GameStateResponse, users::user_response::UserResponse},
+    responses::game::GameResponse,
+    responses::user::UserResponse,
 };
 use anyhow::Result;
 use db_lib::{models::game::Game, DbPool};
@@ -38,7 +39,7 @@ impl JoinHanlder {
             destination: MessageDestination::Direct(self.user_id),
             message: ServerMessage::GameUpdate(GameActionResponse {
                 game_id: self.game.nanoid.to_owned(),
-                game: GameStateResponse::new_from_db(&self.game, &self.pool).await?,
+                game: GameResponse::new_from_db(&self.game, &self.pool).await?,
                 game_action: GameAction::Join,
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),

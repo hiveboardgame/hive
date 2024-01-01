@@ -7,8 +7,8 @@ use crate::{
             rating_and_change::RatingAndChangeDynamic,
         },
     },
-    functions::users::user_response::UserResponse,
     providers::game_state::GameStateSignal,
+    responses::user::UserResponse,
 };
 use hive_lib::{color::Color, game_status::GameStatus};
 use leptos::*;

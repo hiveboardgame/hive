@@ -5,6 +5,8 @@ pub mod error_template;
 pub mod functions;
 pub mod pages;
 pub mod providers;
+pub mod responses;
+
 use cfg_if::cfg_if;
 
 cfg_if! {

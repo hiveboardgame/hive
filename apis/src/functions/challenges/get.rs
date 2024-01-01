@@ -1,4 +1,4 @@
-use super::challenge_response::ChallengeResponse;
+use crate::responses::challenge::ChallengeResponse;
 use leptos::*;
 use uuid::Uuid;
 
@@ -8,7 +8,9 @@ pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, Server
     use db_lib::models::challenge::Challenge;
     let pool = pool()?;
     let challenge = Challenge::find_by_uuid(&id, &pool).await?;
-    ChallengeResponse::from_model(&challenge, &pool).await
+    ChallengeResponse::from_model(&challenge, &pool)
+        .await
+        .map_err(|e| ServerFnError::ServerError(format!("{e}")))
 }
 
 #[server]
@@ -17,5 +19,7 @@ pub async fn get_challenge_by_nanoid(nanoid: String) -> Result<ChallengeResponse
     use db_lib::models::challenge::Challenge;
     let pool = pool()?;
     let challenge = Challenge::find_by_nanoid(&nanoid, &pool).await?;
-    ChallengeResponse::from_model(&challenge, &pool).await
+    ChallengeResponse::from_model(&challenge, &pool)
+        .await
+        .map_err(|e| ServerFnError::ServerError(format!("{e}")))
 }

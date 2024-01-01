@@ -3,14 +3,14 @@ use crate::{
         atoms::{profile_link::ProfileLink, svgs::Svgs},
         molecules::{rating_and_change::RatingAndChange, thumbnail_pieces::ThumbnailPieces},
     },
-    functions::games::game_response::GameStateResponse,
+    responses::game::GameResponse,
 };
 use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
 use leptos::*;
 use leptos_icons::{Icon, RiIcon::RiSwordOthersLine};
 
 #[component]
-pub fn GameRow(game: StoredValue<GameStateResponse>) -> impl IntoView {
+pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     let rated_string = if game().rated { " RATED" } else { " CASUAL" };
 
     let result_string = match game().game_status {

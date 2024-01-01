@@ -1,25 +1,25 @@
-use super::game_response::GameStateResponse;
+use crate::responses::game::GameResponse;
 use leptos::*;
 use uuid::Uuid;
 
 #[server]
-pub async fn get_game_from_uuid(game_id: Uuid) -> Result<GameStateResponse, ServerFnError> {
+pub async fn get_game_from_uuid(game_id: Uuid) -> Result<GameResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::models::game::Game;
     let pool = pool()?;
     let game = Game::find_by_uuid(&game_id, &pool).await?;
-    GameStateResponse::new_from_db(&game, &pool)
+    GameResponse::new_from_db(&game, &pool)
         .await
         .map_err(|e| ServerFnError::ServerError(e.to_string()))
 }
 
 #[server]
-pub async fn get_game_from_nanoid(nanoid: String) -> Result<GameStateResponse, ServerFnError> {
+pub async fn get_game_from_nanoid(nanoid: String) -> Result<GameResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::models::game::Game;
     let pool = pool()?;
     let game = Game::find_by_nanoid(&nanoid, &pool).await?;
-    GameStateResponse::new_from_db(&game, &pool)
+    GameResponse::new_from_db(&game, &pool)
         .await
         .map_err(|e| ServerFnError::ServerError(e.to_string()))
 }

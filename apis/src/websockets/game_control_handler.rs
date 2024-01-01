@@ -5,7 +5,7 @@ use crate::{
             GameActionResponse, InternalServerMessage, MessageDestination, ServerMessage,
         },
     },
-    functions::games::game_response::GameStateResponse,
+    responses::game::GameResponse,
 };
 use anyhow::Result;
 use db_lib::{models::game::Game, models::user::User, DbPool};
@@ -50,7 +50,7 @@ impl GameControlHandler {
             destination: MessageDestination::Game(self.game.nanoid.clone()),
             message: ServerMessage::GameUpdate(GameActionResponse {
                 game_id: self.game.nanoid.to_owned(),
-                game: GameStateResponse::new_from_db(&game, &self.pool).await?,
+                game: GameResponse::new_from_db(&game, &self.pool).await?,
                 game_action: GameAction::Control(self.control.clone()),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),

@@ -1,4 +1,4 @@
-use crate::functions::users::user_response::UserResponse;
+use crate::responses::user::UserResponse;
 use hive_lib::{
     bug::Bug, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
     game_type::GameType, history::History, position::Position, state::State,
@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct GameStateResponse {
+pub struct GameResponse {
     pub game_id: Uuid,
     pub nanoid: String,
     pub turn: usize,
@@ -17,7 +17,6 @@ pub struct GameStateResponse {
     pub tournament_queen_rule: bool,
     pub white_player: UserResponse,
     pub black_player: UserResponse,
-    // #[serde_as(as = "Vec<(_, _)>")]
     pub moves: HashMap<String, Vec<Position>>,
     pub spawns: Vec<Position>,
     pub rated: bool,
@@ -29,6 +28,21 @@ pub struct GameStateResponse {
     pub black_rating: Option<f64>,
     pub white_rating_change: Option<f64>,
     pub black_rating_change: Option<f64>,
+}
+
+impl GameResponse {
+    pub fn create_state(self) -> State {
+        let result = match self.game_status {
+            GameStatus::NotStarted | GameStatus::InProgress => GameResult::Unknown,
+            GameStatus::Finished(result) => result,
+        };
+        State::new_from_history(&History::new_from_gamestate(
+            self.history,
+            result,
+            self.game_type,
+        ))
+        .expect("State to be valid, as game was")
+    }
 }
 
 use cfg_if::cfg_if;
@@ -43,16 +57,16 @@ use hive_lib::{
 use std::str::FromStr;
 use anyhow::Result;
 
-impl GameStateResponse {
+impl GameResponse {
     pub async fn new_from_nanoid(game_id: &str, pool: &DbPool) -> Result<Self> {
         let game = Game::find_by_nanoid(game_id, pool).await?;
-        GameStateResponse::new_from_db(&game, pool).await
+        GameResponse::new_from_db(&game, pool).await
     }
 
     pub async fn new_from_db(game: &Game, pool: &DbPool) -> Result<Self> {
         let history = History::new_from_str(&game.history)?;
         let state = State::new_from_history(&history)?;
-        GameStateResponse::new_from(game, &state, pool).await
+        GameResponse::new_from(game, &state, pool).await
     }
 
     pub async fn new_from(
@@ -86,7 +100,7 @@ impl GameStateResponse {
             turn: state.turn,
             white_player: UserResponse::from_uuid(&game.white_id, pool).await?,
             black_player: UserResponse::from_uuid(&game.black_id, pool).await?,
-            moves: GameStateResponse::moves_as_string(state.board.moves(state.turn_color)),
+            moves: GameResponse::moves_as_string(state.board.moves(state.turn_color)),
             spawns: state
                 .board
                 .spawnable_positions(state.turn_color)
@@ -135,18 +149,3 @@ impl GameStateResponse {
     }
 }
 }}
-
-impl GameStateResponse {
-    pub fn create_state(self) -> State {
-        let result = match self.game_status {
-            GameStatus::NotStarted | GameStatus::InProgress => GameResult::Unknown,
-            GameStatus::Finished(result) => result,
-        };
-        State::new_from_history(&History::new_from_gamestate(
-            self.history,
-            result,
-            self.game_type,
-        ))
-        .expect("State to be valid, as game was")
-    }
-}

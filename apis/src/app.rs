@@ -6,8 +6,9 @@ use crate::{
         ws::WsPage,
     },
     providers::{
-        auth_context::provide_auth, color_scheme::provide_color_scheme,
-        game_state::provide_game_state, web_socket::provide_websocket,
+        auth_context::provide_auth, challenges::provide_challenges,
+        color_scheme::provide_color_scheme, game_state::provide_game_state,
+        web_socket::provide_websocket,
     },
 };
 use leptos::*;
@@ -20,6 +21,7 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
     provide_game_state();
+    provide_challenges();
     let url = "/ws/";
     provide_websocket(url);
     provide_auth();

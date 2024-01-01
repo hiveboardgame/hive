@@ -1,14 +1,13 @@
+use crate::common::challenge_action::ChallengeVisibility;
+use crate::providers::api_requests::ApiRequests;
 use crate::{
     components::atoms::profile_link::ProfileLink,
-    functions::{
-        challenges::{
-            accept::AcceptChallenge, challenge_response::ChallengeResponse, delete::DeleteChallenge,
-        },
-        hostname::hostname_and_port,
-    },
+    functions::hostname::hostname_and_port,
     providers::{auth_context::AuthContext, color_scheme::ColorScheme},
+    responses::challenge::ChallengeResponse,
 };
 use hive_lib::color::ColorChoice;
+use leptos::logging::log;
 use leptos::*;
 use leptos_icons::{
     AiIcon::AiCopyOutlined,
@@ -21,8 +20,6 @@ use leptos_use::use_window;
 
 #[component]
 pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
-    let accept_challenge = create_server_action::<AcceptChallenge>();
-    let delete_challenge = create_server_action::<DeleteChallenge>();
     let auth_context = expect_context::<AuthContext>();
     let color_context = expect_context::<ColorScheme>;
     let icon = move || match challenge().color_choice {
@@ -103,19 +100,15 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
                     fallback=move || {
                         view! {
                             <div class="flex">
-                                <ActionForm action=delete_challenge class="flex">
-                                    <input
-                                        type="hidden"
-                                        name="id"
-                                        value=challenge().id.to_string()
-                                    />
-                                    <input
-                                        type="submit"
-                                        value="Cancel"
-                                        class="grow bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
-                                    />
-                                </ActionForm>
-                                <Show when=move || !challenge().public && !single>
+                                    <button
+                                        on:click= move |_| { ApiRequests::new().challenge_cancel(challenge().nanoid) }
+                                        class="bg-red-500 hover:bg-red-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                    >
+                                    Cancel
+                                    </button>
+                                <Show when=move || {
+                                    challenge().visibility != ChallengeVisibility::Public && !single
+                                }>
                                     <button
                                         ref=button_ref
                                         on:click=copy
@@ -129,15 +122,25 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
                         }
                     }
                 >
-
-                    <ActionForm action=accept_challenge>
-                        <input type="hidden" name="nanoid" value=challenge().nanoid/>
-                        <input
-                            type="submit"
-                            value="Join"
-                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
-                        />
-                    </ActionForm>
+                    <button
+                        on:click= move |_| {
+                            log!("User is: {:?}", (auth_context.user)());
+                            match (auth_context.user)() {
+                                Some(Ok(Some(_))) => {
+                                ApiRequests::new().challenge_accept(challenge().nanoid);
+                                let navigate = use_navigate();
+                                navigate(&format!("/game/{}", challenge().nanoid), Default::default());
+                            },
+                            _ => {
+                                let navigate = use_navigate();
+                                navigate("/login", Default::default());
+                            }
+                            }
+                        }
+                        class="bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                    >
+                    Join
+                    </button>
                 </Show>
             </td>
         </tr>
