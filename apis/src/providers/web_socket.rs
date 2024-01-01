@@ -193,21 +193,19 @@ fn on_message_callback(m: String) {
             log!("User is: {:?}", user_uuid());
             challenges.add(new_challanges, user_uuid());
         }
-        Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Created(
-            challenge_response,
-        )))) => {
+        Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Removed(nanoid)))) => {
+            let mut challenges = expect_context::<ChallengeStateSignal>();
+            challenges.remove(nanoid);
+        }
+        Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Created(challenge))))
+        | Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Direct(challenge)))) => {
             let mut challenges = expect_context::<ChallengeStateSignal>();
             let auth_context = expect_context::<AuthContext>();
             let user_uuid = move || match untrack(auth_context.user) {
                 Some(Ok(Some(user))) => Some(user.id),
                 _ => None,
             };
-            log!("User is: {:?}", user_uuid());
-            challenges.add(vec![challenge_response], user_uuid());
-        }
-        Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Removed(nanoid)))) => {
-            let mut challenges = expect_context::<ChallengeStateSignal>();
-            challenges.remove(nanoid);
+            challenges.add(vec![challenge], user_uuid());
         }
         Ok(ServerResult::Err(e)) => log!("Got error from server: {e}"),
         Err(e) => log!("Can't parse: {m}, error is: {e}"),
