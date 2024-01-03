@@ -40,13 +40,16 @@ pub fn Modal(
         <dialog
             ref=dialog_el
             open=open.get_untracked()
-            class="shadow-lg rounded-lg border-8 backdrop:backdrop-blur"
+            class="shadow-xl drop-shadow-xl rounded-lg backdrop:backdrop-blur bg-stone-300 dark:bg-gray-600 dark:border-gray-500 border "
             // clicking on ::backdrop should dismiss modal
             on:click=on_click
         >
-            <header class="flex justify-end border-b">
+            <header class="flex justify-end ">
                 <form class="m-2" method="dialog">
-                    <button class="hover:bg-red-600 rounded-full" aria-label="Close">
+                    <button
+                        class="hover:bg-li-red rounded-full w-5 h-5 flex items-center justify-center"
+                        aria-label="Close"
+                    >
                         x
                     </button>
                 </form>

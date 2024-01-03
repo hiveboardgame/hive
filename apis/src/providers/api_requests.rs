@@ -64,11 +64,11 @@ impl ApiRequests {
     }
     pub fn challenge_new_with_params(&self, params: ChallengeParams) {
         let msg = ClientRequest::Challenge(ChallengeAction::Create {
-            rated: params.rated,
-            game_type: params.game_type,
-            visibility: params.visibility,
-            opponent: params.opponent,
-            color_choice: params.color_choice,
+            rated: params.rated.get_untracked(),
+            game_type: params.game_type.get_untracked(),
+            visibility: params.visibility.get_untracked(),
+            opponent: params.opponent.get_untracked(),
+            color_choice: params.color_choice.get_untracked(),
         });
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
