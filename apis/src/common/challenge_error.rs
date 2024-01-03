@@ -11,4 +11,6 @@ pub enum ChallengeError {
     OwnChallenge,
     #[error("This is not your challenge")]
     NotUserChallenge,
+    #[error("{found} is not a valid timecontrol")]
+    NotValidTimeControl { found: String },
 }

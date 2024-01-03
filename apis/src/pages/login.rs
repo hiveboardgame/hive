@@ -16,7 +16,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 <label class="block font-bold mb-2" for="username">
                     Username
                     <input
-                        autofocus=true
+                        autofocus
                         class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
                         name="username"
                         id="username"

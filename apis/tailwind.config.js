@@ -22,6 +22,8 @@ module.exports = {
         'hive-white': '#3a3a3a',
         'hive-black': '#f0ead6',
         'li-green': '#629924',
+        'li-hover-dark': '#999',
+        'li-hover-light': '#787878',
         'li-red': '#c33',
         'light': '#edebe9',
         'odd-light': '#f7f6f5',
@@ -38,7 +40,7 @@ module.exports = {
       },
       dropShadow: {
         'w': '0.3px 0.3px 0.3px rgba(0, 0, 0, 1)',
-        'b': '0.3px 0.3px 0.3px rgba(255, 255, 255, 1)'
+        'b': '0.3px 0.3px 0.3px rgba(255, 255, 255, 1)',
       }
     },
   },
