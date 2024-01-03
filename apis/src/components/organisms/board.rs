@@ -14,9 +14,9 @@ use leptos::ev::{
 };
 use leptos::svg::Svg;
 use leptos::*;
-use leptos_use::{use_event_listener, use_resize_observer};
+use leptos_use::{use_debounce_fn_with_arg, use_event_listener, use_resize_observer};
 use wasm_bindgen::JsCast;
-use web_sys::{PointerEvent, SvgPoint, TouchEvent, WheelEvent};
+use web_sys::{DomRectReadOnly, PointerEvent, SvgPoint, TouchEvent, WheelEvent};
 
 #[derive(Debug, Clone)]
 struct ViewBoxControls {
@@ -96,14 +96,20 @@ pub fn Board(
     let svg_pos = SvgPos::center_for_level(initial_position, 0);
 
     //on load and resize make sure to resize the viewbox
+    let debounced_resize = use_debounce_fn_with_arg(
+        move |rect: DomRectReadOnly| {
+            viewbox_signal.try_update(|viewbox_controls: &mut ViewBoxControls| {
+                viewbox_controls.width = rect.width() as f32;
+                viewbox_controls.height = rect.height() as f32;
+                viewbox_controls.x_transform = -(svg_pos.0 - (rect.width() as f32 / 2.0));
+                viewbox_controls.y_transform = -(svg_pos.1 - (rect.height() as f32 / 2.0));
+            });
+        },
+        250.0,
+    );
     use_resize_observer(div_ref, move |entries, _observer| {
         let rect = entries[0].content_rect();
-        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-            viewbox_controls.width = rect.width() as f32;
-            viewbox_controls.height = rect.height() as f32;
-            viewbox_controls.x_transform = -(svg_pos.0 - (rect.width() as f32 / 2.0));
-            viewbox_controls.y_transform = -(svg_pos.1 - (rect.height() as f32 / 2.0));
-        });
+        debounced_resize(rect);
     });
 
     //Start panning and record point where it starts for mouse on left mouse button hold and touch
