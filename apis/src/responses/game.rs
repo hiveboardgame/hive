@@ -4,7 +4,7 @@ use hive_lib::{
     game_type::GameType, history::History, position::Position, state::State,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -12,6 +12,7 @@ pub struct GameResponse {
     pub game_id: Uuid,
     pub nanoid: String,
     pub turn: usize,
+    pub finished: bool,
     pub game_status: GameStatus,
     pub game_type: GameType,
     pub tournament_queen_rule: bool,
@@ -28,6 +29,10 @@ pub struct GameResponse {
     pub black_rating: Option<f64>,
     pub white_rating_change: Option<f64>,
     pub black_rating_change: Option<f64>,
+    pub time_mode: String,
+    pub time_increment: Option<i32>,
+    pub black_time_left: Option<Duration>,
+    pub white_time_left: Option<Duration>,
 }
 
 impl GameResponse {
@@ -91,10 +96,19 @@ impl GameResponse {
                 )
             }
         };
+        let white_time_left = match game.white_time_left {
+            None => None,
+            Some(nanos) => Some(Duration::from_nanos(nanos as u64)),
+        };
+        let black_time_left = match game.black_time_left {
+            None => None,
+            Some(nanos) => Some(Duration::from_nanos(nanos as u64)),
+        };
         Ok(Self {
             game_id: game.id,
             nanoid: game.nanoid.clone(),
             game_status: GameStatus::from_str(&game.game_status)?,
+            finished: game.finished,
             game_type: GameType::from_str(&game.game_type)?,
             tournament_queen_rule: game.tournament_queen_rule,
             turn: state.turn,
@@ -118,6 +132,10 @@ impl GameResponse {
             black_rating,
             white_rating_change,
             black_rating_change,
+            white_time_left: white_time_left,
+            black_time_left: black_time_left,
+            time_mode: game.time_mode.to_owned(),
+            time_increment: game.time_increment,
         })
     }
 

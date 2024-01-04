@@ -19,36 +19,37 @@ pub struct ChallengeParams {
     pub visibility: RwSignal<ChallengeVisibility>,
     pub opponent: RwSignal<Option<String>>,
     pub color_choice: RwSignal<ColorChoice>,
+    pub time_mode: RwSignal<TimeControl>,
+    pub time_base: RwSignal<Option<i32>>,
+    pub time_increment: RwSignal<Option<i32>>,
 }
 
 #[derive(Clone, PartialEq)]
-pub enum SimpleTimeControl {
+pub enum TimeControl {
     Correspondence,
     RealTime,
     Unlimited,
 }
 
-// 19
-
-impl fmt::Display for SimpleTimeControl {
+impl fmt::Display for TimeControl {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let time = match self {
-            SimpleTimeControl::Correspondence => "Correspondence",
-            SimpleTimeControl::RealTime => "Real Time",
-            SimpleTimeControl::Unlimited => "Unlimited",
+            TimeControl::Correspondence => "Correspondence",
+            TimeControl::RealTime => "Real Time",
+            TimeControl::Unlimited => "Unlimited",
         };
         write!(f, "{}", time)
     }
 }
 
-impl FromStr for SimpleTimeControl {
+impl FromStr for TimeControl {
     type Err = ChallengeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Correspondence" => Ok(SimpleTimeControl::Correspondence),
-            "Real Time" => Ok(SimpleTimeControl::RealTime),
-            "Unlimited" => Ok(SimpleTimeControl::Unlimited),
+            "Correspondence" => Ok(TimeControl::Correspondence),
+            "Real Time" => Ok(TimeControl::RealTime),
+            "Unlimited" => Ok(TimeControl::Unlimited),
             s => Err(ChallengeError::NotValidTimeControl {
                 found: s.to_string(),
             }),
@@ -64,6 +65,9 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
         visibility: RwSignal::new(ChallengeVisibility::Public),
         opponent: RwSignal::new(None),
         color_choice: RwSignal::new(ColorChoice::Random),
+        time_mode: RwSignal::new(TimeControl::RealTime),
+        time_base: RwSignal::new(Some(1)),
+        time_increment: RwSignal::new(Some(5)),
     };
     let is_rated = move |b| {
         params.rated.update(|v| *v = b);
@@ -111,7 +115,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
             }
         }
     };
-    let time_control = RwSignal::new(SimpleTimeControl::RealTime);
+    let time_control = RwSignal::new(TimeControl::RealTime);
     let min_rating = RwSignal::new(-500_i16);
     let max_rating = RwSignal::new(500_i16);
     let days_per_move = RwSignal::new(2_u8);
@@ -184,8 +188,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
     let buttons_style =
         "my-1 p-1 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded";
     let disable_rated = move || {
-        if (params.game_type)() == GameType::Base || time_control() == SimpleTimeControl::Unlimited
-        {
+        if (params.game_type)() == GameType::Base || time_control() == TimeControl::Unlimited {
             return true;
         }
         false
@@ -193,7 +196,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
     let disable_game_create = move || {
         if days_per_move() == 0
             && total_days() == 0
-            && time_control() == SimpleTimeControl::Correspondence
+            && time_control() == TimeControl::Correspondence
         {
             return true;
         }
@@ -220,12 +223,12 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                     name="Time Control"
                     id="time-control"
                     on:change=move |ev| {
-                        let new_value = SimpleTimeControl::from_str(&event_target_value(&ev))
+                        let new_value = TimeControl::from_str(&event_target_value(&ev))
                             .expect("Valid timecontrol");
                         params.visibility.update(|v| *v = ChallengeVisibility::Public);
                         params.game_type.update(|v| *v = GameType::MLP);
                         days_per_move.update_untracked(|v| *v = 2);
-                        if new_value == SimpleTimeControl::Unlimited {
+                        if new_value == TimeControl::Unlimited {
                             params.rated.set(false);
                         } else {
                             params.rated.set(true);
@@ -239,9 +242,9 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                     <SelectOption value=time_control is="Unlimited"/>
                 </select>
             </div>
-            <Show when=move || time_control() != SimpleTimeControl::Unlimited>
+            <Show when=move || time_control() != TimeControl::Unlimited>
                 <Show
-                    when=move || time_control() == SimpleTimeControl::RealTime
+                    when=move || time_control() == TimeControl::RealTime
                     fallback=move || {
                         view! {
                             <div class="flex flex-col justify-center items-center mb-1">

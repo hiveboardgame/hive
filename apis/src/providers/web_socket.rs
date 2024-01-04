@@ -6,6 +6,7 @@ use crate::{
     functions::hostname::hostname_and_port,
     providers::{
         auth_context::AuthContext, challenges::ChallengeStateSignal, game_state::GameStateSignal,
+        timer::TimerSignal,
     },
 };
 use hive_lib::{
@@ -15,7 +16,7 @@ use hive_lib::{
 use lazy_static::lazy_static;
 use leptos::logging::log;
 use leptos::*;
-use leptos_router::RouterContext;
+use leptos_router::{use_navigate, RouterContext};
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::*;
 use regex::Regex;
@@ -106,7 +107,8 @@ fn on_message_callback(m: String) {
 
             match gar.game_action {
                 GameAction::Move(ref turn) => {
-                    log!("Playing turn: {turn}");
+                    let timer = expect_context::<TimerSignal>();
+                    timer.update_from(&gar.game);
                     game_state.clear_gc();
                     if Some(gar.user_id) == user_uuid() {
                         let mut games = game_state.signal.get_untracked().next_games;
@@ -115,6 +117,7 @@ fn on_message_callback(m: String) {
                         log!("Skipping own turn");
                         return;
                     }
+                    log!("Playing turn: {turn}");
                     match turn {
                         Turn::Spawn(piece, position) | Turn::Move(piece, position) => {
                             game_state.play_turn(*piece, *position)
@@ -148,6 +151,8 @@ fn on_message_callback(m: String) {
                     }
                     log!("joined the game, reconstructing game state");
                     reset_game_state(&gar);
+                    let timer = expect_context::<TimerSignal>();
+                    timer.update_from(&gar.game);
                     // TODO: @leex try this again once the play page works correctly.
                     if let Some((_turn, gc)) = gar.game.game_control_history.last() {
                         log!("Got a GC: {}", gc);
@@ -171,6 +176,8 @@ fn on_message_callback(m: String) {
                 );
                 log!("server_message history is: {:?}", gar.game.history);
                 reset_game_state(&gar);
+                let timer = expect_context::<TimerSignal>();
+                timer.update_from(&gar.game);
             }
         }
         Ok(ServerResult::Ok(ServerMessage::GameActionNotification(games))) => {
@@ -192,6 +199,25 @@ fn on_message_callback(m: String) {
             };
             log!("User is: {:?}", user_uuid());
             challenges.add(new_challanges, user_uuid());
+        }
+        Ok(ServerResult::Ok(ServerMessage::GameNew(game_response))) => {
+            if game_response.time_mode == "Real Time" {
+                let auth_context = expect_context::<AuthContext>();
+                let user_uuid = move || match untrack(auth_context.user) {
+                    Some(Ok(Some(user))) => Some(user.id),
+                    _ => None,
+                };
+                if let Some(id) = user_uuid() {
+                    if id == game_response.white_player.uid || id == game_response.black_player.uid
+                    {
+                        let navigate = use_navigate();
+                        navigate(
+                            &format!("/game/{}", game_response.nanoid),
+                            Default::default(),
+                        );
+                    }
+                }
+            }
         }
         Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Removed(nanoid)))) => {
             let mut challenges = expect_context::<ChallengeStateSignal>();

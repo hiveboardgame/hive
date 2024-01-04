@@ -19,6 +19,9 @@ pub struct CreateHandler {
     visibility: ChallengeVisibility,
     opponent: Option<String>,
     color_choice: ColorChoice,
+    time_mode: String,
+    time_base: Option<i32>,
+    time_increment: Option<i32>,
     user_id: Uuid,
     pool: DbPool,
 }
@@ -30,6 +33,9 @@ impl CreateHandler {
         visibility: ChallengeVisibility,
         color_choice: ColorChoice,
         opponent: Option<String>,
+        time_mode: String,
+        time_base: Option<i32>,
+        time_increment: Option<i32>,
         user_id: Uuid,
         pool: &DbPool,
     ) -> Result<Self> {
@@ -39,6 +45,9 @@ impl CreateHandler {
             visibility,
             color_choice,
             opponent,
+            time_mode,
+            time_base,
+            time_increment,
             user_id,
             pool: pool.clone(),
         })
@@ -57,7 +66,10 @@ impl CreateHandler {
             self.rated,
             self.visibility.to_string(),
             self.color_choice.to_string(),
-        );
+            self.time_mode.to_owned(),
+            self.time_base,
+            self.time_increment,
+        )?;
 
         let challenge = Challenge::create(&new_challenge, &self.pool).await?;
         let challenge_response = ChallengeResponse::from_model(&challenge, &self.pool).await?;
