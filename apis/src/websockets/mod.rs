@@ -1,4 +1,5 @@
 pub mod api;
+pub mod game_timeout_handler;
 pub mod auth_error;
 pub mod connection;
 pub mod game_action_handler;
