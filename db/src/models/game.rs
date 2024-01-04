@@ -227,7 +227,7 @@ impl Game {
         let mut white_time = None;
 
         if self.time_mode == "Real Time" {
-            if self.turn < 0 {
+            if self.turn < 2 {
                 white_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_MINUTE);
                 black_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_MINUTE);
             } else {

@@ -1,4 +1,5 @@
 use crate::common::time_control::TimeControl;
+use crate::providers::api_requests::ApiRequests;
 use crate::providers::timer::TimerSignal;
 use hive_lib::color::Color;
 use leptos::*;
@@ -14,8 +15,8 @@ pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
         Color::White => timer.signal.get_untracked().white_time_left.unwrap(),
     });
     let tick_rate = Duration::from_millis(100);
-    // TODO: figure out time update bug when move is made but not confirmed
-    // using a slice of the gamestate didn't fix it and lowering the tick_rate from 1s just hides the problem
+    // let api = ApiRequests::new();
+    // api.game_check_time(timer.nanoid);
     let Pausable {
         pause,
         resume,
