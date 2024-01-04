@@ -1,28 +1,19 @@
-use crate::{common::time_control::TimeControl, providers::game_state::GameStateSignal};
-use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
+use crate::common::time_control::TimeControl;
+use crate::providers::timer::TimerSignal;
+use hive_lib::color::Color;
 use leptos::*;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn_with_options, UseIntervalFnOptions};
 use std::time::Duration;
 
 #[component]
-pub fn LiveTimer(
-    side: Color,
-    parent_div: NodeRef<html::Div>,
-    starting_time: Duration,
-    increment: Duration,
-) -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
-    let time = create_rw_signal(starting_time);
+pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
+    let timer = expect_context::<TimerSignal>();
+    let time = create_rw_signal(match side {
+        Color::Black => timer.signal.get_untracked().black_time_left.unwrap(),
+        Color::White => timer.signal.get_untracked().white_time_left.unwrap(),
+    });
     let tick_rate = Duration::from_millis(100);
-    let (turn, _set_turn) = create_slice(
-        // we take a slice *from* `state`
-        game_state_signal.signal,
-        // our getter returns a "slice" of the data
-        |gamestate| gamestate.state.turn,
-        // our setter describes how to mutate that slice, given a new value
-        |gamestate, n| gamestate.state.turn = n,
-    );
     // TODO: figure out time update bug when move is made but not confirmed
     // using a slice of the gamestate didn't fix it and lowering the tick_rate from 1s just hides the problem
     let Pausable {
@@ -35,12 +26,12 @@ pub fn LiveTimer(
         UseIntervalFnOptions::default().immediate(false),
     );
     create_effect(move |_| {
-        if turn() > 0 {
-            if (side == Color::White) == (turn() % 2 == 0) {
+        let timer = timer.signal.get();
+        if timer.turn > 0 {
+            if (side == Color::White) == (timer.turn % 2 == 0) && !timer.finished {
                 resume();
             } else if is_active() {
                 pause();
-                time.update(|t| *t += increment);
             }
         }
         // When time runs out declare winner and style timer that ran out
@@ -50,26 +41,15 @@ pub fn LiveTimer(
                 .expect("div_ref to be loaded by now")
                 .class_list();
             class_list.add_1("bg-red-700").expect("Class added");
-
-            match side {
-                Color::White => {
-                    (game_state_signal.signal).update(|s| {
-                        s.state.game_status =
-                            GameStatus::Finished(GameResult::Winner(Color::Black));
-                    });
-                }
-                Color::Black => {
-                    (game_state_signal.signal).update(|s| {
-                        s.state.game_status =
-                            GameStatus::Finished(GameResult::Winner(Color::White));
-                    });
-                }
-            }
         }
     });
     view! {
-        <div class="flex flex-grow resize h-full w-full select-none items-center justify-center text-[4vw] min-h-fit min-w-fit">
-            {move || TimeControl::RealTime(time(), increment).to_string()}
+        <div class="flex flex-grow resize h-full w-full select-none items-center justify-center text-[2vw] min-h-fit min-w-fit">
+            {move || {
+                TimeControl::RealTime(time(), timer.signal.get().time_increment.unwrap())
+                    .to_string()
+            }}
+
         </div>
     }
 }

@@ -12,6 +12,9 @@ diesel::table! {
         created_at -> Timestamptz,
         opponent_id -> Nullable<Uuid>,
         visibility -> Text,
+        time_mode -> Text,
+        time_base -> Nullable<Int4>,
+        time_increment -> Nullable<Int4>,
     }
 }
 
@@ -36,6 +39,12 @@ diesel::table! {
         black_rating_change -> Nullable<Float8>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        time_mode -> Text,
+        time_base -> Nullable<Int4>,
+        time_increment -> Nullable<Int4>,
+        last_interaction -> Nullable<Timestamptz>,
+        black_time_left -> Nullable<Int8>,
+        white_time_left -> Nullable<Int8>,
     }
 }
 

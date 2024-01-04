@@ -51,17 +51,6 @@ impl ApiRequests {
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
-    pub fn challenge_new(&self) {
-        let msg = ClientRequest::Challenge(ChallengeAction::Create {
-            rated: true,
-            game_type: GameType::MLP,
-            visibility: ChallengeVisibility::Public,
-            opponent: None,
-            color_choice: ColorChoice::Random,
-        });
-        self.websocket
-            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
-    }
     pub fn challenge_new_with_params(&self, params: ChallengeParams) {
         let msg = ClientRequest::Challenge(ChallengeAction::Create {
             rated: params.rated.get_untracked(),
@@ -69,6 +58,9 @@ impl ApiRequests {
             visibility: params.visibility.get_untracked(),
             opponent: params.opponent.get_untracked(),
             color_choice: params.color_choice.get_untracked(),
+            time_mode: params.time_mode.get_untracked().to_string(),
+            time_base: params.time_base.get_untracked(),
+            time_increment: params.time_increment.get_untracked(),
         });
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));

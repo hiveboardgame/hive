@@ -55,7 +55,6 @@ pub fn SideboardTabs(
         <div class=format!(
             "select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 {extend_tw_classes}",
         )>
-
             <div class="z-10 border-b-2 border-black dark:border-white grid grid-cols-2 sticky top-0 bg-inherit">
                 <button
                     class=move || { format!("hover:bg-blue-300 {}", button_color().0) }
@@ -78,7 +77,6 @@ pub fn SideboardTabs(
 
                     "History"
                 </button>
-
             </div>
             <div class="h-full">
                 <Show

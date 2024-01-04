@@ -100,12 +100,15 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
                     fallback=move || {
                         view! {
                             <div class="flex">
-                                    <button
-                                        on:click= move |_| { ApiRequests::new().challenge_cancel(challenge().nanoid) }
-                                        class="bg-red-500 hover:bg-red-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
-                                    >
+                                <button
+                                    on:click=move |_| {
+                                        ApiRequests::new().challenge_cancel(challenge().nanoid)
+                                    }
+
+                                    class="bg-red-500 hover:bg-red-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                >
                                     Cancel
-                                    </button>
+                                </button>
                                 <Show when=move || {
                                     challenge().visibility != ChallengeVisibility::Public && !single
                                 }>
@@ -122,24 +125,29 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
                         }
                     }
                 >
+
                     <button
-                        on:click= move |_| {
-                            log!("User is: {:?}", (auth_context.user)());
+                        on:click=move |_| {
+                            log!("User is: {:?}", (auth_context.user) ());
                             match (auth_context.user)() {
                                 Some(Ok(Some(_))) => {
-                                ApiRequests::new().challenge_accept(challenge().nanoid);
-                                let navigate = use_navigate();
-                                navigate(&format!("/game/{}", challenge().nanoid), Default::default());
-                            },
-                            _ => {
-                                let navigate = use_navigate();
-                                navigate("/login", Default::default());
-                            }
+                                    ApiRequests::new().challenge_accept(challenge().nanoid);
+                                    let navigate = use_navigate();
+                                    navigate(
+                                        &format!("/game/{}", challenge().nanoid),
+                                        Default::default(),
+                                    );
+                                }
+                                _ => {
+                                    let navigate = use_navigate();
+                                    navigate("/login", Default::default());
+                                }
                             }
                         }
+
                         class="bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                     >
-                    Join
+                        Join
                     </button>
                 </Show>
             </td>

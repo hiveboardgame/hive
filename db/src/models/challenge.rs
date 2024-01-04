@@ -28,6 +28,9 @@ pub struct NewChallenge {
     pub created_at: DateTime<Utc>,
     pub opponent_id: Option<Uuid>,
     pub visibility: String,
+    pub time_mode: String,           // Correspondence, Timed, Untimed
+    pub time_base: Option<i32>,      // Secons
+    pub time_increment: Option<i32>, // Seconds
 }
 
 impl NewChallenge {
@@ -38,8 +41,54 @@ impl NewChallenge {
         rated: bool,
         visibility: String,
         color_choice: String,
-    ) -> Self {
-        Self {
+        time_mode: String,           // Correspondence, Timed, Untimed
+        time_base: Option<i32>,      // Secons
+        time_increment: Option<i32>, // Seconds
+    ) -> Result<Self, DbError> {
+        match time_mode.as_str() {
+            "Unlimited" => {
+                if time_base.is_some() || time_increment.is_some() {
+                    return Err(DbError::InvalidInput {
+                        info: String::from("Unlimited game has time_base or time_increment"),
+                        error: format!(
+                            "time_base: {:?}, time_increment: {:?}",
+                            time_base, time_increment
+                        ),
+                    });
+                }
+            }
+            "Real Time" => {
+                if time_base.is_none() || time_increment.is_none() {
+                    return Err(DbError::InvalidInput {
+                        info: String::from("Realtime game is missing time_base or time_increment"),
+                        error: format!(
+                            "time_base: {:?}, time_increment: {:?}",
+                            time_base, time_increment
+                        ),
+                    });
+                }
+            }
+            "Correspondence" => {
+                if time_base.is_none() || time_increment.is_some() {
+                    return Err(DbError::InvalidInput {
+                        info: String::from(
+                            "Correspondence game has wrong time_base or time_increment",
+                        ),
+                        error: format!(
+                            "time_base: {:?}, time_increment: {:?}",
+                            time_base, time_increment
+                        ),
+                    });
+                }
+            }
+            found => {
+                return Err(DbError::InvalidInput {
+                    info: format!("{found} is not a valid time control"),
+                    error: String::new(),
+                })
+            }
+        }
+        Ok(Self {
             nanoid: nanoid!(10),
             challenger_id,
             opponent_id,
@@ -49,7 +98,10 @@ impl NewChallenge {
             tournament_queen_rule: true,
             color_choice,
             created_at: Utc::now(),
-        }
+            time_mode,
+            time_base,
+            time_increment,
+        })
     }
 }
 
@@ -69,6 +121,9 @@ pub struct Challenge {
     pub created_at: DateTime<Utc>,
     pub opponent_id: Option<Uuid>,
     pub visibility: String,
+    pub time_mode: String,           // Correspondence, Timed, Untimed
+    pub time_base: Option<i32>,      // Secons
+    pub time_increment: Option<i32>, // Seconds
 }
 
 impl Challenge {

@@ -33,6 +33,9 @@ impl ChallengeHandler {
                 visibility,
                 opponent,
                 color_choice,
+                time_mode,
+                time_base,
+                time_increment,
             } => {
                 CreateHandler::new(
                     rated,
@@ -40,6 +43,9 @@ impl ChallengeHandler {
                     visibility,
                     color_choice,
                     opponent,
+                    time_mode,
+                    time_base,
+                    time_increment,
                     self.user_id,
                     &self.pool,
                 )

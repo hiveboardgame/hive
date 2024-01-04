@@ -13,6 +13,9 @@ pub enum ChallengeAction {
         visibility: ChallengeVisibility,
         opponent: Option<String>,
         color_choice: ColorChoice,
+        time_mode: String,
+        time_base: Option<i32>,
+        time_increment: Option<i32>,
     },
     Decline(String), // Deletes the direct challenge with nanoid
     Delete(String),  // Deletes the challenge with nanoid

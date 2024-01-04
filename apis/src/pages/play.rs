@@ -5,19 +5,21 @@ use crate::{
         molecules::{control_buttons::ControlButtons, user_with_rating::UserWithRating},
         organisms::{
             board::Board,
+            display_timer::{DisplayTimer, Placement},
             reserve::{Alignment, Reserve},
             side_board::SideboardTabs,
-            timer::{DisplayTimer, Placement},
         },
     },
     functions::games::get::get_game_from_nanoid,
-    providers::{auth_context::AuthContext, game_state::GameStateSignal},
+    providers::{auth_context::AuthContext, game_state::GameStateSignal, timer::TimerSignal},
     responses::user::UserResponse,
 };
 use hive_lib::{color::Color, position::Position};
+use leptos::logging::log;
 use leptos::*;
 use leptos_router::*;
 use leptos_use::use_media_query;
+use std::time::Duration;
 
 #[derive(Params, PartialEq, Eq)]
 struct PlayParams {
@@ -39,19 +41,12 @@ pub struct TargetStack(pub RwSignal<Option<Position>>);
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
     let params = use_params::<PlayParams>();
-    // TODO: move the time_control to the gamestate
-    // let time_control = store_value(TimeControl::RealTime(
-    //     Duration::from_secs(60),
-    //     Duration::from_secs(10),
-    // ));
-
     let auth_context = expect_context::<AuthContext>();
     let user = move || match (auth_context.user)() {
         Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
 
-    let time_control = store_value(TimeControl::Untimed);
     let nanoid = move || {
         params.with(|params| {
             params
@@ -66,6 +61,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let nav_buttons_style =
         "flex place-items-center justify-center hover:bg-green-300 my-1 h-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
 
+    // WARN: THIS IS A MOVE be very careful with what you do with signals!
     view! {
         <Transition>
             {move || {
@@ -134,7 +130,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                                         side=players.top_player_color
                                                         placement=Placement::Top
                                                         player=players.top_player
-                                                        time_control=time_control()
+                                                        // time_control=time_control()
                                                         vertical=false
                                                     />
                                                     <SideboardTabs player_is_black=player_is_black/>
@@ -142,7 +138,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                                         side=players.bottom_player_color
                                                         placement=Placement::Bottom
                                                         player=players.bottom_player
-                                                        time_control=time_control()
+                                                        // time_control=time_control()
                                                         vertical=false
                                                     />
                                                 </div>
@@ -163,12 +159,12 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                                         alignment=Alignment::SingleRow
                                                         color=players.top_player_color
                                                     />
-                                                    <DisplayTimer
-                                                        side=players.top_player_color
-                                                        player=players.top_player
-                                                        time_control=time_control()
-                                                        vertical=true
-                                                    />
+                                                // <DisplayTimer
+                                                // side=players.top_player_color
+                                                // player=players.top_player
+                                                // time_control=time_control()
+                                                // vertical=true
+                                                // />
                                                 </div>
                                                 <div class="ml-2 flex gap-1">
                                                     <UserWithRating
@@ -192,12 +188,12 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                                         color=players.bottom_player_color
                                                     />
 
-                                                    <DisplayTimer
-                                                        side=players.bottom_player_color
-                                                        player=players.bottom_player
-                                                        time_control=time_control()
-                                                        vertical=true
-                                                    />
+                                                // <DisplayTimer
+                                                // side=players.bottom_player_color
+                                                // player=players.bottom_player
+                                                // time_control=time_control()
+                                                // vertical=true
+                                                // />
                                                 </div>
                                                 <div class="grid grid-cols-4 gap-8">
                                                     <HistoryButton
