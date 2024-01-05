@@ -58,6 +58,7 @@ pub enum ServerMessage {
     },
     GameActionNotification(Vec<String>),
     GameUpdate(GameActionResponse),
+    GameTimeoutCheck(GameResponse),
     GameNew(GameResponse),
     Challenge(ChallengeUpdate),
     UserStatus(UserUpdate),

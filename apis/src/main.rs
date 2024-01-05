@@ -28,8 +28,7 @@ async fn main() -> std::io::Result<()> {
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
 
-    // WARN: This needs to be enabled again
-    // simple_logger::init_with_level(log::Level::Debug).expect("couldn't initialize logging");
+    simple_logger::init_with_level(log::Level::Warn).expect("couldn't initialize logging");
 
     let config = DbConfig::from_env().expect("Failed to load config from env");
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");

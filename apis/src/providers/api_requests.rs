@@ -40,6 +40,12 @@ impl ApiRequests {
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
+    pub fn game_check_time(&self, game_id: &str) {
+        let msg = ClientRequest::GameTimeout(game_id.to_owned());
+        self.websocket
+            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    }
+
     pub fn join(&self, game_id: String) {
         let msg = ClientRequest::Game {
             id: game_id,
