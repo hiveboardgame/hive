@@ -1,4 +1,5 @@
 use crate::responses::user::UserResponse;
+use chrono::{DateTime, Utc};
 use hive_lib::{
     bug::Bug, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
     game_type::GameType, history::History, position::Position, state::State,
@@ -33,6 +34,7 @@ pub struct GameResponse {
     pub time_increment: Option<i32>,
     pub black_time_left: Option<Duration>,
     pub white_time_left: Option<Duration>,
+    pub last_interaction: Option<DateTime<Utc>>,
 }
 
 impl GameResponse {
@@ -136,6 +138,7 @@ impl GameResponse {
             black_time_left: black_time_left,
             time_mode: game.time_mode.to_owned(),
             time_increment: game.time_increment,
+            last_interaction: game.last_interaction,
         })
     }
 
