@@ -1,6 +1,7 @@
 use crate::common::time_control::TimeControl;
 use crate::providers::api_requests::ApiRequests;
 use crate::providers::timer::TimerSignal;
+use chrono::prelude::*;
 use hive_lib::color::Color;
 use lazy_static::lazy_static;
 use leptos::*;
@@ -17,17 +18,63 @@ lazy_static! {
 #[component]
 pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
     let timer = expect_context::<TimerSignal>();
-    let time_left = create_rw_signal(match side {
-        Color::Black => timer.signal.get_untracked().black_time_left.unwrap(),
-        Color::White => timer.signal.get_untracked().white_time_left.unwrap(),
+    let white_time = move || {
+        let left = timer.signal.get_untracked().white_time_left.unwrap();
+        if timer.signal.get_untracked().turn < 2
+            || left == Duration::from_millis(0)
+            || timer.signal.get_untracked().turn % 2 == 1
+        {
+            left
+        } else {
+            let left = chrono::Duration::from_std(left).unwrap();
+            let then = timer.signal.get_untracked().last_interaction.unwrap();
+            let future = then.checked_add_signed(left).unwrap();
+            let now = Utc::now();
+            future.signed_duration_since(now).to_std().unwrap()
+        }
+    };
+    let black_time = move || {
+        let left = timer.signal.get_untracked().black_time_left.unwrap();
+        if timer.signal.get_untracked().turn < 2
+            || left == Duration::from_millis(0)
+            || timer.signal.get_untracked().turn % 2 == 0
+        {
+            left
+        } else {
+            let left = chrono::Duration::from_std(left).unwrap();
+            let then = timer.signal.get_untracked().last_interaction.unwrap();
+            let future = then.checked_add_signed(left).unwrap();
+            let now = Utc::now();
+            future.signed_duration_since(now).to_std().unwrap()
+        }
+    };
+    let time_left = create_rw_signal({
+        match side {
+            Color::Black => black_time(),
+            Color::White => white_time(),
+        }
     });
+    let ticks = create_rw_signal(0);
     let tick_rate = Duration::from_millis(100);
     let Pausable {
         pause,
         resume,
         is_active,
     } = use_interval_fn_with_options(
-        move || time_left.update(|t| *t -= tick_rate),
+        move || {
+            ticks.update(|t| *t += 1);
+            time_left.update(|t| {
+                if ticks.get_untracked() > 10 {
+                    ticks.update(|t| *t = 0);
+                    *t = match side {
+                        Color::Black => black_time(),
+                        Color::White => white_time(),
+                    };
+                } else {
+                    *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
+                }
+            })
+        },
         100,
         UseIntervalFnOptions::default().immediate(false),
     );
