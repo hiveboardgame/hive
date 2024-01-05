@@ -46,10 +46,10 @@ impl NewChallenge {
         time_increment: Option<i32>, // Seconds
     ) -> Result<Self, DbError> {
         match time_mode.as_str() {
-            "Unlimited" => {
+            "Untimed" => {
                 if time_base.is_some() || time_increment.is_some() {
                     return Err(DbError::InvalidInput {
-                        info: String::from("Unlimited game has time_base or time_increment"),
+                        info: String::from("Untimed game has time_base or time_increment"),
                         error: format!(
                             "time_base: {:?}, time_increment: {:?}",
                             time_base, time_increment

@@ -56,7 +56,7 @@ pub struct NewGame {
 impl NewGame {
     pub fn new(white: Uuid, black: Uuid, challenge: &Challenge) -> Self {
         let time_left = match challenge.time_mode.as_ref() {
-            "Unlimited" => None,
+            "Untimed" => None,
             "Real Time" => Some(challenge.time_base.unwrap() as i64 * NANOS_IN_MINUTE),
             "Correspondence" => Some(challenge.time_base.unwrap() as i64 * NANOS_IN_MINUTE),
             _ => unimplemented!(),

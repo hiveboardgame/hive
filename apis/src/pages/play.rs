@@ -1,5 +1,4 @@
 use crate::{
-    common::time_control::TimeControl,
     components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         molecules::{control_buttons::ControlButtons, user_with_rating::UserWithRating},
@@ -11,15 +10,13 @@ use crate::{
         },
     },
     functions::games::get::get_game_from_nanoid,
-    providers::{auth_context::AuthContext, game_state::GameStateSignal, timer::TimerSignal},
+    providers::{auth_context::AuthContext, game_state::GameStateSignal},
     responses::user::UserResponse,
 };
 use hive_lib::{color::Color, position::Position};
-use leptos::logging::log;
 use leptos::*;
 use leptos_router::*;
 use leptos_use::use_media_query;
-use std::time::Duration;
 
 #[derive(Params, PartialEq, Eq)]
 struct PlayParams {

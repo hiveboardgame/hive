@@ -1,4 +1,5 @@
 use crate::common::challenge_action::ChallengeVisibility;
+use crate::pages::challenge_create::TimeControl;
 use crate::providers::api_requests::ApiRequests;
 use crate::{
     components::atoms::profile_link::ProfileLink,
@@ -17,6 +18,7 @@ use leptos_icons::{
 };
 use leptos_router::*;
 use leptos_use::use_window;
+use std::str::FromStr;
 
 #[component]
 pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
@@ -78,7 +80,36 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
                 {if challenge().game_type == "Base" { "🚫" } else { "🦟🐞💊" }}
             </td>
             <td class=td_class>
-                <Icon icon=Icon::from(BiInfiniteRegular) class="h-full w-full"/>
+
+                {move || {
+                    let time_mode = TimeControl::from_str(&challenge().time_mode)
+                        .expect("Valid timecontrol");
+                    match time_mode {
+                        TimeControl::Untimed => {
+                            view! { <Icon icon=Icon::from(BiInfiniteRegular)/> }
+                        }
+                        TimeControl::RealTime => {
+                            view! {
+                                <p>
+                                    "Realtime: " {challenge().time_base.expect("Time exists")} "m"
+                                    " + " {challenge().time_increment.expect("Increment exists")}
+                                    "s"
+                                </p>
+                            }
+                                .into_view()
+                        }
+                        TimeControl::Correspondence => {
+                            view! {
+                                <p>
+                                    "Correspondence: Days/move "
+                                    {challenge().time_base.expect("Time exists")}
+                                </p>
+                            }
+                                .into_view()
+                        }
+                    }
+                }}
+
             </td>
             <td class=td_class>
                 <span class="font-bold">{if challenge().rated { "RATED" } else { "CASUAL" }}</span>

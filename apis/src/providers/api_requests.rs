@@ -1,9 +1,7 @@
-use crate::common::challenge_action::{ChallengeAction, ChallengeVisibility};
+use crate::common::challenge_action::ChallengeAction;
 use crate::common::{client_message::ClientRequest, game_action::GameAction};
 use crate::pages::challenge_create::ChallengeParams;
 use crate::providers::web_socket::WebsocketContext;
-use hive_lib::color::ColorChoice;
-use hive_lib::game_type::GameType;
 use hive_lib::{game_control::GameControl, turn::Turn};
 use leptos::*;
 
