@@ -19,3 +19,7 @@ engine/perf.data
 
 #vscode settings
 .vscode/
+
+# direnv
+.direnv
+
