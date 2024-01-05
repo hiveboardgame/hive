@@ -299,6 +299,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                                             total_days_per_player(),
                                         )
                                     }}
+
                                 </label>
                                 <input
                                     on:input=total_slider

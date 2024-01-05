@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub enum ClientRequest {
     Challenge(ChallengeAction),
     Game { id: String, action: GameAction },
+    GameTimeout(String),
     // leptos-use idle or window unfocused will send
     Away, // Online and Offline are not needed because they will be handled by the WS connection
           // being established/torn down

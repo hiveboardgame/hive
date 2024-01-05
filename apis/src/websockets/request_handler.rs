@@ -1,3 +1,4 @@
+use super::game_timeout_handler::GameTimeoutHandler;
 use super::{
     auth_error::AuthError, game_action_handler::GameActionHandler,
     user_status_handler::UserStatusHandler,
@@ -44,6 +45,12 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
+            ClientRequest::GameTimeout(nanoid) => {
+                GameTimeoutHandler::new(&nanoid, &self.username, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
             ClientRequest::Game {
                 action: game_action,
                 id: game_id,

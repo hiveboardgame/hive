@@ -25,6 +25,7 @@ impl TimerSignal {
     pub fn update_from(&self, game: &GameResponse) {
         log!("Updating the timer");
         self.signal.update(|timer| {
+            timer.nanoid = game.nanoid.to_owned();
             timer.finished = game.finished;
             timer.turn = game.turn;
             timer.white_time_left = game.white_time_left;
@@ -37,6 +38,7 @@ impl TimerSignal {
 
 #[derive(Clone, Debug)]
 pub struct Timer {
+    pub nanoid: String,
     pub finished: bool,
     pub turn: usize,
     pub white_time_left: Option<Duration>,
@@ -48,6 +50,7 @@ pub struct Timer {
 impl Timer {
     pub fn new() -> Self {
         Self {
+            nanoid: String::new(),
             finished: true,
             turn: 0,
             white_time_left: None,

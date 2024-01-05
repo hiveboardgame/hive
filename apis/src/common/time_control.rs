@@ -26,10 +26,13 @@ impl fmt::Display for TimeControl {
                 }
             }
             TimeControl::RealTime(duration, _) => {
-                let duration = duration.as_secs();
-                let minutes = duration / 60;
-                let seconds = duration % 60;
-                if minutes < 100 {
+                let duration_seconds = duration.as_secs();
+                let minutes = duration_seconds / 60;
+                let seconds = duration_seconds % 60;
+                if duration_seconds < 10 {
+                    let seconds_f32 = duration.as_secs_f32();
+                    format!("{:.1}", seconds_f32)
+                } else if minutes < 100 {
                     format!("{:02}:{:02}", minutes, seconds)
                 } else {
                     format!("{:03}:{:02}", minutes, seconds)

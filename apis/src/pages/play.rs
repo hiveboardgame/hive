@@ -127,7 +127,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                                         side=players.top_player_color
                                                         placement=Placement::Top
                                                         player=players.top_player
-                                                        // time_control=time_control()
                                                         vertical=false
                                                     />
                                                     <SideboardTabs player_is_black=player_is_black/>
@@ -135,7 +134,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                                         side=players.bottom_player_color
                                                         placement=Placement::Bottom
                                                         player=players.bottom_player
-                                                        // time_control=time_control()
                                                         vertical=false
                                                     />
                                                 </div>
@@ -156,12 +154,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                                         alignment=Alignment::SingleRow
                                                         color=players.top_player_color
                                                     />
-                                                // <DisplayTimer
-                                                // side=players.top_player_color
-                                                // player=players.top_player
-                                                // time_control=time_control()
-                                                // vertical=true
-                                                // />
+                                                    <DisplayTimer
+                                                        side=players.top_player_color
+                                                        player=players.top_player
+                                                        vertical=true
+                                                    />
                                                 </div>
                                                 <div class="ml-2 flex gap-1">
                                                     <UserWithRating
@@ -185,12 +182,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                                         color=players.bottom_player_color
                                                     />
 
-                                                // <DisplayTimer
-                                                // side=players.bottom_player_color
-                                                // player=players.bottom_player
-                                                // time_control=time_control()
-                                                // vertical=true
-                                                // />
+                                                    <DisplayTimer
+                                                        side=players.bottom_player_color
+                                                        player=players.bottom_player
+                                                        vertical=true
+                                                    />
                                                 </div>
                                                 <div class="grid grid-cols-4 gap-8">
                                                     <HistoryButton

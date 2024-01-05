@@ -1,13 +1,14 @@
 use crate::{
     common::{
         game_action::GameAction,
-        server_result::{ChallengeUpdate, GameActionResponse, ServerMessage, ServerResult},
+        server_result::{ChallengeUpdate, ServerMessage, ServerResult},
     },
     functions::hostname::hostname_and_port,
     providers::{
         auth_context::AuthContext, challenges::ChallengeStateSignal, game_state::GameStateSignal,
         timer::TimerSignal,
     },
+    responses::game::GameResponse,
 };
 use hive_lib::{
     game_control::GameControl, game_result::GameResult, game_status::GameStatus, history::History,
@@ -140,7 +141,7 @@ fn on_message_callback(m: String) {
                         GameControl::Resign(color) => game_state.set_game_status(
                             GameStatus::Finished(GameResult::Winner(color.opposite_color())),
                         ),
-                        GameControl::TakebackAccept(_) => reset_game_state(&gar),
+                        GameControl::TakebackAccept(_) => reset_game_state(&gar.game),
                         _ => {}
                     }
                 }
@@ -150,7 +151,7 @@ fn on_message_callback(m: String) {
                         return;
                     }
                     log!("joined the game, reconstructing game state");
-                    reset_game_state(&gar);
+                    reset_game_state(&gar.game);
                     let timer = expect_context::<TimerSignal>();
                     timer.update_from(&gar.game);
                     // TODO: @leex try this again once the play page works correctly.
@@ -175,7 +176,7 @@ fn on_message_callback(m: String) {
                     game_state.signal.get_untracked().state.history.moves
                 );
                 log!("server_message history is: {:?}", gar.game.history);
-                reset_game_state(&gar);
+                reset_game_state(&gar.game);
                 let timer = expect_context::<TimerSignal>();
                 timer.update_from(&gar.game);
             }
@@ -199,6 +200,19 @@ fn on_message_callback(m: String) {
             };
             log!("User is: {:?}", user_uuid());
             challenges.add(new_challanges, user_uuid());
+        }
+        Ok(ServerResult::Ok(ServerMessage::GameTimeoutCheck(game))) => {
+            let mut game_state = expect_context::<GameStateSignal>();
+            if game_state.signal.get_untracked().state.game_status != game.game_status {
+                reset_game_state(&game);
+                let timer = expect_context::<TimerSignal>();
+                timer.update_from(&game);
+                if let GameStatus::Finished(_) = game.game_status {
+                    let mut games = game_state.signal.get_untracked().next_games;
+                    games.retain(|g| *g != game.nanoid);
+                    game_state.set_next_games(games);
+                }
+            }
         }
         Ok(ServerResult::Ok(ServerMessage::GameNew(game_response))) => {
             if game_response.time_mode == "Real Time" {
@@ -241,16 +255,16 @@ fn on_message_callback(m: String) {
     }
 }
 
-fn reset_game_state(gar: &GameActionResponse) {
+fn reset_game_state(game: &GameResponse) {
     let mut game_state = expect_context::<GameStateSignal>();
     let mut history = History::new();
-    history.moves = gar.game.history.to_owned();
-    history.game_type = gar.game.game_type.to_owned();
-    if let GameStatus::Finished(result) = &gar.game.game_status {
+    history.moves = game.history.to_owned();
+    history.game_type = game.game_type.to_owned();
+    if let GameStatus::Finished(result) = &game.game_status {
         history.result = result.to_owned();
     }
     if let Ok(state) = State::new_from_history(&history) {
-        game_state.set_state(state, gar.game.black_player.uid, gar.game.white_player.uid);
+        game_state.set_state(state, game.black_player.uid, game.white_player.uid);
     }
     // TODO: check if there an anunsered gc and set it
 }

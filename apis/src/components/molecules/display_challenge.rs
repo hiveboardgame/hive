@@ -4,7 +4,9 @@ use crate::providers::api_requests::ApiRequests;
 use crate::{
     components::atoms::profile_link::ProfileLink,
     functions::hostname::hostname_and_port,
-    providers::{auth_context::AuthContext, color_scheme::ColorScheme},
+    providers::{
+        auth_context::AuthContext, color_scheme::ColorScheme, game_state::GameStateSignal,
+    },
     responses::challenge::ChallengeResponse,
 };
 use hive_lib::color::ColorChoice;
@@ -162,12 +164,11 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
                             log!("User is: {:?}", (auth_context.user) ());
                             match (auth_context.user)() {
                                 Some(Ok(Some(_))) => {
+                                    let mut game_state = expect_context::<GameStateSignal>();
+                                    let games = game_state.signal.get().next_games;
+                                    game_state.full_reset();
+                                    game_state.signal.update(|s| s.next_games = games);
                                     ApiRequests::new().challenge_accept(challenge().nanoid);
-                                    let navigate = use_navigate();
-                                    navigate(
-                                        &format!("/game/{}", challenge().nanoid),
-                                        Default::default(),
-                                    );
                                 }
                                 _ => {
                                     let navigate = use_navigate();

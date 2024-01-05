@@ -25,6 +25,25 @@ impl GameStateSignal {
         }
     }
 
+    // TODO: fix this
+    pub fn full_reset(&mut self) {
+        let state = State::new(GameType::MLP, false);
+        self.signal.update(|s| {
+            s.game_id = None;
+            s.state = state;
+            s.black_id = None;
+            s.white_id = None;
+            s.target_positions = vec![];
+            s.active = None;
+            s.target_position = None;
+            s.current_position = None;
+            s.reserve_position = None;
+            s.history_turn = None;
+            s.view = View::Game;
+            s.game_control_pending = None;
+        })
+    }
+
     pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
         self.signal.get_untracked().user_color(user_id)
     }

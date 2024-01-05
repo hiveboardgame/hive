@@ -97,7 +97,7 @@ impl Rating {
         black_id: Uuid,
         game_result: GameResult,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    ) -> Result<((f64, f64), Option<(f64, f64)>), DbError> {
+    ) -> Result<(f64, f64, Option<f64>, Option<f64>), DbError> {
         let white_rating: Rating = ratings_table
             .filter(user_uid.eq(white_id))
             .first(conn)
@@ -107,17 +107,20 @@ impl Rating {
             .first(conn)
             .await?;
 
+        let (white_change, black_change) = match game_result {
+            GameResult::Draw => Rating::draw(rated, &white_rating, &black_rating, conn).await,
+            GameResult::Winner(color) => {
+                Rating::winner(rated, color, &white_rating, &black_rating, conn).await
+            }
+            GameResult::Unknown => unreachable!(
+                "This function should not be called when there's no concrete game result"
+            ),
+        }?;
         Ok((
-            (white_rating.rating, black_rating.rating),
-            match game_result {
-                GameResult::Draw => Rating::draw(rated, &white_rating, &black_rating, conn).await,
-                GameResult::Winner(color) => {
-                    Rating::winner(rated, color, &white_rating, &black_rating, conn).await
-                }
-                GameResult::Unknown => unreachable!(
-                    "This function should not be called when there's no concrete game result"
-                ),
-            }?,
+            white_rating.rating,
+            black_rating.rating,
+            white_change,
+            black_change,
         ))
     }
 
@@ -168,7 +171,7 @@ impl Rating {
         white_rating: &Rating,
         black_rating: &Rating,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    ) -> Result<Option<(f64, f64)>, DbError> {
+    ) -> Result<(Option<f64>, Option<f64>), DbError> {
         if rated {
             let (white_glicko, black_glicko, white_rating_change, black_rating_change) =
                 Rating::calculate_glicko2(white_rating, black_rating, GameResult::Draw);
@@ -195,7 +198,7 @@ impl Rating {
                 ))
                 .execute(conn)
                 .await?;
-            Ok(Some((white_rating_change, black_rating_change)))
+            Ok((Some(white_rating_change), Some(black_rating_change)))
         } else {
             diesel::update(ratings::table.find(black_rating.id))
                 .set((
@@ -214,7 +217,7 @@ impl Rating {
                 ))
                 .execute(conn)
                 .await?;
-            Ok(None)
+            Ok((None, None))
         }
     }
 
@@ -224,7 +227,7 @@ impl Rating {
         white_rating: &Rating,
         black_rating: &Rating,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    ) -> Result<Option<(f64, f64)>, DbError> {
+    ) -> Result<(Option<f64>, Option<f64>), DbError> {
         let (white_won, white_lost) = {
             if winner == Color::White {
                 (1, 0)
@@ -262,7 +265,7 @@ impl Rating {
                 ))
                 .execute(conn)
                 .await?;
-            Ok(Some((white_rating_change, black_rating_change)))
+            Ok((Some(white_rating_change), Some(black_rating_change)))
         } else {
             diesel::update(ratings::table.find(white_rating.id))
                 .set((
@@ -281,7 +284,7 @@ impl Rating {
                 ))
                 .execute(conn)
                 .await?;
-            Ok(None)
+            Ok((None, None))
         }
     }
 }
