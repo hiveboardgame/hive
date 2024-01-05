@@ -53,7 +53,7 @@ impl Timer {
             white_time_left: None,
             black_time_left: None,
             time_increment: None,
-            time_mode: String::from("Unlimited"),
+            time_mode: String::from("Untimed"),
         }
     }
 }

@@ -24,11 +24,11 @@ pub struct ChallengeParams {
     pub time_increment: RwSignal<Option<i32>>,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TimeControl {
     Correspondence,
     RealTime,
-    Unlimited,
+    Untimed,
 }
 
 impl fmt::Display for TimeControl {
@@ -36,7 +36,7 @@ impl fmt::Display for TimeControl {
         let time = match self {
             TimeControl::Correspondence => "Correspondence",
             TimeControl::RealTime => "Real Time",
-            TimeControl::Unlimited => "Unlimited",
+            TimeControl::Untimed => "Untimed",
         };
         write!(f, "{}", time)
     }
@@ -49,7 +49,7 @@ impl FromStr for TimeControl {
         match s {
             "Correspondence" => Ok(TimeControl::Correspondence),
             "Real Time" => Ok(TimeControl::RealTime),
-            "Unlimited" => Ok(TimeControl::Unlimited),
+            "Untimed" => Ok(TimeControl::Untimed),
             s => Err(ChallengeError::NotValidTimeControl {
                 found: s.to_string(),
             }),
@@ -66,8 +66,8 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
         opponent: RwSignal::new(None),
         color_choice: RwSignal::new(ColorChoice::Random),
         time_mode: RwSignal::new(TimeControl::RealTime),
-        time_base: RwSignal::new(Some(1)),
-        time_increment: RwSignal::new(Some(5)),
+        time_base: RwSignal::new(Some(10)),
+        time_increment: RwSignal::new(Some(10)),
     };
     let is_rated = move |b| {
         params.rated.update(|v| *v = b);
@@ -82,17 +82,6 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
         };
     };
     let challenge_visibility = move |visibility| params.visibility.update(|v| *v = visibility);
-    let create_challenge = move |color_choice| {
-        params.color_choice.update(|p| *p = color_choice);
-        let api = ApiRequests::new();
-        api.challenge_new_with_params(params);
-        params
-            .visibility
-            .update(|v| *v = ChallengeVisibility::Public);
-        params.game_type.update(|v| *v = GameType::MLP);
-        params.rated.set(true);
-        close(());
-    };
     let color_context = expect_context::<ColorScheme>;
     let icon = move |color_choice: ColorChoice| {
         move || match color_choice {
@@ -118,10 +107,10 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
     let time_control = RwSignal::new(TimeControl::RealTime);
     let min_rating = RwSignal::new(-500_i16);
     let max_rating = RwSignal::new(500_i16);
-    let days_per_move = RwSignal::new(2_u8);
-    let total_days = RwSignal::new(0_u8);
-    let step_min = RwSignal::new(10_u8);
-    let step_sec = RwSignal::new(10_u8);
+    let days_per_move = RwSignal::new(2_i32);
+    let total_days_per_player = RwSignal::new(0_i32);
+    let step_min = RwSignal::new(10_i32);
+    let step_sec = RwSignal::new(10_i32);
     let total_min = Signal::derive(move || {
         let step = step_min();
         match step {
@@ -129,7 +118,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
             21 => step + 4,
             22 => step + 8,
             23..=32 => (step - 20) * 15,
-            0_u8 | 33_u8..=u8::MAX => unreachable!(),
+            i32::MIN..=0_i32 | 33_i32..=i32::MAX => unreachable!(),
         }
     });
     let sec_per_move = Signal::derive(move || {
@@ -139,7 +128,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
             21 => step + 4,
             22 => step + 8,
             23..=32 => (step - 20) * 15,
-            33_u8..=u8::MAX => unreachable!(),
+            i32::MIN..=-1_i32 | 33_i32..=i32::MAX => unreachable!(),
         }
     });
 
@@ -157,17 +146,17 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
     };
     let days_slider = {
         move |evt| {
-            let value = event_target_value(&evt).parse::<u8>().unwrap();
+            let value = event_target_value(&evt).parse::<i32>().unwrap();
             days_per_move.update(|v| *v = value);
             if value != 0 {
-                total_days.update(|v| *v = 0);
+                total_days_per_player.update(|v| *v = 0);
             }
         }
     };
     let total_slider = {
         move |evt| {
-            let value = event_target_value(&evt).parse::<u8>().unwrap();
-            total_days.update(|v| *v = value);
+            let value = event_target_value(&evt).parse::<i32>().unwrap();
+            total_days_per_player.update(|v| *v = value);
             if value != 0 {
                 days_per_move.update(|v| *v = 0);
             }
@@ -175,27 +164,68 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
     };
     let incr_slider = {
         move |evt| {
-            let value = event_target_value(&evt).parse::<u8>().unwrap();
+            let value = event_target_value(&evt).parse::<i32>().unwrap();
             step_sec.update(|v| *v = value);
         }
     };
     let minute_slider = {
         move |evt| {
-            let value = event_target_value(&evt).parse::<u8>().unwrap();
+            let value = event_target_value(&evt).parse::<i32>().unwrap();
             step_min.update(|v| *v = value);
         }
     };
+
+    let create_challenge = move |color_choice| {
+        params.color_choice.update(|p| *p = color_choice);
+        let api = ApiRequests::new();
+        params
+            .time_mode
+            .update_untracked(|v| *v = time_control.get_untracked());
+        match (params.time_mode)() {
+            TimeControl::Untimed => {
+                params.time_base.update_untracked(|v| *v = None);
+                params.time_increment.update_untracked(|v| *v = None);
+            }
+            TimeControl::RealTime => {
+                params
+                    .time_base
+                    .update_untracked(|v| *v = Some(total_min.get_untracked()));
+                params
+                    .time_increment
+                    .update_untracked(|v| *v = Some(sec_per_move.get_untracked()));
+            }
+            TimeControl::Correspondence => {
+                let days_per_move = days_per_move.get_untracked();
+                let total_days_per_player = total_days_per_player.get_untracked();
+                let value = if days_per_move != 0 {
+                    days_per_move
+                } else {
+                    total_days_per_player
+                };
+                params.time_base.update_untracked(|v| *v = Some(value));
+                params.time_increment.update_untracked(|v| *v = None);
+            }
+        };
+        api.challenge_new_with_params(params);
+        params
+            .visibility
+            .update(|v| *v = ChallengeVisibility::Public);
+        params.game_type.update(|v| *v = GameType::MLP);
+        params.rated.set(true);
+        close(());
+    };
+
     let buttons_style =
         "my-1 p-1 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded";
     let disable_rated = move || {
-        if (params.game_type)() == GameType::Base || time_control() == TimeControl::Unlimited {
+        if (params.game_type)() == GameType::Base || time_control() == TimeControl::Untimed {
             return true;
         }
         false
     };
     let disable_game_create = move || {
         if days_per_move() == 0
-            && total_days() == 0
+            && total_days_per_player() == 0
             && time_control() == TimeControl::Correspondence
         {
             return true;
@@ -228,7 +258,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                         params.visibility.update(|v| *v = ChallengeVisibility::Public);
                         params.game_type.update(|v| *v = GameType::MLP);
                         days_per_move.update_untracked(|v| *v = 2);
-                        if new_value == TimeControl::Unlimited {
+                        if new_value == TimeControl::Untimed {
                             params.rated.set(false);
                         } else {
                             params.rated.set(true);
@@ -239,10 +269,10 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
 
                     <SelectOption value=time_control is="Real Time"/>
                     <SelectOption value=time_control is="Correspondence"/>
-                    <SelectOption value=time_control is="Unlimited"/>
+                    <SelectOption value=time_control is="Untimed"/>
                 </select>
             </div>
-            <Show when=move || time_control() != TimeControl::Unlimited>
+            <Show when=move || time_control() != TimeControl::Untimed>
                 <Show
                     when=move || time_control() == TimeControl::RealTime
                     fallback=move || {
@@ -263,7 +293,12 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                                     class=slider_style
                                 />
                                 <label for="corr">
-                                    {move || format!("Total_days: {}", total_days())}
+                                    {move || {
+                                        format!(
+                                            "total_days_per_player: {}",
+                                            total_days_per_player(),
+                                        )
+                                    }}
                                 </label>
                                 <input
                                     on:input=total_slider
@@ -272,7 +307,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                                     name="Correspondence"
                                     min="0"
                                     max="14"
-                                    prop:value=total_days
+                                    prop:value=total_days_per_player
                                     step="1"
                                     class=slider_style
                                 />

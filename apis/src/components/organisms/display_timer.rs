@@ -1,16 +1,16 @@
 use crate::{
-    common::time_control::TimeControl,
     components::molecules::{
         correspondence_timer::CorrespondenceTimer, live_timer::LiveTimer,
         user_with_rating::UserWithRating,
     },
+    pages::challenge_create::TimeControl,
     providers::timer::TimerSignal,
     responses::user::UserResponse,
 };
 use hive_lib::color::Color;
-use leptos::logging::log;
 use leptos::*;
 use leptos_icons::{BiIcon::BiInfiniteRegular, Icon};
+use std::str::FromStr;
 use std::time::Duration;
 
 pub enum Placement {
@@ -68,13 +68,15 @@ pub fn DisplayTimer(
             >
 
                 {move || {
-                    match timer.signal.get().time_mode.as_str() {
-                        "Unlimited" => {
+                    match TimeControl::from_str(&timer.signal.get().time_mode)
+                        .expect("Valid timecontrol")
+                    {
+                        TimeControl::Untimed => {
                             view! {
                                 <Icon icon=Icon::from(BiInfiniteRegular) class="h-full w-full"/>
                             }
                         }
-                        "Correspondence" => {
+                        TimeControl::Correspondence => {
                             view! {
                                 <CorrespondenceTimer
                                     side=side
@@ -83,10 +85,9 @@ pub fn DisplayTimer(
                                 />
                             }
                         }
-                        "Real Time" => {
+                        TimeControl::RealTime => {
                             view! { <LiveTimer side=side parent_div=div_ref/> }
                         }
-                        _ => unimplemented!(),
                     }
                 }}
 

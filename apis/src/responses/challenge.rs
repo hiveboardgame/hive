@@ -18,6 +18,9 @@ pub struct ChallengeResponse {
     pub color_choice: ColorChoice,
     pub created_at: DateTime<Utc>,
     pub challenger_rating: f64,
+    pub time_mode: String,           // Correspondence, Timed, Untimed
+    pub time_base: Option<i32>,      // Secons
+    pub time_increment: Option<i32>, // Seconds
 }
 
 use cfg_if::cfg_if;
@@ -55,6 +58,9 @@ impl ChallengeResponse {
             color_choice: ColorChoice::from_str(&challenge.color_choice)?,
             created_at: challenge.created_at,
             challenger_rating: challenger_rating.rating,
+            time_mode: challenge.time_mode.clone(),
+            time_base: challenge.time_base,
+            time_increment: challenge.time_increment,
         })
     }
 }
