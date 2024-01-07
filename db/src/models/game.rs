@@ -21,8 +21,8 @@ use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
 
-static NANOS_IN_A_DAY: i64 = 86400000000000_i64;
-static NANOS_IN_MINUTE: i64 = 60000000000_i64;
+static NANOS_IN_A_DAY: u64 = 86400000000000_u64;
+static NANOS_IN_MINUTE: u64 = 60000000000_u64;
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = games)]
@@ -57,8 +57,10 @@ impl NewGame {
     pub fn new(white: Uuid, black: Uuid, challenge: &Challenge) -> Self {
         let time_left = match challenge.time_mode.as_ref() {
             "Untimed" => None,
-            "Real Time" => Some(challenge.time_base.unwrap() as i64 * NANOS_IN_MINUTE),
-            "Correspondence" => Some(challenge.time_base.unwrap() as i64 * NANOS_IN_MINUTE),
+            "Real Time" => Some((challenge.time_base.unwrap() as u64 * NANOS_IN_MINUTE) as i64),
+            "Correspondence" => {
+                Some((challenge.time_base.unwrap() as u64 * NANOS_IN_MINUTE) as i64)
+            }
             _ => unimplemented!(),
         };
         Self {
@@ -147,9 +149,10 @@ impl Game {
             return Ok(self.clone());
         }
         if let Some(last) = self.last_interaction {
-            let time_passed = Utc::now().signed_duration_since(last).to_std().unwrap();
-            if time_left > time_passed {
-                return Ok(self.clone());
+            if let Ok(time_passed) = Utc::now().signed_duration_since(last).to_std() {
+                if time_left > time_passed {
+                    return Ok(self.clone());
+                }
             }
             let (white_time, black_time, game_result) = if self.turn % 2 == 0 {
                 (
@@ -201,6 +204,46 @@ impl Game {
         }
     }
 
+    fn white_time_left_duration(&self) -> Result<Duration, DbError> {
+        if let Some(white_time) = self.white_time_left {
+            Ok(Duration::from_secs(white_time as u64 * NANOS_IN_MINUTE))
+        } else {
+            Err(DbError::TimeNotFound {
+                reason: String::from("Could not find white_time"),
+            })
+        }
+    }
+
+    fn black_time_left_duration(&self) -> Result<Duration, DbError> {
+        if let Some(black_time) = self.black_time_left {
+            Ok(Duration::from_secs(black_time as u64 * NANOS_IN_MINUTE))
+        } else {
+            Err(DbError::TimeNotFound {
+                reason: String::from("Could not find black_time"),
+            })
+        }
+    }
+
+    fn time_base_duration(&self) -> Result<Duration, DbError> {
+        if let Some(base) = self.time_base {
+            Ok(Duration::from_secs(base as u64 * NANOS_IN_MINUTE))
+        } else {
+            Err(DbError::TimeNotFound {
+                reason: String::from("Could not find time_base"),
+            })
+        }
+    }
+
+    fn time_increment_duration(&self) -> Result<Duration, DbError> {
+        if let Some(increment) = self.time_increment {
+            Ok(Duration::from_secs(increment as u64))
+        } else {
+            Err(DbError::TimeNotFound {
+                reason: String::from("Could not find time_increment"),
+            })
+        }
+    }
+
     pub async fn make_move(
         &self,
         mut board_move: String,
@@ -232,14 +275,20 @@ impl Game {
 
         if self.time_mode == "Real Time" {
             if self.turn < 2 {
-                white_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_MINUTE);
-                black_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_MINUTE);
+                white_time = Some(
+                    (self.time_base.expect("Realtime games to have base_time") as u64
+                        * NANOS_IN_MINUTE) as i64,
+                );
+                black_time = Some(
+                    (self.time_base.expect("Realtime games to have base_time") as u64
+                        * NANOS_IN_MINUTE) as i64,
+                );
             } else {
                 // get time left for the current player
                 let mut time_left = if self.turn % 2 == 0 {
-                    Duration::from_nanos(self.white_time_left.unwrap() as u64)
+                    self.white_time_left_duration()?
                 } else {
-                    Duration::from_nanos(self.black_time_left.unwrap() as u64)
+                    self.black_time_left_duration()?
                 };
 
                 // if the player has time left
@@ -249,8 +298,7 @@ impl Game {
                     println!("Time passed: {:?}", time_passed);
                     if time_left > time_passed {
                         // substract passed time and add time_increment
-                        time_left = time_left - time_passed
-                            + Duration::from_secs(self.time_increment.unwrap() as u64);
+                        time_left = time_left - time_passed + self.time_increment_duration()?;
                         if self.turn % 2 == 0 {
                             black_time = self.black_time_left;
                             white_time = Some(time_left.as_nanos() as i64);
@@ -284,9 +332,9 @@ impl Game {
         if self.time_mode == "Correspondence" {
             // get time left for the current player
             let time_left = if self.turn % 2 == 0 {
-                Duration::from_nanos(self.white_time_left.unwrap() as u64)
+                self.white_time_left_duration()?
             } else {
-                Duration::from_nanos(self.black_time_left.unwrap() as u64)
+                self.black_time_left_duration()?
             };
 
             // if the player has time left
@@ -296,10 +344,10 @@ impl Game {
                     // reset the time to X days
                     if self.turn % 2 == 0 {
                         black_time = self.black_time_left;
-                        white_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_A_DAY);
+                        white_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_A_DAY as i64);
                     } else {
                         white_time = self.white_time_left;
-                        black_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_A_DAY);
+                        black_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_A_DAY as i64);
                     };
                 }
             }
