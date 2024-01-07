@@ -30,7 +30,11 @@ pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
             let then = timer.signal.get_untracked().last_interaction.unwrap();
             let future = then.checked_add_signed(left).unwrap();
             let now = Utc::now();
-            future.signed_duration_since(now).to_std().unwrap()
+            if now > future {
+                Duration::from_millis(0)
+            } else {
+                future.signed_duration_since(now).to_std().unwrap()
+            }
         }
     };
     let black_time = move || {
@@ -45,7 +49,11 @@ pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
             let then = timer.signal.get_untracked().last_interaction.unwrap();
             let future = then.checked_add_signed(left).unwrap();
             let now = Utc::now();
-            future.signed_duration_since(now).to_std().unwrap()
+            if now > future {
+                Duration::from_millis(0)
+            } else {
+                future.signed_duration_since(now).to_std().unwrap()
+            }
         }
     };
     let time_left = create_rw_signal({

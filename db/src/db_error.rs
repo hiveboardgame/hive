@@ -9,6 +9,8 @@ pub enum DbError {
     InvalidInput { info: String, error: String },
     #[error("Not found")]
     NotFound { reason: String },
+    #[error("Time not present")]
+    TimeNotFound { reason: String },
 }
 
 impl From<diesel::result::Error> for DbError {
