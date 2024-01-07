@@ -1,4 +1,4 @@
-use crate::common::challenge_error::ChallengeError;
+use shared_types::challenge_error::ChallengeError;
 use hive_lib::{color::ColorChoice, game_type::GameType};
 use serde::{Deserialize, Serialize};
 use std::fmt;

@@ -1,13 +1,13 @@
 use crate::{
     common::{
         challenge_action::ChallengeVisibility,
-        challenge_error::ChallengeError,
         server_result::{
             ChallengeUpdate, InternalServerMessage, MessageDestination, ServerMessage,
         },
     },
     responses::challenge::ChallengeResponse,
 };
+use shared_types::challenge_error::ChallengeError;
 use anyhow::Result;
 use db_lib::{models::challenge::Challenge, DbPool};
 use uuid::Uuid;

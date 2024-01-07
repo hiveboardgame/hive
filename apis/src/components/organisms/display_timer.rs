@@ -3,13 +3,13 @@ use crate::{
         correspondence_timer::CorrespondenceTimer, live_timer::LiveTimer,
         user_with_rating::UserWithRating,
     },
-    pages::challenge_create::TimeControl,
     providers::timer::TimerSignal,
     responses::user::UserResponse,
 };
 use hive_lib::color::Color;
 use leptos::*;
 use leptos_icons::{BiIcon::BiInfiniteRegular, Icon};
+use shared_types::time_mode::TimeMode;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -23,7 +23,6 @@ pub fn DisplayTimer(
     side: Color,
     #[prop(optional)] placement: Option<Placement>,
     player: StoredValue<UserResponse>,
-    // time_control: TimeControl,
     vertical: bool,
 ) -> impl IntoView {
     let (bg_color, text_color) = match side {
@@ -68,15 +67,15 @@ pub fn DisplayTimer(
             >
 
                 {move || {
-                    match TimeControl::from_str(&timer.signal.get().time_mode)
-                        .expect("Valid timecontrol")
+                    match TimeMode::from_str(&timer.signal.get().time_mode)
+                        .expect("Valid TimeMode")
                     {
-                        TimeControl::Untimed => {
+                        TimeMode::Untimed => {
                             view! {
                                 <Icon icon=Icon::from(BiInfiniteRegular) class="h-full w-full"/>
                             }
                         }
-                        TimeControl::Correspondence => {
+                        TimeMode::Correspondence => {
                             view! {
                                 <CorrespondenceTimer
                                     side=side
@@ -85,7 +84,7 @@ pub fn DisplayTimer(
                                 />
                             }
                         }
-                        TimeControl::RealTime => {
+                        TimeMode::RealTime => {
                             view! { <LiveTimer side=side parent_div=div_ref/> }
                         }
                     }
