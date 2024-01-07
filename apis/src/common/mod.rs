@@ -1,5 +1,4 @@
 pub mod challenge_action;
-pub mod challenge_error;
 pub mod client_message;
 pub mod game_action;
 pub mod hex;
@@ -9,4 +8,3 @@ pub mod piece_type;
 pub mod server_message;
 pub mod server_result;
 pub mod svg_pos;
-pub mod time_control;

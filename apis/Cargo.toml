@@ -23,6 +23,7 @@ db = { path = "../db", optional = true  }
 diesel = { workspace = true, optional = true }
 diesel_migrations = { workspace = true, optional = true }
 hive = { path = "../engine" }
+shared_types = { path = "../shared_types" }
 http.workspace = true
 leptos = { workspace = true }
 leptos-use.workspace = true

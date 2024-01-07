@@ -1,7 +1,5 @@
-use std::{fmt, str::FromStr};
-
 use crate::{
-    common::{challenge_action::ChallengeVisibility, challenge_error::ChallengeError},
+    common::challenge_action::ChallengeVisibility,
     components::atoms::select_options::SelectOption,
     providers::{api_requests::ApiRequests, color_scheme::ColorScheme},
 };
@@ -11,6 +9,8 @@ use leptos_icons::{
     BsIcon::{BsHexagon, BsHexagonFill, BsHexagonHalf},
     Icon,
 };
+use shared_types::time_mode::TimeMode;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ChallengeParams {
@@ -19,42 +19,9 @@ pub struct ChallengeParams {
     pub visibility: RwSignal<ChallengeVisibility>,
     pub opponent: RwSignal<Option<String>>,
     pub color_choice: RwSignal<ColorChoice>,
-    pub time_mode: RwSignal<TimeControl>,
+    pub time_mode: RwSignal<TimeMode>,
     pub time_base: RwSignal<Option<i32>>,
     pub time_increment: RwSignal<Option<i32>>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum TimeControl {
-    Correspondence,
-    RealTime,
-    Untimed,
-}
-
-impl fmt::Display for TimeControl {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let time = match self {
-            TimeControl::Correspondence => "Correspondence",
-            TimeControl::RealTime => "Real Time",
-            TimeControl::Untimed => "Untimed",
-        };
-        write!(f, "{}", time)
-    }
-}
-
-impl FromStr for TimeControl {
-    type Err = ChallengeError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Correspondence" => Ok(TimeControl::Correspondence),
-            "Real Time" => Ok(TimeControl::RealTime),
-            "Untimed" => Ok(TimeControl::Untimed),
-            s => Err(ChallengeError::NotValidTimeControl {
-                found: s.to_string(),
-            }),
-        }
-    }
 }
 
 #[component]
@@ -65,7 +32,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
         visibility: RwSignal::new(ChallengeVisibility::Public),
         opponent: RwSignal::new(None),
         color_choice: RwSignal::new(ColorChoice::Random),
-        time_mode: RwSignal::new(TimeControl::RealTime),
+        time_mode: RwSignal::new(TimeMode::RealTime),
         time_base: RwSignal::new(Some(10)),
         time_increment: RwSignal::new(Some(10)),
     };
@@ -104,7 +71,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
             }
         }
     };
-    let time_control = RwSignal::new(TimeControl::RealTime);
+    let time_control = RwSignal::new(TimeMode::RealTime);
     let min_rating = RwSignal::new(-500_i16);
     let max_rating = RwSignal::new(500_i16);
     let days_per_move = RwSignal::new(2_i32);
@@ -182,11 +149,11 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
             .time_mode
             .update_untracked(|v| *v = time_control.get_untracked());
         match (params.time_mode)() {
-            TimeControl::Untimed => {
+            TimeMode::Untimed => {
                 params.time_base.update_untracked(|v| *v = None);
                 params.time_increment.update_untracked(|v| *v = None);
             }
-            TimeControl::RealTime => {
+            TimeMode::RealTime => {
                 params
                     .time_base
                     .update_untracked(|v| *v = Some(total_min.get_untracked()));
@@ -194,7 +161,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                     .time_increment
                     .update_untracked(|v| *v = Some(sec_per_move.get_untracked()));
             }
-            TimeControl::Correspondence => {
+            TimeMode::Correspondence => {
                 let days_per_move = days_per_move.get_untracked();
                 let total_days_per_player = total_days_per_player.get_untracked();
                 let value = if days_per_move != 0 {
@@ -218,7 +185,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
     let buttons_style =
         "my-1 p-1 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded";
     let disable_rated = move || {
-        if (params.game_type)() == GameType::Base || time_control() == TimeControl::Untimed {
+        if (params.game_type)() == GameType::Base || time_control() == TimeMode::Untimed {
             return true;
         }
         false
@@ -226,7 +193,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
     let disable_game_create = move || {
         if days_per_move() == 0
             && total_days_per_player() == 0
-            && time_control() == TimeControl::Correspondence
+            && time_control() == TimeMode::Correspondence
         {
             return true;
         }
@@ -253,12 +220,12 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                     name="Time Control"
                     id="time-control"
                     on:change=move |ev| {
-                        let new_value = TimeControl::from_str(&event_target_value(&ev))
-                            .expect("Valid timecontrol");
+                        let new_value = TimeMode::from_str(&event_target_value(&ev))
+                            .expect("Valid TimeMode");
                         params.visibility.update(|v| *v = ChallengeVisibility::Public);
                         params.game_type.update(|v| *v = GameType::MLP);
                         days_per_move.update_untracked(|v| *v = 2);
-                        if new_value == TimeControl::Untimed {
+                        if new_value == TimeMode::Untimed {
                             params.rated.set(false);
                         } else {
                             params.rated.set(true);
@@ -272,9 +239,9 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                     <SelectOption value=time_control is="Untimed"/>
                 </select>
             </div>
-            <Show when=move || time_control() != TimeControl::Untimed>
+            <Show when=move || time_control() != TimeMode::Untimed>
                 <Show
-                    when=move || time_control() == TimeControl::RealTime
+                    when=move || time_control() == TimeMode::RealTime
                     fallback=move || {
                         view! {
                             <div class="flex flex-col justify-center items-center mb-1">

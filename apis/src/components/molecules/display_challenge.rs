@@ -1,5 +1,4 @@
 use crate::common::challenge_action::ChallengeVisibility;
-use crate::pages::challenge_create::TimeControl;
 use crate::providers::api_requests::ApiRequests;
 use crate::{
     components::atoms::profile_link::ProfileLink,
@@ -21,6 +20,7 @@ use leptos_icons::{
 use leptos_router::*;
 use leptos_use::use_window;
 use std::str::FromStr;
+use shared_types::time_mode::TimeMode;
 
 #[component]
 pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
@@ -84,13 +84,13 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
             <td class=td_class>
 
                 {move || {
-                    let time_mode = TimeControl::from_str(&challenge().time_mode)
-                        .expect("Valid timecontrol");
+                    let time_mode = TimeMode::from_str(&challenge().time_mode)
+                        .expect("Valid TimeMode");
                     match time_mode {
-                        TimeControl::Untimed => {
+                        TimeMode::Untimed => {
                             view! { <Icon icon=Icon::from(BiInfiniteRegular)/> }
                         }
-                        TimeControl::RealTime => {
+                        TimeMode::RealTime => {
                             view! {
                                 <p>
                                     "Realtime: " {challenge().time_base.expect("Time exists")} "m"
@@ -100,7 +100,7 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
                             }
                                 .into_view()
                         }
-                        TimeControl::Correspondence => {
+                        TimeMode::Correspondence => {
                             view! {
                                 <p>
                                     "Correspondence: Days/move "

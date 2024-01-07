@@ -1,8 +1,9 @@
-use crate::{common::time_control::TimeControl, providers::game_state::GameStateSignal};
+use crate::providers::game_state::GameStateSignal;
 use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
 use leptos::*;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn_with_options, UseIntervalFnOptions};
+use shared_types::time_mode::TimeMode;
 use std::time::Duration;
 
 #[component]
@@ -67,7 +68,7 @@ pub fn CorrespondenceTimer(
     });
     view! {
         <div class="flex flex-grow resize h-full w-full select-none items-center justify-center text-[2vw] min-h-fit min-w-fit">
-            {move || TimeControl::Correspondence(time()).to_string()}
+            {move || TimeMode::Correspondence.time_remaining(time())}
         </div>
     }
 }

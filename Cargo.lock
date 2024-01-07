@@ -454,6 +454,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "shared_types",
  "simple_logger",
  "thiserror",
  "tokio",
@@ -3082,6 +3083,14 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+]
+
+[[package]]
+name = "shared_types"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

@@ -1,4 +1,3 @@
-use crate::common::time_control::TimeControl;
 use crate::providers::api_requests::ApiRequests;
 use crate::providers::timer::TimerSignal;
 use hive_lib::color::Color;
@@ -8,6 +7,7 @@ use leptos_router::RouterContext;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn_with_options, UseIntervalFnOptions};
 use regex::Regex;
+use shared_types::time_mode::TimeMode;
 use std::time::Duration;
 lazy_static! {
     static ref NANOID: Regex =
@@ -61,8 +61,7 @@ pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
     view! {
         <div class="flex flex-grow resize h-full w-full select-none items-center justify-center text-[2vw] min-h-fit min-w-fit">
             {move || {
-                TimeControl::RealTime(time_left(), timer.signal.get().time_increment.unwrap())
-                    .to_string()
+                TimeMode::RealTime.time_remaining(time_left.get())
             }}
 
         </div>
