@@ -86,7 +86,7 @@ pub struct GameActionResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserUpdate {
     pub status: UserStatus,
-    pub user: Uuid,
+    pub user: Option<UserResponse>,
     pub username: String,
 }
 

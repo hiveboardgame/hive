@@ -31,10 +31,10 @@ pub fn HistoryMove(
         game_state_signal.show_history_turn(turn);
     };
     let get_class = move || {
-        let mut class = "ml-3 hover:bg-blue-300 col-span-2";
+        let mut class = "ml-3 hover:bg-blue-300 col-span-2 leading-6 h-auto max-h-6";
         if let Some(history_turn) = (game_state_signal.signal)().history_turn {
             if turn == history_turn {
-                class = "ml-3 hover:bg-blue-300 col-span-2 bg-orange-300"
+                class = "ml-3 hover:bg-blue-300 col-span-2 bg-orange-300 leading-6 h-auto max-h-6"
             }
         }
         class
@@ -105,8 +105,8 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         "flex justify-center h-fit hover:bg-green-300 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
     let white_black_styles = "col-span-2";
     view! {
-        <div class=format!("h-[90%] grid grid-cols-4 gap-1 pb-4 {extend_tw_classes}")>
-            <div class="col-span-4 grid grid-cols-4 gap-1 dark:bg-dark bg-light min-h-0">
+        <div class=format!("h-[90%] grid grid-cols-4 grid-rows-6 gap-1 pb-4 {extend_tw_classes}")>
+            <div class="col-span-4 grid grid-cols-4 gap-1 dark:bg-dark bg-light min-h-0 row-span-3 row-start-1">
                 <HistoryButton
                     nav_buttons_style=nav_buttons_style
                     action=HistoryNavigation::First
@@ -138,7 +138,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             </div>
             <div
                 ref=parent
-                class="col-span-4 grid grid-cols-4 gap-1 overflow-auto max-h-[inherit] mt-8"
+                class="col-span-4 grid grid-cols-4 gap-1 overflow-auto max-h-[inherit] min-h-[inherit] mt-8 row-span-3 row-start-4"
             >
                 <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 

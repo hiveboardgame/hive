@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        atoms::{profile_link::ProfileLink, svgs::Svgs},
+        atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator, svgs::Svgs},
         molecules::{rating_and_change::RatingAndChange, thumbnail_pieces::ThumbnailPieces},
     },
     responses::game::GameResponse,
@@ -45,7 +45,10 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                 </div>
                 <div class="flex justify-center items-center w-full gap-1">
                     <div>
-                        <ProfileLink username=game().white_player.username/>
+                        <div class="flex">
+                            <StatusIndicator username=game().white_player.username/>
+                            <ProfileLink username=game().white_player.username/>
+                        </div>
                         <br/>
                         <Show when=is_finished fallback=move || { game().white_player.rating }>
                             <RatingAndChange game=game() side=Color::White/>
@@ -54,7 +57,10 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     </div>
                     <Icon icon=Icon::from(RiSwordOthersLine) class=""/>
                     <div>
-                        <ProfileLink username=game().black_player.username/>
+                        <div class="flex">
+                            <StatusIndicator username=game().black_player.username/>
+                            <ProfileLink username=game().black_player.username/>
+                        </div>
                         <br/>
                         <Show when=is_finished fallback=move || { game().black_player.rating }>
                             <RatingAndChange game=game() side=Color::Black/>

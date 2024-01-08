@@ -1,7 +1,8 @@
+use crate::providers::online_users::OnlineUsersSignal;
 use crate::{
     common::{
         game_action::GameAction,
-        server_result::{ChallengeUpdate, ServerMessage, ServerResult},
+        server_result::{ChallengeUpdate, ServerMessage, ServerResult, UserStatus},
     },
     functions::hostname::hostname_and_port,
     providers::{
@@ -85,8 +86,17 @@ impl WebsocketContext {
 fn on_message_callback(m: String) {
     // TODO: @leex this needs to be broken up this is getting out of hand
     match serde_json::from_str::<ServerResult>(&m) {
-        Ok(ServerResult::Ok(ServerMessage::UserStatus(update))) => {
-            log!("{update:?}");
+        Ok(ServerResult::Ok(ServerMessage::UserStatus(user_update))) => {
+            let mut online_users = expect_context::<OnlineUsersSignal>();
+            log!("{:?}", user_update);
+            match user_update.status {
+                UserStatus::Online => online_users.add(
+                    user_update.user.expect("User is online"),
+                    UserStatus::Online,
+                ),
+                UserStatus::Offline => online_users.remove(user_update.username),
+                UserStatus::Away => todo!("We need to do away in the frontend"),
+            }
         }
         Ok(ServerResult::Ok(ServerMessage::GameUpdate(gar))) => {
             log!("Got a game action response message: {:?}", gar);

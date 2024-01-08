@@ -1,5 +1,6 @@
 use crate::{
-    components::molecules::game_row::GameRow, functions::users::get::get_user_games,
+    components::{atoms::status_indicator::StatusIndicator, molecules::game_row::GameRow},
+    functions::users::get::get_user_games,
     responses::user::UserResponse,
 };
 use hive_lib::game_status::GameStatus;
@@ -68,7 +69,10 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                                     {games().0.len()}
                                 </button>
                             </div>
-                            <p>"🟢 " {user().username}</p>
+                            <p class="flex">
+                                <StatusIndicator username=user().username/>
+                                {user().username}
+                            </p>
                             <p>"Rating: " {user().rating}</p>
                             <p>"Wins: " {user().win}</p>
                             <p>"Draws: " {user().draw}</p>

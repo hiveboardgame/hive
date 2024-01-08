@@ -24,6 +24,8 @@ leptos_icons = { version = "0.1", default_features = false, features = [
     "AiStepForwardFilled",
     "BiInfiniteRegular",
     "BiUndoRegular",
+    "BiCircleRegular",
+    "BiCircleSolid",
     "BsHexagon",
     "BsHexagonFill",
     "BsHexagonHalf",

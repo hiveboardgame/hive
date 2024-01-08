@@ -1,4 +1,4 @@
-use crate::components::molecules::display_challenge::DisplayChallenge;
+use crate::components::molecules::challenge_row::ChallengeRow;
 use crate::functions::{challenges::get::get_challenge_by_nanoid, hostname::hostname_and_port};
 use crate::providers::auth_context::AuthContext;
 use leptos::*;
@@ -93,7 +93,7 @@ pub fn ChallengeView() -> impl IntoView {
                                             "The first person to come to this URL will play with you."
                                         </p>
                                     </Show>
-                                    <DisplayChallenge challenge=store_value(challenge) single=true/>
+                                    <ChallengeRow challenge=store_value(challenge) single=true/>
                                 }
                                     .into_view()
                             }
