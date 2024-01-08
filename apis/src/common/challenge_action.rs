@@ -1,6 +1,6 @@
-use shared_types::challenge_error::ChallengeError;
 use hive_lib::{color::ColorChoice, game_type::GameType};
 use serde::{Deserialize, Serialize};
+use shared_types::challenge_error::ChallengeError;
 use std::fmt;
 use std::str::FromStr;
 

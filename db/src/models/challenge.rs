@@ -69,7 +69,9 @@ impl NewChallenge {
                 }
             }
             "Correspondence" => {
-                if time_base.is_none() || time_increment.is_some() {
+                if (time_base.is_some() && time_increment.is_some())
+                    || (time_base.is_none() && time_increment.is_none())
+                {
                     return Err(DbError::InvalidInput {
                         info: String::from(
                             "Correspondence game has wrong time_base or time_increment",

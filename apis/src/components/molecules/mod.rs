@@ -1,7 +1,6 @@
 pub mod board_pieces;
 pub mod challenge_row;
 pub mod control_buttons;
-pub mod correspondence_timer;
 pub mod game_row;
 pub mod hex_stack;
 pub mod history_pieces;

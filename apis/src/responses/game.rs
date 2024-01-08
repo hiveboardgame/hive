@@ -98,14 +98,8 @@ impl GameResponse {
                 )
             }
         };
-        let white_time_left = match game.white_time_left {
-            None => None,
-            Some(nanos) => Some(Duration::from_nanos(nanos as u64)),
-        };
-        let black_time_left = match game.black_time_left {
-            None => None,
-            Some(nanos) => Some(Duration::from_nanos(nanos as u64)),
-        };
+        let white_time_left = game.white_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
+        let black_time_left = game.black_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
         Ok(Self {
             game_id: game.id,
             nanoid: game.nanoid.clone(),
@@ -134,8 +128,8 @@ impl GameResponse {
             black_rating,
             white_rating_change,
             black_rating_change,
-            white_time_left: white_time_left,
-            black_time_left: black_time_left,
+            white_time_left,
+            black_time_left,
             time_mode: game.time_mode.to_owned(),
             time_increment: game.time_increment,
             last_interaction: game.last_interaction,
