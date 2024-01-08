@@ -28,3 +28,4 @@ tokio.workspace = true
 hive = { path = "../engine/" }
 skillratings.workspace = true
 chrono.workspace = true
+shared_types = { path = "../shared_types/" }

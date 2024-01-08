@@ -1074,6 +1074,7 @@ dependencies = [
  "nanoid",
  "serde",
  "serde_with",
+ "shared_types",
  "skillratings",
  "thiserror",
  "tokio",

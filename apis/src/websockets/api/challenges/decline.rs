@@ -7,9 +7,9 @@ use crate::{
     },
     responses::challenge::ChallengeResponse,
 };
-use shared_types::challenge_error::ChallengeError;
 use anyhow::Result;
 use db_lib::{models::challenge::Challenge, DbPool};
+use shared_types::challenge_error::ChallengeError;
 use uuid::Uuid;
 
 pub struct DeclineHandler {

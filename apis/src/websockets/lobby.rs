@@ -106,7 +106,7 @@ impl Handler<Connect> for Lobby {
         let future = async move {
             //Get currently online users
             for uuid in sessions.keys() {
-                if let Ok(user_response) = UserResponse::from_uuid(&uuid, &pool).await {
+                if let Ok(user_response) = UserResponse::from_uuid(uuid, &pool).await {
                     let message = ServerResult::Ok(ServerMessage::UserStatus(UserUpdate {
                         status: UserStatus::Online,
                         user: Some(user_response.clone()),

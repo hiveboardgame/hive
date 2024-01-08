@@ -1,8 +1,5 @@
 use crate::{
-    components::molecules::{
-        correspondence_timer::CorrespondenceTimer, live_timer::LiveTimer,
-        user_with_rating::UserWithRating,
-    },
+    components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
     providers::timer::TimerSignal,
     responses::user::UserResponse,
 };
@@ -11,7 +8,6 @@ use leptos::*;
 use leptos_icons::{BiIcon::BiInfiniteRegular, Icon};
 use shared_types::time_mode::TimeMode;
 use std::str::FromStr;
-use std::time::Duration;
 
 pub enum Placement {
     Top,
@@ -75,16 +71,7 @@ pub fn DisplayTimer(
                                 <Icon icon=Icon::from(BiInfiniteRegular) class="h-full w-full"/>
                             }
                         }
-                        TimeMode::Correspondence => {
-                            view! {
-                                <CorrespondenceTimer
-                                    side=side
-                                    parent_div=div_ref
-                                    max_time_to_move=Duration::new(0, 0)
-                                />
-                            }
-                        }
-                        TimeMode::RealTime => {
+                        TimeMode::Correspondence | TimeMode::RealTime => {
                             view! { <LiveTimer side=side parent_div=div_ref/> }
                         }
                     }

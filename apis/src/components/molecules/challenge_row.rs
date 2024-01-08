@@ -104,15 +104,23 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                             }
                                 .into_view()
                         }
-                        TimeMode::Correspondence => {
+                        TimeMode::Correspondence if challenge().time_base.is_some() => {
                             view! {
                                 <p>
-                                    "Correspondence: Days/move "
-                                    {challenge().time_base.expect("Time exists")}
+                                    {format!("Correspondence: {} days/side", challenge().time_base.expect("Time exists") / 86400)}
                                 </p>
                             }
                                 .into_view()
                         }
+                        TimeMode::Correspondence if challenge().time_increment.is_some() => {
+                            view! {
+                                <p>
+                                    {format!("Correspondence: {} days/move ", challenge().time_increment.expect("Time exists") / 86400 )}
+                                </p>
+                            }
+                                .into_view()
+                        }
+                        _ => unreachable!(),
                     }
                 }}
 

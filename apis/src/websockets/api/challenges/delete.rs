@@ -9,8 +9,8 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{models::challenge::Challenge, DbPool};
-use uuid::Uuid;
 use shared_types::challenge_error::ChallengeError;
+use uuid::Uuid;
 
 pub struct DeleteHandler {
     nanoid: String,

@@ -162,15 +162,17 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                     .update_untracked(|v| *v = Some(sec_per_move.get_untracked()));
             }
             TimeMode::Correspondence => {
-                let days_per_move = days_per_move.get_untracked();
-                let total_days_per_player = total_days_per_player.get_untracked();
-                let value = if days_per_move != 0 {
-                    days_per_move
+                if days_per_move.get_untracked() != 0 {
+                    params
+                        .time_increment
+                        .update_untracked(|v| *v = Some(days_per_move.get_untracked() * 86400));
+                    params.time_base.update_untracked(|v| *v = None);
                 } else {
-                    total_days_per_player
+                    params.time_increment.update_untracked(|v| *v = None);
+                    params.time_base.update_untracked(|v| {
+                        *v = Some(total_days_per_player.get_untracked() * 86400)
+                    });
                 };
-                params.time_base.update_untracked(|v| *v = Some(value));
-                params.time_increment.update_untracked(|v| *v = None);
             }
         };
         api.challenge_new_with_params(params);
