@@ -102,12 +102,14 @@ pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
         // When time runs out declare winner and style timer that ran out
         if time_left() == Duration::from_secs(0) {
             pause();
-            let api = ApiRequests::new();
-            let router = expect_context::<RouterContext>();
-            if let Some(caps) = NANOID.captures(&router.pathname().get_untracked()) {
-                let nanoid = caps.name("nanoid").map_or("", |m| m.as_str());
-                if !nanoid.is_empty() {
-                    api.game_check_time(nanoid);
+            if !timer.finished {
+                let api = ApiRequests::new();
+                let router = expect_context::<RouterContext>();
+                if let Some(caps) = NANOID.captures(&router.pathname().get_untracked()) {
+                    let nanoid = caps.name("nanoid").map_or("", |m| m.as_str());
+                    if !nanoid.is_empty() {
+                        api.game_check_time(nanoid);
+                    }
                 }
             }
             // WARN: THIS IS HACKY
