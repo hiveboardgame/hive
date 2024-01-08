@@ -21,8 +21,8 @@ use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
 
-static NANOS_IN_A_DAY: u64 = 86400000000000_u64;
-static NANOS_IN_MINUTE: u64 = 60000000000_u64;
+static NANOS_IN_DAY: u64 = 86400000000000_u64;
+static NANOS_IN_SECOND: u64 = 1000000000_u64;
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = games)]
@@ -46,21 +46,23 @@ pub struct NewGame {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub time_mode: String,           // Correspondence, Timed, Untimed
-    pub time_base: Option<i32>,      // Secons
+    pub time_base: Option<i32>,      // Seconds
     pub time_increment: Option<i32>, // Seconds
     pub last_interaction: Option<DateTime<Utc>>, // When was the last move made
-    pub black_time_left: Option<i64>,
-    pub white_time_left: Option<i64>,
+    pub black_time_left: Option<i64>, // A duration of nanos represented as an int
+    pub white_time_left: Option<i64>, // A duration of nanos represented as an int
 }
 
 impl NewGame {
     pub fn new(white: Uuid, black: Uuid, challenge: &Challenge) -> Self {
         let time_left = match challenge.time_mode.as_ref() {
             "Untimed" => None,
-            "Real Time" => Some((challenge.time_base.unwrap() as u64 * NANOS_IN_MINUTE) as i64),
-            "Correspondence" => {
-                Some((challenge.time_base.unwrap() as u64 * NANOS_IN_MINUTE) as i64)
-            }
+            "Real Time" => challenge
+                .time_base
+                .and_then(|base| Some((base as u64 * NANOS_IN_SECOND) as i64)),
+            "Correspondence" => challenge
+                .time_base
+                .and_then(|base| Some((base as u64 * NANOS_IN_SECOND) as i64)),
             _ => unimplemented!(),
         };
         Self {
@@ -118,7 +120,7 @@ pub struct Game {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub time_mode: String,           // Correspondence, Timed, Untimed
-    pub time_base: Option<i32>,      // Secons
+    pub time_base: Option<i32>,      // Seconds
     pub time_increment: Option<i32>, // Seconds
     pub last_interaction: Option<DateTime<Utc>>, // When was the last move made
     pub black_time_left: Option<i64>,
@@ -141,9 +143,9 @@ impl Game {
             return Ok(self.clone());
         }
         let time_left = if self.turn % 2 == 0 {
-            Duration::from_nanos(self.white_time_left.unwrap() as u64)
+            self.white_time_left_duration()?
         } else {
-            Duration::from_nanos(self.black_time_left.unwrap() as u64)
+            self.black_time_left_duration()?
         };
         if GameStatus::NotStarted.to_string() == self.game_status {
             return Ok(self.clone());
@@ -206,7 +208,7 @@ impl Game {
 
     fn white_time_left_duration(&self) -> Result<Duration, DbError> {
         if let Some(white_time) = self.white_time_left {
-            Ok(Duration::from_secs(white_time as u64 * NANOS_IN_MINUTE))
+            Ok(Duration::from_nanos(white_time as u64))
         } else {
             Err(DbError::TimeNotFound {
                 reason: String::from("Could not find white_time"),
@@ -216,20 +218,10 @@ impl Game {
 
     fn black_time_left_duration(&self) -> Result<Duration, DbError> {
         if let Some(black_time) = self.black_time_left {
-            Ok(Duration::from_secs(black_time as u64 * NANOS_IN_MINUTE))
+            Ok(Duration::from_nanos(black_time as u64))
         } else {
             Err(DbError::TimeNotFound {
                 reason: String::from("Could not find black_time"),
-            })
-        }
-    }
-
-    fn time_base_duration(&self) -> Result<Duration, DbError> {
-        if let Some(base) = self.time_base {
-            Ok(Duration::from_secs(base as u64 * NANOS_IN_MINUTE))
-        } else {
-            Err(DbError::TimeNotFound {
-                reason: String::from("Could not find time_base"),
             })
         }
     }
@@ -242,6 +234,45 @@ impl Game {
                 reason: String::from("Could not find time_increment"),
             })
         }
+    }
+
+    fn calculate_time_left(&self) -> Result<(Option<i64>, Option<i64>), DbError> {
+        let mut time_left = if self.turn % 2 == 0 {
+            self.white_time_left_duration()?
+        } else {
+            self.black_time_left_duration()?
+        };
+        let (mut black_time, mut white_time) = (self.black_time_left, self.white_time_left);
+        if let Some(last) = self.last_interaction {
+            let time_passed = Utc::now().signed_duration_since(last).to_std().unwrap();
+            if time_left > time_passed {
+                // substract passed time and add time_increment
+                time_left = time_left - time_passed;
+                if self.turn % 2 == 0 {
+                    white_time = Some(time_left.as_nanos() as i64);
+                } else {
+                    black_time = Some(time_left.as_nanos() as i64);
+                };
+            } else {
+                if self.turn % 2 == 0 {
+                    white_time = Some(0);
+                } else {
+                    black_time = Some(0);
+                }
+            }
+        }
+        Ok((white_time, black_time))
+    }
+
+    fn calculate_time_left_add_increment(&self) -> Result<(Option<i64>, Option<i64>), DbError> {
+        let (mut white_time, mut black_time) = self.calculate_time_left()?;
+        let increment = self.time_increment_duration()?.as_nanos() as i64;
+        if self.turn % 2 == 0 {
+            white_time = white_time.and_then(|time| Some(time + increment));
+        } else {
+            black_time = black_time.and_then(|time| Some(time + increment));
+        };
+        Ok((white_time, black_time))
     }
 
     pub async fn make_move(
@@ -275,54 +306,19 @@ impl Game {
 
         if self.time_mode == "Real Time" {
             if self.turn < 2 {
-                white_time = Some(
-                    (self.time_base.expect("Realtime games to have base_time") as u64
-                        * NANOS_IN_MINUTE) as i64,
-                );
-                black_time = Some(
-                    (self.time_base.expect("Realtime games to have base_time") as u64
-                        * NANOS_IN_MINUTE) as i64,
-                );
+                white_time = self.white_time_left;
+                black_time = self.black_time_left;
             } else {
-                // get time left for the current player
-                let mut time_left = if self.turn % 2 == 0 {
-                    self.white_time_left_duration()?
-                } else {
-                    self.black_time_left_duration()?
-                };
-
-                // if the player has time left
-                if let Some(last) = self.last_interaction {
-                    let time_passed = Utc::now().signed_duration_since(last).to_std().unwrap();
-                    println!("Time left: {:?}", time_left);
-                    println!("Time passed: {:?}", time_passed);
-                    if time_left > time_passed {
-                        // substract passed time and add time_increment
-                        time_left = time_left - time_passed + self.time_increment_duration()?;
-                        if self.turn % 2 == 0 {
-                            black_time = self.black_time_left;
-                            white_time = Some(time_left.as_nanos() as i64);
-                        } else {
-                            white_time = self.white_time_left;
-                            black_time = Some(time_left.as_nanos() as i64);
-                        };
-                    } else {
-                        // Out of time, no new GC or board move should be accepted
+                (white_time, black_time) = self.calculate_time_left_add_increment()?;
+                if self.turn % 2 == 0 {
+                    if white_time == Some(0) {
                         timed_out = true;
-                        game_control_string = String::new();
-                        board_move = String::new();
-                        // let's end the game
-                        if self.turn % 2 == 0 {
-                            white_time = Some(0 as i64);
-                            black_time = self.black_time_left;
-                            new_game_status =
-                                GameStatus::Finished(GameResult::Winner(Color::Black));
-                        } else {
-                            black_time = Some(0);
-                            white_time = self.white_time_left;
-                            new_game_status =
-                                GameStatus::Finished(GameResult::Winner(Color::White));
-                        }
+                        new_game_status = GameStatus::Finished(GameResult::Winner(Color::Black));
+                    }
+                } else {
+                    if black_time == Some(0) {
+                        timed_out = true;
+                        new_game_status = GameStatus::Finished(GameResult::Winner(Color::White));
                     }
                 }
             }
@@ -344,10 +340,10 @@ impl Game {
                     // reset the time to X days
                     if self.turn % 2 == 0 {
                         black_time = self.black_time_left;
-                        white_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_A_DAY as i64);
+                        white_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_DAY as i64);
                     } else {
                         white_time = self.white_time_left;
-                        black_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_A_DAY as i64);
+                        black_time = Some(self.time_base.unwrap() as i64 * NANOS_IN_DAY as i64);
                     };
                 }
             }
@@ -528,8 +524,9 @@ impl Game {
         let winner_color = game_control.color().opposite_color();
         let new_game_status = GameStatus::Finished(GameResult::Winner(winner_color));
 
+        let (white_time, black_time) = self.calculate_time_left()?;
         connection
-            .transaction::<_, DbError, _>(|conn| {
+            .transaction::<_, DbError, _>(move |conn| {
                 async move {
                     let (w_rating, b_rating, w_change, b_change) = match new_game_status.clone() {
                         GameStatus::Finished(game_result) => {
@@ -555,6 +552,8 @@ impl Game {
                             white_rating_change.eq(w_change),
                             black_rating_change.eq(b_change),
                             updated_at.eq(Utc::now()),
+                            white_time_left.eq(white_time),
+                            black_time_left.eq(black_time),
                         ))
                         .get_result(conn)
                         .await?;
@@ -572,8 +571,9 @@ impl Game {
     ) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
         let game_control_string = format!("{}. {game_control};", self.turn);
+        let (white_time, black_time) = self.calculate_time_left()?;
         connection
-            .transaction::<_, DbError, _>(|conn| {
+            .transaction::<_, DbError, _>(move |conn| {
                 async move {
                     let (w_rating, b_rating, w_change, b_change) = Rating::update(
                         self.rated,
@@ -594,6 +594,8 @@ impl Game {
                             white_rating_change.eq(w_change),
                             black_rating_change.eq(b_change),
                             updated_at.eq(Utc::now()),
+                            white_time_left.eq(white_time),
+                            black_time_left.eq(black_time),
                         ))
                         .get_result(conn)
                         .await?;

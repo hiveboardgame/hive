@@ -93,7 +93,7 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
                         TimeMode::RealTime => {
                             view! {
                                 <p>
-                                    "Realtime: " {challenge().time_base.expect("Time exists")} "m"
+                                    "Realtime: " {challenge().time_base.expect("Time exists")/60} "m"
                                     " + " {challenge().time_increment.expect("Increment exists")}
                                     "s"
                                 </p>

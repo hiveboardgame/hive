@@ -17,17 +17,19 @@ lazy_static! {
 
 #[component]
 pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
-    let timer = expect_context::<TimerSignal>();
+    let timer_signal = expect_context::<TimerSignal>();
+    let timer = timer_signal.signal.get_untracked();
     let white_time = move || {
-        let left = timer.signal.get_untracked().white_time_left.unwrap();
-        if timer.signal.get_untracked().turn < 2
+        let left = timer.white_time_left.unwrap();
+        if timer.turn < 2
             || left == Duration::from_millis(0)
-            || timer.signal.get_untracked().turn % 2 == 1
+            || timer.turn % 2 == 1
+            || timer.finished
         {
             left
         } else {
             let left = chrono::Duration::from_std(left).unwrap();
-            let then = timer.signal.get_untracked().last_interaction.unwrap();
+            let then = timer.last_interaction.unwrap();
             let future = then.checked_add_signed(left).unwrap();
             let now = Utc::now();
             if now > future {
@@ -38,15 +40,16 @@ pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
         }
     };
     let black_time = move || {
-        let left = timer.signal.get_untracked().black_time_left.unwrap();
-        if timer.signal.get_untracked().turn < 2
+        let left = timer.black_time_left.unwrap();
+        if timer.turn < 2
             || left == Duration::from_millis(0)
-            || timer.signal.get_untracked().turn % 2 == 0
+            || timer.turn % 2 == 0
+            || timer.finished
         {
             left
         } else {
             let left = chrono::Duration::from_std(left).unwrap();
-            let then = timer.signal.get_untracked().last_interaction.unwrap();
+            let then = timer.last_interaction.unwrap();
             let future = then.checked_add_signed(left).unwrap();
             let now = Utc::now();
             if now > future {
@@ -87,7 +90,7 @@ pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
         UseIntervalFnOptions::default().immediate(false),
     );
     create_effect(move |_| {
-        let timer = timer.signal.get();
+        let timer = timer_signal.signal.get();
         if timer.turn > 1 {
             if (side == Color::White) == (timer.turn % 2 == 0) && !timer.finished {
                 resume();
