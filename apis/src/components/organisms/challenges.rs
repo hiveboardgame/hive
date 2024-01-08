@@ -1,6 +1,5 @@
 use crate::{
-    components::molecules::display_challenge::DisplayChallenge,
-    responses::challenge::ChallengeResponse,
+    components::molecules::challenge_row::ChallengeRow, responses::challenge::ChallengeResponse,
 };
 use leptos::*;
 use std::collections::HashMap;
@@ -34,7 +33,7 @@ pub fn Challenges(challenges: HashMap<String, ChallengeResponse>) -> impl IntoVi
                                     key=|(key, _)| key.to_owned()
                                     let:one_challenge
                                 >
-                                    <DisplayChallenge
+                                    <ChallengeRow
                                         challenge=store_value(one_challenge.1)
                                         single=false
                                     />

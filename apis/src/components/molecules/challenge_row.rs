@@ -1,4 +1,5 @@
 use crate::common::challenge_action::ChallengeVisibility;
+use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::providers::api_requests::ApiRequests;
 use crate::{
     components::atoms::profile_link::ProfileLink,
@@ -19,11 +20,11 @@ use leptos_icons::{
 };
 use leptos_router::*;
 use leptos_use::use_window;
-use std::str::FromStr;
 use shared_types::time_mode::TimeMode;
+use std::str::FromStr;
 
 #[component]
-pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
+pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let color_context = expect_context::<ColorScheme>;
     let icon = move || match challenge().color_choice {
@@ -75,7 +76,10 @@ pub fn DisplayChallenge(challenge: StoredValue<ChallengeResponse>, single: bool)
         <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center">
             <td class=td_class>{icon}</td>
             <td class=td_class>
-                <ProfileLink username=challenge().challenger.username/>
+                <p class="flex">
+                    <StatusIndicator username=challenge().challenger.username/>
+                    <ProfileLink username=challenge().challenger.username/>
+                </p>
             </td>
             <td class=td_class>{challenge().challenger.rating}</td>
             <td class=td_class>

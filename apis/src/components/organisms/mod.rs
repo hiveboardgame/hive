@@ -6,6 +6,8 @@ pub mod display_timer;
 pub mod hamburger;
 pub mod header;
 pub mod history;
+pub mod leaderboard;
 pub mod logout;
+pub mod online_users;
 pub mod reserve;
 pub mod side_board;

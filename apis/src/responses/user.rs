@@ -27,6 +27,12 @@ impl UserResponse {
         Ok(Self::from_user_and_rating(&user, &rating))
     }
 
+    pub async fn from_user(user: &User, pool: &DbPool) -> Result<Self> {
+        let rating = Rating::for_uuid(&user.id, pool).await?;
+
+        Ok(Self::from_user_and_rating(user, &rating))
+    }
+
     pub async fn from_username(username: &str, pool: &DbPool) -> Result<Self> {
         let user = User::find_by_username(username, pool).await?;
         let rating = Rating::for_uuid(&user.id, pool).await?;

@@ -1,7 +1,7 @@
 pub mod board_pieces;
+pub mod challenge_row;
 pub mod control_buttons;
 pub mod correspondence_timer;
-pub mod display_challenge;
 pub mod game_row;
 pub mod hex_stack;
 pub mod history_pieces;
@@ -10,4 +10,5 @@ pub mod modal;
 pub mod rating_and_change;
 pub mod simple_hex_stack;
 pub mod thumbnail_pieces;
+pub mod user_row;
 pub mod user_with_rating;

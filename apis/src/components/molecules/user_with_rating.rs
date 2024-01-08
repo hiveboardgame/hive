@@ -3,7 +3,8 @@ use leptos::*;
 
 use crate::{
     components::{
-        atoms::profile_link::ProfileLink, molecules::rating_and_change::RatingAndChangeDynamic,
+        atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator},
+        molecules::rating_and_change::RatingAndChangeDynamic,
     },
     providers::game_state::GameStateSignal,
     responses::user::UserResponse,
@@ -23,7 +24,10 @@ pub fn UserWithRating(
         )
     });
     view! {
-        <ProfileLink username=player().username extend_tw_classes=text_color/>
+        <div class="flex">
+            <StatusIndicator username=player().username/>
+            <ProfileLink username=player().username extend_tw_classes=text_color/>
+        </div>
         <Show
             when=is_finished
             fallback=move || {
