@@ -32,7 +32,7 @@ impl TimerSignal {
             timer.turn = game.turn;
             timer.white_time_left = game.white_time_left;
             timer.black_time_left = game.black_time_left;
-            timer.time_increment = Some(Duration::from_secs(game.time_increment.unwrap() as u64));
+            timer.time_increment = game.time_increment.and_then(|inc| Some(Duration::from_secs(inc as u64)));
             timer.time_mode = game.time_mode.to_owned();
             timer.last_interaction = game.last_interaction;
         });

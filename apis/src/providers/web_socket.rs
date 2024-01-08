@@ -136,11 +136,17 @@ fn on_message_callback(m: String) {
                             navigate("/", Default::default());
                         }
                         GameControl::DrawAccept(_) => {
-                            game_state.set_game_status(GameStatus::Finished(GameResult::Draw))
+                            game_state.set_game_status(GameStatus::Finished(GameResult::Draw));
+                            let timer = expect_context::<TimerSignal>();
+                            timer.update_from(&gar.game);
                         }
-                        GameControl::Resign(color) => game_state.set_game_status(
-                            GameStatus::Finished(GameResult::Winner(color.opposite_color())),
-                        ),
+                        GameControl::Resign(color) => {
+                            game_state.set_game_status(GameStatus::Finished(GameResult::Winner(
+                                color.opposite_color(),
+                            )));
+                            let timer = expect_context::<TimerSignal>();
+                            timer.update_from(&gar.game);
+                        }
                         GameControl::TakebackAccept(_) => reset_game_state(&gar.game),
                         _ => {}
                     }

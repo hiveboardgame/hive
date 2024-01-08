@@ -78,15 +78,15 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
     let total_days_per_player = RwSignal::new(0_i32);
     let step_min = RwSignal::new(10_i32);
     let step_sec = RwSignal::new(10_i32);
-    let total_min = Signal::derive(move || {
+    let total_seconds = Signal::derive(move || {
         let step = step_min();
-        match step {
+        (match step {
             1..=20 => step,
             21 => step + 4,
             22 => step + 8,
             23..=32 => (step - 20) * 15,
             i32::MIN..=0_i32 | 33_i32..=i32::MAX => unreachable!(),
-        }
+        }) * 60
     });
     let sec_per_move = Signal::derive(move || {
         let step = step_sec();
@@ -156,7 +156,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
             TimeMode::RealTime => {
                 params
                     .time_base
-                    .update_untracked(|v| *v = Some(total_min.get_untracked()));
+                    .update_untracked(|v| *v = Some(total_seconds.get_untracked()));
                 params
                     .time_increment
                     .update_untracked(|v| *v = Some(sec_per_move.get_untracked()));
@@ -286,7 +286,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
 
                     <div class="flex flex-col justify-center">
                         <label for="minutes">
-                            {move || format!("Minutes per side: {}", total_min())}
+                            {move || format!("Minutes per side: {}", total_seconds()/60)}
                         </label>
                         <input
                             on:input=minute_slider
