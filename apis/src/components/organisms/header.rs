@@ -16,7 +16,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
     let onclick = move || hamburger_show.update(|b| *b = false);
     view! {
         <header class=format!(
-            "h-8 md:h-10 w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] {extend_tw_classes}",
+            "h-8 md:h-10 lg:h-12 w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] {extend_tw_classes}",
         )>
             <a class="ml-10" href="/">
                 Home

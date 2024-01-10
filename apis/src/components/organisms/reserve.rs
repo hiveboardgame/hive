@@ -143,7 +143,7 @@ pub fn Reserve(
         <svg
             width="100%"
             height="100%"
-            class=format!("{viewbox_styles} {extend_tw_classes}")
+            class=format!("duration-300 {viewbox_styles} {extend_tw_classes}")
             viewBox=viewbox_str
             xmlns="http://www.w3.org/2000/svg"
         >

@@ -31,10 +31,13 @@ pub struct GameResponse {
     pub white_rating_change: Option<f64>,
     pub black_rating_change: Option<f64>,
     pub time_mode: String,
+    pub time_base: Option<i32>,
     pub time_increment: Option<i32>,
     pub black_time_left: Option<Duration>,
     pub white_time_left: Option<Duration>,
     pub last_interaction: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl GameResponse {
@@ -131,8 +134,11 @@ impl GameResponse {
             white_time_left,
             black_time_left,
             time_mode: game.time_mode.to_owned(),
+            time_base: game.time_base,
             time_increment: game.time_increment,
             last_interaction: game.last_interaction,
+            created_at: game.created_at,
+            updated_at: game.updated_at,
         })
     }
 

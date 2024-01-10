@@ -24,18 +24,21 @@ pub fn UserWithRating(
         )
     });
     view! {
-        <div class="flex">
-            <StatusIndicator username=player().username/>
-            <ProfileLink username=player().username extend_tw_classes=text_color/>
-        </div>
-        <Show
-            when=is_finished
-            fallback=move || {
-                view! { <p class=format!("{text_color}")>{player().rating}</p> }
-            }
-        >
+        <div class="flex items-center flex-col justify-center">
+            <div class="flex justify-center">
+                <StatusIndicator username=player().username/>
+                <ProfileLink username=player().username extend_tw_classes=text_color/>
+            </div>
 
-            <RatingAndChangeDynamic extend_tw_classes=text_color side=side/>
-        </Show>
+            <Show
+                when=is_finished
+                fallback=move || {
+                    view! { <p class=format!("{text_color}")>{player().rating}</p> }
+                }
+            >
+
+                <RatingAndChangeDynamic extend_tw_classes=text_color side=side/>
+            </Show>
+        </div>
     }
 }

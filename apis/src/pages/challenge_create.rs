@@ -185,7 +185,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
     };
 
     let buttons_style =
-        "my-1 p-1 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded";
+        "my-1 p-1 duration-300 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded";
     let disable_rated = move || {
         if (params.game_type)() == GameType::Base || time_control() == TimeMode::Untimed {
             return true;
@@ -288,7 +288,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
 
                     <div class="flex flex-col justify-center">
                         <label for="minutes">
-                            {move || format!("Minutes per side: {}", total_seconds()/60)}
+                            {move || format!("Minutes per side: {}", total_seconds() / 60)}
                         </label>
                         <input
                             on:input=minute_slider
@@ -393,30 +393,39 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
             </div>
             <div>
                 <p class="flex justify-center">Rating range</p>
-                <input
-                    on:input=min_rating_slider
-                    type="range"
-                    id="below"
-                    name="below"
-                    min="-500"
-                    max="0"
-                    prop:value=min_rating
-                    step="50"
-                    class=slider_style
-                />
-                <label for="below">{min_rating} /</label>
-                <label for="above">" +" {max_rating}</label>
-                <input
-                    on:input=max_rating_slider
-                    type="range"
-                    id="above"
-                    name="above"
-                    min="0"
-                    max="500"
-                    prop:value=max_rating
-                    step="50"
-                    class=slider_style
-                />
+                <p class="flex">
+                    <input
+                        on:input=min_rating_slider
+                        type="range"
+                        id="below"
+                        name="below"
+                        min="-500"
+                        max="0"
+                        prop:value=min_rating
+                        step="50"
+                        class=slider_style
+                    />
+                    <p class="flex mx-1 w-[5.5rem] justify-center">
+                        <label for="below" class="whitespace-nowrap">
+                            {move || format!("{} /", min_rating())}
+
+                        </label>
+                        <label for="above" class="whitespace-nowrap">
+                            {move || format!(" +{}", max_rating())}
+                        </label>
+                    </p>
+                    <input
+                        on:input=max_rating_slider
+                        type="range"
+                        id="above"
+                        name="above"
+                        min="0"
+                        max="500"
+                        prop:value=max_rating
+                        step="50"
+                        class=slider_style
+                    />
+                </p>
             </div>
             <div class="flex justify-center items-baseline">
                 <button

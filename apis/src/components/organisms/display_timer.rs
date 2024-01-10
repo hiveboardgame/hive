@@ -32,9 +32,9 @@ pub fn DisplayTimer(
     };
     let(outer_container_style, timer_container_style, user_container_style) = match vertical {
         false => ("grid grid-cols-2 grid-rows-2 col-span-2 row-span-1",
-                "border-y-2 border-l-2 col-span-1 row-span-2 md:row-span-1 short:row-span-2 border-black dark:border-white",
+                "border-y-2 border-l-2 col-span-1 row-span-2 md:row-span-1 short:row-span-2 border-black dark:border-white duration-300",
                 "h-full flex justify-center md:leading-5 row-span-2 md:row-span-1 short:row-span-2 short:text-xs items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none"),
-        true => ("flex grow justify-end items-center", "w-14 h-14 grow-0 ",""),
+        true => ("flex grow justify-end items-center", "w-14 h-14 grow-0 duration-300",""),
     };
     let div_ref = create_node_ref::<html::Div>();
     let timer = expect_context::<TimerSignal>();
@@ -63,8 +63,7 @@ pub fn DisplayTimer(
             >
 
                 {move || {
-                    match TimeMode::from_str(&timer.signal.get().time_mode)
-                        .expect("Valid TimeMode")
+                    match TimeMode::from_str(&timer.signal.get().time_mode).expect("Valid TimeMode")
                     {
                         TimeMode::Untimed => {
                             view! {
