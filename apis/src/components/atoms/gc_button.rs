@@ -29,7 +29,10 @@ pub fn AcceptDenyGc(game_control: StoredValue<GameControl>, user_id: Uuid) -> im
             title=title
             on:click=on_click
             class=move || {
-                format!("aspect-square hover:bg-green-500 rounded-sm relative {}", button_style())
+                format!(
+                    "aspect-square hover:bg-green-500 rounded-sm duration-300 {}",
+                    button_style(),
+                )
             }
         >
 
@@ -131,7 +134,10 @@ pub fn ConfirmButton(game_control: StoredValue<GameControl>, user_id: Uuid) -> i
                 prop:disabled=disabled
 
                 class=move || {
-                    format!("aspect-square rounded-sm relative {}", conditional_button_style())
+                    format!(
+                        "aspect-square rounded-sm relative duration-300 {}",
+                        conditional_button_style(),
+                    )
                 }
             >
 
@@ -147,7 +153,7 @@ pub fn ConfirmButton(game_control: StoredValue<GameControl>, user_id: Uuid) -> i
                 <button
                     title="Cancel"
                     on:click=cancel
-                    class="ml-1 aspect-square bg-red-700 hover:bg-red-500 rounded-sm absolute"
+                    class="ml-1 aspect-square bg-red-700 hover:bg-red-500 rounded-sm absolute duration-300"
                 >
                     <Icon icon=Icon::from(ChCross) class="h-8 w-8"/>
                 </button>

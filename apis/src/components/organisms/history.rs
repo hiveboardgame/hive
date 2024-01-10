@@ -31,7 +31,7 @@ pub fn HistoryMove(
         game_state_signal.show_history_turn(turn);
     };
     let get_class = move || {
-        let mut class = "ml-3 hover:bg-blue-300 col-span-2 leading-6 h-auto max-h-6";
+        let mut class = "ml-3 hover:bg-blue-300 col-span-2 leading-6 h-auto max-h-6 duration-300";
         if let Some(history_turn) = (game_state_signal.signal)().history_turn {
             if turn == history_turn {
                 class = "ml-3 hover:bg-blue-300 col-span-2 bg-orange-300 leading-6 h-auto max-h-6"
@@ -102,7 +102,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     });
 
     let nav_buttons_style =
-        "flex justify-center h-fit hover:bg-green-300 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
+        "flex justify-center h-fit hover:bg-green-400 dark:hover:bg-green-500 duration-300 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
     let white_black_styles = "col-span-2";
     view! {
         <div class=format!("h-[90%] grid grid-cols-4 grid-rows-6 gap-1 pb-4 {extend_tw_classes}")>

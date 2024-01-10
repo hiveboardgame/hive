@@ -1,5 +1,6 @@
 use crate::common::challenge_action::ChallengeVisibility;
 use crate::components::atoms::status_indicator::StatusIndicator;
+use crate::components::molecules::time_row::TimeRow;
 use crate::providers::api_requests::ApiRequests;
 use crate::{
     components::atoms::profile_link::ProfileLink,
@@ -14,7 +15,6 @@ use leptos::logging::log;
 use leptos::*;
 use leptos_icons::{
     AiIcon::AiCopyOutlined,
-    BiIcon::BiInfiniteRegular,
     BsIcon::{BsHexagon, BsHexagonFill, BsHexagonHalf},
     Icon,
 };
@@ -71,59 +71,43 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     };
 
     let td_class = "py-1 px-1 md:py-2 md:px-2 lg:px-3";
+    let time_mode = TimeMode::from_str(&challenge().time_mode).expect("Valid TimeMode");
 
     view! {
         <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center">
             <td class=td_class>{icon}</td>
             <td class=td_class>
-                <p class="flex">
+                <p class="flex items-center">
                     <StatusIndicator username=challenge().challenger.username/>
                     <ProfileLink username=challenge().challenger.username/>
                 </p>
             </td>
             <td class=td_class>{challenge().challenger.rating}</td>
             <td class=td_class>
-                {if challenge().game_type == "Base" { "🚫" } else { "🦟🐞💊" }}
+                <div class="flex justify-center">
+                    {if challenge().game_type == "Base" {
+                        view! { "—" }.into_view()
+                    } else {
+                        view! {
+                            <img
+                                width="100%"
+                                height="100%"
+                                src="/assets/plm.svg"
+                                alt="plm"
+                                class="w-14 lg:w-20"
+                            />
+                        }
+                            .into_view()
+                    }}
+
+                </div>
             </td>
             <td class=td_class>
-
-                {move || {
-                    let time_mode = TimeMode::from_str(&challenge().time_mode)
-                        .expect("Valid TimeMode");
-                    match time_mode {
-                        TimeMode::Untimed => {
-                            view! { <Icon icon=Icon::from(BiInfiniteRegular)/> }
-                        }
-                        TimeMode::RealTime => {
-                            view! {
-                                <p>
-                                    "Realtime: " {challenge().time_base.expect("Time exists")/60} "m"
-                                    " + " {challenge().time_increment.expect("Increment exists")}
-                                    "s"
-                                </p>
-                            }
-                                .into_view()
-                        }
-                        TimeMode::Correspondence if challenge().time_base.is_some() => {
-                            view! {
-                                <p>
-                                    {format!("Correspondence: {} days/side", challenge().time_base.expect("Time exists") / 86400)}
-                                </p>
-                            }
-                                .into_view()
-                        }
-                        TimeMode::Correspondence if challenge().time_increment.is_some() => {
-                            view! {
-                                <p>
-                                    {format!("Correspondence: {} days/move ", challenge().time_increment.expect("Time exists") / 86400 )}
-                                </p>
-                            }
-                                .into_view()
-                        }
-                        _ => unreachable!(),
-                    }
-                }}
-
+                <TimeRow
+                    time_mode=time_mode
+                    time_base=challenge().time_base
+                    increment=challenge().time_increment
+                />
             </td>
             <td class=td_class>
                 <span class="font-bold">{if challenge().rated { "RATED" } else { "CASUAL" }}</span>
@@ -150,7 +134,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                         ApiRequests::new().challenge_cancel(challenge().nanoid)
                                     }
 
-                                    class="bg-red-500 hover:bg-red-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                    class="bg-red-500 hover:bg-red-400 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                                 >
                                     Cancel
                                 </button>
@@ -160,7 +144,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     <button
                                         ref=button_ref
                                         on:click=copy
-                                        class="bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                        class="bg-blue-500 hover:bg-blue-400 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                                     >
                                         <Icon icon=Icon::from(AiCopyOutlined)/>
                                     </button>
@@ -189,7 +173,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                             }
                         }
 
-                        class="bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                        class="bg-blue-500 hover:bg-blue-400 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                     >
                         Join
                     </button>

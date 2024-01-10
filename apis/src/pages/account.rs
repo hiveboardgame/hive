@@ -7,17 +7,22 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     let account_action = create_server_action::<EditAccount>();
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
+    let my_input = NodeRef::<html::Input>::new();
+
+    create_effect(move |_| {
+        let _ = my_input.get_untracked().map(|el| el.focus());
+    });
     view! {
         <div class=format!("mx-auto max-w-xs pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=account_action
                 class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800"
             >
-                <label class="block font-bold mb-2" for="email">
+                <label class="hidden font-bold mb-2" for="email">
                     New Email
                 </label>
                 <input
-                    class="shadow appearance-none border rounded py-2 px-3 leading-tight focus:outline-none"
+                    class="hidden shadow appearance-none border rounded py-2 px-3 leading-tight focus:outline-none"
                     id="email"
                     name="new_email"
                     type="email"
@@ -27,8 +32,8 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     Current Password
                 </label>
                 <input
+                    ref=my_input
                     class="shadow appearance-none border rounded w-full py-2 px-3 mb-3 leading-tight focus:outline-none"
-                    autofocus=true
                     id="old_password"
                     name="password"
                     type="password"
@@ -57,7 +62,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 <input type="hidden" name="pathname" value=pathname().0/>
                 <input
                     type="submit"
-                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none"
+                    class="bg-blue-500 duration-300 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none"
                     value="Save"
                 />
             </ActionForm>

@@ -19,7 +19,7 @@ pub fn Piece(
     let color = piece.get_untracked().color();
     let order = piece.get_untracked().order();
     //IMPORTANT drop-shadow-b drop-shadow-w leave this comment for TW
-    let mut filter = String::from("drop-shadow-");
+    let mut filter = String::from("duration-300 drop-shadow-");
     filter.push_str(&color.to_string());
     if piece_type == PieceType::Inactive {
         filter.push_str(" sepia-[.75]");

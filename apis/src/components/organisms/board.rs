@@ -214,7 +214,7 @@ pub fn Board(
                 width="100%"
                 height="100%"
                 viewBox=viewbox_string
-                class=move || format!("touch-none {}", history_style())
+                class=move || format!("touch-none duration-300 {}", history_style())
                 ref=viewbox_ref
                 xmlns="http://www.w3.org/2000/svg"
             >

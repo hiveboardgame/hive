@@ -142,10 +142,10 @@ pub fn ControlButtons() -> impl IntoView {
                 }
             >
 
-                <button class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                <button class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded">
                     Rematch
                 </button>
-                <button class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                <button class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded">
                     New game
                 </button>
             </Show>

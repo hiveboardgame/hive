@@ -84,7 +84,7 @@ pub fn ChallengeView() -> impl IntoView {
                                                 title="Copy link"
                                                 ref=button_ref
                                                 on:click=copy
-                                                class="bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                                class="bg-blue-500 hover:bg-blue-400 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                                             >
                                                 <Icon icon=Icon::from(AiCopyOutlined)/>
                                             </button>

@@ -7,6 +7,11 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
     let auth_context = expect_context::<AuthContext>();
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
+    let my_input = NodeRef::<html::Input>::new();
+    create_effect(move |_| {
+        let _ = my_input.get_untracked().map(|el| el.focus());
+    });
+
     view! {
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
@@ -16,7 +21,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 <label class="block font-bold mb-2" for="username">
                     Username
                     <input
-                        autofocus
+                        ref=my_input
                         class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
                         name="username"
                         id="username"
@@ -31,19 +36,18 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         name="password"
                         id="password"
                         type="password"
-                        placeholder="hunter2"
                     />
                 </label>
                 <input type="hidden" name="pathname" value=pathname().0/>
                 <input
-                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none"
+                    class="bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none"
                     type="submit"
                     value="Sign In"
                 />
             </ActionForm>
             <p class="text-center text-gray-500 text-xs">
                 "Don't have an account?"
-                <a class="text-blue-500 hover:text-blue-800" href="/register">
+                <a class="text-blue-500 hover:text-blue-800 duration-300" href="/register">
                     Sign Up
                 </a>
             </p>

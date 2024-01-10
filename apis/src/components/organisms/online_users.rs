@@ -20,12 +20,12 @@ pub fn OnlineUsers() -> impl IntoView {
     };
     view! {
         <div class="flex flex-col m-2">
-            Online players <ol>
+            Online players <ul>
 
                 <For each=online_players key=|(key, _)| key.to_owned() let:a_user>
                     <UserRow username=store_value(a_user.0) rating=a_user.1.rating/>
                 </For>
-            </ol>
+            </ul>
         </div>
     }
 }

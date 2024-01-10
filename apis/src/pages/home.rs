@@ -36,7 +36,7 @@ pub fn Home() -> impl IntoView {
         <div class="pt-16 flex flex-col justify-center place-items-center">
             <a
                 href="/players"
-                class="m-5 grow md:grow-0 max-w-fit whitespace-nowrap bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                class="m-5 grow md:grow-0 max-w-fit whitespace-nowrap duration-300 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             >
                 Leaderboard and online players
             </a>
@@ -69,7 +69,10 @@ pub fn Home() -> impl IntoView {
                                         <div class="flex justify-between">
                                             <button
                                                 class=move || {
-                                                    format!("grow hover:bg-blue-300 {}", button_color().0)
+                                                    format!(
+                                                        "grow hover:bg-blue-300 duration-300 {}",
+                                                        button_color().0,
+                                                    )
                                                 }
 
                                                 on:click=move |_| { show_public.update(|b| *b = true) }
@@ -78,7 +81,10 @@ pub fn Home() -> impl IntoView {
                                             </button>
                                             <button
                                                 class=move || {
-                                                    format!("grow hover:bg-blue-300 {}", button_color().1)
+                                                    format!(
+                                                        "grow hover:bg-blue-300 duration-300 {}",
+                                                        button_color().1,
+                                                    )
                                                 }
 
                                                 on:click=move |_| { show_public.update(|b| *b = false) }
@@ -94,7 +100,7 @@ pub fn Home() -> impl IntoView {
                                 </div>
                                 <div class="flex md:flex-col">
                                     <button
-                                        class="m-5 md:mt-20 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                        class="m-5 md:mt-20 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded"
                                         on:click=move |_| open.update(move |b| *b = true)
                                     >
                                         Create New Game

@@ -26,7 +26,7 @@ pub fn NextGameButton() -> impl IntoView {
 
     let color = move || match next_games().len() {
         0 => "hidden",
-        _ => "bg-red-700 text-white rounded-md px-2 py-1 m-2",
+        _ => "bg-red-700 duration-300 hover:bg-red-600 text-white rounded-md px-2 py-1 m-2",
     };
 
     let title_text = move || match next_games().len() {
