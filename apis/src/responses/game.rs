@@ -12,6 +12,7 @@ use uuid::Uuid;
 pub struct GameResponse {
     pub game_id: Uuid,
     pub nanoid: String,
+    pub current_player_id: Uuid,
     pub turn: usize,
     pub finished: bool,
     pub game_status: GameStatus,
@@ -107,6 +108,7 @@ impl GameResponse {
             game_id: game.id,
             nanoid: game.nanoid.clone(),
             game_status: GameStatus::from_str(&game.game_status)?,
+            current_player_id: game.current_player_id,
             finished: game.finished,
             game_type: GameType::from_str(&game.game_type)?,
             tournament_queen_rule: game.tournament_queen_rule,

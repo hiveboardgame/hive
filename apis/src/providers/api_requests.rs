@@ -5,6 +5,8 @@ use crate::providers::web_socket::WebsocketContext;
 use hive_lib::{game_control::GameControl, turn::Turn};
 use leptos::*;
 
+use super::games::GamesSignal;
+
 #[derive(Clone)]
 pub struct ApiRequests {
     websocket: WebsocketContext,
@@ -24,11 +26,13 @@ impl ApiRequests {
 
     pub fn turn(&self, game_id: String, turn: Turn) {
         let msg = ClientRequest::Game {
-            id: game_id,
+            id: game_id.to_owned(),
             action: GameAction::Move(turn),
         };
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+        let mut games = expect_context::<GamesSignal>();
+        games.games_remove(&game_id);
     }
 
     pub fn game_control(&self, game_id: String, gc: GameControl) {

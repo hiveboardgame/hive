@@ -1,4 +1,5 @@
 use crate::providers::api_requests::ApiRequests;
+use crate::responses::game::GameResponse;
 use hive_lib::color::Color;
 use hive_lib::game_control::GameControl;
 use hive_lib::game_status::GameStatus;
@@ -73,11 +74,6 @@ impl GameStateSignal {
             .send_game_control(game_control, user)
     }
 
-    pub fn join(&self) {
-        log!("Joined game");
-        self.signal.get_untracked().join()
-    }
-
     pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
         self.reset();
         let turn = if state.turn != 0 {
@@ -93,12 +89,7 @@ impl GameStateSignal {
         })
     }
 
-    pub fn set_next_games(&mut self, games: Vec<String>) {
-        self.signal.update(|s| s.next_games = games)
-    }
-
-    pub fn set_game_id(&mut self, game_id: StoredValue<String>) {
-        log!("game id is {}", game_id());
+    pub fn set_game_id(&mut self, game_id: String) {
         self.signal.update_untracked(|s| s.game_id = Some(game_id))
     }
 
@@ -156,6 +147,11 @@ impl GameStateSignal {
     pub fn view_history(&mut self) {
         self.signal.update(|s| s.view_history())
     }
+
+    pub fn set_game_response(&mut self, game_response: GameResponse) {
+        self.signal
+            .update(|s| s.game_response = Some(game_response))
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -167,7 +163,7 @@ pub enum View {
 #[derive(Clone, Debug)]
 pub struct GameState {
     // game_id is the nanoid of the game
-    pub game_id: Option<StoredValue<String>>,
+    pub game_id: Option<String>,
     // the gamestate
     pub state: State,
     pub black_id: Option<Uuid>,
@@ -188,7 +184,7 @@ pub struct GameState {
     pub view: View,
     // Unanswered game_control
     pub game_control_pending: Option<GameControl>,
-    pub next_games: Vec<String>,
+    pub game_response: Option<GameResponse>,
 }
 
 impl Default for GameState {
@@ -214,7 +210,7 @@ impl GameState {
             history_turn: None,
             view: View::Game,
             game_control_pending: None,
-            next_games: vec![],
+            game_response: None,
         }
     }
 
@@ -247,29 +243,26 @@ impl GameState {
     }
 
     pub fn send_game_control(&mut self, game_control: GameControl, user_id: Uuid) {
-        let game_id = self.game_id.expect("Game_id in gamestate")();
         if let Some(color) = self.user_color(user_id) {
             if color != game_control.color() {
                 log!("This is a bug, you should only send GCs of your own color");
+            } else if let Some(ref game_id) = self.game_id {
+                ApiRequests::new().game_control(game_id.to_owned(), game_control);
             } else {
-                ApiRequests::new().game_control(game_id, game_control)
+                log!("This is a bug, there should be a game_id");
             }
         }
-    }
-
-    pub fn join(&mut self) {
-        let game_id = self.game_id.expect("Game_id in gamestate")();
-        ApiRequests::new().join(game_id)
     }
 
     pub fn move_active(&mut self) {
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
-            } else {
-                let game_id = self.game_id.expect("Game_id in gamestate")();
+            } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
-                ApiRequests::new().turn(game_id, turn)
+                ApiRequests::new().turn(game_id.to_owned(), turn)
+            } else {
+                log!("This is a bug, there should be a game_id");
             }
         }
         self.reset();
@@ -281,10 +274,11 @@ impl GameState {
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
-            } else {
-                let game_id = self.game_id.expect("Game_id in gamestate")();
+            } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Spawn(active, position);
-                ApiRequests::new().turn(game_id, turn)
+                ApiRequests::new().turn(game_id.to_owned(), turn)
+            } else {
+                log!("This is a bug, there should be a game_id");
             }
         }
         self.reset();

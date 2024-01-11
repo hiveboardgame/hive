@@ -1,5 +1,5 @@
+use crate::providers::game_state::GameStateSignal;
 use crate::responses::game::GameResponse;
-use crate::{functions::games::get::get_game_from_nanoid, providers::game_state::GameStateSignal};
 use hive_lib::color::Color;
 use leptos::*;
 use std::cmp::Ordering;
@@ -49,39 +49,16 @@ pub fn RatingAndChangeDynamic(
     #[prop(optional)] extend_tw_classes: &'static str,
     side: Color,
 ) -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
-    let game_id = move || game_state_signal.signal.get_untracked().game_id;
+    let game_state = expect_context::<GameStateSignal>();
+    let game = move || game_state.signal.get().game_response;
     view! {
-        <Show when=move || {
-            game_id().is_some()
-        }>
-            {move || {
-                let game = Resource::once(move || get_game_from_nanoid(
-                    (game_id().expect("Some game_id"))(),
-                ));
-                view! {
-                    <Transition>
-                        {move || {
-                            game()
-                                .map(|data| match data {
-                                    Err(_) => view! { <pre>"Error"</pre> }.into_view(),
-                                    Ok(game) => {
-                                        view! {
-                                            <RatingAndChange
-                                                extend_tw_classes=extend_tw_classes
-                                                game=game
-                                                side=side
-                                            />
-                                        }
-                                            .into_view()
-                                    }
-                                })
-                        }}
-
-                    </Transition>
-                }
-            }}
-
-        </Show>
+        {move || {
+            game()
+                .map(|game| {
+                    view! {
+                        <RatingAndChange extend_tw_classes=extend_tw_classes game=game side=side/>
+                    }
+                })
+        }}
     }
 }

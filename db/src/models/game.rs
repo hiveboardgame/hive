@@ -538,7 +538,13 @@ impl Game {
         let winner_color = game_control.color().opposite_color();
         let new_game_status = GameStatus::Finished(GameResult::Winner(winner_color));
 
-        let (white_time, black_time) = self.calculate_time_left()?;
+        let (white_time, black_time) = match TimeMode::from_str(&self.time_mode)? {
+            TimeMode::Untimed => (None, None),
+            _ => self.calculate_time_left()?,
+        };
+        if white_time == Some(0) || black_time == Some(0) {
+            return self.check_time(pool).await;
+        }
         connection
             .transaction::<_, DbError, _>(move |conn| {
                 async move {
@@ -585,7 +591,13 @@ impl Game {
     ) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
         let game_control_string = format!("{}. {game_control};", self.turn);
-        let (white_time, black_time) = self.calculate_time_left()?;
+        let (white_time, black_time) = match TimeMode::from_str(&self.time_mode)? {
+            TimeMode::Untimed => (None, None),
+            _ => self.calculate_time_left()?,
+        };
+        if white_time == Some(0) || black_time == Some(0) {
+            return self.check_time(pool).await;
+        }
         connection
             .transaction::<_, DbError, _>(move |conn| {
                 async move {
