@@ -11,6 +11,8 @@ pub enum DbError {
     NotFound { reason: String },
     #[error("Time not present")]
     TimeNotFound { reason: String },
+    #[error("Game is over")]
+    GameIsOver,
 }
 
 impl From<diesel::result::Error> for DbError {

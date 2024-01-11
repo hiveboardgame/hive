@@ -161,9 +161,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                             match (auth_context.user)() {
                                 Some(Ok(Some(_))) => {
                                     let mut game_state = expect_context::<GameStateSignal>();
-                                    let games = game_state.signal.get().next_games;
                                     game_state.full_reset();
-                                    game_state.signal.update(|s| s.next_games = games);
                                     ApiRequests::new().challenge_accept(challenge().nanoid);
                                 }
                                 _ => {

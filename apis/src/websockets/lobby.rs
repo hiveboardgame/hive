@@ -2,7 +2,7 @@ use crate::{
     common::server_result::{
         ChallengeUpdate, MessageDestination, ServerMessage, ServerResult, UserStatus, UserUpdate,
     },
-    responses::{challenge::ChallengeResponse, user::UserResponse},
+    responses::{challenge::ChallengeResponse, game::GameResponse, user::UserResponse},
     websockets::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
 };
 use actix::prelude::{Actor, Context, Handler, Recipient};
@@ -152,7 +152,13 @@ impl Handler<Connect> for Lobby {
                     .await
                     .expect("to get urgent game_ids");
                 if !game_ids.is_empty() {
-                    let message = ServerResult::Ok(ServerMessage::GameActionNotification(game_ids));
+                    let mut games = Vec::new();
+                    for game_id in game_ids {
+                        if let Ok(game) = GameResponse::new_from_nanoid(&game_id, &pool).await {
+                            games.push(game)
+                        }
+                    }
+                    let message = ServerResult::Ok(ServerMessage::GameActionNotification(games));
                     let serialized = serde_json::to_string(&message)
                         .expect("Failed to serialize a server message");
                     let cam = ClientActorMessage {

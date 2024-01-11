@@ -1,3 +1,5 @@
+use crate::providers::games::GamesSignal;
+use crate::providers::navigation_controller::NavigationControllerSignal;
 use crate::providers::online_users::OnlineUsersSignal;
 use crate::{
     common::{
@@ -18,24 +20,17 @@ use hive_lib::{
 use lazy_static::lazy_static;
 use leptos::logging::log;
 use leptos::*;
-use leptos_router::{use_navigate, RouterContext};
+use leptos_router::use_navigate;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::*;
 use regex::Regex;
+use shared_types::time_mode::TimeMode;
 use std::rc::Rc;
+use std::str::FromStr;
+
 lazy_static! {
     static ref NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
-}
-
-fn current_page_game_id() -> Option<String> {
-    let router = expect_context::<RouterContext>();
-    if let Some(caps) = NANOID.captures(&(router.pathname().get_untracked())) {
-        if let Some(m) = caps.name("nanoid") {
-            return Some(m.as_str().to_owned());
-        }
-    }
-    None
 }
 
 #[derive(Clone)]
@@ -85,6 +80,9 @@ impl WebsocketContext {
 
 fn on_message_callback(m: String) {
     // TODO: @leex this needs to be broken up this is getting out of hand
+    let mut game_state = expect_context::<GameStateSignal>();
+    let navigation_controller = expect_context::<NavigationControllerSignal>();
+    let mut games = expect_context::<GamesSignal>();
     match serde_json::from_str::<ServerResult>(&m) {
         Ok(ServerResult::Ok(ServerMessage::UserStatus(user_update))) => {
             let mut online_users = expect_context::<OnlineUsersSignal>();
@@ -100,107 +98,119 @@ fn on_message_callback(m: String) {
         }
         Ok(ServerResult::Ok(ServerMessage::GameUpdate(gar))) => {
             log!("Got a game action response message: {:?}", gar);
-            let mut game_state = expect_context::<GameStateSignal>();
             let auth_context = expect_context::<AuthContext>();
             let user_uuid = move || match untrack(auth_context.user) {
                 Some(Ok(Some(user))) => Some(user.id),
                 _ => None,
             };
 
-            match current_page_game_id() {
-                None => return,
-                Some(current_id) => {
-                    if gar.game_id != current_id {
-                        return;
+            // If the action is not for the current game, just update next_games
+            if navigation_controller.signal.get_untracked().nanoid != Some(gar.game_id.to_owned()) {
+                // Handle next_games
+                match gar.game_action {
+                    GameAction::Move(_)
+                    | GameAction::Control(GameControl::DrawOffer(_))
+                    | GameAction::Control(GameControl::TakebackRequest(_)) => {
+                        if Some(gar.user_id) != user_uuid() {
+                            games.games_add(gar.game.to_owned());
+                        }
                     }
+                    GameAction::Control(GameControl::TakebackAccept(_)) => {
+                        games.games_add(gar.game.to_owned());
+                    }
+                    GameAction::Control(GameControl::Abort(_))
+                    | GameAction::Control(GameControl::Resign(_))
+                    | GameAction::Control(GameControl::DrawAccept(_)) => {
+                        games.games_remove(&gar.game.nanoid);
+                    }
+                    _ => {}
                 }
-            }
-
-            match gar.game_action {
-                GameAction::Move(ref turn) => {
-                    let timer = expect_context::<TimerSignal>();
-                    timer.update_from(&gar.game);
-                    game_state.clear_gc();
-                    if Some(gar.user_id) == user_uuid() {
-                        let mut games = game_state.signal.get_untracked().next_games;
-                        games.retain(|g| *g != gar.game_id);
-                        game_state.set_next_games(games);
-                        log!("Skipping own turn");
-                        return;
-                    }
-                    log!("Playing turn: {turn}");
-                    match turn {
-                        Turn::Spawn(piece, position) | Turn::Move(piece, position) => {
-                            game_state.play_turn(*piece, *position)
-                        }
-                        _ => unreachable!(),
-                    };
+                if gar.game.finished {
+                    games.games_remove(&gar.game.nanoid);
                 }
-                GameAction::Control(ref game_control) => {
-                    log!("Frontend got game_control {}", game_control);
-                    game_state.set_pending_gc(game_control.clone());
-                    match game_control {
-                        GameControl::Abort(_) => {
-                            // TODO: Once we have notifications tell the user the game was aborted
-                            let navigate = leptos_router::use_navigate();
-                            navigate("/", Default::default());
+            } else {
+                match gar.game_action {
+                    GameAction::Move(ref turn) => {
+                        let timer = expect_context::<TimerSignal>();
+                        timer.update_from(&gar.game);
+                        game_state.clear_gc();
+                        game_state.set_game_response(gar.game.clone());
+                        if Some(gar.user_id) == user_uuid() {
+                            return;
                         }
-                        GameControl::DrawAccept(_) => {
-                            game_state.set_game_status(GameStatus::Finished(GameResult::Draw));
-                            let timer = expect_context::<TimerSignal>();
-                            timer.update_from(&gar.game);
-                        }
-                        GameControl::Resign(color) => {
-                            game_state.set_game_status(GameStatus::Finished(GameResult::Winner(
-                                color.opposite_color(),
-                            )));
-                            let timer = expect_context::<TimerSignal>();
-                            timer.update_from(&gar.game);
-                        }
-                        GameControl::TakebackAccept(_) => reset_game_state(&gar.game),
-                        _ => {}
-                    }
-                }
-                GameAction::Join => {
-                    if Some(gar.user_id) != user_uuid() {
-                        log!("{} joined", gar.username);
-                        return;
-                    }
-                    log!("joined the game, reconstructing game state");
-                    reset_game_state(&gar.game);
-                    let timer = expect_context::<TimerSignal>();
-                    timer.update_from(&gar.game);
-                    // TODO: @leex try this again once the play page works correctly.
-                    if let Some((_turn, gc)) = gar.game.game_control_history.last() {
-                        log!("Got a GC: {}", gc);
-                        match gc {
-                            GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
-                                game_state.set_pending_gc(gc.clone())
+                        match turn {
+                            Turn::Spawn(piece, position) | Turn::Move(piece, position) => {
+                                game_state.play_turn(*piece, *position)
                             }
+                            _ => unreachable!(),
+                        };
+                    }
+                    GameAction::Control(ref game_control) => {
+                        game_state.set_pending_gc(game_control.clone());
+                        match game_control {
+                            GameControl::Abort(_) => {
+                                // TODO: Once we have notifications tell the user the game was aborted
+                                let navigate = leptos_router::use_navigate();
+                                games.games_remove(&gar.game.nanoid);
+                                navigate("/", Default::default());
+                            }
+                            GameControl::DrawAccept(_) => {
+                                game_state.set_game_status(GameStatus::Finished(GameResult::Draw));
+                                game_state.set_game_response(gar.game.clone());
+                                let timer = expect_context::<TimerSignal>();
+                                timer.update_from(&gar.game);
+                                games.games_remove(&gar.game.nanoid);
+                            }
+                            GameControl::Resign(color) => {
+                                game_state.set_game_status(GameStatus::Finished(
+                                    GameResult::Winner(color.opposite_color()),
+                                ));
+                                game_state.set_game_response(gar.game.clone());
+                                let timer = expect_context::<TimerSignal>();
+                                timer.update_from(&gar.game);
+                                games.games_remove(&gar.game.nanoid);
+                            }
+                            GameControl::TakebackAccept(_) => reset_game_state(&gar.game),
                             _ => {}
                         }
                     }
-                    // TODO: @leex
-                    // Check here whether it's one of your own GCs and only show it when it's not
-                    // your own GC also only if user is a player.
+                    // GameUpdate(GameAction::Join) is always a direct message
+                    GameAction::Join => {
+                        log!("joined the game, reconstructing game state");
+                        reset_game_state(&gar.game);
+                        let timer = expect_context::<TimerSignal>();
+                        timer.update_from(&gar.game);
+                        // TODO: @leex try this again once the play page works correctly.
+                        if let Some((_turn, gc)) = gar.game.game_control_history.last() {
+                            log!("Got a GC: {}", gc);
+                            match gc {
+                                GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
+                                    game_state.set_pending_gc(gc.clone())
+                                }
+                                _ => {}
+                            }
+                        }
+                        // TODO: @leex
+                        // Check here whether it's one of your own GCs and only show it when it's not
+                        // your own GC also only if user is a player.
+                    }
+                };
+                if game_state.signal.get_untracked().state.history.moves != gar.game.history {
+                    log!("history diverged, reconstructing please report this as a bug to the developers");
+                    log!(
+                        "game_state history is: {:?}",
+                        game_state.signal.get_untracked().state.history.moves
+                    );
+                    log!("server_message history is: {:?}", gar.game.history);
+                    reset_game_state(&gar.game);
+                    let timer = expect_context::<TimerSignal>();
+                    timer.update_from(&gar.game);
                 }
-            };
-            if game_state.signal.get_untracked().state.history.moves != gar.game.history {
-                log!("history diverged, reconstructing please report this as a bug to the developers");
-                log!(
-                    "game_state history is: {:?}",
-                    game_state.signal.get_untracked().state.history.moves
-                );
-                log!("server_message history is: {:?}", gar.game.history);
-                reset_game_state(&gar.game);
-                let timer = expect_context::<TimerSignal>();
-                timer.update_from(&gar.game);
             }
         }
-        Ok(ServerResult::Ok(ServerMessage::GameActionNotification(games))) => {
-            let mut game_state = expect_context::<GameStateSignal>();
-            log!("New games: {:?}", games);
-            game_state.set_next_games(games);
+        Ok(ServerResult::Ok(ServerMessage::GameActionNotification(new_games))) => {
+            log!("Setting game: {:?}", new_games);
+            games.games_set(new_games);
         }
         Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Challenges(
             new_challanges,
@@ -219,19 +229,31 @@ fn on_message_callback(m: String) {
         }
         Ok(ServerResult::Ok(ServerMessage::GameTimeoutCheck(game))) => {
             let mut game_state = expect_context::<GameStateSignal>();
+            game_state.set_game_response(game.clone());
             if game_state.signal.get_untracked().state.game_status != game.game_status {
                 reset_game_state(&game);
                 let timer = expect_context::<TimerSignal>();
                 timer.update_from(&game);
-                if let GameStatus::Finished(_) = game.game_status {
-                    let mut games = game_state.signal.get_untracked().next_games;
-                    games.retain(|g| *g != game.nanoid);
-                    game_state.set_next_games(games);
-                }
+            }
+            if let GameStatus::Finished(_) = game.game_status {
+                games.games_remove(&game.nanoid);
             }
         }
         Ok(ServerResult::Ok(ServerMessage::GameNew(game_response))) => {
-            if game_response.time_mode == "Real Time" {
+            let navigate = match TimeMode::from_str(&game_response.time_mode) {
+                Ok(TimeMode::RealTime) => true,
+                Ok(TimeMode::Correspondence) | Ok(TimeMode::Untimed) => {
+                    let navigation_controller = expect_context::<NavigationControllerSignal>();
+                    navigation_controller
+                        .signal
+                        .get_untracked()
+                        .nanoid
+                        .is_none()
+                }
+                _ => false,
+            };
+            games.games_add(game_response.to_owned());
+            if navigate {
                 let auth_context = expect_context::<AuthContext>();
                 let user_uuid = move || match untrack(auth_context.user) {
                     Some(Ok(Some(user))) => Some(user.id),
@@ -273,6 +295,7 @@ fn on_message_callback(m: String) {
 
 fn reset_game_state(game: &GameResponse) {
     let mut game_state = expect_context::<GameStateSignal>();
+    game_state.set_game_response(game.clone());
     let mut history = History::new();
     history.moves = game.history.to_owned();
     history.game_type = game.game_type.to_owned();
@@ -282,7 +305,7 @@ fn reset_game_state(game: &GameResponse) {
     if let Ok(state) = State::new_from_history(&history) {
         game_state.set_state(state, game.black_player.uid, game.white_player.uid);
     }
-    // TODO: check if there an anunsered gc and set it
+    // TODO: check if there an answered gc and set it
 }
 
 fn fix_wss(url: &str) -> String {

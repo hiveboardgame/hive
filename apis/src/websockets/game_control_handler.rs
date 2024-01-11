@@ -59,15 +59,16 @@ impl GameControlHandler {
         match self.control {
             GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
                 let current_user = User::find_by_uuid(&game.current_player_id, &self.pool).await?;
-                let game_ids = current_user
+                let games = current_user
                     .get_games_with_notifications(&self.pool)
-                    .await?
-                    .into_iter()
-                    .map(|game| game.nanoid)
-                    .collect();
+                    .await?;
+                let mut game_responses = Vec::new();
+                for game in games {
+                    game_responses.push(GameResponse::new_from_db(&game, &self.pool).await?);
+                }
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::Direct(game.current_player_id),
-                    message: ServerMessage::GameActionNotification(game_ids),
+                    message: ServerMessage::GameActionNotification(game_responses),
                 });
             }
             _ => {}

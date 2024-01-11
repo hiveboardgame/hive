@@ -56,7 +56,7 @@ pub enum ServerMessage {
         game_id: String,
         message: String,
     },
-    GameActionNotification(Vec<String>),
+    GameActionNotification(Vec<GameResponse>),
     GameUpdate(GameActionResponse),
     GameTimeoutCheck(GameResponse),
     GameNew(GameResponse),

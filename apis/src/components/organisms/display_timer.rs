@@ -1,7 +1,6 @@
 use crate::{
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
-    providers::timer::TimerSignal,
-    responses::user::UserResponse,
+    providers::{auth_context::AuthContext, game_state::GameStateSignal, timer::TimerSignal},
 };
 use hive_lib::color::Color;
 use leptos::*;
@@ -9,6 +8,7 @@ use leptos_icons::{BiIcon::BiInfiniteRegular, Icon};
 use shared_types::time_mode::TimeMode;
 use std::str::FromStr;
 
+#[derive(Clone, Copy)]
 pub enum Placement {
     Top,
     Bottom,
@@ -16,16 +16,36 @@ pub enum Placement {
 
 #[component]
 pub fn DisplayTimer(
-    side: Color,
     #[prop(optional)] placement: Option<Placement>,
-    player: StoredValue<UserResponse>,
     vertical: bool,
 ) -> impl IntoView {
-    let (bg_color, text_color) = match side {
-        Color::White => ("bg-hive-black", "text-hive-white"),
-        Color::Black => ("bg-hive-white", "text-hive-black"),
+    let game_state = expect_context::<GameStateSignal>();
+    let auth_context = expect_context::<AuthContext>();
+    let user = move || match (auth_context.user)() {
+        Some(Ok(Some(user))) => Some(user),
+        _ => None,
     };
-    let css_grid_row = match placement {
+    let player_is_black = create_memo(move |_| {
+        user().map_or(false, |user| {
+            let game_state = game_state.signal.get();
+            Some(user.id) == game_state.black_id
+        })
+    });
+    let side = move || match (player_is_black(), placement) {
+        (true, Some(Placement::Top)) => Color::White,
+        (true, Some(Placement::Bottom)) | (true, None) => Color::Black,
+        (false, Some(Placement::Top)) => Color::Black,
+        (false, Some(Placement::Bottom)) | (false, None) => Color::White,
+    };
+    let bg_color = move || match side() {
+        Color::White => "bg-hive-black",
+        Color::Black => "bg-hive-white",
+    };
+    let text_color = move || match side() {
+        Color::White => "text-hive-white",
+        Color::Black => "text-hive-black",
+    };
+    let css_grid_row = move || match placement {
         Some(Placement::Top) => "row-start-1 md:row-start-2",
         Some(Placement::Bottom) => "row-start-1",
         _ => "",
@@ -41,13 +61,14 @@ pub fn DisplayTimer(
     let active_side = create_memo(move |_| match timer.signal.get().finished {
         true => "bg-stone-200 dark:bg-gray-900",
         false => {
-            if (side == Color::White) == (timer.signal.get().turn % 2 == 0) {
+            if (side() == Color::White) == (timer.signal.get().turn % 2 == 0) {
                 "bg-green-700"
             } else {
                 "bg-stone-200 dark:bg-gray-900"
             }
         }
     });
+    let classes = move || format!("{user_container_style} {} {}", css_grid_row(), bg_color());
 
     view! {
         <div class=outer_container_style>
@@ -57,7 +78,7 @@ pub fn DisplayTimer(
                     if vertical {
                         format!("{timer_container_style} {}", active_side())
                     } else {
-                        format!("{timer_container_style} {css_grid_row} {}", active_side())
+                        format!("{timer_container_style} {} {}", css_grid_row(), active_side())
                     }
                 }
             >
@@ -71,15 +92,15 @@ pub fn DisplayTimer(
                             }
                         }
                         TimeMode::Correspondence | TimeMode::RealTime => {
-                            view! { <LiveTimer side=side parent_div=div_ref/> }
+                            view! { <LiveTimer side=side() parent_div=div_ref/> }
                         }
                     }
                 }}
 
             </div>
             <Show when=move || !vertical>
-                <div class=move || format!("{user_container_style} {css_grid_row} {bg_color}")>
-                    <UserWithRating player=player side=side text_color=text_color/>
+                <div class=classes()>
+                    <UserWithRating side=side() text_color=text_color()/>
                 </div>
             </Show>
         </div>

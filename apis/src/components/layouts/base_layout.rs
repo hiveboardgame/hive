@@ -1,8 +1,17 @@
-use leptos::*;
-use leptos_meta::*;
-
 use crate::components::organisms::header::Header;
 use crate::providers::color_scheme::ColorScheme;
+use crate::providers::navigation_controller::NavigationControllerSignal;
+use lazy_static::lazy_static;
+
+use leptos::*;
+use leptos_meta::*;
+use leptos_router::use_location;
+use regex::Regex;
+
+lazy_static! {
+    static ref NANOID: Regex =
+        Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
+}
 
 #[component]
 pub fn BaseLayout(children: Children) -> impl IntoView {
@@ -14,6 +23,18 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
             "light".to_string()
         }
     };
+
+    create_effect(move |_| {
+        let location = use_location();
+        let mut navi = expect_context::<NavigationControllerSignal>();
+        let pathname = (location.pathname)();
+        let nanoid = if let Some(caps) = NANOID.captures(&pathname) {
+            caps.name("nanoid").map(|m| m.as_str().to_string())
+        } else {
+            None
+        };
+        navi.update_nanoid(nanoid);
+    });
 
     view! {
         <Meta name="color-scheme" content=color_scheme_meta/>
