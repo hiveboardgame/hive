@@ -24,7 +24,9 @@ pub fn Challenges() -> impl IntoView {
                 .signal
                 .get()
                 .challenges
-                .values().filter(|&challenge| challenge.clone().opponent.is_some_and(|o| o.uid == user.id)).cloned()
+                .values()
+                .filter(|&challenge| challenge.clone().opponent.is_some_and(|o| o.uid == user.id))
+                .cloned()
                 .collect::<Vec<ChallengeResponse>>()
         } else {
             challenges
@@ -43,7 +45,9 @@ pub fn Challenges() -> impl IntoView {
                 .signal
                 .get()
                 .challenges
-                .values().filter(|&challenge| challenge.challenger.uid == user.id).cloned()
+                .values()
+                .filter(|&challenge| challenge.challenger.uid == user.id)
+                .cloned()
                 .collect::<Vec<ChallengeResponse>>()
         } else {
             Vec::new()
@@ -56,9 +60,11 @@ pub fn Challenges() -> impl IntoView {
                 .signal
                 .get()
                 .challenges
-                .values().filter(|&challenge| {
+                .values()
+                .filter(|&challenge| {
                     challenge.clone().opponent.is_none() && challenge.challenger.uid != user.id
-                }).cloned()
+                })
+                .cloned()
                 .collect::<Vec<ChallengeResponse>>()
         } else {
             Vec::new()
@@ -79,27 +85,15 @@ pub fn Challenges() -> impl IntoView {
                     </tr>
                 </thead>
                 <tbody>
-                    <For
-                        each=move || { direct() }
-                        key=|c| c.nanoid.to_owned()
-                        let:challenge
-                    >
+                    <For each=move || { direct() } key=|c| c.nanoid.to_owned() let:challenge>
                         <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
                     </For>
-                    <tr class="h-2"> </tr>
-                    <For
-                        each=move || { own() }
-                        key=|c| c.nanoid.to_owned()
-                        let:challenge
-                    >
+                    <tr class="h-2"></tr>
+                    <For each=move || { own() } key=|c| c.nanoid.to_owned() let:challenge>
                         <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
                     </For>
-                    <tr class="h-2"> </tr>
-                    <For
-                        each=move || { public() }
-                        key=|c| c.nanoid.to_owned()
-                        let:challenge
-                    >
+                    <tr class="h-2"></tr>
+                    <For each=move || { public() } key=|c| c.nanoid.to_owned() let:challenge>
                         <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
                     </For>
                 </tbody>
