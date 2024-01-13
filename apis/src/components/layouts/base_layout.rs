@@ -1,11 +1,17 @@
 use crate::components::organisms::header::Header;
 use crate::providers::color_scheme::ColorScheme;
 use crate::providers::navigation_controller::NavigationControllerSignal;
+use crate::providers::web_socket::WebsocketContext;
 use lazy_static::lazy_static;
+use leptos::logging::log;
+use leptos_use::use_interval_fn_with_options;
+use leptos_use::utils::Pausable;
+use leptos_use::{use_interval_fn, UseIntervalFnOptions};
 
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::use_location;
+use leptos_use::core::ConnectionReadyState;
 use regex::Regex;
 
 lazy_static! {
@@ -34,6 +40,35 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
             None
         };
         navi.update_nanoid(nanoid);
+    });
+
+    let counter = create_rw_signal(0);
+
+    let Pausable { pause, resume, .. } = use_interval_fn(
+        move || {
+            if counter.get() == 10 {
+                let ws = expect_context::<WebsocketContext>();
+                ws.open();
+                log!("trying to reconnect");
+            } else {
+                log!("Counter is {}", counter.get_untracked());
+                counter.update(|c| *c += 1);
+            }
+        },
+        1000,
+    );
+
+    create_effect(move |_| {
+        let websocket = expect_context::<WebsocketContext>();
+        match websocket.ready_state.get() {
+            ConnectionReadyState::Closed => {
+                counter.update(|c| *c = 0);
+                resume();
+            }
+            _ => {
+                pause();
+            }
+        }
     });
 
     view! {
