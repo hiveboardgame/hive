@@ -1,8 +1,15 @@
 use crate::{
+    common::challenge_action::{ChallengeAction, ChallengeVisibility},
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
-    providers::{auth_context::AuthContext, game_state::GameStateSignal},
+    providers::{
+        api_requests::ApiRequests, auth_context::AuthContext, game_state::GameStateSignal,
+    },
 };
-use hive_lib::{color::Color, game_control::GameControl, game_status::GameStatus};
+use hive_lib::{
+    color::{Color, ColorChoice},
+    game_control::GameControl,
+    game_status::GameStatus,
+};
 use leptos::*;
 
 #[component]
@@ -41,6 +48,35 @@ pub fn ControlButtons() -> impl IntoView {
         Some(GameControl::DrawOffer(gc_color)) => gc_color.opposite_color() == color,
 
         _ => false,
+    };
+
+    let rematch = move |_| {
+        let game_state = expect_context::<GameStateSignal>();
+        let auth_context = expect_context::<AuthContext>();
+        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+            if let Some(game) = game_state.signal.get_untracked().game_response {
+                // TODO: color and opponent
+                let (color_choice, opponent) = if user.id == game.black_player.uid {
+                    (ColorChoice::White, Some(game.white_player.username))
+                } else if user.id == game.white_player.uid {
+                    (ColorChoice::Black, Some(game.black_player.username))
+                } else {
+                    unreachable!();
+                };
+                let challenge_action = ChallengeAction::Create {
+                    rated: game.rated,
+                    game_type: game.game_type,
+                    visibility: ChallengeVisibility::Direct,
+                    opponent,
+                    color_choice,
+                    time_mode: game.time_mode,
+                    time_base: game.time_base,
+                    time_increment: game.time_increment,
+                };
+                let api = ApiRequests::new();
+                api.challenge_direct(challenge_action);
+            }
+        }
     };
 
     view! {
@@ -142,7 +178,10 @@ pub fn ControlButtons() -> impl IntoView {
                 }
             >
 
-                <button class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded">
+                <button
+                    class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded"
+                    on:click=rematch
+                >
                     Rematch
                 </button>
                 <button class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded">

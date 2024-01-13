@@ -29,7 +29,7 @@ impl DeleteHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let challenge = Challenge::find_by_nanoid(&self.nanoid, &self.pool).await?;
-        if challenge.challenger_id != self.user_id {
+        if challenge.challenger_id != self.user_id && challenge.opponent_id != Some(self.user_id) {
             return Err(ChallengeError::NotUserChallenge.into());
         }
         let challenge_response = ChallengeResponse::from_model(&challenge, &self.pool).await?;

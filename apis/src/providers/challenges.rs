@@ -1,7 +1,6 @@
 use crate::responses::challenge::ChallengeResponse;
 use leptos::*;
 use std::collections::HashMap;
-use uuid::Uuid;
 
 #[derive(Clone, Debug, Copy)]
 pub struct ChallengeStateSignal {
@@ -23,33 +22,14 @@ impl ChallengeStateSignal {
 
     pub fn remove(&mut self, nanoid: String) {
         self.signal.update(|s| {
-            s.own.remove(&nanoid);
-            s.direct.remove(&nanoid);
-            s.public.remove(&nanoid);
+            s.challenges.remove(&nanoid);
         });
     }
 
-    pub fn add(&mut self, challenges: Vec<ChallengeResponse>, user_id: Option<Uuid>) {
-        self.signal.update(|s| match user_id {
-            Some(id) => {
-                for c in challenges {
-                    if c.challenger.uid == id {
-                        s.own.insert(c.nanoid.to_owned(), c.to_owned());
-                        continue;
-                    }
-                    if let Some(ref opponent) = c.opponent {
-                        if opponent.uid == id {
-                            s.direct.insert(c.nanoid.to_owned(), c.to_owned());
-                            continue;
-                        }
-                    }
-                    s.public.insert(c.nanoid.to_owned(), c.to_owned());
-                }
-            }
-            None => {
-                for c in challenges {
-                    s.public.insert(c.nanoid.to_owned(), c);
-                }
+    pub fn add(&mut self, challenges: Vec<ChallengeResponse>) {
+        self.signal.update(|s| {
+            for challenge in challenges {
+                s.challenges.insert(challenge.nanoid.to_owned(), challenge);
             }
         })
     }
@@ -57,17 +37,13 @@ impl ChallengeStateSignal {
 
 #[derive(Clone, Debug)]
 pub struct ChallengeState {
-    pub public: HashMap<String, ChallengeResponse>,
-    pub own: HashMap<String, ChallengeResponse>,
-    pub direct: HashMap<String, ChallengeResponse>,
+    pub challenges: HashMap<String, ChallengeResponse>,
 }
 
 impl ChallengeState {
     pub fn new() -> Self {
         Self {
-            public: HashMap::new(),
-            own: HashMap::new(),
-            direct: HashMap::new(),
+            challenges: HashMap::new(),
         }
     }
 }

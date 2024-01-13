@@ -90,6 +90,12 @@ impl NewChallenge {
                 })
             }
         }
+        if opponent_id == Some(challenger_id) {
+            return Err(DbError::InvalidInput {
+                info: "You can't play here with yourself.".to_string(),
+                error: String::new(),
+            });
+        };
         Ok(Self {
             nanoid: nanoid!(10),
             challenger_id,
@@ -165,7 +171,7 @@ impl Challenge {
             .await?)
     }
 
-    pub async fn direct_challenges(id: &Uuid, pool: &DbPool) -> Result<Vec<Challenge>, DbError> {
+    pub async fn direct_challenges(id: Uuid, pool: &DbPool) -> Result<Vec<Challenge>, DbError> {
         let conn = &mut get_conn(pool).await?;
         Ok(challenges::table
             .filter(opponent_id_field.eq(id))
