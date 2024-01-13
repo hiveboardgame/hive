@@ -46,7 +46,7 @@ impl GameStateSignal {
     }
 
     pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
-        self.signal.get_untracked().user_color(user_id)
+        self.signal.get().user_color(user_id)
     }
 
     pub fn set_game_status(&self, status: GameStatus) {
