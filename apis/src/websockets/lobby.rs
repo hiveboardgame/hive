@@ -186,6 +186,14 @@ impl Handler<Connect> for Lobby {
                         }
                     }
                 }
+                if let Ok(challenges) = Challenge::direct_challenges(user.id, &pool).await {
+                    for challenge in challenges {
+                        if let Ok(response) = ChallengeResponse::from_model(&challenge, &pool).await
+                        {
+                            responses.push(response);
+                        }
+                    }
+                }
                 let message = ServerResult::Ok(ServerMessage::Challenge(
                     ChallengeUpdate::Challenges(responses),
                 ));

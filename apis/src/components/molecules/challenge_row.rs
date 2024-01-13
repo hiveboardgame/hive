@@ -3,6 +3,7 @@ use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::components::molecules::time_row::TimeRow;
 use crate::providers::api_requests::ApiRequests;
 use crate::{
+    components::atoms::game_type::GameType,
     components::atoms::profile_link::ProfileLink,
     functions::hostname::hostname_and_port,
     providers::{
@@ -73,34 +74,41 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     let td_class = "py-1 px-1 md:py-2 md:px-2 lg:px-3";
     let time_mode = TimeMode::from_str(&challenge().time_mode).expect("Valid TimeMode");
 
+    let uid = move || match (auth_context.user)() {
+        Some(Ok(Some(user))) => Some(user.id),
+        _ => None,
+    };
+
+    let player = move || {
+        if let (Some(uid), Some(opponent)) = (uid(), challenge().opponent) {
+            if challenge().challenger.uid == uid {
+                view! {
+                    <StatusIndicator username=opponent.username.to_owned()/>
+                    <ProfileLink username=opponent.username/>
+                }
+            } else {
+                view! {
+                    <StatusIndicator username=challenge().challenger.username/>
+                    <ProfileLink username=challenge().challenger.username/>
+                }
+            }
+        } else {
+            view! {
+                <StatusIndicator username=challenge().challenger.username/>
+                <ProfileLink username=challenge().challenger.username/>
+            }
+        }
+    };
+
     view! {
         <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center">
             <td class=td_class>{icon}</td>
             <td class=td_class>
-                <p class="flex items-center">
-                    <StatusIndicator username=challenge().challenger.username/>
-                    <ProfileLink username=challenge().challenger.username/>
-                </p>
+                <p class="flex items-center">{player}</p>
             </td>
             <td class=td_class>{challenge().challenger.rating}</td>
             <td class=td_class>
-                <div class="flex justify-center">
-                    {if challenge().game_type == "Base" {
-                        view! { "—" }.into_view()
-                    } else {
-                        view! {
-                            <img
-                                width="100%"
-                                height="100%"
-                                src="/assets/plm.svg"
-                                alt="plm"
-                                class="w-14 lg:w-20"
-                            />
-                        }
-                            .into_view()
-                    }}
-
-                </div>
+                <GameType game_type=challenge().game_type/>
             </td>
             <td class=td_class>
                 <TimeRow
@@ -115,20 +123,13 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             <td class=td_class>
                 <Show
                     when=move || {
-                        let user = move || match (auth_context.user)() {
-                            Some(Ok(Some(user))) => Some(user),
-                            _ => None,
-                        };
-                        if user().is_some() {
-                            user().expect("there to be a user").id != challenge().challenger.uid
-                        } else {
-                            true
-                        }
+                        let uid = uid();
+                        uid != Some(challenge().challenger.uid)
                     }
 
                     fallback=move || {
                         view! {
-                            <div class="flex">
+                            <div class="justify-center flex">
                                 <button
                                     on:click=move |_| {
                                         ApiRequests::new().challenge_cancel(challenge().nanoid)
@@ -139,7 +140,8 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     Cancel
                                 </button>
                                 <Show when=move || {
-                                    challenge().visibility != ChallengeVisibility::Public && !single
+                                    challenge().visibility == ChallengeVisibility::Private
+                                        && !single
                                 }>
                                     <button
                                         ref=button_ref
@@ -173,8 +175,36 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                         class="bg-blue-500 hover:bg-blue-400 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                     >
-                        Join
+                        {if challenge().opponent.is_some() { "Accept" } else { "Join" }}
+
                     </button>
+                    {if challenge().opponent.is_some() {
+                        view! {
+                            <button
+                                on:click=move |_| {
+                                    log!("User is: {:?}", (auth_context.user) ());
+                                    match (auth_context.user)() {
+                                        Some(Ok(Some(_))) => {
+                                            ApiRequests::new().challenge_cancel(challenge().nanoid);
+                                        }
+                                        _ => {
+                                            let navigate = use_navigate();
+                                            navigate("/login", Default::default());
+                                        }
+                                    }
+                                }
+
+                                class="bg-red-500 hover:bg-red-400 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                            >
+                                "Deny"
+
+                            </button>
+                        }
+                            .into_view()
+                    } else {
+                        view! {}.into_view()
+                    }}
+
                 </Show>
             </td>
         </tr>

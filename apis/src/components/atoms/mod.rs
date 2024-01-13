@@ -1,4 +1,5 @@
 pub mod active;
+pub mod game_type;
 pub mod gc_button;
 pub mod hex;
 pub mod history_button;

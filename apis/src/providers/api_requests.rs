@@ -59,6 +59,12 @@ impl ApiRequests {
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
+    pub fn challenge_direct(&self, challenge_action: ChallengeAction) {
+        let msg = ClientRequest::Challenge(challenge_action);
+        self.websocket
+            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    }
+
     pub fn challenge_new_with_params(&self, params: ChallengeParams) {
         let msg = ClientRequest::Challenge(ChallengeAction::Create {
             rated: params.rated.get_untracked(),

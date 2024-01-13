@@ -215,17 +215,8 @@ fn on_message_callback(m: String) {
         Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Challenges(
             new_challanges,
         )))) => {
-            for chal in new_challanges.clone() {
-                log!("Got new challenge: {}", chal.nanoid);
-            }
             let mut challenges = expect_context::<ChallengeStateSignal>();
-            let auth_context = expect_context::<AuthContext>();
-            let user_uuid = move || match untrack(auth_context.user) {
-                Some(Ok(Some(user))) => Some(user.id),
-                _ => None,
-            };
-            log!("User is: {:?}", user_uuid());
-            challenges.add(new_challanges, user_uuid());
+            challenges.add(new_challanges);
         }
         Ok(ServerResult::Ok(ServerMessage::GameTimeoutCheck(game))) => {
             let mut game_state = expect_context::<GameStateSignal>();
@@ -278,12 +269,7 @@ fn on_message_callback(m: String) {
         Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Created(challenge))))
         | Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Direct(challenge)))) => {
             let mut challenges = expect_context::<ChallengeStateSignal>();
-            let auth_context = expect_context::<AuthContext>();
-            let user_uuid = move || match untrack(auth_context.user) {
-                Some(Ok(Some(user))) => Some(user.id),
-                _ => None,
-            };
-            challenges.add(vec![challenge], user_uuid());
+            challenges.add(vec![challenge]);
         }
         Ok(ServerResult::Err(e)) => log!("Got error from server: {e}"),
         Err(e) => log!("Can't parse: {m}, error is: {e}"),
