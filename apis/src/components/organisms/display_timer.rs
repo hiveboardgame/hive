@@ -15,10 +15,7 @@ pub enum Placement {
 }
 
 #[component]
-pub fn DisplayTimer(
-    #[prop(optional)] placement: Option<Placement>,
-    vertical: bool,
-) -> impl IntoView {
+pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let user = move || match (auth_context.user)() {
@@ -32,10 +29,10 @@ pub fn DisplayTimer(
         })
     });
     let side = move || match (player_is_black(), placement) {
-        (true, Some(Placement::Top)) => Color::White,
-        (true, Some(Placement::Bottom)) | (true, None) => Color::Black,
-        (false, Some(Placement::Top)) => Color::Black,
-        (false, Some(Placement::Bottom)) | (false, None) => Color::White,
+        (true, Placement::Top) => Color::White,
+        (true, Placement::Bottom) => Color::Black,
+        (false, Placement::Top) => Color::Black,
+        (false, Placement::Bottom) => Color::White,
     };
     let bg_color = move || match side() {
         Color::White => "bg-hive-black",
@@ -46,9 +43,8 @@ pub fn DisplayTimer(
         Color::Black => "text-hive-black",
     };
     let css_grid_row = move || match placement {
-        Some(Placement::Top) => "row-start-1 md:row-start-2",
-        Some(Placement::Bottom) => "row-start-1",
-        _ => "",
+        Placement::Top => "row-start-1 md:row-start-2",
+        Placement::Bottom => "row-start-1",
     };
     let(outer_container_style, timer_container_style, user_container_style) = match vertical {
         false => ("grid grid-cols-2 grid-rows-2 col-span-2 row-span-1",
@@ -56,7 +52,6 @@ pub fn DisplayTimer(
                 "h-full flex justify-center md:leading-5 row-span-2 md:row-span-1 short:row-span-2 short:text-xs items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none"),
         true => ("flex grow justify-end items-center", "w-14 h-14 grow-0 duration-300",""),
     };
-    let div_ref = create_node_ref::<html::Div>();
     let timer = expect_context::<TimerSignal>();
     let active_side = create_memo(move |_| match timer.signal.get().finished {
         true => "bg-stone-200 dark:bg-gray-900",
@@ -68,20 +63,23 @@ pub fn DisplayTimer(
             }
         }
     });
-    let classes = move || format!("{user_container_style} {} {}", css_grid_row(), bg_color());
+    let classes = move || {
+        if vertical {
+            format!("{user_container_style} {}", bg_color())
+        } else {
+            format!("{user_container_style} {} {}", css_grid_row(), bg_color())
+        }
+    };
 
     view! {
         <div class=outer_container_style>
-            <div
-                ref=div_ref
-                class=move || {
-                    if vertical {
-                        format!("{timer_container_style} {}", active_side())
-                    } else {
-                        format!("{timer_container_style} {} {}", css_grid_row(), active_side())
-                    }
+            <div class=move || {
+                if vertical {
+                    format!("{timer_container_style} {}", active_side())
+                } else {
+                    format!("{timer_container_style} {} {}", css_grid_row(), active_side())
                 }
-            >
+            }>
 
                 {move || {
                     match TimeMode::from_str(&timer.signal.get().time_mode).expect("Valid TimeMode")
@@ -92,14 +90,14 @@ pub fn DisplayTimer(
                             }
                         }
                         TimeMode::Correspondence | TimeMode::RealTime => {
-                            view! { <LiveTimer side=side() parent_div=div_ref/> }
+                            view! { <LiveTimer side=side()/> }
                         }
                     }
                 }}
 
             </div>
             <Show when=move || !vertical>
-                <div class=classes()>
+                <div class=classes>
                     <UserWithRating side=side() text_color=text_color()/>
                 </div>
             </Show>

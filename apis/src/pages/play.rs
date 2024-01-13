@@ -28,7 +28,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     };
 
     let is_tall = use_media_query("(min-height: 100vw)");
-    let nav_buttons_style = "flex place-items-center justify-center hover:bg-green-400 dark:hover:bg-green-500 duration-300 my-1 h-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
+    let nav_buttons_style = "flex place-items-center justify-center hover:bg-green-400 dark:hover:bg-green-500 duration-300 my-1 h-6 rounded-md border-cyan-500 border-2 drop-shadow-lg touch-manipulation";
     let game_state = expect_context::<GameStateSignal>();
     let parent_container_style = move || {
         if is_tall() {
@@ -88,14 +88,13 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 <div class="flex flex-col flex-grow h-full min-h-0">
                     <div class="flex flex-col shrink flex-grow">
                         <div class="flex justify-between shrink">
-
                             <Show when=show_buttons>
                                 <ControlButtons/>
                             </Show>
                         </div>
                         <div class="flex max-h-16 justify-between h-full">
                             <Reserve alignment=Alignment::SingleRow color=top_color()/>
-                            <DisplayTimer vertical=true/>
+                            <DisplayTimer vertical=true placement=Placement::Top/>
                         </div>
                         <div class="ml-2 flex gap-1">
                             <UserWithRating side=top_color()/>
@@ -109,7 +108,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         </div>
                         <div class="flex max-h-16 justify-between h-full">
                             <Reserve alignment=Alignment::SingleRow color=bottom_color()/>
-                            <DisplayTimer vertical=true/>
+                            <DisplayTimer vertical=true placement=Placement::Bottom/>
                         </div>
                         <div class="grid grid-cols-4 gap-8">
                             <HistoryButton

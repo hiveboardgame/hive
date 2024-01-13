@@ -30,16 +30,10 @@ impl GameControl {
         }
     }
 
-    pub fn allowed_on_turn(&self, turn: i32, side: Color) -> bool {
+    pub fn allowed_on_turn(&self, turn: i32) -> bool {
         match self {
-            GameControl::Abort(_) => turn < 1 || (side == Color::Black && turn < 2),
-            GameControl::DrawAccept(_) => turn > 0,
-            GameControl::DrawOffer(_) => (turn > 0 && side == Color::White) || turn > 1,
-            GameControl::DrawReject(_) => turn > 0,
-            GameControl::Resign(_) => (turn > 0 && side == Color::White) || turn > 1,
-            GameControl::TakebackAccept(_) => turn > 0,
-            GameControl::TakebackReject(_) => turn > 0,
-            GameControl::TakebackRequest(_) => turn > 0,
+            GameControl::Abort(_) => turn < 2,
+            _ => turn > 1,
         }
     }
 }

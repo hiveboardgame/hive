@@ -183,8 +183,8 @@ impl GameControlHandler {
     }
 
     fn ensure_gc_allowed_for_turn(&self) -> Result<()> {
-        if let Some(color) = self.game.user_color(self.user_id) {
-            if !self.control.allowed_on_turn(self.game.turn, color) {
+        if let Some(_color) = self.game.user_color(self.user_id) {
+            if !self.control.allowed_on_turn(self.game.turn) {
                 Err(GameError::InvalidGc {
                     gc: self.control.to_string(),
                     game: self.game.nanoid.to_owned(),

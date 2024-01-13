@@ -17,7 +17,7 @@ lazy_static! {
 }
 
 #[component]
-pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
+pub fn LiveTimer(side: Color) -> impl IntoView {
     let timer_signal = expect_context::<TimerSignal>();
     let timer = timer_signal.signal.get_untracked();
     let white_time = move || {
@@ -66,6 +66,13 @@ pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
             Color::White => white_time(),
         }
     });
+    let time_is_red = Memo::new(move |_| {
+        if time_left() == Duration::from_secs(0) {
+            String::from("bg-red-500")
+        } else {
+            String::new()
+        }
+    });
     let ticks = create_rw_signal(0);
     let tick_rate = Duration::from_millis(100);
     let Pausable {
@@ -90,7 +97,9 @@ pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
         100,
         UseIntervalFnOptions::default().immediate(false),
     );
-    create_effect(move |_| {
+
+    // WARN: Might lead to problems, if we get  re-render loops, this could be the cause.
+    create_isomorphic_effect(move |_| {
         let timer = timer_signal.signal.get();
         if timer.turn > 1 {
             if (side == Color::White) == (timer.turn % 2 == 0) && !timer.finished {
@@ -112,15 +121,16 @@ pub fn LiveTimer(side: Color, parent_div: NodeRef<html::Div>) -> impl IntoView {
                     }
                 }
             }
-            // WARN: THIS IS HACKY
-            let class_list = parent_div()
-                .expect("div_ref to be loaded by now")
-                .class_list();
-            class_list.add_1("bg-red-700").expect("Class added");
         }
     });
+
     view! {
-        <div class="flex flex-grow resize h-full w-full select-none items-center justify-center text-[2vw] min-h-fit min-w-fit">
+        <div class=move || {
+            format!(
+                "flex flex-grow resize h-full w-full select-none items-center justify-center text-[2vw] min-h-fit min-w-fit {}",
+                time_is_red(),
+            )
+        }>
             {move || {
                 TimeMode::from_str(&timer.time_mode).unwrap().time_remaining(time_left.get())
             }}
