@@ -526,6 +526,7 @@ impl Game {
                 game_status.eq(new_game_status),
                 game_control_history.eq(game_control_history.concat(game_control_string)),
                 updated_at.eq(Utc::now()),
+                last_interaction.eq(Utc::now()),
             ))
             .get_result(conn)
             .await?)
