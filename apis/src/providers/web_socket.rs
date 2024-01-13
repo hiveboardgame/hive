@@ -170,7 +170,11 @@ fn on_message_callback(m: String) {
                                 timer.update_from(&gar.game);
                                 games.games_remove(&gar.game.nanoid);
                             }
-                            GameControl::TakebackAccept(_) => reset_game_state(&gar.game),
+                            GameControl::TakebackAccept(_) => {
+                                let timer = expect_context::<TimerSignal>();
+                                timer.update_from(&gar.game);
+                                reset_game_state(&gar.game);
+                            }
                             _ => {}
                         }
                     }
