@@ -5,11 +5,7 @@ use crate::{
         api_requests::ApiRequests, auth_context::AuthContext, game_state::GameStateSignal,
     },
 };
-use hive_lib::{
-    color::{Color, ColorChoice},
-    game_control::GameControl,
-    game_status::GameStatus,
-};
+use hive_lib::{color::ColorChoice, game_control::GameControl, game_status::GameStatus};
 use leptos::*;
 
 #[component]
@@ -33,9 +29,10 @@ pub fn ControlButtons() -> impl IntoView {
         .user_color(user_id)
         .expect("User is either white or black");
 
-    let abort_allowed = move || {
-        let state = (game_state.signal)().state;
-        state.turn == 0 || (state.turn == 1 && color == Color::Black)
+    let pending_draw = move || match (game_state.signal)().game_control_pending {
+        Some(GameControl::DrawOffer(gc_color)) => gc_color.opposite_color() == color,
+
+        _ => false,
     };
 
     let pending_takeback = move || match (game_state.signal)().game_control_pending {
@@ -44,10 +41,25 @@ pub fn ControlButtons() -> impl IntoView {
         _ => false,
     };
 
-    let pending_draw = move || match (game_state.signal)().game_control_pending {
-        Some(GameControl::DrawOffer(gc_color)) => gc_color.opposite_color() == color,
+    let new_opponent = move |_| {
+        let game_state = expect_context::<GameStateSignal>();
 
-        _ => false,
+        if let Some(game) = game_state.signal.get_untracked().game_response {
+            let challenge_action = ChallengeAction::Create {
+                rated: game.rated,
+                game_type: game.game_type,
+                visibility: ChallengeVisibility::Public,
+                opponent: None,
+                color_choice: ColorChoice::Random,
+                time_mode: game.time_mode,
+                time_base: game.time_base,
+                time_increment: game.time_increment,
+            };
+            let api = ApiRequests::new();
+            let navigate = leptos_router::use_navigate();
+            api.challenge(challenge_action);
+            navigate("/", Default::default());
+        }
     };
 
     let rematch = move |_| {
@@ -74,7 +86,7 @@ pub fn ControlButtons() -> impl IntoView {
                     time_increment: game.time_increment,
                 };
                 let api = ApiRequests::new();
-                api.challenge_direct(challenge_action);
+                api.challenge(challenge_action);
             }
         }
     };
@@ -86,89 +98,52 @@ pub fn ControlButtons() -> impl IntoView {
                 fallback=move || {
                     view! {
                         <div class="flex justify-around items-center grow shrink">
-                            <Show
-                                when=abort_allowed
-                                fallback=move || {
-                                    view! {
-                                        <Show
-                                            when=pending_takeback
-                                            fallback=move || {
-                                                view! {
-                                                    <ConfirmButton
-                                                        game_control=store_value(
-                                                            GameControl::TakebackRequest(color),
-                                                        )
+                            <div class="relative">
+                                <ConfirmButton
+                                    game_control=store_value(GameControl::Abort(color))
+                                    user_id=user_id
+                                    hidden=memo_for_hidden_class(move || {
+                                        (game_state.signal)().state.turn > 1
+                                    })
+                                />
 
-                                                        user_id=user_id
-                                                    />
-                                                }
-                                            }
-                                        >
+                                <ConfirmButton
+                                    game_control=store_value(GameControl::TakebackRequest(color))
+                                    user_id=user_id
+                                    hidden=memo_for_hidden_class(move || {
+                                        pending_takeback() || (game_state.signal)().state.turn < 2
+                                    })
+                                />
 
-                                            <div class="relative">
-                                                <AcceptDenyGc
-                                                    game_control=store_value(GameControl::TakebackAccept(color))
-                                                    user_id=user_id
-                                                />
-                                                <AcceptDenyGc
-                                                    game_control=store_value(GameControl::TakebackReject(color))
-                                                    user_id=user_id
-                                                />
-                                            </div>
-                                        </Show>
-                                    }
-                                }
-                            >
+                                <AcceptDenyGc
+                                    game_control=store_value(GameControl::TakebackAccept(color))
+                                    user_id=user_id
+                                    hidden=memo_for_hidden_class(move || !pending_takeback())
+                                />
+                                <AcceptDenyGc
+                                    game_control=store_value(GameControl::TakebackReject(color))
+                                    user_id=user_id
+                                    hidden=memo_for_hidden_class(move || !pending_takeback())
+                                />
+                            </div>
+                            <div class="relative">
+                                <ConfirmButton
+                                    game_control=store_value(GameControl::DrawOffer(color))
+                                    user_id=user_id
+                                    hidden=memo_for_hidden_class(pending_draw)
+                                />
 
-                                <Show
-                                    when=pending_takeback
-                                    fallback=move || {
-                                        view! {
-                                            <ConfirmButton
-                                                game_control=store_value(GameControl::Abort(color))
-                                                user_id=user_id
-                                            />
-                                        }
-                                    }
-                                >
-
-                                    <div class="relative">
-                                        <AcceptDenyGc
-                                            game_control=store_value(GameControl::TakebackAccept(color))
-                                            user_id=user_id
-                                        />
-                                        <AcceptDenyGc
-                                            game_control=store_value(GameControl::TakebackReject(color))
-                                            user_id=user_id
-                                        />
-                                    </div>
-                                </Show>
-
-                            </Show>
-
-                            <Show
-                                when=pending_draw
-                                fallback=move || {
-                                    view! {
-                                        <ConfirmButton
-                                            game_control=store_value(GameControl::DrawOffer(color))
-                                            user_id=user_id
-                                        />
-                                    }
-                                }
-                            >
-
-                                <div class="relative">
-                                    <AcceptDenyGc
-                                        game_control=store_value(GameControl::DrawAccept(color))
-                                        user_id=user_id
-                                    />
-                                    <AcceptDenyGc
-                                        game_control=store_value(GameControl::DrawReject(color))
-                                        user_id=user_id
-                                    />
-                                </div>
-                            </Show>
+                                <AcceptDenyGc
+                                    game_control=store_value(GameControl::DrawAccept(color))
+                                    user_id=user_id
+                                    hidden=memo_for_hidden_class(move || !pending_draw())
+                                />
+                                <AcceptDenyGc
+                                    game_control=store_value(GameControl::DrawReject(color))
+                                    user_id=user_id
+                                    hidden=memo_for_hidden_class(move || !pending_draw())
+                                />
+                            </div>
                             <ConfirmButton
                                 game_control=store_value(GameControl::Resign(color))
                                 user_id=user_id
@@ -184,10 +159,24 @@ pub fn ControlButtons() -> impl IntoView {
                 >
                     Rematch
                 </button>
-                <button class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded">
-                    New game
+                <button
+                    class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded"
+                    on:click=new_opponent
+                >
+                    New Opponent
                 </button>
+
             </Show>
         </div>
     }
+}
+
+fn memo_for_hidden_class(condition: impl Fn() -> bool + 'static) -> Memo<String> {
+    Memo::new(move |_| {
+        if condition() {
+            String::from("hidden")
+        } else {
+            String::new()
+        }
+    })
 }

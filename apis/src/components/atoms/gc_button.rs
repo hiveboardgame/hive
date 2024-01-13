@@ -10,7 +10,11 @@ use uuid::Uuid;
 use crate::providers::game_state::GameStateSignal;
 
 #[component]
-pub fn AcceptDenyGc(game_control: StoredValue<GameControl>, user_id: Uuid) -> impl IntoView {
+pub fn AcceptDenyGc(
+    game_control: StoredValue<GameControl>,
+    user_id: Uuid,
+    #[prop(optional, into)] hidden: MaybeSignal<String>,
+) -> impl IntoView {
     let (icon, title) = get_icon_and_title(game_control());
 
     let button_style = move || match game_control() {
@@ -30,19 +34,24 @@ pub fn AcceptDenyGc(game_control: StoredValue<GameControl>, user_id: Uuid) -> im
             on:click=on_click
             class=move || {
                 format!(
-                    "aspect-square hover:bg-green-500 rounded-sm duration-300 {}",
+                    "aspect-square hover:bg-green-500 rounded-sm duration-300 {} {}",
                     button_style(),
+                    hidden(),
                 )
             }
         >
 
-            <Icon icon=icon class="h-8 w-8"/>
+            <Icon icon=icon class="h-6 w-6 lg:h-8 lg:w-8"/>
         </button>
     }
 }
 
 #[component]
-pub fn ConfirmButton(game_control: StoredValue<GameControl>, user_id: Uuid) -> impl IntoView {
+pub fn ConfirmButton(
+    game_control: StoredValue<GameControl>,
+    user_id: Uuid,
+    #[prop(optional, into)] hidden: MaybeSignal<String>,
+) -> impl IntoView {
     let game_state = store_value(expect_context::<GameStateSignal>());
     let (icon, title) = get_icon_and_title(game_control());
     let color = game_control().color();
@@ -89,7 +98,7 @@ pub fn ConfirmButton(game_control: StoredValue<GameControl>, user_id: Uuid) -> i
 
     let disabled = move || {
         let turn = (game_state().signal)().state.turn as i32;
-        if game_control().allowed_on_turn(turn, color) {
+        if game_control().allowed_on_turn(turn) {
             !matches!(game_control(), GameControl::Resign(_))
                 && (pending(GameControl::DrawOffer(color))
                     || pending(GameControl::TakebackRequest(color)))
@@ -118,7 +127,8 @@ pub fn ConfirmButton(game_control: StoredValue<GameControl>, user_id: Uuid) -> i
         }
     };
 
-    create_effect(move |_| {
+    // WARN: Might lead to problems, if we get  re-render loops, this could be the cause.
+    create_isomorphic_effect(move |_| {
         if counter() >= 1 {
             is_clicked.update(|v| *v = false);
             reset();
@@ -127,7 +137,7 @@ pub fn ConfirmButton(game_control: StoredValue<GameControl>, user_id: Uuid) -> i
     });
 
     view! {
-        <div class="relative">
+        <div class=move || format!("relative {}", hidden())>
             <button
                 title=title
                 on:click=onclick_confirm
@@ -144,7 +154,7 @@ pub fn ConfirmButton(game_control: StoredValue<GameControl>, user_id: Uuid) -> i
                 <Icon
                     icon=icon
                     class=Signal::derive(move || {
-                        format!("h-8 w-8 {}", conditional_icon_style())
+                        format!("h-6 w-6 lg:h-8 lg:w-8 {}", conditional_icon_style())
                     })
                 />
 
@@ -155,7 +165,7 @@ pub fn ConfirmButton(game_control: StoredValue<GameControl>, user_id: Uuid) -> i
                     on:click=cancel
                     class="ml-1 aspect-square bg-red-700 hover:bg-red-500 rounded-sm absolute duration-300"
                 >
-                    <Icon icon=Icon::from(ChCross) class="h-8 w-8"/>
+                    <Icon icon=Icon::from(ChCross) class="h-6 w-6 lg:h-8 lg:w-8"/>
                 </button>
             </Show>
         </div>

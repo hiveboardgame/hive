@@ -1,5 +1,5 @@
 use crate::{
-    common::challenge_action::ChallengeVisibility,
+    common::challenge_action::{ChallengeAction, ChallengeVisibility},
     components::atoms::select_options::SelectOption,
     providers::{api_requests::ApiRequests, color_scheme::ColorScheme},
 };
@@ -175,7 +175,17 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                 };
             }
         };
-        api.challenge_new_with_params(params);
+        let challenge_action = ChallengeAction::Create {
+            rated: params.rated.get_untracked(),
+            game_type: params.game_type.get_untracked(),
+            visibility: params.visibility.get_untracked(),
+            opponent: params.opponent.get_untracked(),
+            color_choice: params.color_choice.get_untracked(),
+            time_mode: params.time_mode.get_untracked().to_string(),
+            time_base: params.time_base.get_untracked(),
+            time_increment: params.time_increment.get_untracked(),
+        };
+        api.challenge(challenge_action);
         params
             .visibility
             .update(|v| *v = ChallengeVisibility::Public);
