@@ -52,6 +52,19 @@ impl State {
         Ok(state)
     }
 
+    pub fn undo(&mut self) {
+        let mut moves = self.history.moves.clone();
+        moves.pop();
+        let moves = moves
+            .iter()
+            .map(|(piece, mov)| format!("{piece} {mov}"))
+            .collect::<Vec<String>>()
+            .join(";");
+        if let Ok(new) = Self::new_from_str(&moves, &self.game_type.to_string()) {
+            *self = new;
+        }
+    }
+
     pub fn new_from_history(history: &History) -> Result<Self, GameError> {
         let mut tournament = true;
         // Did white open with a Queen?
@@ -85,7 +98,6 @@ impl State {
     pub fn queen_allowed(&self) -> bool {
         self.turn > 1 || !self.tournament
     }
-
     pub fn play_turn_from_history(&mut self, piece: &str, position: &str) -> Result<(), GameError> {
         match piece {
             "pass" => {

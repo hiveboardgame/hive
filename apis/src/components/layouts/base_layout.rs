@@ -4,14 +4,12 @@ use crate::providers::navigation_controller::NavigationControllerSignal;
 use crate::providers::web_socket::WebsocketContext;
 use lazy_static::lazy_static;
 use leptos::logging::log;
-use leptos_use::use_interval_fn_with_options;
-use leptos_use::utils::Pausable;
-use leptos_use::{use_interval_fn, UseIntervalFnOptions};
-
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::use_location;
 use leptos_use::core::ConnectionReadyState;
+use leptos_use::use_interval_fn;
+use leptos_use::utils::Pausable;
 use regex::Regex;
 
 lazy_static! {
