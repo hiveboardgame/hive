@@ -8,6 +8,7 @@ use crate::{
 };
 use hive_lib::{color::ColorChoice, game_control::GameControl, game_status::GameStatus};
 use leptos::*;
+use leptos_icons::{Icon, TbIcon::TbMicroscope};
 
 #[component]
 pub fn ControlButtons() -> impl IntoView {
@@ -24,6 +25,11 @@ pub fn ControlButtons() -> impl IntoView {
     let user = move || match untrack(auth_context.user) {
         Some(Ok(Some(user))) => Some(user),
         _ => None,
+    };
+
+    let analysis_setup = move |_| {
+        let mut game_state = expect_context::<GameStateSignal>();
+        game_state.do_analysis();
     };
 
     let user_id = move || user().expect("User to be present in control buttons").id;
@@ -238,6 +244,7 @@ pub fn ControlButtons() -> impl IntoView {
                             rematch_button_color(),
                         )
                     }
+
                     prop:disabled=sent_challenge
                     on:click=rematch
                 >
@@ -249,7 +256,13 @@ pub fn ControlButtons() -> impl IntoView {
                 >
                     New Opponent
                 </button>
-
+                <a
+                    href="/analysis"
+                    class="m-1 md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded"
+                    on:click=analysis_setup
+                >
+                    <Icon icon=Icon::from(TbMicroscope) class="h-4 w-4 lg:h-7 lg:w-7"/>
+                </a>
             </Show>
         </div>
     }

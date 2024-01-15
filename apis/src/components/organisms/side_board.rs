@@ -1,5 +1,6 @@
 use crate::{
     components::{
+        atoms::undo_button::UndoButton,
         molecules::control_buttons::ControlButtons,
         organisms::{
             history::History,
@@ -18,6 +19,7 @@ use leptos::*;
 #[component]
 pub fn SideboardTabs(
     player_is_black: Memo<bool>,
+    #[prop(optional)] analysis: bool,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     let mut game_state_signal = expect_context::<GameStateSignal>();
@@ -32,7 +34,7 @@ pub fn SideboardTabs(
         user().map_or(false, |user| {
             let game_state = game_state_signal.signal.get();
             Some(user.id) == game_state.black_id || Some(user.id) == game_state.white_id
-        })
+        }) && !analysis
     };
 
     let button_color = move || {
@@ -50,10 +52,15 @@ pub fn SideboardTabs(
         }
     });
     let bottom_color = Signal::derive(move || top_color().opposite_color());
+    let row_start = if analysis {
+        "row-start-1"
+    } else {
+        "row-start-2"
+    };
 
     view! {
         <div class=format!(
-            "select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 {extend_tw_classes}",
+            "select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 {row_start} {extend_tw_classes}",
         )>
             <div class="z-10 border-b-2 border-black dark:border-white grid grid-cols-2 sticky top-0 bg-inherit">
                 <button
@@ -87,6 +94,11 @@ pub fn SideboardTabs(
                                 <Reserve color=top_color alignment=Alignment::DoubleRow/>
                                 <Show when=show_buttons>
                                     <ControlButtons/>
+                                </Show>
+                                <Show when=move || analysis>
+                                    <div class="flex justify-center items-center">
+                                        <UndoButton/>
+                                    </div>
                                 </Show>
                                 <Reserve color=bottom_color alignment=Alignment::DoubleRow/>
                             </div>

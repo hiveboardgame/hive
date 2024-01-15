@@ -45,8 +45,30 @@ impl GameStateSignal {
         })
     }
 
+    pub fn do_analysis(&mut self) {
+        self.signal.update(|s| {
+            s.game_id = None;
+            s.state.game_status = GameStatus::InProgress;
+            s.black_id = None;
+            s.white_id = None;
+        });
+    }
+
     pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
         self.signal.get().user_color(user_id)
+    }
+
+    pub fn undo_move(&mut self) {
+        self.signal.update(|s| {
+            if let Some(turn) = s.history_turn {
+                s.state.undo();
+                if turn > 0 {
+                    s.history_turn = Some(turn - 1);
+                } else {
+                    s.history_turn = None;
+                }
+            };
+        })
     }
 
     pub fn set_game_status(&self, status: GameStatus) {
@@ -68,7 +90,6 @@ impl GameStateSignal {
     }
 
     pub fn send_game_control(&self, game_control: GameControl, user: Uuid) {
-        log!("Sending game_control: {game_control}");
         self.signal
             .get_untracked()
             .send_game_control(game_control, user)

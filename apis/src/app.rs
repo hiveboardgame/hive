@@ -1,8 +1,9 @@
 use crate::{
     components::layouts::base_layout::BaseLayout,
     pages::{
-        account::Account, challenge_view::ChallengeView, home::Home, login::Login, play::Play,
-        players::PlayersView, profile_view::ProfileView, register::Register, user_get::UserGet,
+        account::Account, analysis::Analysis, challenge_view::ChallengeView, home::Home,
+        login::Login, play::Play, players::PlayersView, profile_view::ProfileView,
+        register::Register, user_get::UserGet,
     },
     providers::{
         auth_context::provide_auth, challenges::provide_challenges,
@@ -61,6 +62,7 @@ pub fn App() -> impl IntoView {
                     <Route path="/account" view=|| view! { <Account/> }/>
                     <Route path="/get_user" view=|| view! { <UserGet/> }/>
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
+                    <Route path="/analysis" view=|| view! { <Analysis/> }/>
                     <Route
                         path="/game/:nanoid"
                         ssr=SsrMode::PartiallyBlocked
