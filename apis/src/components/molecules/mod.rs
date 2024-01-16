@@ -1,3 +1,4 @@
+pub mod alert;
 pub mod board_pieces;
 pub mod challenge_row;
 pub mod control_buttons;

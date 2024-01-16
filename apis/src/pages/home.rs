@@ -43,7 +43,7 @@ pub fn Home() -> impl IntoView {
                 <Show when=logged_in>
                     <div class="flex md:flex-col">
                         <button
-                            class="m-5 md:mt-14 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded"
+                            class="m-5 md:mt-14 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
                             on:click=move |_| open.update(move |b| *b = true)
                         >
                             Create New Game

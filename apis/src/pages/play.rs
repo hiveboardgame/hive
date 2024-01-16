@@ -28,7 +28,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     };
 
     let is_tall = use_media_query("(min-height: 100vw)");
-    let nav_buttons_style = "flex place-items-center justify-center hover:bg-green-400 dark:hover:bg-green-500 duration-300 my-1 h-6 rounded-md border-cyan-500 border-2 drop-shadow-lg touch-manipulation";
+    let nav_buttons_style = "flex place-items-center justify-center hover:bg-green-400 dark:hover:bg-green-500 transform transition-transform duration-300 active:scale-95 my-1 h-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
     let game_state = expect_context::<GameStateSignal>();
     let parent_container_style = move || {
         if is_tall() {

@@ -36,18 +36,22 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         name="password"
                         id="password"
                         type="password"
+                        placeholder="********"
                     />
                 </label>
                 <input type="hidden" name="pathname" value=pathname().0/>
                 <input
-                    class="bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none"
+                    class="bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none"
                     type="submit"
                     value="Sign In"
                 />
             </ActionForm>
             <p class="text-center text-gray-500 text-xs">
                 "Don't have an account?"
-                <a class="text-blue-500 hover:text-blue-800 duration-300" href="/register">
+                <a
+                    class="text-blue-500 hover:text-blue-800 transform transition-transform duration-300 active:scale-95"
+                    href="/register"
+                >
                     Sign Up
                 </a>
             </p>

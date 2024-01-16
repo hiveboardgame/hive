@@ -34,7 +34,7 @@ pub fn AcceptDenyGc(
             on:click=on_click
             class=move || {
                 format!(
-                    "aspect-square hover:bg-green-500 rounded-sm duration-300 {} {}",
+                    "aspect-square rounded-sm transform transition-transform duration-300 active:scale-95 {} {}",
                     button_style(),
                     hidden(),
                 )
@@ -145,7 +145,7 @@ pub fn ConfirmButton(
 
                 class=move || {
                     format!(
-                        "aspect-square rounded-sm relative duration-300 {}",
+                        "aspect-square rounded-sm relative transform transition-transform duration-300 active:scale-95 {}",
                         conditional_button_style(),
                     )
                 }

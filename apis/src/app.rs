@@ -6,7 +6,7 @@ use crate::{
         register::Register, user_get::UserGet,
     },
     providers::{
-        auth_context::provide_auth, challenges::provide_challenges,
+        alerts::provide_alerts, auth_context::provide_auth, challenges::provide_challenges,
         color_scheme::provide_color_scheme, game_state::provide_game_state, games::provide_games,
         navigation_controller::provide_navigation_controller, online_users::provide_users,
         timer::provide_timer, web_socket::provide_websocket,
@@ -30,6 +30,7 @@ pub fn App() -> impl IntoView {
     let url = "/ws/";
     provide_websocket(url);
     provide_auth();
+    provide_alerts();
 
     view! {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>

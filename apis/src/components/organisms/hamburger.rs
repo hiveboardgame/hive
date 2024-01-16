@@ -21,7 +21,7 @@ pub fn Hamburger(hamburger_show: RwSignal<bool>, children: ChildrenFn) -> impl I
         <div node_ref=target class="inline-block mr-10">
             <button
                 on:click=move |_| hamburger_show.update(|b| *b = !*b)
-                class="bg-blue-500 text-white rounded-md px-2 py-1 m-2 hover:bg-blue-600 duration-300 whitespace-nowrap truncate max-w-[80px] lg:max-w-[120px]"
+                class="bg-blue-500 text-white rounded-md px-2 py-1 m-2 hover:bg-blue-600 transform transition-transform duration-300 active:scale-95 whitespace-nowrap truncate max-w-[80px] lg:max-w-[120px]"
             >
                 {username}
             </button>

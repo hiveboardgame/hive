@@ -1,3 +1,4 @@
+pub mod alerts;
 pub mod api_requests;
 pub mod auth_context;
 pub mod challenges;

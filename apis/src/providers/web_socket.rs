@@ -1,3 +1,4 @@
+use crate::providers::alerts::{AlertType, AlertsContext};
 use crate::providers::games::GamesSignal;
 use crate::providers::navigation_controller::NavigationControllerSignal;
 use crate::providers::online_users::OnlineUsersSignal;
@@ -149,6 +150,13 @@ fn on_message_callback(m: String) {
                         game_state.set_pending_gc(game_control.clone());
                         match game_control {
                             GameControl::Abort(_) => {
+                                let alerts = expect_context::<AlertsContext>();
+                                alerts.last_alert.update(|v| {
+                                    *v = Some(AlertType::Warn(format!(
+                                        "{} aborted the game",
+                                        gar.username
+                                    )));
+                                });
                                 // TODO: Once we have notifications tell the user the game was aborted
                                 let navigate = leptos_router::use_navigate();
                                 games.games_remove(&gar.game.nanoid);

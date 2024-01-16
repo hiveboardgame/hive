@@ -64,7 +64,12 @@ pub fn SideboardTabs(
         )>
             <div class="z-10 border-b-2 border-black dark:border-white grid grid-cols-2 sticky top-0 bg-inherit">
                 <button
-                    class=move || { format!("duration-300 hover:bg-blue-300 {}", button_color().0) }
+                    class=move || {
+                        format!(
+                            "transform transition-transform duration-300 active:scale-95 hover:bg-blue-300 {}",
+                            button_color().0,
+                        )
+                    }
 
                     on:click=move |_| {
                         game_state_signal.view_game();
@@ -75,7 +80,12 @@ pub fn SideboardTabs(
                 </button>
 
                 <button
-                    class=move || { format!("duration-300 hover:bg-blue-300 {}", button_color().1) }
+                    class=move || {
+                        format!(
+                            "transform transition-transform duration-300 active:scale-95 hover:bg-blue-300 {}",
+                            button_color().1,
+                        )
+                    }
 
                     on:click=move |_| {
                         game_state_signal.view_history();
