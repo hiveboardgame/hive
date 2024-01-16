@@ -20,9 +20,11 @@ pub fn NextGameButton() -> impl IntoView {
         log!("Games without nanoid: {:?}", next_games);
         next_games
     };
-    let color = move || match next_games().len() {
-        0 => "hidden",
-        _ => "bg-red-700 duration-300 hover:bg-red-600 text-white rounded-md px-2 py-1 m-2",
+    let color = move || {
+        match next_games().len() {
+            0 => "hidden",
+            _ => "bg-red-700 transform transition-transform duration-300 active:scale-95 hover:bg-red-600 text-white rounded-md px-2 py-1 m-2",
+        }
     };
     let title_text = move || match next_games().len() {
         0 => String::from("HiveGame.com"),

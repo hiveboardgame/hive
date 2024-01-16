@@ -135,7 +135,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                         ApiRequests::new().challenge_cancel(challenge().nanoid)
                                     }
 
-                                    class="bg-red-500 hover:bg-red-400 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                    class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                                 >
                                     Cancel
                                 </button>
@@ -146,7 +146,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     <button
                                         ref=button_ref
                                         on:click=copy
-                                        class="bg-blue-500 hover:bg-blue-400 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                        class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                                     >
                                         <Icon icon=Icon::from(AiCopyOutlined)/>
                                     </button>
@@ -173,7 +173,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                             }
                         }
 
-                        class="bg-blue-500 hover:bg-blue-400 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                        class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                     >
                         {if challenge().opponent.is_some() { "Accept" } else { "Join" }}
 
@@ -194,7 +194,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     }
                                 }
 
-                                class="bg-red-500 hover:bg-red-400 duration-300 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
                             >
                                 "Deny"
 

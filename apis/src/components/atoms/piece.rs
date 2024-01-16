@@ -2,7 +2,6 @@ use crate::common::{piece_type::PieceType, svg_pos::SvgPos};
 use crate::providers::auth_context::AuthContext;
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::{bug::Bug, game_status::GameStatus, piece::Piece, position::Position};
-use leptos::logging::log;
 use leptos::*;
 
 #[component]
@@ -25,7 +24,7 @@ pub fn Piece(
         filter.push_str(" sepia-[.75]");
     }
 
-    let mut dot_color = String::from(" color: #");
+    let mut dot_color = String::from("color: #");
     dot_color.push_str(match bug {
         Bug::Ant => "3574a5",
         Bug::Beetle => "7a4fab",
@@ -63,26 +62,22 @@ pub fn Piece(
                 _ => {
                     match piece_type {
                         PieceType::Board => {
-                            log!("Board piece");
                             game_state_signal
                                 .show_moves(piece.get_untracked(), position.get_untracked());
                         }
                         PieceType::Reserve => {
-                            log!("Reserve piece");
                             game_state_signal
                                 .show_spawns(piece.get_untracked(), position.get_untracked());
                         }
                         PieceType::Move => {
-                            log!("Moving piece {}", piece.get_untracked());
                             game_state_signal.move_active();
                         }
                         PieceType::Spawn => {
                             {
-                                log!("Spawning piece {}", piece.get_untracked());
                                 game_state_signal.spawn_active();
                             };
                         }
-                        _ => log!("Piece is {}", piece_type),
+                        _ => {}
                     };
                 }
             }
@@ -90,7 +85,7 @@ pub fn Piece(
     };
 
     view! {
-        <g on:click=onclick class=filter style=dot_color>
+        <g on:click=onclick style=dot_color class=filter>
             <g transform=transform>
                 <use_
                     href=format!("#{}", color)

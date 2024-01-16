@@ -195,7 +195,7 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
     };
 
     let buttons_style =
-        "my-1 p-1 duration-300 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded";
+        "my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded";
     let disable_rated = move || {
         if (params.game_type)() == GameType::Base || time_control() == TimeMode::Untimed {
             return true;

@@ -51,7 +51,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 fallback=move || {
                     view! {
                         <Board/>
-                        <div class="grid border-y-2 col-start-9 col-span-2 row-start-2 row-span-4 grid-cols-2 grid-rows-4">
+                        <div class="grid border-y-2 border-black dark:border-white col-start-9 col-span-2 row-start-2 row-span-4 grid-cols-2 grid-rows-4">
                             <SideboardTabs player_is_black=player_is_black analysis=true/>
                         </div>
                     }

@@ -14,7 +14,10 @@ use leptos::ev::{
 };
 use leptos::svg::Svg;
 use leptos::*;
-use leptos_use::{use_debounce_fn_with_arg, use_event_listener, use_resize_observer};
+use leptos_use::{
+    use_debounce_fn_with_arg, use_event_listener, use_event_listener_with_options,
+    use_resize_observer, UseEventListenerOptions,
+};
 use wasm_bindgen::JsCast;
 use web_sys::{DomRectReadOnly, PointerEvent, SvgPoint, TouchEvent, WheelEvent};
 
@@ -136,53 +139,67 @@ pub fn Board(
     });
 
     //Zoom on point with mousewheel/touchpad
-    _ = use_event_listener(viewbox_ref, wheel, move |evt| {
-        evt.prevent_default();
-        if !is_panning.get_untracked() {
-            let initial_point = svg_point_from_wheel(viewbox_ref, &evt);
-            let scale: f32 = if evt.delta_y() > 0.0 { 0.09 } else { -0.09 };
-            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                let initial_width = viewbox_controls.width;
-                let initial_height = viewbox_controls.height;
-                viewbox_controls.width += initial_width * scale;
-                viewbox_controls.height += initial_height * scale;
-                viewbox_controls.x = initial_point.x()
-                    - (initial_point.x() - viewbox_controls.x) / initial_width
-                        * viewbox_controls.width;
-                viewbox_controls.y = initial_point.y()
-                    - (initial_point.y() - viewbox_controls.y) / initial_height
-                        * viewbox_controls.height;
-            });
-        }
-    });
+    _ = use_event_listener_with_options(
+        viewbox_ref,
+        wheel,
+        move |evt| {
+            if !is_panning.get_untracked() {
+                let initial_point = svg_point_from_wheel(viewbox_ref, &evt);
+                let scale: f32 = if evt.delta_y() > 0.0 { 0.09 } else { -0.09 };
+                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                    let initial_width = viewbox_controls.width;
+                    let initial_height = viewbox_controls.height;
+                    viewbox_controls.width += initial_width * scale;
+                    viewbox_controls.height += initial_height * scale;
+                    viewbox_controls.x = initial_point.x()
+                        - (initial_point.x() - viewbox_controls.x) / initial_width
+                            * viewbox_controls.width;
+                    viewbox_controls.y = initial_point.y()
+                        - (initial_point.y() - viewbox_controls.y) / initial_height
+                            * viewbox_controls.height;
+                });
+            }
+        },
+        UseEventListenerOptions::default().passive(true),
+    );
 
     //Zoom on pinch
-    _ = use_event_listener(viewbox_ref, touchstart, move |evt| {
-        if evt.touches().length() == 2 {
-            is_panning.update_untracked(|b| *b = false);
-            let initial_point_0 = svg_point_from_touch(viewbox_ref, &evt, 0);
-            let initial_point_1 = svg_point_from_touch(viewbox_ref, &evt, 1);
-            initial_touch_distance
-                .update(move |v| *v = get_touch_distance(initial_point_0, initial_point_1));
-        }
-    });
+    _ = use_event_listener_with_options(
+        viewbox_ref,
+        touchstart,
+        move |evt| {
+            if evt.touches().length() == 2 {
+                is_panning.update_untracked(|b| *b = false);
+                let initial_point_0 = svg_point_from_touch(viewbox_ref, &evt, 0);
+                let initial_point_1 = svg_point_from_touch(viewbox_ref, &evt, 1);
+                initial_touch_distance
+                    .update(move |v| *v = get_touch_distance(initial_point_0, initial_point_1));
+            }
+        },
+        UseEventListenerOptions::default().passive(true),
+    );
 
-    _ = use_event_listener(viewbox_ref, touchmove, move |evt| {
-        if evt.touches().length() == 2 {
-            let current_point_0 = svg_point_from_touch(viewbox_ref, &evt, 0);
-            let current_point_1 = svg_point_from_touch(viewbox_ref, &evt, 1);
-            let current_distance = get_touch_distance(current_point_0.clone(), current_point_1);
-            let scale = current_distance / initial_touch_distance();
-            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                viewbox_controls.width /= scale;
-                viewbox_controls.height /= scale;
-                viewbox_controls.x =
-                    current_point_0.x() - (current_point_0.x() - viewbox_controls.x) / scale;
-                viewbox_controls.y =
-                    current_point_0.y() - (current_point_0.y() - viewbox_controls.y) / scale;
-            });
-        }
-    });
+    _ = use_event_listener_with_options(
+        viewbox_ref,
+        touchmove,
+        move |evt| {
+            if evt.touches().length() == 2 {
+                let current_point_0 = svg_point_from_touch(viewbox_ref, &evt, 0);
+                let current_point_1 = svg_point_from_touch(viewbox_ref, &evt, 1);
+                let current_distance = get_touch_distance(current_point_0.clone(), current_point_1);
+                let scale = current_distance / initial_touch_distance();
+                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                    viewbox_controls.width /= scale;
+                    viewbox_controls.height /= scale;
+                    viewbox_controls.x =
+                        current_point_0.x() - (current_point_0.x() - viewbox_controls.x) / scale;
+                    viewbox_controls.y =
+                        current_point_0.y() - (current_point_0.y() - viewbox_controls.y) / scale;
+                });
+            }
+        },
+        UseEventListenerOptions::default().passive(true),
+    );
 
     //Stop panning when user releases touch/click AND reset height adjustment on right click release
     _ = use_event_listener(viewbox_ref, pointerup, move |_| {

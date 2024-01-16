@@ -14,7 +14,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                 }
 
                 type="submit"
-                class="bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 m-1 rounded"
+                class="bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
                 value="Logout"
             />
         </ActionForm>

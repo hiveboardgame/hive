@@ -240,7 +240,7 @@ pub fn ControlButtons() -> impl IntoView {
                 <button
                     class=move || {
                         format!(
-                            "m-1 grow md:grow-0 whitespace-nowrap {} duration-300 text-white font-bold py-2 px-4 rounded disabled:opacity-25 disabled:cursor-not-allowed",
+                            "m-1 grow md:grow-0 whitespace-nowrap {} transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded disabled:opacity-25 disabled:cursor-not-allowed",
                             rematch_button_color(),
                         )
                     }
@@ -251,7 +251,7 @@ pub fn ControlButtons() -> impl IntoView {
                     {rematch_text}
                 </button>
                 <button
-                    class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded"
+                    class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
                     on:click=new_opponent
                 >
                     New Opponent

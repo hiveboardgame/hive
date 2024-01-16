@@ -62,7 +62,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 <input type="hidden" name="pathname" value=pathname().0/>
                 <input
                     type="submit"
-                    class="bg-blue-500 duration-300 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none"
+                    class="bg-blue-500 transform transition-transform duration-300 active:scale-95 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none"
                     value="Save"
                 />
             </ActionForm>

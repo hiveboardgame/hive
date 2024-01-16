@@ -44,10 +44,10 @@ pub fn Modal(
             // clicking on ::backdrop should dismiss modal
             on:click=on_click
         >
-            <header class="flex justify-end ">
+            <header class="flex justify-end">
                 <form class="m-2" method="dialog">
                     <button
-                        class="hover:bg-li-red duration-300 rounded-full w-5 h-5 flex items-center justify-center"
+                        class="hover:bg-li-red duration-300 active:scale-95 rounded-full w-5 h-5 flex items-center justify-center"
                         aria-label="Close"
                     >
                         x

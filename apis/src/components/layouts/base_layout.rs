@@ -1,3 +1,4 @@
+use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
 use crate::providers::color_scheme::ColorScheme;
 use crate::providers::navigation_controller::NavigationControllerSignal;
@@ -80,8 +81,9 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
 
         <Body/>
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
-        <main class="min-h-screen w-full bg-light dark:bg-dark text-xs sm:text-sm md:text-md lg:text-lg xl-text-xl">
+        <main class="min-h-screen w-full bg-light dark:bg-dark text-xs sm:text-sm md:text-md lg:text-lg xl-text-xl touch-manipulation select-none">
             <Header/>
+            <Alert/>
             {children()}
         </main>
     }
