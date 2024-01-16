@@ -24,8 +24,10 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
             <a class="ml-10" href="/">
                 Home
             </a>
+            <div>
+                { ws_state }
+            </div>
 
-            {ws_state}
             <Transition>
                 {move || {
                     let user = move || match (auth_context.user)() {

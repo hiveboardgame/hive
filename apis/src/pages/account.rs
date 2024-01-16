@@ -26,6 +26,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     id="email"
                     name="new_email"
                     type="email"
+                    autocomplete="off"
                     placeholder="New email"
                 />
                 <label class="block font-bold mb-2" for="old_password">
@@ -37,6 +38,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     id="old_password"
                     name="password"
                     type="password"
+                    autocomplete="current-password"
                     placeholder="Current password"
                 />
                 <label class="block font-bold mb-2" for="new_password">
@@ -47,6 +49,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     name="new_password"
                     id="new_password"
                     type="password"
+                    autocomplete="new-password"
                     placeholder="New password"
                 />
                 <label class="block font-bold mb-2" for="confirm_password">
@@ -57,6 +60,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     id="confirm_password"
                     name="new_password_confirmation"
                     type="password"
+                    autocomplete="new-password"
                     placeholder="New password (again)"
                 />
                 <input type="hidden" name="pathname" value=pathname().0/>

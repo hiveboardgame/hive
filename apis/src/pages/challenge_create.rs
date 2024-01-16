@@ -25,12 +25,16 @@ pub struct ChallengeParams {
 }
 
 #[component]
-pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
+pub fn ChallengeCreate(
+    close: Callback<()>,
+    #[prop(optional)] opponent: Option<String>,
+) -> impl IntoView {
+    let opponent = store_value(opponent);
     let params = ChallengeParams {
         rated: RwSignal::new(true),
         game_type: RwSignal::new(GameType::MLP),
         visibility: RwSignal::new(ChallengeVisibility::Public),
-        opponent: RwSignal::new(None),
+        opponent: RwSignal::new(opponent()),
         color_choice: RwSignal::new(ColorChoice::Random),
         time_mode: RwSignal::new(TimeMode::RealTime),
         time_base: RwSignal::new(Some(10)),
@@ -223,33 +227,35 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
 
     view! {
         <div class="flex flex-col m-2 flex-shrink-0 flex-grow-0">
+            <div class=move || {
+                if opponent().is_some() { "block" } else { "hidden" }
+            }>"Opponent: " {opponent()}</div>
             <div class="flex">
-                <label for="time-control" class="mr-1">
+                <label class="mr-1">
                     Time Control:
-                </label>
-                <select
-                    class="bg-odd-light dark:bg-gray-700"
-                    name="Time Control"
-                    id="time-control"
-                    on:change=move |ev| {
-                        let new_value = TimeMode::from_str(&event_target_value(&ev))
-                            .expect("Valid TimeMode");
-                        params.visibility.update(|v| *v = ChallengeVisibility::Public);
-                        params.game_type.update(|v| *v = GameType::MLP);
-                        days_per_move.update_untracked(|v| *v = 2);
-                        if new_value == TimeMode::Untimed {
-                            params.rated.set(false);
-                        } else {
-                            params.rated.set(true);
+                    <select
+                        class="bg-odd-light dark:bg-gray-700"
+                        name="Time Control"
+                        on:change=move |ev| {
+                            let new_value = TimeMode::from_str(&event_target_value(&ev))
+                                .expect("Valid TimeMode");
+                            params.visibility.update(|v| *v = ChallengeVisibility::Public);
+                            params.game_type.update(|v| *v = GameType::MLP);
+                            days_per_move.update_untracked(|v| *v = 2);
+                            if new_value == TimeMode::Untimed {
+                                params.rated.set(false);
+                            } else {
+                                params.rated.set(true);
+                            }
+                            time_control.update(|v| *v = new_value);
                         }
-                        time_control.update(|v| *v = new_value);
-                    }
-                >
+                    >
 
-                    <SelectOption value=time_control is="Real Time"/>
-                    <SelectOption value=time_control is="Correspondence"/>
-                    <SelectOption value=time_control is="Untimed"/>
-                </select>
+                        <SelectOption value=time_control is="Real Time"/>
+                        <SelectOption value=time_control is="Correspondence"/>
+                        <SelectOption value=time_control is="Untimed"/>
+                    </select>
+                </label>
             </div>
             <Show when=move || time_control() != TimeMode::Untimed>
                 <Show
@@ -257,74 +263,69 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                     fallback=move || {
                         view! {
                             <div class="flex flex-col justify-center items-center mb-1">
-                                <label for="corr">
+                                <label>
                                     {move || format!("Days per move: {}", days_per_move())}
+                                    <input
+                                        on:input=days_slider
+                                        type="range"
+                                        name="Correspondence"
+                                        min="0"
+                                        max="14"
+                                        prop:value=days_per_move
+                                        step="1"
+                                        class=slider_style
+                                    />
                                 </label>
-                                <input
-                                    on:input=days_slider
-                                    type="range"
-                                    id="corr"
-                                    name="Correspondence"
-                                    min="0"
-                                    max="14"
-                                    prop:value=days_per_move
-                                    step="1"
-                                    class=slider_style
-                                />
-                                <label for="corr">
+                                <label>
                                     {move || {
                                         format!(
                                             "total_days_per_player: {}",
                                             total_days_per_player(),
                                         )
                                     }}
-
+                                    <input
+                                        on:input=total_slider
+                                        type="range"
+                                        name="Correspondence"
+                                        min="0"
+                                        max="14"
+                                        prop:value=total_days_per_player
+                                        step="1"
+                                        class=slider_style
+                                    />
                                 </label>
-                                <input
-                                    on:input=total_slider
-                                    type="range"
-                                    id="corr"
-                                    name="Correspondence"
-                                    min="0"
-                                    max="14"
-                                    prop:value=total_days_per_player
-                                    step="1"
-                                    class=slider_style
-                                />
                             </div>
                         }
                     }
                 >
 
                     <div class="flex flex-col justify-center">
-                        <label for="minutes">
+                        <label>
                             {move || format!("Minutes per side: {}", total_seconds() / 60)}
+                            <input
+                                on:input=minute_slider
+                                type="range"
+                                name="minutes"
+                                min="1"
+                                max="32"
+                                prop:value=step_min
+                                step="1"
+                                class=slider_style
+                            />
                         </label>
-                        <input
-                            on:input=minute_slider
-                            type="range"
-                            id="minutes"
-                            name="minutes"
-                            min="1"
-                            max="32"
-                            prop:value=step_min
-                            step="1"
-                            class=slider_style
-                        />
-                        <label for="increment">
+                        <label>
                             {move || format!("Increment in sec: {}", sec_per_move())}
+                            <input
+                                on:input=incr_slider
+                                type="range"
+                                name="increment"
+                                min="0"
+                                max="32"
+                                prop:value=step_sec
+                                step="1"
+                                class=slider_style
+                            />
                         </label>
-                        <input
-                            on:input=incr_slider
-                            type="range"
-                            id="increment"
-                            name="increment"
-                            min="0"
-                            max="32"
-                            prop:value=step_sec
-                            step="1"
-                            class=slider_style
-                        />
                     </div>
                 </Show>
             </Show>
@@ -401,40 +402,37 @@ pub fn ChallengeCreate(close: Callback<()>) -> impl IntoView {
                     Private
                 </button>
             </div>
-            <div>
+            <div class="hidden">
                 <p class="flex justify-center">Rating range</p>
                 <p class="flex">
-                    <input
-                        on:input=min_rating_slider
-                        type="range"
-                        id="below"
-                        name="below"
-                        min="-500"
-                        max="0"
-                        prop:value=min_rating
-                        step="50"
-                        class=slider_style
-                    />
-                    <p class="flex mx-1 w-[5.5rem] justify-center">
-                        <label for="below" class="whitespace-nowrap">
-                            {move || format!("{} /", min_rating())}
-
+                    <p class="flex mx-1">
+                        <label class="flex whitespace-nowrap w-[5.5rem]">
+                            <input
+                                on:input=min_rating_slider
+                                type="range"
+                                name="below"
+                                min="-500"
+                                max="0"
+                                prop:value=min_rating
+                                step="50"
+                                class=slider_style
+                            />
+                            <div>{move || format!("{} /", min_rating())}</div>
                         </label>
-                        <label for="above" class="whitespace-nowrap">
-                            {move || format!(" +{}", max_rating())}
+                        <label class="flex whitespace-nowrap w-[5.5rem]">
+                            <div>{move || format!(" +{}", max_rating())}</div>
+                            <input
+                                on:input=max_rating_slider
+                                type="range"
+                                name="above"
+                                min="0"
+                                max="500"
+                                prop:value=max_rating
+                                step="50"
+                                class=slider_style
+                            />
                         </label>
                     </p>
-                    <input
-                        on:input=max_rating_slider
-                        type="range"
-                        id="above"
-                        name="above"
-                        min="0"
-                        max="500"
-                        prop:value=max_rating
-                        step="50"
-                        class=slider_style
-                    />
                 </p>
             </div>
             <div class="flex justify-center items-baseline">

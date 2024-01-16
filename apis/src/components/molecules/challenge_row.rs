@@ -100,13 +100,25 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
         }
     };
 
+    let rating = move || {
+        if let (Some(uid), Some(opponent)) = (uid(), challenge().opponent) {
+            if challenge().challenger.uid == uid {
+                view! { <p>{opponent.rating}</p> }
+            } else {
+                view! { <p>{challenge().challenger.rating}</p> }
+            }
+        } else {
+            view! { <p>{challenge().challenger.rating}</p> }
+        }
+    };
+
     view! {
         <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center">
             <td class=td_class>{icon}</td>
             <td class=td_class>
                 <p class="flex items-center">{player}</p>
             </td>
-            <td class=td_class>{challenge().challenger.rating}</td>
+            <td class=td_class>{rating}</td>
             <td class=td_class>
                 <GameType game_type=challenge().game_type/>
             </td>
