@@ -19,9 +19,10 @@ pub fn OnlineUsers() -> impl IntoView {
         users
     };
     view! {
-        <div class="flex flex-col m-2">
-            Online players <ul>
-
+        <div class="flex flex-col m-2 w-fit">
+            Online players:
+            <ul>
+                {move || if online_players().len() == 0 { "Only you" } else { "" }}
                 <For each=online_players key=|(key, _)| key.to_owned() let:a_user>
                     <UserRow username=store_value(a_user.0) rating=a_user.1.rating/>
                 </For>

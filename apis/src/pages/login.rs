@@ -26,6 +26,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         name="username"
                         id="username"
                         type="text"
+                        autocomplete="username"
                         placeholder="Username"
                     />
                 </label>
@@ -36,6 +37,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         name="password"
                         id="password"
                         type="password"
+                        autocomplete="current-password"
                         placeholder="********"
                     />
                 </label>

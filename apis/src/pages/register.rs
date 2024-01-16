@@ -25,6 +25,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
                         name="username"
                         type="text"
+                        autocomplete="off"
                         placeholder="Username"
                     />
                 </label>
@@ -34,6 +35,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
                         name="email"
                         type="text"
+                        autocomplete="off"
                         placeholder="Email(optional)"
                     />
                 </label>
@@ -43,6 +45,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         class="shadow appearance-none border rounded w-full py-2 px-3 mb-3 leading-tight focus:outline-none"
                         name="password"
                         type="password"
+                        autocomplete="new-password"
                         placeholder="password"
                     />
                 </label>
@@ -52,6 +55,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         class="shadow appearance-none border rounded w-full py-2 px-3 mb-3 leading-tight focus:outline-none"
                         name="password_confirmation"
                         type="password"
+                        autocomplete="new-password"
                         placeholder="password"
                     />
                 </label>

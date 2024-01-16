@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PlayersView() -> impl IntoView {
     view! {
-        <div class="pt-10">
+        <div class="">
             <OnlineUsers/>
             <Leaderboard/>
         </div>
