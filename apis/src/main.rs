@@ -2,7 +2,8 @@ pub mod common;
 pub mod functions;
 pub mod responses;
 pub mod websockets;
-
+use actix_session::config::PersistentSession;
+use actix_web::cookie::time::Duration;
 use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 
@@ -77,10 +78,13 @@ async fn main() -> std::io::Result<()> {
             // Now SessionMiddleware, this is a bit confusing but actix invokes middlesware in
             // reverse order of registration and the IdentityMiddleware is based on the
             // SessionMiddleware so SessionMiddleware needs to be present
-            .wrap(SessionMiddleware::new(
-                CookieSessionStore::default(),
-                cookie_key.clone(),
-            ))
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), cookie_key.clone())
+                    .session_lifecycle(
+                        PersistentSession::default().session_ttl(Duration::weeks(1))
+                    )
+                    .build()
+            )
         //.wrap(middleware::Compress::default())
     })
     .bind(&addr)?
