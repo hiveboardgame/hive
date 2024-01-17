@@ -118,7 +118,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             }
             Ok(ws::Message::Nop) => (),
             Ok(Text(s)) => {
-                println!("WS message is {:?}", s);
                 let request: ClientRequest =
                     serde_json::from_str(s.as_ref()).expect("ClientMessage from string worked");
                 let pool = self.pool.clone();
@@ -132,7 +131,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                     let handler_result = handler.handle().await;
                     match handler_result {
                         Ok(messages) => {
-                            // TODO: for tomorrow handle the Message::Connect
                             for message in messages {
                                 let serialized =
                                     serde_json::to_string(&ServerResult::Ok(message.message))

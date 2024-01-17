@@ -7,6 +7,7 @@ use crate::common::{
     client_message::ClientRequest, game_action::GameAction, server_result::InternalServerMessage,
 };
 use crate::websockets::api::challenges::handler::ChallengeHandler;
+use crate::websockets::api::ping::handler::PingHandler;
 use anyhow::Result;
 use db_lib::DbPool;
 use uuid::Uuid;
@@ -45,6 +46,7 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
+            ClientRequest::Ping(sent) => PingHandler::new(self.user_id, sent).handle(),
             ClientRequest::GameTimeout(nanoid) => {
                 GameTimeoutHandler::new(&nanoid, &self.username, self.user_id, &self.pool)
                     .await?

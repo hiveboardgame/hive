@@ -28,6 +28,8 @@ leptos_icons = { version = "0.1", default_features = false, features = [
     "BiUndoRegular",
     "BiCircleRegular",
     "BiCircleSolid",
+    "BiNoSignalRegular",
+    "BiSignal5Regular",
     "BsHexagon",
     "BsHexagonFill",
     "BsHexagonHalf",

@@ -14,6 +14,7 @@ use crate::{
     },
     responses::game::GameResponse,
 };
+
 use hive_lib::{
     game_control::GameControl, game_result::GameResult, game_status::GameStatus, history::History,
     state::State, turn::Turn,
@@ -29,6 +30,8 @@ use shared_types::time_mode::TimeMode;
 use std::rc::Rc;
 use std::str::FromStr;
 
+use super::ping::PingSignal;
+
 lazy_static! {
     static ref NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
@@ -37,7 +40,7 @@ lazy_static! {
 #[derive(Clone)]
 pub struct WebsocketContext {
     pub message: Signal<Option<String>>,
-    send: Rc<dyn Fn(&str)>, // use Rc to make it easily cloneable
+    send: Rc<dyn Fn(&str)>,
     pub ready_state: Signal<ConnectionReadyState>,
     open: Rc<dyn Fn()>,
     close: Rc<dyn Fn()>,
@@ -62,7 +65,6 @@ impl WebsocketContext {
 
     #[inline(always)]
     pub fn send(&self, message: &str) {
-        log!("WS sending message: {:?}", message);
         (self.send)(message)
     }
 
@@ -84,7 +86,11 @@ fn on_message_callback(m: String) {
     let mut game_state = expect_context::<GameStateSignal>();
     let navigation_controller = expect_context::<NavigationControllerSignal>();
     let mut games = expect_context::<GamesSignal>();
+    let mut ping = expect_context::<PingSignal>();
     match serde_json::from_str::<ServerResult>(&m) {
+        Ok(ServerResult::Ok(ServerMessage::Pong { ping_sent, .. })) => {
+            ping.update_ping(ping_sent);
+        }
         Ok(ServerResult::Ok(ServerMessage::UserStatus(user_update))) => {
             let mut online_users = expect_context::<OnlineUsersSignal>();
             log!("{:?}", user_update);

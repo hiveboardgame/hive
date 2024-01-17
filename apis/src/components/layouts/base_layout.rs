@@ -1,8 +1,11 @@
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
+use crate::providers::api_requests::ApiRequests;
 use crate::providers::color_scheme::ColorScheme;
 use crate::providers::navigation_controller::NavigationControllerSignal;
+use crate::providers::ping::PingSignal;
 use crate::providers::web_socket::WebsocketContext;
+use chrono::Utc;
 use lazy_static::lazy_static;
 use leptos::logging::log;
 use leptos::*;
@@ -41,34 +44,44 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         navi.update_nanoid(nanoid);
     });
 
-    let counter = create_rw_signal(0);
+    let api = ApiRequests::new();
+    let ping = expect_context::<PingSignal>();
+    let ws = expect_context::<WebsocketContext>();
 
-    let Pausable { pause, resume, .. } = use_interval_fn(
+    let counter = RwSignal::new(0_u64);
+    let retry_at = RwSignal::new(2_u64);
+    let Pausable { .. } = use_interval_fn(
         move || {
-            if counter.get() == 10 {
-                let ws = expect_context::<WebsocketContext>();
-                ws.open();
-                log!("trying to reconnect");
-            } else {
-                log!("Counter is {}", counter.get_untracked());
-                counter.update(|c| *c += 1);
+            api.ping();
+            counter.update(|c| *c += 1);
+            match ws.ready_state.get() {
+                ConnectionReadyState::Closed => {
+                    if retry_at.get() == counter.get() {
+                        log!("Reconnecting due to ReadyState");
+                        ws.open();
+                        counter.update(|c| *c = 0);
+                        counter.update(|r| *r *= 2);
+                    }
+                }
+                ConnectionReadyState::Open => {
+                    counter.update(|c| *c = 0);
+                }
+                _ => {}
             }
+            if Utc::now()
+                .signed_duration_since(ping.signal.get_untracked().last_update)
+                .num_seconds()
+                > 5
+                && retry_at.get() == counter.get()
+            {
+                log!("Reconnecting due to ping duration");
+                ws.open();
+                counter.update(|c| *c = 0);
+                counter.update(|r| *r *= 2);
+            };
         },
         1000,
     );
-
-    create_effect(move |_| {
-        let websocket = expect_context::<WebsocketContext>();
-        match websocket.ready_state.get() {
-            ConnectionReadyState::Closed => {
-                counter.update(|c| *c = 0);
-                resume();
-            }
-            _ => {
-                pause();
-            }
-        }
-    });
 
     view! {
         <Meta name="color-scheme" content=color_scheme_meta/>
