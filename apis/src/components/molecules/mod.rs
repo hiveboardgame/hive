@@ -7,6 +7,7 @@ pub mod hex_stack;
 pub mod history_pieces;
 pub mod live_timer;
 pub mod modal;
+pub mod ping;
 pub mod rating_and_change;
 pub mod simple_hex_stack;
 pub mod thumbnail_pieces;

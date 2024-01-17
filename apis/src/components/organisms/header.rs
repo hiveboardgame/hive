@@ -1,9 +1,10 @@
 use crate::components::atoms::next_game_button::NextGameButton;
+use crate::components::molecules::ping::Ping;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle, hamburger::Hamburger, logout::Logout,
 };
 use crate::providers::auth_context::*;
-use crate::providers::web_socket::WebsocketContext;
+
 use leptos::*;
 use leptos_router::use_location;
 
@@ -15,8 +16,6 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
     let auth_context = expect_context::<AuthContext>();
     let hamburger_show = create_rw_signal(false);
     let onclick = move || hamburger_show.update(|b| *b = false);
-    let websocket = expect_context::<WebsocketContext>();
-    let ws_state = move || websocket.ready_state.get().to_string();
     view! {
         <header class=format!(
             "h-8 md:h-10 lg:h-12 w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] {extend_tw_classes}",
@@ -24,10 +23,6 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
             <a class="ml-10" href="/">
                 Home
             </a>
-            <div>
-                { ws_state }
-            </div>
-
             <Transition>
                 {move || {
                     let user = move || match (auth_context.user)() {
@@ -62,6 +57,9 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                             </ul>
                                             <ul>
                                                 <DarkModeToggle/>
+                                            </ul>
+                                            <ul>
+                                                <Ping/>
                                             </ul>
                                         </Hamburger>
                                     </div>
@@ -100,6 +98,9 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                 </ul>
                                 <ul>
                                     <Logout on:submit=move |_| onclick()/>
+                                </ul>
+                                <ul>
+                                    <Ping/>
                                 </ul>
 
                             </Hamburger>

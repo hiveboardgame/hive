@@ -2,6 +2,7 @@ use super::game_action::GameAction;
 use crate::responses::challenge::ChallengeResponse;
 use crate::responses::game::GameResponse;
 use crate::responses::user::UserResponse;
+use chrono::{DateTime, Utc};
 use http::StatusCode;
 use http_serde;
 use serde::{Deserialize, Serialize};
@@ -49,6 +50,10 @@ pub enum MessageDestination {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
+    Pong {
+        ping_sent: DateTime<Utc>,
+        pong_sent: DateTime<Utc>,
+    },
     ConnectionUpdated(Uuid, String),
     Chat {
         // Sends a chat message to the game/lobby
