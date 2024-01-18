@@ -349,7 +349,7 @@ pub fn ChallengeCreate(
                 </button>
             </div>
             <div class=move || {
-                format!("{} justify-center", opponent().map_or("hidden", |_| "flex"))
+                format!("{} justify-center", opponent().map_or("flex", |_| "hidden"))
             }>
                 <button
                     class=move || {
