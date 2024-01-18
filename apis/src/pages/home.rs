@@ -19,14 +19,7 @@ pub fn Home() -> impl IntoView {
             .expect("dialog to have been created")
             .close();
     });
-
-    let logged_in = move || {
-        if let Some(Ok(Some(_))) = (auth_context.user)() {
-            true
-        } else {
-            false
-        }
-    };
+    let logged_in = move || matches!((auth_context.user)(), Some(Ok(Some(_))));
 
     view! {
         <div class="pt-16 flex flex-col justify-center place-items-center">
