@@ -66,3 +66,33 @@ impl FromStr for TimeMode {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub enum CorrespondenceMode {
+    DaysPerMove,
+    TotalTimeEach,
+}
+
+impl fmt::Display for CorrespondenceMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let time = match self {
+            CorrespondenceMode::DaysPerMove => "Days per move",
+            CorrespondenceMode::TotalTimeEach => "Total time each",
+        };
+        write!(f, "{}", time)
+    }
+}
+
+impl FromStr for CorrespondenceMode {
+    type Err = ChallengeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Days per move" => Ok(CorrespondenceMode::DaysPerMove),
+            "Total time each" => Ok(CorrespondenceMode::TotalTimeEach),
+            s => Err(ChallengeError::NotValidTimeMode {
+                found: s.to_string(),
+            }),
+        }
+    }
+}

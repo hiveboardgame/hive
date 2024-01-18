@@ -44,6 +44,7 @@ pub fn UserRow(username: StoredValue<String>, rating: u64) -> impl IntoView {
             </div>
             <Show when=logged_in_and_not_user>
                 <button
+                    title="Challenge to a game"
                     on:click=move |_| open.update(move |b| *b = true)
                     class="mx-2 bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 py-2 px-4 rounded"
                 >
