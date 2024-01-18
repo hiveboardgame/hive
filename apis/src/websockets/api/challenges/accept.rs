@@ -1,9 +1,6 @@
 use crate::{
-    common::{
-        challenge_action::ChallengeVisibility,
-        server_result::{
-            ChallengeUpdate, InternalServerMessage, MessageDestination, ServerMessage,
-        },
+    common::server_result::{
+        ChallengeUpdate, InternalServerMessage, MessageDestination, ServerMessage,
     },
     responses::game::GameResponse,
 };
@@ -13,7 +10,7 @@ use db_lib::{
     models::game::{Game, NewGame},
     DbPool,
 };
-use std::str::FromStr;
+
 use uuid::Uuid;
 
 pub struct AcceptHandler {
@@ -46,8 +43,7 @@ impl AcceptHandler {
         };
 
         let new_game = NewGame::new(white_id, black_id, &challenge);
-        let game = Game::create(&new_game, &self.pool).await?;
-        challenge.delete(&self.pool).await?;
+        let (game, deleted_challenges) = Game::create(&new_game, &self.pool).await?;
         let mut messages = Vec::new();
         let game_response = GameResponse::new_from_db(&game, &self.pool).await?;
 
@@ -61,35 +57,11 @@ impl AcceptHandler {
             message: ServerMessage::GameNew(game_response),
         });
 
-        match ChallengeVisibility::from_str(&challenge.visibility)? {
-            ChallengeVisibility::Public => {
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::Global,
-                    message: ServerMessage::Challenge(ChallengeUpdate::Removed(challenge.nanoid)),
-                });
-            }
-            ChallengeVisibility::Private => {
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::Direct(challenge.challenger_id),
-                    message: ServerMessage::Challenge(ChallengeUpdate::Removed(challenge.nanoid)),
-                });
-            }
-            ChallengeVisibility::Direct => {
-                if let Some(opponent) = challenge.opponent_id {
-                    messages.push(InternalServerMessage {
-                        destination: MessageDestination::Direct(opponent),
-                        message: ServerMessage::Challenge(ChallengeUpdate::Removed(
-                            challenge.nanoid.clone(),
-                        )),
-                    });
-                    messages.push(InternalServerMessage {
-                        destination: MessageDestination::Direct(challenge.challenger_id),
-                        message: ServerMessage::Challenge(ChallengeUpdate::Removed(
-                            challenge.nanoid,
-                        )),
-                    });
-                }
-            }
+        for challenge_nanoid in deleted_challenges {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::Global,
+                message: ServerMessage::Challenge(ChallengeUpdate::Removed(challenge_nanoid)),
+            });
         }
         Ok(messages)
     }
