@@ -15,8 +15,8 @@ use leptos::ev::{
 use leptos::svg::Svg;
 use leptos::*;
 use leptos_use::{
-    use_debounce_fn_with_arg, use_event_listener, use_event_listener_with_options,
-    use_resize_observer, UseEventListenerOptions,
+    use_event_listener, use_event_listener_with_options, use_resize_observer,
+    use_throttle_fn_with_arg, UseEventListenerOptions,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{DomRectReadOnly, PointerEvent, SvgPoint, TouchEvent, WheelEvent};
@@ -99,7 +99,7 @@ pub fn Board(
     let svg_pos = SvgPos::center_for_level(initial_position, 0);
 
     //on load and resize make sure to resize the viewbox
-    let debounced_resize = use_debounce_fn_with_arg(
+    let throttled_resize = use_throttle_fn_with_arg(
         move |rect: DomRectReadOnly| {
             viewbox_signal.try_update(|viewbox_controls: &mut ViewBoxControls| {
                 viewbox_controls.width = rect.width() as f32;
@@ -112,7 +112,7 @@ pub fn Board(
     );
     use_resize_observer(div_ref, move |entries, _observer| {
         let rect = entries[0].content_rect();
-        debounced_resize(rect);
+        throttled_resize(rect);
     });
 
     //Start panning and record point where it starts for mouse on left mouse button hold and touch
