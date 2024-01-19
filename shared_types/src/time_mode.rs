@@ -24,10 +24,10 @@ impl TimeMode {
                     if days > 1 || hours == 24 {
                         format!("{:1}d", days)
                     } else {
-                        format!("{:1}d {:1}h", days, hours % 24)
+                        format!("{:1}d:{:1}h", days, hours % 24)
                     }
                 } else if hours > 0 {
-                    format!("{:1}h{:1}m", hours, minutes)
+                    format!("{:1}h{:1}", hours, minutes)
                 } else if minutes > 0 {
                     format!("{:1}:{:02}", minutes, seconds)
                 } else if duration < 10 {

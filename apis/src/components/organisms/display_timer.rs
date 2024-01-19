@@ -35,12 +35,12 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
         (false, Placement::Bottom) => Color::White,
     };
     let bg_color = move || match side() {
-        Color::White => "bg-hive-black",
-        Color::Black => "bg-hive-white",
+        Color::White => "bg-hive-white",
+        Color::Black => "bg-hive-black",
     };
     let text_color = move || match side() {
-        Color::White => "text-hive-white",
-        Color::Black => "text-hive-black",
+        Color::White => "text-hive-black",
+        Color::Black => "text-hive-white",
     };
     let css_grid_row = move || match placement {
         Placement::Top => "row-start-1 md:row-start-2",
@@ -49,7 +49,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     let(outer_container_style, timer_container_style, user_container_style) = match vertical {
         false => ("grid grid-cols-2 grid-rows-2 col-span-2 row-span-1",
                 "border-y-2 border-l-2 col-span-1 row-span-2 md:row-span-1 short:row-span-2 border-black dark:border-white duration-300",
-                "h-full flex justify-center md:leading-5 row-span-2 md:row-span-1 short:row-span-2 short:text-xs items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none"),
+                "h-full flex justify-center md:leading-4 row-span-2 md:row-span-1 short:row-span-2 short:text-xs items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none"),
         true => ("flex grow justify-end items-center", "w-14 h-14 grow-0 duration-300",""),
     };
     let timer = expect_context::<TimerSignal>();

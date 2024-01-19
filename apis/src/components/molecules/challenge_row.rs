@@ -12,11 +12,11 @@ use crate::{
     responses::challenge::ChallengeResponse,
 };
 use hive_lib::color::ColorChoice;
-use leptos::logging::log;
 use leptos::*;
 use leptos_icons::{
-    AiIcon::AiCopyOutlined,
+    AiIcon::{AiCheckOutlined, AiCopyOutlined},
     BsIcon::{BsHexagon, BsHexagonFill, BsHexagonHalf},
+    ChIcon::ChCross,
     Icon,
 };
 use leptos_router::*;
@@ -71,7 +71,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             .expect("tw classes to be added");
     };
 
-    let td_class = "py-1 px-1 md:py-2 md:px-2 lg:px-3";
+    let td_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let time_mode = TimeMode::from_str(&challenge().time_mode).expect("Valid TimeMode");
 
     let uid = move || match (auth_context.user)() {
@@ -83,19 +83,34 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
         if let (Some(uid), Some(opponent)) = (uid(), challenge().opponent) {
             if challenge().challenger.uid == uid {
                 view! {
-                    <StatusIndicator username=opponent.username.to_owned()/>
-                    <ProfileLink username=opponent.username/>
+                    <div class="flex">
+                        <StatusIndicator username=opponent.username.to_owned()/>
+                        <ProfileLink
+                            username=opponent.username
+                            extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-full sm:line-clamp-none"
+                        />
+                    </div>
                 }
             } else {
                 view! {
-                    <StatusIndicator username=challenge().challenger.username/>
-                    <ProfileLink username=challenge().challenger.username/>
+                    <div class="flex">
+                        <StatusIndicator username=challenge().challenger.username/>
+                        <ProfileLink
+                            username=challenge().challenger.username
+                            extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-full sm:line-clamp-none"
+                        />
+                    </div>
                 }
             }
         } else {
             view! {
-                <StatusIndicator username=challenge().challenger.username/>
-                <ProfileLink username=challenge().challenger.username/>
+                <div class="flex items-center">
+                    <StatusIndicator username=challenge().challenger.username/>
+                    <ProfileLink
+                        username=challenge().challenger.username
+                        extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-full sm:line-clamp-none"
+                    />
+                </div>
             }
         }
     };
@@ -113,11 +128,9 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     };
 
     view! {
-        <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center">
+        <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center cursor-pointer">
             <td class=td_class>{icon}</td>
-            <td class=td_class>
-                <p class="flex items-center">{player}</p>
-            </td>
+            <td class=format!("w-10 sm:w-32 {td_class}")>{player}</td>
             <td class=td_class>{rating}</td>
             <td class=td_class>
                 <GameType game_type=challenge().game_type/>
@@ -127,10 +140,11 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                     time_mode=time_mode
                     time_base=challenge().time_base
                     increment=challenge().time_increment
+                    extend_tw_classes="break-words max-w-[40px] sm:max-w-fit"
                 />
             </td>
             <td class=td_class>
-                <span class="font-bold">{if challenge().rated { "RATED" } else { "CASUAL" }}</span>
+                <span class="font-bold">{if challenge().rated { "YES" } else { "NO" }}</span>
             </td>
             <td class=td_class>
                 <Show
@@ -141,37 +155,32 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                     fallback=move || {
                         view! {
-                            <div class="justify-center flex">
+                            <Show when=move || {
+                                challenge().visibility == ChallengeVisibility::Private && !single
+                            }>
                                 <button
-                                    on:click=move |_| {
-                                        ApiRequests::new().challenge_cancel(challenge().nanoid)
-                                    }
-
-                                    class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                    ref=button_ref
+                                    on:click=copy
+                                    class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white py-2 px-2 rounded focus:outline-none focus:shadow-outline m-1"
                                 >
-                                    Cancel
+                                    <Icon icon=Icon::from(AiCopyOutlined)/>
                                 </button>
-                                <Show when=move || {
-                                    challenge().visibility == ChallengeVisibility::Private
-                                        && !single
-                                }>
-                                    <button
-                                        ref=button_ref
-                                        on:click=copy
-                                        class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
-                                    >
-                                        <Icon icon=Icon::from(AiCopyOutlined)/>
-                                    </button>
-                                </Show>
+                            </Show>
+                            <button
+                                on:click=move |_| {
+                                    ApiRequests::new().challenge_cancel(challenge().nanoid)
+                                }
 
-                            </div>
+                                class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-2 px-2 rounded focus:outline-none focus:shadow-outline m-1"
+                            >
+                                <Icon icon=Icon::from(ChCross)/>
+                            </button>
                         }
                     }
                 >
 
                     <button
                         on:click=move |_| {
-                            log!("User is: {:?}", (auth_context.user) ());
                             match (auth_context.user)() {
                                 Some(Ok(Some(_))) => {
                                     let mut game_state = expect_context::<GameStateSignal>();
@@ -185,16 +194,15 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                             }
                         }
 
-                        class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                        class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white py-2 px-2 rounded focus:outline-none focus:shadow-outline m-1"
                     >
-                        {if challenge().opponent.is_some() { "Accept" } else { "Join" }}
+                        <Icon icon=Icon::from(AiCheckOutlined)/>
 
                     </button>
                     {if challenge().opponent.is_some() {
                         view! {
                             <button
                                 on:click=move |_| {
-                                    log!("User is: {:?}", (auth_context.user) ());
                                     match (auth_context.user)() {
                                         Some(Ok(Some(_))) => {
                                             ApiRequests::new().challenge_cancel(challenge().nanoid);
@@ -206,9 +214,9 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     }
                                 }
 
-                                class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-2 px-2 rounded focus:outline-none focus:shadow-outline m-1"
                             >
-                                "Deny"
+                                <Icon icon=Icon::from(ChCross)/>
 
                             </button>
                         }

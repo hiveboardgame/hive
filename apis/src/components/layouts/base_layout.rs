@@ -94,7 +94,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
 
         <Body/>
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
-        <main class="min-h-screen w-full bg-light dark:bg-dark text-xs sm:text-sm md:text-md lg:text-lg xl-text-xl touch-manipulation select-none">
+        <main class="min-h-screen w-full bg-light dark:bg-dark text-xs sm:text-sm md:text-md touch-manipulation select-none">
             <Header/>
             <Alert/>
             {children()}

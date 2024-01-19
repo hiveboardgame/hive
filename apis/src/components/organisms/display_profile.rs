@@ -1,5 +1,8 @@
 use crate::{
-    components::{atoms::status_indicator::StatusIndicator, molecules::game_row::GameRow},
+    components::{
+        atoms::{direct_challenge_button::DirectChallenge, status_indicator::StatusIndicator},
+        molecules::game_row::GameRow,
+    },
     functions::users::get::get_user_games,
     responses::user::UserResponse,
 };
@@ -69,10 +72,11 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                                     {games().0.len()}
                                 </button>
                             </div>
-                            <p class="flex items-center">
+                            <div class="flex items-center">
                                 <StatusIndicator username=user().username/>
                                 {user().username}
-                            </p>
+                                <DirectChallenge username=store_value(user().username)/>
+                            </div>
                             <p>"Rating: " {user().rating}</p>
                             <p>"Wins: " {user().win}</p>
                             <p>"Draws: " {user().draw}</p>

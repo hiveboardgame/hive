@@ -240,7 +240,7 @@ pub fn ControlButtons() -> impl IntoView {
                 <button
                     class=move || {
                         format!(
-                            "m-1 grow md:grow-0 whitespace-nowrap {} transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded disabled:opacity-25 disabled:cursor-not-allowed",
+                            "h-7 m-1 grow sm:grow-0 {} transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded disabled:opacity-25 disabled:cursor-not-allowed flex-shrink-0",
                             rematch_button_color(),
                         )
                     }
@@ -251,17 +251,17 @@ pub fn ControlButtons() -> impl IntoView {
                     {rematch_text}
                 </button>
                 <button
-                    class="m-1 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
+                    class=" h-7 m-1 grow sm:grow-0 bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0"
                     on:click=new_opponent
                 >
-                    New Opponent
+                    New Game
                 </button>
                 <a
                     href="/analysis"
-                    class="m-1 md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 duration-300 text-white font-bold py-2 px-4 rounded"
+                    class="bg-blue-500 hover:bg-blue-700 duration-300 text-white rounded m-1"
                     on:click=analysis_setup
                 >
-                    <Icon icon=Icon::from(TbMicroscope) class="h-4 w-4 lg:h-7 lg:w-7"/>
+                    <Icon icon=Icon::from(TbMicroscope) class="h-7 w-7 py-1"/>
                 </a>
             </Show>
         </div>

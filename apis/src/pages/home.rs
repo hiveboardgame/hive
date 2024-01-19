@@ -22,7 +22,7 @@ pub fn Home() -> impl IntoView {
     let logged_in = move || matches!((auth_context.user)(), Some(Ok(Some(_))));
 
     view! {
-        <div class="pt-16 flex flex-col justify-center place-items-center">
+        <div class="pt-16 flex flex-col justify-start md:justify-center items-center w-full overflow-x-clip">
             <Show when=logged_in>
                 <button
                     class="m-5 grow md:grow-0 whitespace-nowrap bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
@@ -35,8 +35,8 @@ pub fn Home() -> impl IntoView {
                 <Modal open=open dialog_el=dialog_el>
                     <ChallengeCreate close=close_modal/>
                 </Modal>
-                <div class="flex justify-center">
-                    <div class="flex flex-col max-w-fit w-full">
+                <div class="flex">
+                    <div class="flex flex-col w-full">
                         <Challenges/>
                     </div>
                 </div>

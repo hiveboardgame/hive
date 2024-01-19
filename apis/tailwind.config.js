@@ -11,6 +11,7 @@ module.exports = {
   theme: {
     extend: {
       screens: {
+        'xs': '360px',
         'short': { 'raw': '(max-height: 700px)' },
       },
       gridTemplateColumns: {
@@ -22,8 +23,8 @@ module.exports = {
       colors: {
         transparent: 'transparent',
         current: 'currentColor',
-        'hive-white': '#3a3a3a',
-        'hive-black': '#f0ead6',
+        'hive-black': '#3a3a3a',
+        'hive-white': '#f0ead6',
         'li-green': '#629924',
         'li-hover-dark': '#999',
         'li-hover-light': '#787878',

@@ -1,7 +1,9 @@
 use crate::{
     components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
-        molecules::{control_buttons::ControlButtons, user_with_rating::UserWithRating},
+        molecules::{
+            control_buttons::ControlButtons, game_info::GameInfo, user_with_rating::UserWithRating,
+        },
         organisms::{
             board::Board,
             display_timer::{DisplayTimer, Placement},
@@ -34,7 +36,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         if is_tall() {
             "flex flex-col"
         } else {
-            "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 pr-1"
+            "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 mr-2"
         }
     };
     let show_buttons = move || {
@@ -75,6 +77,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 when=is_tall
                 fallback=move || {
                     view! {
+                        <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-light dark:bg-dark"/>
                         <Board/>
                         <div class="grid col-start-9 col-span-2 row-span-full grid-cols-2 grid-rows-6">
                             <DisplayTimer placement=Placement::Top vertical=false/>
@@ -96,15 +99,16 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             <Reserve alignment=Alignment::SingleRow color=top_color()/>
                             <DisplayTimer vertical=true placement=Placement::Top/>
                         </div>
-                        <div class="ml-2 flex gap-1">
-                            <UserWithRating side=top_color()/>
+                        <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1">
+                            <UserWithRating side=top_color() is_tall/>
+                            <GameInfo/>
                         </div>
 
                     </div>
                     <Board overwrite_tw_classes="flex grow min-h-0"/>
                     <div class="flex flex-col shrink flex-grow">
-                        <div class="ml-2 flex gap-1">
-                            <UserWithRating side=bottom_color()/>
+                        <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
+                            <UserWithRating side=bottom_color() is_tall/>
                         </div>
                         <div class="flex max-h-16 justify-between h-full">
                             <Reserve alignment=Alignment::SingleRow color=bottom_color()/>

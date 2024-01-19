@@ -1,6 +1,6 @@
 use crate::{common::server_result::UserStatus, providers::online_users::OnlineUsersSignal};
 use leptos::*;
-use leptos_icons::{BiIcon::BiCircleRegular, BiIcon::BiCircleSolid, Icon};
+use leptos_icons::{BiIcon::BiCircleSolid, Icon};
 
 #[component]
 pub fn StatusIndicator(username: String) -> impl IntoView {
@@ -10,7 +10,9 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
             view! { <Icon icon=Icon::from(BiCircleSolid) class="mr-1 fill-green-500"/> }
         }
         Some(UserStatus::Away) => view! { <p>Away icon</p> }.into_view(),
-        _ => view! { <Icon icon=Icon::from(BiCircleRegular) class="mr-1"/> },
+        _ => {
+            view! { <Icon icon=Icon::from(BiCircleSolid) class="mr-1 fill-slate-400"/> }
+        }
     };
     display_icon
 }
