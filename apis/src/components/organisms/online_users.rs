@@ -18,11 +18,13 @@ pub fn OnlineUsers() -> impl IntoView {
         username().and_then(|name| users.remove(&name));
         users
     };
+    let is_empty = move || online_players().is_empty();
     view! {
         <div class="flex flex-col m-2 w-fit">
-            Online players:
-            <ul>
-                {move || if online_players().is_empty() { "Only you" } else { "" }}
+            Online players: <ul>
+                <div class=move || {
+                    format!("p-1 {}", if !is_empty() { "hidden" } else { "flex" })
+                }>{move || if is_empty() { "Only you" } else { "" }}</div>
                 <For each=online_players key=|(key, _)| key.to_owned() let:a_user>
                     <UserRow username=store_value(a_user.0) rating=a_user.1.rating/>
                 </For>

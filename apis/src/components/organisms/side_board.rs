@@ -60,7 +60,7 @@ pub fn SideboardTabs(
 
     view! {
         <div class=format!(
-            "select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 {row_start} {extend_tw_classes}",
+            " select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 {row_start} {extend_tw_classes}",
         )>
             <div class="z-10 border-b-2 border-black dark:border-white grid grid-cols-2 sticky top-0 bg-inherit">
                 <button

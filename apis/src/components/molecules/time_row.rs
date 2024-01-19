@@ -11,6 +11,7 @@ pub fn TimeRow(
     time_mode: TimeMode,
     time_base: Option<i32>,
     increment: Option<i32>,
+    #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     view! {
         <p class="flex items-center gap-1">
@@ -34,13 +35,17 @@ pub fn TimeRow(
                 TimeMode::Correspondence if time_base.is_some() => {
                     view! {
                         <Icon icon=Icon::from(AiMailOutlined)/>
-                        <p>{format!("{} days/side", time_base.expect("Time exists") / 86400)}</p>
+                        <p class=extend_tw_classes>
+                            {format!("{} days/side", time_base.expect("Time exists") / 86400)}
+                        </p>
                     }
                 }
                 TimeMode::Correspondence if increment.is_some() => {
                     view! {
                         <Icon icon=Icon::from(AiMailOutlined)/>
-                        <p>{format!("{} days/move ", increment.expect("Time exists") / 86400)}</p>
+                        <p class=extend_tw_classes>
+                            {format!("{} days/move ", increment.expect("Time exists") / 86400)}
+                        </p>
                     }
                 }
                 _ => unreachable!(),

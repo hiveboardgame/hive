@@ -7,7 +7,8 @@ use leptos::*;
 
 #[component]
 pub fn Challenges() -> impl IntoView {
-    let th_class = "py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase max-h-[80vh]";
+    let th_class =
+        "py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase max-h-[80vh] max-w-screen";
     let challenges = expect_context::<ChallengeStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let user = move || {
@@ -71,33 +72,31 @@ pub fn Challenges() -> impl IntoView {
         }
     };
     view! {
-        <div class="flex col-span-full overflow-x-auto">
-            <table class="grow md:grow-0 md:table-fixed">
-                <thead>
-                    <tr>
-                        <th class=th_class></th>
-                        <th class=th_class>Player</th>
-                        <th class=th_class>Rating</th>
-                        <th class=th_class>Expansions</th>
-                        <th class=th_class>Time</th>
-                        <th class=th_class>Mode</th>
-                        <th class=th_class>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <For each=move || { direct() } key=|c| c.nanoid.to_owned() let:challenge>
-                        <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
-                    </For>
-                    <tr class="h-2"></tr>
-                    <For each=move || { own() } key=|c| c.nanoid.to_owned() let:challenge>
-                        <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
-                    </For>
-                    <tr class="h-2"></tr>
-                    <For each=move || { public() } key=|c| c.nanoid.to_owned() let:challenge>
-                        <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
-                    </For>
-                </tbody>
-            </table>
-        </div>
+        <table class="table-auto">
+            <thead>
+                <tr>
+                    <th class=th_class></th>
+                    <th class=th_class>Player</th>
+                    <th class=th_class>Elo</th>
+                    <th class=th_class>Plm</th>
+                    <th class=th_class>Time</th>
+                    <th class=th_class>Rated</th>
+                    <th class=th_class></th>
+                </tr>
+            </thead>
+            <tbody>
+                <For each=move || { direct() } key=|c| c.nanoid.to_owned() let:challenge>
+                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
+                </For>
+                <tr class="h-2"></tr>
+                <For each=move || { own() } key=|c| c.nanoid.to_owned() let:challenge>
+                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
+                </For>
+                <tr class="h-2"></tr>
+                <For each=move || { public() } key=|c| c.nanoid.to_owned() let:challenge>
+                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
+                </For>
+            </tbody>
+        </table>
     }
 }

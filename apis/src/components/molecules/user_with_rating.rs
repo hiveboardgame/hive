@@ -10,7 +10,11 @@ use crate::{
 };
 
 #[component]
-pub fn UserWithRating(side: Color, #[prop(optional)] text_color: &'static str) -> impl IntoView {
+pub fn UserWithRating(
+    side: Color,
+    #[prop(optional)] text_color: &'static str,
+    #[prop(optional)] is_tall: Signal<bool>,
+) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let player = move || match side {
         Color::White => game_state
@@ -33,10 +37,20 @@ pub fn UserWithRating(side: Color, #[prop(optional)] text_color: &'static str) -
     let username = move || player().map_or(String::new(), |p| p.username);
     let rating = move || player().map_or(String::new(), |p| p.rating.to_string());
     view! {
-        <div class="flex items-center flex-col justify-center">
-            <div class="flex justify-center">
-                {move || view! { <StatusIndicator username=username()/> }}
-                {move || view! { <ProfileLink username=username() extend_tw_classes=text_color/> }}
+        <div class=move || {
+            format!(
+                "ml-1 flex items-center {} justify-center",
+                if is_tall() { "flex-row gap-1" } else { "flex-col" },
+            )
+        }>
+            <div class="flex justify-center items-center">
+                {move || {
+                    view! {
+                        <StatusIndicator username=username()/>
+                        <ProfileLink username=username() extend_tw_classes=text_color/>
+                    }
+                }}
+
             </div>
             <Show
                 when=is_finished

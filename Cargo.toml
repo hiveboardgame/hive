@@ -15,6 +15,7 @@ leptos_meta = { version = "0.5", features = ["nightly"] }
 leptos_router = { version = "0.5", features = ["nightly"] }
 leptos_actix = { version = "0.5" }
 leptos_icons = { version = "0.1", default_features = false, features = [
+    "AiCheckOutlined",
     "TbMicroscope",
     "AiCopyOutlined",
     "AiFlagOutlined",
@@ -26,7 +27,6 @@ leptos_icons = { version = "0.1", default_features = false, features = [
     "AiMailOutlined",
     "BiInfiniteRegular",
     "BiUndoRegular",
-    "BiCircleRegular",
     "BiCircleSolid",
     "BiNoSignalRegular",
     "BiSignal5Regular",
