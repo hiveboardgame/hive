@@ -1,8 +1,5 @@
 use crate::{
-    components::{
-        atoms::{direct_challenge_button::DirectChallenge, status_indicator::StatusIndicator},
-        molecules::game_row::GameRow,
-    },
+    components::molecules::{game_row::GameRow, user_row::UserRow},
     functions::users::get::get_user_games,
     responses::user::UserResponse,
 };
@@ -21,22 +18,20 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
     let tab_view = create_rw_signal(TabView::Playing);
     let button_styles = "z-10 w-fit flex justify-center box-content h-fit inline-block text-center hover:bg-green-300 transform transition-transform duration-300 active:scale-95 rounded-md border-cyan-500 border-2 drop-shadow-lg";
     view! {
-        <div class="grid grid-cols-6">
-            <div class="flex flex-col mt-12 ml-3">
-                <div class="flex items-center">
-                    <StatusIndicator username=user().username/>
-                    {user().username}
-                    <DirectChallenge username=store_value(user().username)/>
+        <div class="mt-4">
+            <div class="flex flex-col items-start ml-3">
+                <div class="max-w-fit">
+                    <UserRow username=store_value(user().username) rating=user().rating/>
                 </div>
-                <p>"Rating: " {user().rating}</p>
-                <p>"Wins: " {user().win}</p>
-                <p>"Draws: " {user().draw}</p>
-                <p>"Losses " {user().loss}</p>
+                <p>
+                    {format!("Wins: {} Draws: {} Losses {}", user().win, user().draw, user().loss)}
+                </p>
             </div>
             <Transition>
                 {move || {
                     let games = move || match games() {
-                        Some(Ok(games)) => {
+                        Some(Ok(mut games)) => {
+                            games.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
                             games
                                 .into_iter()
                                 .partition(|game| {
@@ -46,8 +41,8 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                         _ => (Vec::new(), Vec::new()),
                     };
                     view! {
-                        <div class="flex flex-col gap-2 col-span-1 col-start-1 absolute ml-2">
-                            <div class="flex gap-6 min-w-fit flex-col md:flex-row mb-6">
+                        <div class="flex flex-col gap-2 ml-2">
+                            <div class="flex gap-6 min-w-fit mb-3">
                                 <button
                                     class=move || {
                                         let side = match tab_view() {
@@ -84,7 +79,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                                 </button>
                             </div>
                         </div>
-                        <div class="bg-inherit gap-6 col-span-5 col-start-2">
+                        <div class="bg-inherit">
 
                             <Show
                                 when=move || { tab_view() == TabView::Playing }

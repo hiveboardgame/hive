@@ -14,7 +14,7 @@ pub fn Leaderboard() -> impl IntoView {
                             let users = store_value(users);
                             view! {
                                 <div class="m-2 flex flex-col w-fit">
-                                    "Leaderboard:" <ol>
+                                    "Leaderboard:" <div>
                                         <For
                                             each=move || { users() }
 
@@ -26,7 +26,7 @@ pub fn Leaderboard() -> impl IntoView {
                                                 rating=user.rating
                                             />
                                         </For>
-                                    </ol>
+                                    </div>
                                 </div>
                             }
                                 .into_view()
