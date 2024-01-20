@@ -29,7 +29,7 @@ RUN cargo chef cook --release --all-features --recipe-path recipe.json
 COPY . .
 
 # Build the app
-RUN cargo leptos build --release -vv
+RUN LEPTOS_OUTPUT_NAME="hivegame_$(tr -dc a-z0-9 </dev/urandom | head -c 10)" cargo leptos build -r -P  -vv
 
 FROM debian:bookworm-slim as runner
 # Copy the server binary to the /app directory

@@ -22,6 +22,17 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
     let button_styles = "z-10 w-fit flex justify-center box-content h-fit inline-block text-center hover:bg-green-300 transform transition-transform duration-300 active:scale-95 rounded-md border-cyan-500 border-2 drop-shadow-lg";
     view! {
         <div class="grid grid-cols-6">
+            <div class="flex flex-col mt-12 ml-3">
+                <div class="flex items-center">
+                    <StatusIndicator username=user().username/>
+                    {user().username}
+                    <DirectChallenge username=store_value(user().username)/>
+                </div>
+                <p>"Rating: " {user().rating}</p>
+                <p>"Wins: " {user().win}</p>
+                <p>"Draws: " {user().draw}</p>
+                <p>"Losses " {user().loss}</p>
+            </div>
             <Transition>
                 {move || {
                     let games = move || match games() {
@@ -72,16 +83,6 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                                     {games().0.len()}
                                 </button>
                             </div>
-                            <div class="flex items-center">
-                                <StatusIndicator username=user().username/>
-                                {user().username}
-                                <DirectChallenge username=store_value(user().username)/>
-                            </div>
-                            <p>"Rating: " {user().rating}</p>
-                            <p>"Wins: " {user().win}</p>
-                            <p>"Draws: " {user().draw}</p>
-                            <p>"Losses " {user().loss}</p>
-
                         </div>
                         <div class="bg-inherit gap-6 col-span-5 col-start-2">
 
