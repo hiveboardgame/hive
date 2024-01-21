@@ -8,7 +8,8 @@ use crate::{
         alerts::provide_alerts, auth_context::provide_auth, challenges::provide_challenges,
         color_scheme::provide_color_scheme, game_state::provide_game_state, games::provide_games,
         navigation_controller::provide_navigation_controller, online_users::provide_users,
-        ping::provide_ping, timer::provide_timer, web_socket::provide_websocket,
+        ping::provide_ping, refocus::provide_refocus, timer::provide_timer,
+        web_socket::provide_websocket,
     },
 };
 use leptos::*;
@@ -33,6 +34,7 @@ pub fn App() -> impl IntoView {
     provide_websocket(url);
     provide_auth();
     provide_alerts();
+    provide_refocus();
 
     view! {
         <Stylesheet id="leptos" href=format!("/pkg/{}.css", LEPTOS_OUTPUT_NAME)/>

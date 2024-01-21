@@ -18,7 +18,7 @@ type Socket = Recipient<WsMessage>;
 pub struct Lobby {
     #[allow(dead_code)]
     id: String,
-    sessions: HashMap<Uuid, Socket>, // user_id to (socket_)id
+    sessions: HashMap<Uuid, Vec<Socket>>, // user_id to (socket_)id
     games_users: HashMap<String, HashSet<Uuid>>, // game_id to set of users
     users_games: HashMap<Uuid, HashSet<String>>, // user_id to set of games
     #[allow(dead_code)]
@@ -39,10 +39,13 @@ impl Lobby {
 
 impl Lobby {
     fn send_message(&self, message: &str, id_to: &Uuid) {
-        if let Some(socket_recipient) = self.sessions.get(id_to) {
-            socket_recipient.do_send(WsMessage(message.to_owned()));
+        if let Some(sockets) = self.sessions.get(id_to) {
+            for socket in sockets {
+                socket.do_send(WsMessage(message.to_owned()));
+            }
         } else {
-            println!("attempting to send message but couldn't find user id.");
+            // TODO: It's this one
+            println!("Couldn't find socket for {}", id_to);
         }
     }
 }
@@ -55,7 +58,15 @@ impl Handler<Disconnect> for Lobby {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
-        if self.sessions.remove(&msg.user_id).is_some() {
+        // Remove the WS connection from the user sessions
+        if let Some(user_sessions) = self.sessions.get_mut(&msg.user_id) {
+            user_sessions.retain(|session| *session != msg.addr);
+            if user_sessions.is_empty() {
+                self.sessions.remove(&msg.user_id);
+            }
+        }
+        // If that was the last WS connection for that user
+        if self.sessions.get(&msg.user_id).is_none() {
             if let Some(games) = self.users_games.remove(&msg.user_id) {
                 for game in games.iter() {
                     if let Some(game_users) = self.games_users.get_mut(game) {
@@ -75,10 +86,12 @@ impl Handler<Disconnect> for Lobby {
             }));
             let serialized =
                 serde_json::to_string(&message).expect("Failed to serialize a server message");
+            if let Some(lobby) = self.games_users.get_mut(&self.id) {
+                lobby.remove(&msg.user_id);
+            }
             if let Some(lobby) = self.games_users.get(&self.id) {
                 lobby
                     .iter()
-                    .filter(|conn_id| *conn_id.to_owned() != msg.user_id)
                     .for_each(|user_id| self.send_message(&serialized, user_id));
             }
         }
@@ -98,7 +111,10 @@ impl Handler<Connect> for Lobby {
             .entry(msg.user_id)
             .or_default()
             .insert(msg.game_id.clone());
-        self.sessions.insert(msg.user_id, msg.addr.clone());
+        self.sessions
+            .entry(msg.user_id)
+            .or_default()
+            .push(msg.addr.clone());
         let pool = self.pool.clone();
         let address = ctx.address().clone();
         let games_users = self.games_users.clone();
@@ -133,17 +149,19 @@ impl Handler<Connect> for Lobby {
                         .expect("Failed to serialize a server message");
                     // TODO: one needs to be a game::join to everyone in the game, the other one just to the
                     // lobby that the user came online
-                    games_users
-                        .get(&msg.game_id)
-                        .expect("Uuid exists")
-                        .iter()
-                        .for_each(|conn_id| {
-                            if let Some(socket_recipient) = sessions.get(conn_id) {
-                                socket_recipient.do_send(WsMessage(serialized.clone()));
+                    if let Some(user_ids) = games_users.get(&msg.game_id) {
+                        for id in user_ids {
+                            if let Some(sockets) = sessions.get(id) {
+                                for socket in sockets {
+                                    socket.do_send(WsMessage(serialized.clone()));
+                                }
+                            } else if let Ok(user) = User::find_by_uuid(id, &pool).await {
+                                println!("Game_users has stale user: {}", user.username);
                             } else {
-                                println!("attempting to send message but couldn't find user id.");
+                                println!("Game_users has stale anoymous user");
                             }
-                        });
+                        }
+                    }
                 }
 
                 // Send games which require input from the user

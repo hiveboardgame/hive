@@ -285,7 +285,7 @@ impl State {
                 reason: "Game is already over".to_string(),
             });
         }
-        // TODO check for GameStatus::Finished
+        // TODO: check for GameStatus::Finished
         if self.board.piece_already_played(piece) {
             self.turn_move(piece, target_position)?
         } else {

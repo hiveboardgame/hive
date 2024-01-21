@@ -1,6 +1,7 @@
 use super::auth_context::AuthContext;
 use crate::responses::game::GameResponse;
 use hive_lib::{color::Color, game_control::GameControl};
+use leptos::logging::log;
 use leptos::*;
 use std::collections::HashMap;
 
@@ -22,7 +23,10 @@ impl GamesSignal {
         }
     }
 
-    fn update_next_games(&mut self) {
+    pub fn update_next_games(&mut self) {
+        if self.signal.get_untracked().games.is_empty() {
+            return;
+        }
         let auth_context = expect_context::<AuthContext>();
         if let Some(Ok(Some(user))) = untrack(auth_context.user) {
             self.signal.update(|s| {
@@ -43,6 +47,9 @@ impl GamesSignal {
                             }
                             _ => false,
                         };
+                        if unanswered_gc {
+                            log!("{} has an unanswered gc", nanoid)
+                        }
                         if !game.finished && (game.current_player_id == user.id || unanswered_gc) {
                             Some(nanoid.to_owned())
                         } else {
@@ -51,7 +58,7 @@ impl GamesSignal {
                     })
                     .collect::<Vec<String>>()
             });
-        };
+        }
     }
 
     pub fn visit_game(&mut self, game_id: String) {
@@ -78,6 +85,13 @@ impl GamesSignal {
     }
 
     pub fn games_set(&mut self, games: Vec<GameResponse>) {
+        log!(
+            "Games provider got: {:?}",
+            games
+                .iter()
+                .map(|g| g.nanoid.clone())
+                .collect::<Vec<String>>()
+        );
         for game in games {
             self.signal.update_untracked(|s| {
                 s.games.insert(game.nanoid.to_owned(), game);
