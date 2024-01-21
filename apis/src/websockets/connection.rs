@@ -56,10 +56,11 @@ impl Actor for WsConnection {
             .wait(ctx);
     }
 
-    fn stopping(&mut self, _: &mut Self::Context) -> Running {
+    fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
         self.lobby_addr.do_send(Disconnect {
             user_id: self.user_uid,
             game_id: String::from("lobby"),
+            addr: ctx.address().recipient(),
             username: self.username.clone(),
         });
         Running::Stop

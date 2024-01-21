@@ -30,8 +30,9 @@ pub fn provide_auth() {
         },
         move |_| {
             websocket_context.close();
+            let account = get_account();
             websocket_context.open();
-            get_account()
+            account
         },
     );
 

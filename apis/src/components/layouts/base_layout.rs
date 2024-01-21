@@ -4,6 +4,7 @@ use crate::providers::api_requests::ApiRequests;
 use crate::providers::color_scheme::ColorScheme;
 use crate::providers::navigation_controller::NavigationControllerSignal;
 use crate::providers::ping::PingSignal;
+use crate::providers::refocus::RefocusSignal;
 use crate::providers::web_socket::WebsocketContext;
 use chrono::Utc;
 use lazy_static::lazy_static;
@@ -12,8 +13,8 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::use_location;
 use leptos_use::core::ConnectionReadyState;
-use leptos_use::use_interval_fn;
 use leptos_use::utils::Pausable;
+use leptos_use::{use_interval_fn, use_window_focus};
 use regex::Regex;
 
 lazy_static! {
@@ -47,6 +48,21 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
     let api = ApiRequests::new();
     let ping = expect_context::<PingSignal>();
     let ws = expect_context::<WebsocketContext>();
+
+    let focused = use_window_focus();
+    let _ = watch(
+        focused,
+        move |focused, _, _| {
+            let mut refocus = expect_context::<RefocusSignal>();
+            log!("Focus changed");
+            if *focused {
+                refocus.refocus();
+            } else {
+                refocus.unfocus();
+            }
+        },
+        false,
+    );
 
     let counter = RwSignal::new(0_u64);
     let retry_at = RwSignal::new(2_u64);

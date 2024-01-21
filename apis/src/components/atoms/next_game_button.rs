@@ -8,16 +8,17 @@ use leptos_meta::Title;
 #[component]
 pub fn NextGameButton() -> impl IntoView {
     let navigate = leptos_router::use_navigate();
-    let mut games = expect_context::<GamesSignal>();
     let navigation_controller = expect_context::<NavigationControllerSignal>();
     let next_games = move || {
+        let mut games = expect_context::<GamesSignal>();
+        games.update_next_games();
         let mut next_games = games.signal.get().next_games;
-        log!("Games in ngb: {:?}", next_games);
+        log!("all next games: {:?}", next_games);
         if let Some(nanoid) = navigation_controller.signal.get().nanoid {
-            log!("Nanoid in ngb: {:?}", nanoid);
+            log!("nanoid: {:?}", nanoid);
             next_games.retain(|g| *g != nanoid);
         }
-        log!("Games without nanoid: {:?}", next_games);
+        log!("next games without current: {:?}", next_games);
         next_games
     };
     let color = move || {
@@ -40,6 +41,7 @@ pub fn NextGameButton() -> impl IntoView {
         if let Some(game) = next_games.first() {
             let mut game_state = expect_context::<GameStateSignal>();
             game_state.full_reset();
+            let mut games = expect_context::<GamesSignal>();
             games.visit_game(game.to_owned());
             navigate(&format!("/game/{}", game), Default::default());
         } else {
