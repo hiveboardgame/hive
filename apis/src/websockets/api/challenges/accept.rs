@@ -1,8 +1,7 @@
 use crate::{
-    common::server_result::{
-        ChallengeUpdate, InternalServerMessage, MessageDestination, ServerMessage,
-    },
+    common::server_result::{ChallengeUpdate, ServerMessage},
     responses::game::GameResponse,
+    websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{
@@ -48,12 +47,12 @@ impl AcceptHandler {
         let game_response = GameResponse::new_from_db(&game, &self.pool).await?;
 
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Direct(game.white_id),
+            destination: MessageDestination::User(game.white_id),
             message: ServerMessage::GameNew(game_response.clone()),
         });
 
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Direct(game.black_id),
+            destination: MessageDestination::User(game.black_id),
             message: ServerMessage::GameNew(game_response),
         });
 

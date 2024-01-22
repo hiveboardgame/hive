@@ -1,9 +1,7 @@
 use crate::{
     common::{
         game_action::GameAction,
-        server_result::{
-            GameActionResponse, InternalServerMessage, MessageDestination, ServerMessage,
-        },
+        server_result::{GameActionResponse, ServerMessage},
     },
     responses::game::GameResponse,
 };
@@ -11,6 +9,8 @@ use anyhow::Result;
 use db_lib::{models::game::Game, models::user::User, DbPool};
 use hive_lib::{game_error::GameError, state::State, turn::Turn};
 use uuid::Uuid;
+
+use super::internal_server_message::{InternalServerMessage, MessageDestination};
 
 pub struct TurnHandler {
     turn: Turn,
@@ -90,7 +90,7 @@ impl TurnHandler {
             game_responses.push(GameResponse::new_from_db(&game, &self.pool).await?);
         }
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Direct(game.current_player_id),
+            destination: MessageDestination::User(game.current_player_id),
             message: ServerMessage::GameActionNotification(game_responses),
         });
         messages.push(InternalServerMessage {

@@ -31,7 +31,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                 {move || {
                     let games = move || match games() {
                         Some(Ok(mut games)) => {
-                            games.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
+                            games.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
                             games
                                 .into_iter()
                                 .partition(|game| {

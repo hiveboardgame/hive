@@ -4,6 +4,7 @@ pub mod connection;
 pub mod game_action_handler;
 pub mod game_control_handler;
 pub mod game_timeout_handler;
+pub mod internal_server_message;
 pub mod join_handler;
 pub mod lobby;
 pub mod messages;

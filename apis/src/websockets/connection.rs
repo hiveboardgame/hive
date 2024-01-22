@@ -1,7 +1,8 @@
+use super::internal_server_message::MessageDestination;
 use crate::{
     common::{
         client_message::ClientRequest,
-        server_result::{ExternalServerError, MessageDestination, ServerResult},
+        server_result::{ExternalServerError, ServerResult},
     },
     websockets::{
         lobby::Lobby,
@@ -126,9 +127,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 let user_id = self.user_uid;
                 let username = self.username.clone();
                 let authed = self.authed;
+                let addr = ctx.address().recipient();
 
                 let future = async move {
-                    let handler = RequestHandler::new(request, user_id, &username, authed, pool);
+                    let handler =
+                        RequestHandler::new(request, addr, user_id, &username, authed, pool);
                     let handler_result = handler.handle().await;
                     match handler_result {
                         Ok(messages) => {
@@ -155,7 +158,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                             let serialized = serde_json::to_string(&message)
                                 .expect("Failed to serialize a server message");
                             let cam = ClientActorMessage {
-                                destination: MessageDestination::Direct(user_id),
+                                destination: MessageDestination::User(user_id),
                                 serialized,
                                 from: user_id,
                             };

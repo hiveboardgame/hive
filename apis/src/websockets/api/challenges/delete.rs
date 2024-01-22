@@ -1,9 +1,8 @@
+use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
 use crate::{
     common::{
         challenge_action::ChallengeVisibility,
-        server_result::{
-            ChallengeUpdate, InternalServerMessage, MessageDestination, ServerMessage,
-        },
+        server_result::{ChallengeUpdate, ServerMessage},
     },
     responses::challenge::ChallengeResponse,
 };
@@ -46,7 +45,7 @@ impl DeleteHandler {
             }
             ChallengeVisibility::Private => {
                 messages.push(InternalServerMessage {
-                    destination: MessageDestination::Direct(challenge_response.challenger.uid),
+                    destination: MessageDestination::User(challenge_response.challenger.uid),
                     message: ServerMessage::Challenge(ChallengeUpdate::Removed(
                         challenge_response.nanoid,
                     )),
@@ -55,13 +54,13 @@ impl DeleteHandler {
             ChallengeVisibility::Direct => {
                 if let Some(opponent) = challenge_response.opponent {
                     messages.push(InternalServerMessage {
-                        destination: MessageDestination::Direct(opponent.uid),
+                        destination: MessageDestination::User(opponent.uid),
                         message: ServerMessage::Challenge(ChallengeUpdate::Removed(
                             challenge_response.nanoid.clone(),
                         )),
                     });
                     messages.push(InternalServerMessage {
-                        destination: MessageDestination::Direct(challenge_response.challenger.uid),
+                        destination: MessageDestination::User(challenge_response.challenger.uid),
                         message: ServerMessage::Challenge(ChallengeUpdate::Removed(
                             challenge_response.nanoid,
                         )),

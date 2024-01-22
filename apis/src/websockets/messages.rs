@@ -1,7 +1,7 @@
 use actix::prelude::*;
 use uuid::Uuid;
 
-use crate::common::server_result::MessageDestination;
+use super::internal_server_message::MessageDestination;
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
