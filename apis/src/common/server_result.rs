@@ -34,20 +34,6 @@ impl fmt::Display for ExternalServerError {
     }
 }
 
-// TODO: This might be able to be removed and ServerMessage just goes into ServerResult::Ok(...)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InternalServerMessage {
-    pub destination: MessageDestination,
-    pub message: ServerMessage,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum MessageDestination {
-    Direct(Uuid), // to a user
-    Game(String), // to everyone in the game
-    Global,       // to everyone online
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
     Pong {

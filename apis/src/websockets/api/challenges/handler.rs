@@ -1,7 +1,8 @@
-use crate::common::{challenge_action::ChallengeAction, server_result::InternalServerMessage};
+use crate::common::challenge_action::ChallengeAction;
 use crate::websockets::api::challenges::accept::AcceptHandler;
 use crate::websockets::api::challenges::create::CreateHandler;
 use crate::websockets::api::challenges::delete::DeleteHandler;
+use crate::websockets::internal_server_message::InternalServerMessage;
 use anyhow::Result;
 use db_lib::DbPool;
 use uuid::Uuid;

@@ -1,4 +1,7 @@
-use crate::common::server_result::{InternalServerMessage, MessageDestination, ServerMessage};
+use crate::{
+    common::server_result::ServerMessage,
+    websockets::internal_server_message::{InternalServerMessage, MessageDestination},
+};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -14,7 +17,7 @@ impl PingHandler {
 
     pub fn handle(&self) -> Vec<InternalServerMessage> {
         vec![InternalServerMessage {
-            destination: MessageDestination::Direct(self.user_id),
+            destination: MessageDestination::User(self.user_id),
             message: ServerMessage::Pong {
                 ping_sent: self.sent,
                 pong_sent: Utc::now(),

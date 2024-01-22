@@ -1,9 +1,8 @@
+use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
 use crate::{
     common::{
         challenge_action::ChallengeVisibility,
-        server_result::{
-            ChallengeUpdate, InternalServerMessage, MessageDestination, ServerMessage,
-        },
+        server_result::{ChallengeUpdate, ServerMessage},
     },
     responses::challenge::ChallengeResponse,
 };
@@ -36,7 +35,7 @@ impl GetHandler {
             || challenge.visibility == ChallengeVisibility::Private.to_string()
         {
             return Ok(vec![InternalServerMessage {
-                destination: MessageDestination::Direct(challenge_response.challenger.uid),
+                destination: MessageDestination::User(challenge_response.challenger.uid),
                 message: ServerMessage::Challenge(ChallengeUpdate::Challenges(vec![
                     challenge_response,
                 ])),

@@ -1,4 +1,5 @@
 use super::auth_context::AuthContext;
+use super::navigation_controller::NavigationControllerSignal;
 use crate::responses::game::GameResponse;
 use hive_lib::{color::Color, game_control::GameControl};
 use leptos::logging::log;
@@ -25,15 +26,19 @@ impl GamesSignal {
 
     pub fn update_next_games(&mut self) {
         if self.signal.get_untracked().games.is_empty() {
+            self.signal.update(|s| {
+                s.next_games.clear();
+            });
             return;
         }
         let auth_context = expect_context::<AuthContext>();
         if let Some(Ok(Some(user))) = untrack(auth_context.user) {
             self.signal.update(|s| {
-                s.next_games = s
-                    .games
+                let mut games: Vec<GameResponse> = s.games.values().cloned().collect();
+                games.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
+                s.next_games = games
                     .iter()
-                    .filter_map(|(nanoid, game)| {
+                    .filter_map(|game| {
                         let not_player_color = if game.black_player.uid == user.id {
                             Color::White
                         } else {
@@ -47,11 +52,8 @@ impl GamesSignal {
                             }
                             _ => false,
                         };
-                        if unanswered_gc {
-                            log!("{} has an unanswered gc", nanoid)
-                        }
                         if !game.finished && (game.current_player_id == user.id || unanswered_gc) {
-                            Some(nanoid.to_owned())
+                            Some(game.nanoid.to_owned())
                         } else {
                             None
                         }
@@ -61,20 +63,38 @@ impl GamesSignal {
         }
     }
 
-    pub fn visit_game(&mut self, game_id: String) {
+    pub fn visit_game(&mut self) -> Option<String> {
+        let mut next_game = None;
+        let navigation_controller = expect_context::<NavigationControllerSignal>();
         self.signal.update(|s| {
             let mut games = s.next_games.clone();
-            games.retain(|g| *g != game_id);
-            games.push(game_id);
+            log!("Games in visit: {:?}", games);
+            if let Some(nanoid) = navigation_controller.signal.get_untracked().nanoid {
+                games.retain(|g| *g != nanoid);
+                games.push(nanoid.clone());
+            }
+            next_game = games.first().cloned();
             s.next_games = games;
+            log!("Games after visit: {:?}", s.next_games);
         });
+        next_game
     }
 
     pub fn games_add(&mut self, game: GameResponse) {
+        let mut update_required = true;
         self.signal.update_untracked(|s| {
-            s.games.insert(game.nanoid.to_owned(), game);
+            if let Some(already_present_game) = s.games.get(&game.nanoid) {
+                if already_present_game.updated_at == game.updated_at {
+                    update_required = false
+                }
+            };
+            if update_required {
+                s.games.insert(game.nanoid.to_owned(), game);
+            }
         });
-        self.update_next_games();
+        if update_required {
+            self.update_next_games();
+        }
     }
 
     pub fn games_remove(&mut self, game_id: &str) {
@@ -85,13 +105,6 @@ impl GamesSignal {
     }
 
     pub fn games_set(&mut self, games: Vec<GameResponse>) {
-        log!(
-            "Games provider got: {:?}",
-            games
-                .iter()
-                .map(|g| g.nanoid.clone())
-                .collect::<Vec<String>>()
-        );
         for game in games {
             self.signal.update_untracked(|s| {
                 s.games.insert(game.nanoid.to_owned(), game);

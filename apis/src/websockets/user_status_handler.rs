@@ -1,5 +1,6 @@
-use crate::common::server_result::InternalServerMessage;
 use anyhow::Result;
+
+use super::internal_server_message::InternalServerMessage;
 
 pub struct UserStatusHandler {}
 

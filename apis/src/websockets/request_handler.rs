@@ -1,11 +1,11 @@
 use super::game_timeout_handler::GameTimeoutHandler;
+use super::internal_server_message::InternalServerMessage;
+use super::messages::WsMessage;
 use super::{
     auth_error::AuthError, game_action_handler::GameActionHandler,
     user_status_handler::UserStatusHandler,
 };
-use crate::common::{
-    client_message::ClientRequest, game_action::GameAction, server_result::InternalServerMessage,
-};
+use crate::common::{client_message::ClientRequest, game_action::GameAction};
 use crate::websockets::api::challenges::handler::ChallengeHandler;
 use crate::websockets::api::ping::handler::PingHandler;
 use anyhow::Result;
@@ -14,6 +14,7 @@ use uuid::Uuid;
 
 pub struct RequestHandler {
     command: ClientRequest,
+    received_from: actix::Recipient<WsMessage>, // This is the socket the message was received over
     pool: DbPool,
     user_id: Uuid,
     username: String,
@@ -23,12 +24,14 @@ pub struct RequestHandler {
 impl RequestHandler {
     pub fn new(
         command: ClientRequest,
+        sender_addr: actix::Recipient<WsMessage>,
         user_id: Uuid,
         username: &str,
         authed: bool,
         pool: DbPool,
     ) -> Self {
         Self {
+            received_from: sender_addr,
             command,
             pool,
             user_id,
@@ -66,6 +69,7 @@ impl RequestHandler {
                     game_action,
                     &self.username,
                     self.user_id,
+                    self.received_from.clone(),
                     &self.pool,
                 )
                 .await?

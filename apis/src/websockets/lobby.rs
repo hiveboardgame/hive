@@ -1,7 +1,5 @@
 use crate::{
-    common::server_result::{
-        ChallengeUpdate, MessageDestination, ServerMessage, ServerResult, UserStatus, UserUpdate,
-    },
+    common::server_result::{ChallengeUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
     responses::{challenge::ChallengeResponse, game::GameResponse, user::UserResponse},
     websockets::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
 };
@@ -12,16 +10,14 @@ use db_lib::{models::challenge::Challenge, models::user::User, DbPool};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
-type Socket = Recipient<WsMessage>;
+use super::internal_server_message::MessageDestination;
 
 #[derive(Debug)]
 pub struct Lobby {
-    #[allow(dead_code)]
     id: String,
-    sessions: HashMap<Uuid, Vec<Socket>>, // user_id to (socket_)id
-    games_users: HashMap<String, HashSet<Uuid>>, // game_id to set of users
-    users_games: HashMap<Uuid, HashSet<String>>, // user_id to set of games
-    #[allow(dead_code)]
+    sessions: HashMap<Uuid, Vec<Recipient<WsMessage>>>, // user_id to (socket_)id
+    games_users: HashMap<String, HashSet<Uuid>>,        // game_id to set of users
+    users_games: HashMap<Uuid, HashSet<String>>,        // user_id to set of games
     pool: DbPool,
 }
 
@@ -131,7 +127,7 @@ impl Handler<Connect> for Lobby {
                     let serialized = serde_json::to_string(&message)
                         .expect("Failed to serialize a server message");
                     let cam = ClientActorMessage {
-                        destination: MessageDestination::Direct(user_id),
+                        destination: MessageDestination::User(user_id),
                         serialized,
                         from: user_id,
                     };
@@ -180,7 +176,7 @@ impl Handler<Connect> for Lobby {
                     let serialized = serde_json::to_string(&message)
                         .expect("Failed to serialize a server message");
                     let cam = ClientActorMessage {
-                        destination: MessageDestination::Direct(user_id),
+                        destination: MessageDestination::User(user_id),
                         serialized,
                         from: user_id,
                     };
@@ -232,7 +228,7 @@ impl Handler<Connect> for Lobby {
                 serde_json::to_string(&message).expect("Failed to serialize a server message")
             };
             let cam = ClientActorMessage {
-                destination: MessageDestination::Direct(user_id),
+                destination: MessageDestination::User(user_id),
                 serialized,
                 from: user_id,
             };
@@ -254,6 +250,9 @@ impl Handler<ClientActorMessage> for Lobby {
 
     fn handle(&mut self, cam: ClientActorMessage, _ctx: &mut Context<Self>) -> Self::Result {
         match cam.destination {
+            MessageDestination::Direct(socket) => {
+                socket.do_send(WsMessage(cam.serialized));
+            }
             MessageDestination::Global => {
                 // Make sure the user is in the game:
                 self.games_users
@@ -280,7 +279,7 @@ impl Handler<ClientActorMessage> for Lobby {
                     .iter()
                     .for_each(|client| self.send_message(&cam.serialized, client));
             }
-            MessageDestination::Direct(user_id) => {
+            MessageDestination::User(user_id) => {
                 self.send_message(&cam.serialized, &user_id);
             }
         }

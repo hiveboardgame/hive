@@ -1,7 +1,6 @@
+use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
 use crate::{
-    common::server_result::{
-        ChallengeUpdate, InternalServerMessage, MessageDestination, ServerMessage,
-    },
+    common::server_result::{ChallengeUpdate, ServerMessage},
     responses::challenge::ChallengeResponse,
 };
 use anyhow::Result;
@@ -27,7 +26,7 @@ impl GetOwnHandler {
             responses.push(ChallengeResponse::from_model(&challenge, &self.pool).await?);
         }
         Ok(vec![InternalServerMessage {
-            destination: MessageDestination::Direct(self.user_id),
+            destination: MessageDestination::User(self.user_id),
             message: ServerMessage::Challenge(ChallengeUpdate::Challenges(responses)),
         }])
     }

@@ -1,4 +1,4 @@
-use crate::common::{game_action::GameAction, server_result::InternalServerMessage};
+use crate::common::game_action::GameAction;
 use crate::websockets::turn_handler::TurnHandler;
 use anyhow::Result;
 use db_lib::{models::game::Game, DbPool};
@@ -6,13 +6,16 @@ use hive_lib::{game_error::GameError, game_status::GameStatus};
 use std::str::FromStr;
 use uuid::Uuid;
 
-use super::{game_control_handler::GameControlHandler, join_handler::JoinHanlder};
+use super::internal_server_message::InternalServerMessage;
+use super::messages::WsMessage;
+use super::{game_control_handler::GameControlHandler, join_handler::JoinHandler};
 
 pub struct GameActionHandler {
     game_action: GameAction,
     game: Game,
     pool: DbPool,
     user_id: Uuid,
+    received_from: actix::Recipient<WsMessage>,
     username: String,
 }
 
@@ -22,6 +25,7 @@ impl GameActionHandler {
         game_action: GameAction,
         username: &str,
         user_id: Uuid,
+        received_from: actix::Recipient<WsMessage>,
         pool: &DbPool,
     ) -> Result<Self> {
         let game = Game::find_by_nanoid(game_id, pool).await?;
@@ -30,6 +34,7 @@ impl GameActionHandler {
             game,
             username: username.to_owned(),
             game_action,
+            received_from,
             user_id,
         })
     }
@@ -63,9 +68,14 @@ impl GameActionHandler {
                 gch.handle().await?
             }
             GameAction::Join => {
-                let jh =
-                    JoinHanlder::new(self.game.clone(), &self.username, self.user_id, &self.pool)
-                        .await;
+                let jh = JoinHandler::new(
+                    self.game.clone(),
+                    &self.username,
+                    self.user_id,
+                    self.received_from.clone(),
+                    &self.pool,
+                )
+                .await;
                 jh.handle().await?
             }
         };

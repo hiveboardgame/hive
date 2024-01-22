@@ -1,10 +1,9 @@
-use crate::{
-    common::server_result::{InternalServerMessage, MessageDestination, ServerMessage},
-    responses::game::GameResponse,
-};
+use crate::{common::server_result::ServerMessage, responses::game::GameResponse};
 use anyhow::Result;
 use db_lib::{models::game::Game, DbPool};
 use uuid::Uuid;
+
+use super::internal_server_message::{InternalServerMessage, MessageDestination};
 
 #[allow(dead_code)]
 pub struct GameTimeoutHandler {

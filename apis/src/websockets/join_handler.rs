@@ -1,9 +1,7 @@
 use crate::{
     common::{
         game_action::GameAction,
-        server_result::{
-            GameActionResponse, InternalServerMessage, MessageDestination, ServerMessage,
-        },
+        server_result::{GameActionResponse, ServerMessage},
     },
     responses::game::GameResponse,
     responses::user::UserResponse,
@@ -12,16 +10,29 @@ use anyhow::Result;
 use db_lib::{models::game::Game, DbPool};
 use uuid::Uuid;
 
-pub struct JoinHanlder {
+use super::{
+    internal_server_message::{InternalServerMessage, MessageDestination},
+    messages::WsMessage,
+};
+
+pub struct JoinHandler {
     pool: DbPool,
+    received_from: actix::Recipient<WsMessage>,
     user_id: Uuid,
     username: String,
     game: Game,
 }
 
-impl JoinHanlder {
-    pub async fn new(game: Game, username: &str, user_id: Uuid, pool: &DbPool) -> Self {
+impl JoinHandler {
+    pub async fn new(
+        game: Game,
+        username: &str,
+        user_id: Uuid,
+        received_from: actix::Recipient<WsMessage>,
+        pool: &DbPool,
+    ) -> Self {
         Self {
+            received_from,
             game,
             user_id,
             username: username.to_owned(),
@@ -36,7 +47,7 @@ impl JoinHanlder {
             message: ServerMessage::Join(UserResponse::from_uuid(&self.user_id, &self.pool).await?),
         });
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Direct(self.user_id),
+            destination: MessageDestination::Direct(self.received_from.clone()),
             message: ServerMessage::GameUpdate(GameActionResponse {
                 game_id: self.game.nanoid.to_owned(),
                 game: GameResponse::new_from_db(&self.game, &self.pool).await?,

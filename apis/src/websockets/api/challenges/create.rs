@@ -1,8 +1,7 @@
 use crate::common::challenge_action::ChallengeVisibility;
-use crate::common::server_result::{
-    ChallengeUpdate, InternalServerMessage, MessageDestination, ServerMessage,
-};
+use crate::common::server_result::{ChallengeUpdate, ServerMessage};
 use crate::responses::challenge::ChallengeResponse;
+use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
 use anyhow::Result;
 use db_lib::{
     models::challenge::{Challenge, NewChallenge},
@@ -78,13 +77,13 @@ impl CreateHandler {
             ChallengeVisibility::Direct => {
                 if let Some(ref opponent) = challenge_response.opponent {
                     messages.push(InternalServerMessage {
-                        destination: MessageDestination::Direct(opponent.uid),
+                        destination: MessageDestination::User(opponent.uid),
                         message: ServerMessage::Challenge(ChallengeUpdate::Direct(
                             challenge_response.clone(),
                         )),
                     });
                     messages.push(InternalServerMessage {
-                        destination: MessageDestination::Direct(challenge_response.challenger.uid),
+                        destination: MessageDestination::User(challenge_response.challenger.uid),
                         message: ServerMessage::Challenge(ChallengeUpdate::Direct(
                             challenge_response,
                         )),
@@ -93,7 +92,7 @@ impl CreateHandler {
             }
             ChallengeVisibility::Private => {
                 messages.push(InternalServerMessage {
-                    destination: MessageDestination::Direct(challenge_response.challenger.uid),
+                    destination: MessageDestination::User(challenge_response.challenger.uid),
                     message: ServerMessage::Challenge(ChallengeUpdate::Direct(challenge_response)),
                 });
             }

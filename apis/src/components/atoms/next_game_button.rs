@@ -2,24 +2,27 @@ use crate::providers::{
     game_state::GameStateSignal, games::GamesSignal,
     navigation_controller::NavigationControllerSignal,
 };
-use leptos::{logging::log, *};
+use leptos::*;
 use leptos_meta::Title;
 
 #[component]
 pub fn NextGameButton() -> impl IntoView {
     let navigate = leptos_router::use_navigate();
     let navigation_controller = expect_context::<NavigationControllerSignal>();
+    let games = expect_context::<GamesSignal>();
     let next_games = move || {
-        let mut games = expect_context::<GamesSignal>();
-        games.update_next_games();
-        let mut next_games = games.signal.get().next_games;
-        log!("all next games: {:?}", next_games);
-        if let Some(nanoid) = navigation_controller.signal.get().nanoid {
-            log!("nanoid: {:?}", nanoid);
-            next_games.retain(|g| *g != nanoid);
-        }
-        log!("next games without current: {:?}", next_games);
-        next_games
+        games.signal.with(|games_state| {
+            if let Some(nanoid) = navigation_controller.signal.get().nanoid {
+                games_state
+                    .next_games
+                    .iter()
+                    .filter(|g| **g != nanoid)
+                    .cloned()
+                    .collect()
+            } else {
+                games_state.next_games.clone()
+            }
+        })
     };
     let color = move || {
         match next_games().len() {
@@ -37,12 +40,10 @@ pub fn NextGameButton() -> impl IntoView {
         i => format!("Next ({})", i),
     };
     let onclick = move |_| {
-        let next_games = next_games();
-        if let Some(game) = next_games.first() {
+        let mut games = expect_context::<GamesSignal>();
+        if let Some(game) = games.visit_game() {
             let mut game_state = expect_context::<GameStateSignal>();
             game_state.full_reset();
-            let mut games = expect_context::<GamesSignal>();
-            games.visit_game(game.to_owned());
             navigate(&format!("/game/{}", game), Default::default());
         } else {
             navigate("/", Default::default());

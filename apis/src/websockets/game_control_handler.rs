@@ -1,9 +1,7 @@
 use crate::{
     common::{
         game_action::GameAction,
-        server_result::{
-            GameActionResponse, InternalServerMessage, MessageDestination, ServerMessage,
-        },
+        server_result::{GameActionResponse, ServerMessage},
     },
     responses::game::GameResponse,
 };
@@ -11,6 +9,8 @@ use anyhow::Result;
 use db_lib::{models::game::Game, models::user::User, DbPool};
 use hive_lib::{game_control::GameControl, game_error::GameError};
 use uuid::Uuid;
+
+use super::internal_server_message::{InternalServerMessage, MessageDestination};
 
 pub struct GameControlHandler {
     control: GameControl,
@@ -67,7 +67,7 @@ impl GameControlHandler {
                     game_responses.push(GameResponse::new_from_db(&game, &self.pool).await?);
                 }
                 messages.push(InternalServerMessage {
-                    destination: MessageDestination::Direct(game.current_player_id),
+                    destination: MessageDestination::User(game.current_player_id),
                     message: ServerMessage::GameActionNotification(game_responses),
                 });
             }
@@ -168,8 +168,9 @@ impl GameControlHandler {
     async fn match_control(&self) -> Result<Game> {
         Ok(match self.control {
             GameControl::Abort(_) => {
-                let game = self.game.clone();
+                let mut game = self.game.clone();
                 self.handle_abort().await?;
+                game.finished = true;
                 game
             }
             GameControl::Resign(_) => self.handle_resign().await?,
