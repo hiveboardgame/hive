@@ -38,7 +38,7 @@ pub fn HistoryButton(
                 game_state.is_last_turn()
             }
             HistoryNavigation::Previous | HistoryNavigation::First => {
-                game_state.history_turn == None || game_state.history_turn == Some(0)
+                game_state.history_turn.is_none() || game_state.history_turn == Some(0)
             }
         }
     };
