@@ -102,7 +102,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     });
 
     let nav_buttons_style =
-        "flex justify-center h-fit hover:bg-green-400 dark:hover:bg-green-500 transform transition-transform duration-300 active:scale-95 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg";
+        "flex justify-center h-fit hover:bg-green-400 dark:hover:bg-green-500 transform transition-transform duration-300 active:scale-95 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed";
     let white_black_styles = "col-span-2";
     view! {
         <div class=format!("h-[90%] grid grid-cols-4 grid-rows-6 gap-1 pb-4 {extend_tw_classes}")>

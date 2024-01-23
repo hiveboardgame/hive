@@ -1,18 +1,54 @@
-use crate::{common::server_result::UserStatus, providers::online_users::OnlineUsersSignal};
+use crate::{
+    common::server_result::UserStatus,
+    providers::{
+        auth_context::AuthContext, online_users::OnlineUsersSignal, ping::PingSignal,
+        web_socket::WebsocketContext,
+    },
+};
+use chrono::Utc;
 use leptos::*;
 use leptos_icons::{BiIcon::BiCircleSolid, Icon};
+use leptos_use::core::ConnectionReadyState;
 
 #[component]
 pub fn StatusIndicator(username: String) -> impl IntoView {
+    let websocket = expect_context::<WebsocketContext>();
+    let ping = expect_context::<PingSignal>();
+    let auth_context = expect_context::<AuthContext>();
     let online_users = expect_context::<OnlineUsersSignal>();
-    let display_icon = move || match (online_users.signal)().username_status.get(&username) {
-        Some(UserStatus::Online) => {
-            view! { <Icon icon=Icon::from(BiCircleSolid) class="mr-1 fill-green-500"/> }
-        }
-        Some(UserStatus::Away) => view! { <p>Away icon</p> }.into_view(),
-        _ => {
-            view! { <Icon icon=Icon::from(BiCircleSolid) class="mr-1 fill-slate-400"/> }
+    let username = store_value(username);
+    let user_is_player = move || match (auth_context.user)() {
+        Some(Ok(Some(user))) => user.username == username(),
+        _ => false,
+    };
+    let user_has_ws = move || {
+        Utc::now()
+            .signed_duration_since(ping.signal.get().last_update)
+            .num_seconds()
+            < 5
+            && matches!(websocket.ready_state.get(), ConnectionReadyState::Open)
+    };
+
+    let icon_color = move || {
+        if user_is_player() {
+            if user_has_ws() {
+                "fill-green-500"
+            } else {
+                "fill-red-500"
+            }
+        } else {
+            match (online_users.signal)().username_status.get(&username()) {
+                Some(UserStatus::Online) => "fill-green-500",
+
+                // TODO: Figure out away Some(UserStatus::Away) => ....
+                _ => "fill-slate-400",
+            }
         }
     };
-    display_icon
+    view! {
+        <Icon
+            icon=Icon::from(BiCircleSolid)
+            class=Signal::derive(move || format!("mr-1 pb-[2px] {}", icon_color()))
+        />
+    }
 }

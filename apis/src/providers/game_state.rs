@@ -154,11 +154,25 @@ impl GameStateSignal {
     }
 
     pub fn next_history_turn(&mut self) {
-        self.signal.update(|s| s.next_history_turn())
+        self.signal.update(|s| {
+            s.next_history_turn();
+            if let Some(turn) = s.history_turn {
+                if s.state.history.move_is_pass(turn) {
+                    s.next_history_turn()
+                }
+            }
+        });
     }
 
     pub fn previous_history_turn(&mut self) {
-        self.signal.update(|s| s.previous_history_turn())
+        self.signal.update(|s| {
+            s.previous_history_turn();
+            if let Some(turn) = s.history_turn {
+                if s.state.history.move_is_pass(turn) {
+                    s.previous_history_turn()
+                }
+            }
+        });
     }
 
     pub fn view_game(&mut self) {

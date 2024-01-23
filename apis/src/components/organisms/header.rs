@@ -18,7 +18,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
     let onclick = move || hamburger_show.update(|b| *b = false);
     view! {
         <header class=format!(
-            "h-8 md:h-10 lg:h-12 w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] {extend_tw_classes}",
+            "w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] {extend_tw_classes}",
         )>
             <a class="ml-10" href="/">
                 Home
@@ -36,8 +36,9 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                 let hamburger_show = create_rw_signal(false);
                                 let onclick = move |_| hamburger_show.update(|b| *b = false);
                                 view! {
-                                    <div>
+                                    <div class="flex items-center">
                                         <a
+                                            class="bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 m-1 px-4 rounded"
                                             href="/login"
                                             on:focus=move |_| set_redirect()
                                             on:click=onclick
@@ -46,21 +47,16 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                             Login
                                         </a>
                                         <Hamburger hamburger_show=hamburger_show>
-                                            <ul>
-                                                <a
-                                                    href="/register"
-                                                    on:focus=move |_| set_redirect()
-                                                    on:click=onclick
-                                                >
-                                                    Register
-                                                </a>
-                                            </ul>
-                                            <ul>
-                                                <DarkModeToggle/>
-                                            </ul>
-                                            <ul>
-                                                <Ping/>
-                                            </ul>
+                                            <a
+                                                class="bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
+                                                href="/register"
+                                                on:focus=move |_| set_redirect()
+                                                on:click=onclick
+                                            >
+                                                Register
+                                            </a>
+                                            <DarkModeToggle/>
+                                            <Ping/>
                                         </Hamburger>
                                     </div>
                                 }
@@ -72,37 +68,25 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             </div>
 
                             <Hamburger hamburger_show=hamburger_show>
-                                <ul>
-                                    <a
-                                        href=format!(
-                                            "/@/{}",
-                                            user().expect("User is some").username,
-                                        )
+                                <a
+                                    class="bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
+                                    href=format!("/@/{}", user().expect("User is some").username)
 
-                                        on:click=move |_| onclick()
-                                    >
-                                        Profile
-                                    </a>
-                                </ul>
-                                <ul>
-                                    <a
-                                        href="/account"
-                                        on:focus=move |_| set_redirect()
-                                        on:click=move |_| onclick()
-                                    >
-                                        Edit Account
-                                    </a>
-                                </ul>
-                                <ul>
-                                    <DarkModeToggle/>
-                                </ul>
-                                <ul>
-                                    <Logout on:submit=move |_| onclick()/>
-                                </ul>
-                                <ul>
-                                    <Ping/>
-                                </ul>
-
+                                    on:click=move |_| onclick()
+                                >
+                                    Profile
+                                </a>
+                                <a
+                                    class="bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
+                                    href="/account"
+                                    on:focus=move |_| set_redirect()
+                                    on:click=move |_| onclick()
+                                >
+                                    Edit Account
+                                </a>
+                                <DarkModeToggle/>
+                                <Logout on:submit=move |_| onclick()/>
+                                <Ping/>
                             </Hamburger>
                         </Show>
                     }

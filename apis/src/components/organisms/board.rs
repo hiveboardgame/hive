@@ -129,7 +129,7 @@ pub fn Board(
 
     //Keep panning while user drags around
     _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
-        if is_panning.get_untracked() {
+        if is_panning.get_untracked() && target_stack.with_untracked(|v| v.is_none()) {
             let moved_point = svg_point_from_pointer(viewbox_ref, &evt);
             viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                 viewbox_controls.x -= moved_point.x() - viewbox_controls.drag_start_x;

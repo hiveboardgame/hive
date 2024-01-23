@@ -1,8 +1,8 @@
 use hive_lib::game_control::GameControl;
 use leptos::*;
 use leptos_icons::{
-    AiIcon::AiFlagOutlined, AiIcon::AiStopOutlined, BiIcon::BiUndoRegular, ChIcon::ChCross,
-    FaIcon::FaHandshakeSimpleSolid, Icon,
+    AiIcon::AiFlagOutlined, AiIcon::AiStopOutlined, BiIcon::BiUndoRegular,
+    FaIcon::FaHandshakeSimpleSolid, Icon, IoIcon::IoCloseSharp,
 };
 use leptos_use::{use_interval_with_options, UseIntervalOptions, UseIntervalReturn};
 use uuid::Uuid;
@@ -165,7 +165,7 @@ pub fn ConfirmButton(
                     on:click=cancel
                     class="ml-1 aspect-square bg-red-700 hover:bg-red-500 rounded-sm absolute duration-300"
                 >
-                    <Icon icon=Icon::from(ChCross) class="h-6 w-6 lg:h-8 lg:w-8"/>
+                    <Icon icon=Icon::from(IoCloseSharp) class="h-6 w-6 lg:h-8 lg:w-8"/>
                 </button>
             </Show>
         </div>

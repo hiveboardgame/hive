@@ -7,7 +7,10 @@ pub fn DarkModeToggle() -> impl IntoView {
     let color_scheme = expect_context::<ColorScheme>();
 
     view! {
-        <ActionForm action=color_scheme.action>
+        <ActionForm
+            action=color_scheme.action
+            class="m-1 inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow dark:bg-yellow-400 bg-gray-700 justify-center"
+        >
             <input
                 type="hidden"
                 name="prefers_dark"
@@ -15,7 +18,6 @@ pub fn DarkModeToggle() -> impl IntoView {
             />
             <button
                 type="submit"
-                class="m-1 inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow mx-4 dark:bg-yellow-400 bg-gray-700"
                 value=move || { if (color_scheme.prefers_dark)() { "dark" } else { "light" } }
                 inner_html=move || {
                     if (color_scheme.prefers_dark)() {

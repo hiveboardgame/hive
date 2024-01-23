@@ -50,17 +50,16 @@ pub fn UserWithRating(
                         <ProfileLink username=username() extend_tw_classes=text_color/>
                     }
                 }}
+                <Show
+                    when=is_finished
+                    fallback=move || {
+                        view! { <div class=format!("{text_color}")>{rating()}</div> }
+                    }
+                >
 
+                    <RatingAndChangeDynamic extend_tw_classes=text_color side=side/>
+                </Show>
             </div>
-            <Show
-                when=is_finished
-                fallback=move || {
-                    view! { <p class=format!("{text_color}")>{rating()}</p> }
-                }
-            >
-
-                <RatingAndChangeDynamic extend_tw_classes=text_color side=side/>
-            </Show>
         </div>
     }
 }
