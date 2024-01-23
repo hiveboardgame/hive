@@ -29,7 +29,7 @@ pub struct NewChallenge {
     pub opponent_id: Option<Uuid>,
     pub visibility: String,
     pub time_mode: String,           // Correspondence, Timed, Untimed
-    pub time_base: Option<i32>,      // Secons
+    pub time_base: Option<i32>,      // Seconds
     pub time_increment: Option<i32>, // Seconds
 }
 

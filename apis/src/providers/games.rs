@@ -1,10 +1,13 @@
 use super::auth_context::AuthContext;
 use super::navigation_controller::NavigationControllerSignal;
 use crate::responses::game::GameResponse;
+use chrono::{Duration, Utc};
 use hive_lib::{color::Color, game_control::GameControl};
 use leptos::logging::log;
 use leptos::*;
+use shared_types::time_mode::TimeMode;
 use std::collections::HashMap;
+use std::str::FromStr;
 
 #[derive(Clone, Debug, Copy)]
 pub struct GamesSignal {
@@ -36,7 +39,7 @@ impl GamesSignal {
             self.signal.update(|s| {
                 let mut games: Vec<GameResponse> = s.games.values().cloned().collect();
                 games.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
-                s.next_games = games
+                let mut games_with_time = games
                     .iter()
                     .filter_map(|game| {
                         let not_player_color = if game.black_player.uid == user.id {
@@ -53,12 +56,39 @@ impl GamesSignal {
                             _ => false,
                         };
                         if !game.finished && (game.current_player_id == user.id || unanswered_gc) {
-                            Some(game.nanoid.to_owned())
+                            let time_left = if let Some(last_interaction) = game.last_interaction {
+                                let left = match TimeMode::from_str(&game.time_mode) {
+                                    Ok(TimeMode::RealTime) | Ok(TimeMode::Correspondence) => {
+                                        if game.turn % 2 == 0 {
+                                            Duration::from_std(game.white_time_left.unwrap())
+                                                .unwrap()
+                                        } else {
+                                            Duration::from_std(game.black_time_left.unwrap())
+                                                .unwrap()
+                                        }
+                                    }
+                                    _ => Duration::days(10_000),
+                                };
+                                let future = last_interaction.checked_add_signed(left).unwrap();
+                                let now = Utc::now();
+                                if now > future {
+                                    std::time::Duration::from_nanos(0)
+                                } else {
+                                    future.signed_duration_since(now).to_std().unwrap()
+                                }
+                            } else if let Some(base) = game.white_time_left {
+                                base
+                            } else {
+                                std::time::Duration::from_secs(u64::MAX)
+                            };
+                            Some((time_left, game.nanoid.to_owned()))
                         } else {
                             None
                         }
                     })
-                    .collect::<Vec<String>>()
+                    .collect::<Vec<(std::time::Duration, String)>>();
+                games_with_time.sort_by(|a, b| a.0.cmp(&b.0));
+                s.next_games = games_with_time.iter().map(|g| g.1.to_owned()).collect();
             });
         }
     }
