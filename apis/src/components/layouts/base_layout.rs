@@ -87,7 +87,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
             if Utc::now()
                 .signed_duration_since(ping.signal.get_untracked().last_update)
                 .num_seconds()
-                > 5
+                >= 5
                 && retry_at.get() == counter.get()
             {
                 log!("Reconnecting due to ping duration");

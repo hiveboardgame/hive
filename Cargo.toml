@@ -34,7 +34,7 @@ leptos_icons = { version = "0.1", default_features = false, features = [
     "BsHexagonFill",
     "BsHexagonHalf",
     "BiStopwatchRegular",
-    "ChCross",
+    "IoCloseSharp",
     "ChMenuHamburger",
     "FaHandshakeSimpleSolid",
     "RiSwordOthersLine"

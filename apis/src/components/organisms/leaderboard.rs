@@ -9,7 +9,9 @@ pub fn Leaderboard() -> impl IntoView {
             {move || {
                 top_users()
                     .map(|data| match data {
-                        Err(_) => view! { <pre>"No top users"</pre> }.into_view(),
+                        Err(_) => {
+                            view! { <pre class="m-2">"Couldn't fetch top users"</pre> }.into_view()
+                        }
                         Ok(users) => {
                             let users = store_value(users);
                             view! {

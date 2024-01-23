@@ -95,6 +95,14 @@ impl History {
         self.moves.push((piece.into(), pos.into()));
     }
 
+    pub fn move_is_pass(&self, turn: usize) -> bool {
+        if let Some(mov) = self.moves.get(turn) {
+            return mov.0 == "pass";
+        }
+
+        false
+    }
+
     fn parse_game_result(&mut self, str: &str) {
         match str {
             "\"1-0\"]" => self.result = GameResult::Winner(Color::White),

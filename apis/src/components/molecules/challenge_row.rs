@@ -16,8 +16,8 @@ use leptos::*;
 use leptos_icons::{
     AiIcon::{AiCheckOutlined, AiCopyOutlined},
     BsIcon::{BsHexagon, BsHexagonFill, BsHexagonHalf},
-    ChIcon::ChCross,
     Icon,
+    IoIcon::IoCloseSharp,
 };
 use leptos_router::*;
 use leptos_use::use_window;
@@ -30,20 +30,20 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     let color_context = expect_context::<ColorScheme>;
     let icon = move || match challenge().color_choice {
         ColorChoice::Random => {
-            view! { <Icon icon=Icon::from(BsHexagonHalf)/> }
+            view! { <Icon icon=Icon::from(BsHexagonHalf) class="pb-[2px]"/> }
         }
         ColorChoice::White => {
             if (color_context().prefers_dark)() {
-                view! { <Icon icon=Icon::from(BsHexagonFill) class="fill-white"/> }
+                view! { <Icon icon=Icon::from(BsHexagonFill) class="fill-white pb-[2px]"/> }
             } else {
-                view! { <Icon icon=Icon::from(BsHexagon) class="stroke-black"/> }
+                view! { <Icon icon=Icon::from(BsHexagon) class="stroke-black pb-[2px]"/> }
             }
         }
         ColorChoice::Black => {
             if (color_context().prefers_dark)() {
-                view! { <Icon icon=Icon::from(BsHexagon) class="stroke-white"/> }
+                view! { <Icon icon=Icon::from(BsHexagon) class="stroke-white pb-[2px]"/> }
             } else {
-                view! { <Icon icon=Icon::from(BsHexagonFill) class="fill-black"/> }
+                view! { <Icon icon=Icon::from(BsHexagonFill) class="fill-black pb-[2px]"/> }
             }
         }
     };
@@ -130,7 +130,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     view! {
         <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center cursor-pointer">
             <td class=td_class>{icon}</td>
-            <td class=format!("w-10 sm:w-32 {td_class}")>{player}</td>
+            <td class=format!("w-10 sm:w-32 md:w-full {td_class}")>{player}</td>
             <td class=td_class>{rating}</td>
             <td class=td_class>
                 <GameType game_type=challenge().game_type/>
@@ -171,9 +171,9 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     ApiRequests::new().challenge_cancel(challenge().nanoid)
                                 }
 
-                                class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-2 px-2 rounded focus:outline-none focus:shadow-outline m-1"
+                                class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                             >
-                                <Icon icon=Icon::from(ChCross)/>
+                                <Icon icon=Icon::from(IoCloseSharp) class="w-6 h-6"/>
                             </button>
                         }
                     }
@@ -194,9 +194,9 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                             }
                         }
 
-                        class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white py-2 px-2 rounded focus:outline-none focus:shadow-outline m-1"
+                        class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                     >
-                        <Icon icon=Icon::from(AiCheckOutlined)/>
+                        <Icon icon=Icon::from(AiCheckOutlined) class="w-6 h-6"/>
 
                     </button>
                     {if challenge().opponent.is_some() {
@@ -214,9 +214,9 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     }
                                 }
 
-                                class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-2 px-2 rounded focus:outline-none focus:shadow-outline m-1"
+                                class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                             >
-                                <Icon icon=Icon::from(ChCross)/>
+                                <Icon icon=Icon::from(IoCloseSharp) class="w-6 h-6"/>
 
                             </button>
                         }
