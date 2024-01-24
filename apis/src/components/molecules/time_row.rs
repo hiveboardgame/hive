@@ -13,44 +13,39 @@ pub fn TimeRow(
     increment: Option<i32>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    view! {
-        <p class="flex items-center gap-1">
-            {match time_mode {
-                TimeMode::Untimed => {
-                    view! {
-                        <Icon icon=Icon::from(BiInfiniteRegular)/>
-                        <p>"No time limit "</p>
-                    }
-                }
-                TimeMode::RealTime => {
-                    view! {
-                        <Icon icon=Icon::from(BiStopwatchRegular)/>
-                        {format!(
-                            "{}m + {}s",
-                            time_base.expect("Time exists") / 60,
-                            increment.expect("Increment exists"),
-                        )}
-                    }
-                }
-                TimeMode::Correspondence if time_base.is_some() => {
-                    view! {
-                        <Icon icon=Icon::from(AiMailOutlined)/>
-                        <p class=extend_tw_classes>
-                            {format!("{} days/side", time_base.expect("Time exists") / 86400)}
-                        </p>
-                    }
-                }
-                TimeMode::Correspondence if increment.is_some() => {
-                    view! {
-                        <Icon icon=Icon::from(AiMailOutlined)/>
-                        <p class=extend_tw_classes>
-                            {format!("{} days/move ", increment.expect("Time exists") / 86400)}
-                        </p>
-                    }
-                }
-                _ => unreachable!(),
-            }}
+    let time_mode = store_value(time_mode);
+    let icon = move || match time_mode() {
+        TimeMode::Untimed => Icon::from(BiInfiniteRegular),
+        TimeMode::RealTime => Icon::from(BiStopwatchRegular),
 
-        </p>
+        TimeMode::Correspondence if time_base.is_some() => Icon::from(AiMailOutlined),
+
+        TimeMode::Correspondence if increment.is_some() => Icon::from(AiMailOutlined),
+
+        _ => unreachable!(),
+    };
+    let text = move || match time_mode() {
+        TimeMode::Untimed => "No time limit".to_owned(),
+        TimeMode::RealTime => format!(
+            "{}m + {}s",
+            time_base.expect("Time exists") / 60,
+            increment.expect("Increment exists"),
+        ),
+
+        TimeMode::Correspondence if time_base.is_some() => {
+            format!("{} days/side", time_base.expect("Time exists") / 86400)
+        }
+
+        TimeMode::Correspondence if increment.is_some() => {
+            format!("{} days/move ", increment.expect("Time exists") / 86400)
+        }
+
+        _ => unreachable!(),
+    };
+    view! {
+        <div class="flex items-center gap-1 justify-start">
+            <Icon icon=icon() class="w-4 h-4"/>
+            <p class=extend_tw_classes>{text}</p>
+        </div>
     }
 }

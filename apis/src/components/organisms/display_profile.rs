@@ -16,7 +16,7 @@ pub enum TabView {
 pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
     let games = Resource::once(move || get_user_games(user().username));
     let tab_view = create_rw_signal(TabView::Playing);
-    let button_styles = "z-10 w-fit flex justify-center box-content h-fit inline-block text-center hover:bg-green-300 transform transition-transform duration-300 active:scale-95 rounded-md border-cyan-500 border-2 drop-shadow-lg";
+    let button_styles = "z-10 w-fit flex justify-center box-content h-fit inline-block text-center hover:bg-green-500 transform transition-transform duration-300 active:scale-95 rounded-md border-pillbug-teal border-2 drop-shadow-lg";
     view! {
         <div class="mt-4">
             <div class="flex flex-col items-start ml-3">
@@ -46,7 +46,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                                 <button
                                     class=move || {
                                         let side = match tab_view() {
-                                            TabView::Playing => "bg-green-500",
+                                            TabView::Playing => "bg-grasshopper-green",
                                             TabView::Games => "",
                                         };
                                         format!("{button_styles} {side}")
@@ -64,7 +64,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                                     class=move || {
                                         let side = match tab_view() {
                                             TabView::Playing => "",
-                                            TabView::Games => "bg-green-500",
+                                            TabView::Games => "bg-grasshopper-green",
                                         };
                                         format!("{button_styles} {side}")
                                     }

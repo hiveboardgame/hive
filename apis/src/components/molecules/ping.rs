@@ -19,18 +19,19 @@ pub fn Ping() -> impl IntoView {
             .num_seconds()
             >= 5
         {
-            view! { <Icon class="fill-red-400" icon=Icon::from(BiNoSignalRegular)/> }.into_view()
+            view! { <Icon class="fill-ladybug-red" icon=Icon::from(BiNoSignalRegular)/> }
+                .into_view()
         } else {
             match websocket.ready_state.get() {
         ConnectionReadyState::Open => view! {
-            <div class="flex">
-                <Icon class="fill-green-400" icon=Icon::from(BiSignal5Regular)/>
+            <div class="flex items-center">
+                <Icon class="fill-grasshopper-green" icon=Icon::from(BiSignal5Regular)/>
                 {move || { format!("{}ms", ping.signal.get().ping_duration.num_milliseconds()) }}
             </div>
         }.into_view(),
-        _ => view! { <Icon class="fill-red-400" icon=Icon::from(BiNoSignalRegular)/> }.into_view(),}
+        _ => view! { <Icon class="fill-ladybug-red" icon=Icon::from(BiNoSignalRegular)/> }.into_view(),}
         }
     };
 
-    view! { <div class="m-1">{signal}</div> }
+    view! { <div class="m-1 text-dark dark:text-white">{signal}</div> }
 }

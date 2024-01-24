@@ -11,7 +11,7 @@ pub fn OnlineUsers() -> impl IntoView {
         <div class="flex flex-col m-2 w-fit">
             Online players: <div>
                 <div class=move || {
-                    format!("p-1 {}", if !is_empty() { "hidden" } else { "flex" })
+                    format!("p-1 h-6 {}", if !is_empty() { "hidden" } else { "flex" })
                 }>{move || if is_empty() { "Only you" } else { "" }}</div>
 
                 <For each=online_players key=|(key, _)| key.to_owned() let:a_user>

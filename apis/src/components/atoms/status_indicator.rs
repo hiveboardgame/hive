@@ -32,13 +32,13 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     let icon_color = move || {
         if user_is_player() {
             if user_has_ws() {
-                "fill-green-500"
+                "fill-grasshopper-green"
             } else {
-                "fill-red-500"
+                "fill-ladybug-red"
             }
         } else {
             match (online_users.signal)().username_status.get(&username()) {
-                Some(UserStatus::Online) => "fill-green-500",
+                Some(UserStatus::Online) => "fill-grasshopper-green",
 
                 // TODO: Figure out away Some(UserStatus::Away) => ....
                 _ => "fill-slate-400",

@@ -1,6 +1,6 @@
 use crate::{common::server_result::UserStatus, responses::user::UserResponse};
 use leptos::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, Copy)]
 pub struct OnlineUsersSignal {
@@ -38,15 +38,15 @@ impl OnlineUsersSignal {
 
 #[derive(Clone, Debug)]
 pub struct OnlineUsersState {
-    pub username_user: HashMap<String, UserResponse>,
-    pub username_status: HashMap<String, UserStatus>,
+    pub username_user: BTreeMap<String, UserResponse>,
+    pub username_status: BTreeMap<String, UserStatus>,
 }
 
 impl OnlineUsersState {
     pub fn new() -> Self {
         Self {
-            username_user: HashMap::new(),
-            username_status: HashMap::new(),
+            username_user: BTreeMap::new(),
+            username_status: BTreeMap::new(),
         }
     }
 }

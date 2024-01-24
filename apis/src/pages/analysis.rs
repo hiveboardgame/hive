@@ -21,7 +21,6 @@ use leptos_use::use_media_query;
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
     let is_tall = use_media_query("(min-height: 100vw)");
-    let nav_buttons_style = "flex place-items-center justify-center hover:bg-green-400 dark:hover:bg-green-500 duration-300 my-1 h-6 rounded-md border-cyan-500 border-2 drop-shadow-lg touch-manipulation disabled:opacity-25 disabled:cursor-not-allowed";
     let parent_container_style = move || {
         if is_tall() {
             "flex flex-col"
@@ -71,23 +70,10 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             <UndoButton/>
                         </div>
                         <div class="grid grid-cols-4 gap-8">
-                            <HistoryButton
-                                nav_buttons_style=nav_buttons_style
-                                action=HistoryNavigation::First
-                            />
-                            <HistoryButton
-                                nav_buttons_style=nav_buttons_style
-                                action=HistoryNavigation::Previous
-                            />
-                            <HistoryButton
-                                nav_buttons_style=nav_buttons_style
-                                action=HistoryNavigation::Next
-                                post_action=go_to_game
-                            />
-                            <HistoryButton
-                                nav_buttons_style=nav_buttons_style
-                                action=HistoryNavigation::MobileLast
-                            />
+                            <HistoryButton action=HistoryNavigation::First/>
+                            <HistoryButton action=HistoryNavigation::Previous/>
+                            <HistoryButton action=HistoryNavigation::Next post_action=go_to_game/>
+                            <HistoryButton action=HistoryNavigation::MobileLast/>
                         </div>
                     </div>
                 </div>

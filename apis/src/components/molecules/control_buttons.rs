@@ -118,11 +118,11 @@ pub fn ControlButtons() -> impl IntoView {
         if let Some(challenge) = rematch_present() {
             if let Some(user) = user() {
                 if challenge.challenger.uid != user.id {
-                    return "bg-green-500 hover:bg-green-700";
+                    return "bg-grasshopper-green hover:bg-green-500";
                 }
             }
         }
-        "bg-blue-500 hover:bg-blue-700"
+        "bg-ant-blue hover:bg-pillbug-teal"
     };
 
     let rematch_text = move || {
@@ -176,7 +176,7 @@ pub fn ControlButtons() -> impl IntoView {
     };
 
     view! {
-        <div class="flex justify-around items-center grow shrink w-full">
+        <div class="flex justify-around items-center grow shrink w-full mt-1">
             <Show
                 when=is_finished
                 fallback=move || {
@@ -251,14 +251,14 @@ pub fn ControlButtons() -> impl IntoView {
                     {rematch_text}
                 </button>
                 <button
-                    class=" h-7 m-1 grow sm:grow-0 bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0"
+                    class=" h-7 m-1 grow sm:grow-0 bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0"
                     on:click=new_opponent
                 >
                     New Game
                 </button>
                 <a
                     href="/analysis"
-                    class="bg-blue-500 hover:bg-blue-700 duration-300 text-white rounded m-1"
+                    class="bg-ant-blue hover:bg-pillbug-teal duration-300 text-white rounded m-1"
                     on:click=analysis_setup
                 >
                     <Icon icon=Icon::from(TbMicroscope) class="h-7 w-7 py-1"/>
