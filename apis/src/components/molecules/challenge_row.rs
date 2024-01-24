@@ -64,10 +64,10 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             .expect("div_ref to be loaded by now")
             .class_list();
         class_list
-            .remove_2("bg-blue-500", "hover:bg-blue-400")
+            .remove_2("bg-ant-blue", "hover:bg-pillbug-teal")
             .expect("tw classes to exist");
         class_list
-            .add_2("bg-green-500", "hover:bg-green-400")
+            .add_2("bg-grasshopper-green", "hover:bg-green-500")
             .expect("tw classes to be added");
     };
 
@@ -83,21 +83,21 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
         if let (Some(uid), Some(opponent)) = (uid(), challenge().opponent) {
             if challenge().challenger.uid == uid {
                 view! {
-                    <div class="flex">
+                    <div class="flex items-center">
                         <StatusIndicator username=opponent.username.to_owned()/>
                         <ProfileLink
                             username=opponent.username
-                            extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-full sm:line-clamp-none"
+                            extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-[150px]"
                         />
                     </div>
                 }
             } else {
                 view! {
-                    <div class="flex">
+                    <div class="flex items-center">
                         <StatusIndicator username=challenge().challenger.username/>
                         <ProfileLink
                             username=challenge().challenger.username
-                            extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-full sm:line-clamp-none"
+                            extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-[150px]"
                         />
                     </div>
                 }
@@ -108,7 +108,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                     <StatusIndicator username=challenge().challenger.username/>
                     <ProfileLink
                         username=challenge().challenger.username
-                        extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-full sm:line-clamp-none"
+                        extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-[150px]"
                     />
                 </div>
             }
@@ -130,7 +130,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     view! {
         <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center cursor-pointer">
             <td class=td_class>{icon}</td>
-            <td class=format!("w-10 sm:w-32 md:w-full {td_class}")>{player}</td>
+            <td class=format!("w-10 sm:w-36 {td_class}")>{player}</td>
             <td class=td_class>{rating}</td>
             <td class=td_class>
                 <GameType game_type=challenge().game_type/>
@@ -140,7 +140,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                     time_mode=time_mode
                     time_base=challenge().time_base
                     increment=challenge().time_increment
-                    extend_tw_classes="break-words max-w-[40px] sm:max-w-fit"
+                    extend_tw_classes="break-words max-w-[40px] sm:max-w-fit sm:whitespace-nowrap"
                 />
             </td>
             <td class=td_class>
@@ -161,9 +161,9 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                 <button
                                     ref=button_ref
                                     on:click=copy
-                                    class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white py-2 px-2 rounded focus:outline-none focus:shadow-outline m-1"
+                                    class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                                 >
-                                    <Icon icon=Icon::from(AiCopyOutlined)/>
+                                    <Icon icon=Icon::from(AiCopyOutlined) class="w-6 h-6"/>
                                 </button>
                             </Show>
                             <button
@@ -171,7 +171,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     ApiRequests::new().challenge_cancel(challenge().nanoid)
                                 }
 
-                                class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                class="bg-ladybug-red hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                             >
                                 <Icon icon=Icon::from(IoCloseSharp) class="w-6 h-6"/>
                             </button>
@@ -194,7 +194,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                             }
                         }
 
-                        class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                        class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                     >
                         <Icon icon=Icon::from(AiCheckOutlined) class="w-6 h-6"/>
 
@@ -214,7 +214,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     }
                                 }
 
-                                class="bg-red-500 hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                class="bg-ladybug-red hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                             >
                                 <Icon icon=Icon::from(IoCloseSharp) class="w-6 h-6"/>
 

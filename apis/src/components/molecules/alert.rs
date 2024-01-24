@@ -17,9 +17,9 @@ pub fn Alert() -> impl IntoView {
         alerts.last_alert.update(|v| *v = None);
     };
     let color_and_text = move || match (alerts.last_alert)() {
-        Some(AlertType::Error(_)) => ("bg-red-100 border-red-400", "Error! "),
-        Some(AlertType::Warn(_)) => ("bg-yellow-100 border-yellow-400", "Warning! "),
-        Some(AlertType::Notification(_)) => ("bg-blue-100 border-blue-400", "Notification: "),
+        Some(AlertType::Error(_)) => ("bg-red-100 border-ladybug-red", "Error! "),
+        Some(AlertType::Warn(_)) => ("bg-yellow-100 border-queen-orange", "Warning! "),
+        Some(AlertType::Notification(_)) => ("bg-blue-100 border-pillbug-teal", "Notification: "),
         None => ("", ""),
     };
 
@@ -56,7 +56,7 @@ pub fn Alert() -> impl IntoView {
             <span class="absolute top-0 bottom-0 right-0 px-3 py-2 border-y-2">
                 <button
                     on:click=close
-                    class="hover:bg-red-300 duration-300 active:scale-95 rounded-full w-6 h-6 flex items-center justify-center"
+                    class="hover:bg-red-400 duration-300 active:scale-95 rounded-full w-6 h-6 flex items-center justify-center"
                     aria-label="Close"
                 >
                     x

@@ -174,7 +174,7 @@ pub fn ChallengeCreate(
 
     let active_color = move |b| {
         if b {
-            "bg-blue-500"
+            "bg-ant-blue"
         } else {
             "bg-odd-light dark:bg-gray-700"
         }

@@ -27,7 +27,7 @@ pub fn NextGameButton() -> impl IntoView {
     let style = move || {
         match next_games().len() {
             0 => "hidden",
-            _ => "bg-red-700 transform transition-transform duration-300 active:scale-95 hover:bg-red-600 text-white rounded-md px-2 py-1 m-1",
+            _ => "bg-ladybug-red transform transition-transform duration-300 active:scale-95 hover:bg-red-400 text-white rounded-md px-2 py-1 m-1",
         }
     };
     let title_text = move || match next_games().len() {

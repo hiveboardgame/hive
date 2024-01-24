@@ -68,7 +68,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
     });
     let time_is_red = Memo::new(move |_| {
         if time_left() == Duration::from_secs(0) {
-            String::from("bg-red-500")
+            String::from("bg-ladybug-red")
         } else {
             String::new()
         }

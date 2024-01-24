@@ -38,7 +38,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                 view! {
                                     <div class="flex items-center">
                                         <a
-                                            class="bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 m-1 px-4 rounded"
+                                            class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 m-1 px-4 rounded"
                                             href="/login"
                                             on:focus=move |_| set_redirect()
                                             on:click=onclick
@@ -48,7 +48,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                         </a>
                                         <Hamburger hamburger_show=hamburger_show>
                                             <a
-                                                class="bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
+                                                class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
                                                 href="/register"
                                                 on:focus=move |_| set_redirect()
                                                 on:click=onclick
@@ -69,7 +69,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
 
                             <Hamburger hamburger_show=hamburger_show>
                                 <a
-                                    class="bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
+                                    class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
                                     href=format!("/@/{}", user().expect("User is some").username)
 
                                     on:click=move |_| onclick()
@@ -77,7 +77,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                     Profile
                                 </a>
                                 <a
-                                    class="bg-blue-500 hover:bg-blue-700 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
+                                    class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
                                     href="/account"
                                     on:focus=move |_| set_redirect()
                                     on:click=move |_| onclick()

@@ -41,10 +41,10 @@ pub fn ChallengeView() -> impl IntoView {
             .expect("div_ref to be loaded by now")
             .class_list();
         class_list
-            .remove_2("bg-blue-500", "hover:bg-blue-400")
+            .remove_2("bg-ant-blue", "hover:bg-pillbug-teal")
             .expect("tw classes to exist");
         class_list
-            .add_2("bg-green-500", "hover:bg-green-400")
+            .add_2("bg-grasshopper-green", "hover:bg-green-500")
             .expect("tw classes to be added");
     };
 
@@ -84,9 +84,9 @@ pub fn ChallengeView() -> impl IntoView {
                                                 title="Copy link"
                                                 ref=button_ref
                                                 on:click=copy
-                                                class="bg-blue-500 hover:bg-blue-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline m-1"
+                                                class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                                             >
-                                                <Icon icon=Icon::from(AiCopyOutlined)/>
+                                                <Icon icon=Icon::from(AiCopyOutlined) class="h-6 w-6"/>
                                             </button>
                                         </div>
                                         <p>

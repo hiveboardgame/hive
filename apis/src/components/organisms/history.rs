@@ -34,7 +34,7 @@ pub fn HistoryMove(
         let mut class = "ml-3 hover:bg-blue-300 col-span-2 leading-6 h-auto max-h-6 transform transition-transform duration-300 active:scale-95";
         if let Some(history_turn) = (game_state_signal.signal)().history_turn {
             if turn == history_turn {
-                class = "ml-3 hover:bg-blue-300 col-span-2 bg-orange-300 leading-6 h-auto max-h-6 transform transition-transform duration-300 active:scale-95"
+                class = "ml-3 hover:bg-blue-300 col-span-2 bg-queen-orange leading-6 h-auto max-h-6 transform transition-transform duration-300 active:scale-95"
             }
         }
         class
@@ -101,31 +101,29 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         }
     });
 
-    let nav_buttons_style =
-        "flex justify-center h-fit hover:bg-green-400 dark:hover:bg-green-500 transform transition-transform duration-300 active:scale-95 mt-6 rounded-md border-cyan-500 border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed";
     let white_black_styles = "col-span-2";
     view! {
         <div class=format!("h-[90%] grid grid-cols-4 grid-rows-6 gap-1 pb-4 {extend_tw_classes}")>
             <div class="col-span-4 grid grid-cols-4 gap-1 dark:bg-dark bg-light min-h-0 row-span-3 row-start-1">
                 <HistoryButton
-                    nav_buttons_style=nav_buttons_style
+
                     action=HistoryNavigation::First
                     post_action=focus
                 />
 
                 <HistoryButton
-                    nav_buttons_style=nav_buttons_style
+
                     action=HistoryNavigation::Previous
                     post_action=focus
                 />
                 <HistoryButton
-                    nav_buttons_style=nav_buttons_style
+
                     action=HistoryNavigation::Next
                     post_action=focus
                 />
 
                 <HistoryButton
-                    nav_buttons_style=nav_buttons_style
+
                     action=HistoryNavigation::Last
                     post_action=focus
                 />

@@ -54,12 +54,12 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     };
     let timer = expect_context::<TimerSignal>();
     let active_side = create_memo(move |_| match timer.signal.get().finished {
-        true => "bg-stone-200 dark:bg-gray-900",
+        true => "bg-stone-200 dark:bg-dark",
         false => {
             if (side() == Color::White) == (timer.signal.get().turn % 2 == 0) {
-                "bg-green-700"
+                "bg-grasshopper-green"
             } else {
-                "bg-stone-200 dark:bg-gray-900"
+                "bg-stone-200 dark:bg-dark"
             }
         }
     });

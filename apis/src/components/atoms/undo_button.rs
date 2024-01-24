@@ -11,7 +11,7 @@ pub fn UndoButton() -> impl IntoView {
 
     view! {
         <button
-            class="aspect-square hover:bg-blue-400 rounded-sm transform transition-transform duration-300 active:scale-95 flex items-center justify-center"
+            class="aspect-square hover:bg-pillbug-teal rounded-sm transform transition-transform duration-300 active:scale-95 flex items-center justify-center"
             on:click=undo
         >
             <Icon icon=Icon::from(BiUndoRegular) class="h-6 w-6 lg:h-8 lg:w-8"/>

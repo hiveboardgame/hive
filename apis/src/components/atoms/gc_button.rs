@@ -19,9 +19,9 @@ pub fn AcceptDenyGc(
 
     let button_style = move || match game_control() {
         GameControl::DrawReject(_) | GameControl::TakebackReject(_) => {
-            "bg-red-700 hover:bg-red-500 absolute"
+            "bg-red-700 hover:bg-ladybug-red absolute"
         }
-        _ => "mr-1 bg-green-700 hover:bg-green-500 relative",
+        _ => "mr-1 bg-grasshopper-green hover:bg-green-500 relative",
     };
 
     let on_click = move |_| {
@@ -109,13 +109,13 @@ pub fn ConfirmButton(
 
     let conditional_button_style = move || {
         if is_clicked() {
-            "bg-green-500 hover:bg-green-400"
+            "bg-grasshopper-green hover:bg-green-500"
         } else if pending(game_control()) {
-            "bg-cyan-400"
+            "bg-pullbug-teal"
         } else if disabled() {
             ""
         } else {
-            "hover:bg-green-500"
+            "hover:bg-grasshopper-green"
         }
     };
 
@@ -163,7 +163,7 @@ pub fn ConfirmButton(
                 <button
                     title="Cancel"
                     on:click=cancel
-                    class="ml-1 aspect-square bg-red-700 hover:bg-red-500 rounded-sm absolute duration-300"
+                    class="ml-1 aspect-square bg-red-700 hover:bg-ladybug-red rounded-sm absolute duration-300"
                 >
                     <Icon icon=Icon::from(IoCloseSharp) class="h-6 w-6 lg:h-8 lg:w-8"/>
                 </button>

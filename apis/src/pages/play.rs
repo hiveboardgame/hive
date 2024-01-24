@@ -30,7 +30,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     };
 
     let is_tall = use_media_query("(min-height: 100vw)");
-    let nav_buttons_style = "flex place-items-center justify-center hover:bg-green-400 dark:hover:bg-green-500 transform transition-transform duration-300 active:scale-95 my-1 h-6 rounded-md border-cyan-500 border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed";
     let game_state = expect_context::<GameStateSignal>();
     let parent_container_style = move || {
         if is_tall() {
@@ -115,27 +114,10 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             <DisplayTimer vertical=true placement=Placement::Bottom/>
                         </div>
                         <div class="grid grid-cols-4 gap-8">
-                            <HistoryButton
-                                nav_buttons_style=nav_buttons_style
-                                action=HistoryNavigation::First
-                            />
-
-                            <HistoryButton
-                                nav_buttons_style=nav_buttons_style
-                                action=HistoryNavigation::Previous
-                            />
-
-                            <HistoryButton
-                                nav_buttons_style=nav_buttons_style
-                                action=HistoryNavigation::Next
-                                post_action=go_to_game
-                            />
-
-                            <HistoryButton
-                                nav_buttons_style=nav_buttons_style
-                                action=HistoryNavigation::MobileLast
-                            />
-
+                            <HistoryButton action=HistoryNavigation::First/>
+                            <HistoryButton action=HistoryNavigation::Previous/>
+                            <HistoryButton action=HistoryNavigation::Next post_action=go_to_game/>
+                            <HistoryButton action=HistoryNavigation::MobileLast/>
                         </div>
                     </div>
                 </div>

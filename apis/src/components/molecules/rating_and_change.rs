@@ -33,9 +33,9 @@ pub fn RatingAndChange(
         }
     };
     let (sign, style) = match rating_change.cmp(&0_i64) {
-        Ordering::Equal => ("+", "text-cyan-400"),
-        Ordering::Less => ("", "text-li-red"),
-        Ordering::Greater => ("+", "text-li-green"),
+        Ordering::Equal => ("+", "text-pillbug-teal"),
+        Ordering::Less => ("", "text-ladybug-red"),
+        Ordering::Greater => ("+", "text-grasshopper-green"),
     };
 
     view! {

@@ -72,7 +72,7 @@ pub fn Challenges() -> impl IntoView {
         }
     };
     view! {
-        <table class="table-auto">
+        <table class="table-fixed m-2">
             <thead>
                 <tr>
                     <th class=th_class></th>

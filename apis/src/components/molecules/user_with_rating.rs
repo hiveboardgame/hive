@@ -43,23 +43,23 @@ pub fn UserWithRating(
                 if is_tall() { "flex-row gap-1" } else { "flex-col" },
             )
         }>
-            <div class="flex justify-center items-center">
-                {move || {
-                    view! {
+            {move || {
+                view! {
+                    <div class="flex items-center">
                         <StatusIndicator username=username()/>
                         <ProfileLink username=username() extend_tw_classes=text_color/>
-                    }
-                }}
-                <Show
-                    when=is_finished
-                    fallback=move || {
-                        view! { <div class=format!("{text_color}")>{rating()}</div> }
-                    }
-                >
+                    </div>
+                }
+            }}
+            <Show
+                when=is_finished
+                fallback=move || {
+                    view! { <div class=format!("{text_color}")>{rating()}</div> }
+                }
+            >
 
-                    <RatingAndChangeDynamic extend_tw_classes=text_color side=side/>
-                </Show>
-            </div>
+                <RatingAndChangeDynamic extend_tw_classes=text_color side=side/>
+            </Show>
         </div>
     }
 }
