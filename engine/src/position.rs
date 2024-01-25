@@ -33,6 +33,10 @@ impl Position {
         Self { q: 16, r: 16 }
     }
 
+    pub fn initial_spawn_black() -> Self {
+        Self { q: 17, r: 16 }
+    }
+
     fn wrap_around(num: i32) -> i32 {
         if num == (BOARD_SIZE - 1) {
             return -1;
