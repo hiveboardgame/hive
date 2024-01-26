@@ -106,9 +106,9 @@ fn on_message_callback(m: String) {
             log!("Got a game action response message: {:?}", gar);
             if gar.game.finished {
                 log!("Removing finished game {}", gar.game.nanoid.clone());
-                games.games_remove(&gar.game.nanoid);
+                games.own_games_remove(&gar.game.nanoid);
             } else {
-                games.games_add(gar.game.to_owned());
+                games.own_games_add(gar.game.to_owned());
             }
             let navigation_controller = expect_context::<NavigationControllerSignal>();
             if let Some(nanoid) = navigation_controller.signal.get_untracked().nanoid {
@@ -135,7 +135,7 @@ fn on_message_callback(m: String) {
                             match game_control {
                                 GameControl::Abort(_) => {
                                     let alerts = expect_context::<AlertsContext>();
-                                    games.games_remove(&gar.game.nanoid);
+                                    games.own_games_remove(&gar.game.nanoid);
                                     alerts.last_alert.update(|v| {
                                         *v = Some(AlertType::Warn(format!(
                                             "{} aborted the game",
@@ -212,7 +212,7 @@ fn on_message_callback(m: String) {
                     .map(|g| g.nanoid.clone())
                     .collect::<Vec<String>>()
             );
-            games.games_set(new_games);
+            games.own_games_set(new_games);
         }
         Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Challenges(
             new_challanges,
@@ -228,12 +228,13 @@ fn on_message_callback(m: String) {
                 let timer = expect_context::<TimerSignal>();
                 timer.update_from(&game);
             }
-            if let GameStatus::Finished(_) = game.game_status {
-                games.games_remove(&game.nanoid);
-            }
+        }
+        Ok(ServerResult::Ok(ServerMessage::GameTimedOut(nanoid))) => {
+            games.own_games_remove(&nanoid);
+            games.live_games_remove(&nanoid);
         }
         Ok(ServerResult::Ok(ServerMessage::GameNew(game_response))) => {
-            games.games_add(game_response.to_owned());
+            games.own_games_add(game_response.to_owned());
             let should_navigate = match TimeMode::from_str(&game_response.time_mode) {
                 Ok(TimeMode::RealTime) => true,
                 Ok(TimeMode::Correspondence) | Ok(TimeMode::Untimed) => {
@@ -273,6 +274,10 @@ fn on_message_callback(m: String) {
         Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Removed(nanoid)))) => {
             let mut challenges = expect_context::<ChallengeStateSignal>();
             challenges.remove(nanoid);
+        }
+        Ok(ServerResult::Ok(ServerMessage::GameSpectate(game))) => {
+            let mut games = expect_context::<GamesSignal>();
+            games.live_games_add(game);
         }
         Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Created(challenge))))
         | Ok(ServerResult::Ok(ServerMessage::Challenge(ChallengeUpdate::Direct(challenge)))) => {

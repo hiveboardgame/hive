@@ -11,7 +11,8 @@ use std::str::FromStr;
 
 #[derive(Clone, Debug, Copy)]
 pub struct GamesSignal {
-    pub signal: RwSignal<GamesState>,
+    pub own: RwSignal<OwnGames>,
+    pub live: RwSignal<LiveGames>,
 }
 
 impl Default for GamesSignal {
@@ -23,20 +24,21 @@ impl Default for GamesSignal {
 impl GamesSignal {
     pub fn new() -> Self {
         Self {
-            signal: create_rw_signal(GamesState::new()),
+            own: create_rw_signal(OwnGames::new()),
+            live: create_rw_signal(LiveGames::new()),
         }
     }
 
     pub fn update_next_games(&mut self) {
-        if self.signal.get_untracked().games.is_empty() {
-            self.signal.update(|s| {
+        if self.own.get_untracked().games.is_empty() {
+            self.own.update(|s| {
                 s.next_games.clear();
             });
             return;
         }
         let auth_context = expect_context::<AuthContext>();
         if let Some(Ok(Some(user))) = untrack(auth_context.user) {
-            self.signal.update(|s| {
+            self.own.update(|s| {
                 let mut games: Vec<GameResponse> = s.games.values().cloned().collect();
                 games.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
                 let mut games_with_time = games
@@ -96,7 +98,7 @@ impl GamesSignal {
     pub fn visit_game(&mut self) -> Option<String> {
         let mut next_game = None;
         let navigation_controller = expect_context::<NavigationControllerSignal>();
-        self.signal.update(|s| {
+        self.own.update(|s| {
             let mut games = s.next_games.clone();
             log!("Games in visit: {:?}", games);
             if let Some(nanoid) = navigation_controller.signal.get_untracked().nanoid {
@@ -110,9 +112,9 @@ impl GamesSignal {
         next_game
     }
 
-    pub fn games_add(&mut self, game: GameResponse) {
+    pub fn own_games_add(&mut self, game: GameResponse) {
         let mut update_required = true;
-        self.signal.update_untracked(|s| {
+        self.own.update_untracked(|s| {
             if let Some(already_present_game) = s.games.get(&game.nanoid) {
                 if already_present_game.updated_at == game.updated_at {
                     update_required = false
@@ -127,30 +129,60 @@ impl GamesSignal {
         }
     }
 
-    pub fn games_remove(&mut self, game_id: &str) {
-        self.signal.update_untracked(|s| {
+    pub fn own_games_remove(&mut self, game_id: &str) {
+        self.own.update_untracked(|s| {
             s.games.remove(game_id);
         });
         self.update_next_games();
     }
 
-    pub fn games_set(&mut self, games: Vec<GameResponse>) {
+    pub fn remove_from_next_games(&mut self, game_id: &str) {
+        self.own.update_untracked(|s| {
+            s.next_games.retain(|g| g != game_id);
+        });
+        self.update_next_games();
+    }
+
+    pub fn own_games_set(&mut self, games: Vec<GameResponse>) {
         for game in games {
-            self.signal.update_untracked(|s| {
+            self.own.update_untracked(|s| {
                 s.games.insert(game.nanoid.to_owned(), game);
             });
         }
         self.update_next_games();
     }
+
+    pub fn live_games_add(&mut self, game: GameResponse) {
+        let auth_context = expect_context::<AuthContext>();
+        let mut should_show = true;
+        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+            if game.black_player.uid == user.id || game.white_player.uid == user.id {
+                should_show = false;
+            }
+        }
+        if game.finished {
+            self.live_games_remove(&game.nanoid);
+        } else if should_show {
+            self.live.update(|s| {
+                s.live_games.insert(game.nanoid.to_owned(), game);
+            });
+        }
+    }
+
+    pub fn live_games_remove(&mut self, game_id: &str) {
+        self.live.update(|s| {
+            s.live_games.remove(game_id);
+        });
+    }
 }
 
 #[derive(Clone, Debug)]
-pub struct GamesState {
+pub struct OwnGames {
     pub games: HashMap<String, GameResponse>,
     pub next_games: Vec<String>,
 }
 
-impl GamesState {
+impl OwnGames {
     pub fn new() -> Self {
         Self {
             next_games: Vec::new(),
@@ -159,7 +191,26 @@ impl GamesState {
     }
 }
 
-impl Default for GamesState {
+impl Default for OwnGames {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct LiveGames {
+    pub live_games: HashMap<String, GameResponse>,
+}
+
+impl LiveGames {
+    pub fn new() -> Self {
+        Self {
+            live_games: HashMap::new(),
+        }
+    }
+}
+
+impl Default for LiveGames {
     fn default() -> Self {
         Self::new()
     }

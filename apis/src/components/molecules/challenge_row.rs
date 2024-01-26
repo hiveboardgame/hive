@@ -128,104 +128,119 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     };
 
     view! {
-        <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center cursor-pointer">
-            <td class=td_class>{icon}</td>
-            <td class=format!("w-10 sm:w-36 {td_class}")>{player}</td>
-            <td class=td_class>{rating}</td>
+        <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center cursor-pointer max-w-fit">
             <td class=td_class>
-                <GameType game_type=challenge().game_type/>
+                <div>{icon}</div>
+            </td>
+            <td class=format!("w-10 sm:w-36 {td_class}")>
+                <div class="flex justify-center items-center">{player}</div>
             </td>
             <td class=td_class>
-                <TimeRow
-                    time_mode=time_mode
-                    time_base=challenge().time_base
-                    increment=challenge().time_increment
-                    extend_tw_classes="break-words max-w-[40px] sm:max-w-fit sm:whitespace-nowrap"
-                />
+                <div class="flex justify-center items-center">{rating}</div>
             </td>
             <td class=td_class>
-                <span class="font-bold">{if challenge().rated { "YES" } else { "NO" }}</span>
+                <div class="flex justify-center items-center">
+                    <GameType game_type=challenge().game_type/>
+                </div>
             </td>
             <td class=td_class>
-                <Show
-                    when=move || {
-                        let uid = uid();
-                        uid != Some(challenge().challenger.uid)
-                    }
-
-                    fallback=move || {
-                        view! {
-                            <Show when=move || {
-                                challenge().visibility == ChallengeVisibility::Private && !single
-                            }>
-                                <button
-                                    ref=button_ref
-                                    on:click=copy
-                                    class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
-                                >
-                                    <Icon icon=Icon::from(AiCopyOutlined) class="w-6 h-6"/>
-                                </button>
-                            </Show>
-                            <button
-                                on:click=move |_| {
-                                    ApiRequests::new().challenge_cancel(challenge().nanoid)
-                                }
-
-                                class="bg-ladybug-red hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
-                            >
-                                <Icon icon=Icon::from(IoCloseSharp) class="w-6 h-6"/>
-                            </button>
+                <div class="flex justify-center items-center">
+                    <TimeRow
+                        time_mode=time_mode
+                        time_base=challenge().time_base
+                        increment=challenge().time_increment
+                        extend_tw_classes="break-words max-w-[40px] sm:max-w-fit sm:whitespace-nowrap"
+                    />
+                </div>
+            </td>
+            <td class=td_class>
+                <div class="flex justify-center items-center">
+                    <span class="font-bold">{if challenge().rated { "YES" } else { "NO" }}</span>
+                </div>
+            </td>
+            <td class=td_class>
+                <div class="flex justify-center items-center">
+                    <Show
+                        when=move || {
+                            let uid = uid();
+                            uid != Some(challenge().challenger.uid)
                         }
-                    }
-                >
 
-                    <button
-                        on:click=move |_| {
-                            match (auth_context.user)() {
-                                Some(Ok(Some(_))) => {
-                                    let mut game_state = expect_context::<GameStateSignal>();
-                                    game_state.full_reset();
-                                    ApiRequests::new().challenge_accept(challenge().nanoid);
-                                }
-                                _ => {
-                                    let navigate = use_navigate();
-                                    navigate("/login", Default::default());
-                                }
+                        fallback=move || {
+                            view! {
+                                <Show when=move || {
+                                    challenge().visibility == ChallengeVisibility::Private
+                                        && !single
+                                }>
+                                    <button
+                                        ref=button_ref
+                                        on:click=copy
+                                        class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                    >
+                                        <Icon icon=Icon::from(AiCopyOutlined) class="w-6 h-6"/>
+                                    </button>
+                                </Show>
+                                <button
+                                    on:click=move |_| {
+                                        ApiRequests::new().challenge_cancel(challenge().nanoid)
+                                    }
+
+                                    class="bg-ladybug-red hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                >
+                                    <Icon icon=Icon::from(IoCloseSharp) class="w-6 h-6"/>
+                                </button>
                             }
                         }
-
-                        class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                     >
-                        <Icon icon=Icon::from(AiCheckOutlined) class="w-6 h-6"/>
 
-                    </button>
-                    {if challenge().opponent.is_some() {
-                        view! {
-                            <button
-                                on:click=move |_| {
-                                    match (auth_context.user)() {
-                                        Some(Ok(Some(_))) => {
-                                            ApiRequests::new().challenge_cancel(challenge().nanoid);
-                                        }
-                                        _ => {
-                                            let navigate = use_navigate();
-                                            navigate("/login", Default::default());
-                                        }
+                        <button
+                            on:click=move |_| {
+                                match (auth_context.user)() {
+                                    Some(Ok(Some(_))) => {
+                                        let mut game_state = expect_context::<GameStateSignal>();
+                                        game_state.full_reset();
+                                        ApiRequests::new().challenge_accept(challenge().nanoid);
+                                    }
+                                    _ => {
+                                        let navigate = use_navigate();
+                                        navigate("/login", Default::default());
                                     }
                                 }
+                            }
 
-                                class="bg-ladybug-red hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
-                            >
-                                <Icon icon=Icon::from(IoCloseSharp) class="w-6 h-6"/>
+                            class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                        >
+                            <Icon icon=Icon::from(AiCheckOutlined) class="w-6 h-6"/>
 
-                            </button>
-                        }
-                            .into_view()
-                    } else {
-                        view! {}.into_view()
-                    }}
+                        </button>
+                        {if challenge().opponent.is_some() {
+                            view! {
+                                <button
+                                    on:click=move |_| {
+                                        match (auth_context.user)() {
+                                            Some(Ok(Some(_))) => {
+                                                ApiRequests::new().challenge_cancel(challenge().nanoid);
+                                            }
+                                            _ => {
+                                                let navigate = use_navigate();
+                                                navigate("/login", Default::default());
+                                            }
+                                        }
+                                    }
 
-                </Show>
+                                    class="bg-ladybug-red hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                >
+                                    <Icon icon=Icon::from(IoCloseSharp) class="w-6 h-6"/>
+
+                                </button>
+                            }
+                                .into_view()
+                        } else {
+                            view! {}.into_view()
+                        }}
+
+                    </Show>
+                </div>
             </td>
         </tr>
     }

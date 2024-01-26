@@ -71,8 +71,13 @@ pub fn Challenges() -> impl IntoView {
             Vec::new()
         }
     };
+    let has_games = move |list: Vec<ChallengeResponse>| !list.is_empty();
+    let not_hidden =
+        Memo::new(move |_| has_games(direct()) || has_games(own()) || has_games(public()));
     view! {
-        <table class="table-fixed m-2">
+        <table class=move || {
+            format!("table-fixed max-w-fit m-2 {}", if not_hidden() { "" } else { "hidden" })
+        }>
             <thead>
                 <tr>
                     <th class=th_class></th>

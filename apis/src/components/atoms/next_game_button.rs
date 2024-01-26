@@ -11,7 +11,7 @@ pub fn NextGameButton() -> impl IntoView {
     let navigation_controller = expect_context::<NavigationControllerSignal>();
     let games = expect_context::<GamesSignal>();
     let next_games = move || {
-        games.signal.with(|games_state| {
+        games.own.with(|games_state| {
             if let Some(nanoid) = navigation_controller.signal.get().nanoid {
                 games_state
                     .next_games

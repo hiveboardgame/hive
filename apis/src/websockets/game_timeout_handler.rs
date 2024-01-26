@@ -29,11 +29,16 @@ impl GameTimeoutHandler {
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut messages = Vec::new();
         let game = self.game.check_time(&self.pool).await?;
+        let game_response = GameResponse::new_from_db(&game, &self.pool).await?;
+        if game.finished {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::Global,
+                message: ServerMessage::GameTimedOut(game_response.nanoid.clone()),
+            });
+        }
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(self.game.nanoid.clone()),
-            message: ServerMessage::GameTimeoutCheck(
-                GameResponse::new_from_db(&game, &self.pool).await?,
-            ),
+            message: ServerMessage::GameTimeoutCheck(game_response),
         });
         Ok(messages)
     }

@@ -8,6 +8,8 @@ use crate::{
 use anyhow::Result;
 use db_lib::{models::game::Game, models::user::User, DbPool};
 use hive_lib::{game_error::GameError, state::State, turn::Turn};
+use shared_types::time_mode::TimeMode;
+use std::str::FromStr;
 use uuid::Uuid;
 
 use super::internal_server_message::{InternalServerMessage, MessageDestination};
@@ -93,16 +95,24 @@ impl TurnHandler {
             destination: MessageDestination::User(game.current_player_id),
             message: ServerMessage::GameActionNotification(game_responses),
         });
+        let response = GameResponse::new_from_db(&game, &self.pool).await?;
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(self.game.nanoid.clone()),
             message: ServerMessage::GameUpdate(GameActionResponse {
                 game_id: self.game.nanoid.to_owned(),
-                game: GameResponse::new_from_db(&game, &self.pool).await?,
+                game: response.clone(),
                 game_action: GameAction::Move(self.turn.clone()),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
             }),
         });
+        // TODO: Just add the few top games and keep them rated
+        if TimeMode::from_str(&response.time_mode)? == TimeMode::RealTime {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::Global,
+                message: ServerMessage::GameSpectate(response),
+            });
+        };
         Ok(messages)
     }
 

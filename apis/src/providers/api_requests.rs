@@ -32,7 +32,8 @@ impl ApiRequests {
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
         let mut games = expect_context::<GamesSignal>();
-        games.games_remove(&game_id);
+        // TODO: fix this so that it just removes from next_games games.remove_from_next_games(&game_id);
+        games.own_games_remove(&game_id);
     }
 
     pub fn ping(&self) {
