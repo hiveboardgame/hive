@@ -12,3 +12,4 @@ pub mod online_users;
 pub mod players;
 pub mod reserve;
 pub mod side_board;
+pub mod tv;

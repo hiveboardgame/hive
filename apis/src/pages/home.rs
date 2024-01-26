@@ -1,3 +1,4 @@
+use crate::components::organisms::tv::Tv;
 use crate::providers::auth_context::AuthContext;
 use crate::{
     components::{
@@ -31,16 +32,17 @@ pub fn Home() -> impl IntoView {
                     Create New Game
                 </button>
             </Show>
-            <div class="flex flex-col md:flex-row justify-center">
+            <div class="flex flex-col md:flex-row justify-center items-center">
                 <Modal open=open dialog_el=dialog_el>
                     <ChallengeCreate close=close_modal/>
                 </Modal>
-                <div class="flex">
-                    <div class="flex flex-col w-full">
+                <div class="flex flex-col md:flex-row w-full items-center md:items-start">
+                    <div class="flex flex-col">
                         <Challenges/>
+                        <Tv/>
                     </div>
+                    <PlayersView/>
                 </div>
-                <PlayersView/>
             </div>
         </div>
     }

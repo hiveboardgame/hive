@@ -50,7 +50,9 @@ pub enum ServerMessage {
     GameActionNotification(Vec<GameResponse>),
     GameUpdate(GameActionResponse),
     GameTimeoutCheck(GameResponse),
+    GameTimedOut(String),
     GameNew(GameResponse),
+    GameSpectate(GameResponse),
     Challenge(ChallengeUpdate),
     UserStatus(UserUpdate),
     // sent to everyone in the game when a user joins the game
