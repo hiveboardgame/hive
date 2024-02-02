@@ -11,7 +11,7 @@ use crate::{
 use chrono::Utc;
 use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
 use leptos::*;
-use leptos_icons::{Icon, RiIcon::RiSwordOthersLine};
+use leptos_icons::*;
 use shared_types::time_mode::TimeMode;
 use std::str::FromStr;
 
@@ -117,7 +117,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                         </Show>
 
                     </div>
-                    <Icon icon=Icon::from(RiSwordOthersLine)/>
+                    <Icon icon=icondata::RiSwordOthersLine/>
                     <div class="ml-2">
                         <div class="flex items-center">
                             <StatusIndicator username=game().black_player.username/>

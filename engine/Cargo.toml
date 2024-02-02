@@ -16,7 +16,7 @@ path = "src/main.rs" # replace bin.rs with name of your file
 lazy_static = "*"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
-serde_with = "3.3.0"
+serde_with = "3.5.1"
 thiserror = "*"
 bitfield-struct = "0.5"
-itertools = "0.11.0"
+itertools = "0.12.0"

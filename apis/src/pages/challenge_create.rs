@@ -5,10 +5,7 @@ use crate::{
 };
 use hive_lib::{color::ColorChoice, game_type::GameType};
 use leptos::*;
-use leptos_icons::{
-    BsIcon::{BsHexagon, BsHexagonFill, BsHexagonHalf},
-    Icon,
-};
+use leptos_icons::*;
 use leptos_use::use_debounce_fn_with_arg;
 use shared_types::time_mode::{CorrespondenceMode, TimeMode};
 use std::str::FromStr;
@@ -58,20 +55,20 @@ pub fn ChallengeCreate(
     let icon = move |color_choice: ColorChoice| {
         move || match color_choice {
             ColorChoice::Random => {
-                view! { <Icon icon=Icon::from(BsHexagonHalf) class="w-full h-full"/> }
+                view! { <Icon icon=icondata::BsHexagonHalf class="w-full h-full"/> }
             }
             ColorChoice::White => {
                 if (color_context().prefers_dark)() {
-                    view! { <Icon icon=Icon::from(BsHexagonFill) class="fill-white w-full h-full"/> }
+                    view! { <Icon icon=icondata::BsHexagonFill class="fill-white w-full h-full"/> }
                 } else {
-                    view! { <Icon icon=Icon::from(BsHexagon) class="stroke-black stroke-1 w-full h-full"/> }
+                    view! { <Icon icon=icondata::BsHexagon class="stroke-black stroke-1 w-full h-full"/> }
                 }
             }
             ColorChoice::Black => {
                 if (color_context().prefers_dark)() {
-                    view! { <Icon icon=Icon::from(BsHexagon) class="stroke-white stroke-1 w-full h-full"/> }
+                    view! { <Icon icon=icondata::BsHexagon class="stroke-white stroke-1 w-full h-full"/> }
                 } else {
-                    view! { <Icon icon=Icon::from(BsHexagonFill) class="fill-black w-full h-full"/> }
+                    view! { <Icon icon=icondata::BsHexagonFill class="fill-black w-full h-full"/> }
                 }
             }
         }

@@ -15,22 +15,20 @@ pub async fn login(
     let pool = pool()?;
     let user: User = User::find_by_username(&username, &pool)
         .await
-        .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
+        .map_err(ServerFnError::new)?;
 
     let argon2 = Argon2::default();
     let parsed_hash =
-        PasswordHash::new(&user.password).map_err(|e| ServerFnError::ServerError(e.to_string()))?;
+        PasswordHash::new(&user.password).map_err(ServerFnError::new)?;
     match argon2.verify_password(password.as_bytes(), &parsed_hash) {
         Ok(_) => {
             let req = use_context::<actix_web::HttpRequest>()
                 .ok_or("Failed to get HttpRequest")
-                .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
-            Identity::login(&req.extensions(), user.id.to_string()).expect("Login");
+                .map_err(ServerFnError::new)?;
+            Identity::login(&req.extensions(), user.id.to_string())?;
             leptos_actix::redirect(&pathname);
             AccountResponse::from_uuid(&user.id, &pool).await
         }
-        Err(_) => Err(ServerFnError::ServerError(
-            "Password does not match.".to_string(),
-        )),
+        Err(_) => Err(ServerFnError::new("Password does not match.")),
     }
 }

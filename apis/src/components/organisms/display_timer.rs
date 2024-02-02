@@ -4,7 +4,7 @@ use crate::{
 };
 use hive_lib::color::Color;
 use leptos::*;
-use leptos_icons::{BiIcon::BiInfiniteRegular, Icon};
+use leptos_icons::*;
 use shared_types::time_mode::TimeMode;
 use std::str::FromStr;
 
@@ -85,9 +85,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                     match TimeMode::from_str(&timer.signal.get().time_mode).expect("Valid TimeMode")
                     {
                         TimeMode::Untimed => {
-                            view! {
-                                <Icon icon=Icon::from(BiInfiniteRegular) class="h-full w-full"/>
-                            }
+                            view! { <Icon icon=icondata::BiInfiniteRegular class="h-full w-full"/> }
                         }
                         TimeMode::Correspondence | TimeMode::RealTime => {
                             view! { <LiveTimer side=side()/> }

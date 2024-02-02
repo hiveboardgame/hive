@@ -57,7 +57,6 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(actix_web::web::Data::new(pool.clone()))
             .app_data(actix_web::web::Data::new(chat_server.clone()))
-            .route("/api/{tail:.*}", leptos_actix::handle_server_fns())
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             // serve other assets from the `assets` directory

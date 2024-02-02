@@ -49,11 +49,7 @@ pub fn App() -> impl IntoView {
                     view=|| {
                         view! {
                             <BaseLayout>
-                                // <ErrorBoundary fallback=| errors| {
-                                // view! {  <ErrorTemplate errors=errors/> }
-                                // }>
                                 <Outlet/>
-                            // </ErrorBoundary>
                             </BaseLayout>
                         }
                     }

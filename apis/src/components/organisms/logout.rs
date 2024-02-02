@@ -10,7 +10,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
         <ActionForm
             action=auth_context.logout
             class=format!(
-                "bg-ant-blue hover:bg-ladybug-red transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded {extend_tw_classes}",
+                "bg-ant-blue hover:bg-ladybug-red transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded cursor-pointer {extend_tw_classes}",
             )
         >
 
@@ -19,6 +19,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                     websocket_context.close();
                 }
 
+                class="cursor-pointer"
                 type="submit"
                 value="Logout"
             />

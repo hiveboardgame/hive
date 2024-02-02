@@ -9,7 +9,7 @@ pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError>
     let pool = pool()?;
     UserResponse::from_uuid(&uuid, &pool)
         .await
-        .map_err(|e| ServerFnError::ServerError(e.to_string()))
+        .map_err(ServerFnError::new)
 }
 
 #[server]
@@ -18,7 +18,7 @@ pub async fn get_user_by_username(username: String) -> Result<UserResponse, Serv
     let pool = pool()?;
     UserResponse::from_username(&username, &pool)
         .await
-        .map_err(|e| ServerFnError::ServerError(e.to_string()))
+        .map_err(ServerFnError::new)
 }
 
 #[server]

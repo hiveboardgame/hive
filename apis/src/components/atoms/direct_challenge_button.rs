@@ -3,7 +3,7 @@ use crate::{
     providers::auth_context::AuthContext,
 };
 use leptos::{html::Dialog, *};
-use leptos_icons::{Icon, RiIcon::RiSwordOthersLine};
+use leptos_icons::*;
 
 #[component]
 pub fn DirectChallenge(username: StoredValue<String>) -> impl IntoView {
@@ -35,7 +35,7 @@ pub fn DirectChallenge(username: StoredValue<String>) -> impl IntoView {
                 on:click=move |_| open.update(move |b| *b = true)
                 class="mx-2 bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 rounded p-1 text-white"
             >
-                <Icon icon=Icon::from(RiSwordOthersLine) class="h-6 w-6"/>
+                <Icon icon=icondata::RiSwordOthersLine class="h-6 w-6"/>
             </button>
         </Show>
     }

@@ -19,8 +19,8 @@ pub async fn register(
     use rand_core::OsRng;
 
     if password != password_confirmation {
-        return Err(ServerFnError::ServerError(
-            "Passwords don't match.".to_string(),
+        return Err(ServerFnError::new(
+            "Passwords don't match."
         ));
     }
 
@@ -29,14 +29,14 @@ pub async fn register(
     let salt = SaltString::generate(&mut OsRng);
     let password = argon2
         .hash_password(password.as_bytes(), &salt)
-        .map_err(|e| ServerFnError::ServerError(e.to_string()))?
+        .map_err(ServerFnError::new)?
         .to_string();
 
     let new_user = NewUser::new(&username, &password, &email)?;
     let user = User::create(&new_user, &pool).await?;
     let req = use_context::<actix_web::HttpRequest>()
         .ok_or("Failed to get HttpRequest")
-        .map_err(|e| ServerFnError::ServerError(e.to_string()))?;
+        .map_err(ServerFnError::new)?;
     Identity::login(&req.extensions(), user.id.to_string()).expect("To have logged in");
     leptos_actix::redirect(&pathname);
 

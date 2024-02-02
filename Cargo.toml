@@ -9,73 +9,50 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-leptos = { version = "0.5", features = ["nightly"] }
-leptos-use = { version = "0.8" }
-leptos_meta = { version = "0.5", features = ["nightly"] }
-leptos_router = { version = "0.5", features = ["nightly"] }
-leptos_actix = { version = "0.5" }
-leptos_icons = { version = "0.1", default_features = false, features = [
-    "AiCheckOutlined",
-    "TbMicroscope",
-    "AiCopyOutlined",
-    "AiFlagOutlined",
-    "AiFastBackwardFilled",
-    "AiStopOutlined",
-    "AiStepBackwardFilled",
-    "AiFastForwardFilled",
-    "AiStepForwardFilled",
-    "AiMailOutlined",
-    "BiInfiniteRegular",
-    "BiUndoRegular",
-    "BiCircleSolid",
-    "BiNoSignalRegular",
-    "BiSignal5Regular",
-    "BsHexagon",
-    "BsHexagonFill",
-    "BsHexagonHalf",
-    "BiStopwatchRegular",
-    "IoCloseSharp",
-    "ChMenuHamburger",
-    "FaHandshakeSimpleSolid",
-    "RiSwordOthersLine"
-] }
+leptos = { version = "0.6" , features = ["nightly"] }
+leptos-use = { version = "0.10" }
+leptos_meta =  { version = "0.6" , features = ["nightly"] }
+leptos_router =  { version = "0.6" , features = ["nightly"] }
+leptos_actix =  { version = "0.6" }
+leptos_icons = { version = "0.3"}
+icondata = {version = "0.3"}
 actix-web = { version = "4",  features = ["macros"] }
 actix-files = { version = "0.6" }
 actix-web-actors = { version  = "4.2.0" }
 actix = "0.13.1"
 actix-rt = "2.9.0"
-actix-identity = { version = "0.6" }
-actix-session = { version = "0.8", features = ["cookie-session"] }
+actix-identity = { version = "0.7" }
+actix-session = { version = "0.9", features = ["cookie-session"] }
 argon2 = "0.5"
 sha2 = "0.10"
 serde = { version = "1", feature = ["derive"] }
-serde_with = { version = "3.4" }
-http-serde = { version = "1" }
+serde_with = { version = "3.5" }
+http-serde = { version = "2" }
 serde_json = { version = "1" }
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 regex = "1.10"
-http = "0.2.9"
+http = "1.0.0"
 log = "0.4.20"
-simple_logger = "4.2.0"
+simple_logger = "4.3.3"
 thiserror = "1"
 anyhow = "1"
-tokio = { version = "1.32.0", features = ["full"] }
-wasm-bindgen = "0.2.88"
-web-sys = {version = "0.3.6", features = ["AbortController", "AbortSignal", "Clipboard", "HtmlDocument", "SvgPoint","SvgsvgElement", "SvgGraphicsElement", "SvgMatrix"] }
+tokio = { version = "1.35.1", features = ["full"] }
+wasm-bindgen = "0.2.90"
+web-sys = {version = "0.3.67", features = ["AbortController", "AbortSignal", "Clipboard", "HtmlDocument", "SvgPoint","SvgsvgElement", "SvgGraphicsElement", "SvgMatrix"] }
 bb8 = { version = "0.8" }
 diesel = { version = "2.1", features = ["postgres", "chrono", "uuid", "serde_json"] }
 diesel-async = { version = "0.4", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.1", features = ["postgres"]}
-uuid = { version = "1.4", features = ["v4", "wasm-bindgen", "serde"] }
+uuid = { version = "1.7", features = ["v4", "js", "serde"] }
 nanoid = "0.4"
 dotenvy = "0.15"
 lazy_static = "1.4"
 rand = "0.8"
 rand_core = "0.6"
-cookie = "0.17"
-skillratings = "0.25"
+cookie = "0.18"
+skillratings = "0.26"
 chrono = { version = "0.4", features = ["serde"] }
 
 # Defines a size-optimized profile for the WASM bundle in release mode
