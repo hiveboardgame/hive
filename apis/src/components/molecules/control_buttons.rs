@@ -8,7 +8,7 @@ use crate::{
 };
 use hive_lib::{color::ColorChoice, game_control::GameControl, game_status::GameStatus};
 use leptos::*;
-use leptos_icons::{Icon, TbIcon::TbMicroscope};
+use leptos_icons::*;
 
 #[component]
 pub fn ControlButtons() -> impl IntoView {
@@ -261,7 +261,7 @@ pub fn ControlButtons() -> impl IntoView {
                     class="bg-ant-blue hover:bg-pillbug-teal duration-300 text-white rounded m-1"
                     on:click=analysis_setup
                 >
-                    <Icon icon=Icon::from(TbMicroscope) class="h-7 w-7 py-1"/>
+                    <Icon icon=icondata::TbMicroscope class="h-7 w-7 py-1"/>
                 </a>
             </Show>
         </div>

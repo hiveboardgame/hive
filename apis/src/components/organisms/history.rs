@@ -88,7 +88,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 .expect("window to exist")
                 .document()
                 .expect("window to have a document")
-                .query_selector(".bg-orange-300")
+                .query_selector(".bg-queen-orange")
                 .expect("to have an Element")
         } else {
             None

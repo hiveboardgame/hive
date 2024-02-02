@@ -1,7 +1,7 @@
 use crate::providers::auth_context::AuthContext;
 use leptos::html::Div;
 use leptos::*;
-use leptos_icons::{ChIcon::ChMenuHamburger, Icon};
+use leptos_icons::*;
 use leptos_use::on_click_outside;
 
 #[component]
@@ -14,7 +14,7 @@ pub fn Hamburger(hamburger_show: RwSignal<bool>, children: ChildrenFn) -> impl I
         if let Some(Ok(Some(user))) = (auth_context.user)() {
             user.username.into_view()
         } else {
-            view! { <Icon icon=Icon::from(ChMenuHamburger)/> }
+            view! { <Icon icon=icondata::ChMenuHamburger/> }
         }
     };
     view! {

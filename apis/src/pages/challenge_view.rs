@@ -2,7 +2,7 @@ use crate::components::molecules::challenge_row::ChallengeRow;
 use crate::functions::{challenges::get::get_challenge_by_nanoid, hostname::hostname_and_port};
 use crate::providers::auth_context::AuthContext;
 use leptos::*;
-use leptos_icons::{AiIcon::AiCopyOutlined, Icon};
+use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::use_window;
 
@@ -86,7 +86,7 @@ pub fn ChallengeView() -> impl IntoView {
                                                 on:click=copy
                                                 class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                                             >
-                                                <Icon icon=Icon::from(AiCopyOutlined) class="h-6 w-6"/>
+                                                <Icon icon=icondata::AiCopyOutlined class="h-6 w-6"/>
                                             </button>
                                         </div>
                                         <p>

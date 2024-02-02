@@ -1,9 +1,5 @@
 use leptos::*;
-use leptos_icons::{
-    AiIcon::AiMailOutlined,
-    BiIcon::{BiInfiniteRegular, BiStopwatchRegular},
-    Icon,
-};
+use leptos_icons::*;
 use shared_types::time_mode::TimeMode;
 
 #[component]
@@ -15,12 +11,12 @@ pub fn TimeRow(
 ) -> impl IntoView {
     let time_mode = store_value(time_mode);
     let icon = move || match time_mode() {
-        TimeMode::Untimed => Icon::from(BiInfiniteRegular),
-        TimeMode::RealTime => Icon::from(BiStopwatchRegular),
+        TimeMode::Untimed => icondata::BiInfiniteRegular,
+        TimeMode::RealTime => icondata::BiStopwatchRegular,
 
-        TimeMode::Correspondence if time_base.is_some() => Icon::from(AiMailOutlined),
+        TimeMode::Correspondence if time_base.is_some() => icondata::AiMailOutlined,
 
-        TimeMode::Correspondence if increment.is_some() => Icon::from(AiMailOutlined),
+        TimeMode::Correspondence if increment.is_some() => icondata::AiMailOutlined,
 
         _ => unreachable!(),
     };

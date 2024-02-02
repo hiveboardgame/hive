@@ -1,9 +1,7 @@
 use hive_lib::game_control::GameControl;
+use icondata::Icon;
 use leptos::*;
-use leptos_icons::{
-    AiIcon::AiFlagOutlined, AiIcon::AiStopOutlined, BiIcon::BiUndoRegular,
-    FaIcon::FaHandshakeSimpleSolid, Icon, IoIcon::IoCloseSharp,
-};
+use leptos_icons::*;
 use leptos_use::{use_interval_with_options, UseIntervalOptions, UseIntervalReturn};
 use uuid::Uuid;
 
@@ -153,7 +151,7 @@ pub fn ConfirmButton(
 
                 <Icon
                     icon=icon
-                    class=Signal::derive(move || {
+                    class=TextProp::from(move || {
                         format!("h-6 w-6 lg:h-8 lg:w-8 {}", conditional_icon_style())
                     })
                 />
@@ -165,7 +163,7 @@ pub fn ConfirmButton(
                     on:click=cancel
                     class="ml-1 aspect-square bg-red-700 hover:bg-ladybug-red rounded-sm absolute duration-300"
                 >
-                    <Icon icon=Icon::from(IoCloseSharp) class="h-6 w-6 lg:h-8 lg:w-8"/>
+                    <Icon icon=icondata::IoCloseSharp class="h-6 w-6 lg:h-8 lg:w-8"/>
                 </button>
             </Show>
         </div>
@@ -174,25 +172,15 @@ pub fn ConfirmButton(
 
 fn get_icon_and_title(game_control: GameControl) -> (Icon, &'static str) {
     match game_control {
-        GameControl::Abort(_) => (leptos_icons::Icon::Ai(AiStopOutlined), "Abort"),
-        GameControl::DrawAccept(_) => (
-            leptos_icons::Icon::Fa(FaHandshakeSimpleSolid),
-            "Accept Draw",
-        ),
-        GameControl::DrawOffer(_) => (leptos_icons::Icon::Fa(FaHandshakeSimpleSolid), "Offer Draw"),
-        GameControl::DrawReject(_) => (
-            leptos_icons::Icon::Fa(FaHandshakeSimpleSolid),
-            "Reject Draw",
-        ),
-        GameControl::Resign(_) => (leptos_icons::Icon::Ai(AiFlagOutlined), "Resign"),
-        GameControl::TakebackAccept(_) => {
-            (leptos_icons::Icon::Bi(BiUndoRegular), "Accept Takeback")
-        }
-        GameControl::TakebackReject(_) => {
-            (leptos_icons::Icon::Bi(BiUndoRegular), "Reject Takeback")
-        }
-        GameControl::TakebackRequest(_) => {
-            (leptos_icons::Icon::Bi(BiUndoRegular), "Request Takeback")
-        }
+        GameControl::Abort(_) => (icondata::AiStopOutlined, "Abort"),
+        GameControl::DrawAccept(_) => (icondata::FaHandshakeSimpleSolid, "Accept Draw"),
+        GameControl::DrawOffer(_) => (icondata::FaHandshakeSimpleSolid, "Offer Draw"),
+        GameControl::DrawReject(_) => (icondata::FaHandshakeSimpleSolid, "Reject Draw"),
+        GameControl::Resign(_) => (icondata::AiFlagOutlined, "Resign"),
+        GameControl::TakebackAccept(_) => (icondata::BiUndoRegular, "Accept Takeback"),
+        GameControl::TakebackReject(_) => (icondata::BiUndoRegular, "Reject Takeback"),
+        GameControl::TakebackRequest(_) => (icondata::BiUndoRegular, "Request Takeback"),
     }
 }
+
+//154:                    class=MaybeProp::derive(TextProp::from(move || {format!("h-6 w-6 lg:h-8 lg:w-8 {}", conditional_icon_style())).into()})

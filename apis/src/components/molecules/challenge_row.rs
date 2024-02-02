@@ -13,12 +13,7 @@ use crate::{
 };
 use hive_lib::color::ColorChoice;
 use leptos::*;
-use leptos_icons::{
-    AiIcon::{AiCheckOutlined, AiCopyOutlined},
-    BsIcon::{BsHexagon, BsHexagonFill, BsHexagonHalf},
-    Icon,
-    IoIcon::IoCloseSharp,
-};
+use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::use_window;
 use shared_types::time_mode::TimeMode;
@@ -30,20 +25,20 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     let color_context = expect_context::<ColorScheme>;
     let icon = move || match challenge().color_choice {
         ColorChoice::Random => {
-            view! { <Icon icon=Icon::from(BsHexagonHalf) class="pb-[2px]"/> }
+            view! { <Icon icon=icondata::BsHexagonHalf class="pb-[2px]"/> }
         }
         ColorChoice::White => {
             if (color_context().prefers_dark)() {
-                view! { <Icon icon=Icon::from(BsHexagonFill) class="fill-white pb-[2px]"/> }
+                view! { <Icon icon=icondata::BsHexagonFill class="fill-white pb-[2px]"/> }
             } else {
-                view! { <Icon icon=Icon::from(BsHexagon) class="stroke-black pb-[2px]"/> }
+                view! { <Icon icon=icondata::BsHexagon class="stroke-black pb-[2px]"/> }
             }
         }
         ColorChoice::Black => {
             if (color_context().prefers_dark)() {
-                view! { <Icon icon=Icon::from(BsHexagon) class="stroke-white pb-[2px]"/> }
+                view! { <Icon icon=icondata::BsHexagon class="stroke-white pb-[2px]"/> }
             } else {
-                view! { <Icon icon=Icon::from(BsHexagonFill) class="fill-black pb-[2px]"/> }
+                view! { <Icon icon=icondata::BsHexagonFill class="fill-black pb-[2px]"/> }
             }
         }
     };
@@ -177,7 +172,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                         on:click=copy
                                         class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                                     >
-                                        <Icon icon=Icon::from(AiCopyOutlined) class="w-6 h-6"/>
+                                        <Icon icon=icondata::AiCopyOutlined class="w-6 h-6"/>
                                     </button>
                                 </Show>
                                 <button
@@ -187,7 +182,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                                     class="bg-ladybug-red hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                                 >
-                                    <Icon icon=Icon::from(IoCloseSharp) class="w-6 h-6"/>
+                                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/>
                                 </button>
                             }
                         }
@@ -210,7 +205,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                             class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                         >
-                            <Icon icon=Icon::from(AiCheckOutlined) class="w-6 h-6"/>
+                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6"/>
 
                         </button>
                         {if challenge().opponent.is_some() {
@@ -230,7 +225,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                                     class="bg-ladybug-red hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                                 >
-                                    <Icon icon=Icon::from(IoCloseSharp) class="w-6 h-6"/>
+                                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/>
 
                                 </button>
                             }

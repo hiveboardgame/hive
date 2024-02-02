@@ -5,6 +5,7 @@ use crate::components::organisms::{
 };
 use crate::providers::auth_context::*;
 
+use leptos::logging::log;
 use leptos::*;
 use leptos_router::use_location;
 
@@ -101,6 +102,8 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
 fn set_redirect() {
     let referrer = RwSignal::new(String::from("/"));
     let location = use_location().pathname.get();
+    log!("We have location");
     referrer.update(|s| *s = location);
+    log!("Referrer is {}", referrer.get_untracked());
     provide_context(Redirect(referrer));
 }

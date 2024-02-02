@@ -7,7 +7,7 @@ use crate::{
 };
 use chrono::Utc;
 use leptos::*;
-use leptos_icons::{BiIcon::BiCircleSolid, Icon};
+use leptos_icons::*;
 use leptos_use::core::ConnectionReadyState;
 
 #[component]
@@ -47,8 +47,8 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     };
     view! {
         <Icon
-            icon=Icon::from(BiCircleSolid)
-            class=Signal::derive(move || format!("mr-1 pb-[2px] {}", icon_color()))
+            icon=icondata::BiCircleSolid
+            class=TextProp::from(move || format!("mr-1 pb-[2px] {}", icon_color()))
         />
     }
 }

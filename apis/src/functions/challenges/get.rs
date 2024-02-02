@@ -10,7 +10,7 @@ pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, Server
     let challenge = Challenge::find_by_uuid(&id, &pool).await?;
     ChallengeResponse::from_model(&challenge, &pool)
         .await
-        .map_err(|e| ServerFnError::ServerError(format!("{e}")))
+        .map_err(ServerFnError::new)
 }
 
 #[server]
@@ -21,5 +21,5 @@ pub async fn get_challenge_by_nanoid(nanoid: String) -> Result<ChallengeResponse
     let challenge = Challenge::find_by_nanoid(&nanoid, &pool).await?;
     ChallengeResponse::from_model(&challenge, &pool)
         .await
-        .map_err(|e| ServerFnError::ServerError(format!("{e}")))
+        .map_err(ServerFnError::new)
 }
