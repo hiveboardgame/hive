@@ -110,7 +110,7 @@ impl Position {
     }
 
     pub fn from_string(s: &str, board: &Board) -> Result<Position, GameError> {
-        if s.starts_with('.') {
+        if s.starts_with('.') || s.is_empty() {
             return Ok(Position::initial_spawn_position());
         }
 

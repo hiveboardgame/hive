@@ -18,8 +18,7 @@ pub async fn login(
         .map_err(ServerFnError::new)?;
 
     let argon2 = Argon2::default();
-    let parsed_hash =
-        PasswordHash::new(&user.password).map_err(ServerFnError::new)?;
+    let parsed_hash = PasswordHash::new(&user.password).map_err(ServerFnError::new)?;
     match argon2.verify_password(password.as_bytes(), &parsed_hash) {
         Ok(_) => {
             let req = use_context::<actix_web::HttpRequest>()

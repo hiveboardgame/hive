@@ -19,9 +19,7 @@ pub async fn register(
     use rand_core::OsRng;
 
     if password != password_confirmation {
-        return Err(ServerFnError::new(
-            "Passwords don't match."
-        ));
+        return Err(ServerFnError::new("Passwords don't match."));
     }
 
     let pool = pool()?;

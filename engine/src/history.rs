@@ -4,8 +4,8 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt,
-    fs::{File, OpenOptions},
-    io::{self, prelude::*, BufRead},
+    fs::File,
+    io::{self, BufRead},
 };
 
 #[derive(Debug, Clone, Serialize, Default, Deserialize, PartialEq, Eq)]
@@ -73,7 +73,7 @@ impl History {
                     _ if history.moves.is_empty() => {
                         history
                             .moves
-                            .push((maybe_piece.to_string(), ".".to_string()));
+                            .push((maybe_piece.to_string(), "".to_string()));
                     }
                     any => {
                         return Err(GameError::ParsingError {
@@ -145,7 +145,7 @@ impl History {
                                 self.moves.push(("pass".to_string(), "".to_string()));
                             }
                             _ if self.moves.is_empty() => {
-                                self.moves.push((piece.to_string(), ".".to_string()));
+                                self.moves.push((piece.to_string(), "".to_string()));
                             }
                             any => {
                                 return Err(GameError::ParsingError {
@@ -199,17 +199,5 @@ impl History {
             }
         }
         Ok(history)
-    }
-
-    // TODO remove once DB is online
-    pub fn write_move(&self, file_name: &str, turn: usize, board_move: String) {
-        let mut file = OpenOptions::new()
-            .append(true)
-            .open(file_name)
-            .expect("game.txt cannot be written to");
-        if let Err(e) = writeln!(file, "{turn}. {board_move}") {
-            //TODO not sure what to do with this one
-            panic!("{}", e);
-        }
     }
 }

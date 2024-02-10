@@ -41,6 +41,7 @@ impl FromStr for Piece {
                             typ: "piece".to_string(),
                         })
                     }
+
                     _ => {}
                 }
                 return Ok(Piece::new_from(bug, color, order));

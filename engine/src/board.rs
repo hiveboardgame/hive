@@ -247,6 +247,10 @@ impl Board {
         self.board.get(position).top_piece()
     }
 
+    pub fn under_piece(&self, position: Position) -> Option<Piece> {
+        self.board.get(position).under_piece()
+    }
+
     pub fn is_bottom_piece(&self, piece: Piece, position: Position) -> bool {
         self.bottom_piece(position)
             .map(|found| found == piece)

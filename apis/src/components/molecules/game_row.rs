@@ -1,6 +1,9 @@
 use crate::{
     components::{
-        atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator, svgs::Svgs},
+        atoms::{
+            download_pgn::DownloadPgn, profile_link::ProfileLink,
+            status_indicator::StatusIndicator, svgs::Svgs,
+        },
         molecules::{
             rating_and_change::RatingAndChange, thumbnail_pieces::ThumbnailPieces,
             time_row::TimeRow,
@@ -130,7 +133,9 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     </div>
                 </div>
                 <div class="flex justify-center items-center w-full gap-1">{result_string}</div>
-                {history_string}
+                <div class="flex justify-between items-center w-full gap-1">
+                    {history_string} <DownloadPgn game=game/>
+                </div>
             </div>
             <a
                 class="h-full w-full absolute top-0 left-0 z-10"

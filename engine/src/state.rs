@@ -119,28 +119,17 @@ impl State {
             }
             _ => {
                 let piece = piece.parse()?;
-                let target_position = Position::from_string(position, &self.board)?;
-                self.play_turn(piece, target_position)?;
-            }
-        }
-        Ok(())
-    }
-
-    pub fn play_turn_from_notation(
-        &mut self,
-        piece: &str,
-        position: &str,
-    ) -> Result<(), GameError> {
-        match piece {
-            "pass" => {
-                println!("Pass is only allowed in play_turn_from_history")
-            }
-            _ => {
-                let piece = piece.parse()?;
-                let target_position = Position::from_string(position, &self.board)?;
-                self.play_turn(piece, target_position)?;
-                if self.board.is_shutout(self.turn_color, self.game_type) {
-                    self.pass();
+                if is_absolute_position(position) {
+                    if let Ok(destination_piece) = Piece::from_str(position) {
+                        if let Some(target_position) =
+                            self.board.position_of_piece(destination_piece)
+                        {
+                            self.play_turn(piece, target_position)?;
+                        }
+                    }
+                } else {
+                    let target_position = Position::from_string(position, &self.board)?;
+                    self.play_turn(piece, target_position)?;
                 }
             }
         }
@@ -160,9 +149,13 @@ impl State {
     }
 
     fn update_history(&mut self, piece: Piece, target_position: Position) {
-        // if it's the first played piece on the board yet use "."
         if self.board.positions.into_iter().flatten().count() == 1 {
-            self.history.record_move(piece.to_string(), ".".to_string());
+            self.history.record_move(piece.to_string(), "".to_string());
+            return;
+        }
+        if let Some(destination_piece) = self.board.under_piece(target_position) {
+            self.history
+                .record_move(piece.to_string(), destination_piece.to_string());
             return;
         }
         if let Some((neighbor_piece, neighbor_pos)) = self.board.get_neighbor(target_position) {
@@ -320,4 +313,8 @@ impl State {
         }
         true
     }
+}
+
+fn is_absolute_position(position: &str) -> bool {
+    !position.is_empty() && !['-', '/', '\\', '.'].iter().any(|c| position.contains(*c))
 }
