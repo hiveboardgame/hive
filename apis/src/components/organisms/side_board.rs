@@ -1,7 +1,7 @@
 use crate::{
     components::{
         atoms::undo_button::UndoButton,
-        molecules::control_buttons::ControlButtons,
+        molecules::{analysis_and_download::AnalysisAndDownload, control_buttons::ControlButtons},
         organisms::{
             history::History,
             reserve::{Alignment, Reserve},
@@ -102,9 +102,12 @@ pub fn SideboardTabs(
                         view! {
                             <div class="grid h-[95%]">
                                 <Reserve color=top_color alignment=Alignment::DoubleRow/>
-                                <Show when=show_buttons>
-                                    <ControlButtons/>
-                                </Show>
+                                <div class="flex justify-between flex-row-reverse">
+                                    <AnalysisAndDownload/>
+                                    <Show when=show_buttons>
+                                        <ControlButtons/>
+                                    </Show>
+                                </div>
                                 <Show when=move || analysis>
                                     <div class="flex justify-center items-center">
                                         <UndoButton/>

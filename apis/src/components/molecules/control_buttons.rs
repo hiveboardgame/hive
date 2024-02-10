@@ -8,7 +8,6 @@ use crate::{
 };
 use hive_lib::{color::ColorChoice, game_control::GameControl, game_status::GameStatus};
 use leptos::*;
-use leptos_icons::*;
 
 #[component]
 pub fn ControlButtons() -> impl IntoView {
@@ -25,11 +24,6 @@ pub fn ControlButtons() -> impl IntoView {
     let user = move || match untrack(auth_context.user) {
         Some(Ok(Some(user))) => Some(user),
         _ => None,
-    };
-
-    let analysis_setup = move |_| {
-        let mut game_state = expect_context::<GameStateSignal>();
-        game_state.do_analysis();
     };
 
     let user_id = move || user().expect("User to be present in control buttons").id;
@@ -256,13 +250,6 @@ pub fn ControlButtons() -> impl IntoView {
                 >
                     New Game
                 </button>
-                <a
-                    href="/analysis"
-                    class="bg-ant-blue hover:bg-pillbug-teal duration-300 text-white rounded m-1"
-                    on:click=analysis_setup
-                >
-                    <Icon icon=icondata::TbMicroscope class="h-7 w-7 py-1"/>
-                </a>
             </Show>
         </div>
     }

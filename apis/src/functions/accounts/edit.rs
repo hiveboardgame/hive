@@ -19,9 +19,7 @@ pub async fn edit_account(
     use rand_core::OsRng;
 
     if new_password != new_password_confirmation {
-        return Err(ServerFnError::new(
-            "Passwords don't match."
-        ));
+        return Err(ServerFnError::new("Passwords don't match."));
     }
 
     let pool = pool()?;
@@ -30,16 +28,13 @@ pub async fn edit_account(
     let user = User::find_by_uuid(&uuid, &pool).await?;
 
     let argon2 = Argon2::default();
-    let parsed_hash =
-        PasswordHash::new(&user.password).map_err(ServerFnError::new)?;
+    let parsed_hash = PasswordHash::new(&user.password).map_err(ServerFnError::new)?;
 
     if argon2
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_err()
     {
-        return Err(ServerFnError::new(
-            "Password does not match."
-        ));
+        return Err(ServerFnError::new("Password does not match."));
     }
 
     let salt = SaltString::generate(&mut OsRng);

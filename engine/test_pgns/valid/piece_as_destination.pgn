@@ -1,0 +1,36 @@
+[GameType "Base+MLP"]
+[Date "20-Jan-2024_14:53:24"]
+[Site "hivegame.com"]
+[White "Jewdoka"]
+[Black "Cavaliers16"]
+[Result "WhiteWins"]
+
+1. wP 
+2. bL \wP
+3. wQ wP\
+4. bM \bL
+5. wA1 /wQ
+6. bB1 /bM
+7. wA1 bM/
+8. bQ \bB1
+9. wM wA1-
+10. bP /bQ
+11. wM \bP
+12. bB1 bL
+13. wB1 \wM
+14. bA1 bP\
+15. wB1 \bQ
+16. bB1 wP
+17. wM bP
+18. bS1 /bL
+19. wB1 bQ
+20. bS1 wQ\
+21. wB2 \wB1
+22. bG1 /bL
+23. wS1 \wM
+24. bA2 bB1/
+25. wB1 bM
+26. bG1 bA2\
+27. wA1 \wB1
+28. bA3 /bL
+29. wB1 bQ\

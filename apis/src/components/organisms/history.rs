@@ -50,21 +50,14 @@ pub fn HistoryMove(
 pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let game_state_signal = expect_context::<GameStateSignal>();
     let history_moves = move || {
-        let mut his = Vec::new();
-        for (i, (piece, pos)) in (game_state_signal.signal)()
+        (game_state_signal.signal)()
             .state
             .history
             .moves
             .into_iter()
             .enumerate()
-        {
-            if i == 0 {
-                his.push((i, piece, String::new()));
-            } else {
-                his.push((i, piece, pos));
-            }
-        }
-        his
+            .map(|(i, (piece, pos))| (i, piece, pos))
+            .collect::<Vec<(usize, String, String)>>()
     };
 
     let parent = create_node_ref::<html::Div>();
