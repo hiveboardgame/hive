@@ -1,5 +1,6 @@
 pub mod board;
 pub mod challenges;
+pub mod confirm_mode_toggle;
 pub mod darkmode_toggle;
 pub mod display_profile;
 pub mod display_timer;

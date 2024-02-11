@@ -1,5 +1,6 @@
 use crate::components::atoms::next_game_button::NextGameButton;
 use crate::components::molecules::ping::Ping;
+use crate::components::organisms::confirm_mode_toggle::ConfirmModeToggle;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle, hamburger::Hamburger, logout::Logout,
 };
@@ -35,14 +36,14 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             when=move || user().is_some()
                             fallback=|| {
                                 let hamburger_show = create_rw_signal(false);
-                                let onclick = move |_| hamburger_show.update(|b| *b = false);
+                                let onclick = move || hamburger_show.update(|b| *b = false);
                                 view! {
                                     <div class="flex items-center">
                                         <a
                                             class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 m-1 px-4 rounded"
                                             href="/login"
                                             on:focus=move |_| set_redirect()
-                                            on:click=onclick
+                                            on:click=move |_| onclick()
                                         >
 
                                             Login
@@ -52,11 +53,11 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                                 class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
                                                 href="/register"
                                                 on:focus=move |_| set_redirect()
-                                                on:click=onclick
+                                                on:click=move |_| onclick()
                                             >
                                                 Register
                                             </a>
-                                            <DarkModeToggle/>
+                                            <DarkModeToggle on:submit=move |_| onclick()/>
                                             <Ping/>
                                         </Hamburger>
                                     </div>
@@ -85,7 +86,8 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                 >
                                     Edit Account
                                 </a>
-                                <DarkModeToggle/>
+                                <ConfirmModeToggle on:submit=move |_| onclick()/>
+                                <DarkModeToggle on:submit=move |_| onclick()/>
                                 <Logout on:submit=move |_| onclick()/>
                                 <Ping/>
                             </Hamburger>

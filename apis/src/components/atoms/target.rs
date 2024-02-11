@@ -1,7 +1,8 @@
+use crate::common::move_confirm::MoveConfirm;
 use crate::common::svg_pos::SvgPos;
+use crate::providers::confirm_mode::ConfirmMode;
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::position::Position;
-use leptos::logging::log;
 use leptos::*;
 
 #[component]
@@ -13,15 +14,20 @@ pub fn Target(
     let center = move || SvgPos::center_for_level(position, level());
     let transform = move || format!("translate({},{})", center().0, center().1);
     let mut game_state_signal = expect_context::<GameStateSignal>();
+    let confirm_mode = expect_context::<ConfirmMode>();
 
-    // Select the target position
+    // Select the target position and make a move if it's the correct mode
     let onclick = move |_| {
-        log!("Target piece");
-        game_state_signal.set_target(position);
+        if game_state_signal.is_move_allowed() {
+            game_state_signal.set_target(position);
+            if matches!((confirm_mode.preferred_confirm)(), MoveConfirm::Single) {
+                game_state_signal.move_active();
+            }
+        }
     };
 
     view! {
-        <g on:click=onclick class=format!("{extend_tw_classes}")>
+        <g on:click=onclick class=extend_tw_classes>
             <g id="Target" transform=transform>
                 <use_
                     href="#target"

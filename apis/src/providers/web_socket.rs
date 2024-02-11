@@ -123,7 +123,7 @@ fn on_message_callback(m: String) {
                                 != gar.game.history
                             {
                                 match turn {
-                                    Turn::Spawn(piece, position) | Turn::Move(piece, position) => {
+                                    Turn::Move(piece, position) => {
                                         game_state.play_turn(*piece, *position)
                                     }
                                     _ => unreachable!(),

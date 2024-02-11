@@ -127,7 +127,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
     view! {
         <div class=move || {
             format!(
-                "flex flex-grow resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl min-h-fit min-w-fit {}",
+                "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
                 time_is_red(),
             )
         }>

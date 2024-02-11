@@ -3,6 +3,7 @@ pub mod api_requests;
 pub mod auth_context;
 pub mod challenges;
 pub mod color_scheme;
+pub mod confirm_mode;
 pub mod game_state;
 pub mod games;
 pub mod navigation_controller;

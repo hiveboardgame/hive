@@ -1,6 +1,7 @@
 pub mod accounts;
 pub mod auth;
 pub mod challenges;
+pub mod confirm_mode;
 pub mod darkmode;
 #[cfg(feature = "ssr")]
 pub mod db;

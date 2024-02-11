@@ -6,7 +6,8 @@ use crate::{
     },
     providers::{
         alerts::provide_alerts, auth_context::provide_auth, challenges::provide_challenges,
-        color_scheme::provide_color_scheme, game_state::provide_game_state, games::provide_games,
+        color_scheme::provide_color_scheme, confirm_mode::provide_confirm_mode,
+        game_state::provide_game_state, games::provide_games,
         navigation_controller::provide_navigation_controller, online_users::provide_users,
         ping::provide_ping, refocus::provide_refocus, timer::provide_timer,
         web_socket::provide_websocket,
@@ -21,6 +22,7 @@ pub const LEPTOS_OUTPUT_NAME: &str = std::env!("LEPTOS_OUTPUT_NAME");
 #[component]
 pub fn App() -> impl IntoView {
     provide_color_scheme();
+    provide_confirm_mode();
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
     provide_game_state();
