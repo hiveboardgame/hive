@@ -1,6 +1,10 @@
 use crate::{
+    common::move_confirm::MoveConfirm,
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
-    providers::{auth_context::AuthContext, game_state::GameStateSignal, timer::TimerSignal},
+    providers::{
+        auth_context::AuthContext, confirm_mode::ConfirmMode, game_state::GameStateSignal,
+        timer::TimerSignal,
+    },
 };
 use hive_lib::color::Color;
 use leptos::*;
@@ -8,7 +12,7 @@ use leptos_icons::*;
 use shared_types::time_mode::TimeMode;
 use std::str::FromStr;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Placement {
     Top,
     Bottom,
@@ -18,6 +22,8 @@ pub enum Placement {
 pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
+    let confirm_mode = expect_context::<ConfirmMode>();
+    let mut game_state_signal = expect_context::<GameStateSignal>();
     let user = move || match (auth_context.user)() {
         Some(Ok(Some(user))) => Some(user),
         _ => None,
@@ -71,15 +77,39 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
         }
     };
 
+    let is_button = move || {
+        placement == Placement::Bottom
+            && matches!((confirm_mode.preferred_confirm)(), MoveConfirm::Clock)
+            && game_state_signal.is_move_allowed()
+    };
+
+    let onclick = move |_| {
+        if is_button() {
+            game_state_signal.move_active();
+        }
+    };
+
     view! {
         <div class=outer_container_style>
-            <div class=move || {
-                if vertical {
-                    format!("{timer_container_style} {}", active_side())
-                } else {
-                    format!("{timer_container_style} {} {}", css_grid_row(), active_side())
+            <button
+                on:click=onclick
+                class=move || {
+                    if vertical {
+                        format!(
+                            "{timer_container_style} {} {}",
+                            active_side(),
+                            if !is_button() { "cursor-[unset]" } else { "cursor-pointer" },
+                        )
+                    } else {
+                        format!(
+                            "{timer_container_style} {} {} {}",
+                            css_grid_row(),
+                            active_side(),
+                            if !is_button() { "cursor-[unset]" } else { "cursor-pointer" },
+                        )
+                    }
                 }
-            }>
+            >
 
                 {move || {
                     match TimeMode::from_str(&timer.signal.get().time_mode).expect("Valid TimeMode")
@@ -93,7 +123,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                     }
                 }}
 
-            </div>
+            </button>
             <Show when=move || !vertical>
                 <div class=classes>
                     <UserWithRating side=side() text_color=text_color()/>

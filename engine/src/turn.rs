@@ -7,7 +7,6 @@ use std::fmt;
 pub enum Turn {
     Move(Piece, Position),
     Shutout,
-    Spawn(Piece, Position),
 }
 
 impl fmt::Display for Turn {
@@ -15,7 +14,6 @@ impl fmt::Display for Turn {
         let name = match self {
             Turn::Move(piece, pos) => format!("Moving({},{})", piece, pos),
             Turn::Shutout => String::from("Shutout"),
-            Turn::Spawn(piece, pos) => format!("Spawning({},{})", piece, pos),
         };
         write!(f, "{}", name)
     }

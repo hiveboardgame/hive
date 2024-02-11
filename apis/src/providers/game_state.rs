@@ -8,6 +8,8 @@ use leptos::logging::log;
 use leptos::*;
 use uuid::Uuid;
 
+use super::auth_context::AuthContext;
+
 #[derive(Clone, Debug, Copy)]
 pub struct GameStateSignal {
     pub signal: RwSignal<GameState>,
@@ -129,8 +131,8 @@ impl GameStateSignal {
         self.signal.update(|s| s.move_active())
     }
 
-    pub fn spawn_active(&mut self) {
-        self.signal.update(|s| s.spawn_active())
+    pub fn is_move_allowed(&self) -> bool {
+        self.signal.get_untracked().is_move_allowed()
     }
 
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
@@ -289,35 +291,42 @@ impl GameState {
         }
     }
 
+    pub fn is_move_allowed(&self) -> bool {
+        let auth_context = expect_context::<AuthContext>();
+
+        let user = move || match (auth_context.user)() {
+            Some(Ok(Some(user))) => Some(user),
+            _ => None,
+        };
+        if matches!(self.state.game_status, GameStatus::Finished(_)) {
+            return false;
+        }
+        user().is_some_and(|user| {
+            let turn = self.state.turn;
+            let black_id = self.black_id;
+            let white_id = self.white_id;
+            if turn % 2 == 0 {
+                white_id.is_some_and(|white| white == user.id)
+            } else {
+                black_id.is_some_and(|black| black == user.id)
+            }
+        })
+    }
+
     pub fn move_active(&mut self) {
+        log!("Moved active!");
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
-                ApiRequests::new().turn(game_id.to_owned(), turn)
+                ApiRequests::new().turn(game_id.to_owned(), turn);
+                self.reset();
+                self.history_turn = Some(self.state.turn - 1);
             } else {
                 log!("This is a bug, there should be a game_id");
             }
         }
-        self.reset();
-        self.game_control_pending = None;
-        self.history_turn = Some(self.state.turn - 1)
-    }
-
-    pub fn spawn_active(&mut self) {
-        if let (Some(active), Some(position)) = (self.active, self.target_position) {
-            if let Err(e) = self.state.play_turn_from_position(active, position) {
-                log!("Could not play turn: {} {} {}", active, position, e);
-            } else if let Some(ref game_id) = self.game_id {
-                let turn = Turn::Spawn(active, position);
-                ApiRequests::new().turn(game_id.to_owned(), turn)
-            } else {
-                log!("This is a bug, there should be a game_id");
-            }
-        }
-        self.reset();
-        self.history_turn = Some(self.state.turn - 1)
     }
 
     // TODO refactor to not take a position, the position and piece are in self already

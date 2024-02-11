@@ -44,7 +44,6 @@ impl TurnHandler {
         self.users_turn()?;
         let (piece, position) = match self.turn {
             Turn::Move(piece, position) => (piece, position),
-            Turn::Spawn(piece, position) => (piece, position),
             Turn::Shutout => Err(GameError::InvalidTurn {
                 username: self.username.to_owned(),
                 game: self.game.nanoid.to_owned(),

@@ -1,7 +1,8 @@
+use crate::common::move_confirm::MoveConfirm;
 use crate::common::{piece_type::PieceType, svg_pos::SvgPos};
-use crate::providers::auth_context::AuthContext;
+use crate::providers::confirm_mode::ConfirmMode;
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::{bug::Bug, game_status::GameStatus, piece::Piece, position::Position};
+use hive_lib::{bug::Bug, piece::Piece, position::Position};
 use leptos::*;
 
 #[component]
@@ -34,53 +35,24 @@ pub fn Piece(
     });
 
     let mut game_state_signal = expect_context::<GameStateSignal>();
-    let auth_context = expect_context::<AuthContext>();
-
-    let user = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user),
-        _ => None,
-    };
+    let confirm_mode = expect_context::<ConfirmMode>();
 
     let onclick = move |_| {
-        let turn = game_state_signal.signal.get_untracked().state.turn;
-        let black_id = game_state_signal.signal.get_untracked().black_id;
-        let white_id = game_state_signal.signal.get_untracked().white_id;
-        if let Some(user) = user() {
-            if turn % 2 == 0 {
-                if let Some(white) = white_id {
-                    if white != user.id {
-                        return;
+        if game_state_signal.is_move_allowed() {
+            match piece_type {
+                PieceType::Board => {
+                    game_state_signal.show_moves(piece.get_untracked(), position.get_untracked());
+                }
+                PieceType::Reserve => {
+                    game_state_signal.show_spawns(piece.get_untracked(), position.get_untracked());
+                }
+                PieceType::Move | PieceType::Spawn => {
+                    if matches!((confirm_mode.preferred_confirm)(), MoveConfirm::Double) {
+                        game_state_signal.move_active();
                     }
                 }
-            } else if let Some(black) = black_id {
-                if black != user.id {
-                    return;
-                }
-            }
-            match (game_state_signal.signal)().state.game_status {
-                GameStatus::Finished(_) => { /* Don't attach any on:click for finished games */ }
-                _ => {
-                    match piece_type {
-                        PieceType::Board => {
-                            game_state_signal
-                                .show_moves(piece.get_untracked(), position.get_untracked());
-                        }
-                        PieceType::Reserve => {
-                            game_state_signal
-                                .show_spawns(piece.get_untracked(), position.get_untracked());
-                        }
-                        PieceType::Move => {
-                            game_state_signal.move_active();
-                        }
-                        PieceType::Spawn => {
-                            {
-                                game_state_signal.spawn_active();
-                            };
-                        }
-                        _ => {}
-                    };
-                }
-            }
+                _ => {}
+            };
         }
     };
 
