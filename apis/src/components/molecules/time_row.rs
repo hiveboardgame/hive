@@ -13,12 +13,7 @@ pub fn TimeRow(
     let icon = move || match time_mode() {
         TimeMode::Untimed => icondata::BiInfiniteRegular,
         TimeMode::RealTime => icondata::BiStopwatchRegular,
-
-        TimeMode::Correspondence if time_base.is_some() => icondata::AiMailOutlined,
-
-        TimeMode::Correspondence if increment.is_some() => icondata::AiMailOutlined,
-
-        _ => unreachable!(),
+        TimeMode::Correspondence => icondata::AiMailOutlined,
     };
     let text = move || match time_mode() {
         TimeMode::Untimed => "No time limit".to_owned(),

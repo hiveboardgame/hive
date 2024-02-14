@@ -3,45 +3,51 @@ use crate::providers::{
     navigation_controller::NavigationControllerSignal,
 };
 use leptos::*;
-use leptos_meta::Title;
+use leptos_icons::Icon;
+use shared_types::time_mode::TimeMode;
 
 #[component]
-pub fn NextGameButton() -> impl IntoView {
+pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
     let navigate = leptos_router::use_navigate();
     let navigation_controller = expect_context::<NavigationControllerSignal>();
     let games = expect_context::<GamesSignal>();
     let next_games = move || {
-        games.own.with(|games_state| {
-            if let Some(nanoid) = navigation_controller.signal.get().nanoid {
-                games_state
-                    .next_games
-                    .iter()
-                    .filter(|g| **g != nanoid)
-                    .cloned()
-                    .collect()
-            } else {
-                games_state.next_games.clone()
-            }
-        })
+        let nanoid = navigation_controller
+            .signal
+            .get()
+            .nanoid
+            .unwrap_or_default();
+        match time_mode() {
+            TimeMode::Untimed => games.own.get().next_untimed,
+            TimeMode::RealTime => games.own.get().next_realtime,
+            TimeMode::Correspondence => games.own.get().next_correspondence,
+        }
+        .iter()
+        .filter(|gp| gp.nanoid != nanoid)
+        .count()
+    };
+    let icon = move || match time_mode() {
+        TimeMode::Untimed => icondata::BiInfiniteRegular,
+        TimeMode::RealTime => icondata::BiStopwatchRegular,
+        TimeMode::Correspondence => icondata::AiMailOutlined,
     };
     let style = move || {
-        match next_games().len() {
+        match next_games() {
             0 => "hidden",
-            _ => "bg-ladybug-red transform transition-transform duration-300 active:scale-95 hover:bg-red-400 text-white rounded-md px-2 py-1 m-1",
+            _ => "flex place-items-center bg-ladybug-red transform transition-transform duration-300 active:scale-95 hover:bg-red-400 text-white rounded-md px-2 py-1 m-1",
         }
     };
-    let title_text = move || match next_games().len() {
-        0 => String::from("HiveGame.com"),
-        i => format!("({}) HiveGame.com", i),
-    };
-    let text = move || match next_games().len() {
-        0 => String::new(),
-        1 => String::from("Next"),
-        i => format!("Next ({})", i),
-    };
+    // TODO: @leex move this somewhere else
+    // use leptos_meta::Title;
+    // let title_text = move || match next_games().len() {
+    //     0 => String::from("HiveGame.com"),
+    //     i => format!("({}) HiveGame.com", i),
+    // };
+    // <Title text=title_text/>
+    let text = move || format!(": {}", next_games());
     let onclick = move |_| {
         let mut games = expect_context::<GamesSignal>();
-        if let Some(game) = games.visit_game() {
+        if let Some(game) = games.visit(time_mode()) {
             let mut game_state = expect_context::<GameStateSignal>();
             game_state.full_reset();
             navigate(&format!("/game/{}", game), Default::default());
@@ -51,12 +57,9 @@ pub fn NextGameButton() -> impl IntoView {
     };
 
     view! {
-        <Title text=title_text/>
-
-        <div class="relative">
-            <button on:click=onclick class=style>
-                {text}
-            </button>
-        </div>
+        <button on:click=onclick class=style>
+            <Icon icon=icon() class="w-4 h-4"/>
+            {text}
+        </button>
     }
 }

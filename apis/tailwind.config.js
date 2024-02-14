@@ -47,8 +47,8 @@ module.exports = {
         'queen-orange': '#f68c11',
       },
       dropShadow: {
-        'w': '0.3px 0.3px 0.3px rgba(0, 0, 0, 1)',
-        'b': '0.3px 0.3px 0.3px rgba(255, 255, 255, 1)',
+        'w': '1px 1px 1px #888888',
+        'b': '1px 1px 1px #888888',
       }
     },
   },

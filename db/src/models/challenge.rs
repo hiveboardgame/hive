@@ -14,6 +14,7 @@ use diesel_async::RunQueryDsl;
 use hive_lib::game_type::GameType;
 use nanoid::nanoid;
 use serde::Serialize;
+use shared_types::time_mode::TimeMode;
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -41,12 +42,12 @@ impl NewChallenge {
         rated: bool,
         visibility: String,
         color_choice: String,
-        time_mode: String,           // Correspondence, Timed, Untimed
+        time_mode: TimeMode,           // Correspondence, Timed, Untimed
         time_base: Option<i32>,      // Secons
         time_increment: Option<i32>, // Seconds
     ) -> Result<Self, DbError> {
-        match time_mode.as_str() {
-            "Untimed" => {
+        match time_mode {
+            TimeMode::Untimed => {
                 if time_base.is_some() || time_increment.is_some() {
                     return Err(DbError::InvalidInput {
                         info: String::from("Untimed game has time_base or time_increment"),
@@ -57,7 +58,7 @@ impl NewChallenge {
                     });
                 }
             }
-            "Real Time" => {
+            TimeMode::RealTime => {
                 if time_base.is_none() || time_increment.is_none() {
                     return Err(DbError::InvalidInput {
                         info: String::from("Realtime game is missing time_base or time_increment"),
@@ -68,7 +69,7 @@ impl NewChallenge {
                     });
                 }
             }
-            "Correspondence" => {
+            TimeMode::Correspondence => {
                 if (time_base.is_some() && time_increment.is_some())
                     || (time_base.is_none() && time_increment.is_none())
                 {
@@ -82,12 +83,6 @@ impl NewChallenge {
                         ),
                     });
                 }
-            }
-            found => {
-                return Err(DbError::InvalidInput {
-                    info: format!("{found} is not a valid time control"),
-                    error: String::new(),
-                })
             }
         }
         if opponent_id == Some(challenger_id) {
@@ -106,7 +101,7 @@ impl NewChallenge {
             tournament_queen_rule: true,
             color_choice,
             created_at: Utc::now(),
-            time_mode,
+            time_mode: time_mode.to_string(),
             time_base,
             time_increment,
         })

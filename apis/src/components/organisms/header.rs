@@ -9,6 +9,7 @@ use crate::providers::auth_context::*;
 use leptos::logging::log;
 use leptos::*;
 use leptos_router::use_location;
+use shared_types::time_mode::TimeMode;
 
 #[derive(Clone)]
 pub struct Redirect(pub RwSignal<String>);
@@ -65,8 +66,10 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             }
                         >
 
-                            <div>
-                                <NextGameButton/>
+                            <div class="flex items-center">
+                                <NextGameButton time_mode=store_value(TimeMode::RealTime)/>
+                                <NextGameButton time_mode=store_value(TimeMode::Correspondence)/>
+                                <NextGameButton time_mode=store_value(TimeMode::Untimed)/>
                             </div>
 
                             <Hamburger hamburger_show=hamburger_show>

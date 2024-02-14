@@ -1,4 +1,4 @@
-use std::str::FromStr;
+
 
 use crate::{
     components::{
@@ -8,7 +8,7 @@ use crate::{
     providers::games::GamesSignal,
 };
 use leptos::*;
-use shared_types::time_mode::TimeMode;
+
 
 #[component]
 pub fn Tv() -> impl IntoView {
@@ -31,8 +31,7 @@ pub fn Tv() -> impl IntoView {
                             <div class="flex items-center">
                                 {if game.1.rated { "RATED " } else { "CASUAL " }}
                                 <TimeRow
-                                    time_mode=TimeMode::from_str(&game.1.time_mode)
-                                        .expect("Valid time mode")
+                                    time_mode=game.1.time_mode.clone()
                                     time_base=game.1.time_base
                                     increment=game.1.time_increment
                                 />

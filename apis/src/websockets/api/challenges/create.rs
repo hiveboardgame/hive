@@ -9,6 +9,7 @@ use db_lib::{
     DbPool,
 };
 use hive_lib::{color::ColorChoice, game_type::GameType};
+use shared_types::time_mode::TimeMode;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -18,7 +19,7 @@ pub struct CreateHandler {
     visibility: ChallengeVisibility,
     opponent: Option<String>,
     color_choice: ColorChoice,
-    time_mode: String,
+    time_mode: TimeMode,
     time_base: Option<i32>,
     time_increment: Option<i32>,
     user_id: Uuid,
@@ -32,7 +33,7 @@ impl CreateHandler {
         visibility: ChallengeVisibility,
         color_choice: ColorChoice,
         opponent: Option<String>,
-        time_mode: String,
+        time_mode: TimeMode,
         time_base: Option<i32>,
         time_increment: Option<i32>,
         user_id: Uuid,
@@ -65,7 +66,7 @@ impl CreateHandler {
             self.rated,
             self.visibility.to_string(),
             self.color_choice.to_string(),
-            self.time_mode.to_owned(),
+            self.time_mode.clone(),
             self.time_base,
             self.time_increment,
         )?;

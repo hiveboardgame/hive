@@ -1,4 +1,4 @@
-use super::internal_server_message::MessageDestination;
+use super::{api::handler::RequestHandler, internal_server_message::MessageDestination};
 use crate::{
     common::{
         client_message::ClientRequest,
@@ -7,7 +7,6 @@ use crate::{
     websockets::{
         lobby::Lobby,
         messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
-        request_handler::RequestHandler,
     },
 };
 use actix::{

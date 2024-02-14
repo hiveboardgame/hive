@@ -147,7 +147,7 @@ pub fn ChallengeCreate(
             },
             opponent: params.opponent.get_untracked(),
             color_choice: params.color_choice.get_untracked(),
-            time_mode: params.time_mode.get_untracked().to_string(),
+            time_mode: params.time_mode.get_untracked(),
             time_base: (params.time_base)(),
             time_increment: (params.time_increment)(),
         };

@@ -1,5 +1,7 @@
 use crate::{
-    common::server_result::{ChallengeUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
+    common::server_result::{
+        ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate,
+    },
     responses::{challenge::ChallengeResponse, game::GameResponse, user::UserResponse},
     websockets::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
 };
@@ -172,7 +174,7 @@ impl Handler<Connect> for Lobby {
                             games.push(game)
                         }
                     }
-                    let message = ServerResult::Ok(ServerMessage::GameActionNotification(games));
+                    let message = ServerResult::Ok(ServerMessage::Game(GameUpdate::Urgent(games)));
                     let serialized = serde_json::to_string(&message)
                         .expect("Failed to serialize a server message");
                     let cam = ClientActorMessage {

@@ -1,9 +1,9 @@
 use crate::functions::accounts::account_response::AccountResponse;
 use crate::functions::accounts::get::get_account;
 use crate::functions::auth::{login::Login, logout::Logout, register::Register};
+use crate::providers::websocket::context::WebsocketContext;
+use leptos::logging::log;
 use leptos::*;
-
-use super::web_socket::WebsocketContext;
 
 #[derive(Clone)]
 pub struct AuthContext {
@@ -15,7 +15,6 @@ pub struct AuthContext {
 
 /// Get the current user and place it in Context
 pub fn provide_auth() {
-    let websocket_context = expect_context::<WebsocketContext>();
     let login = create_server_action::<Login>();
     let logout = create_server_action::<Logout>();
     let register = create_server_action::<Register>();
@@ -28,13 +27,25 @@ pub fn provide_auth() {
                 register.version().get(),
             )
         },
-        move |_| {
-            websocket_context.close();
-            let account = get_account();
-            websocket_context.open();
-            account
-        },
+        move |_| get_account(),
     );
+
+    create_effect(move |_| {
+        user.and_then(|user| {
+            let websocket_context = expect_context::<WebsocketContext>();
+            websocket_context.close();
+            log!("User in create effect is: {:?}", user);
+            if user.is_some() {
+                websocket_context.open();
+            }
+        });
+    });
+
+    create_effect(move |_| {
+        let websocket_context = expect_context::<WebsocketContext>();
+        logout.version().get();
+        websocket_context.close();
+    });
 
     provide_context(AuthContext {
         user,

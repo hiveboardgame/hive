@@ -1,6 +1,6 @@
 use crate::common::challenge_action::ChallengeAction;
 use crate::common::{client_message::ClientRequest, game_action::GameAction};
-use crate::providers::web_socket::WebsocketContext;
+use crate::providers::websocket::context::WebsocketContext;
 use chrono::Utc;
 use hive_lib::{game_control::GameControl, turn::Turn};
 use leptos::*;
@@ -27,7 +27,7 @@ impl ApiRequests {
     pub fn turn(&self, game_id: String, turn: Turn) {
         let msg = ClientRequest::Game {
             id: game_id.to_owned(),
-            action: GameAction::Move(turn),
+            action: GameAction::Turn(turn),
         };
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
@@ -52,7 +52,10 @@ impl ApiRequests {
     }
 
     pub fn game_check_time(&self, game_id: &str) {
-        let msg = ClientRequest::GameTimeout(game_id.to_owned());
+        let msg = ClientRequest::Game {
+            id: game_id.to_owned(),
+            action: GameAction::CheckTime,
+        };
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }

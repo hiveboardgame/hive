@@ -15,14 +15,21 @@ pub struct ChallengeHandler {
     challenge_action: ChallengeAction,
     pool: DbPool,
     user_id: Uuid,
+    username: String,
 }
 
 impl ChallengeHandler {
-    pub async fn new(action: ChallengeAction, user_id: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(
+        action: ChallengeAction,
+        username: &str,
+        user_id: Uuid,
+        pool: &DbPool,
+    ) -> Result<Self> {
         Ok(Self {
             pool: pool.clone(),
             challenge_action: action,
             user_id,
+            username: username.to_owned(),
         })
     }
 
@@ -55,7 +62,7 @@ impl ChallengeHandler {
                 .await?
             }
             ChallengeAction::Accept(nanoid) => {
-                AcceptHandler::new(nanoid, self.user_id, &self.pool)
+                AcceptHandler::new(nanoid, &self.username, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?

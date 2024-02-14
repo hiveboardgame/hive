@@ -1,4 +1,4 @@
-use super::game_action::GameAction;
+use super::game_reaction::GameReaction;
 use crate::responses::challenge::ChallengeResponse;
 use crate::responses::game::GameResponse;
 use crate::responses::user::UserResponse;
@@ -47,16 +47,27 @@ pub enum ServerMessage {
         game_id: String,
         message: String,
     },
-    GameActionNotification(Vec<GameResponse>),
-    GameUpdate(GameActionResponse),
-    GameTimeoutCheck(GameResponse),
-    GameTimedOut(String),
-    GameNew(GameResponse),
-    GameSpectate(GameResponse),
+    Game(GameUpdate),
     Challenge(ChallengeUpdate),
     UserStatus(UserUpdate),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GameUpdate {
+    Reaction(GameActionResponse),
+    Urgent(Vec<GameResponse>),
+    Tv(GameResponse),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameActionResponse {
+    pub game_action: GameReaction,
+    pub game: GameResponse,
+    pub game_id: String,
+    pub user_id: Uuid,
+    pub username: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,15 +76,6 @@ pub enum ChallengeUpdate {
     Removed(String),                    // A challenge was removed
     Direct(ChallengeResponse),          // Player got directly invited to a game
     Challenges(Vec<ChallengeResponse>), //
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GameActionResponse {
-    pub game_action: GameAction,
-    pub game: GameResponse,
-    pub game_id: String,
-    pub user_id: Uuid,
-    pub username: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

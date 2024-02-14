@@ -15,8 +15,8 @@ use chrono::Utc;
 use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
 use leptos::*;
 use leptos_icons::*;
-use shared_types::time_mode::TimeMode;
-use std::str::FromStr;
+
+
 
 #[component]
 pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
@@ -99,8 +99,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     <div class="flex gap-1">
                         {rated_string}
                         <TimeRow
-                            time_mode=TimeMode::from_str(&game().time_mode)
-                                .expect("Valid time mode")
+                            time_mode=game().time_mode
                             time_base=game().time_base
                             increment=game().time_increment
                         />

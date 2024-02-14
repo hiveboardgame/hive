@@ -1,16 +1,15 @@
-use super::game_timeout_handler::GameTimeoutHandler;
-use super::internal_server_message::InternalServerMessage;
-use super::messages::WsMessage;
-use super::{
-    auth_error::AuthError, game_action_handler::GameActionHandler,
-    user_status_handler::UserStatusHandler,
-};
 use crate::common::{client_message::ClientRequest, game_action::GameAction};
 use crate::websockets::api::challenges::handler::ChallengeHandler;
 use crate::websockets::api::ping::handler::PingHandler;
+use crate::websockets::api::user_status::handler::UserStatusHandler;
+use crate::websockets::auth_error::AuthError;
+use crate::websockets::internal_server_message::InternalServerMessage;
+use crate::websockets::messages::WsMessage;
 use anyhow::Result;
 use db_lib::DbPool;
 use uuid::Uuid;
+
+use super::game::handler::GameActionHandler;
 
 pub struct RequestHandler {
     command: ClientRequest,
@@ -50,18 +49,12 @@ impl RequestHandler {
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
             ClientRequest::Ping(sent) => PingHandler::new(self.user_id, sent).handle(),
-            ClientRequest::GameTimeout(nanoid) => {
-                GameTimeoutHandler::new(&nanoid, &self.username, self.user_id, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
             ClientRequest::Game {
                 action: game_action,
                 id: game_id,
             } => {
                 match game_action {
-                    GameAction::Move(_) | GameAction::Control(_) => self.ensure_auth()?,
+                    GameAction::Turn(_) | GameAction::Control(_) => self.ensure_auth()?,
                     _ => {}
                 };
                 GameActionHandler::new(
@@ -78,7 +71,7 @@ impl RequestHandler {
             }
             ClientRequest::Challenge(challenge_action) => {
                 self.ensure_auth()?;
-                ChallengeHandler::new(challenge_action, self.user_id, &self.pool)
+                ChallengeHandler::new(challenge_action, &self.username, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?

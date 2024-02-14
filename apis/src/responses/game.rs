@@ -1,10 +1,12 @@
 use crate::responses::user::UserResponse;
+use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use hive_lib::{
     bug::Bug, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
     game_type::GameType, history::History, position::Position, state::State,
 };
 use serde::{Deserialize, Serialize};
+use shared_types::time_mode::TimeMode;
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
@@ -31,7 +33,7 @@ pub struct GameResponse {
     pub black_rating: Option<f64>,
     pub white_rating_change: Option<f64>,
     pub black_rating_change: Option<f64>,
-    pub time_mode: String,
+    pub time_mode: TimeMode,
     pub time_base: Option<i32>,
     pub time_increment: Option<i32>,
     pub black_time_left: Option<Duration>,
@@ -54,6 +56,40 @@ impl GameResponse {
         ))
         .expect("State to be valid, as game was")
     }
+
+    pub fn time_left(&self) -> Result<std::time::Duration> {
+        if self.turn < 2 {
+            return Ok(std::time::Duration::from_nanos(std::u64::MAX));
+        }
+        if self.time_mode == TimeMode::Untimed {
+            return Ok(self
+                .updated_at
+                .signed_duration_since(DateTime::<chrono::Utc>::MIN_UTC)
+                .to_std()?);
+        }
+        if let Some(interaction) = self.last_interaction {
+            let left = if self.turn % 2 == 0 {
+                chrono::Duration::from_std(
+                    self.white_time_left.context("white_time_left not some")?,
+                )
+            } else {
+                chrono::Duration::from_std(
+                    self.black_time_left.context("black_time_left not some")?,
+                )
+            }
+            .context("Could not convert to chrono::TimeDelta")?;
+            let future = interaction
+                .checked_add_signed(left)
+                .context("Time overflowed")?;
+            let now = Utc::now();
+            if now > future {
+                return Ok(std::time::Duration::from_nanos(0));
+            } else {
+                return Ok(future.signed_duration_since(now).to_std()?);
+            }
+        }
+        Ok(std::time::Duration::from_nanos(std::u64::MAX))
+    }
 }
 
 use cfg_if::cfg_if;
@@ -66,9 +102,13 @@ use hive_lib::{
     color::Color, game_status::GameStatus::Finished, piece::Piece,
 };
 use std::str::FromStr;
-use anyhow::Result;
 
 impl GameResponse {
+    pub async fn new_from_uuid(game_id: Uuid, pool: &DbPool) -> Result<Self> {
+        let game = Game::find_by_uuid(&game_id, pool).await?;
+        GameResponse::new_from_db(&game, pool).await
+    }
+
     pub async fn new_from_nanoid(game_id: &str, pool: &DbPool) -> Result<Self> {
         let game = Game::find_by_nanoid(game_id, pool).await?;
         GameResponse::new_from_db(&game, pool).await
@@ -80,7 +120,7 @@ impl GameResponse {
         GameResponse::new_from(game, &state, pool).await
     }
 
-    pub async fn new_from(
+    async fn new_from(
         game: &Game,
         state: &State,
         pool: &DbPool,
@@ -135,7 +175,7 @@ impl GameResponse {
             black_rating_change,
             white_time_left,
             black_time_left,
-            time_mode: game.time_mode.to_owned(),
+            time_mode: TimeMode::from_str(&game.time_mode).unwrap(),
             time_base: game.time_base,
             time_increment: game.time_increment,
             last_interaction: game.last_interaction,

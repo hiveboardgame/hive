@@ -16,8 +16,8 @@ use leptos::*;
 use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::use_window;
-use shared_types::time_mode::TimeMode;
-use std::str::FromStr;
+
+
 
 #[component]
 pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
@@ -67,13 +67,11 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     };
 
     let td_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
-    let time_mode = TimeMode::from_str(&challenge().time_mode).expect("Valid TimeMode");
-
+    let time_mode = challenge().time_mode;
     let uid = move || match (auth_context.user)() {
         Some(Ok(Some(user))) => Some(user.id),
         _ => None,
     };
-
     let player = move || {
         if let (Some(uid), Some(opponent)) = (uid(), challenge().opponent) {
             if challenge().challenger.uid == uid {

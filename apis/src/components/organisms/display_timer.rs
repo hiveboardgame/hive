@@ -10,7 +10,7 @@ use hive_lib::color::Color;
 use leptos::*;
 use leptos_icons::*;
 use shared_types::time_mode::TimeMode;
-use std::str::FromStr;
+
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Placement {
@@ -112,7 +112,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
             >
 
                 {move || {
-                    match TimeMode::from_str(&timer.signal.get().time_mode).expect("Valid TimeMode")
+                    match timer.signal.get().time_mode
                     {
                         TimeMode::Untimed => {
                             view! { <Icon icon=icondata::BiInfiniteRegular class="h-full w-full"/> }

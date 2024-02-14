@@ -3,6 +3,7 @@ use crate::responses::user::UserResponse;
 use chrono::prelude::*;
 use hive_lib::color::ColorChoice;
 use serde::{Deserialize, Serialize};
+use shared_types::time_mode::TimeMode;
 use std::str;
 use uuid::Uuid;
 
@@ -18,7 +19,7 @@ pub struct ChallengeResponse {
     pub color_choice: ColorChoice,
     pub created_at: DateTime<Utc>,
     pub challenger_rating: f64,
-    pub time_mode: String,           // Correspondence, Timed, Untimed
+    pub time_mode: TimeMode,           // Correspondence, Timed, Untimed
     pub time_base: Option<i32>,      // Secons
     pub time_increment: Option<i32>, // Seconds
 }
@@ -58,7 +59,7 @@ impl ChallengeResponse {
             color_choice: ColorChoice::from_str(&challenge.color_choice)?,
             created_at: challenge.created_at,
             challenger_rating: challenger_rating.rating,
-            time_mode: challenge.time_mode.clone(),
+            time_mode: TimeMode::from_str(&challenge.time_mode)?,
             time_base: challenge.time_base,
             time_increment: challenge.time_increment,
         })
