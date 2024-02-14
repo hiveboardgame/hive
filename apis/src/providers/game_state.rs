@@ -324,7 +324,9 @@ impl GameState {
                 self.reset();
                 self.history_turn = Some(self.state.turn - 1);
             } else {
-                log!("This is a bug, there should be a game_id");
+                log!("We should be in analysis");
+                self.reset();
+                self.history_turn = Some(self.state.turn - 1);
             }
         }
     }
