@@ -1,19 +1,18 @@
 use crate::{
     common::{
-        game_action::GameAction,
-        server_result::{GameActionResponse, ServerMessage},
+        game_reaction::GameReaction,
+        server_result::{GameActionResponse, GameUpdate, ServerMessage},
     },
     responses::game::GameResponse,
     responses::user::UserResponse,
+    websockets::{
+        internal_server_message::{InternalServerMessage, MessageDestination},
+        messages::WsMessage,
+    },
 };
 use anyhow::Result;
 use db_lib::{models::game::Game, DbPool};
 use uuid::Uuid;
-
-use super::{
-    internal_server_message::{InternalServerMessage, MessageDestination},
-    messages::WsMessage,
-};
 
 pub struct JoinHandler {
     pool: DbPool,
@@ -24,7 +23,7 @@ pub struct JoinHandler {
 }
 
 impl JoinHandler {
-    pub async fn new(
+    pub fn new(
         game: Game,
         username: &str,
         user_id: Uuid,
@@ -48,13 +47,13 @@ impl JoinHandler {
         });
         messages.push(InternalServerMessage {
             destination: MessageDestination::Direct(self.received_from.clone()),
-            message: ServerMessage::GameUpdate(GameActionResponse {
+            message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
                 game_id: self.game.nanoid.to_owned(),
                 game: GameResponse::new_from_db(&self.game, &self.pool).await?,
-                game_action: GameAction::Join,
+                game_action: GameReaction::Join,
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
-            }),
+            })),
         });
         Ok(messages)
     }

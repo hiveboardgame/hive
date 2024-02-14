@@ -1,6 +1,7 @@
 use hive_lib::{color::ColorChoice, game_type::GameType};
 use serde::{Deserialize, Serialize};
 use shared_types::challenge_error::ChallengeError;
+use shared_types::time_mode::TimeMode;
 use std::fmt;
 use std::str::FromStr;
 
@@ -13,7 +14,7 @@ pub enum ChallengeAction {
         visibility: ChallengeVisibility,
         opponent: Option<String>,
         color_choice: ColorChoice,
-        time_mode: String,
+        time_mode: TimeMode,
         time_base: Option<i32>,
         time_increment: Option<i32>,
     },

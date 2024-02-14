@@ -10,7 +10,7 @@ use crate::{
         game_state::provide_game_state, games::provide_games,
         navigation_controller::provide_navigation_controller, online_users::provide_users,
         ping::provide_ping, refocus::provide_refocus, timer::provide_timer,
-        web_socket::provide_websocket,
+        websocket::context::provide_websocket,
     },
 };
 use leptos::*;

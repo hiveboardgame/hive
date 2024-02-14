@@ -8,8 +8,8 @@ use leptos_router::RouterContext;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn_with_options, UseIntervalFnOptions};
 use regex::Regex;
-use shared_types::time_mode::TimeMode;
-use std::str::FromStr;
+
+
 use std::time::Duration;
 lazy_static! {
     static ref NANOID: Regex =
@@ -132,7 +132,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
             )
         }>
             {move || {
-                TimeMode::from_str(&timer.time_mode).unwrap().time_remaining(time_left.get())
+                timer.time_mode.time_remaining(time_left.get())
             }}
 
         </div>

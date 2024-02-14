@@ -1,5 +1,8 @@
 use crate::{
-    common::server_result::{ChallengeUpdate, ServerMessage},
+    common::{
+        game_reaction::GameReaction,
+        server_result::{ChallengeUpdate, GameActionResponse, GameUpdate, ServerMessage},
+    },
     responses::game::GameResponse,
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
@@ -15,14 +18,16 @@ use uuid::Uuid;
 pub struct AcceptHandler {
     nanoid: String,
     user_id: Uuid,
+    username: String,
     pool: DbPool,
 }
 
 impl AcceptHandler {
-    pub async fn new(nanoid: String, user_id: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(nanoid: String, username: &str, user_id: Uuid, pool: &DbPool) -> Result<Self> {
         Ok(Self {
             nanoid,
             user_id,
+            username: username.to_owned(),
             pool: pool.clone(),
         })
     }
@@ -48,12 +53,24 @@ impl AcceptHandler {
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.white_id),
-            message: ServerMessage::GameNew(game_response.clone()),
+            message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
+                game_action: GameReaction::New,
+                game: game_response.clone(),
+                game_id: game_response.nanoid.clone(),
+                user_id: self.user_id,
+                username: self.username.to_owned(),
+            })),
         });
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.black_id),
-            message: ServerMessage::GameNew(game_response),
+            message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
+                game_action: GameReaction::New,
+                game: game_response.clone(),
+                game_id: game_response.nanoid.clone(),
+                user_id: self.user_id,
+                username: self.username.to_owned(),
+            })),
         });
 
         for challenge_nanoid in deleted_challenges {

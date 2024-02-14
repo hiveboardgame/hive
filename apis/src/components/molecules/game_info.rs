@@ -1,7 +1,7 @@
-use std::str::FromStr;
+
 
 use leptos::*;
-use shared_types::time_mode::TimeMode;
+
 
 use crate::{components::molecules::time_row::TimeRow, providers::game_state::GameStateSignal};
 
@@ -15,7 +15,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <div class=extend_tw_classes>
                     <div class="flex items-center gap-1">
                         <TimeRow
-                            time_mode=TimeMode::from_str(&gr.time_mode).expect("Valid time mode")
+                            time_mode=gr.time_mode
                             time_base=gr.time_base
                             increment=gr.time_increment
                             extend_tw_classes="whitespace-nowrap"

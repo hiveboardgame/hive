@@ -489,13 +489,12 @@ impl Game {
     }
 
     pub fn has_unanswered_game_control(&self) -> bool {
-        if let Some(gc) = self.last_game_control() {
-            return matches!(
+        self.last_game_control().is_some_and(|gc| {
+            matches!(
                 gc,
                 GameControl::TakebackRequest(_) | GameControl::DrawOffer(_)
-            );
-        }
-        false
+            )
+        })
     }
 
     pub fn last_game_control(&self) -> Option<GameControl> {
@@ -689,15 +688,25 @@ impl Game {
 
     pub async fn find_by_uuid(uuid: &Uuid, pool: &DbPool) -> Result<Game, DbError> {
         let conn = &mut get_conn(pool).await?;
-        Ok(games::table.find(uuid).first(conn).await?)
+        let game: Game = games::table.find(uuid).first(conn).await?;
+        if !game.finished && TimeMode::from_str(&game.time_mode)? != TimeMode::Untimed {
+            game.check_time(pool).await
+        } else {
+            Ok(game)
+        }
     }
 
     pub async fn find_by_nanoid(find_nanoid: &str, pool: &DbPool) -> Result<Game, DbError> {
         let conn = &mut get_conn(pool).await?;
-        Ok(games::table
+        let game: Game = games::table
             .filter(nanoid.eq(find_nanoid))
             .first(conn)
-            .await?)
+            .await?;
+        if !game.finished && TimeMode::from_str(&game.time_mode)? != TimeMode::Untimed {
+            game.check_time(pool).await
+        } else {
+            Ok(game)
+        }
     }
 
     pub async fn delete(&self, pool: &DbPool) -> Result<(), DbError> {

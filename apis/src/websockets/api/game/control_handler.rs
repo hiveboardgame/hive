@@ -1,16 +1,17 @@
 use crate::{
     common::{
-        game_action::GameAction,
-        server_result::{GameActionResponse, ServerMessage},
+        game_reaction::GameReaction,
+        server_result::{GameActionResponse, GameUpdate, ServerMessage},
     },
     responses::game::GameResponse,
+    websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{models::game::Game, models::user::User, DbPool};
 use hive_lib::{game_control::GameControl, game_error::GameError};
+use shared_types::time_mode::TimeMode;
 use uuid::Uuid;
 
-use super::internal_server_message::{InternalServerMessage, MessageDestination};
 
 pub struct GameControlHandler {
     control: GameControl,
@@ -21,7 +22,7 @@ pub struct GameControlHandler {
 }
 
 impl GameControlHandler {
-    pub async fn new(
+    pub fn new(
         control: &GameControl,
         game: Game,
         username: &str,
@@ -46,15 +47,16 @@ impl GameControlHandler {
         // the gc hasn't been sent previously
         self.ensure_fresh_game_control()?;
         let game = self.match_control().await?;
+        let game_response = GameResponse::new_from_db(&game, &self.pool).await?;
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(self.game.nanoid.clone()),
-            message: ServerMessage::GameUpdate(GameActionResponse {
+            message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
                 game_id: self.game.nanoid.to_owned(),
-                game: GameResponse::new_from_db(&game, &self.pool).await?,
-                game_action: GameAction::Control(self.control.clone()),
+                game: game_response.clone(),
+                game_action: GameReaction::Control(self.control.clone()),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
-            }),
+            })),
         });
         match self.control {
             GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
@@ -68,11 +70,17 @@ impl GameControlHandler {
                 }
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(game.current_player_id),
-                    message: ServerMessage::GameActionNotification(game_responses),
+                    message: ServerMessage::Game(GameUpdate::Urgent(game_responses)),
                 });
             }
             _ => {}
         }
+        if game_response.time_mode == TimeMode::RealTime {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::Global,
+                message: ServerMessage::Game(GameUpdate::Tv(game_response)),
+            });
+        };
         Ok(messages)
     }
 

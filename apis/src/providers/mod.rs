@@ -11,4 +11,4 @@ pub mod online_users;
 pub mod ping;
 pub mod refocus;
 pub mod timer;
-pub mod web_socket;
+pub mod websocket;

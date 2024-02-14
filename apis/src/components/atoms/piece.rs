@@ -14,14 +14,44 @@ pub fn Piece(
     #[prop(into)] level: MaybeSignal<usize>,
     #[prop(optional, into)] piece_type: PieceType,
 ) -> impl IntoView {
+    let game_state_signal = expect_context::<GameStateSignal>();
     let center = move || SvgPos::center_for_level(position.get_untracked(), level());
     let transform = move || format!("translate({},{})", center().0, center().1);
     let bug = piece.get_untracked().bug();
     let color = piece.get_untracked().color();
     let order = piece.get_untracked().order();
+
     //IMPORTANT drop-shadow-b drop-shadow-w leave this comment for TW
-    let mut filter = String::from("duration-300 drop-shadow-");
-    filter.push_str(&color.to_string());
+    let mut filter = match game_state_signal
+        .signal
+        .get_untracked()
+        .state
+        .board
+        .last_move
+    {
+        (Some(from), Some(to)) => {
+            if position.get_untracked() == from || position.get_untracked() == to {
+                String::new()
+            } else {
+                format!("duration-300 drop-shadow-{}", &color.to_string())
+            }
+        }
+        (Some(pos), None) => {
+            if position.get_untracked() == pos {
+                String::new()
+            } else {
+                format!("duration-300 drop-shadow-{}", &color.to_string())
+            }
+        }
+        (None, Some(pos)) => {
+            if position.get_untracked() == pos {
+                String::new()
+            } else {
+                format!("duration-300 drop-shadow-{}", &color.to_string())
+            }
+        }
+        _ => format!("duration-300 drop-shadow-{}", &color.to_string()),
+    };
     if piece_type == PieceType::Inactive {
         filter.push_str(" sepia-[.75]");
     }

@@ -1,18 +1,17 @@
 use crate::{
     common::{
-        game_action::GameAction,
-        server_result::{GameActionResponse, ServerMessage},
+        game_reaction::GameReaction,
+        server_result::{GameActionResponse, GameUpdate, ServerMessage},
     },
     responses::game::GameResponse,
+    websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{models::game::Game, models::user::User, DbPool};
 use hive_lib::{game_error::GameError, state::State, turn::Turn};
 use shared_types::time_mode::TimeMode;
-use std::str::FromStr;
-use uuid::Uuid;
 
-use super::internal_server_message::{InternalServerMessage, MessageDestination};
+use uuid::Uuid;
 
 pub struct TurnHandler {
     turn: Turn,
@@ -23,20 +22,14 @@ pub struct TurnHandler {
 }
 
 impl TurnHandler {
-    pub async fn new(
-        turn: Turn,
-        game: Game,
-        username: &str,
-        user_id: Uuid,
-        pool: &DbPool,
-    ) -> Result<Self> {
-        Ok(Self {
+    pub fn new(turn: Turn, game: Game, username: &str, user_id: Uuid, pool: &DbPool) -> Self {
+        Self {
             game,
             user_id,
             username: username.to_owned(),
             pool: pool.clone(),
             turn,
-        })
+        }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
@@ -82,8 +75,8 @@ impl TurnHandler {
                 .make_move(String::from("pass "), state.game_status.clone(), &self.pool)
                 .await?;
         }
-        let current_user = User::find_by_uuid(&game.current_player_id, &self.pool).await?;
-        let games = current_user
+        let next_to_move = User::find_by_uuid(&game.current_player_id, &self.pool).await?;
+        let games = next_to_move
             .get_games_with_notifications(&self.pool)
             .await?;
         let mut game_responses = Vec::new();
@@ -92,24 +85,24 @@ impl TurnHandler {
         }
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.current_player_id),
-            message: ServerMessage::GameActionNotification(game_responses),
+            message: ServerMessage::Game(GameUpdate::Urgent(game_responses)),
         });
         let response = GameResponse::new_from_db(&game, &self.pool).await?;
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(self.game.nanoid.clone()),
-            message: ServerMessage::GameUpdate(GameActionResponse {
+            message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
                 game_id: self.game.nanoid.to_owned(),
                 game: response.clone(),
-                game_action: GameAction::Move(self.turn.clone()),
+                game_action: GameReaction::Turn(self.turn.clone()),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
-            }),
+            })),
         });
         // TODO: Just add the few top games and keep them rated
-        if TimeMode::from_str(&response.time_mode)? == TimeMode::RealTime {
+        if response.time_mode == TimeMode::RealTime {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::GameSpectate(response),
+                message: ServerMessage::Game(GameUpdate::Tv(response)),
             });
         };
         Ok(messages)

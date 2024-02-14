@@ -2,6 +2,7 @@ use chrono::DateTime;
 use chrono::Utc;
 use leptos::logging::log;
 use leptos::*;
+use shared_types::time_mode::TimeMode;
 use std::time::Duration;
 
 use crate::responses::game::GameResponse;
@@ -35,7 +36,7 @@ impl TimerSignal {
             timer.time_increment = game
                 .time_increment
                 .map(|inc| Duration::from_secs(inc as u64));
-            timer.time_mode = game.time_mode.to_owned();
+            timer.time_mode = game.time_mode.clone();
             timer.last_interaction = game.last_interaction;
         });
     }
@@ -49,7 +50,7 @@ pub struct Timer {
     pub white_time_left: Option<Duration>,
     pub black_time_left: Option<Duration>,
     pub time_increment: Option<Duration>,
-    pub time_mode: String,
+    pub time_mode: TimeMode,
     pub last_interaction: Option<DateTime<Utc>>,
 }
 
@@ -62,7 +63,7 @@ impl Timer {
             white_time_left: None,
             black_time_left: None,
             time_increment: None,
-            time_mode: String::from("Untimed"),
+            time_mode: TimeMode::Untimed,
             last_interaction: None,
         }
     }

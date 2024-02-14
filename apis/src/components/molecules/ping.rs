@@ -1,5 +1,5 @@
 use crate::providers::ping::PingSignal;
-use crate::providers::web_socket::WebsocketContext;
+use crate::providers::websocket::context::WebsocketContext;
 use chrono::Utc;
 use leptos::*;
 use leptos_icons::*;

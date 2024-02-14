@@ -5,7 +5,7 @@ use crate::providers::color_scheme::ColorScheme;
 use crate::providers::navigation_controller::NavigationControllerSignal;
 use crate::providers::ping::PingSignal;
 use crate::providers::refocus::RefocusSignal;
-use crate::providers::web_socket::WebsocketContext;
+use crate::providers::websocket::context::WebsocketContext;
 use chrono::Utc;
 use lazy_static::lazy_static;
 use leptos::logging::log;

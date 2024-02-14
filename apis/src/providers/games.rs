@@ -1,13 +1,14 @@
 use super::auth_context::AuthContext;
 use super::navigation_controller::NavigationControllerSignal;
 use crate::responses::game::GameResponse;
-use chrono::{Duration, Utc};
-use hive_lib::{color::Color, game_control::GameControl};
-use leptos::logging::log;
+use chrono::{DateTime, Utc};
+use hive_lib::color::Color;
+use hive_lib::game_control::GameControl;
 use leptos::*;
 use shared_types::time_mode::TimeMode;
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 use std::collections::HashMap;
-use std::str::FromStr;
 
 #[derive(Clone, Debug, Copy)]
 pub struct GamesSignal {
@@ -29,127 +30,194 @@ impl GamesSignal {
         }
     }
 
-    pub fn update_next_games(&mut self) {
-        if self.own.get_untracked().games.is_empty() {
-            self.own.update(|s| {
-                s.next_games.clear();
-            });
-            return;
-        }
+    pub fn visit(&mut self, time_mode: TimeMode) -> Option<String> {
+        let navigation_controller = expect_context::<NavigationControllerSignal>();
         let auth_context = expect_context::<AuthContext>();
         if let Some(Ok(Some(user))) = untrack(auth_context.user) {
             self.own.update(|s| {
-                let mut games: Vec<GameResponse> = s.games.values().cloned().collect();
-                games.sort_by(|a, b| a.updated_at.cmp(&b.updated_at));
-                let mut games_with_time = games
-                    .iter()
-                    .filter_map(|game| {
-                        let not_player_color = if game.black_player.uid == user.id {
-                            Color::White
-                        } else {
-                            Color::Black
-                        };
-                        let gc = game.game_control_history.last().map(|(_turn, gc)| gc);
-                        let unanswered_gc = match gc {
-                            Some(GameControl::DrawOffer(color))
-                            | Some(GameControl::TakebackRequest(color)) => {
-                                *color == not_player_color
-                            }
-                            _ => false,
-                        };
-                        if !game.finished && (game.current_player_id == user.id || unanswered_gc) {
-                            let time_left = if let Some(last_interaction) = game.last_interaction {
-                                let left = match TimeMode::from_str(&game.time_mode) {
-                                    Ok(TimeMode::RealTime) | Ok(TimeMode::Correspondence) => {
-                                        if game.turn % 2 == 0 {
-                                            Duration::from_std(game.white_time_left.unwrap())
-                                                .unwrap()
-                                        } else {
-                                            Duration::from_std(game.black_time_left.unwrap())
-                                                .unwrap()
-                                        }
-                                    }
-                                    _ => Duration::days(10_000),
-                                };
-                                let future = last_interaction.checked_add_signed(left).unwrap();
-                                let now = Utc::now();
-                                if now > future {
-                                    std::time::Duration::from_nanos(0)
-                                } else {
-                                    future.signed_duration_since(now).to_std().unwrap()
+                if let Some(nanoid) = navigation_controller.signal.get_untracked().nanoid {
+                    if let Some(game) = s.untimed.get(&nanoid) {
+                        if game.current_player_id == user.id {
+                            if let Some(gp) =
+                                s.next_untimed.clone().iter().find(|gp| gp.nanoid == nanoid)
+                            {
+                                s.next_untimed.retain(|gp| gp.nanoid != nanoid);
+                                if let Ok(time_left) = game.time_left() {
+                                    s.next_untimed.push(GamePriority {
+                                        last_interaction: gp.last_interaction,
+                                        time_left,
+                                        skipped: gp.skipped + 1,
+                                        nanoid: gp.nanoid.clone(),
+                                    });
                                 }
-                            } else if let Some(base) = game.white_time_left {
-                                base
-                            } else {
-                                std::time::Duration::from_secs(u64::MAX)
-                            };
-                            Some((time_left, game.nanoid.to_owned()))
-                        } else {
-                            None
+                            }
                         }
-                    })
-                    .collect::<Vec<(std::time::Duration, String)>>();
-                games_with_time.sort_by(|a, b| a.0.cmp(&b.0));
-                s.next_games = games_with_time.iter().map(|g| g.1.to_owned()).collect();
+                    }
+                    if let Some(game) = s.realtime.get(&nanoid) {
+                        if game.current_player_id == user.id {
+                            if let Some(gp) = s
+                                .next_realtime
+                                .clone()
+                                .iter()
+                                .find(|gp| gp.nanoid == nanoid)
+                            {
+                                s.next_realtime.retain(|gp| gp.nanoid != nanoid);
+                                if let Ok(time_left) = game.time_left() {
+                                    s.next_realtime.push(GamePriority {
+                                        last_interaction: gp.last_interaction,
+                                        time_left,
+                                        skipped: gp.skipped + 1,
+                                        nanoid: gp.nanoid.clone(),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    if let Some(game) = s.correspondence.get(&nanoid) {
+                        if game.current_player_id == user.id {
+                            if let Some(gp) = s
+                                .next_correspondence
+                                .clone()
+                                .iter()
+                                .find(|gp| gp.nanoid == nanoid)
+                            {
+                                s.next_correspondence.retain(|gp| gp.nanoid != nanoid);
+                                if let Ok(time_left) = game.time_left() {
+                                    s.next_correspondence.push(GamePriority {
+                                        last_interaction: gp.last_interaction,
+                                        time_left,
+                                        skipped: gp.skipped + 1,
+                                        nanoid: gp.nanoid.clone(),
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
             });
-        }
-    }
-
-    pub fn visit_game(&mut self) -> Option<String> {
-        let mut next_game = None;
-        let navigation_controller = expect_context::<NavigationControllerSignal>();
-        self.own.update(|s| {
-            let mut games = s.next_games.clone();
-            log!("Games in visit: {:?}", games);
-            if let Some(nanoid) = navigation_controller.signal.get_untracked().nanoid {
-                games.retain(|g| *g != nanoid);
-                games.push(nanoid.clone());
-            }
-            next_game = games.first().cloned();
-            s.next_games = games;
-            log!("Games after visit: {:?}", s.next_games);
-        });
-        next_game
+            return match time_mode {
+                TimeMode::RealTime => self
+                    .own
+                    .get_untracked()
+                    .next_realtime
+                    .peek()
+                    .map(|gp| gp.nanoid.clone()),
+                TimeMode::Correspondence => self
+                    .own
+                    .get_untracked()
+                    .next_correspondence
+                    .peek()
+                    .map(|gp| gp.nanoid.clone()),
+                TimeMode::Untimed => self
+                    .own
+                    .get_untracked()
+                    .next_untimed
+                    .peek()
+                    .map(|gp| gp.nanoid.clone()),
+            };
+        };
+        None
     }
 
     pub fn own_games_add(&mut self, game: GameResponse) {
-        let mut update_required = true;
-        self.own.update_untracked(|s| {
-            if let Some(already_present_game) = s.games.get(&game.nanoid) {
+        let auth_context = expect_context::<AuthContext>();
+        let mut next_required = false;
+        let mut player_color = Color::White;
+        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+            if game.current_player_id == user.id {
+                next_required = true;
+            }
+            if game.black_player.uid == user.id {
+                player_color = Color::Black;
+            }
+        }
+        if let Some(last) = game.game_control_history.last() {
+            match &last.1 {
+                GameControl::DrawOffer(color) | GameControl::TakebackRequest(color) => {
+                    if color != &player_color {
+                        next_required = true;
+                    }
+                }
+                _ => {
+                }
+            }
+        }
+        self.own.update(|s| {
+            let mut update_required = true;
+            if let Some(already_present_game) = match game.time_mode {
+                TimeMode::Untimed => s.untimed.get(&game.nanoid),
+                TimeMode::Correspondence => s.correspondence.get(&game.nanoid),
+                TimeMode::RealTime => s.realtime.get(&game.nanoid),
+            } {
                 if already_present_game.updated_at == game.updated_at {
-                    update_required = false
+                    update_required = false;
                 }
             };
             if update_required {
-                s.games.insert(game.nanoid.to_owned(), game);
+                match game.time_mode {
+                    TimeMode::Untimed => {
+                        s.untimed.insert(game.nanoid.to_owned(), game.clone());
+                        s.next_untimed.retain(|gp| gp.nanoid != game.nanoid);
+                        if next_required {
+                            if let Ok(time_left) = game.time_left() {
+                                s.next_untimed.push(GamePriority {
+                                    last_interaction: Some(game.updated_at),
+                                    time_left,
+                                    skipped: 0,
+                                    nanoid: game.nanoid.clone(),
+                                });
+                            }
+                        }
+                    }
+                    TimeMode::Correspondence => {
+                        s.correspondence
+                            .insert(game.nanoid.to_owned(), game.clone());
+                        s.next_correspondence.retain(|gp| gp.nanoid != game.nanoid);
+                        if next_required {
+                            if let Ok(time_left) = game.time_left() {
+                                s.next_correspondence.push(GamePriority {
+                                    last_interaction: game.last_interaction,
+                                    time_left,
+                                    skipped: 0,
+                                    nanoid: game.nanoid.clone(),
+                                });
+                            }
+                        }
+                    }
+                    TimeMode::RealTime => {
+                        s.realtime.insert(game.nanoid.to_owned(), game.clone());
+                        s.next_realtime.retain(|gp| gp.nanoid != game.nanoid);
+                        if next_required {
+                            if let Ok(time_left) = game.time_left() {
+                                s.next_realtime.push(GamePriority {
+                                    last_interaction: game.last_interaction,
+                                    time_left,
+                                    skipped: 0,
+                                    nanoid: game.nanoid.clone(),
+                                });
+                            }
+                        }
+                    }
+                };
             }
         });
-        if update_required {
-            self.update_next_games();
-        }
     }
 
     pub fn own_games_remove(&mut self, game_id: &str) {
-        self.own.update_untracked(|s| {
-            s.games.remove(game_id);
+        self.own.update(|s| {
+            s.realtime.remove(game_id);
+            s.next_realtime.retain(|gp| gp.nanoid != game_id);
+            s.correspondence.remove(game_id);
+            s.next_correspondence.retain(|gp| gp.nanoid != game_id);
+            s.untimed.remove(game_id);
+            s.next_untimed.retain(|gp| gp.nanoid != game_id);
         });
-        self.update_next_games();
-    }
-
-    pub fn remove_from_next_games(&mut self, game_id: &str) {
-        self.own.update_untracked(|s| {
-            s.next_games.retain(|g| g != game_id);
-        });
-        self.update_next_games();
     }
 
     pub fn own_games_set(&mut self, games: Vec<GameResponse>) {
         for game in games {
-            self.own.update_untracked(|s| {
-                s.games.insert(game.nanoid.to_owned(), game);
-            });
+            self.own_games_add(game);
         }
-        self.update_next_games();
     }
 
     pub fn live_games_add(&mut self, game: GameResponse) {
@@ -176,17 +244,48 @@ impl GamesSignal {
     }
 }
 
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct GamePriority {
+    pub last_interaction: Option<DateTime<Utc>>,
+    pub time_left: std::time::Duration,
+    pub skipped: usize,
+    pub nanoid: String,
+}
+
+impl Ord for GamePriority {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other
+            .skipped
+            .cmp(&self.skipped)
+            .then_with(|| other.time_left.cmp(&self.time_left))
+    }
+}
+
+impl PartialOrd for GamePriority {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct OwnGames {
-    pub games: HashMap<String, GameResponse>,
-    pub next_games: Vec<String>,
+    pub realtime: HashMap<String, GameResponse>,
+    pub untimed: HashMap<String, GameResponse>,
+    pub correspondence: HashMap<String, GameResponse>,
+    pub next_realtime: BinaryHeap<GamePriority>,
+    pub next_untimed: BinaryHeap<GamePriority>,
+    pub next_correspondence: BinaryHeap<GamePriority>,
 }
 
 impl OwnGames {
     pub fn new() -> Self {
         Self {
-            next_games: Vec::new(),
-            games: HashMap::new(),
+            realtime: HashMap::new(),
+            untimed: HashMap::new(),
+            correspondence: HashMap::new(),
+            next_realtime: BinaryHeap::new(),
+            next_untimed: BinaryHeap::new(),
+            next_correspondence: BinaryHeap::new(),
         }
     }
 }

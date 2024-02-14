@@ -342,10 +342,8 @@ impl GameState {
         self.reset();
         self.current_position = Some(position);
         let moves = self.state.board.moves(self.state.turn_color);
-        log!("showing moves");
         if let Some(positions) = moves.get(&(piece, position)) {
             self.target_positions = positions.to_owned();
-            log!("{:?}", piece);
             self.active = Some(piece);
         }
     }

@@ -1,14 +1,15 @@
+use super::{
+    control_handler::GameControlHandler, join_handler::JoinHandler,
+    timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
+};
 use crate::common::game_action::GameAction;
-use crate::websockets::turn_handler::TurnHandler;
+use crate::websockets::internal_server_message::InternalServerMessage;
+use crate::websockets::messages::WsMessage;
 use anyhow::Result;
 use db_lib::{models::game::Game, DbPool};
 use hive_lib::{game_error::GameError, game_status::GameStatus};
 use std::str::FromStr;
 use uuid::Uuid;
-
-use super::internal_server_message::InternalServerMessage;
-use super::messages::WsMessage;
-use super::{game_control_handler::GameControlHandler, join_handler::JoinHandler};
 
 pub struct GameActionHandler {
     game_action: GameAction,
@@ -41,42 +42,47 @@ impl GameActionHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.game_action.clone() {
-            GameAction::Move(turn) => {
+            GameAction::CheckTime => {
+                TimeoutHandler::new(self.game.clone(), &self.username, self.user_id, &self.pool)
+                    .handle()
+                    .await?
+            }
+            GameAction::Turn(turn) => {
                 self.ensure_not_finished()?;
                 self.ensure_user_is_player()?;
-                let th = TurnHandler::new(
+                TurnHandler::new(
                     turn,
                     self.game.clone(),
                     &self.username,
                     self.user_id,
                     &self.pool,
                 )
-                .await?;
-                th.handle().await?
+                .handle()
+                .await?
             }
             GameAction::Control(control) => {
                 self.ensure_not_finished()?;
                 self.ensure_user_is_player()?;
-                let gch = GameControlHandler::new(
+                GameControlHandler::new(
                     &control,
                     self.game.clone(),
                     &self.username,
                     self.user_id,
                     &self.pool,
                 )
-                .await;
-                gch.handle().await?
+                .handle()
+                .await?
             }
             GameAction::Join => {
-                let jh = JoinHandler::new(
+                JoinHandler::new(
                     self.game.clone(),
                     &self.username,
                     self.user_id,
                     self.received_from.clone(),
                     &self.pool,
                 )
-                .await;
-                jh.handle().await?
+                .handle()
+                .await?
             }
         };
         Ok(messages)
