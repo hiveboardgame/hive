@@ -7,22 +7,18 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
     let auth_context = expect_context::<AuthContext>();
     let websocket_context = expect_context::<WebsocketContext>();
     view! {
-        <ActionForm
-            action=auth_context.logout
-            class=format!(
-                "bg-ant-blue hover:bg-ladybug-red transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded cursor-pointer {extend_tw_classes}",
-            )
-        >
+        <ActionForm action=auth_context.logout class=format!("flex m-1 {extend_tw_classes}")>
 
-            <input
+            <button
                 on:click=move |_| {
                     websocket_context.close();
                 }
 
-                class="cursor-pointer"
+                class="w-full h-full flex place-content-start bg-ant-blue hover:bg-ladybug-red transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
                 type="submit"
-                value="Logout"
-            />
+            >
+                Logout
+            </button>
         </ActionForm>
     }
 }

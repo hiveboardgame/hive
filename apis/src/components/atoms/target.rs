@@ -1,5 +1,6 @@
 use crate::common::move_confirm::MoveConfirm;
 use crate::common::svg_pos::SvgPos;
+use crate::pages::analysis::InAnalysis;
 use crate::providers::confirm_mode::ConfirmMode;
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::position::Position;
@@ -15,12 +16,14 @@ pub fn Target(
     let transform = move || format!("translate({},{})", center().0, center().1);
     let mut game_state_signal = expect_context::<GameStateSignal>();
     let confirm_mode = expect_context::<ConfirmMode>();
+    let in_analysis = use_context::<InAnalysis>().unwrap_or(InAnalysis(RwSignal::new(false)));
 
     // Select the target position and make a move if it's the correct mode
     let onclick = move |_| {
-        if game_state_signal.is_move_allowed() {
+        let in_analysis = in_analysis.0.get_untracked();
+        if in_analysis || game_state_signal.is_move_allowed() {
             game_state_signal.set_target(position);
-            if matches!((confirm_mode.preferred_confirm)(), MoveConfirm::Single) {
+            if matches!((confirm_mode.preferred_confirm)(), MoveConfirm::Single) && !in_analysis {
                 game_state_signal.move_active();
             }
         }

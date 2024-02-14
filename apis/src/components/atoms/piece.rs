@@ -1,5 +1,6 @@
 use crate::common::move_confirm::MoveConfirm;
 use crate::common::{piece_type::PieceType, svg_pos::SvgPos};
+use crate::pages::analysis::InAnalysis;
 use crate::providers::confirm_mode::ConfirmMode;
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::{bug::Bug, piece::Piece, position::Position};
@@ -36,9 +37,11 @@ pub fn Piece(
 
     let mut game_state_signal = expect_context::<GameStateSignal>();
     let confirm_mode = expect_context::<ConfirmMode>();
+    let in_analysis = use_context::<InAnalysis>().unwrap_or(InAnalysis(RwSignal::new(false)));
 
     let onclick = move |_| {
-        if game_state_signal.is_move_allowed() {
+        let in_analysis = in_analysis.0.get_untracked();
+        if in_analysis || game_state_signal.is_move_allowed() {
             match piece_type {
                 PieceType::Board => {
                     game_state_signal.show_moves(piece.get_untracked(), position.get_untracked());
@@ -47,7 +50,9 @@ pub fn Piece(
                     game_state_signal.show_spawns(piece.get_untracked(), position.get_untracked());
                 }
                 PieceType::Move | PieceType::Spawn => {
-                    if matches!((confirm_mode.preferred_confirm)(), MoveConfirm::Double) {
+                    if in_analysis
+                        || matches!((confirm_mode.preferred_confirm)(), MoveConfirm::Double)
+                    {
                         game_state_signal.move_active();
                     }
                 }

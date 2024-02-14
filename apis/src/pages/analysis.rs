@@ -17,9 +17,13 @@ use hive_lib::color::Color;
 use leptos::*;
 use leptos_use::use_media_query;
 
+#[derive(Clone)]
+pub struct InAnalysis(pub RwSignal<bool>);
+
 #[component]
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
+    provide_context(InAnalysis(RwSignal::new(true)));
     let is_tall = use_media_query("(min-height: 100vw)");
     let parent_container_style = move || {
         if is_tall() {

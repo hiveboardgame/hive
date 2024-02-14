@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::common::svg_pos::SvgPos;
 use crate::providers::game_state::{GameStateSignal, View};
 use crate::{
@@ -12,6 +14,7 @@ use hive_lib::position::Position;
 use leptos::ev::{
     contextmenu, pointerdown, pointerleave, pointermove, pointerup, touchmove, touchstart, wheel,
 };
+use leptos::leptos_dom::helpers::debounce;
 use leptos::svg::Svg;
 use leptos::*;
 use leptos_use::{
@@ -108,7 +111,7 @@ pub fn Board(
                 viewbox_controls.y_transform = -(svg_pos.1 - (rect.height() as f32 / 2.0));
             });
         },
-        250.0,
+        10.0,
     );
     use_resize_observer(div_ref, move |entries, _observer| {
         let rect = entries[0].content_rect();
@@ -138,28 +141,32 @@ pub fn Board(
         }
     });
 
-    //Zoom on point with mousewheel/touchpad
     _ = use_event_listener_with_options(
         viewbox_ref,
         wheel,
-        move |evt| {
+        debounce(Duration::from_millis(7), move |evt| {
             if !is_panning.get_untracked() {
                 let initial_point = svg_point_from_wheel(viewbox_ref, &evt);
                 let scale: f32 = if evt.delta_y() > 0.0 { 0.09 } else { -0.09 };
-                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                    let initial_width = viewbox_controls.width;
-                    let initial_height = viewbox_controls.height;
-                    viewbox_controls.width += initial_width * scale;
-                    viewbox_controls.height += initial_height * scale;
-                    viewbox_controls.x = initial_point.x()
-                        - (initial_point.x() - viewbox_controls.x) / initial_width
-                            * viewbox_controls.width;
-                    viewbox_controls.y = initial_point.y()
-                        - (initial_point.y() - viewbox_controls.y) / initial_height
-                            * viewbox_controls.height;
-                });
+                let current_height = viewbox_signal.get_untracked().height;
+                if (scale < 0.0 && current_height >= 100.0)
+                    || (scale > 0.0 && current_height <= 5000.0)
+                {
+                    viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                        let initial_width = viewbox_controls.width;
+                        let initial_height = viewbox_controls.height;
+                        viewbox_controls.width += initial_width * scale;
+                        viewbox_controls.height += initial_height * scale;
+                        viewbox_controls.x = initial_point.x()
+                            - (initial_point.x() - viewbox_controls.x) / initial_width
+                                * viewbox_controls.width;
+                        viewbox_controls.y = initial_point.y()
+                            - (initial_point.y() - viewbox_controls.y) / initial_height
+                                * viewbox_controls.height;
+                    });
+                }
             }
-        },
+        }),
         UseEventListenerOptions::default().passive(true),
     );
 
@@ -167,7 +174,7 @@ pub fn Board(
     _ = use_event_listener_with_options(
         viewbox_ref,
         touchstart,
-        move |evt| {
+        debounce(Duration::from_millis(1), move |evt: TouchEvent| {
             if evt.touches().length() == 2 {
                 is_panning.update_untracked(|b| *b = false);
                 let initial_point_0 = svg_point_from_touch(viewbox_ref, &evt, 0);
@@ -175,29 +182,35 @@ pub fn Board(
                 initial_touch_distance
                     .update(move |v| *v = get_touch_distance(initial_point_0, initial_point_1));
             }
-        },
+        }),
         UseEventListenerOptions::default().passive(true),
     );
 
     _ = use_event_listener_with_options(
         viewbox_ref,
         touchmove,
-        move |evt| {
+        debounce(Duration::from_millis(1), move |evt: TouchEvent| {
             if evt.touches().length() == 2 {
                 let current_point_0 = svg_point_from_touch(viewbox_ref, &evt, 0);
                 let current_point_1 = svg_point_from_touch(viewbox_ref, &evt, 1);
                 let current_distance = get_touch_distance(current_point_0.clone(), current_point_1);
-                let scale = current_distance / initial_touch_distance();
-                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                    viewbox_controls.width /= scale;
-                    viewbox_controls.height /= scale;
-                    viewbox_controls.x =
-                        current_point_0.x() - (current_point_0.x() - viewbox_controls.x) / scale;
-                    viewbox_controls.y =
-                        current_point_0.y() - (current_point_0.y() - viewbox_controls.y) / scale;
+
+                batch(move || {
+                    let scale = current_distance / initial_touch_distance();
+                    let intermediate_height = viewbox_signal().height / scale;
+                    if intermediate_height > 150.0 && intermediate_height < 2000.0 {
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            viewbox_controls.width /= scale;
+                            viewbox_controls.height /= scale;
+                            viewbox_controls.x = current_point_0.x()
+                                - (current_point_0.x() - viewbox_controls.x) / scale;
+                            viewbox_controls.y = current_point_0.y()
+                                - (current_point_0.y() - viewbox_controls.y) / scale;
+                        });
+                    }
                 });
             }
-        },
+        }),
         UseEventListenerOptions::default().passive(true),
     );
 
@@ -298,5 +311,5 @@ fn svg_point_from_coordinates(svg: NodeRef<Svg>, x: f32, y: f32) -> web_sys::Svg
 fn get_touch_distance(point_0: SvgPoint, point_1: SvgPoint) -> f32 {
     let distance_x = point_0.x() - point_1.x();
     let distance_y = point_0.y() - point_1.y();
-    (distance_x * distance_x + distance_y + distance_y).sqrt()
+    (distance_x * distance_x + distance_y * distance_y).sqrt()
 }
