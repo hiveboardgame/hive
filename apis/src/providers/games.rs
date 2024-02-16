@@ -167,6 +167,9 @@ impl GamesSignal {
                                 });
                             }
                         }
+                        if game.finished {
+                            s.next_untimed.retain(|gp| gp.nanoid != game.nanoid);
+                        }
                     }
                     TimeMode::Correspondence => {
                         s.correspondence
@@ -182,6 +185,9 @@ impl GamesSignal {
                                 });
                             }
                         }
+                        if game.finished {
+                            s.next_correspondence.retain(|gp| gp.nanoid != game.nanoid);
+                        }
                     }
                     TimeMode::RealTime => {
                         s.realtime.insert(game.nanoid.to_owned(), game.clone());
@@ -194,6 +200,9 @@ impl GamesSignal {
                                     skipped: 0,
                                     nanoid: game.nanoid.clone(),
                                 });
+                            }
+                            if game.finished {
+                                s.next_realtime.retain(|gp| gp.nanoid != game.nanoid);
                             }
                         }
                     }
