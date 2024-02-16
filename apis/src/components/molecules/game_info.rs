@@ -1,7 +1,4 @@
-
-
 use leptos::*;
-
 
 use crate::{components::molecules::time_row::TimeRow, providers::game_state::GameStateSignal};
 

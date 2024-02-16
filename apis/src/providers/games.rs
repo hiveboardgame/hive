@@ -138,8 +138,7 @@ impl GamesSignal {
                         next_required = true;
                     }
                 }
-                _ => {
-                }
+                _ => {}
             }
         }
         self.own.update(|s| {

@@ -1,6 +1,5 @@
 use crate::components::atoms::next_game_button::NextGameButton;
 use crate::components::molecules::ping::Ping;
-use crate::components::organisms::confirm_mode_toggle::ConfirmModeToggle;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle, hamburger::Hamburger, logout::Logout,
 };
@@ -89,8 +88,15 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                 >
                                     Edit Account
                                 </a>
-                                <ConfirmModeToggle on:submit=move |_| onclick()/>
-                                <DarkModeToggle on:submit=move |_| onclick()/>
+                                <a
+                                    class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded"
+                                    href="/config"
+                                    on:focus=move |_| set_redirect()
+                                    on:click=move |_| onclick()
+                                >
+                                    Config
+                                </a>
+                                <DarkModeToggle/>
                                 <Logout on:submit=move |_| onclick()/>
                                 <Ping/>
                             </Hamburger>
@@ -99,7 +105,6 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                 }}
 
             </Transition>
-
         </header>
     }
 }

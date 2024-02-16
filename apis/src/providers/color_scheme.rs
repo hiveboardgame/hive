@@ -1,4 +1,4 @@
-use crate::functions::darkmode::ToggleDarkMode;
+use crate::functions::config::darkmode::ToggleDarkMode;
 use leptos::*;
 
 #[cfg(not(feature = "ssr"))]

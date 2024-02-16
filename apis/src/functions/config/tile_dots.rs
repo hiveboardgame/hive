@@ -1,9 +1,8 @@
+use crate::common::config_options::TileDots;
 use leptos::*;
 
-use crate::common::move_confirm::MoveConfirm;
-
 #[server]
-pub async fn toggle_confirm_mode(move_confirm: MoveConfirm) -> Result<MoveConfirm, ServerFnError> {
+pub async fn change_tile_dots(tile_dots: TileDots) -> Result<TileDots, ServerFnError> {
     use actix_web::http::header::{HeaderMap, HeaderValue, SET_COOKIE};
     use chrono::Duration;
     use leptos_actix::{ResponseOptions, ResponseParts};
@@ -19,7 +18,7 @@ pub async fn toggle_confirm_mode(move_confirm: MoveConfirm) -> Result<MoveConfir
     headers.insert(
         SET_COOKIE,
         HeaderValue::from_str(&format!(
-            "confirm_mode={move_confirm}; Max-Age={}; Path=/",
+            "tile_dots={tile_dots}; Max-Age={}; Path=/",
             max_age
         ))
         .expect("to create header value"),
@@ -27,5 +26,5 @@ pub async fn toggle_confirm_mode(move_confirm: MoveConfirm) -> Result<MoveConfir
     response_parts.headers = headers;
 
     response.overwrite(response_parts);
-    Ok(move_confirm)
+    Ok(tile_dots)
 }

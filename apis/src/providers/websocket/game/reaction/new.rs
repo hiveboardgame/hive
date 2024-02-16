@@ -10,7 +10,6 @@ use leptos::*;
 use leptos_router::use_navigate;
 use shared_types::time_mode::TimeMode;
 
-
 // if gar.game.finished {
 //     log!("Removing finished game {}", gar.game.nanoid.clone());
 //     games.own_games_remove(&gar.game.nanoid);

@@ -1,8 +1,8 @@
 use crate::{
-    common::move_confirm::MoveConfirm,
+    common::config_options::MoveConfirm,
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
     providers::{
-        auth_context::AuthContext, confirm_mode::ConfirmMode, game_state::GameStateSignal,
+        auth_context::AuthContext, config::config::Config, game_state::GameStateSignal,
         timer::TimerSignal,
     },
 };
@@ -10,7 +10,6 @@ use hive_lib::color::Color;
 use leptos::*;
 use leptos_icons::*;
 use shared_types::time_mode::TimeMode;
-
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Placement {
@@ -22,7 +21,7 @@ pub enum Placement {
 pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
-    let confirm_mode = expect_context::<ConfirmMode>();
+    let config = expect_context::<Config>();
     let mut game_state_signal = expect_context::<GameStateSignal>();
     let user = move || match (auth_context.user)() {
         Some(Ok(Some(user))) => Some(user),
@@ -79,7 +78,10 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
 
     let is_button = move || {
         placement == Placement::Bottom
-            && matches!((confirm_mode.preferred_confirm)(), MoveConfirm::Clock)
+            && matches!(
+                (config.confirm_mode.preferred_confirm)(),
+                MoveConfirm::Clock
+            )
             && game_state_signal.is_move_allowed()
     };
 
@@ -112,8 +114,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
             >
 
                 {move || {
-                    match timer.signal.get().time_mode
-                    {
+                    match timer.signal.get().time_mode {
                         TimeMode::Untimed => {
                             view! { <Icon icon=icondata::BiInfiniteRegular class="h-full w-full"/> }
                         }

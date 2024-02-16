@@ -1,5 +1,3 @@
-
-
 use crate::{
     components::{
         atoms::svgs::Svgs,
@@ -8,7 +6,6 @@ use crate::{
     providers::games::GamesSignal,
 };
 use leptos::*;
-
 
 #[component]
 pub fn Tv() -> impl IntoView {

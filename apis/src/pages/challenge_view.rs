@@ -64,7 +64,8 @@ pub fn ChallengeView() -> impl IntoView {
                                 };
                                 view! {
                                     <Show when=move || {
-                                        user().is_some_and(|user| user.id == challenge.challenger.uid)
+                                        user()
+                                            .is_some_and(|user| user.id == challenge.challenger.uid)
                                     }>
                                         <p>"To invite someone to play, give this URL:"</p>
                                         <div class="flex">

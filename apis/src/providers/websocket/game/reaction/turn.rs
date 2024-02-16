@@ -21,9 +21,7 @@ pub fn handle_turn(turn: Turn, gar: GameActionResponse) {
             game_state.set_game_response(gar.game.clone());
             if game_state.signal.get_untracked().state.history.moves != gar.game.history {
                 match turn {
-                    Turn::Move(piece, position) => {
-                        game_state.play_turn(piece, position)
-                    }
+                    Turn::Move(piece, position) => game_state.play_turn(piece, position),
                     _ => unreachable!(),
                 };
             }
