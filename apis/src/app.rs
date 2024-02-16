@@ -1,12 +1,13 @@
 use crate::{
     components::layouts::base_layout::BaseLayout,
     pages::{
-        account::Account, analysis::Analysis, challenge_view::ChallengeView, home::Home,
-        login::Login, play::Play, profile_view::ProfileView, register::Register, user_get::UserGet,
+        account::Account, analysis::Analysis, challenge_view::ChallengeView, config::Config,
+        home::Home, login::Login, play::Play, profile_view::ProfileView, register::Register,
+        user_get::UserGet,
     },
     providers::{
         alerts::provide_alerts, auth_context::provide_auth, challenges::provide_challenges,
-        color_scheme::provide_color_scheme, confirm_mode::provide_confirm_mode,
+        color_scheme::provide_color_scheme, config::config::provide_config,
         game_state::provide_game_state, games::provide_games,
         navigation_controller::provide_navigation_controller, online_users::provide_users,
         ping::provide_ping, refocus::provide_refocus, timer::provide_timer,
@@ -22,7 +23,7 @@ pub const LEPTOS_OUTPUT_NAME: &str = std::env!("LEPTOS_OUTPUT_NAME");
 #[component]
 pub fn App() -> impl IntoView {
     provide_color_scheme();
-    provide_confirm_mode();
+    provide_config();
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
     provide_game_state();
@@ -65,6 +66,7 @@ pub fn App() -> impl IntoView {
                     <Route path="/get_user" view=|| view! { <UserGet/> }/>
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
                     <Route path="/analysis" view=|| view! { <Analysis/> }/>
+                    <Route path="/config" view=|| view! { <Config/> }/>
                     <Route
                         path="/game/:nanoid"
                         ssr=SsrMode::PartiallyBlocked

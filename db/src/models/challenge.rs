@@ -42,7 +42,7 @@ impl NewChallenge {
         rated: bool,
         visibility: String,
         color_choice: String,
-        time_mode: TimeMode,           // Correspondence, Timed, Untimed
+        time_mode: TimeMode,         // Correspondence, Timed, Untimed
         time_base: Option<i32>,      // Secons
         time_increment: Option<i32>, // Seconds
     ) -> Result<Self, DbError> {

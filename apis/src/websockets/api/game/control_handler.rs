@@ -12,7 +12,6 @@ use hive_lib::{game_control::GameControl, game_error::GameError};
 use shared_types::time_mode::TimeMode;
 use uuid::Uuid;
 
-
 pub struct GameControlHandler {
     control: GameControl,
     pool: DbPool,

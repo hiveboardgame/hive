@@ -16,8 +16,6 @@ use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
 use leptos::*;
 use leptos_icons::*;
 
-
-
 #[component]
 pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     let rated_string = if game().rated { " RATED" } else { " CASUAL" };

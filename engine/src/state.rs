@@ -98,6 +98,7 @@ impl State {
     pub fn queen_allowed(&self) -> bool {
         self.turn > 1 || !self.tournament
     }
+
     pub fn play_turn_from_history(&mut self, piece: &str, position: &str) -> Result<(), GameError> {
         match piece {
             "pass" => {

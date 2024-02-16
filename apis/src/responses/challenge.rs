@@ -19,7 +19,7 @@ pub struct ChallengeResponse {
     pub color_choice: ColorChoice,
     pub created_at: DateTime<Utc>,
     pub challenger_rating: f64,
-    pub time_mode: TimeMode,           // Correspondence, Timed, Untimed
+    pub time_mode: TimeMode,         // Correspondence, Timed, Untimed
     pub time_base: Option<i32>,      // Secons
     pub time_increment: Option<i32>, // Seconds
 }

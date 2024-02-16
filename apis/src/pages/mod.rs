@@ -2,6 +2,7 @@ pub mod account;
 pub mod analysis;
 pub mod challenge_create;
 pub mod challenge_view;
+pub mod config;
 pub mod home;
 pub mod login;
 pub mod play;

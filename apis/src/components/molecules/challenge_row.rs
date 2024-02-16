@@ -17,8 +17,6 @@ use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::use_window;
 
-
-
 #[component]
 pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
