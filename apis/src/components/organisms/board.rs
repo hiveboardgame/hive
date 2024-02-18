@@ -59,7 +59,7 @@ pub fn Board(
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] overwrite_tw_classes: &'static str,
 ) -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
+    let mut game_state_signal = expect_context::<GameStateSignal>();
     let target_stack = expect_context::<TargetStack>().0;
     let is_panning = create_rw_signal(false);
     let viewbox_signal = create_rw_signal(ViewBoxControls::new());
@@ -247,7 +247,9 @@ pub fn Board(
                 class=move || format!("touch-none duration-300 {}", history_style())
                 ref=viewbox_ref
                 xmlns="http://www.w3.org/2000/svg"
+                on:click=move |_| { game_state_signal.reset() }
             >
+
                 <Svgs/>
                 <g transform=transform>
                     <Show

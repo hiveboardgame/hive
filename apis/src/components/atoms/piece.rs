@@ -6,6 +6,7 @@ use crate::providers::config::config::Config;
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::{bug::Bug, piece::Piece, position::Position};
 use leptos::*;
+use web_sys::MouseEvent;
 
 #[component]
 pub fn Piece(
@@ -92,7 +93,8 @@ pub fn Piece(
     let mut game_state_signal = expect_context::<GameStateSignal>();
     let in_analysis = use_context::<InAnalysis>().unwrap_or(InAnalysis(RwSignal::new(false)));
 
-    let onclick = move |_| {
+    let onclick = move |evt: MouseEvent| {
+        evt.stop_propagation();
         let in_analysis = in_analysis.0.get_untracked();
         if in_analysis || game_state_signal.is_move_allowed() {
             match piece_type {
