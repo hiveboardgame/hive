@@ -15,9 +15,7 @@ pub fn DownloadPgn(
             Some(game)
         } else {
             let game_state = expect_context::<GameStateSignal>();
-            (game_state.signal)()
-                .game_response
-                .map(store_value)
+            (game_state.signal)().game_response.map(store_value)
         }
     };
     let download = move |_| {
@@ -86,10 +84,7 @@ fn blob_and_filename(game: StoredValue<GameResponse>) -> (Blob, String) {
     if game.finished {
         file.push(format!("\n{game_result}\n"));
     }
-    let file = file
-        .into_iter()
-        .map(JsValue::from)
-        .collect::<Array>();
+    let file = file.into_iter().map(JsValue::from).collect::<Array>();
     (
         Blob::new_with_u8_array_sequence(&file).unwrap(),
         format!(
