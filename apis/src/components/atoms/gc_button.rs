@@ -1,11 +1,11 @@
+use crate::providers::game_state::GameStateSignal;
 use hive_lib::game_control::GameControl;
 use icondata::Icon;
 use leptos::*;
 use leptos_icons::*;
-use leptos_use::{use_interval_with_options, UseIntervalOptions, UseIntervalReturn};
+use leptos_use::{use_interval_with_options, UseIntervalOptions};
+use std::rc::Rc;
 use uuid::Uuid;
-
-use crate::providers::game_state::GameStateSignal;
 
 #[component]
 pub fn AcceptDenyGc(
@@ -54,28 +54,30 @@ pub fn ConfirmButton(
     let (icon, title) = get_icon_and_title(game_control());
     let color = game_control().color();
     let is_clicked = RwSignal::new(false);
-    let UseIntervalReturn {
-        counter,
-        reset,
-        pause,
-        resume,
-        ..
-    } = use_interval_with_options(5000, UseIntervalOptions::default().immediate(false));
-    let resume_clone = resume.clone();
-    let pause_clone = pause.clone();
-    let reset_clone = reset.clone();
+    let interval = store_value(Rc::new(use_interval_with_options(
+        5000,
+        UseIntervalOptions::default().immediate(false),
+    )));
 
     let onclick_confirm = move |_| {
         if is_clicked() {
             game_state().send_game_control(game_control(), user_id);
             is_clicked.update(|v| *v = false);
-            reset_clone();
-            pause_clone();
+            (interval().reset)();
+            (interval().pause)();
         } else {
             is_clicked.update(|v| *v = true);
-            resume_clone();
+            (interval().resume)();
         }
     };
+
+    create_effect(move |_| {
+        if (interval().counter)() >= 1 {
+            is_clicked.update(|v| *v = false);
+            (interval().reset)();
+            (interval().pause)();
+        }
+    });
     let cancel = move |_| is_clicked.update(|v| *v = false);
     let pending =
         move |game_control: GameControl| match (game_state().signal)().game_control_pending {
@@ -124,15 +126,6 @@ pub fn ConfirmButton(
             ""
         }
     };
-
-    // WARN: Might lead to problems, if we get  re-render loops, this could be the cause.
-    create_isomorphic_effect(move |_| {
-        if counter() >= 1 {
-            is_clicked.update(|v| *v = false);
-            reset();
-            pause();
-        }
-    });
 
     view! {
         <div class=move || format!("relative {}", hidden())>
