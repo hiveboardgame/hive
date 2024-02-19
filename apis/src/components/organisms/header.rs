@@ -96,7 +96,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                 >
                                     Config
                                 </a>
-                                <DarkModeToggle/>
+                                <DarkModeToggle on:submit=move |_| onclick()/>
                                 <Logout on:submit=move |_| onclick()/>
                                 <Ping/>
                             </Hamburger>

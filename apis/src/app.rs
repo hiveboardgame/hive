@@ -1,8 +1,16 @@
 use crate::{
     components::layouts::base_layout::BaseLayout,
     pages::{
-        account::Account, analysis::Analysis, challenge_view::ChallengeView, config::Config,
-        home::Home, login::Login, play::Play, profile_view::ProfileView, register::Register,
+        account::Account,
+        analysis::Analysis,
+        challenge_view::ChallengeView,
+        config::Config,
+        display_games::DisplayGames,
+        home::Home,
+        login::Login,
+        play::Play,
+        profile_view::{ProfileGamesView, ProfileView},
+        register::Register,
         user_get::UserGet,
     },
     providers::{
@@ -59,7 +67,30 @@ pub fn App() -> impl IntoView {
                 >
 
                     <Route path="" ssr=SsrMode::InOrder view=|| view! { <Home/> }/>
-                    <Route path="/@/:username" view=|| view! { <ProfileView/> }/>
+                    <Route
+                        path="/@/:username"
+                        view=|| {
+                            view! {
+                                <ProfileView>
+                                    <Outlet/>
+                                </ProfileView>
+                            }
+                        }
+                    >
+
+                        <Route
+                            path=""
+                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Playing/> }
+                        />
+                        <Route
+                            path="playing"
+                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Playing/> }
+                        />
+                        <Route
+                            path="finished"
+                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Finished/> }
+                        />
+                    </Route>
                     <Route path="/register" view=|| view! { <Register/> }/>
                     <Route path="/login" view=|| view! { <Login/> }/>
                     <Route path="/account" view=|| view! { <Account/> }/>
