@@ -67,24 +67,24 @@ pub fn Piece(
             if position.get_untracked() == from || position.get_untracked() == to {
                 String::new()
             } else {
-                format!("duration-300 drop-shadow-{}", &color.to_string())
+                format!("duration-300 translateZ(0) transform-gpu drop-shadow-{}", &color.to_string())
             }
         }
         (Some(pos), None) => {
             if position.get_untracked() == pos {
                 String::new()
             } else {
-                format!("duration-300 drop-shadow-{}", &color.to_string())
+                format!("duration-300 translateZ(0) transform-gpu drop-shadow-{}", &color.to_string())
             }
         }
         (None, Some(pos)) => {
             if position.get_untracked() == pos {
                 String::new()
             } else {
-                format!("duration-300 drop-shadow-{}", &color.to_string())
+                format!("duration-300 translateZ(0) transform-gpu drop-shadow-{}", &color.to_string())
             }
         }
-        _ => format!("duration-300 drop-shadow-{}", &color.to_string()),
+        _ => format!("duration-300 translateZ(0) transform-gpu drop-shadow-{}", &color.to_string()),
     };
     if piece_type == PieceType::Inactive {
         filter.push_str(" sepia-[.75]");
