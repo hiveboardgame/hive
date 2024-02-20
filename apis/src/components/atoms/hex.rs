@@ -57,13 +57,13 @@ pub fn Hex(hex: Hex) -> impl IntoView {
             }
         },
         HexType::LastMove(Direction::To) => {
-            view! { <LastMove position=hex.position level=expanded_level/> }
+            view! { <LastMove position=hex.position level=expanded_level direction=Direction::To/> }
         }
         HexType::LastMove(Direction::From) => {
             if hex.level == 0 {
-                view! { <LastMove position=hex.position level=hex.level/> }
+                view! { <LastMove position=hex.position level=hex.level direction=Direction::From/> }
             } else {
-                view! { <LastMove position=hex.position level=expanded_sublevel/> }
+                view! { <LastMove position=hex.position level=expanded_sublevel direction=Direction::From/> }
             }
         }
     }

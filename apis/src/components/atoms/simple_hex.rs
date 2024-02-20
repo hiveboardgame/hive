@@ -12,7 +12,9 @@ pub fn SimpleHex(hex: Hex) -> impl IntoView {
         HexType::Tile(piece, piece_type) => {
             view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type/> }
         }
-        HexType::LastMove(_) => view! { <LastMove position=hex.position level=hex.level/> },
+        HexType::LastMove(dir) => {
+            view! { <LastMove position=hex.position level=hex.level direction=dir/> }
+        }
         HexType::Target => view! { <Target position=hex.position level=hex.level/> },
     }
 }
