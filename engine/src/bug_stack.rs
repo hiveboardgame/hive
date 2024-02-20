@@ -7,6 +7,7 @@ pub struct BugStack {
     pub pieces: [Piece; 7],
     pub size: u8,
 }
+
 impl Default for BugStack {
     fn default() -> Self {
         Self::new()

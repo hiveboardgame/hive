@@ -129,7 +129,6 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
                 "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
                 time_is_red(),
             )
-        }>{move || { timer.time_mode.time_remaining(time_left.get()) }}
-        </div>
+        }>{move || { timer.time_mode.time_remaining(time_left.get()) }}</div>
     }
 }
