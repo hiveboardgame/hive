@@ -63,8 +63,8 @@ pub fn Piece(
         .board
         .last_move
     {
-        (Some(from), Some(to)) => {
-            if position.get_untracked() == from || position.get_untracked() == to {
+        (Some(_), Some(to)) => {
+            if position.get_untracked() == to {
                 String::new()
             } else {
                 format!("duration-300 translateZ(0) transform-gpu drop-shadow-{}", &color.to_string())
