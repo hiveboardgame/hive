@@ -55,52 +55,28 @@ pub fn Piece(
         }
     };
 
-    //IMPORTANT drop-shadow-b drop-shadow-w leave this comment for TW
-    let mut filter = match game_state_signal
+    let drop_shadow = if match game_state_signal
         .signal
         .get_untracked()
         .state
         .board
         .last_move
     {
-        (Some(_), Some(to)) => {
-            if position.get_untracked() == to {
-                String::new()
-            } else {
-                format!(
-                    "duration-300 translateZ(0) transform-gpu drop-shadow-{}",
-                    &color.to_string()
-                )
-            }
-        }
-        (Some(pos), None) => {
-            if position.get_untracked() == pos {
-                String::new()
-            } else {
-                format!(
-                    "duration-300 translateZ(0) transform-gpu drop-shadow-{}",
-                    &color.to_string()
-                )
-            }
-        }
-        (None, Some(pos)) => {
-            if position.get_untracked() == pos {
-                String::new()
-            } else {
-                format!(
-                    "duration-300 translateZ(0) transform-gpu drop-shadow-{}",
-                    &color.to_string()
-                )
-            }
-        }
-        _ => format!(
-            "duration-300 translateZ(0) transform-gpu drop-shadow-{}",
-            &color.to_string()
-        ),
+        (Some(_), Some(to)) => position.get_untracked() != to,
+        (Some(pos), None) => position.get_untracked() != pos,
+        (None, Some(pos)) => position.get_untracked() != pos,
+        _ => true,
+    } {
+        "#ds"
+    } else {
+        "#no-ds"
     };
-    if piece_type == PieceType::Inactive {
-        filter.push_str(" sepia-[.75]");
-    }
+
+    let sepia = if piece_type == PieceType::Inactive {
+        "sepia-[.75]"
+    } else {
+        ""
+    };
 
     let mut game_state_signal = expect_context::<GameStateSignal>();
     let in_analysis = use_context::<InAnalysis>().unwrap_or(InAnalysis(RwSignal::new(false)));
@@ -167,10 +143,10 @@ pub fn Piece(
     };
 
     view! {
-        <g on:click=onclick class=filter style=dot_color>
+        <g on:click=onclick class=sepia style=dot_color>
             <g transform=transform>
+                <use_ href=drop_shadow transform="scale(0.56, 0.56) translate(-67, -64.5)"></use_>
                 <use_ href=tile_svg transform="scale(0.56, 0.56) translate(-45, -50)"></use_>
-                // TODO: Fix svgs to have the same numbers
                 <use_ href=bug_svg transform=bug_transform></use_>
                 <use_ href=dots transform="scale(0.56, 0.56) translate(-45, -50)"></use_>
             </g>
