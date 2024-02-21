@@ -45,6 +45,7 @@ diesel::table! {
         last_interaction -> Nullable<Timestamptz>,
         black_time_left -> Nullable<Int8>,
         white_time_left -> Nullable<Int8>,
+        speed -> Text,
     }
 }
 

@@ -6,7 +6,7 @@ use hive_lib::{
     game_type::GameType, history::History, position::Position, state::State,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::time_mode::TimeMode;
+use shared_types::{time_mode::TimeMode, game_speed::GameSpeed};
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
@@ -36,6 +36,7 @@ pub struct GameResponse {
     pub time_mode: TimeMode,
     pub time_base: Option<i32>,
     pub time_increment: Option<i32>,
+    pub speed: GameSpeed,
     pub black_time_left: Option<Duration>,
     pub white_time_left: Option<Duration>,
     pub last_interaction: Option<DateTime<Utc>>,
@@ -179,6 +180,7 @@ impl GameResponse {
             time_base: game.time_base,
             time_increment: game.time_increment,
             last_interaction: game.last_interaction,
+            speed: GameSpeed::from_str(&game.speed)?,
             created_at: game.created_at,
             updated_at: game.updated_at,
         })
