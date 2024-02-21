@@ -45,6 +45,7 @@ diesel::table! {
         last_interaction -> Nullable<Timestamptz>,
         black_time_left -> Nullable<Int8>,
         white_time_left -> Nullable<Int8>,
+        speed -> Text,
     }
 }
 
@@ -86,4 +87,10 @@ diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
 
-diesel::allow_tables_to_appear_in_same_query!(challenges, games, games_users, ratings, users,);
+diesel::allow_tables_to_appear_in_same_query!(
+    challenges,
+    games,
+    games_users,
+    ratings,
+    users,
+);

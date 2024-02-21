@@ -18,6 +18,7 @@ use hive_lib::{
     history::History, state::State,
 };
 use serde::{Deserialize, Serialize};
+use shared_types::game_speed::GameSpeed;
 use shared_types::time_mode::TimeMode;
 use std::str::FromStr;
 use std::time::Duration;
@@ -52,6 +53,7 @@ pub struct NewGame {
     pub last_interaction: Option<DateTime<Utc>>, // When was the last move made
     pub black_time_left: Option<i64>, // A duration of nanos represented as an int
     pub white_time_left: Option<i64>, // A duration of nanos represented as an int
+    pub speed: String,
 }
 
 impl NewGame {
@@ -67,6 +69,7 @@ impl NewGame {
                 _ => unreachable!(),
             },
         };
+
         Self {
             nanoid: challenge.nanoid.to_owned(),
             current_player_id: white,
@@ -92,6 +95,8 @@ impl NewGame {
             last_interaction: None,
             black_time_left: time_left,
             white_time_left: time_left,
+            speed: GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment)
+                .to_string(),
         }
     }
 }
@@ -127,6 +132,7 @@ pub struct Game {
     pub last_interaction: Option<DateTime<Utc>>, // When was the last move made
     pub black_time_left: Option<i64>,
     pub white_time_left: Option<i64>,
+    pub speed: String,
 }
 
 impl Game {
