@@ -4,25 +4,6 @@ use leptos::*;
 pub fn Svgs() -> impl IntoView {
     view! {
         <svg visibility="hidden" xmlns="http://www.w3.org/2000/svg">
-            <defs id="defs166">
-                <clipPath clipPathUnits="userSpaceOnUse" id="clipPath23-3">
-                    <path
-                        d="M 0,841.89 H 595.275 V 0 H 0 Z"
-                        transform="translate(-308.47071,-688.47362)"
-                        id="path23-6"
-                    ></path>
-                </clipPath>
-                <filter
-                    style="color-interpolation-filters:sRGB"
-                    id="filter1"
-                    x="-0.025635776"
-                    y="-0.028579977"
-                    width="1.0512716"
-                    height="1.05716"
-                >
-                    <feGaussianBlur stdDeviation="0.63602629" id="feGaussianBlur1"></feGaussianBlur>
-                </filter>
-            </defs>
             // common among designs
             <g id="target" transform="translate(-55.302105,-46.379573)">
                 <path
@@ -35,14 +16,13 @@ pub fn Svgs() -> impl IntoView {
             </g>
             <g id="active" transform="translate(-55.302105,-46.379573)">
                 <path
-                    style="fill:#3a3a3a;fill-opacity:0;stroke:#B58900;stroke-width:4.58225;stroke-dasharray:none;stroke-opacity:1"
+                    style="fill:#3a3a3a;fill-opacity:0;stroke:#b58900;stroke-width:4.58225;stroke-dasharray:none;stroke-opacity:1"
                     id="path1826"
                     d="m 153.01799,136.80519 -40.72248,23.51113 c -2.8113,1.6231 -7.36932,1.6231 -10.18062,0 L 61.392414,136.80519 c -2.8113,-1.62311 -5.09031,-5.57047 -5.09031,-8.81668 l 10e-7,-47.022264 c 0,-3.24621 2.279009,-7.19357 5.090309,-8.816675 L 102.11489,48.638438 c 2.8113,-1.623105 7.36932,-1.623105 10.18062,0 l 40.72248,23.511133 c 2.8113,1.623105 5.09031,5.570465 5.09031,8.816675 l 0,47.022264 c 0,3.24621 -2.27901,7.19357 -5.09031,8.81668 z"
                     transform="matrix(0.87632789,0,0,0.87632789,6.963,5.8646687)"
                 ></path>
             </g>
             <g id="lastmove_from">
-
                 <path
                     style="opacity:1;fill:none;stroke:#d33682;stroke-width:1.10471;stroke-linecap:round;stroke-linejoin:bevel;stroke-miterlimit:0;stroke-dasharray:none;stroke-opacity:1"
                     id="path2"
@@ -109,14 +89,7 @@ pub fn Svgs() -> impl IntoView {
                 ></circle>
             </g>
             <g id="ds">
-                <defs id="defs166">
-                    <clipPath clipPathUnits="userSpaceOnUse" id="clipPath23-3">
-                        <path
-                            d="M 0,841.89 H 595.275 V 0 H 0 Z"
-                            transform="translate(-308.47071,-688.47362)"
-                            id="path23-6"
-                        ></path>
-                    </clipPath>
+                <g id="defs166">
                     <filter
                         style="color-interpolation-filters:sRGB"
                         id="filter1"
@@ -130,14 +103,13 @@ pub fn Svgs() -> impl IntoView {
                             id="feGaussianBlur1"
                         ></feGaussianBlur>
                     </filter>
-                </defs>
+                </g>
 
                 <path
                     id="path22-5"
                     d="m 0,0 c 1.322,0.202 2.578,0.787 3.592,1.708 0.517,0.473 0.974,1.029 1.342,1.671 0.326,0.572 11.761,19.972 12.074,20.942 0.4,1.238 0.451,2.581 0.105,3.877 -0.15,0.567 -0.369,1.124 -0.674,1.657 -0.283,0.496 -11.474,20.355 -12.078,21.052 -0.855,0.99 -1.986,1.732 -3.275,2.108 -0.611,0.176 -1.254,0.277 -1.922,0.277 -0.607,0 -23.293,0.147 -24.033,0.032 -1.32,-0.204 -2.572,-0.79 -3.582,-1.711 -0.516,-0.469 -0.971,-1.025 -1.336,-1.665 -0.324,-0.569 -11.76,-19.973 -12.072,-20.929 -0.407,-1.242 -0.457,-2.589 -0.116,-3.888 0.153,-0.571 0.371,-1.133 0.68,-1.669 0.285,-0.498 11.469,-20.347 12.078,-21.05 0.856,-0.987 1.987,-1.727 3.274,-2.1 0.609,-0.178 1.25,-0.278 1.916,-0.278 C -23.422,0.034 -0.73,-0.112 0,0"
                     style="opacity:0.549569;fill:#999999;fill-opacity:1;fill-rule:nonzero;stroke:none;filter:url(#filter1)"
                     transform="matrix(1.4542878,-0.83963345,-0.83963345,-1.4542878,109.68343,95.675975)"
-                    clip-path="url(#clipPath23-3)"
                 ></path>
             </g>
             <g id="b">

@@ -1,6 +1,5 @@
 use crate::common::config_options::{MoveConfirm, TileDesign, TileDots, TileRotation};
 use crate::common::{piece_type::PieceType, svg_pos::SvgPos};
-
 use crate::pages::analysis::InAnalysis;
 use crate::providers::config::config::Config;
 use crate::providers::game_state::GameStateSignal;
@@ -16,10 +15,12 @@ pub fn Piece(
     #[prop(into)] level: MaybeSignal<usize>,
     #[prop(optional, into)] piece_type: PieceType,
 ) -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
-    let center = move || SvgPos::center_for_level(position.get_untracked(), level());
-    let order = piece.get_untracked().order();
+    let piece = piece.get_untracked();
+    let position = position.get_untracked();
+    let center = move || SvgPos::center_for_level(position, level());
+    let order = piece.order();
     let config = expect_context::<Config>();
+    let ds_transform = move || format!("translate({},{})", center().0, center().1);
     let transform = move || {
         if (config.tile_rotation.preferred_tile_rotation)() == TileRotation::Yes {
             format!(
@@ -29,11 +30,11 @@ pub fn Piece(
                 order.saturating_sub(1) * 60
             )
         } else {
-            format!("translate({},{})", center().0, center().1,)
+            format!("translate({},{})", center().0, center().1)
         }
     };
-    let bug = piece.get_untracked().bug();
-    let color = piece.get_untracked().color();
+    let bug = piece.bug();
+    let color = piece.color();
 
     let dot_color = move || {
         if (config.tile_design.preferred_tile_design)() == TileDesign::Official {
@@ -55,23 +56,6 @@ pub fn Piece(
         }
     };
 
-    let drop_shadow = if match game_state_signal
-        .signal
-        .get_untracked()
-        .state
-        .board
-        .last_move
-    {
-        (Some(_), Some(to)) => position.get_untracked() != to,
-        (Some(pos), None) => position.get_untracked() != pos,
-        (None, Some(pos)) => position.get_untracked() != pos,
-        _ => true,
-    } {
-        "#ds"
-    } else {
-        "#no-ds"
-    };
-
     let sepia = if piece_type == PieceType::Inactive {
         "sepia-[.75]"
     } else {
@@ -87,10 +71,10 @@ pub fn Piece(
         if in_analysis || game_state_signal.is_move_allowed() {
             match piece_type {
                 PieceType::Board => {
-                    game_state_signal.show_moves(piece.get_untracked(), position.get_untracked());
+                    game_state_signal.show_moves(piece, position);
                 }
                 PieceType::Reserve => {
-                    game_state_signal.show_spawns(piece.get_untracked(), position.get_untracked());
+                    game_state_signal.show_spawns(piece, position);
                 }
                 PieceType::Move | PieceType::Spawn => {
                     if in_analysis
@@ -142,10 +126,45 @@ pub fn Piece(
         String::new()
     };
 
+    let top_piece = game_state_signal
+        .signal
+        .get_untracked()
+        .state
+        .board
+        .top_piece(position)
+        .unwrap_or(piece);
+
+    let show_ds = move || {
+        if let Some(active) = game_state_signal.signal.get().active {
+            if active == piece {
+                return "#no_ds";
+            }
+            return "#ds";
+        };
+        if match game_state_signal
+            .signal
+            .get_untracked()
+            .state
+            .board
+            .last_move
+        {
+            (Some(_), Some(pos)) => position != pos || piece != top_piece,
+            (Some(pos), None) => position != pos || piece != top_piece,
+            (None, Some(pos)) => position != pos || piece != top_piece,
+            _ => true,
+        } {
+            "#ds"
+        } else {
+            "#no_ds"
+        }
+    };
+
     view! {
         <g on:click=onclick class=sepia style=dot_color>
+            <g transform=ds_transform>
+                <use_ href=show_ds transform="scale(0.56, 0.56) translate(-67, -64.5)"></use_>
+            </g>
             <g transform=transform>
-                <use_ href=drop_shadow transform="scale(0.56, 0.56) translate(-67, -64.5)"></use_>
                 <use_ href=tile_svg transform="scale(0.56, 0.56) translate(-45, -50)"></use_>
                 <use_ href=bug_svg transform=bug_transform></use_>
                 <use_ href=dots transform="scale(0.56, 0.56) translate(-45, -50)"></use_>
