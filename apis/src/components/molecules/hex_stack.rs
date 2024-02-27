@@ -17,7 +17,7 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
         500,
         UseIntervalOptions::default().immediate(false),
     )));
-    create_effect(move |_| {
+    create_isomorphic_effect(move |_| {
         if (interval().counter)() >= 1 {
             target_stack.set(Some(hex_stack.position));
         }

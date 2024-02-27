@@ -1,8 +1,5 @@
 use crate::{
-    components::{
-        atoms::svgs::Svgs,
-        molecules::{thumbnail_pieces::ThumbnailPieces, time_row::TimeRow},
-    },
+    components::molecules::{thumbnail_pieces::ThumbnailPieces, time_row::TimeRow},
     providers::games::GamesSignal,
 };
 use leptos::*;
@@ -34,16 +31,7 @@ pub fn Tv() -> impl IntoView {
                                 />
                             </div>
                         </div>
-                        <svg
-                            viewBox="1100 500 400 510"
-                            class="touch-none h-full w-full"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <Svgs/>
-                            <g>
-                                <ThumbnailPieces game=game.1/>
-                            </g>
-                        </svg>
+                        <ThumbnailPieces game=game.1/>
                         <a
                             class="h-full w-full absolute top-0 left-0 z-10"
                             href=format!("/game/{}", game.0)

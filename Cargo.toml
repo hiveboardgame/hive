@@ -40,7 +40,7 @@ thiserror = "1"
 anyhow = "1"
 tokio = { version = "1.35.1", features = ["full"] }
 wasm-bindgen = "0.2.90"
-web-sys = {version = "0.3.67", features = ["AbortController", "AbortSignal", "Blob", "Clipboard", "HtmlDocument", "SvgPoint","SvgsvgElement", "SvgGraphicsElement", "SvgMatrix", "Url"] }
+web-sys = {version = "0.3.67", features = ["AbortController", "AbortSignal", "Blob", "Clipboard", "HtmlDocument", "SvgPoint","SvgsvgElement", "SvgGraphicsElement", "SvgRect", "SvgMatrix", "Url"] }
 bb8 = { version = "0.8" }
 diesel = { version = "2.1", features = ["postgres", "chrono", "uuid", "serde_json"] }
 diesel-async = { version = "0.4", features = ["postgres", "bb8"] }

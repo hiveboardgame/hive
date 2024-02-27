@@ -23,7 +23,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             }
             .into_view()
         } else {
-            view! {}.into_view()
+            view! { "" }.into_view()
         }
     }
 }

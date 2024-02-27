@@ -496,6 +496,31 @@ impl Board {
         self.positions.into_iter().flatten()
     }
 
+    pub fn center_coordinates(&self) -> Position {
+        let positions = self.all_taken_positions().collect::<Vec<_>>();
+        //center won't shift much if any in the first few moves
+        if positions.len() < 8 {
+            return Position::initial_spawn_position();
+        }
+
+        let (q_min, q_max, r_min, r_max) = positions.iter().fold(
+            (i32::MAX, i32::MIN, i32::MAX, i32::MIN),
+            |(q_min, q_max, r_min, r_max), pos| {
+                (
+                    q_min.min(pos.q),
+                    q_max.max(pos.q),
+                    r_min.min(pos.r),
+                    r_max.max(pos.r),
+                )
+            },
+        );
+        //TODO: Some look centered with q + 1 some without it, figure out something
+        Position {
+            q: q_min + ((q_max - q_min) / 2),
+            r: r_min + ((r_max - r_min) / 2),
+        }
+    }
+
     pub fn spawnable(&self, color: Color, position: Position) -> bool {
         match self.game_result() {
             GameResult::Unknown => {}

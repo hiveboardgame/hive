@@ -100,7 +100,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             <Reserve alignment=Alignment::SingleRow color=top_color()/>
                             <DisplayTimer vertical=true placement=Placement::Top/>
                         </div>
-                        <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1">
+                        <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1 bg-inherit">
                             <UserWithRating side=top_color() is_tall/>
                             <GameInfo/>
                         </div>

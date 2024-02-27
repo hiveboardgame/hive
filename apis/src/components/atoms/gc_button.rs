@@ -71,7 +71,7 @@ pub fn ConfirmButton(
         }
     };
 
-    create_effect(move |_| {
+    create_isomorphic_effect(move |_| {
         if (interval().counter)() >= 1 {
             is_clicked.update(|v| *v = false);
             (interval().reset)();

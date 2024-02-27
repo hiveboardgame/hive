@@ -227,7 +227,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                             }
                                 .into_view()
                         } else {
-                            view! {}.into_view()
+                            view! { "" }.into_view()
                         }}
 
                     </Show>
