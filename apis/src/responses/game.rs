@@ -45,13 +45,21 @@ pub struct GameResponse {
 }
 
 impl GameResponse {
-    pub fn create_state(self) -> State {
-        let result = match self.game_status {
-            GameStatus::NotStarted | GameStatus::InProgress => GameResult::Unknown,
-            GameStatus::Finished(result) => result,
+    pub fn white_rating(&self) -> u64 {
+        self.white_player.rating_for_speed(&self.speed)
+    }
+
+    pub fn black_rating(&self) -> u64 {
+        self.black_player.rating_for_speed(&self.speed)
+    }
+
+    pub fn create_state(&self) -> State {
+        let result = match &self.game_status {
+            &GameStatus::NotStarted | &GameStatus::InProgress => GameResult::Unknown,
+            &GameStatus::Finished(ref result) => result.clone(),
         };
         State::new_from_history(&History::new_from_gamestate(
-            self.history,
+            self.history.clone(),
             result,
             self.game_type,
         ))
@@ -136,8 +144,8 @@ impl GameResponse {
                 )
             } else {
                 (
-                    Some(Rating::for_uuid(&game.white_id, pool).await?.rating),
-                    Some(Rating::for_uuid(&game.black_id, pool).await?.rating),
+                    Some(Rating::for_uuid(&game.white_id, &GameSpeed::from_str(&game.speed)?, pool).await?.rating),
+                    Some(Rating::for_uuid(&game.black_id, &GameSpeed::from_str(&game.speed)?, pool).await?.rating),
                     None,
                     None,
                 )

@@ -18,6 +18,7 @@ use diesel_async::{
 };
 use hive_lib::{color::Color, game_result::GameResult};
 use serde::{Deserialize, Serialize};
+use shared_types::game_speed::GameSpeed;
 use skillratings::{
     glicko2::{glicko2, Glicko2Config, Glicko2Rating},
     Outcomes,
@@ -37,10 +38,11 @@ pub struct NewRating {
     pub volatility: f64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub speed: String,
 }
 
 impl NewRating {
-    pub fn for_uuid(uuid: &Uuid) -> Self {
+    pub fn for_uuid(uuid: &Uuid, game_speed: GameSpeed) -> Self {
         Self {
             user_uid: uuid.to_owned(),
             played: 0,
@@ -52,6 +54,7 @@ impl NewRating {
             volatility: 0.06,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            speed: game_speed.to_string(),
         }
     }
 }
@@ -83,27 +86,39 @@ pub struct Rating {
     pub volatility: f64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub speed: String,
 }
 
 impl Rating {
-    pub async fn for_uuid(uuid: &Uuid, pool: &DbPool) -> Result<Self, DbError> {
+    pub async fn for_uuid(
+        uuid: &Uuid,
+        game_speed: &GameSpeed,
+        pool: &DbPool,
+    ) -> Result<Self, DbError> {
         let conn = &mut get_conn(pool).await?;
-        Ok(ratings_table.filter(user_uid.eq(uuid)).first(conn).await?)
+        Ok(ratings_table
+            .filter(user_uid.eq(uuid).and(speed.eq(game_speed.to_string())))
+            .first(conn)
+            .await?)
     }
 
     pub async fn update(
         rated: bool,
+        game_speed: &str,
         white_id: Uuid,
         black_id: Uuid,
         game_result: GameResult,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
     ) -> Result<(f64, f64, Option<f64>, Option<f64>), DbError> {
+        // TODO: @leex this update needs to do everything in one transaction!
         let white_rating: Rating = ratings_table
             .filter(user_uid.eq(white_id))
+            .filter(speed.eq(game_speed))
             .first(conn)
             .await?;
         let black_rating: Rating = ratings_table
             .filter(user_uid.eq(black_id))
+            .filter(speed.eq(game_speed))
             .first(conn)
             .await?;
 
