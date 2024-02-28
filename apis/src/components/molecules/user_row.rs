@@ -25,7 +25,11 @@ pub fn UserRow(
             <div class="flex w-48 mr-2 justify-between">
                 <div class="flex items-center">
                     <StatusIndicator username=user().username/>
-                    <ProfileLink username=user().username extend_tw_classes="truncate max-w-[120px]"/>
+                    <ProfileLink
+                        username=user().username
+                        extend_tw_classes="truncate max-w-[120px]"
+                        user_is_hoverable=user
+                    />
                     <Rating rating=rating()/>
                 </div>
             </div>
