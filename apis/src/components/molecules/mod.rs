@@ -7,6 +7,7 @@ pub mod game_info;
 pub mod game_row;
 pub mod hex_stack;
 pub mod history_pieces;
+pub mod hover_ratings;
 pub mod live_timer;
 pub mod modal;
 pub mod ping;
