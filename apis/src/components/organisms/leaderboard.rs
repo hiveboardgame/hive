@@ -1,15 +1,18 @@
 use crate::{components::molecules::user_row::UserRow, functions::users::get::get_top_users};
 use leptos::*;
+use shared_types::game_speed::GameSpeed;
+use leptos::logging::log;
 
 #[component]
-pub fn Leaderboard() -> impl IntoView {
-    let top_users = Resource::once(move || get_top_users(10));
+pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
+    let top_users = Resource::once(move || get_top_users(speed.clone(), 10));
     view! {
         <Transition>
             {move || {
                 top_users()
                     .map(|data| match data {
-                        Err(_) => {
+                        Err(e) => {
+                            log!("Error is: {:?}", e);
                             view! { <pre class="m-2 h-6">"Couldn't fetch top users"</pre> }
                                 .into_view()
                         }
@@ -25,8 +28,7 @@ pub fn Leaderboard() -> impl IntoView {
                                             let:user
                                         >
                                             <UserRow
-                                                username=store_value(user.username)
-                                                rating=user.rating
+                                                user=store_value(user)
                                             />
                                         </For>
                                     </div>

@@ -1,6 +1,7 @@
 use crate::responses::game::GameResponse;
 use crate::responses::user::UserResponse;
 use leptos::*;
+use shared_types::game_speed::GameSpeed;
 use uuid::Uuid;
 
 #[server]
@@ -40,14 +41,21 @@ pub async fn get_user_games(username: String) -> Result<Vec<GameResponse>, Serve
 }
 
 #[server]
-pub async fn get_top_users(limit: i64) -> Result<Vec<UserResponse>, ServerFnError> {
+pub async fn get_top_users(
+    game_speed: GameSpeed,
+    limit: i64,
+) -> Result<Vec<UserResponse>, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::models::{rating::Rating, user::User};
     let pool = pool()?;
-    let top_users: Vec<(User, Rating)> = User::get_top_users(&pool, limit).await?;
+    let top_users: Vec<(User, Rating)> = User::get_top_users(&game_speed, limit, &pool).await?;
     let mut results: Vec<UserResponse> = Vec::new();
-    for (user, rating) in top_users.iter() {
-        results.push(UserResponse::from_user_and_rating(user, rating));
+    for (user, _rating) in top_users.iter() {
+        results.push(
+            UserResponse::from_user(user, &pool)
+                .await
+                .map_err(ServerFnError::new)?,
+        )
     }
     Ok(results)
 }

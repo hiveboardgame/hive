@@ -3,7 +3,7 @@ use crate::responses::user::UserResponse;
 use chrono::prelude::*;
 use hive_lib::color::ColorChoice;
 use serde::{Deserialize, Serialize};
-use shared_types::time_mode::TimeMode;
+use shared_types::{game_speed::GameSpeed, time_mode::TimeMode};
 use std::str;
 use uuid::Uuid;
 
@@ -22,6 +22,7 @@ pub struct ChallengeResponse {
     pub time_mode: TimeMode,         // Correspondence, Timed, Untimed
     pub time_base: Option<i32>,      // Secons
     pub time_increment: Option<i32>, // Seconds
+    pub speed: GameSpeed,
 }
 
 use cfg_if::cfg_if;
@@ -43,7 +44,8 @@ impl ChallengeResponse {
         challenger: User,
         pool: &DbPool,
     ) -> Result<Self> {
-        let challenger_rating = Rating::for_uuid(&challenger.id, pool).await?;
+        let game_speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
+        let challenger_rating = Rating::for_uuid(&challenger.id, &game_speed, pool).await?;
         let opponent = match challenge.opponent_id {
             None => None,
             Some(id) => Some(UserResponse::from_uuid(&id, pool).await?),
@@ -62,6 +64,7 @@ impl ChallengeResponse {
             time_mode: TimeMode::from_str(&challenge.time_mode)?,
             time_base: challenge.time_base,
             time_increment: challenge.time_increment,
+            speed: game_speed,
         })
     }
 }

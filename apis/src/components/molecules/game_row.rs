@@ -102,7 +102,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                             <ProfileLink username=game().white_player.username/>
                         </div>
                         <br/>
-                        <Show when=is_finished fallback=move || { game().white_player.rating }>
+                        <Show when=is_finished fallback=move || { game().white_rating() }>
                             <RatingAndChange game=game() side=Color::White/>
                         </Show>
 
@@ -114,7 +114,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                             <ProfileLink username=game().black_player.username/>
                         </div>
                         <br/>
-                        <Show when=is_finished fallback=move || { game().black_player.rating }>
+                        <Show when=is_finished fallback=move || { game().black_rating() }>
                             <RatingAndChange game=game() side=Color::Black/>
                         </Show>
                     </div>
