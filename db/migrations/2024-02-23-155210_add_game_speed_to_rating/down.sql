@@ -1,0 +1,1 @@
+ALTER TABLE ratings DROP COLUMN speed;

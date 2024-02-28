@@ -109,12 +109,12 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     let rating = move || {
         if let (Some(uid), Some(opponent)) = (uid(), challenge().opponent) {
             if challenge().challenger.uid == uid {
-                view! { <p>{opponent.rating}</p> }
+                view! { <p>{opponent.rating_for_speed(&challenge().speed)}</p> }
             } else {
-                view! { <p>{challenge().challenger.rating}</p> }
+                view! { <p>{challenge().challenger_rating}</p> }
             }
         } else {
-            view! { <p>{challenge().challenger.rating}</p> }
+            view! { <p>{challenge().challenger_rating}</p> }
         }
     };
 

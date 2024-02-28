@@ -1,3 +1,4 @@
+use super::rating::Rating;
 use crate::{
     db_error::DbError,
     get_conn,
@@ -21,9 +22,8 @@ use diesel::{
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
+use shared_types::game_speed::GameSpeed;
 use uuid::Uuid;
-
-use super::rating::Rating;
 
 const MAX_USERNAME_LENGTH: usize = 40;
 const VALID_USERNAME_CHARS: &str = "-_";
@@ -92,11 +92,12 @@ impl User {
                         .values(new_user)
                         .get_result(conn)
                         .await?;
-                    let new_rating = NewRating::for_uuid(&user.id);
-                    diesel::insert_into(ratings::table)
-                        .values(&new_rating)
-                        .execute(conn)
-                        .await?;
+                    for game_speed in GameSpeed::all_rated().into_iter() {
+                        diesel::insert_into(ratings::table)
+                            .values(NewRating::for_uuid(&user.id, game_speed))
+                            .execute(conn)
+                            .await?;
+                    }
                     Ok(user)
                 }
                 .scope_boxed()
@@ -192,17 +193,21 @@ impl User {
             .await?)
     }
 
-    pub async fn get_top_users(pool: &DbPool, limit: i64) -> Result<Vec<(User, Rating)>, DbError> {
+    pub async fn get_top_users(
+        game_speed: &GameSpeed,
+        limit: i64,
+        pool: &DbPool,
+    ) -> Result<Vec<(User, Rating)>, DbError> {
         let conn = &mut get_conn(pool).await?;
-
         let result = users::table
             .inner_join(ratings::table)
             .filter(ratings::played.ne(0))
+            .filter(ratings::speed.eq(game_speed.to_string()))
             .order_by(rating.desc())
             .limit(limit)
             .load::<(User, Rating)>(conn)
-            .await?;
-
-        Ok(result)
+            .await;
+        println!("{:?}", result);
+        Ok(result?)
     }
 }
