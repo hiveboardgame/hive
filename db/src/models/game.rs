@@ -226,6 +226,7 @@ impl Game {
                     async move {
                         let (w_rating, b_rating, w_change, b_change) = Rating::update(
                             self.rated,
+                            &self.speed,
                             self.white_id,
                             self.black_id,
                             game_result,
@@ -425,6 +426,7 @@ impl Game {
                         };
                         let (w_rating, b_rating, w_change, b_change) = Rating::update(
                             self.rated,
+                            &self.speed,
                             self.white_id,
                             self.black_id,
                             game_result,
@@ -601,6 +603,7 @@ impl Game {
                         GameStatus::Finished(game_result) => {
                             Rating::update(
                                 self.rated,
+                                &self.speed,
                                 self.white_id,
                                 self.black_id,
                                 game_result.clone(),
@@ -652,6 +655,7 @@ impl Game {
                 async move {
                     let (w_rating, b_rating, w_change, b_change) = Rating::update(
                         self.rated,
+                        &self.speed,
                         self.white_id,
                         self.black_id,
                         GameResult::Draw,

@@ -15,9 +15,8 @@ pub fn OnlineUsers() -> impl IntoView {
                 }>{move || if is_empty() { "Only you" } else { "" }}</div>
 
                 <For each=online_players key=|(key, _)| key.to_owned() let:a_user>
-                    <UserRow username=store_value(a_user.0) rating=a_user.1.rating/>
+                    <UserRow user=store_value(a_user.1)/>
                 </For>
-
             </div>
         </div>
     }

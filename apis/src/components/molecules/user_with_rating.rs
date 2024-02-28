@@ -35,7 +35,8 @@ pub fn UserWithRating(
         )
     });
     let username = move || player().map_or(String::new(), |p| p.username);
-    let rating = move || player().map_or(String::new(), |p| p.rating.to_string());
+    // TODO: show rating on hover
+    let rating = move || player().map_or(String::new(), |p| p.correspondence().to_string());
     view! {
         <div class=move || {
             format!(

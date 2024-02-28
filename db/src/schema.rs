@@ -69,6 +69,7 @@ diesel::table! {
         volatility -> Float8,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        speed -> Text,
     }
 }
 

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, PartialEq, Eq, Deserialize, Clone, Hash)]
 pub enum GameSpeed {
     Bullet,
     Blitz,
@@ -12,6 +12,16 @@ pub enum GameSpeed {
 }
 
 impl GameSpeed {
+    pub fn all_rated() -> Vec<GameSpeed> {
+        use GameSpeed::*;
+        vec![Bullet, Blitz, Rapid, Classic, Correspondence]
+    }
+
+    pub fn all() -> Vec<GameSpeed> {
+        use GameSpeed::*;
+        vec![Bullet, Blitz, Rapid, Classic, Correspondence, Untimed]
+    }
+
     pub fn from_base_increment(base: Option<i32>, increment: Option<i32>) -> GameSpeed {
         let total = base.unwrap_or(0) + 40 * increment.unwrap_or(0);
         if total == 0 {
