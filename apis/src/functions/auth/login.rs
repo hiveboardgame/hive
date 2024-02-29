@@ -3,7 +3,7 @@ use leptos::*;
 
 #[server]
 pub async fn login(
-    username: String,
+    email: String,
     password: String,
     pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
@@ -13,7 +13,7 @@ pub async fn login(
     use argon2::{password_hash::PasswordHash, Argon2, PasswordVerifier};
     use db_lib::models::user::User;
     let pool = pool()?;
-    let user: User = User::find_by_username(&username, &pool)
+    let user: User = User::find_by_email(&email, &pool)
         .await
         .map_err(ServerFnError::new)?;
 
