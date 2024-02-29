@@ -81,6 +81,7 @@ diesel::table! {
         email -> Text,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        normalized_username -> Text,
     }
 }
 

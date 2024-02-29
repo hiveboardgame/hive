@@ -8,9 +8,9 @@ use crate::{
         ratings::{self, rating},
         users,
         users::dsl::email as email_field,
+        users::dsl::normalized_username,
         users::dsl::password as password_field,
         users::dsl::updated_at,
-        users::dsl::username as username_field,
         users::dsl::users as users_table,
     },
     DbPool,
@@ -24,11 +24,33 @@ use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl
 use serde::{Deserialize, Serialize};
 use shared_types::game_speed::GameSpeed;
 use uuid::Uuid;
+use lazy_static::lazy_static;
+use regex::Regex;
 
-const MAX_USERNAME_LENGTH: usize = 40;
+const MAX_USERNAME_LENGTH: usize = 20;
+const MIN_USERNAME_LENGTH: usize = 2;
+const MIN_PASSWORD_LENGTH: usize = 8;
+const MAX_PASSWORD_LENGTH: usize = 128;
 const VALID_USERNAME_CHARS: &str = "-_";
+const BANNED_USERNAMES: [&str; 3] = ["black", "white", "admin"];
+
+lazy_static! {
+    static ref EMAIL_RE: Regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+}
+
 fn valid_username_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || VALID_USERNAME_CHARS.contains(c)
+}
+
+fn validate_email(email: &str) -> Result<(), DbError> {
+    if !EMAIL_RE.is_match(email) {
+        let reason = format!("invalid e-mail address: {:?}", email);
+        return Err(DbError::InvalidInput {
+            info: String::from("E-mail address is invalid"),
+            error: reason,
+        });
+    }
+    Ok(())
 }
 
 fn validate_username(username: &str) -> Result<(), DbError> {
@@ -38,11 +60,47 @@ fn validate_username(username: &str) -> Result<(), DbError> {
             info: String::from("Username has invalid characters"),
             error: reason,
         });
-    } else if username.len() > MAX_USERNAME_LENGTH {
+    }
+    if username.len() > MAX_USERNAME_LENGTH {
         let reason = format!("username must be <= {} chars", MAX_USERNAME_LENGTH);
         return Err(DbError::InvalidInput {
             info: String::from("Username is too long."),
             error: reason,
+        });
+    }
+    if username.len() < MIN_USERNAME_LENGTH {
+        let reason = format!("username must be >= {} chars", MAX_USERNAME_LENGTH);
+        return Err(DbError::InvalidInput {
+            info: String::from("Username is too short."),
+            error: reason,
+        });
+    }
+    if BANNED_USERNAMES.contains(&username.to_lowercase().as_str()) {
+        return Err(DbError::InvalidInput {
+            info: String::from("Pick another username."),
+            error: "Username is not allowed.".to_string(),
+        });
+    }
+    Ok(())
+}
+
+fn validate_password(password: &str) -> Result<(), DbError> {
+    if password.len() < MIN_PASSWORD_LENGTH {
+        return Err(DbError::InvalidInput {
+            info: String::from("Password is too short"),
+            error: format!(
+                "The password needs to be at least {} characters.",
+                MIN_PASSWORD_LENGTH
+            ),
+        });
+    }
+    if password.len() > MAX_PASSWORD_LENGTH {
+        return Err(DbError::InvalidInput {
+            info: String::from("Password is too long"),
+            error: format!(
+                "The password must not exceed {} characters.",
+                MAX_PASSWORD_LENGTH
+            ),
         });
     }
     Ok(())
@@ -56,17 +114,21 @@ pub struct NewUser {
     pub email: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub normalized_username: String,
 }
 
 impl NewUser {
     pub fn new(username: &str, password: &str, email: &str) -> Result<Self, DbError> {
+        validate_email(email)?;
         validate_username(username)?;
+        validate_password(password)?;
         Ok(Self {
             username: username.to_owned(),
             password: password.to_owned(),
             email: email.to_owned(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            normalized_username: username.to_lowercase(),
         })
     }
 }
@@ -80,6 +142,7 @@ pub struct User {
     pub email: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub normalized_username: String,
 }
 
 impl User {
@@ -147,7 +210,15 @@ impl User {
     pub async fn find_by_username(username: &str, pool: &DbPool) -> Result<User, DbError> {
         let conn = &mut get_conn(pool).await?;
         Ok(users_table
-            .filter(username_field.eq(username))
+            .filter(normalized_username.eq(username.to_lowercase()))
+            .first(conn)
+            .await?)
+    }
+
+    pub async fn find_by_email(email: &str, pool: &DbPool) -> Result<User, DbError> {
+        let conn = &mut get_conn(pool).await?;
+        Ok(users_table
+            .filter(email_field.eq(email))
             .first(conn)
             .await?)
     }

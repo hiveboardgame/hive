@@ -18,16 +18,16 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 action=auth_context.login
                 class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800 "
             >
-                <label class="block font-bold mb-2" for="username">
-                    Username
+                <label class="block font-bold mb-2" for="email">
+                    E-Mail
                     <input
                         ref=my_input
                         class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
-                        name="username"
-                        id="username"
+                        name="email"
+                        id="email"
                         type="text"
-                        autocomplete="username"
-                        placeholder="Username"
+                        autocomplete="email"
+                        placeholder="E-mail"
                     />
                 </label>
                 <label class="block font-bold mb-2" for="password">
