@@ -25,18 +25,18 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
                         name="username"
                         type="text"
-                        autocomplete="off"
+                        autocomplete="username"
                         placeholder="Username"
                     />
                 </label>
-                <label class="font-bold mb-2 hidden">
+                <label class="font-bold mb-2">
                     Email
                     <input
                         class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
                         name="email"
                         type="text"
-                        autocomplete="off"
-                        placeholder="Email(optional)"
+                        autocomplete="email"
+                        placeholder="Email"
                     />
                 </label>
                 <label class="block font-bold mb-2">
