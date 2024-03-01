@@ -5,10 +5,11 @@ use crate::{
     common::{hex::ActiveState, hex_stack::HexStack},
     components::atoms::hex::Hex,
 };
+use leptos::ev::pointerup;
 use leptos::*;
-use leptos_use::{use_interval_with_options, UseIntervalOptions};
+use leptos_use::{use_event_listener, use_interval_with_options, use_window, UseIntervalOptions};
 use std::rc::Rc;
-use web_sys::MouseEvent;
+use web_sys::PointerEvent;
 
 #[component]
 pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
@@ -22,10 +23,19 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
             target_stack.set(Some(hex_stack.position));
         }
     });
-    let rightclick_expand = move |evt: MouseEvent| {
+    let rightclick_expand = move |evt: PointerEvent| {
         evt.prevent_default();
-        target_stack.set(Some(hex_stack.position));
+        if evt.button() == 2 {
+            target_stack.set(Some(hex_stack.position));
+        }
     };
+
+    let window = use_window();
+    _ = use_event_listener(window, pointerup, move |evt| {
+        if evt.button() == 2 {
+            target_stack.set(None);
+        }
+    });
     let longpress_expand = move |_| {
         (interval().reset)();
         (interval().resume)();
@@ -51,7 +61,7 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
                 view! {
                     <Hex
                         hex=hex
-                        on:contextmenu=rightclick_expand
+                        on:pointerdown=rightclick_expand
                         on:touchstart=longpress_expand
                         on:touchend=collapse_stack
                     />
