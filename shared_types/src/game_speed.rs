@@ -9,6 +9,7 @@ pub enum GameSpeed {
     Classic,
     Correspondence,
     Untimed,
+    Puzzle,
 }
 
 impl GameSpeed {
@@ -49,6 +50,7 @@ impl fmt::Display for GameSpeed {
             GameSpeed::Classic => "Classic",
             GameSpeed::Correspondence => "Correspondence",
             GameSpeed::Untimed => "Untimed",
+            GameSpeed::Puzzle => "Puzzle",
         };
         write!(f, "{}", time)
     }
@@ -72,6 +74,7 @@ impl std::str::FromStr for GameSpeed {
             "Classic" => Ok(GameSpeed::Classic),
             "Correspondence" => Ok(GameSpeed::Correspondence),
             "Untimed" => Ok(GameSpeed::Untimed),
+            "Puzzle" => Ok(GameSpeed::Untimed),
             s => Err(GameSpeedError::InvalidGameSpeed {
                 found: s.to_string(),
             }),
