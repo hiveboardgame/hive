@@ -277,7 +277,6 @@ pub fn Board(
     //Stop panning when user releases touch/click AND reset height adjustment on right click release
     _ = use_event_listener(viewbox_ref, pointerup, move |_| {
         is_panning.update_untracked(|b| *b = false);
-        target_stack.set(None);
     });
 
     //Stop panning when pointer leaves board area
