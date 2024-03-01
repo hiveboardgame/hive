@@ -50,8 +50,8 @@ impl NewRating {
             lost: 0,
             draw: 0,
             rating: 1500.0,
-            deviation: 350.0,
-            volatility: 0.06,
+            deviation: 500.0,
+            volatility: 0.09,
             created_at: Utc::now(),
             updated_at: Utc::now(),
             speed: game_speed.to_string(),
@@ -157,7 +157,7 @@ impl Rating {
         };
 
         let config = Glicko2Config {
-            tau: 0.5,
+            tau: 0.75,
             ..Default::default()
         };
         let outcome = match game_result {
