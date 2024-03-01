@@ -18,12 +18,20 @@ impl UserResponse {
             GameSpeed::Bullet => self.bullet(),
             GameSpeed::Rapid => self.rapid(),
             GameSpeed::Classic => self.classic(),
+            GameSpeed::Puzzle => self.puzzle(),
             GameSpeed::Untimed => 0,
         }
     }
 
     pub fn bullet(&self) -> u64 {
         if let Some(rating_response) = self.ratings.get(&GameSpeed::Bullet) {
+            return rating_response.rating;
+        }
+        0
+    }
+
+    pub fn puzzle(&self) -> u64 {
+        if let Some(rating_response) = self.ratings.get(&GameSpeed::Puzzle) {
             return rating_response.rating;
         }
         0

@@ -17,6 +17,7 @@ pub fn Rating(rating: Option<RatingResponse>) -> impl IntoView {
             Rapid => icondata::BiStopwatchRegular,
             Classic => icondata::AiMailOutlined,
             Correspondence => icondata::AiMailOutlined,
+            Puzzle => icondata::TiPuzzle,
         };
         return view! {
             <p> <Icon icon=icon() class="w-full h-full"/> {rating.rating}</p>
