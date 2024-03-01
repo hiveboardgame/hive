@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
-use shared_types::game_speed::GameSpeed;
+use shared_types::{game_speed::GameSpeed, certainty::Certainty};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -12,9 +12,11 @@ pub struct RatingResponse {
     pub win: i64,
     pub loss: i64,
     pub draw: i64,
+    pub certainty: Certainty,
 }
 
 use cfg_if::cfg_if;
+
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::{rating::Rating, user::User},
@@ -46,6 +48,7 @@ impl RatingResponse {
             win: rating.won,
             loss: rating.lost,
             draw: rating.draw,
+            certainty: Certainty::from_deviation(rating.deviation),
         }
     }
 }
