@@ -21,11 +21,11 @@ use diesel::{
     SelectableHelper,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use shared_types::game_speed::GameSpeed;
 use uuid::Uuid;
-use lazy_static::lazy_static;
-use regex::Regex;
 
 const MAX_USERNAME_LENGTH: usize = 20;
 const MIN_USERNAME_LENGTH: usize = 2;
@@ -35,7 +35,8 @@ const VALID_USERNAME_CHARS: &str = "-_";
 const BANNED_USERNAMES: [&str; 3] = ["black", "white", "admin"];
 
 lazy_static! {
-    static ref EMAIL_RE: Regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+    static ref EMAIL_RE: Regex =
+        Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
 }
 
 fn valid_username_char(c: char) -> bool {
@@ -270,15 +271,13 @@ impl User {
         pool: &DbPool,
     ) -> Result<Vec<(User, Rating)>, DbError> {
         let conn = &mut get_conn(pool).await?;
-        let result = users::table
+        Ok(users::table
             .inner_join(ratings::table)
-            .filter(ratings::played.ne(0))
+            .filter(ratings::deviation.le(shared_types::certainty::RANKABLE_DEVIATION))
             .filter(ratings::speed.eq(game_speed.to_string()))
             .order_by(rating.desc())
             .limit(limit)
             .load::<(User, Rating)>(conn)
-            .await;
-        println!("{:?}", result);
-        Ok(result?)
+            .await?)
     }
 }
