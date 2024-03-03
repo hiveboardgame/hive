@@ -29,11 +29,12 @@ RUN cargo chef cook --release --all-features --recipe-path recipe.json
 COPY . .
 
 # Build the app
-RUN LEPTOS_OUTPUT_NAME="hivegame_$(tr -dc a-z0-9 </dev/urandom | head -c 10)" cargo leptos build -r -P  -vv
+RUN LEPTOS_HASH_FILES=true cargo leptos build -r -P  -vv
 
 FROM debian:bookworm-slim as runner
 # Copy the server binary to the /app directory
 COPY --from=builder /app/target/release/apis /app/
+COPY --from=builder /app/target/release/hash.txt /app/
 # /target/site contains our JS/WASM/CSS, etc.
 COPY --from=builder /app/target/site /app/site
 # Copy Cargo.toml if it’s needed at runtime
@@ -44,7 +45,8 @@ RUN apt-get update && \
     apt-get install --no-install-recommends libpq5 -y && \
     rm -rf /var/lib/apt/lists/*
 
-# Set any required env variables and
+# Set any required env variables
+ENV LEPTOS_HASH_FILES=true
 ENV RUST_LOG="info"
 ENV APP_ENVIRONMENT="production"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:8080"

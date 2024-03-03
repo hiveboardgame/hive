@@ -26,8 +26,6 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 
-pub const LEPTOS_OUTPUT_NAME: &str = std::env!("LEPTOS_OUTPUT_NAME");
-
 #[component]
 pub fn App() -> impl IntoView {
     provide_color_scheme();
@@ -48,7 +46,7 @@ pub fn App() -> impl IntoView {
     provide_refocus();
 
     view! {
-        <Stylesheet id="leptos" href=format!("/pkg/{}.css", LEPTOS_OUTPUT_NAME)/>
+        <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
 
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
