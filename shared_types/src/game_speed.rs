@@ -13,14 +13,27 @@ pub enum GameSpeed {
 }
 
 impl GameSpeed {
-    pub fn all_rated() -> Vec<GameSpeed> {
+    pub fn all_rated_games() -> Vec<GameSpeed> {
         use GameSpeed::*;
         vec![Bullet, Blitz, Rapid, Classic, Correspondence]
     }
 
+    pub fn all_rated() -> Vec<GameSpeed> {
+        use GameSpeed::*;
+        vec![Bullet, Blitz, Rapid, Classic, Correspondence, Puzzle]
+    }
+
     pub fn all() -> Vec<GameSpeed> {
         use GameSpeed::*;
-        vec![Bullet, Blitz, Rapid, Classic, Correspondence, Untimed]
+        vec![
+            Bullet,
+            Blitz,
+            Rapid,
+            Classic,
+            Correspondence,
+            Puzzle,
+            Untimed,
+        ]
     }
 
     pub fn from_base_increment(base: Option<i32>, increment: Option<i32>) -> GameSpeed {

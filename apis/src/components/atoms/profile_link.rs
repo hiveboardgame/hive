@@ -1,6 +1,5 @@
 use crate::components::molecules::hover_ratings::HoverRating;
 use crate::responses::user::UserResponse;
-use leptos::logging::log;
 use leptos::*;
 
 #[component]

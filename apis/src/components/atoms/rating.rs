@@ -1,28 +1,39 @@
 use crate::responses::rating::RatingResponse;
 use leptos::*;
 use leptos_icons::*;
-use shared_types::game_speed::GameSpeed;
+use icondata::Icon;
+use shared_types::{certainty::Certainty, game_speed::GameSpeed};
 
 #[component]
-pub fn Rating(rating: Option<RatingResponse>) -> impl IntoView {
-    // TODO: @ion please style this nicely <3
-    // maybe do a IconRating and (Plain)Rating?
-    if let Some(rating) = rating {
-        use GameSpeed::*;
-        // TODO: find some nice icons for the different speeds
-        let icon = move || match rating.speed {
-            Untimed => icondata::BiInfiniteRegular,
-            Blitz => icondata::BiStopwatchRegular,
-            Bullet => icondata::BiStopwatchRegular,
-            Rapid => icondata::BiStopwatchRegular,
-            Classic => icondata::AiMailOutlined,
-            Correspondence => icondata::AiMailOutlined,
-            Puzzle => icondata::TiPuzzle,
-        };
-        return view! {
-            <p> <Icon icon=icon() class="w-full h-full"/> {rating.rating}</p>
-        }
-        .into_view();
+pub fn Rating(rating: RatingResponse) -> impl IntoView {
+    let certainty_str = match rating.certainty {
+        Certainty::Rankable => "",
+        _ => "?",
+    };
+    view! {
+        {rating.rating}
+        {certainty_str}
     }
-    view! {}.into_view()
+}
+
+#[component]
+pub fn RatingWithIcon(rating: StoredValue<RatingResponse>) -> impl IntoView {
+    view! {
+        <div class="flex flex-row items-center gap-1">
+            <Icon icon=icon_for_speed(&rating().speed)/>
+            <Rating rating=rating()/>
+        </div>
+    }
+}
+
+pub fn icon_for_speed(speed:&GameSpeed) -> Icon {
+    match speed {
+        GameSpeed::Untimed => icondata::BiInfiniteRegular,
+        GameSpeed::Blitz => icondata::BsLightningFill,
+        GameSpeed::Bullet => icondata::FaGunSolid,
+        GameSpeed::Rapid => icondata::LuRabbit,
+        GameSpeed::Classic => icondata::LuTurtle,
+        GameSpeed::Correspondence => icondata::AiMailOutlined,
+        GameSpeed::Puzzle => icondata::TiPuzzle,
+    }
 }
