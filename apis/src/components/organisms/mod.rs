@@ -10,7 +10,6 @@ pub mod history;
 pub mod leaderboard;
 pub mod logout;
 pub mod online_users;
-pub mod players;
 pub mod preview_tiles;
 pub mod reserve;
 pub mod side_board;

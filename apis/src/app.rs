@@ -11,7 +11,7 @@ use crate::{
         play::Play,
         profile_view::{ProfileGamesView, ProfileView},
         register::Register,
-        user_get::UserGet,
+        top_players::TopPlayers,
     },
     providers::{
         alerts::provide_alerts, auth_context::provide_auth, challenges::provide_challenges,
@@ -92,9 +92,9 @@ pub fn App() -> impl IntoView {
                         />
                     </Route>
                     <Route path="/register" view=|| view! { <Register/> }/>
+                    <Route path="/top_players" view=|| view! { <TopPlayers/> }/>
                     <Route path="/login" view=|| view! { <Login/> }/>
                     <Route path="/account" view=|| view! { <Account/> }/>
-                    <Route path="/get_user" view=|| view! { <UserGet/> }/>
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
                     <Route path="/analysis" view=|| view! { <Analysis/> }/>
                     <Route path="/config" view=|| view! { <Config/> }/>
