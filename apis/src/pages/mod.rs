@@ -9,4 +9,4 @@ pub mod login;
 pub mod play;
 pub mod profile_view;
 pub mod register;
-pub mod user_get;
+pub mod top_players;

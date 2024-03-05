@@ -3,7 +3,7 @@ use leptos::*;
 
 use crate::{
     components::{
-        atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator},
+        atoms::{profile_link::ProfileLink, rating::Rating, status_indicator::StatusIndicator},
         molecules::rating_and_change::RatingAndChangeDynamic,
     },
     providers::game_state::GameStateSignal,
@@ -34,9 +34,13 @@ pub fn UserWithRating(
             GameStatus::Finished(_)
         )
     });
+    let speed= move || game_state.signal.get_untracked().game_response.map(|resp| resp.speed);
     let username = move || player().map_or(String::new(), |p| p.username);
-    // TODO: show rating on hover
-    let rating = move || player().map_or(String::new(), |p| p.correspondence().to_string());
+    // TODO: Display proper rating for game use <Rating/>
+    let rating = move || match (player(), speed() ){
+        (Some(player), Some(speed)) => {view!{<Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone()/>}},
+        _ => view! {""}.into_view()
+    };
     view! {
         <div class=move || {
             format!(
@@ -55,7 +59,7 @@ pub fn UserWithRating(
             <Show
                 when=is_finished
                 fallback=move || {
-                    view! { <div class=format!("{text_color}")>{rating()}</div> }
+                    view! { <div class=format!("{text_color}")>{rating}</div> }
                 }
             >
 
