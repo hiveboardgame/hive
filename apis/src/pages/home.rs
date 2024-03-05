@@ -1,10 +1,8 @@
+use crate::components::organisms::online_users::OnlineUsers;
 use crate::components::organisms::tv::Tv;
 use crate::providers::auth_context::AuthContext;
 use crate::{
-    components::{
-        molecules::modal::Modal,
-        organisms::{challenges::Challenges, players::PlayersView},
-    },
+    components::{molecules::modal::Modal, organisms::challenges::Challenges},
     pages::challenge_create::ChallengeCreate,
 };
 use leptos::{html::Dialog, *};
@@ -41,7 +39,15 @@ pub fn Home() -> impl IntoView {
                         <Challenges/>
                         <Tv/>
                     </div>
-                    <PlayersView/>
+                    <div class="flex flex-col">
+                        <OnlineUsers/>
+                        <a
+                            class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded max-w-fit self-center"
+                            href="/top_players"
+                        >
+                            Top Players
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

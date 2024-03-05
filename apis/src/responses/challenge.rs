@@ -18,7 +18,7 @@ pub struct ChallengeResponse {
     pub visibility: ChallengeVisibility,
     pub color_choice: ColorChoice,
     pub created_at: DateTime<Utc>,
-    pub challenger_rating: f64,
+    pub challenger_rating: u64,
     pub time_mode: TimeMode,         // Correspondence, Timed, Untimed
     pub time_base: Option<i32>,      // Secons
     pub time_increment: Option<i32>, // Seconds
@@ -60,7 +60,7 @@ impl ChallengeResponse {
             visibility: ChallengeVisibility::from_str(&challenge.visibility)?,
             color_choice: ColorChoice::from_str(&challenge.color_choice)?,
             created_at: challenge.created_at,
-            challenger_rating: challenger_rating.rating,
+            challenger_rating: challenger_rating.rating as u64,
             time_mode: TimeMode::from_str(&challenge.time_mode)?,
             time_base: challenge.time_base,
             time_increment: challenge.time_increment,
