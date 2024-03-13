@@ -1,6 +1,7 @@
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
 use crate::providers::api_requests::ApiRequests;
+use crate::providers::auth_context::{self, AuthContext};
 use crate::providers::color_scheme::ColorScheme;
 use crate::providers::navigation_controller::NavigationControllerSignal;
 use crate::providers::ping::PingSignal;
@@ -32,6 +33,8 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
             "light".to_string()
         }
     };
+    let auth_context = expect_context::<AuthContext>();
+    let ws = expect_context::<WebsocketContext>();
 
     create_effect(move |_| {
         let location = use_location();
@@ -42,7 +45,9 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         } else {
             None
         };
-        navi.update_nanoid(nanoid);
+        if (auth_context.user)().is_some() && (ws.ready_state)() == ConnectionReadyState::Open {
+            navi.update_nanoid(nanoid);
+        };
     });
 
     let api = ApiRequests::new();

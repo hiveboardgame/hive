@@ -50,8 +50,7 @@ pub fn App() -> impl IntoView {
 
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
 
-        // content for this welcome page
-        <Router>
+        <Router trailing_slash=TrailingSlash::Redirect>
             <Routes>
                 <Route
                     path=""
@@ -96,11 +95,7 @@ pub fn App() -> impl IntoView {
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
                     <Route path="/analysis" view=|| view! { <Analysis/> }/>
                     <Route path="/config" view=|| view! { <Config/> }/>
-                    <Route
-                        path="/game/:nanoid"
-                        ssr=SsrMode::PartiallyBlocked
-                        view=|| view! { <Play/> }
-                    />
+                    <Route path="/game/:nanoid" view=|| view! { <Play/> }/>
                 </Route>
             </Routes>
         </Router>
