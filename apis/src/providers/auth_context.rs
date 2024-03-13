@@ -34,7 +34,6 @@ pub fn provide_auth() {
         user.and_then(|user| {
             let websocket_context = expect_context::<WebsocketContext>();
             websocket_context.close();
-            log!("User in create effect is: {:?}", user);
             if user.is_some() {
                 websocket_context.open();
             }
