@@ -29,8 +29,6 @@ use uuid::Uuid;
 
 const MAX_USERNAME_LENGTH: usize = 20;
 const MIN_USERNAME_LENGTH: usize = 2;
-const MIN_PASSWORD_LENGTH: usize = 8;
-const MAX_PASSWORD_LENGTH: usize = 128;
 const VALID_USERNAME_CHARS: &str = "-_";
 const BANNED_USERNAMES: [&str; 3] = ["black", "white", "admin"];
 
@@ -85,28 +83,6 @@ fn validate_username(username: &str) -> Result<(), DbError> {
     Ok(())
 }
 
-fn validate_password(password: &str) -> Result<(), DbError> {
-    if password.len() < MIN_PASSWORD_LENGTH {
-        return Err(DbError::InvalidInput {
-            info: String::from("Password is too short"),
-            error: format!(
-                "The password needs to be at least {} characters.",
-                MIN_PASSWORD_LENGTH
-            ),
-        });
-    }
-    if password.len() > MAX_PASSWORD_LENGTH {
-        return Err(DbError::InvalidInput {
-            info: String::from("Password is too long"),
-            error: format!(
-                "The password must not exceed {} characters.",
-                MAX_PASSWORD_LENGTH
-            ),
-        });
-    }
-    Ok(())
-}
-
 #[derive(Insertable, Debug)]
 #[diesel(table_name = users)]
 pub struct NewUser {
@@ -119,13 +95,12 @@ pub struct NewUser {
 }
 
 impl NewUser {
-    pub fn new(username: &str, password: &str, email: &str) -> Result<Self, DbError> {
+    pub fn new(username: &str, hashed_password: &str, email: &str) -> Result<Self, DbError> {
         validate_email(email)?;
         validate_username(username)?;
-        validate_password(password)?;
         Ok(Self {
             username: username.to_owned(),
-            password: password.to_owned(),
+            password: hashed_password.to_owned(),
             email: email.to_owned(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
