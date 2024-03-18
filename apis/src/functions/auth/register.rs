@@ -17,9 +17,18 @@ pub async fn register(
     };
     use db_lib::models::user::{NewUser, User};
     use rand_core::OsRng;
+    const MIN_PASSWORD_LENGTH: usize = 8;
+    const MAX_PASSWORD_LENGTH: usize = 128;
 
     if password != password_confirmation {
         return Err(ServerFnError::new("Passwords don't match."));
+    }
+    let password_length=password.len();
+    if password_length < MIN_PASSWORD_LENGTH {
+        return Err(ServerFnError::new(format!("Password is too short, it must be at least {}", MIN_PASSWORD_LENGTH)));
+    }
+    if password_length > MAX_PASSWORD_LENGTH {
+        return Err(ServerFnError::new(format!("Password is too long it must not exceed {}", MAX_PASSWORD_LENGTH)));
     }
 
     let pool = pool()?;
