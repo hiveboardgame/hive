@@ -543,10 +543,12 @@ impl Game {
         let game_control_string = format!("{}. {game_control};", self.turn);
 
         let mut moves = self.history.split_terminator(';').collect::<Vec<_>>();
+        let mut popped = 1;
         if let Some(a_move) = moves.pop() {
             if a_move.trim() == "pass" {
                 println!("found a pass, will delete another move");
                 moves.pop();
+                popped +=1;
             }
         }
         let mut new_history = moves.join(";");
@@ -572,7 +574,7 @@ impl Game {
             .set((
                 current_player_id.eq(next_player),
                 history.eq(new_history),
-                turn.eq(turn - 1),
+                turn.eq(turn - popped),
                 game_status.eq(new_game_status),
                 game_control_history.eq(game_control_history.concat(game_control_string)),
                 updated_at.eq(Utc::now()),
