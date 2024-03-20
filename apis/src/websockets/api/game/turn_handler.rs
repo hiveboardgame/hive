@@ -45,36 +45,8 @@ impl TurnHandler {
         };
 
         let mut state = State::new_from_str(&self.game.history, &self.game.game_type)?;
-        let current_turn = state.turn;
         state.play_turn_from_position(piece, position)?;
-        let (piece, pos) = state
-            .history
-            .moves
-            .get(current_turn)
-            .expect("No moves in history after a move has been played.");
-        // TODO: @leex making 2 DB inserts is a bit ugly, maybe we should have:
-        // make_move and make_moves?
-        let mut game = self
-            .game
-            .make_move(
-                format!("{piece} {pos}"),
-                state.game_status.clone(),
-                &self.pool,
-            )
-            .await?;
-        if state
-            .history
-            .moves
-            .last()
-            .expect("There needs to be a move here")
-            .0
-            == "pass"
-        {
-            game = self
-                .game
-                .make_move(String::from("pass "), state.game_status.clone(), &self.pool)
-                .await?;
-        }
+        let game = self.game.update_gamestate(state.history.moves, state.game_status, state.turn as i32, &self.pool).await?;
         let next_to_move = User::find_by_uuid(&game.current_player_id, &self.pool).await?;
         let games = next_to_move
             .get_games_with_notifications(&self.pool)

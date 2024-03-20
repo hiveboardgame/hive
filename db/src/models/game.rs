@@ -324,16 +324,15 @@ impl Game {
         Ok((white_time, black_time))
     }
 
-    pub async fn make_move(
+    pub async fn update_gamestate(
         &self,
-        mut board_move: String,
+        moves: Vec<(String, String)>,
         mut new_game_status: GameStatus,
+        current_turn: i32,
         pool: &DbPool,
     ) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
-        if board_move.chars().last().unwrap_or(' ') != ';' {
-            board_move = format!("{board_move};");
-        }
+        let mut new_history =  moves.iter().map(|(piece, destination)| format!("{piece} {destination};")).collect::<Vec<String>>().join("");
         let mut game_control_string = String::new();
         if self.has_unanswered_game_control() {
             let gc = match self.last_game_control() {
@@ -410,14 +409,13 @@ impl Game {
                 interaction = Some(Utc::now());
             }
         }
-
+        let next_player = if current_turn % 2 == 0 {
+            self.white_id
+        } else {
+            self.black_id
+        };
         connection
             .transaction::<_, DbError, _>(move |conn| {
-                let next_player = if self.current_player_id == self.black_id {
-                    self.white_id
-                } else {
-                    self.black_id
-                };
                 async move {
                     if let GameStatus::Finished(game_result) = new_game_status.clone() {
                         if let GameResult::Unknown = game_result {
@@ -433,13 +431,13 @@ impl Game {
                             conn,
                         )
                         .await?;
-                        let new_turn = if timed_out { self.turn } else { self.turn + 1 };
+                        let new_turn = if timed_out { self.turn } else { current_turn };
                         if timed_out {
-                            board_move = String::new();
+                            new_history = self.history.clone();
                         }
                         let game = diesel::update(games::table.find(self.id))
                             .set((
-                                history.eq(history.concat(board_move)),
+                                history.eq(new_history),
                                 current_player_id.eq(next_player),
                                 turn.eq(new_turn),
                                 finished.eq(true),
@@ -461,9 +459,9 @@ impl Game {
                     } else {
                         let game = diesel::update(games::table.find(self.id))
                             .set((
-                                history.eq(history.concat(board_move)),
+                                history.eq(new_history),
                                 current_player_id.eq(next_player),
-                                turn.eq(turn + 1),
+                                turn.eq(current_turn),
                                 game_status.eq(new_game_status.to_string()),
                                 game_control_history
                                     .eq(game_control_history.concat(game_control_string)),
@@ -546,7 +544,6 @@ impl Game {
         let mut popped = 1;
         if let Some(a_move) = moves.pop() {
             if a_move.trim() == "pass" {
-                println!("found a pass, will delete another move");
                 moves.pop();
                 popped +=1;
             }
