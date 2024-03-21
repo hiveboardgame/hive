@@ -39,15 +39,7 @@ pub fn Home() -> impl IntoView {
                         <Challenges/>
                         <Tv/>
                     </div>
-                    <div class="flex flex-col">
-                        <OnlineUsers/>
-                        <a
-                            class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded max-w-fit self-center"
-                            href="/top_players"
-                        >
-                            Top Players
-                        </a>
-                    </div>
+                    <OnlineUsers/>
                 </div>
             </div>
         </div>
