@@ -4,7 +4,7 @@ pub mod confirm_mode_toggle;
 pub mod darkmode_toggle;
 pub mod display_profile;
 pub mod display_timer;
-pub mod hamburger;
+pub mod dropdowns;
 pub mod header;
 pub mod history;
 pub mod leaderboard;

@@ -5,6 +5,7 @@ pub mod challenge_row;
 pub mod control_buttons;
 pub mod game_info;
 pub mod game_row;
+pub mod hamburger;
 pub mod hex_stack;
 pub mod history_pieces;
 pub mod hover_ratings;

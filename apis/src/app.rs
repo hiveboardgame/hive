@@ -6,12 +6,19 @@ use crate::{
         challenge_view::ChallengeView,
         config::Config,
         display_games::DisplayGames,
+        donate::Donate,
         home::Home,
         login::Login,
         play::Play,
         profile_view::{ProfileGamesView, ProfileView},
+        puzzles::Puzzles,
         register::Register,
+        rules::Rules,
+        socials::Socials,
+        strategy::Strategy,
         top_players::TopPlayers,
+        tournaments::Tournaments,
+        tutorial::Tutorial,
     },
     providers::{
         alerts::provide_alerts, auth_context::provide_auth, challenges::provide_challenges,
@@ -95,7 +102,18 @@ pub fn App() -> impl IntoView {
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
                     <Route path="/analysis" view=|| view! { <Analysis/> }/>
                     <Route path="/config" view=|| view! { <Config/> }/>
-                    <Route path="/game/:nanoid" view=|| view! { <Play/> }/>
+                    <Route path="/tournaments" view=|| view! { <Tournaments/> }/>
+                    <Route path="/donate" view=|| view! { <Donate/> }/>
+                    <Route path="/puzzles" view=|| view! { <Puzzles/> }/>
+                    <Route path="/rules" view=|| view! { <Rules/> }/>
+                    <Route path="/strategy" view=|| view! { <Strategy/> }/>
+                    <Route path="/socials" view=|| view! { <Socials/> }/>
+                    <Route path="/tutorial" view=|| view! { <Tutorial/> }/>
+                    <Route
+                        path="/game/:nanoid"
+                        ssr=SsrMode::PartiallyBlocked
+                        view=|| view! { <Play/> }
+                    />
                 </Route>
             </Routes>
         </Router>
