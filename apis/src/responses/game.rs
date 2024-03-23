@@ -6,7 +6,7 @@ use hive_lib::{
     game_type::GameType, history::History, position::Position, state::State,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::{time_mode::TimeMode, game_speed::GameSpeed};
+use shared_types::{game_speed::GameSpeed, time_mode::TimeMode};
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
@@ -42,6 +42,7 @@ pub struct GameResponse {
     pub last_interaction: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub hashes: Vec<u64>,
 }
 
 impl GameResponse {
@@ -56,10 +57,11 @@ impl GameResponse {
     pub fn create_state(&self) -> State {
         let result = match &self.game_status {
             &GameStatus::NotStarted | &GameStatus::InProgress => GameResult::Unknown,
-            &GameStatus::Finished(ref result) => result.clone(),
+            GameStatus::Finished(result) => result.clone(),
         };
         State::new_from_history(&History::new_from_gamestate(
             self.history.clone(),
+            &self.hashes,
             result,
             self.game_type,
         ))
@@ -162,6 +164,7 @@ impl GameResponse {
             game_type: GameType::from_str(&game.game_type)?,
             tournament_queen_rule: game.tournament_queen_rule,
             turn: state.turn,
+            hashes: game.hashes(),
             white_player: UserResponse::from_uuid(&game.white_id, pool).await?,
             black_player: UserResponse::from_uuid(&game.black_id, pool).await?,
             moves: GameResponse::moves_as_string(state.board.moves(state.turn_color)),

@@ -10,8 +10,7 @@ use crate::{
 use bb8::PooledConnection;
 use chrono::{DateTime, Utc};
 use diesel::{
-    prelude::*, AsChangeset, Associations, Identifiable, Insertable, QueryDsl, Queryable,
-    Selectable,
+    prelude::*, AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable,
 };
 use diesel_async::{
     pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl,

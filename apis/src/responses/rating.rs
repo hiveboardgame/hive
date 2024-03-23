@@ -1,6 +1,6 @@
-use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use shared_types::{certainty::Certainty, game_speed::GameSpeed};
+use std::str::FromStr;
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]

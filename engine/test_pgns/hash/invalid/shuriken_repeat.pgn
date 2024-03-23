@@ -1,0 +1,82 @@
+[GameType "Base+MLP"]
+[Date "2024.03.15"]
+[Event ""]
+[Site ""]
+[Round ""]
+[White "noi"]
+[Black "noi"]
+[Result "InProgress"]
+
+1. wA1
+2. bA1 wA1-
+3. wQ \wA1
+4. bQ bA1-
+5. wQ \bA1
+6. bQ bA1/
+7. wA2 -wQ
+8. bG1 bA1\
+9. wA2 wA1\
+10. bG1 \wQ
+11. wA3 /wA1
+12. bG2 bQ\
+13. wA1 bA1\
+14. bG2 \bQ
+15. wA1 /bG1
+16. bG2 wA1\
+17. wA1 -bG1
+18. bQ wQ/
+19. wA2 bA1\
+20. bG3 \bQ
+21. wA1 -bG3
+22. bG3 bQ\
+23. wA2 bG3-
+24. bA1 bG2\
+25. wA3 -bG2
+26. bA1 wQ\
+27. wG1 \wA3
+28. bA1 bG2\
+29. wG1 wA3\
+30. bA1 wG1\
+31. wA2 bG3\
+32. bA1 /wG1
+33. wG2 /wA2
+34. bA1 wG1\
+35. wG2 wA2/
+36. bA2 bQ/
+37. wA1 -bG1
+38. bA2 wA2\
+39. wA3 -wG1
+40. bA1 wA3\
+41. wG3 /wA1
+42. bA1 wG1\
+43. wG3 \bG1
+44. bA1 wA3\
+45. wA3 /bA1
+46. bA2 wG2-
+47. wA2 bA2-
+48. bA3 bQ/
+49. wA1 -wG3
+50. bA3 \wG3
+51. wA1 /wG3
+52. bQ \wG2
+53. wA1 /bA3
+54. bQ \bA2
+55. wA1 /wG3
+56. bQ \wA2
+57. wA1 /bA3
+58. bQ wA2/
+59. wA1 /wG3
+60. bQ wA2-
+61. wA1 \bA3
+62. bQ wA2/
+63. wA1 bA3/
+64. bQ wA2-
+65. wA1 \bA3
+66. bQ wA2/
+67. wA1 bA3/
+68. bQ wA2-
+69. wA1 \bA3
+70. bQ wA2/
+71. wA1 bA3/
+72. bQ wA2-
+73. wA1 \bA3

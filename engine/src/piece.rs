@@ -7,7 +7,7 @@ use std::fmt;
 use std::str::FromStr;
 
 #[bitfield(u8)]
-#[derive(Serialize, Deserialize, PartialEq, Hash, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Hash, Eq, PartialOrd, Ord)]
 pub struct Piece {
     #[bits(1)]
     pub color: Color,
@@ -15,8 +15,10 @@ pub struct Piece {
     pub bug: Bug,
     #[bits(2)]
     pub order: usize,
+    #[bits(1)]
+    pub invalid: bool,
     /// we need to fill the u8
-    #[bits(2)]
+    #[bits(1)]
     _padding: usize,
 }
 
@@ -55,6 +57,14 @@ impl FromStr for Piece {
 }
 
 impl Piece {
+    pub fn simple(&self) -> u8 {
+        u8::from(*self) & 0b00001111
+    }
+
+    pub fn to_char(&self) -> char {
+        char::from_u32(65_u32 + self.simple() as u32).unwrap()
+    }
+
     pub fn new_from(bug: Bug, color: Color, order: usize) -> Piece {
         if bug.has_order() {
             return Piece::new()
@@ -77,5 +87,56 @@ impl fmt::Display for Piece {
         } else {
             write!(f, "{}{}", self.color(), self.bug())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_piece_order() {
+        let wq = Piece::new().with_bug(Bug::Queen).with_color(Color::White);
+        let bq = Piece::new().with_bug(Bug::Queen).with_color(Color::Black);
+        assert!(wq < bq);
+        assert!(wq.simple() < bq.simple());
+        let ba1 = Piece::new()
+            .with_bug(Bug::Ant)
+            .with_color(Color::Black)
+            .with_order(1);
+        let ba2 = Piece::new()
+            .with_bug(Bug::Ant)
+            .with_color(Color::Black)
+            .with_order(2);
+        assert!(ba1.simple() == ba2.simple());
+        let wa1 = Piece::new()
+            .with_bug(Bug::Ant)
+            .with_color(Color::White)
+            .with_order(1);
+        let ba2 = Piece::new()
+            .with_bug(Bug::Ant)
+            .with_color(Color::Black)
+            .with_order(2);
+        assert!(wa1.simple() < ba2.simple());
+        let wa1 = Piece::new()
+            .with_bug(Bug::Ant)
+            .with_color(Color::White)
+            .with_order(1);
+        let wa2 = Piece::new()
+            .with_bug(Bug::Ant)
+            .with_color(Color::White)
+            .with_order(2);
+        assert!(wa1.simple() <= wa2.simple());
+        assert!(wa1.simple() >= wa2.simple());
+    }
+
+    #[test]
+    fn tests_simple() {
+        let piece = Piece::new()
+            .with_bug(Bug::Ant)
+            .with_color(Color::Black)
+            .with_order(1);
+        let simple_piece = Piece::new().with_bug(Bug::Ant).with_color(Color::Black);
+        assert_eq!(piece.simple(), simple_piece.into());
     }
 }

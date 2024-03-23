@@ -18,5 +18,5 @@ regex = "*"
 serde = { version = "*", features = ["derive"] }
 serde_with = "3.5.1"
 thiserror = "*"
-bitfield-struct = "0.5"
+bitfield-struct = "0.6"
 itertools = "0.12.0"

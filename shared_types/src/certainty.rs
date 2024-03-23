@@ -20,5 +20,4 @@ impl Certainty {
         }
         Certainty::Clueless
     }
-    
 }
