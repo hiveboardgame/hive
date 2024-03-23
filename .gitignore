@@ -17,5 +17,8 @@ engine/flamegraph.svg
 engine/log
 engine/perf.data
 
+# direnv
+.direnv
+
 #vscode settings
 .vscode/
