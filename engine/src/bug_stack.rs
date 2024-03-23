@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::color::Color;
 use crate::piece::Piece;
 use std::fmt;
@@ -5,6 +7,7 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BugStack {
     pub pieces: [Piece; 7],
+    pub index: [Option<usize>; 2],
     pub size: u8,
 }
 
@@ -29,9 +32,48 @@ impl fmt::Display for BugStack {
 impl BugStack {
     pub fn new() -> Self {
         Self {
-            pieces: [Piece::new(); 7],
+            pieces: [Piece::new().with_invalid(true); 7],
+            index: [None, None],
             size: 0,
         }
+    }
+
+    pub fn to_char(&self) -> char {
+        if let Some(piece) = self.smallest() {
+            return piece.to_char();
+        }
+        'Z'
+    }
+
+    pub fn contains(&self, piece: &Piece) -> bool {
+        self.pieces
+            .iter()
+            .filter(|piece| !piece.invalid())
+            .contains(&piece)
+    }
+
+    pub fn smallest(&self) -> Option<Piece> {
+        self.pieces
+            .iter()
+            .filter(|piece| !piece.invalid())
+            .min_by_key(|piece| piece.simple())
+            .cloned()
+    }
+
+    pub fn simple(&self) -> u32 {
+        if self.is_empty() {
+            return u32::MAX;
+        }
+        let mut simple = 0;
+        for (i, piece) in self
+            .pieces
+            .iter()
+            .filter(|piece| !piece.invalid())
+            .enumerate()
+        {
+            simple |= (piece.simple() as u32) << (4 * i)
+        }
+        simple
     }
 
     pub fn len(&self) -> usize {
@@ -63,7 +105,7 @@ impl BugStack {
         }
         self.size -= 1;
         let piece = self.pieces[self.size as usize];
-        self.pieces[self.size as usize] = Piece::new();
+        self.pieces[self.size as usize] = Piece::new().with_invalid(true);
         piece
     }
 

@@ -18,14 +18,12 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
         <div class="m-1">
             <div class="flex flex-col items-start ml-3">
                 <div class="max-w-fit">
-                    <UserRow user=user />
+                    <UserRow user=user/>
                 </div>
-                <p>
-                    {short}
-                </p>
+                <p>{short}</p>
                 <p>
                     {ratings}
-                    //{format!("Wins: {} Draws: {} Losses {}", user().win, user().draw, user().loss)}
+                // {format!("Wins: {} Draws: {} Losses {}", user().win, user().draw, user().loss)}
                 </p>
             </div>
 

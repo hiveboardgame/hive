@@ -1,0 +1,71 @@
+[GameType "Base+MLP"]
+[Date "2021.07.31"]
+[Event ""]
+[Site "boardspace.net"]
+[Round ""]
+[White "entomokine"]
+[Black "CoalLover"]
+[Result "1-0"]
+
+1. wP
+2. bL /wP
+3. wQ wP/
+4. bQ -bL
+5. wA1 \wQ
+6. bP -bQ
+7. wM -wQ
+8. bA1 \bP
+9. wB1 \wM
+10. bM \bQ
+11. wM wP
+12. bM /wB1
+13. wM bL
+14. bA2 /bP
+15. wG1 wP\
+16. bA2 wG1\
+17. wA2 \wA1
+18. bA3 /bP
+19. wG2 wQ\
+20. bA3 wA2/
+21. wG2 bM-
+22. bM wB1
+23. wA1 bA1/
+24. bS1 \bA3
+25. wB2 wQ\
+26. bA2 wB2-
+27. wG1 \bA2
+28. bA2 wB2\
+29. wG1 -bA2
+30. bA2 wB2-
+31. wG1 \bA2
+32. bA2 wB2\
+33. wG1 -bA2
+34. bA2 wB2-
+35. wA1 /bA2
+36. bS1 wA2-
+37. wB2 bQ/
+38. bM wG2
+39. wB2 bQ
+40. bA3 /wA1
+41. wS1 /wM
+42. bA3 wS1\
+43. wM /bM
+44. bM wM
+45. wQ -bA2
+46. bA2 wA1\
+47. wL \wQ
+48. bL wQ/
+49. wG1 bM\
+50. bM wB2
+51. wA3 \wM
+52. bA1 -wA3
+53. wL /wQ
+54. bB1 bL-
+55. wG2 \bM
+56. bP -wG2
+57. wG3 \wP
+58. bB1 bL
+59. wG3 /bM
+60. wG2 \bP
+61. wP \bM
+62. bA1 wM/

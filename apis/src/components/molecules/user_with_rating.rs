@@ -34,12 +34,20 @@ pub fn UserWithRating(
             GameStatus::Finished(_)
         )
     });
-    let speed= move || game_state.signal.get_untracked().game_response.map(|resp| resp.speed);
+    let speed = move || {
+        game_state
+            .signal
+            .get_untracked()
+            .game_response
+            .map(|resp| resp.speed)
+    };
     let username = move || player().map_or(String::new(), |p| p.username);
     // TODO: Display proper rating for game use <Rating/>
-    let rating = move || match (player(), speed() ){
-        (Some(player), Some(speed)) => {view!{<Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone()/>}},
-        _ => view! {""}.into_view()
+    let rating = move || match (player(), speed()) {
+        (Some(player), Some(speed)) => {
+            view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone()/> }
+        }
+        _ => view! { "" }.into_view(),
     };
     view! {
         <div class=move || {

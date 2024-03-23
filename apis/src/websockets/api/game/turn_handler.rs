@@ -46,7 +46,15 @@ impl TurnHandler {
 
         let mut state = State::new_from_str(&self.game.history, &self.game.game_type)?;
         state.play_turn_from_position(piece, position)?;
-        let game = self.game.update_gamestate(state.history.moves, state.game_status, state.turn as i32, &self.pool).await?;
+        let game = self
+            .game
+            .update_gamestate(
+                state.history.moves,
+                state.game_status,
+                state.turn as i32,
+                &self.pool,
+            )
+            .await?;
         let next_to_move = User::find_by_uuid(&game.current_player_id, &self.pool).await?;
         let games = next_to_move
             .get_games_with_notifications(&self.pool)
