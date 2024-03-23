@@ -1,37 +1,69 @@
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha512};
+use lazy_static::lazy_static;
 
-use crate::{board::Board, history::History};
+use crate::{bug_stack::BugStack, piece::Piece, position::Rotation};
 
-#[derive(Serialize, Clone, Default, Deserialize, Debug, PartialEq, Eq)]
+lazy_static! {
+    static ref BLACK_TO_MOVE: u64 = 0x2d358dccaa6c78a5_u64;
+    static ref STUNNED: u64 = 0xc2b2ae3d_u64;
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct Hasher {
-    pub moves: Vec<Vec<u8>>,
-    pub states: Vec<Vec<u8>>,
+    pub hash: u64,
+    pub hashes: [u64; 2],
+    pub stunned: Option<Piece>,
 }
 
 impl Hasher {
     pub fn new() -> Self {
         Self {
-            moves: Vec::new(),
-            states: Vec::new(),
+            hash: 0,
+            hashes: [0, 0],
+            stunned: None,
         }
     }
 
-    pub fn record_board_state(&mut self, board: &Board) {
-        let s = format!("{board}");
-        let mut hasher = Sha512::new();
-        hasher.update(s);
-        self.moves.push(hasher.finalize().to_vec());
+    pub fn clear(&mut self, turn: usize) {
+        let black_to_move = if turn % 2 == 0 { *BLACK_TO_MOVE } else { 0 };
+        self.hash = 0;
+        self.hashes = [black_to_move, black_to_move];
+        self.stunned = None;
     }
 
-    pub fn record_move(&mut self, history: &History) {
-        let mut hasher = Sha512::new();
-        let mut s = String::new();
-        for (piece, pos) in history.moves.iter() {
-            s.push_str(piece);
-            s.push_str(pos);
+    pub fn update(&mut self, bug_stack: &BugStack, index: Option<u32>, revolution: Rotation) {
+        if bug_stack.is_empty() {
+            return;
         }
-        hasher.update(s);
-        self.states.push(hasher.finalize().to_vec());
+        let index = if let Some(index) = index {
+            index as u64
+        } else if let Some(index) = bug_stack.index[revolution as usize] {
+            index as u64
+        } else {
+            panic!("We need an index");
+        };
+        self.hashes[revolution as usize] ^= Self::hash(index << 32 | bug_stack.simple() as u64);
+    }
+
+    // This implements wyhash
+    pub fn hash(input: u64) -> u64 {
+        let input = input + 0xa0761d6478bd642f_u64;
+        let output: u128 = input as u128 * (input ^ 0xe7037ed1a0b428db_u64) as u128;
+        ((output >> 64) ^ output) as u64
+    }
+
+    /// For "pass" set stunned to None
+    pub fn finish_turn(&mut self, stunned: Option<Piece>) -> u64 {
+        for i in [0, 1] {
+            self.hashes[i] ^= *BLACK_TO_MOVE;
+            if let Some(stunned) = self.stunned {
+                self.hashes[i] ^= Self::hash(*STUNNED * stunned.simple() as u64);
+            }
+            if let Some(stunned) = stunned {
+                self.hashes[i] ^= Self::hash(*STUNNED * stunned.simple() as u64);
+            }
+        }
+        self.stunned = stunned;
+        self.hash = *self.hashes.iter().min().unwrap();
+        self.hash
     }
 }

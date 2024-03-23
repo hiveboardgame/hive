@@ -1,0 +1,13 @@
+[GameType "Base+MLP"]
+[Date "2024.03.13"]
+[Event ""]
+[Site ""]
+[Round ""]
+[White "noi"]
+[Black "noi"]
+[Result "InProgress"]
+
+1. wA1
+2. bA1 -wA1
+3. wQ wA1/
+4. bQ /bA1

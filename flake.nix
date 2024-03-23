@@ -34,6 +34,7 @@
           #!/usr/bin/env bash
           leptosfmt apis -q
           cargo fmt
+          echo $(git diff --shortstat)
           echo "You are welcome! ٩( ๑╹ ꇴ╹)۶"
         '')
         ];

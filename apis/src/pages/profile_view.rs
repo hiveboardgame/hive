@@ -54,8 +54,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
             <Transition>
                 {move || {
                     let partitioned_games = games()
-                        .map(|games| games.ok())
-                        .flatten()
+                        .and_then(|games| games.ok())
                         .map(|mut games| {
                             games.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
                             games

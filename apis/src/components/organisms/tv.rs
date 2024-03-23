@@ -19,9 +19,31 @@ pub fn Tv() -> impl IntoView {
                             {format!(
                                 "{} {} vs {} {}",
                                 game.1.white_player.username,
-                                game.1.white_player.ratings.get(&GameSpeed::from_base_increment(game.1.time_base, game.1.time_increment)).unwrap().rating,
+                                game
+                                    .1
+                                    .white_player
+                                    .ratings
+                                    .get(
+                                        &GameSpeed::from_base_increment(
+                                            game.1.time_base,
+                                            game.1.time_increment,
+                                        ),
+                                    )
+                                    .unwrap()
+                                    .rating,
                                 game.1.black_player.username,
-                                game.1.black_player.ratings.get(&GameSpeed::from_base_increment(game.1.time_base, game.1.time_increment)).unwrap().rating,
+                                game
+                                    .1
+                                    .black_player
+                                    .ratings
+                                    .get(
+                                        &GameSpeed::from_base_increment(
+                                            game.1.time_base,
+                                            game.1.time_increment,
+                                        ),
+                                    )
+                                    .unwrap()
+                                    .rating,
                             )}
                             <div class="flex items-center">
                                 {if game.1.rated { "RATED " } else { "CASUAL " }}

@@ -9,7 +9,7 @@ use crate::{
     DbPool,
 };
 use chrono::{DateTime, Utc};
-use diesel::{prelude::*, Identifiable, Insertable, QueryDsl, Queryable};
+use diesel::{prelude::*, Identifiable, Insertable, Queryable};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
@@ -54,6 +54,7 @@ pub struct NewGame {
     pub black_time_left: Option<i64>, // A duration of nanos represented as an int
     pub white_time_left: Option<i64>, // A duration of nanos represented as an int
     pub speed: String,
+    pub hashes: Vec<i64>,
 }
 
 impl NewGame {
@@ -97,6 +98,7 @@ impl NewGame {
             white_time_left: time_left,
             speed: GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment)
                 .to_string(),
+            hashes: Vec::new(),
         }
     }
 }
@@ -133,9 +135,14 @@ pub struct Game {
     pub black_time_left: Option<i64>,
     pub white_time_left: Option<i64>,
     pub speed: String,
+    hashes: Vec<i64>,
 }
 
 impl Game {
+    pub fn hashes(&self) -> Vec<u64> {
+        self.hashes.iter().map(|i| *i as u64).collect::<Vec<u64>>()
+    }
+
     pub async fn create(new_game: &NewGame, pool: &DbPool) -> Result<(Game, Vec<String>), DbError> {
         get_conn(pool)
             .await?
@@ -332,7 +339,11 @@ impl Game {
         pool: &DbPool,
     ) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
-        let mut new_history =  moves.iter().map(|(piece, destination)| format!("{piece} {destination};")).collect::<Vec<String>>().join("");
+        let mut new_history = moves
+            .iter()
+            .map(|(piece, destination)| format!("{piece} {destination};"))
+            .collect::<Vec<String>>()
+            .join("");
         let mut game_control_string = String::new();
         if self.has_unanswered_game_control() {
             let gc = match self.last_game_control() {
@@ -545,7 +556,7 @@ impl Game {
         if let Some(a_move) = moves.pop() {
             if a_move.trim() == "pass" {
                 moves.pop();
-                popped +=1;
+                popped += 1;
             }
         }
         let mut new_history = moves.join(";");
