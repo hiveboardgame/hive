@@ -17,7 +17,7 @@ pub fn DisplayGames(tab_view: ProfileGamesView) -> impl IntoView {
     view! {
         <div ref=elem class="w-full flex flex-col items-center">
             <For
-                each=move || games()
+                each=games
 
                 key=|game| (game.game_id)
                 let:game

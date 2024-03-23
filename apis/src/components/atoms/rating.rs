@@ -1,7 +1,7 @@
 use crate::responses::rating::RatingResponse;
+use icondata::Icon;
 use leptos::*;
 use leptos_icons::*;
-use icondata::Icon;
 use shared_types::{certainty::Certainty, game_speed::GameSpeed};
 
 #[component]
@@ -26,7 +26,7 @@ pub fn RatingWithIcon(rating: StoredValue<RatingResponse>) -> impl IntoView {
     }
 }
 
-pub fn icon_for_speed(speed:&GameSpeed) -> Icon {
+pub fn icon_for_speed(speed: &GameSpeed) -> Icon {
     match speed {
         GameSpeed::Untimed => icondata::BiInfiniteRegular,
         GameSpeed::Blitz => icondata::BsLightningFill,

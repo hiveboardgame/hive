@@ -16,6 +16,91 @@ pub struct Position {
     pub r: i32,
 }
 
+#[derive(Debug)]
+pub struct CircleIter {
+    pub current_position: Position,
+    pub direction: Direction,      // Direction that gets explored next
+    pub origin: Position,          // postion of "wQ" aka lowest piece
+    pub main_direction: Direction, // in which direction of the wQ is the bQ
+    pub level: usize,              // ring'th level
+    pub index: Option<usize>,      // how many steps have to explored so far
+    pub side_index: usize,         // at which position are we in the side
+    pub revolution: Rotation,      // clockwise or counter clockwise
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[repr(usize)]
+pub enum Rotation {
+    C = 0,
+    CC = 1,
+}
+
+impl fmt::Display for CircleIter {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{:?}:\t {} {:<10} l:{}, s:{}",
+            self.index,
+            self.current_position,
+            self.direction.to_string(),
+            self.level,
+            self.side_index
+        )
+    }
+}
+
+impl CircleIter {
+    pub fn new(origin: Position, direction: Direction, revolution: Rotation) -> Self {
+        CircleIter {
+            revolution,
+            origin,
+            current_position: origin,
+            main_direction: direction,
+            direction,
+            level: 0,
+            side_index: 0,
+            index: None,
+        }
+    }
+}
+
+impl Iterator for CircleIter {
+    type Item = Position;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // step into next ring
+        if self.index.is_none() {
+            self.index = Some(0);
+            return Some(self.current_position);
+        }
+        let index = self.index.unwrap();
+        self.index = Some(index + 1);
+        if index == 3 * (self.level * self.level + self.level) {
+            self.level += 1;
+            self.current_position = self.current_position.to(self.direction);
+            if index != 0 {
+                self.current_position = self.current_position.to(self.main_direction);
+            }
+            self.direction = self
+                .main_direction
+                .next_direction(self.revolution)
+                .next_direction(self.revolution);
+            self.side_index = 0;
+            return Some(self.current_position);
+        }
+        // steping level-times in self.current_direction
+        self.current_position = self.current_position.to(self.direction);
+        if self.side_index == self.level - 1 {
+            self.side_index = 0;
+            self.direction = self.direction.next_direction(self.revolution);
+            //direction = direction.next_direction(self.revolution);
+        } else {
+            self.side_index += 1;
+        }
+        Some(self.current_position)
+    }
+}
+
 impl fmt::Display for Position {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "q:{}, r:{}", self.q, self.r)
@@ -205,5 +290,57 @@ mod tests {
             pos = pos.to(direction)
         }
         assert_eq!(pos_0_0, pos);
+    }
+
+    #[test]
+    fn tests_step() {
+        let origin = Position::new(16, 16);
+        use Direction::*;
+        let direction = Direction::NW;
+        let mut ci = CircleIter::new(origin, direction, Rotation::C).enumerate();
+        let positions = [
+            origin,
+            origin.to(NW),
+            origin.to(NE),
+            origin.to(E),
+            origin.to(SE),
+            origin.to(SW),
+            origin.to(W),
+            origin.to(NW).to(NW),
+            origin.to(NW).to(NE),
+            origin.to(NE).to(NE),
+            origin.to(NE).to(E),
+            origin.to(E).to(E),
+            origin.to(E).to(SE),
+            origin.to(SE).to(SE),
+            origin.to(SE).to(SW),
+            origin.to(SW).to(SW),
+            origin.to(SW).to(W),
+            origin.to(W).to(W),
+            origin.to(W).to(NW),
+            origin.to(NW).to(NW).to(NW),
+            origin.to(NW).to(NW).to(NW).to(E),
+            origin.to(NW).to(NW).to(NW).to(E).to(E),
+            origin.to(NE).to(NE).to(NE),
+        ];
+        for should_be in positions.into_iter().enumerate() {
+            let is = ci.next().unwrap();
+            assert_eq!(should_be, is);
+        }
+        let mut ci = CircleIter::new(origin, direction, Rotation::CC).enumerate();
+        let positions = [
+            origin,
+            origin.to(NW),
+            origin.to(W),
+            origin.to(SW),
+            origin.to(SE),
+            origin.to(E),
+            origin.to(NE),
+            origin.to(NW).to(NW),
+        ];
+        for should_be in positions.into_iter().enumerate() {
+            let is = ci.next().unwrap();
+            assert_eq!(should_be, is);
+        }
     }
 }

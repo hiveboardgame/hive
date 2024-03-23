@@ -16,6 +16,8 @@ use crate::{board::Board, game_type::GameType};
 pub struct State {
     pub game_id: u64,
     pub board: Board,
+    pub hashes: Vec<u64>,
+    pub hashes_count: HashMap<u64, u8>,
     pub history: History,
     pub turn: usize,
     pub turn_color: Color,
@@ -30,6 +32,8 @@ impl State {
         State {
             game_id: 1,
             board: Board::new(),
+            hashes: Vec::new(),
+            hashes_count: HashMap::new(),
             history: History::new(),
             turn: 0,
             turn_color: Color::White,
@@ -174,6 +178,7 @@ impl State {
         self.turn += 1;
         self.board.last_moved = None;
         self.board.last_move = (None, None);
+        self.three_fold_repetition(None, None, None);
     }
 
     fn next_turn(&mut self) {
@@ -260,7 +265,7 @@ impl State {
             return Err(err);
         }
         if self.board.spawnable(piece.color(), target_position) {
-            self.board.insert(target_position, piece);
+            self.board.insert(target_position, piece, true);
             self.board.last_move = (None, Some(target_position));
         } else {
             err.update_reason(format!("{} is not allowed to spawn here.", self.turn_color));
@@ -279,43 +284,89 @@ impl State {
                 reason: "Game is already over".to_string(),
             });
         }
-        // TODO: check for GameStatus::Finished
-        if self.board.piece_already_played(piece) {
+        let origin_position = self.board.position_of_piece(piece);
+        if origin_position.is_some() {
             self.turn_move(piece, target_position)?
         } else {
             self.turn_spawn(piece, target_position)?
         }
         self.update_history(piece, target_position);
+        self.three_fold_repetition(Some(piece), origin_position, Some(target_position));
         debug_assert!(self.board.check());
         self.next_turn();
         Ok(())
     }
 
+    pub fn three_fold_repetition(
+        &mut self,
+        piece: Option<Piece>,
+        origin_position: Option<Position>,
+        target_position: Option<Position>,
+    ) {
+        let hash = if let (Some(piece), Some(target_position)) = (piece, target_position) {
+            self.board
+                .hash_move(piece, origin_position, target_position, self.turn)
+        } else {
+            self.board.hasher.finish_turn(None)
+        };
+        self.hashes.push(hash);
+        *self.hashes_count.entry(hash).or_default() += 1;
+        self.history.record_hash(hash);
+        if let Some(count) = self.hashes_count.get(&hash) {
+            if *count > 2 {
+                self.game_status = GameStatus::Finished(GameResult::Draw);
+                let mut moves = Vec::new();
+                for (index, history_hash) in self.history.hashes.iter().enumerate() {
+                    if hash == *history_hash {
+                        moves.push(index);
+                    }
+                }
+                println!("Found {count} move repetition: {:?}", moves);
+            }
+        }
+    }
+
     pub fn check_board(&self) -> bool {
         // This function can be used to perform checks on the engine and for debugging engine
         // issues on every turn
-        //true
-        // for this remove the return true and then implement your check in the loop
-        for r in 0..32 {
-            for q in 0..32 {
-                let position = Position::new(q, r);
-                let hex = self.board.board.get(position);
-                let neighbor_count = *self.board.neighbor_count.get(position);
-                let counted = self.board.positions_taken_around(position).count();
-                if counted != neighbor_count as usize {
-                    println!("Calculated: {counted} hashed: {neighbor_count}");
-                    println!("turn: {}", self.turn);
-                    println!("pos: {position}");
-                    println!("hex: {hex:?}");
-                    println!("{}", self.board);
-                    return false;
-                }
-            }
-        }
         true
+        // for this remove the return true and then implement your check in the loop
+        // for r in 0..32 {
+        //     for q in 0..32 {
+        //         let position = Position::new(q, r);
+        //         let hex = self.board.board.get(position);
+        //         let neighbor_count = *self.board.neighbor_count.get(position);
+        //         let counted = self.board.positions_taken_around(position).count();
+        //         if counted != neighbor_count as usize {
+        //             println!("Calculated: {counted} hashed: {neighbor_count}");
+        //             println!("turn: {}", self.turn);
+        //             println!("pos: {position}");
+        //             println!("hex: {hex:?}");
+        //             println!("{}", self.board);
+        //             return false;
+        //         }
+        //     }
+        // }
     }
 }
 
 fn is_absolute_position(position: &str) -> bool {
     !position.is_empty() && !['-', '/', '\\', '.'].iter().any(|c| position.contains(*c))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn tests_iniital_hash() {
+        let mut h = HashSet::new();
+        for p in ["wA1", "wB1", "wG1", "wS1", "wQ", "wM", "wL", "wP"] {
+            let mut s = State::new(GameType::MLP, false);
+            let _ = s.play_turn_from_history(p, ".");
+            h.insert(s.board.hasher.hash);
+        }
+        assert_eq!(h.len(), 8);
+    }
 }

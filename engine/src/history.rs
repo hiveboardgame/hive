@@ -11,6 +11,7 @@ use std::{
 #[derive(Debug, Clone, Serialize, Default, Deserialize, PartialEq, Eq)]
 pub struct History {
     pub moves: Vec<(String, String)>,
+    pub hashes: Vec<u64>,
     pub result: GameResult,
     pub game_type: GameType,
 }
@@ -29,6 +30,7 @@ impl History {
     pub fn new() -> Self {
         History {
             moves: Vec::new(),
+            hashes: Vec::new(),
             result: GameResult::Unknown,
             game_type: GameType::default(),
         }
@@ -36,10 +38,12 @@ impl History {
 
     pub fn new_from_gamestate(
         moves: Vec<(String, String)>,
+        hashes: &[u64],
         result: GameResult,
         game_type: GameType,
     ) -> Self {
         History {
+            hashes: hashes.to_owned(),
             moves,
             result,
             game_type,
@@ -85,6 +89,10 @@ impl History {
             }
         }
         Ok(history)
+    }
+
+    pub fn record_hash(&mut self, hash: u64) {
+        self.hashes.push(hash)
     }
 
     pub fn record_move<S1, S2>(&mut self, piece: S1, pos: S2)

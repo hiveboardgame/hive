@@ -1,0 +1,17 @@
+[GameType "Base+MLP"]
+[Date "2024.03.20"]
+[Event ""]
+[Site ""]
+[Round ""]
+[White "noi"]
+[Black "noi"]
+[Result "InProgress"]
+
+1. wP
+2. bL wP-
+3. wQ -wP
+4. bQ bL/
+5. wA1 \wQ
+6. bA1 \bQ
+7. wM \wP
+8. bA1 \wM

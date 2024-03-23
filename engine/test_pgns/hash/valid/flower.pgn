@@ -1,0 +1,24 @@
+[GameType "Base+MLP"]
+[Date "2024.03.15"]
+[Event ""]
+[Site ""]
+[Round ""]
+[White "noi"]
+[Black "noi"]
+[Result "BlackWins"]
+
+1. wL
+2. bL wL-
+3. wQ -wL
+4. bQ bL-
+5. wP wQ\
+6. bP bQ-
+7. wM /wQ
+8. bM bP-
+9. wB1 -wQ
+10. bA1 bM-
+11. wS1 \wQ
+12. bA2 bA1-
+13. wG1 \wL
+
+BlackWins
