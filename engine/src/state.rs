@@ -25,6 +25,7 @@ pub struct State {
     pub game_status: GameStatus,
     pub game_type: GameType,
     pub tournament: bool,
+    pub repeating_moves: Vec<usize>,
 }
 
 impl State {
@@ -41,6 +42,7 @@ impl State {
             game_status: GameStatus::NotStarted,
             game_type,
             tournament,
+            repeating_moves: Vec::new(),
         }
     }
 
@@ -321,7 +323,7 @@ impl State {
                         moves.push(index);
                     }
                 }
-                println!("Found {count} move repetition: {:?}", moves);
+                self.repeating_moves = moves;
             }
         }
     }

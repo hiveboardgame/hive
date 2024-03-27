@@ -4,7 +4,6 @@ use crate::responses::game::GameResponse;
 use crate::responses::user::UserResponse;
 use chrono::{DateTime, Utc};
 use http::StatusCode;
-use http_serde;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use uuid::Uuid;
