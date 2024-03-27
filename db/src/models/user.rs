@@ -4,21 +4,14 @@ use crate::{
     get_conn,
     models::{game::Game, game_user::GameUser, rating::NewRating},
     schema::{
-        games::{self, current_player_id, finished},
-        ratings::{self, rating},
-        users,
-        users::dsl::email as email_field,
-        users::dsl::normalized_username,
-        users::dsl::password as password_field,
-        users::dsl::updated_at,
-        users::dsl::users as users_table,
+        games::{self, current_player_id, finished}, ratings::{self, rating}, users::{self, dsl::{email as email_field, normalized_username, password as password_field, updated_at, users as users_table}}
     },
     DbPool,
 };
 use chrono::{DateTime, Utc};
 use diesel::{
     query_dsl::BelongingToDsl, ExpressionMethods, Identifiable, Insertable, QueryDsl, Queryable,
-    SelectableHelper,
+    SelectableHelper
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use lazy_static::lazy_static;
@@ -229,15 +222,6 @@ impl User {
             .into_iter()
             .map(|game| game.nanoid)
             .collect())
-    }
-
-    pub async fn get_games(&self, pool: &DbPool) -> Result<Vec<Game>, DbError> {
-        let conn = &mut get_conn(pool).await?;
-        Ok(GameUser::belonging_to(self)
-            .inner_join(games::table)
-            .select(Game::as_select())
-            .get_results(conn)
-            .await?)
     }
 
     pub async fn get_top_users(
