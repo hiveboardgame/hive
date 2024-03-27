@@ -108,7 +108,7 @@ impl GameResponse {
 use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
-    models::{game::Game, rating::Rating},
+    models::game::Game,
     DbPool,
 };
 use hive_lib::{
@@ -138,6 +138,8 @@ impl GameResponse {
         state: &State,
         pool: &DbPool,
     ) -> Result<Self> {
+        let white_player = UserResponse::from_uuid(&game.white_id, pool).await?;
+        let black_player = UserResponse::from_uuid(&game.black_id, pool).await?;
         let (white_rating, black_rating, white_rating_change, black_rating_change) = {
             if let Finished(_) = GameStatus::from_str(&game.game_status).expect("GameStatus parsed") {
                 (
@@ -148,8 +150,8 @@ impl GameResponse {
                 )
             } else {
                 (
-                    Some(Rating::for_uuid(&game.white_id, &GameSpeed::from_str(&game.speed)?, pool).await?.rating),
-                    Some(Rating::for_uuid(&game.black_id, &GameSpeed::from_str(&game.speed)?, pool).await?.rating),
+                    Some(white_player.rating_for_speed(&GameSpeed::from_str(&game.speed)?) as f64),
+                    Some(black_player.rating_for_speed(&GameSpeed::from_str(&game.speed)?) as f64),
                     None,
                     None,
                 )
@@ -167,8 +169,8 @@ impl GameResponse {
             tournament_queen_rule: game.tournament_queen_rule,
             turn: state.turn,
             hashes: game.hashes(),
-            white_player: UserResponse::from_uuid(&game.white_id, pool).await?,
-            black_player: UserResponse::from_uuid(&game.black_id, pool).await?,
+            white_player: white_player,
+            black_player: black_player,
             moves: GameResponse::moves_as_string(state.board.moves(state.turn_color)),
             spawns: state
                 .board

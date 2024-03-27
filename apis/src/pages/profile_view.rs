@@ -1,11 +1,13 @@
 use crate::{
     components::organisms::display_profile::DisplayProfile,
-    functions::users::get::{get_user_by_username, get_user_games},
+    functions::users::get::{
+        get_finished_games_in_batches, get_ongoing_games, get_user_by_username,
+    },
     responses::game::GameResponse,
 };
-use hive_lib::game_status::GameStatus;
-use leptos::*;
+use leptos::{ev::scroll, *};
 use leptos_router::*;
+use leptos_use::{use_document, use_event_listener, use_throttle_fn, use_window};
 
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
@@ -20,13 +22,14 @@ pub enum ProfileGamesView {
 
 #[derive(Debug, Clone)]
 pub struct AllUserGames {
-    pub playing: Vec<GameResponse>,
-    pub finished: Vec<GameResponse>,
+    pub playing: RwSignal<Vec<GameResponse>>,
+    pub finished: RwSignal<Vec<GameResponse>>,
 }
 
 #[component]
 pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let params = use_params::<UsernameParams>();
+    let finished: RwSignal<Vec<GameResponse>> = RwSignal::new(Vec::new());
     let username = move || {
         params.with(|params| {
             params
@@ -36,7 +39,21 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
         })
     };
     let user = Resource::new(username, move |_| get_user_by_username(username()));
-    let games = Resource::new(username, move |_| get_user_games(username()));
+    let get_more = RwSignal::new(0);
+    let last_timestamp = RwSignal::new(None);
+    let last_id = RwSignal::new(None);
+    let finished_games = Resource::new(
+        move || (username(), get_more()),
+        move |_| {
+            get_finished_games_in_batches(
+                username(),
+                last_timestamp.get_untracked(),
+                last_id.get_untracked(),
+                3,
+            )
+        },
+    );
+    let ongoing_games = Resource::new(username, move |_| get_ongoing_games(username()));
     let stored_children = store_value(children);
     let tab_view = create_rw_signal(ProfileGamesView::Playing);
     let active = move |view: ProfileGamesView| {
@@ -47,34 +64,49 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
             button_style + " bg-ant-blue"
         }
     };
+    let still_more_games = RwSignal::from(true);
+    let throttled_more_games = use_throttle_fn(
+        move || {
+            if tab_view.get_untracked() == ProfileGamesView::Finished {
+                if is_end_of_page() && still_more_games.get_untracked() {
+                    get_more.update(|v| *v += 1)
+                }
+            }
+        },
+        500.0,
+    );
     provide_context(tab_view);
+    _ = use_event_listener(use_window(), scroll, move |_| {
+        throttled_more_games();
+    });
 
     view! {
         <div class="bg-light dark:bg-dark pt-12">
             <Transition>
                 {move || {
-                    let partitioned_games = games()
+                    let (finished_games, more_games) = finished_games()
                         .and_then(|games| games.ok())
-                        .map(|mut games| {
-                            games.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-                            games
-                                .into_iter()
-                                .partition(|game| {
-                                    matches!(game.game_status, GameStatus::Finished(_))
-                                })
-                        })
-                        .unwrap_or((Vec::new(), Vec::new()));
-                    provide_context(AllUserGames {
-                        finished: partitioned_games.0,
-                        playing: partitioned_games.1,
-                    });
+                        .unwrap_or((Vec::new(), false));
+                    let ongoing_games = ongoing_games()
+                        .and_then(|games| games.ok())
+                        .unwrap_or(Vec::new());
+                    finished.update(move |v| v.extend(finished_games));
+                    still_more_games.set(more_games);
+                    let playing = RwSignal::from(ongoing_games);
+                    last_id
+                        .update(move |v| {
+                            *v = finished().last().map_or(None, |gr| Some(gr.game_id))
+                        });
+                    last_timestamp
+                        .update(move |v| {
+                            *v = finished().last().map_or(None, |gr| Some(gr.updated_at))
+                        });
+                    provide_context(AllUserGames { finished, playing });
                     user()
                         .map(|data| match data {
                             Err(_) => view! { <pre>"Page not found"</pre> }.into_view(),
                             Ok(user) => {
                                 view! {
-                                    // TODO: in the future data will come from a WS call but for now:
-
                                     <DisplayProfile user=store_value(user)/>
                                     <div class="flex gap-1 ml-3">
                                         <A
@@ -100,4 +132,18 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
             </Transition>
         </div>
     }
+}
+
+fn is_end_of_page() -> bool {
+    let document = use_document();
+    const OFFSET_PX: f64 = 200.0;
+    let inner_height = window()
+        .inner_height()
+        .expect("window")
+        .as_f64()
+        .expect("Converted to f64");
+    let page_y_offset = window().page_y_offset().expect("window again");
+    let body_offset_height = document.body().expect("Body").offset_height() as f64;
+
+    inner_height + page_y_offset >= body_offset_height - OFFSET_PX
 }
