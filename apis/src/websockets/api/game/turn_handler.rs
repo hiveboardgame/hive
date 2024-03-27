@@ -48,12 +48,7 @@ impl TurnHandler {
         state.play_turn_from_position(piece, position)?;
         let game = self
             .game
-            .update_gamestate(
-                state.history.moves,
-                state.game_status,
-                state.turn as i32,
-                &self.pool,
-            )
+            .update_gamestate(&state, &self.pool)
             .await?;
         let next_to_move = User::find_by_uuid(&game.current_player_id, &self.pool).await?;
         let games = next_to_move

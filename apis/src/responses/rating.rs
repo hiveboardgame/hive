@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 use shared_types::{certainty::Certainty, game_speed::GameSpeed};
-use std::str::FromStr;
-use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct RatingResponse {
@@ -21,6 +19,8 @@ use db_lib::{
     models::{rating::Rating, user::User},
     DbPool,
 };
+use std::str::FromStr;
+use uuid::Uuid;
 use anyhow::Result;
 impl RatingResponse {
     pub async fn from_uuid(id: &Uuid, game_speed: &GameSpeed, pool: &DbPool) -> Result<Self> {

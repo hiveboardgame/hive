@@ -18,8 +18,8 @@ use hive_lib::{
     history::History, state::State,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::game_speed::GameSpeed;
 use shared_types::time_mode::TimeMode;
+use shared_types::{conclusion::Conclusion, game_speed::GameSpeed};
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
@@ -54,7 +54,8 @@ pub struct NewGame {
     pub black_time_left: Option<i64>, // A duration of nanos represented as an int
     pub white_time_left: Option<i64>, // A duration of nanos represented as an int
     pub speed: String,
-    pub hashes: Vec<i64>,
+    pub hashes: Vec<Option<i64>>,
+    pub conclusion: String,
 }
 
 impl NewGame {
@@ -99,6 +100,7 @@ impl NewGame {
             speed: GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment)
                 .to_string(),
             hashes: Vec::new(),
+            conclusion: Conclusion::Unknown.to_string(),
         }
     }
 }
@@ -135,12 +137,15 @@ pub struct Game {
     pub black_time_left: Option<i64>,
     pub white_time_left: Option<i64>,
     pub speed: String,
-    hashes: Vec<i64>,
+    hashes: Vec<Option<i64>>,
+    pub conclusion: String,
 }
 
 impl Game {
     pub fn hashes(&self) -> Vec<u64> {
-        self.hashes.iter().map(|i| *i as u64).collect::<Vec<u64>>()
+        // WARN: @leex reimplement this
+        //self.hashes.iter().map(|i| *i as u64).collect::<Vec<u64>>()
+        Vec::new()
     }
 
     pub async fn create(new_game: &NewGame, pool: &DbPool) -> Result<(Game, Vec<String>), DbError> {
@@ -251,6 +256,7 @@ impl Game {
                                 updated_at.eq(Utc::now()),
                                 white_time_left.eq(white_time),
                                 black_time_left.eq(black_time),
+                                conclusion.eq(Conclusion::Timeout.to_string()),
                             ))
                             .get_result(conn)
                             .await?;
@@ -333,13 +339,11 @@ impl Game {
 
     pub async fn update_gamestate(
         &self,
-        moves: Vec<(String, String)>,
-        mut new_game_status: GameStatus,
-        current_turn: i32,
+        state: &State,
         pool: &DbPool,
     ) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
-        let mut new_history = moves
+        let mut new_history = state.history.moves
             .iter()
             .map(|(piece, destination)| format!("{piece} {destination};"))
             .collect::<Vec<String>>()
@@ -362,6 +366,17 @@ impl Game {
         let mut black_time = None;
         let mut white_time = None;
         let mut timed_out = false;
+        let mut new_conclusion = Conclusion::Unknown;
+        let mut new_game_status = state.game_status.clone();
+
+        match new_game_status {
+            GameStatus::Finished(GameResult::Draw) => new_conclusion = Conclusion::Board,
+            GameStatus::Finished(GameResult::Winner(_)) => new_conclusion = Conclusion::Board,
+            _ => {}
+        }
+        if state.repeating_moves.len() > 2 {
+            new_conclusion = Conclusion::Repetition;
+        }
 
         match TimeMode::from_str(&self.time_mode)? {
             TimeMode::Untimed => {}
@@ -420,7 +435,7 @@ impl Game {
                 interaction = Some(Utc::now());
             }
         }
-        let next_player = if current_turn % 2 == 0 {
+        let next_player = if state.turn % 2 == 0 {
             self.white_id
         } else {
             self.black_id
@@ -430,8 +445,7 @@ impl Game {
                 async move {
                     if let GameStatus::Finished(game_result) = new_game_status.clone() {
                         if let GameResult::Unknown = game_result {
-                            // WARN: this would be a big error
-                            unreachable!()
+                            panic!("GameResult is unknown but the game is over");
                         };
                         let (w_rating, b_rating, w_change, b_change) = Rating::update(
                             self.rated,
@@ -442,8 +456,9 @@ impl Game {
                             conn,
                         )
                         .await?;
-                        let new_turn = if timed_out { self.turn } else { current_turn };
+                        let new_turn = if timed_out { self.turn } else { state.turn as i32 };
                         if timed_out {
+                            new_conclusion = Conclusion::Timeout;
                             new_history = self.history.clone();
                         }
                         let game = diesel::update(games::table.find(self.id))
@@ -463,6 +478,7 @@ impl Game {
                                 white_time_left.eq(white_time),
                                 black_time_left.eq(black_time),
                                 last_interaction.eq(interaction),
+                                conclusion.eq(new_conclusion.to_string()),
                             ))
                             .get_result(conn)
                             .await?;
@@ -472,7 +488,7 @@ impl Game {
                             .set((
                                 history.eq(new_history),
                                 current_player_id.eq(next_player),
-                                turn.eq(current_turn),
+                                turn.eq(state.turn as i32),
                                 game_status.eq(new_game_status.to_string()),
                                 game_control_history
                                     .eq(game_control_history.concat(game_control_string)),
@@ -636,6 +652,7 @@ impl Game {
                             updated_at.eq(Utc::now()),
                             white_time_left.eq(white_time),
                             black_time_left.eq(black_time),
+                            conclusion.eq(Conclusion::Resigned.to_string()),
                         ))
                         .get_result(conn)
                         .await?;
@@ -685,6 +702,7 @@ impl Game {
                             updated_at.eq(Utc::now()),
                             white_time_left.eq(white_time),
                             black_time_left.eq(black_time),
+                            conclusion.eq(Conclusion::Draw.to_string()),
                         ))
                         .get_result(conn)
                         .await?;
