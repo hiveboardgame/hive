@@ -3,9 +3,7 @@ use crate::{
     db_error::DbError,
     get_conn,
     models::{game_user::GameUser, rating::Rating},
-    schema::games,
-    schema::games_users::dsl::games_users,
-    schema::{challenges, challenges::nanoid as nanoid_field, games::dsl::*},
+    schema::{challenges::{self, nanoid as nanoid_field}, games::{self, dsl::*}, games_users, users},
     DbPool,
 };
 use chrono::{DateTime, Utc};
@@ -156,12 +154,12 @@ impl Game {
                     let game: Game = new_game.insert_into(games::table).get_result(conn).await?;
                     let game_user_white = GameUser::new(game.id, game.white_id);
                     game_user_white
-                        .insert_into(games_users)
+                        .insert_into(games_users::table)
                         .execute(conn)
                         .await?;
                     let game_user_black = GameUser::new(game.id, game.black_id);
                     game_user_black
-                        .insert_into(games_users)
+                        .insert_into(games_users::table)
                         .execute(conn)
                         .await?;
                     let challenge: Challenge = challenges::table
@@ -754,4 +752,52 @@ impl Game {
             .await?;
         Ok(())
     }
+
+
+    pub async fn get_ongoing_games_for_username(username: &str, pool: &DbPool) -> Result<Vec<Game>, DbError> {
+        let conn = &mut get_conn(pool).await?;
+        Ok(users::table
+            .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
+            .inner_join(games::table.on(games_users::game_id.eq(games::id)))
+            .filter(users::normalized_username.eq(username.to_lowercase()))
+            .filter(games::finished.eq(false))
+            .order(games::updated_at.desc())
+            .select(games::all_columns)
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn get_x_finished_games_for_username(
+        username: &str,
+        pool: &DbPool,
+        last_updated_at: Option<DateTime<Utc>>,
+        last_game_id: Option<Uuid>,
+        amount: i64,
+    ) -> Result<Vec<Game>, DbError> {
+        let conn = &mut get_conn(pool).await?;
+    
+        let mut query = users::table
+            .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
+            .inner_join(games::table.on(games_users::game_id.eq(games::id)))
+            .filter(users::normalized_username.eq(username.to_lowercase()))
+            .filter(games::finished.eq(true))
+            .order((games::updated_at.desc(), games::id.desc()))
+            .into_boxed();
+    
+        match (last_updated_at, last_game_id) {
+            (Some(last_updated_at),Some(last_id)) => query = query.filter(games::updated_at.lt(last_updated_at)
+            .or(
+                (games::updated_at.eq(last_updated_at))
+                    .and(games::id.ne(last_id)))
+            ),
+            (_,_) => {},
+        };
+    
+        Ok(query
+            .limit(amount)
+            .select(games::all_columns)
+            .get_results(conn)
+            .await?)
+    }
+    
 }
