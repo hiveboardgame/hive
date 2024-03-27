@@ -6,12 +6,14 @@ use crate::providers::game_state::GameStateSignal;
 use hive_lib::{color::Color, game_status::GameStatus};
 use leptos::*;
 use leptos_use::use_window;
+use shared_types::conclusion::Conclusion;
 
 #[component]
 pub fn HistoryMove(
     turn: usize,
     piece: String,
     position: String,
+    repetition: bool,
     parent_div: NodeRef<html::Div>,
 ) -> impl IntoView {
     let mut game_state_signal = expect_context::<GameStateSignal>();
@@ -39,9 +41,14 @@ pub fn HistoryMove(
         }
         class
     };
+    let rep = if repetition {
+        String::from(" ↺")
+    } else {
+        String::new()
+    };
     view! {
         <div ref=div_ref class=get_class on:click=onclick>
-            {format!("{}. {piece} {position}", turn + 1)}
+            {format!("{}. {piece} {position}{}", turn + 1, rep)}
         </div>
     }
 }
@@ -73,6 +80,21 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         _ => "".to_string(),
     };
 
+    let conclusion = move || {
+        if let Some(game) = (game_state_signal.signal)().game_response {
+            match game.conclusion {
+                Conclusion::Board => String::from("Finished on board"),
+                Conclusion::Draw => String::from("Draw agreed"),
+                Conclusion::Resigned => String::from("Resigned"),
+                Conclusion::Timeout => String::from("Timeout"),
+                Conclusion::Repetition => String::from("3 move repetition"),
+                Conclusion::Unknown => String::from("Unknown"),
+            }
+        } else {
+            String::from("No data")
+        }
+    };
+
     let window = use_window();
     let active = Signal::derive(move || {
         if window.is_some() {
@@ -95,6 +117,13 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     });
 
     let white_black_styles = "col-span-2";
+    let is_repetition = move |turn: usize| {
+        if let Some(game) = (game_state_signal.signal)().game_response {
+            game.repetitions.contains(&turn)
+        } else {
+            false
+        }
+    };
     view! {
         <div class=format!("h-[90%] grid grid-cols-4 grid-rows-6 gap-1 pb-4 {extend_tw_classes}")>
             <div class="col-span-4 grid grid-cols-4 gap-1 dark:bg-dark bg-light min-h-0 row-span-3 row-start-1">
@@ -138,11 +167,13 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                         piece=history_move.1
                         position=history_move.2
                         parent_div=parent
+                        repetition=is_repetition(history_move.0)
                     />
                 </For>
 
                 <Show when=is_finished>
                     <div class="col-span-4 text-center">{game_result}</div>
+                    <div class="col-span-4 text-center">{conclusion}</div>
                 </Show>
             </div>
         </div>

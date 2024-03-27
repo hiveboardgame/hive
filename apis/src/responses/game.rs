@@ -6,7 +6,7 @@ use hive_lib::{
     game_type::GameType, history::History, position::Position, state::State,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::{game_speed::GameSpeed, time_mode::TimeMode};
+use shared_types::{conclusion::Conclusion, game_speed::GameSpeed, time_mode::TimeMode};
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
@@ -43,6 +43,8 @@ pub struct GameResponse {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub hashes: Vec<u64>,
+    pub conclusion: Conclusion,
+    pub repetitions: Vec<usize>,
 }
 
 impl GameResponse {
@@ -194,6 +196,8 @@ impl GameResponse {
             speed: GameSpeed::from_str(&game.speed)?,
             created_at: game.created_at,
             updated_at: game.updated_at,
+            conclusion: Conclusion::from_str(&game.conclusion)?,
+            repetitions: state.repeating_moves.clone(),
         })
     }
 
