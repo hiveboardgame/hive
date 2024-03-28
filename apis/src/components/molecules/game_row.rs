@@ -14,6 +14,7 @@ use chrono::Utc;
 use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
 use leptos::*;
 use leptos_icons::*;
+use shared_types::conclusion::Conclusion;
 
 #[component]
 pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
@@ -76,6 +77,14 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
             })
             .collect::<String>(),
     };
+    let conclusion = move || match game().conclusion {
+        Conclusion::Board => String::from(" Finished on board"),
+        Conclusion::Draw => String::from(" Draw agreed"),
+        Conclusion::Resigned => String::from(" Resigned"),
+        Conclusion::Timeout => String::from(" Timeout"),
+        Conclusion::Repetition => String::from(" 3 move repetition"),
+        Conclusion::Unknown => String::new(),
+    };
 
     view! {
         <article class="flex h-72 px-2 py-4 duration-300 dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light relative mx-2 w-full hover:bg-blue-light hover:dark:bg-blue-dark">
@@ -119,7 +128,9 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                         </Show>
                     </div>
                 </div>
-                <div class="flex justify-center items-center w-full gap-1">{result_string}</div>
+                <div class="flex justify-center items-center w-full gap-1">
+                    {result_string} <Show when=is_finished>{conclusion}</Show>
+                </div>
                 <div class="flex justify-between items-center w-full gap-1">
                     {history_string} <DownloadPgn game=game/>
                 </div>

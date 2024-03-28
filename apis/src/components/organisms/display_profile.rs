@@ -11,7 +11,16 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
         .iter()
         .map(|speed| {
             if let Some(rating) = user().ratings.get(&speed) {
-                view! { <RatingWithIcon rating=store_value(rating.clone())/> }
+                view! {
+                    <div class="border border-dark dark:border-white p-2">
+                        <RatingWithIcon rating=store_value(rating.clone())/>
+                        <div>{format!("Total: {}", rating.played)}</div>
+                        <div>{format!("Wins: {}", rating.win)}</div>
+                        <div>{format!("Losses: {}", rating.loss)}</div>
+                        <div>{format!("Draws: {}", rating.draw)}</div>
+                    </div>
+                }
+                .into_view()
             } else {
                 "".into_view()
             }
@@ -24,7 +33,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                 <div class="max-w-fit">
                     <UserRow user=user/>
                 </div>
-                <div class="flex gap-1">{ratings}</div>
+                <div class="flex gap-1 flex-wrap">{ratings}</div>
             </div>
 
         </div>
