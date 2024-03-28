@@ -6,20 +6,13 @@ use crate::{
         game_state::GameStateSignal,
     },
 };
-use hive_lib::{color::ColorChoice, game_control::GameControl, game_status::GameStatus};
+use hive_lib::{color::ColorChoice, game_control::GameControl};
 use leptos::*;
 
 #[component]
 pub fn ControlButtons() -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-
-    let is_finished = move || {
-        matches!(
-            (game_state.signal)().state.game_status,
-            GameStatus::Finished(_)
-        )
-    };
-
+    let is_finished = move || (game_state.signal)().is_finished();
     let auth_context = expect_context::<AuthContext>();
     let user = move || match untrack(auth_context.user) {
         Some(Ok(Some(user))) => Some(user),

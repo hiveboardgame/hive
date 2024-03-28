@@ -1,4 +1,4 @@
-use hive_lib::{color::Color, game_status::GameStatus};
+use hive_lib::color::Color;
 use leptos::*;
 
 use crate::{
@@ -28,12 +28,7 @@ pub fn UserWithRating(
             .game_response
             .map(|g| g.black_player),
     };
-    let is_finished = create_memo(move |_| {
-        matches!(
-            (game_state.signal)().state.game_status,
-            GameStatus::Finished(_)
-        )
-    });
+    let is_finished = move || (game_state.signal)().is_finished();
     let speed = move || {
         game_state
             .signal
