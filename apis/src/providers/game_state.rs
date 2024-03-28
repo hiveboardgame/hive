@@ -315,6 +315,11 @@ impl GameState {
         })
     }
 
+    pub fn is_finished(&self) -> bool {
+        matches!(self.state.game_status, GameStatus::Finished(_))
+            || self.game_response.as_ref().is_some_and(|gr| gr.finished)
+    }
+
     pub fn move_active(&mut self) {
         log!("Moved active!");
         if let (Some(active), Some(position)) = (self.active, self.target_position) {

@@ -29,7 +29,7 @@ pub fn handle_reaction(gar: GameActionResponse) {
             handle_tv(gar.game.clone());
         }
         GameReaction::TimedOut => {
-            handle_timeout(gar.game_id.clone());
+            handle_timeout(gar.clone());
         }
         GameReaction::Turn(ref turn) => {
             handle_turn(turn.clone(), gar.clone());
@@ -45,15 +45,17 @@ pub fn handle_reaction(gar: GameActionResponse) {
 
 pub fn reset_game_state(game: &GameResponse) {
     let mut game_state = expect_context::<GameStateSignal>();
-    game_state.set_game_response(game.clone());
-    let mut history = History::new();
-    history.moves = game.history.to_owned();
-    history.game_type = game.game_type.to_owned();
-    if let GameStatus::Finished(result) = &game.game_status {
-        history.result = result.to_owned();
-    }
-    if let Ok(state) = State::new_from_history(&history) {
-        game_state.set_state(state, game.black_player.uid, game.white_player.uid);
-    }
-    // TODO: check if there an answered gc and set it
+    batch(move || {
+        game_state.view_game();
+        game_state.set_game_response(game.clone());
+        let mut history = History::new();
+        history.moves = game.history.to_owned();
+        history.game_type = game.game_type.to_owned();
+        if let GameStatus::Finished(result) = &game.game_status {
+            history.result = result.to_owned();
+        }
+        if let Ok(state) = State::new_from_history(&history) {
+            game_state.set_state(state, game.black_player.uid, game.white_player.uid);
+        }
+    });
 }
