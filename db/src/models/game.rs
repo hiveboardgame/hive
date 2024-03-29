@@ -3,13 +3,11 @@ use crate::{
     db_error::DbError,
     get_conn,
     models::{game_user::GameUser, rating::Rating},
-    schema::games,
-    schema::games_users::dsl::games_users,
-    schema::{challenges, challenges::nanoid as nanoid_field, games::dsl::*},
+    schema::{challenges::{self, nanoid as nanoid_field}, games::{self, dsl::*}, games_users, users},
     DbPool,
 };
 use chrono::{DateTime, Utc};
-use diesel::{prelude::*, Identifiable, Insertable, QueryDsl, Queryable};
+use diesel::{prelude::*, Identifiable, Insertable, Queryable};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
@@ -138,12 +136,12 @@ impl Game {
                     let game: Game = new_game.insert_into(games::table).get_result(conn).await?;
                     let game_user_white = GameUser::new(game.id, game.white_id);
                     game_user_white
-                        .insert_into(games_users)
+                        .insert_into(games_users::table)
                         .execute(conn)
                         .await?;
                     let game_user_black = GameUser::new(game.id, game.black_id);
                     game_user_black
-                        .insert_into(games_users)
+                        .insert_into(games_users::table)
                         .execute(conn)
                         .await?;
                     let challenge: Challenge = challenges::table
@@ -319,14 +317,13 @@ impl Game {
 
     pub async fn make_move(
         &self,
-        mut board_move: String,
+        moves: Vec<(String, String)>,
         mut new_game_status: GameStatus,
+        current_turn: i32,
         pool: &DbPool,
     ) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
-        if board_move.chars().last().unwrap_or(' ') != ';' {
-            board_move = format!("{board_move};");
-        }
+        let mut new_history =  moves.iter().map(|(piece, destination)| format!("{piece} {destination};")).collect::<Vec<String>>().join("");
         let mut game_control_string = String::new();
         if self.has_unanswered_game_control() {
             let gc = match self.last_game_control() {
@@ -403,14 +400,13 @@ impl Game {
                 interaction = Some(Utc::now());
             }
         }
-
+        let next_player = if current_turn % 2 == 0 {
+            self.white_id
+        } else {
+            self.black_id
+        };
         connection
             .transaction::<_, DbError, _>(move |conn| {
-                let next_player = if self.current_player_id == self.black_id {
-                    self.white_id
-                } else {
-                    self.black_id
-                };
                 async move {
                     if let GameStatus::Finished(game_result) = new_game_status.clone() {
                         if let GameResult::Unknown = game_result {
@@ -425,13 +421,13 @@ impl Game {
                             conn,
                         )
                         .await?;
-                        let new_turn = if timed_out { self.turn } else { self.turn + 1 };
+                        let new_turn = if timed_out { self.turn } else { current_turn };
                         if timed_out {
-                            board_move = String::new();
+                            new_history = self.history.clone();
                         }
                         let game = diesel::update(games::table.find(self.id))
                             .set((
-                                history.eq(history.concat(board_move)),
+                                history.eq(new_history),
                                 current_player_id.eq(next_player),
                                 turn.eq(new_turn),
                                 finished.eq(true),
@@ -453,9 +449,9 @@ impl Game {
                     } else {
                         let game = diesel::update(games::table.find(self.id))
                             .set((
-                                history.eq(history.concat(board_move)),
+                                history.eq(new_history),
                                 current_player_id.eq(next_player),
-                                turn.eq(turn + 1),
+                                turn.eq(current_turn),
                                 game_status.eq(new_game_status.to_string()),
                                 game_control_history
                                     .eq(game_control_history.concat(game_control_string)),
@@ -473,6 +469,163 @@ impl Game {
             })
             .await
     }
+
+    //pub async fn make_move(
+    //    &self,
+    //    mut board_move: String,
+    //    mut new_game_status: GameStatus,
+    //    pool: &DbPool,
+    //) -> Result<Game, DbError> {
+    //    let connection = &mut get_conn(pool).await?;
+    //    if board_move.chars().last().unwrap_or(' ') != ';' {
+    //        board_move = format!("{board_move};");
+    //    }
+    //    let mut game_control_string = String::new();
+    //    if self.has_unanswered_game_control() {
+    //        let gc = match self.last_game_control() {
+    //            Some(GameControl::TakebackRequest(color)) => {
+    //                GameControl::TakebackReject(color.opposite_color())
+    //            }
+    //            Some(GameControl::DrawOffer(color)) => {
+    //                GameControl::DrawReject(color.opposite_color())
+    //            }
+    //            _ => unreachable!(),
+    //        };
+    //        game_control_string = format!("{}. {gc};", self.turn);
+    //    }
+//
+    //    let mut interaction = None;
+    //    let mut black_time = None;
+    //    let mut white_time = None;
+    //    let mut timed_out = false;
+//
+    //    match TimeMode::from_str(&self.time_mode)? {
+    //        TimeMode::Untimed => {}
+    //        TimeMode::RealTime => {
+    //            if self.turn < 2 {
+    //                white_time = self.white_time_left;
+    //                black_time = self.black_time_left;
+    //            } else {
+    //                (white_time, black_time) = self.calculate_time_left_add_increment()?;
+    //                if self.turn % 2 == 0 {
+    //                    if white_time == Some(0) {
+    //                        timed_out = true;
+    //                        new_game_status =
+    //                            GameStatus::Finished(GameResult::Winner(Color::Black));
+    //                    }
+    //                } else if black_time == Some(0) {
+    //                    timed_out = true;
+    //                    new_game_status = GameStatus::Finished(GameResult::Winner(Color::White));
+    //                }
+    //            }
+    //            interaction = Some(Utc::now());
+    //        }
+    //        TimeMode::Correspondence => {
+    //            if self.turn < 2 {
+    //                white_time = self.white_time_left;
+    //                black_time = self.black_time_left;
+    //            } else {
+    //                (white_time, black_time) = self.calculate_time_left()?;
+    //                if self.turn % 2 == 0 {
+    //                    if white_time == Some(0) {
+    //                        timed_out = true;
+    //                        new_game_status =
+    //                            GameStatus::Finished(GameResult::Winner(Color::Black));
+    //                    } else {
+    //                        match (self.time_increment, self.time_base) {
+    //                            (Some(inc), None) => {
+    //                                white_time = Some((inc as u64 * NANOS_IN_SECOND) as i64);
+    //                            }
+    //                            (None, Some(_)) => {}
+    //                            _ => unreachable!(),
+    //                        }
+    //                    }
+    //                } else if black_time == Some(0) {
+    //                    timed_out = true;
+    //                    new_game_status = GameStatus::Finished(GameResult::Winner(Color::White));
+    //                } else {
+    //                    match (self.time_increment, self.time_base) {
+    //                        (Some(inc), None) => {
+    //                            black_time = Some((inc as u64 * NANOS_IN_SECOND) as i64);
+    //                        }
+    //                        (None, Some(_)) => {}
+    //                        _ => unreachable!(),
+    //                    }
+    //                }
+    //            }
+    //            interaction = Some(Utc::now());
+    //        }
+    //    }
+//
+    //    connection
+    //        .transaction::<_, DbError, _>(move |conn| {
+    //            let next_player = if self.current_player_id == self.black_id {
+    //                self.white_id
+    //            } else {
+    //                self.black_id
+    //            };
+    //            async move {
+    //                if let GameStatus::Finished(game_result) = new_game_status.clone() {
+    //                    if let GameResult::Unknown = game_result {
+    //                        // WARN: this would be a big error
+    //                        unreachable!()
+    //                    };
+    //                    let (w_rating, b_rating, w_change, b_change) = Rating::update(
+    //                        self.rated,
+    //                        self.white_id,
+    //                        self.black_id,
+    //                        game_result,
+    //                        conn,
+    //                    )
+    //                    .await?;
+    //                    let new_turn = if timed_out { self.turn } else { self.turn + 1 };
+    //                    if timed_out {
+    //                        board_move = String::new();
+    //                    }
+    //                    let game = diesel::update(games::table.find(self.id))
+    //                        .set((
+    //                            history.eq(history.concat(board_move)),
+    //                            current_player_id.eq(next_player),
+    //                            turn.eq(new_turn),
+    //                            finished.eq(true),
+    //                            game_status.eq(new_game_status.to_string()),
+    //                            game_control_history
+    //                                .eq(game_control_history.concat(game_control_string)),
+    //                            white_rating.eq(w_rating),
+    //                            black_rating.eq(b_rating),
+    //                            white_rating_change.eq(w_change),
+    //                            black_rating_change.eq(b_change),
+    //                            updated_at.eq(Utc::now()),
+    //                            white_time_left.eq(white_time),
+    //                            black_time_left.eq(black_time),
+    //                            last_interaction.eq(interaction),
+    //                        ))
+    //                        .get_result(conn)
+    //                        .await?;
+    //                    Ok(game)
+    //                } else {
+    //                    let game = diesel::update(games::table.find(self.id))
+    //                        .set((
+    //                            history.eq(history.concat(board_move)),
+    //                            current_player_id.eq(next_player),
+    //                            turn.eq(turn + 1),
+    //                            game_status.eq(new_game_status.to_string()),
+    //                            game_control_history
+    //                                .eq(game_control_history.concat(game_control_string)),
+    //                            updated_at.eq(Utc::now()),
+    //                            white_time_left.eq(white_time),
+    //                            black_time_left.eq(black_time),
+    //                            last_interaction.eq(interaction),
+    //                        ))
+    //                        .get_result(conn)
+    //                        .await?;
+    //                    Ok(game)
+    //                }
+    //            }
+    //            .scope_boxed()
+    //        })
+    //        .await
+    //}
 
     pub fn user_is_player(&self, user_id: Uuid) -> bool {
         self.white_id == user_id || self.black_id == user_id
@@ -526,6 +679,54 @@ impl Game {
     }
 
     // TODO: get rid of new_game_status and compute it here
+    //pub async fn accept_takeback(
+    //    &self,
+    //    game_control: &GameControl,
+    //    pool: &DbPool,
+    //) -> Result<Game, DbError> {
+    //    let conn = &mut get_conn(pool).await?;
+    //    let game_control_string = format!("{}. {game_control};", self.turn);
+//
+    //    let mut moves = self.history.split_terminator(';').collect::<Vec<_>>();
+    //    if let Some(a_move) = moves.pop() {
+    //        if a_move.trim() == "pass" {
+    //            println!("found a pass, will delete another move");
+    //            moves.pop();
+    //        }
+    //    }
+    //    let mut new_history = moves.join(";");
+    //    if !new_history.is_empty() {
+    //        new_history.push(';');
+    //    };
+    //    // TODO: now we have error problems here... get rid of the expects
+    //    let his = History::new_from_str(&new_history).map_err(|e| DbError::InvalidInput {
+    //        info: String::from("Could not recover History from history string."),
+    //        error: e.to_string(),
+    //    })?;
+    //    let state = State::new_from_history(&his).map_err(|e| DbError::InvalidInput {
+    //        info: String::from("Could not recover State from History."),
+    //        error: e.to_string(),
+    //    })?;
+    //    let new_game_status = state.game_status.to_string();
+    //    let next_player = if self.current_player_id == self.black_id {
+    //        self.white_id
+    //    } else {
+    //        self.black_id
+    //    };
+    //    Ok(diesel::update(games::table.find(self.id))
+    //        .set((
+    //            current_player_id.eq(next_player),
+    //            history.eq(new_history),
+    //            turn.eq(turn - 1),
+    //            game_status.eq(new_game_status),
+    //            game_control_history.eq(game_control_history.concat(game_control_string)),
+    //            updated_at.eq(Utc::now()),
+    //            last_interaction.eq(Utc::now()),
+    //        ))
+    //        .get_result(conn)
+    //        .await?)
+    //}
+
     pub async fn accept_takeback(
         &self,
         game_control: &GameControl,
@@ -535,10 +736,12 @@ impl Game {
         let game_control_string = format!("{}. {game_control};", self.turn);
 
         let mut moves = self.history.split_terminator(';').collect::<Vec<_>>();
+        let mut popped = 1;
         if let Some(a_move) = moves.pop() {
             if a_move.trim() == "pass" {
                 println!("found a pass, will delete another move");
                 moves.pop();
+                popped +=1;
             }
         }
         let mut new_history = moves.join(";");
@@ -564,7 +767,7 @@ impl Game {
             .set((
                 current_player_id.eq(next_player),
                 history.eq(new_history),
-                turn.eq(turn - 1),
+                turn.eq(turn - popped),
                 game_status.eq(new_game_status),
                 game_control_history.eq(game_control_history.concat(game_control_string)),
                 updated_at.eq(Utc::now()),
@@ -716,4 +919,52 @@ impl Game {
             .await?;
         Ok(())
     }
+
+    pub async fn get_ongoing_games_for_username(username: &str, pool: &DbPool) -> Result<Vec<Game>, DbError> {
+        let conn = &mut get_conn(pool).await?;
+        Ok(users::table
+            .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
+            .inner_join(games::table.on(games_users::game_id.eq(games::id)))
+            .filter(users::username.eq(username))
+            .filter(games::finished.eq(false))
+            .order(games::updated_at.desc())
+            .select(games::all_columns)
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn get_x_finished_games_for_username(
+        username: &str,
+        pool: &DbPool,
+        last_updated_at: Option<DateTime<Utc>>,
+        last_game_id: Option<Uuid>,
+        amount: i64,
+    ) -> Result<Vec<Game>, DbError> {
+        let conn = &mut get_conn(pool).await?;
+    
+        let mut query = users::table
+            .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
+            .inner_join(games::table.on(games_users::game_id.eq(games::id)))
+            .filter(users::username.eq(username))
+            .filter(games::finished.eq(true))
+            .order((games::updated_at.desc(), games::id.desc()))
+            .into_boxed();
+    
+        match (last_updated_at, last_game_id) {
+            (Some(last_updated_at),Some(last_id)) => query = query.filter(games::updated_at.lt(last_updated_at)
+            .or(
+                (games::updated_at.eq(last_updated_at))
+                    .and(games::id.ne(last_id)))
+            ),
+            (_,_) => {},
+        };
+    
+        Ok(query
+            .limit(amount)
+            .select(games::all_columns)
+            .get_results(conn)
+            .await?)
+    }
+    
+
 }

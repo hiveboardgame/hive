@@ -125,6 +125,8 @@ impl GameResponse {
         state: &State,
         pool: &DbPool,
     ) -> Result<Self> {
+        let white_player = UserResponse::from_uuid(&game.white_id, pool).await?;
+        let black_player = UserResponse::from_uuid(&game.black_id, pool).await?;
         let (white_rating, black_rating, white_rating_change, black_rating_change) = {
             if let Finished(_) = GameStatus::from_str(&game.game_status).expect("GameStatus parsed") {
                 (
@@ -135,8 +137,8 @@ impl GameResponse {
                 )
             } else {
                 (
-                    Some(Rating::for_uuid(&game.white_id, pool).await?.rating),
-                    Some(Rating::for_uuid(&game.black_id, pool).await?.rating),
+                    Some(white_player.rating as f64),
+                    Some(black_player.rating as f64),
                     None,
                     None,
                 )
@@ -153,8 +155,8 @@ impl GameResponse {
             game_type: GameType::from_str(&game.game_type)?,
             tournament_queen_rule: game.tournament_queen_rule,
             turn: state.turn,
-            white_player: UserResponse::from_uuid(&game.white_id, pool).await?,
-            black_player: UserResponse::from_uuid(&game.black_id, pool).await?,
+            white_player: white_player,
+            black_player: black_player,
             moves: GameResponse::moves_as_string(state.board.moves(state.turn_color)),
             spawns: state
                 .board

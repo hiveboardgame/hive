@@ -1,18 +1,12 @@
 use crate::components::atoms::download_pgn::DownloadPgn;
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::game_status::GameStatus;
 use leptos::*;
 use leptos_icons::*;
 
 #[component]
 pub fn AnalysisAndDownload() -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let is_finished = move || {
-        matches!(
-            (game_state.signal)().state.game_status,
-            GameStatus::Finished(_)
-        )
-    };
+    let is_finished = move || (game_state.signal)().is_finished();
 
     let analysis_setup = move |_| {
         let mut game_state = expect_context::<GameStateSignal>();
