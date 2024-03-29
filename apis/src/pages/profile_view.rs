@@ -49,7 +49,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                 username(),
                 last_timestamp.get_untracked(),
                 last_id.get_untracked(),
-                3,
+                10,
             )
         },
     );
