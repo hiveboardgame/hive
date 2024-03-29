@@ -3,7 +3,11 @@ use crate::{
     db_error::DbError,
     get_conn,
     models::{game_user::GameUser, rating::Rating},
-    schema::{challenges::{self, nanoid as nanoid_field}, games::{self, dsl::*}, games_users, users},
+    schema::{
+        challenges::{self, nanoid as nanoid_field},
+        games::{self, dsl::*},
+        games_users, users,
+    },
     DbPool,
 };
 use chrono::{DateTime, Utc};
@@ -323,7 +327,11 @@ impl Game {
         pool: &DbPool,
     ) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
-        let mut new_history =  moves.iter().map(|(piece, destination)| format!("{piece} {destination};")).collect::<Vec<String>>().join("");
+        let mut new_history = moves
+            .iter()
+            .map(|(piece, destination)| format!("{piece} {destination};"))
+            .collect::<Vec<String>>()
+            .join("");
         let mut game_control_string = String::new();
         if self.has_unanswered_game_control() {
             let gc = match self.last_game_control() {
@@ -423,7 +431,7 @@ impl Game {
                         .await?;
                         let new_turn = if timed_out { self.turn } else { current_turn };
                         if timed_out {
-                            new_history = self.history.clone();
+                            new_history.clone_from(&self.history);
                         }
                         let game = diesel::update(games::table.find(self.id))
                             .set((
@@ -493,12 +501,12 @@ impl Game {
     //        };
     //        game_control_string = format!("{}. {gc};", self.turn);
     //    }
-//
+    //
     //    let mut interaction = None;
     //    let mut black_time = None;
     //    let mut white_time = None;
     //    let mut timed_out = false;
-//
+    //
     //    match TimeMode::from_str(&self.time_mode)? {
     //        TimeMode::Untimed => {}
     //        TimeMode::RealTime => {
@@ -556,7 +564,7 @@ impl Game {
     //            interaction = Some(Utc::now());
     //        }
     //    }
-//
+    //
     //    connection
     //        .transaction::<_, DbError, _>(move |conn| {
     //            let next_player = if self.current_player_id == self.black_id {
@@ -686,7 +694,7 @@ impl Game {
     //) -> Result<Game, DbError> {
     //    let conn = &mut get_conn(pool).await?;
     //    let game_control_string = format!("{}. {game_control};", self.turn);
-//
+    //
     //    let mut moves = self.history.split_terminator(';').collect::<Vec<_>>();
     //    if let Some(a_move) = moves.pop() {
     //        if a_move.trim() == "pass" {
@@ -741,7 +749,7 @@ impl Game {
             if a_move.trim() == "pass" {
                 println!("found a pass, will delete another move");
                 moves.pop();
-                popped +=1;
+                popped += 1;
             }
         }
         let mut new_history = moves.join(";");
@@ -920,7 +928,10 @@ impl Game {
         Ok(())
     }
 
-    pub async fn get_ongoing_games_for_username(username: &str, pool: &DbPool) -> Result<Vec<Game>, DbError> {
+    pub async fn get_ongoing_games_for_username(
+        username: &str,
+        pool: &DbPool,
+    ) -> Result<Vec<Game>, DbError> {
         let conn = &mut get_conn(pool).await?;
         Ok(users::table
             .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
@@ -941,7 +952,7 @@ impl Game {
         amount: i64,
     ) -> Result<Vec<Game>, DbError> {
         let conn = &mut get_conn(pool).await?;
-    
+
         let mut query = users::table
             .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
             .inner_join(games::table.on(games_users::game_id.eq(games::id)))
@@ -949,22 +960,19 @@ impl Game {
             .filter(games::finished.eq(true))
             .order((games::updated_at.desc(), games::id.desc()))
             .into_boxed();
-    
-        match (last_updated_at, last_game_id) {
-            (Some(last_updated_at),Some(last_id)) => query = query.filter(games::updated_at.lt(last_updated_at)
-            .or(
-                (games::updated_at.eq(last_updated_at))
-                    .and(games::id.ne(last_id)))
-            ),
-            (_,_) => {},
+
+        if let (Some(last_updated_at), Some(last_id)) = (last_updated_at, last_game_id) {
+            query = query.filter(
+                games::updated_at
+                    .lt(last_updated_at)
+                    .or((games::updated_at.eq(last_updated_at)).and(games::id.ne(last_id))),
+            )
         };
-    
+
         Ok(query
             .limit(amount)
             .select(games::all_columns)
             .get_results(conn)
             .await?)
     }
-    
-
 }
