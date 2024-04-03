@@ -28,7 +28,7 @@ impl TimerSignal {
     pub fn update_from(&self, game: &GameResponse) {
         log!("Updating the timer");
         self.signal.update(|timer| {
-            timer.nanoid = game.nanoid.to_owned();
+            game.nanoid.clone_into(&mut timer.nanoid);
             timer.finished = game.finished;
             timer.turn = game.turn;
             timer.white_time_left = game.white_time_left;

@@ -350,7 +350,7 @@ impl GameState {
         self.current_position = Some(position);
         let moves = self.state.board.moves(self.state.turn_color);
         if let Some(positions) = moves.get(&(piece, position)) {
-            self.target_positions = positions.to_owned();
+            positions.clone_into(&mut self.target_positions);
             self.active = Some(piece);
         }
     }

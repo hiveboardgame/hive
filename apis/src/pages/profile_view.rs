@@ -67,10 +67,11 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let still_more_games = RwSignal::from(true);
     let throttled_more_games = use_throttle_fn(
         move || {
-            if tab_view.get_untracked() == ProfileGamesView::Finished {
-                if is_end_of_page() && still_more_games.get_untracked() {
-                    get_more.update(|v| *v += 1)
-                }
+            if tab_view.get_untracked() == ProfileGamesView::Finished
+                && is_end_of_page()
+                && still_more_games.get_untracked()
+            {
+                get_more.update(|v| *v += 1)
             }
         },
         500.0,
@@ -93,14 +94,9 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                     finished.update(move |v| v.extend(finished_games));
                     still_more_games.set(more_games);
                     let playing = RwSignal::from(ongoing_games);
-                    last_id
-                        .update(move |v| {
-                            *v = finished().last().map_or(None, |gr| Some(gr.game_id))
-                        });
+                    last_id.update(move |v| { *v = finished().last().map(|gr| gr.game_id) });
                     last_timestamp
-                        .update(move |v| {
-                            *v = finished().last().map_or(None, |gr| Some(gr.updated_at))
-                        });
+                        .update(move |v| { *v = finished().last().map(|gr| gr.updated_at) });
                     provide_context(AllUserGames { finished, playing });
                     user()
                         .map(|data| match data {

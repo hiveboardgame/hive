@@ -49,10 +49,10 @@ pub fn reset_game_state(game: &GameResponse) {
         game_state.view_game();
         game_state.set_game_response(game.clone());
         let mut history = History::new();
-        history.moves = game.history.to_owned();
-        history.game_type = game.game_type.to_owned();
+        game.history.clone_into(&mut history.moves);
+        game.game_type.clone_into(&mut history.game_type);
         if let GameStatus::Finished(result) = &game.game_status {
-            history.result = result.to_owned();
+            result.clone_into(&mut history.result);
         }
         if let Ok(state) = State::new_from_history(&history) {
             game_state.set_state(state, game.black_player.uid, game.white_player.uid);

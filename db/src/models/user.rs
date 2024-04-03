@@ -4,14 +4,22 @@ use crate::{
     get_conn,
     models::{game::Game, game_user::GameUser, rating::NewRating},
     schema::{
-        games::{self, current_player_id, finished}, ratings::{self, rating}, users::{self, dsl::{email as email_field, normalized_username, password as password_field, updated_at, users as users_table}}
+        games::{self, current_player_id, finished},
+        ratings::{self, rating},
+        users::{
+            self,
+            dsl::{
+                email as email_field, normalized_username, password as password_field, updated_at,
+                users as users_table,
+            },
+        },
     },
     DbPool,
 };
 use chrono::{DateTime, Utc};
 use diesel::{
     query_dsl::BelongingToDsl, ExpressionMethods, Identifiable, Insertable, QueryDsl, Queryable,
-    SelectableHelper
+    SelectableHelper,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use lazy_static::lazy_static;

@@ -3,7 +3,11 @@ use crate::{
     db_error::DbError,
     get_conn,
     models::{game_user::GameUser, rating::Rating},
-    schema::{challenges::{self, nanoid as nanoid_field}, games::{self, dsl::*}, games_users, users},
+    schema::{
+        challenges::{self, nanoid as nanoid_field},
+        games::{self, dsl::*},
+        games_users, users,
+    },
     DbPool,
 };
 use chrono::{DateTime, Utc};
@@ -335,13 +339,11 @@ impl Game {
         Ok((white_time, black_time))
     }
 
-    pub async fn update_gamestate(
-        &self,
-        state: &State,
-        pool: &DbPool,
-    ) -> Result<Game, DbError> {
+    pub async fn update_gamestate(&self, state: &State, pool: &DbPool) -> Result<Game, DbError> {
         let connection = &mut get_conn(pool).await?;
-        let mut new_history = state.history.moves
+        let mut new_history = state
+            .history
+            .moves
             .iter()
             .map(|(piece, destination)| format!("{piece} {destination};"))
             .collect::<Vec<String>>()
@@ -454,10 +456,14 @@ impl Game {
                             conn,
                         )
                         .await?;
-                        let new_turn = if timed_out { self.turn } else { state.turn as i32 };
+                        let new_turn = if timed_out {
+                            self.turn
+                        } else {
+                            state.turn as i32
+                        };
                         if timed_out {
                             new_conclusion = Conclusion::Timeout;
-                            new_history = self.history.clone();
+                            new_history.clone_from(&self.history);
                         }
                         let game = diesel::update(games::table.find(self.id))
                             .set((
@@ -753,8 +759,10 @@ impl Game {
         Ok(())
     }
 
-
-    pub async fn get_ongoing_games_for_username(username: &str, pool: &DbPool) -> Result<Vec<Game>, DbError> {
+    pub async fn get_ongoing_games_for_username(
+        username: &str,
+        pool: &DbPool,
+    ) -> Result<Vec<Game>, DbError> {
         let conn = &mut get_conn(pool).await?;
         Ok(users::table
             .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
@@ -775,7 +783,7 @@ impl Game {
         amount: i64,
     ) -> Result<Vec<Game>, DbError> {
         let conn = &mut get_conn(pool).await?;
-    
+
         let mut query = users::table
             .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
             .inner_join(games::table.on(games_users::game_id.eq(games::id)))
@@ -783,21 +791,19 @@ impl Game {
             .filter(games::finished.eq(true))
             .order((games::updated_at.desc(), games::id.desc()))
             .into_boxed();
-    
-        match (last_updated_at, last_game_id) {
-            (Some(last_updated_at),Some(last_id)) => query = query.filter(games::updated_at.lt(last_updated_at)
-            .or(
-                (games::updated_at.eq(last_updated_at))
-                    .and(games::id.ne(last_id)))
-            ),
-            (_,_) => {},
+
+        if let (Some(last_updated_at), Some(last_id)) = (last_updated_at, last_game_id) {
+            query = query.filter(
+                games::updated_at
+                    .lt(last_updated_at)
+                    .or((games::updated_at.eq(last_updated_at)).and(games::id.ne(last_id))),
+            )
         };
-    
+
         Ok(query
             .limit(amount)
             .select(games::all_columns)
             .get_results(conn)
             .await?)
     }
-    
 }

@@ -230,7 +230,7 @@ impl Board {
             }
         }
         if self.ring_is_empty(smallest_position, ring + 1) {
-            backup = h.clone();
+            backup.clone_from(&h);
         }
         h.retain(|_, dirs| dirs.len() == 1);
         if !h.is_empty() {

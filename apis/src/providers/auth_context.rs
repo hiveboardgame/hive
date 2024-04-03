@@ -2,7 +2,6 @@ use crate::functions::accounts::account_response::AccountResponse;
 use crate::functions::accounts::get::get_account;
 use crate::functions::auth::{login::Login, logout::Logout, register::Register};
 use crate::providers::websocket::context::WebsocketContext;
-use leptos::logging::log;
 use leptos::*;
 
 #[derive(Clone)]

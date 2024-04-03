@@ -10,7 +10,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
     let ratings = GameSpeed::all_rated_games()
         .iter()
         .map(|speed| {
-            if let Some(rating) = user().ratings.get(&speed) {
+            if let Some(rating) = user().ratings.get(speed) {
                 view! {
                     <div class="border border-dark dark:border-white p-2">
                         <RatingWithIcon rating=store_value(rating.clone())/>

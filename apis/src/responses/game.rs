@@ -169,8 +169,8 @@ impl GameResponse {
             tournament_queen_rule: game.tournament_queen_rule,
             turn: state.turn,
             hashes: game.hashes(),
-            white_player: white_player,
-            black_player: black_player,
+            white_player,
+            black_player,
             moves: GameResponse::moves_as_string(state.board.moves(state.turn_color)),
             spawns: state
                 .board
