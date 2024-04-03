@@ -1,9 +1,9 @@
 use crate::responses::game::GameResponse;
 use crate::responses::user::UserResponse;
+use chrono::{DateTime, Utc};
 use leptos::*;
 use shared_types::game_speed::GameSpeed;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[server]
 pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError> {
@@ -28,8 +28,7 @@ pub async fn get_ongoing_games(username: String) -> Result<Vec<GameResponse>, Se
     use crate::functions::db::pool;
     use db_lib::models::game::Game;
     let pool = pool()?;
-    let games: Vec<Game> = Game::get_ongoing_games_for_username(&username, &pool)
-        .await?;
+    let games: Vec<Game> = Game::get_ongoing_games_for_username(&username, &pool).await?;
     let mut results: Vec<GameResponse> = Vec::new();
     for game in games.iter() {
         if let Ok(game_response) = GameResponse::new_from_db(game, &pool).await {
@@ -40,12 +39,18 @@ pub async fn get_ongoing_games(username: String) -> Result<Vec<GameResponse>, Se
 }
 
 #[server]
-pub async fn get_finished_games_in_batches(username: String, last_timestamp:Option<DateTime<Utc>>, last_id:Option<Uuid>, amount:i64) -> Result<(Vec<GameResponse>,bool), ServerFnError> {
+pub async fn get_finished_games_in_batches(
+    username: String,
+    last_timestamp: Option<DateTime<Utc>>,
+    last_id: Option<Uuid>,
+    amount: i64,
+) -> Result<(Vec<GameResponse>, bool), ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::models::game::Game;
     let pool = pool()?;
-    let games: Vec<Game> = Game::get_x_finished_games_for_username(&username, &pool, last_timestamp, last_id, amount)
-        .await?;
+    let games: Vec<Game> =
+        Game::get_x_finished_games_for_username(&username, &pool, last_timestamp, last_id, amount)
+            .await?;
     let mut results: Vec<GameResponse> = Vec::new();
     let got_amount = games.len() as i64 == amount;
     for game in games.iter() {
@@ -53,7 +58,7 @@ pub async fn get_finished_games_in_batches(username: String, last_timestamp:Opti
             results.push(game_response);
         }
     }
-    Ok((results,got_amount))
+    Ok((results, got_amount))
 }
 
 #[server]

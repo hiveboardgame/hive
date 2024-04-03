@@ -28,7 +28,7 @@ impl NavigationControllerSignal {
     }
 
     pub fn update_nanoid(&mut self, nanoid: Option<String>) {
-        self.signal.update(|s| s.nanoid = nanoid.to_owned());
+        self.signal.update(|s| nanoid.clone_into(&mut s.nanoid));
         let api = ApiRequests::new();
         if let Some(game_id) = nanoid {
             let mut game_state = expect_context::<GameStateSignal>();

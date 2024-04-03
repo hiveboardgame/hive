@@ -1,7 +1,7 @@
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
 use crate::providers::api_requests::ApiRequests;
-use crate::providers::auth_context::{self, AuthContext};
+use crate::providers::auth_context::AuthContext;
 use crate::providers::color_scheme::ColorScheme;
 use crate::providers::navigation_controller::NavigationControllerSignal;
 use crate::providers::ping::PingSignal;

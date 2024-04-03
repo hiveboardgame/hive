@@ -64,7 +64,7 @@ impl Handler<Disconnect> for Lobby {
             }
         }
         // If that was the last WS connection for that user
-        if self.sessions.get(&msg.user_id).is_none() {
+        if !self.sessions.contains_key(&msg.user_id) {
             if let Some(games) = self.users_games.remove(&msg.user_id) {
                 for game in games.iter() {
                     if let Some(game_users) = self.games_users.get_mut(game) {
