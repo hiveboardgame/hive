@@ -1,3 +1,6 @@
+use super::get::GetHandler;
+use super::get_own::GetOwnHandler;
+use super::get_public::GetPublicHandler;
 use crate::common::challenge_action::ChallengeAction;
 use crate::websockets::api::challenges::accept::AcceptHandler;
 use crate::websockets::api::challenges::create::CreateHandler;
@@ -6,10 +9,6 @@ use crate::websockets::internal_server_message::InternalServerMessage;
 use anyhow::Result;
 use db_lib::DbPool;
 use uuid::Uuid;
-
-use super::get::GetHandler;
-use super::get_own::GetOwnHandler;
-use super::get_public::GetPublicHandler;
 
 pub struct ChallengeHandler {
     challenge_action: ChallengeAction,
@@ -44,6 +43,8 @@ impl ChallengeHandler {
                 time_mode,
                 time_base,
                 time_increment,
+                band_upper,
+                band_lower,
             } => {
                 CreateHandler::new(
                     rated,
@@ -54,6 +55,8 @@ impl ChallengeHandler {
                     time_mode,
                     time_base,
                     time_increment,
+                    band_upper,
+                    band_lower,
                     self.user_id,
                     &self.pool,
                 )

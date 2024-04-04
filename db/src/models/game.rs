@@ -20,8 +20,7 @@ use hive_lib::{
     history::History, state::State,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::time_mode::TimeMode;
-use shared_types::{conclusion::Conclusion, game_speed::GameSpeed};
+use shared_types::{conclusion::Conclusion, game_speed::GameSpeed, time_mode::TimeMode};
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;

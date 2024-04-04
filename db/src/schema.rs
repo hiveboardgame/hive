@@ -15,6 +15,8 @@ diesel::table! {
         time_mode -> Text,
         time_base -> Nullable<Int4>,
         time_increment -> Nullable<Int4>,
+        band_upper -> Nullable<Int4>,
+        band_lower -> Nullable<Int4>,
     }
 }
 
