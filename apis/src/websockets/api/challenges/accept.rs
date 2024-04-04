@@ -8,11 +8,14 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{
-    models::challenge::Challenge,
-    models::game::{Game, NewGame},
+    models::{
+        challenge::Challenge,
+        game::{Game, NewGame},
+        rating::Rating,
+    },
     DbPool,
 };
-
+use shared_types::game_speed::GameSpeed;
 use uuid::Uuid;
 
 pub struct AcceptHandler {
@@ -33,7 +36,34 @@ impl AcceptHandler {
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+        let mut messages = Vec::new();
         let challenge = Challenge::find_by_nanoid(&self.nanoid, &self.pool).await?;
+        let speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
+        let rating = Rating::for_uuid(&self.user_id, &speed, &self.pool)
+            .await?
+            .rating;
+        if let Some(band_upper) = challenge.band_upper {
+            if rating > band_upper as f64 {
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::User(self.user_id),
+                    message: ServerMessage::Error(format!(
+                        "{rating} is above the rating band of {band_upper}"
+                    )),
+                });
+                return Ok(messages);
+            }
+        }
+        if let Some(band_lower) = challenge.band_lower {
+            if rating < band_lower as f64 {
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::User(self.user_id),
+                    message: ServerMessage::Error(format!(
+                        "{rating} is above the rating band of {band_lower}"
+                    )),
+                });
+                return Ok(messages);
+            }
+        }
         let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
             "black" => (self.user_id, challenge.challenger_id),
             "white" => (challenge.challenger_id, self.user_id),
@@ -48,7 +78,6 @@ impl AcceptHandler {
 
         let new_game = NewGame::new(white_id, black_id, &challenge);
         let (game, deleted_challenges) = Game::create(&new_game, &self.pool).await?;
-        let mut messages = Vec::new();
         let game_response = GameResponse::new_from_db(&game, &self.pool).await?;
 
         messages.push(InternalServerMessage {

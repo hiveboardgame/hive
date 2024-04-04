@@ -23,6 +23,8 @@ pub struct ChallengeResponse {
     pub time_base: Option<i32>,      // Secons
     pub time_increment: Option<i32>, // Seconds
     pub speed: GameSpeed,
+    pub band_upper: Option<i32>,
+    pub band_lower: Option<i32>,
 }
 
 use cfg_if::cfg_if;
@@ -65,6 +67,8 @@ impl ChallengeResponse {
             time_base: challenge.time_base,
             time_increment: challenge.time_increment,
             speed: game_speed,
+            band_upper: challenge.band_upper,
+            band_lower: challenge.band_lower,
         })
     }
 }

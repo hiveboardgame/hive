@@ -32,6 +32,8 @@ pub struct NewChallenge {
     pub time_mode: String,           // Correspondence, Timed, Untimed
     pub time_base: Option<i32>,      // Seconds
     pub time_increment: Option<i32>, // Seconds
+    pub band_upper: Option<i32>,
+    pub band_lower: Option<i32>,
 }
 
 impl NewChallenge {
@@ -45,6 +47,8 @@ impl NewChallenge {
         time_mode: TimeMode,         // Correspondence, Timed, Untimed
         time_base: Option<i32>,      // Secons
         time_increment: Option<i32>, // Seconds
+        band_upper: Option<i32>,
+        band_lower: Option<i32>,
     ) -> Result<Self, DbError> {
         match time_mode {
             TimeMode::Untimed => {
@@ -104,6 +108,8 @@ impl NewChallenge {
             time_mode: time_mode.to_string(),
             time_base,
             time_increment,
+            band_upper,
+            band_lower,
         })
     }
 }
@@ -127,6 +133,8 @@ pub struct Challenge {
     pub time_mode: String,           // Correspondence, Timed, Untimed
     pub time_base: Option<i32>,      // Secons
     pub time_increment: Option<i32>, // Seconds
+    pub band_upper: Option<i32>,
+    pub band_lower: Option<i32>,
 }
 
 impl Challenge {

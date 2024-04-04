@@ -17,6 +17,8 @@ pub enum ChallengeAction {
         time_mode: TimeMode,
         time_base: Option<i32>,
         time_increment: Option<i32>,
+        band_upper: Option<i32>,
+        band_lower: Option<i32>,
     },
     Decline(String), // Deletes the direct challenge with nanoid
     Delete(String),  // Deletes the challenge with nanoid

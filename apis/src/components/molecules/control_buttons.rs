@@ -56,6 +56,8 @@ pub fn ControlButtons() -> impl IntoView {
                 time_mode: game.time_mode,
                 time_base: game.time_base,
                 time_increment: game.time_increment,
+                band_upper: None,
+                band_lower: None,
             };
             let api = ApiRequests::new();
             let navigate = leptos_router::use_navigate();
@@ -154,6 +156,8 @@ pub fn ControlButtons() -> impl IntoView {
                         time_mode: game.time_mode,
                         time_base: game.time_base,
                         time_increment: game.time_increment,
+                        band_upper: None,
+                        band_lower: None,
                     };
                     let api = ApiRequests::new();
                     api.challenge(challenge_action);

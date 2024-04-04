@@ -51,6 +51,7 @@ pub enum ServerMessage {
     UserStatus(UserUpdate),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
+    Error(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

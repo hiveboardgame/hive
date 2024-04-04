@@ -1,13 +1,16 @@
 use crate::{
     common::challenge_action::{ChallengeAction, ChallengeVisibility},
     components::atoms::select_options::SelectOption,
-    providers::{api_requests::ApiRequests, color_scheme::ColorScheme},
+    providers::{api_requests::ApiRequests, auth_context::AuthContext, color_scheme::ColorScheme},
 };
 use hive_lib::{color::ColorChoice, game_type::GameType};
 use leptos::*;
 use leptos_icons::*;
 use leptos_use::use_debounce_fn_with_arg;
-use shared_types::time_mode::{CorrespondenceMode, TimeMode};
+use shared_types::{
+    game_speed::GameSpeed,
+    time_mode::{CorrespondenceMode, TimeMode},
+};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
@@ -20,6 +23,8 @@ pub struct ChallengeParams {
     pub time_mode: RwSignal<TimeMode>,
     pub time_base: StoredValue<Option<i32>>,
     pub time_increment: StoredValue<Option<i32>>,
+    pub band_upper: RwSignal<Option<i32>>,
+    pub band_lower: RwSignal<Option<i32>>,
 }
 
 #[component]
@@ -37,6 +42,8 @@ pub fn ChallengeCreate(
         time_mode: RwSignal::new(TimeMode::RealTime),
         time_base: store_value(None),
         time_increment: store_value(None),
+        band_upper: RwSignal::new(None),
+        band_lower: RwSignal::new(None),
     };
     let is_rated = move |b| {
         params.rated.update(|v| *v = b);
@@ -75,8 +82,8 @@ pub fn ChallengeCreate(
     };
     let time_control = RwSignal::new(TimeMode::RealTime);
     let corr_mode = RwSignal::new(CorrespondenceMode::DaysPerMove);
-    let min_rating = RwSignal::new(-500_i32);
-    let max_rating = RwSignal::new(500_i32);
+    let band_upper = RwSignal::new(550_i32);
+    let band_lower = RwSignal::new(-550_i32);
     let corr_days = RwSignal::new(2_i32);
     let step_min = RwSignal::new(10_i32);
     let step_sec = RwSignal::new(10_i32);
@@ -104,6 +111,12 @@ pub fn ChallengeCreate(
     let create_challenge = move |color_choice| {
         params.color_choice.update_untracked(|p| *p = color_choice);
         let api = ApiRequests::new();
+        params
+            .band_upper
+            .update_untracked(|v| *v = Some(band_upper.get_untracked()));
+        params
+            .band_lower
+            .update_untracked(|v| *v = Some(band_lower.get_untracked()));
         params
             .time_mode
             .update_untracked(|v| *v = time_control.get_untracked());
@@ -137,6 +150,48 @@ pub fn ChallengeCreate(
                 };
             }
         };
+        let auth_context = expect_context::<AuthContext>();
+        let account = move || match (auth_context.user)() {
+            Some(Ok(Some(account))) => Some(account),
+            _ => None,
+        };
+        let upper_rating = move || {
+            if let (Some(band_upper), Some(account)) =
+                (params.band_upper.get_untracked(), account())
+            {
+                if band_upper > 500 || opponent().is_some() {
+                    return None;
+                };
+                // TODO: Make rating update in realtime, currently it becomes stale
+                let rating = account
+                    .user
+                    .rating_for_speed(&GameSpeed::from_base_increment(
+                        (params.time_base)(),
+                        (params.time_increment)(),
+                    ));
+                Some((rating as i32).saturating_add(band_upper as i32))
+            } else {
+                None
+            }
+        };
+        let lower_rating = move || {
+            if let (Some(band_lower), Some(account)) =
+                (params.band_lower.get_untracked(), account())
+            {
+                if band_lower < -500 || opponent().is_some() {
+                    return None;
+                };
+                let rating = account
+                    .user
+                    .rating_for_speed(&GameSpeed::from_base_increment(
+                        (params.time_base)(),
+                        (params.time_increment)(),
+                    ));
+                Some((rating as i32).saturating_add(band_lower as i32))
+            } else {
+                None
+            }
+        };
         let challenge_action = ChallengeAction::Create {
             rated: params.rated.get_untracked(),
             game_type: params.game_type.get_untracked(),
@@ -150,6 +205,8 @@ pub fn ChallengeCreate(
             time_mode: params.time_mode.get_untracked(),
             time_base: (params.time_base)(),
             time_increment: (params.time_increment)(),
+            band_upper: upper_rating(),
+            band_lower: lower_rating(),
         };
         api.challenge(challenge_action);
         params
@@ -177,7 +234,21 @@ pub fn ChallengeCreate(
         }
     };
     let slider_style="appearance-none accent-gray-500 dark:accent-gray-400 rounded-full bg-odd-light dark:bg-gray-700 h-4 w-64 p-1";
-
+    let rating_string = move || {
+        format!(
+            "{}/+{}",
+            if band_lower() < -500 {
+                "-∞".to_owned()
+            } else {
+                band_lower.get().to_string()
+            },
+            if band_upper() > 500 {
+                "∞".to_owned()
+            } else {
+                band_upper().to_string()
+            }
+        )
+    };
     let throttled_slider = move |signal_to_update| {
         use_debounce_fn_with_arg(update_from_slider(signal_to_update), 50.0)
     };
@@ -373,24 +444,27 @@ pub fn ChallengeCreate(
                     Private
                 </button>
             </div>
-            <div class="hidden flex-col items-center">
+            <div class=move || {
+                format!(
+                    "{} flex-col items-center",
+                    if opponent().is_some() { "hidden" } else { "flex" },
+                )
+            }>
                 <p class="flex justify-center">Rating range</p>
-                <div class="w-24 flex justify-center">
-                    {move || format!("{}/+{}", min_rating(), max_rating())}
-                </div>
+                <div class="w-24 flex justify-center">{rating_string}</div>
                 <div class="flex">
                     <div class="flex mx-1 gap-1">
                         <label class="flex items-center">
                             <input
                                 on:input=move |evt| {
-                                    throttled_slider(min_rating)(evt);
+                                    throttled_slider(band_lower)(evt);
                                 }
 
                                 type="range"
-                                name="below"
-                                min="-500"
+                                name="above"
+                                min="-550"
                                 max="0"
-                                prop:value=min_rating
+                                prop:value=band_lower
                                 step="50"
                                 class="appearance-none accent-gray-500 dark:accent-gray-400 rounded-full bg-odd-light dark:bg-gray-700 h-4 p-1"
                             />
@@ -398,14 +472,14 @@ pub fn ChallengeCreate(
                         <label class="flex items-center">
                             <input
                                 on:input=move |evt| {
-                                    throttled_slider(max_rating)(evt);
+                                    throttled_slider(band_upper)(evt);
                                 }
 
                                 type="range"
-                                name="above"
+                                name="below"
+                                max="550"
                                 min="0"
-                                max="500"
-                                prop:value=max_rating
+                                prop:value=band_upper
                                 step="50"
                                 class="appearance-none accent-gray-500 dark:accent-gray-400 rounded-full bg-odd-light dark:bg-gray-700 h-4 p-1"
                             />

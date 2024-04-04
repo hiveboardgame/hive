@@ -13,4 +13,10 @@ pub enum ChallengeError {
     NotUserChallenge,
     #[error("{found} is not a valid TimeMode")]
     NotValidTimeMode { found: String },
+    #[error("Your rating {rating} is outside the rating band {band_lower}-{band_upper}")]
+    OutsideBand {
+        rating: u64,
+        band_upper: u64,
+        band_lower: u64,
+    },
 }

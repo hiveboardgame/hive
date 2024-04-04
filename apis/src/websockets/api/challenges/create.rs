@@ -22,6 +22,8 @@ pub struct CreateHandler {
     time_mode: TimeMode,
     time_base: Option<i32>,
     time_increment: Option<i32>,
+    band_upper: Option<i32>,
+    band_lower: Option<i32>,
     user_id: Uuid,
     pool: DbPool,
 }
@@ -36,6 +38,8 @@ impl CreateHandler {
         time_mode: TimeMode,
         time_base: Option<i32>,
         time_increment: Option<i32>,
+        band_upper: Option<i32>,
+        band_lower: Option<i32>,
         user_id: Uuid,
         pool: &DbPool,
     ) -> Result<Self> {
@@ -48,6 +52,8 @@ impl CreateHandler {
             time_mode,
             time_base,
             time_increment,
+            band_upper,
+            band_lower,
             user_id,
             pool: pool.clone(),
         })
@@ -69,6 +75,8 @@ impl CreateHandler {
             self.time_mode.clone(),
             self.time_base,
             self.time_increment,
+            self.band_upper,
+            self.band_lower,
         )?;
 
         let challenge = Challenge::create(&new_challenge, &self.pool).await?;
