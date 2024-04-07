@@ -1,15 +1,16 @@
+use super::{
+    challenge::handler::handle_challenge,
+    game::handler::handle_game,
+    ping::handle::handle_ping,
+    user_rating::handle::handle_user_rating,
+    user_status::handle::handle_user_status,
+};
 use crate::{
     common::server_result::{ServerMessage, ServerResult},
     providers::{game_state::GameStateSignal, games::GamesSignal},
 };
-
 use leptos::logging::log;
 use leptos::*;
-
-use super::{
-    challenge::handler::handle_challenge, game::handler::handle_game, ping::handle::handle_ping,
-    user_status::handle::handle_user_status,
-};
 
 pub fn handle_response(m: String) {
     // TODO: @leex this needs to be broken up this is getting out of hand
@@ -20,7 +21,10 @@ pub fn handle_response(m: String) {
             handle_ping(ping_sent);
         }
         Ok(ServerResult::Ok(ServerMessage::UserStatus(user_update))) => {
-            handle_user_status(user_update)
+            handle_user_status(user_update);
+        }
+        Ok(ServerResult::Ok(ServerMessage::UserRating(user_update))) => {
+            handle_user_rating(user_update);
         }
         Ok(ServerResult::Ok(ServerMessage::Game(game_update))) => {
             handle_game(game_update);

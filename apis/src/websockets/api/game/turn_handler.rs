@@ -1,16 +1,17 @@
 use crate::{
     common::{
         game_reaction::GameReaction,
-        server_result::{GameActionResponse, GameUpdate, ServerMessage},
+        server_result::{
+            GameActionResponse, GameUpdate, ServerMessage, UserRatingUpdate,
+        },
     },
-    responses::game::GameResponse,
+    responses::{game::GameResponse, user::UserResponse},
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{models::game::Game, models::user::User, DbPool};
 use hive_lib::{game_error::GameError, state::State, turn::Turn};
 use shared_types::time_mode::TimeMode;
-
 use uuid::Uuid;
 
 pub struct TurnHandler {
@@ -43,10 +44,21 @@ impl TurnHandler {
                 turn: format!("{}", self.game.turn),
             })?,
         };
-
         let mut state = State::new_from_str(&self.game.history, &self.game.game_type)?;
         state.play_turn_from_position(piece, position)?;
         let game = self.game.update_gamestate(&state, &self.pool).await?;
+        if game.rated && game.finished {
+            for user_id in game.players().iter() {
+                let user_response = UserResponse::from_uuid(user_id, &self.pool).await?;
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::Global,
+                    message: ServerMessage::UserRating(UserRatingUpdate {
+                        username: user_response.username.clone(),
+                        user: user_response,
+                    }),
+                });
+            }
+        }
         let next_to_move = User::find_by_uuid(&game.current_player_id, &self.pool).await?;
         let games = next_to_move
             .get_games_with_notifications(&self.pool)
@@ -60,6 +72,8 @@ impl TurnHandler {
             message: ServerMessage::Game(GameUpdate::Urgent(game_responses)),
         });
         let response = GameResponse::new_from_db(&game, &self.pool).await?;
+        // TODO: you may need to send the game state back to the user if state and game disagree
+        // (or just always!)
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(self.game.nanoid.clone()),
             message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {

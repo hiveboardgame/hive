@@ -2,7 +2,7 @@ use crate::{
     common::config_options::MoveConfirm,
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
     providers::{
-        auth_context::AuthContext, config::config::Config, game_state::GameStateSignal,
+        auth_context::AuthContext, config::Config, game_state::GameStateSignal,
         timer::TimerSignal,
     },
 };

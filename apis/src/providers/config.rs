@@ -1,7 +1,7 @@
-use super::confirm_mode::ConfirmMode;
-use super::tile_design::TileDesignConfig;
-use super::tile_dots::TileDotsConfig;
-use super::tiles_rotation::TileRotationConfig;
+use crate::providers::config_options::confirm_mode::ConfirmMode;
+use crate::providers::config_options::tile_design::TileDesignConfig;
+use crate::providers::config_options::tile_dots::TileDotsConfig;
+use crate::providers::config_options::tiles_rotation::TileRotationConfig;
 use leptos::*;
 
 #[derive(Clone)]

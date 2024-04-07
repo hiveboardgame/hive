@@ -1,4 +1,4 @@
-use crate::{common::config_options::MoveConfirm, providers::config::config::Config};
+use crate::{common::config_options::MoveConfirm, providers::config::Config};
 use leptos::*;
 use leptos_icons::Icon;
 use leptos_router::ActionForm;

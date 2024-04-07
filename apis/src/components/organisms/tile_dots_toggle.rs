@@ -1,4 +1,4 @@
-use crate::{common::config_options::TileDots, providers::config::config::Config};
+use crate::{common::config_options::TileDots, providers::config::Config};
 use leptos::*;
 use leptos_router::ActionForm;
 

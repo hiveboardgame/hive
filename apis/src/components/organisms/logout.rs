@@ -1,4 +1,4 @@
-use crate::providers::{auth_context::AuthContext, online_users::OnlineUsersSignal};
+use crate::providers::{auth_context::AuthContext, users::UserSignal};
 use leptos::*;
 use leptos_router::ActionForm;
 
@@ -10,7 +10,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
 
             <button
                 on:click=move |_| {
-                    let mut online_users = expect_context::<OnlineUsersSignal>();
+                    let mut online_users = expect_context::<UserSignal>();
                     if let Some(Ok(Some(user))) = (auth_context.user)() {
                         online_users.remove(user.username);
                     }

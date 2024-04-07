@@ -1,9 +1,9 @@
 use crate::{
     common::{
         game_reaction::GameReaction,
-        server_result::{GameActionResponse, GameUpdate, ServerMessage},
+        server_result::{GameActionResponse, GameUpdate, ServerMessage, UserRatingUpdate},
     },
-    responses::game::GameResponse,
+    responses::{game::GameResponse, user::UserResponse},
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -47,6 +47,18 @@ impl GameControlHandler {
         self.ensure_fresh_game_control()?;
         let game = self.match_control().await?;
         let game_response = GameResponse::new_from_db(&game, &self.pool).await?;
+        if game.rated && game.finished {
+            for user_id in game.players().iter() {
+                let user_response = UserResponse::from_uuid(user_id, &self.pool).await?;
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::Global,
+                    message: ServerMessage::UserRating(UserRatingUpdate {
+                        username: user_response.username.clone(),
+                        user: user_response.clone(),
+                    }),
+                });
+            }
+        }
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(self.game.nanoid.clone()),
             message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {

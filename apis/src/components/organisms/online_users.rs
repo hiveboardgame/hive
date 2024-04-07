@@ -1,10 +1,10 @@
 use leptos::*;
 
-use crate::{components::molecules::user_row::UserRow, providers::online_users::OnlineUsersSignal};
+use crate::{components::molecules::user_row::UserRow, providers::users::UserSignal};
 
 #[component]
 pub fn OnlineUsers() -> impl IntoView {
-    let online_users = expect_context::<OnlineUsersSignal>();
+    let online_users = expect_context::<UserSignal>();
     let online_players = move || (online_users.signal)().username_user;
     let is_empty = move || online_players().is_empty();
     view! {

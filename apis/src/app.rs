@@ -22,9 +22,9 @@ use crate::{
     },
     providers::{
         alerts::provide_alerts, auth_context::provide_auth, challenges::provide_challenges,
-        color_scheme::provide_color_scheme, config::config::provide_config,
+        color_scheme::provide_color_scheme, config::provide_config,
         game_state::provide_game_state, games::provide_games,
-        navigation_controller::provide_navigation_controller, online_users::provide_users,
+        navigation_controller::provide_navigation_controller, users::provide_users,
         ping::provide_ping, refocus::provide_refocus, timer::provide_timer,
         websocket::context::provide_websocket,
     },

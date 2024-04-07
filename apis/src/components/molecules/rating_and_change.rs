@@ -4,6 +4,7 @@ use hive_lib::color::Color;
 use leptos::*;
 use std::cmp::Ordering;
 
+
 #[component]
 pub fn RatingAndChange(
     #[prop(optional)] extend_tw_classes: &'static str,
@@ -49,6 +50,7 @@ pub fn RatingAndChangeDynamic(
     #[prop(optional)] extend_tw_classes: &'static str,
     side: Color,
 ) -> impl IntoView {
+    // @TODO: think about whether this is still the right elo (meaning from game or from global)
     let game_state = expect_context::<GameStateSignal>();
     let game = move || game_state.signal.get().game_response;
     view! {

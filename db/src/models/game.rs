@@ -716,6 +716,10 @@ impl Game {
             .await
     }
 
+    pub fn players(&self) -> Vec<Uuid> {
+        vec![self.white_id.to_owned(), self.black_id.to_owned()]
+    }
+
     pub async fn set_status(&self, status: GameStatus, pool: &DbPool) -> Result<Game, DbError> {
         let conn = &mut get_conn(pool).await?;
         Ok(diesel::update(games::table.find(self.id))

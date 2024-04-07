@@ -1,9 +1,9 @@
 use crate::{
     common::{
         game_reaction::GameReaction,
-        server_result::{GameActionResponse, GameUpdate, ServerMessage},
+        server_result::{GameActionResponse, GameUpdate, ServerMessage, UserRatingUpdate},
     },
-    responses::game::GameResponse,
+    responses::{game::GameResponse, user::UserResponse},
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -43,6 +43,18 @@ impl TimeoutHandler {
                     username: self.username.clone(),
                 })),
             });
+            if game.finished {
+                for user_id in game.players().iter() {
+                    let user_response = UserResponse::from_uuid(user_id, &self.pool).await?;
+                    messages.push(InternalServerMessage {
+                        destination: MessageDestination::Global,
+                        message: ServerMessage::UserRating(UserRatingUpdate {
+                            username: user_response.username.clone(),
+                            user: user_response.clone(),
+                        }),
+                    });
+                }
+            }
         }
         // TODO: Figure why/whether we need this code :D
         // messages.push(InternalServerMessage {

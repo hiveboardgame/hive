@@ -1,7 +1,7 @@
 use crate::{
     common::server_result::UserStatus,
     providers::{
-        auth_context::AuthContext, online_users::OnlineUsersSignal, ping::PingSignal,
+        auth_context::AuthContext, users::UserSignal, ping::PingSignal,
         websocket::context::WebsocketContext,
     },
 };
@@ -15,7 +15,7 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     let websocket = expect_context::<WebsocketContext>();
     let ping = expect_context::<PingSignal>();
     let auth_context = expect_context::<AuthContext>();
-    let online_users = expect_context::<OnlineUsersSignal>();
+    let online_users = expect_context::<UserSignal>();
     let username = store_value(username);
     let user_is_player = move || match (auth_context.user)() {
         Some(Ok(Some(user))) => user.username == username(),

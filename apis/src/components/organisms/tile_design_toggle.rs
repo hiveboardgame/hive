@@ -1,6 +1,5 @@
-use crate::{common::config_options::TileDesign, providers::config::config::Config};
+use crate::{common::config_options::TileDesign, providers::config::Config};
 use leptos::*;
-
 use leptos_router::ActionForm;
 
 #[component]

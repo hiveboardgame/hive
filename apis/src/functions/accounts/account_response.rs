@@ -1,3 +1,4 @@
+use crate::responses::user::UserResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -9,10 +10,7 @@ pub struct AccountResponse {
     pub user: UserResponse,
 }
 
-use cfg_if::cfg_if;
-
-use crate::responses::user::UserResponse;
-cfg_if! { if #[cfg(feature = "ssr")] {
+cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::user::User,
     DbPool,

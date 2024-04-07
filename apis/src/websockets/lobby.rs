@@ -1,6 +1,6 @@
 use crate::{
     common::server_result::{
-        ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate,
+        ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserStatusUpdate,
     },
     responses::{challenge::ChallengeResponse, game::GameResponse, user::UserResponse},
     websockets::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
@@ -77,7 +77,7 @@ impl Handler<Disconnect> for Lobby {
                     }
                 }
             }
-            let message = ServerResult::Ok(ServerMessage::UserStatus(UserUpdate {
+            let message = ServerResult::Ok(ServerMessage::UserStatus(UserStatusUpdate {
                 status: UserStatus::Offline,
                 user: None,
                 username: msg.username,
@@ -121,7 +121,7 @@ impl Handler<Connect> for Lobby {
             //Get currently online users
             for uuid in sessions.keys() {
                 if let Ok(user_response) = UserResponse::from_uuid(uuid, &pool).await {
-                    let message = ServerResult::Ok(ServerMessage::UserStatus(UserUpdate {
+                    let message = ServerResult::Ok(ServerMessage::UserStatus(UserStatusUpdate {
                         status: UserStatus::Online,
                         user: Some(user_response.clone()),
                         username: user_response.username,
@@ -138,7 +138,7 @@ impl Handler<Connect> for Lobby {
             }
             let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &pool).await {
                 if let Ok(user_response) = UserResponse::from_user(&user, &pool).await {
-                    let message = ServerResult::Ok(ServerMessage::UserStatus(UserUpdate {
+                    let message = ServerResult::Ok(ServerMessage::UserStatus(UserStatusUpdate {
                         status: UserStatus::Online,
                         user: Some(user_response),
                         username: msg.username,

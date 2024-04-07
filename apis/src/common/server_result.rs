@@ -48,7 +48,8 @@ pub enum ServerMessage {
     },
     Game(GameUpdate),
     Challenge(ChallengeUpdate),
-    UserStatus(UserUpdate),
+    UserStatus(UserStatusUpdate),
+    UserRating(UserRatingUpdate),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
     Error(String),
@@ -79,9 +80,15 @@ pub enum ChallengeUpdate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserUpdate {
+pub struct UserStatusUpdate {
     pub status: UserStatus,
     pub user: Option<UserResponse>,
+    pub username: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserRatingUpdate {
+    pub user: UserResponse,
     pub username: String,
 }
 
