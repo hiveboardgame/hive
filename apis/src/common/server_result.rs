@@ -5,6 +5,7 @@ use crate::responses::user::UserResponse;
 use chrono::{DateTime, Utc};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
+use shared_types::chat_message::ChatMessageContainer;
 use std::fmt;
 use uuid::Uuid;
 
@@ -40,12 +41,7 @@ pub enum ServerMessage {
         pong_sent: DateTime<Utc>,
     },
     ConnectionUpdated(Uuid, String),
-    Chat {
-        // Sends a chat message to the game/lobby
-        username: String,
-        game_id: String,
-        message: String,
-    },
+    Chat(ChatMessageContainer),
     Game(GameUpdate),
     Challenge(ChallengeUpdate),
     UserStatus(UserUpdate),

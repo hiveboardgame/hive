@@ -7,8 +7,7 @@ use leptos::logging::log;
 use leptos::*;
 
 use super::{
-    challenge::handler::handle_challenge, game::handler::handle_game, ping::handle::handle_ping,
-    user_status::handle::handle_user_status,
+    challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game, ping::handle::handle_ping, user_status::handle::handle_user_status
 };
 
 pub fn handle_response(m: String) {
@@ -27,6 +26,9 @@ pub fn handle_response(m: String) {
         }
         Ok(ServerResult::Ok(ServerMessage::Challenge(challenge))) => {
             handle_challenge(challenge);
+        }
+        Ok(ServerResult::Ok(ServerMessage::Chat(message))) => {
+            handle_chat(message);
         }
         Ok(ServerResult::Err(e)) => log!("Got error from server: {e}"),
         Err(e) => log!("Can't parse: {m}, error is: {e}"),

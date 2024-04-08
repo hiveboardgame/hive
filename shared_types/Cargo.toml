@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+uuid = { workspace = true }
+chrono = { workspace = true }
