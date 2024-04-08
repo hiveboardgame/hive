@@ -20,9 +20,10 @@ use crate::{
         tournaments::Tournaments,
         tutorial::Tutorial,
     },
+    components::organisms::chat::ChatWindow,
     providers::{
         alerts::provide_alerts, auth_context::provide_auth, challenges::provide_challenges,
-        color_scheme::provide_color_scheme, config::config::provide_config,
+        chat::provide_chat, color_scheme::provide_color_scheme, config::config::provide_config,
         game_state::provide_game_state, games::provide_games,
         navigation_controller::provide_navigation_controller, online_users::provide_users,
         ping::provide_ping, refocus::provide_refocus, timer::provide_timer,
@@ -51,6 +52,7 @@ pub fn App() -> impl IntoView {
     provide_auth();
     provide_alerts();
     provide_refocus();
+    provide_chat();
 
     view! {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
@@ -109,6 +111,7 @@ pub fn App() -> impl IntoView {
                     <Route path="/strategy" view=|| view! { <Strategy/> }/>
                     <Route path="/socials" view=|| view! { <Socials/> }/>
                     <Route path="/tutorial" view=|| view! { <Tutorial/> }/>
+                    <Route path="/chat" view=|| view! { <ChatWindow/> }/>
                     <Route
                         path="/game/:nanoid"
                         ssr=SsrMode::PartiallyBlocked

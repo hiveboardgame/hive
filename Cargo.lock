@@ -3017,8 +3017,10 @@ dependencies = [
 name = "shared_types"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "serde",
  "thiserror",
+ "uuid",
 ]
 
 [[package]]

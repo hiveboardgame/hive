@@ -4,6 +4,7 @@ use crate::providers::websocket::context::WebsocketContext;
 use chrono::Utc;
 use hive_lib::{game_control::GameControl, turn::Turn};
 use leptos::*;
+use shared_types::chat_message::ChatMessageContainer;
 
 use super::games::GamesSignal;
 
@@ -47,6 +48,12 @@ impl ApiRequests {
             id: game_id,
             action: GameAction::Control(gc),
         };
+        self.websocket
+            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    }
+
+    pub fn chat(&self, message: &ChatMessageContainer) {
+        let msg = ClientRequest::Chat(message.to_owned());
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }

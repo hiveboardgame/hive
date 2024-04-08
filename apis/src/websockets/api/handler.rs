@@ -1,3 +1,5 @@
+use super::chat::handler::ChatHandler;
+use super::game::handler::GameActionHandler;
 use crate::common::{client_message::ClientRequest, game_action::GameAction};
 use crate::websockets::api::challenges::handler::ChallengeHandler;
 use crate::websockets::api::ping::handler::PingHandler;
@@ -8,8 +10,6 @@ use crate::websockets::messages::WsMessage;
 use anyhow::Result;
 use db_lib::DbPool;
 use uuid::Uuid;
-
-use super::game::handler::GameActionHandler;
 
 pub struct RequestHandler {
     command: ClientRequest,
@@ -48,6 +48,7 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
+            ClientRequest::Chat(message) => ChatHandler::new(message).handle(),
             ClientRequest::Ping(sent) => PingHandler::new(self.user_id, sent).handle(),
             ClientRequest::Game {
                 action: game_action,
