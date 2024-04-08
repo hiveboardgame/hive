@@ -175,5 +175,3 @@ fn get_icon_and_title(game_control: GameControl) -> (Icon, &'static str) {
         GameControl::TakebackRequest(_) => (icondata::BiUndoRegular, "Request Takeback"),
     }
 }
-
-//154:                    class=MaybeProp::derive(TextProp::from(move || {format!("h-6 w-6 lg:h-8 lg:w-8 {}", conditional_icon_style())).into()})

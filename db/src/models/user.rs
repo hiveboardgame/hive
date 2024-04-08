@@ -18,8 +18,8 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use diesel::{
-    query_dsl::BelongingToDsl, ExpressionMethods, Identifiable, Insertable, QueryDsl, Queryable,
-    SelectableHelper,
+    dsl::exists, query_dsl::BelongingToDsl, select, ExpressionMethods, Identifiable, Insertable,
+    QueryDsl, Queryable, SelectableHelper,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use lazy_static::lazy_static;
@@ -190,6 +190,15 @@ impl User {
             .filter(normalized_username.eq(username.to_lowercase()))
             .first(conn)
             .await?)
+    }
+
+    pub async fn username_exists(username: &str, pool: &DbPool) -> Result<bool, DbError> {
+        let conn = &mut get_conn(pool).await?;
+        Ok(select(exists(
+            users_table.filter(normalized_username.eq(username.to_lowercase())),
+        ))
+        .get_result(conn)
+        .await?)
     }
 
     pub async fn find_by_email(email: &str, pool: &DbPool) -> Result<User, DbError> {

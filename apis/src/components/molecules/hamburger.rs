@@ -1,5 +1,4 @@
 use leptos::html::Div;
-use leptos::logging::log;
 use leptos::*;
 use leptos_use::on_click_outside;
 
@@ -12,22 +11,13 @@ pub fn Hamburger<T: IntoView>(
     content: T,
 ) -> impl IntoView {
     let target = create_node_ref::<Div>();
-    let button_ref = create_node_ref::<html::Button>();
     let _ = on_click_outside(target, move |_| hamburger_show.update(|b| *b = false));
     let children = store_value(children);
 
     view! {
         <div node_ref=target class="inline-block">
             <button
-                ref=button_ref
-                on:click=move |_| {
-                    let rect = button_ref
-                        .get_untracked()
-                        .expect("button to have been created")
-                        .get_bounding_client_rect();
-                    log!("{:?}", rect);
-                    hamburger_show.update(|b| *b = !*b)
-                }
+                on:click=move |_| { hamburger_show.update(|b| *b = !*b) }
 
                 class=button_style
             >

@@ -24,6 +24,14 @@ pub async fn get_user_by_username(username: String) -> Result<UserResponse, Serv
 }
 
 #[server]
+pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::models::user::User;
+    let pool = pool()?;
+    Ok(User::username_exists(&username, &pool).await?)
+}
+
+#[server]
 pub async fn get_ongoing_games(username: String) -> Result<Vec<GameResponse>, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::models::game::Game;

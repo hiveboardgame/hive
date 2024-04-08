@@ -30,7 +30,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         placeholder="E-mail"
                     />
                 </label>
-                <label class="block font-bold mb-2" for="password">
+                <label class="block font-bold" for="password">
                     Password
                     <input
                         class="shadow appearance-none border rounded w-full py-2 px-3 mb-3 leading-tight focus:outline-none"
@@ -42,6 +42,13 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                     />
                 </label>
                 <input type="hidden" name="pathname" value=pathname().0/>
+                <p class="h-5">
+                    <Show when=move || {
+                        auth_context.login.value().get().is_some_and(|v| v.is_err())
+                    }>
+                        <small class="text-ladybug-red">"Invalid email or password"</small>
+                    </Show>
+                </p>
                 <input
                     class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer"
                     type="submit"
@@ -57,6 +64,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                     Sign Up
                 </a>
             </p>
+
         </div>
     }
 }
