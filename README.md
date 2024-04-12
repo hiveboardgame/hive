@@ -22,3 +22,10 @@ server
 ```sh
 format
 ```
+
+## License
+This source code with the exception of the graphics is licensed under the GNU
+Affero General Public License 3 license found in the LICENSE.md file in the
+root directory of this project.
+The official graphics for Hive are owned by [Gen42](https://gen42.com/) and may
+not be used without prior written consent.
