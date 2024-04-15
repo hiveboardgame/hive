@@ -37,13 +37,6 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
             _ => "flex place-items-center bg-ladybug-red transform transition-transform duration-300 active:scale-95 hover:bg-red-400 text-white rounded-md px-2 py-1 m-1",
         }
     };
-    // TODO: @leex move this somewhere else
-    // use leptos_meta::Title;
-    // let title_text = move || match next_games().len() {
-    //     0 => String::from("HiveGame.com"),
-    //     i => format!("({}) HiveGame.com", i),
-    // };
-    // <Title text=title_text/>
     let text = move || format!(": {}", next_games());
     let onclick = move |_| {
         let mut games = expect_context::<GamesSignal>();

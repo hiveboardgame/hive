@@ -109,12 +109,12 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         attr:maxlength="20"
                     />
 
-                        <Show when=username_exists>
-                            <small class="text-ladybug-red ">"Username taken"</small>
-                        </Show>
-                        <Show when=has_invalid_char>
-                            <small class="text-ladybug-red ">"Invalid character in username"</small>
-                        </Show>
+                    <Show when=username_exists>
+                        <small class="text-ladybug-red ">"Username taken"</small>
+                    </Show>
+                    <Show when=has_invalid_char>
+                        <small class="text-ladybug-red ">"Invalid character in username"</small>
+                    </Show>
                     <br/>
                     <small>
                         "Please choose a family-friendly username. Any accounts with inappropriate usernames will be closed!"
@@ -143,13 +143,11 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         placeholder="Email"
                     />
 
-                        <Show when=is_invalid_email>
-                            <small class="text-ladybug-red ">"Invalid email"</small>
-                        </Show>
+                    <Show when=is_invalid_email>
+                        <small class="text-ladybug-red ">"Invalid email"</small>
+                    </Show>
 
-                    <small>
-                        Email notifications and password reset once we implement them
-                    </small>
+                    <small>Email notifications and password reset once we implement them</small>
                 </label>
                 <label>
                     <p class="font-bold">Password</p>
@@ -186,15 +184,10 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         attr:maxlength="128"
                     />
                 </label>
-
-                    <Show when=move || pw_invalid() && (!pw().is_empty())>
-                        <small class="text-ladybug-red ">
-                            "Password too short or does not match"
-                        </small>
-                    </Show>
-
+                <Show when=move || pw_invalid() && (!pw().is_empty())>
+                    <small class="text-ladybug-red ">"Password too short or does not match"</small>
+                </Show>
                 <input type="hidden" name="pathname" value=pathname().0/>
-
                 <div class="flex items-center mb-2">
                     <input
                         on:change=move |_| agree.update(|b| *b = !*b)
@@ -216,8 +209,8 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     value="Sign Up"
                 />
                 <Show when=display_register_error>
-                <small class="text-ladybug-red ">"Registration failed"</small>
-            </Show>
+                    <small class="text-ladybug-red ">"Registration failed"</small>
+                </Show>
 
             </ActionForm>
 
