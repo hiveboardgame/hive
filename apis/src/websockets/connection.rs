@@ -70,13 +70,15 @@ impl Actor for WsConnection {
 impl WsConnection {
     pub fn new(
         user_uid: Option<Uuid>,
-        username: String,
+        username: Option<String>,
         lobby: Addr<Lobby>,
         pool: DbPool,
     ) -> WsConnection {
+        let id = user_uid.unwrap_or(Uuid::new_v4());
+        let name = username.unwrap_or(id.to_string());
         WsConnection {
-            user_uid: user_uid.unwrap_or(Uuid::new_v4()),
-            username,
+            user_uid: id,
+            username: name,
             authed: user_uid.is_some(),
             hb: Instant::now(),
             lobby_addr: lobby,

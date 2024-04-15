@@ -1,5 +1,6 @@
 use crate::{
     components::layouts::base_layout::BaseLayout,
+    components::organisms::chat::ChatWindow,
     pages::{
         account::Account,
         analysis::Analysis,
@@ -20,7 +21,6 @@ use crate::{
         tournaments::Tournaments,
         tutorial::Tutorial,
     },
-    components::organisms::chat::ChatWindow,
     providers::{
         alerts::provide_alerts, auth_context::provide_auth, challenges::provide_challenges,
         chat::provide_chat, color_scheme::provide_color_scheme, config::config::provide_config,

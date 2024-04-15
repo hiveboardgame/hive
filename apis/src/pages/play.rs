@@ -24,20 +24,11 @@ pub struct TargetStack(pub RwSignal<Option<Position>>);
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
+    let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let user = move || match (auth_context.user)() {
         Some(Ok(Some(user))) => Some(user),
         _ => None,
-    };
-
-    let is_tall = use_media_query("(min-height: 100vw)");
-    let game_state = expect_context::<GameStateSignal>();
-    let parent_container_style = move || {
-        if is_tall() {
-            "flex flex-col"
-        } else {
-            "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 mr-2"
-        }
     };
     let show_buttons = move || {
         user().map_or(false, |user| {
@@ -51,6 +42,15 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             Some(user.id) == game_state.black_id
         })
     });
+
+    let is_tall = use_media_query("(min-height: 100vw)");
+    let parent_container_style = move || {
+        if is_tall() {
+            "flex flex-col"
+        } else {
+            "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 mr-2"
+        }
+    };
     let go_to_game = Callback::new(move |()| {
         let mut game_state = expect_context::<GameStateSignal>();
         if game_state.signal.get_untracked().is_last_turn() {
