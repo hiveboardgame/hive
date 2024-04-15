@@ -7,11 +7,11 @@ use leptos::logging::log;
 use leptos::*;
 
 use super::{
-    challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game, ping::handle::handle_ping, user_status::handle::handle_user_status
+    challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
+    ping::handle::handle_ping, user_status::handle::handle_user_status,
 };
 
 pub fn handle_response(m: String) {
-    // TODO: @leex this needs to be broken up this is getting out of hand
     let _game_state = expect_context::<GameStateSignal>();
     let _games = expect_context::<GamesSignal>();
     match serde_json::from_str::<ServerResult>(&m) {
@@ -22,6 +22,7 @@ pub fn handle_response(m: String) {
             handle_user_status(user_update)
         }
         Ok(ServerResult::Ok(ServerMessage::Game(game_update))) => {
+            log!("{:?}", game_update);
             handle_game(game_update);
         }
         Ok(ServerResult::Ok(ServerMessage::Challenge(challenge))) => {

@@ -10,7 +10,6 @@ use uuid::Uuid;
 pub async fn start_connection(
     req: HttpRequest,
     stream: Payload,
-    // group_id: Path<String>,
     srv: Data<Addr<Lobby>>,
     pool: Data<DbPool>,
     identity: Option<Identity>,
@@ -22,7 +21,7 @@ pub async fn start_connection(
                     println!("Welcome {}!", user.username);
                     let ws = WsConnection::new(
                         Some(uuid),
-                        user.username,
+                        Some(user.username),
                         srv.get_ref().clone(),
                         pool.get_ref().clone(),
                     );
@@ -34,12 +33,7 @@ pub async fn start_connection(
     };
 
     println!("Welcome Anonymous!");
-    let ws = WsConnection::new(
-        None,
-        String::from("Anonymous"),
-        srv.get_ref().clone(),
-        pool.get_ref().clone(),
-    );
+    let ws = WsConnection::new(None, None, srv.get_ref().clone(), pool.get_ref().clone());
 
     let resp = ws::start(ws, &req, stream)?;
     Ok(resp)

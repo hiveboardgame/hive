@@ -187,7 +187,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     />
                 </label>
 
-                    <Show when=move || pw_invalid() && (pw().len() > 0)>
+                    <Show when=move || pw_invalid() && (!pw().is_empty())>
                         <small class="text-ladybug-red ">
                             "Password too short or does not match"
                         </small>

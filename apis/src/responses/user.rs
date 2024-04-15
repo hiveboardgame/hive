@@ -11,6 +11,14 @@ pub struct UserResponse {
 }
 
 impl UserResponse {
+    pub fn for_anon(uuid: Uuid) -> Self {
+        Self {
+            username: uuid.to_string(),
+            uid: uuid,
+            ratings: HashMap::new(),
+        }
+    }
+
     pub fn rating_for_speed(&self, game_speed: &GameSpeed) -> u64 {
         match game_speed {
             GameSpeed::Blitz => self.blitz(),

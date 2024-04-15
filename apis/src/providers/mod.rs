@@ -1,8 +1,8 @@
 pub mod alerts;
-pub mod chat;
 pub mod api_requests;
 pub mod auth_context;
 pub mod challenges;
+pub mod chat;
 pub mod color_scheme;
 pub mod config;
 pub mod game_state;

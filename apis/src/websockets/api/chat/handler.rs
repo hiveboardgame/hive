@@ -17,8 +17,7 @@ impl ChatHandler {
     pub fn handle(&self) -> Vec<InternalServerMessage> {
         vec![InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Chat(
-            self.message.to_owned()),
+            message: ServerMessage::Chat(self.message.to_owned()),
         }]
     }
 }

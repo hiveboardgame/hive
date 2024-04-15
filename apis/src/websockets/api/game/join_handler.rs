@@ -14,6 +14,7 @@ use anyhow::Result;
 use db_lib::{models::game::Game, DbPool};
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub struct JoinHandler {
     pool: DbPool,
     received_from: actix::Recipient<WsMessage>,
@@ -41,10 +42,17 @@ impl JoinHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut messages = Vec::new();
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Game(self.game.nanoid.clone()),
-            message: ServerMessage::Join(UserResponse::from_uuid(&self.user_id, &self.pool).await?),
-        });
+        if let Ok(user) = UserResponse::from_uuid(&self.user_id, &self.pool).await {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::Game(self.game.nanoid.clone()),
+                message: ServerMessage::Join(user),
+            });
+        } else {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::Game(self.game.nanoid.clone()),
+                message: ServerMessage::Join(UserResponse::for_anon(self.user_id)),
+            });
+        }
         messages.push(InternalServerMessage {
             destination: MessageDestination::Direct(self.received_from.clone()),
             message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {

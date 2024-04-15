@@ -6,9 +6,9 @@ const MAX_MESSAGE_LENGTH: usize = 1000;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ChatDestination {
-    User((Uuid, String)),   // user_id, username
-    Game(String), // to everyone in the game
-    Lobby,        // to everyone online
+    User((Uuid, String)), // user_id, username
+    Game(String),         // to everyone in the game
+    Lobby,                // to everyone online
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -26,10 +26,7 @@ pub struct ChatMessageContainer {
 }
 
 impl ChatMessageContainer {
-    pub fn new(
-        destination: ChatDestination,
-        message: &ChatMessage,
-    ) -> Self {
+    pub fn new(destination: ChatDestination, message: &ChatMessage) -> Self {
         Self {
             destination,
             message: message.to_owned(),

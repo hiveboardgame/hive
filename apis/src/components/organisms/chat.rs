@@ -1,5 +1,4 @@
 use crate::providers::chat::Chat;
-use chrono::Utc;
 use leptos::logging::log;
 use leptos::*;
 use shared_types::chat_message::ChatMessage;
@@ -26,7 +25,10 @@ pub fn ChatInput() -> impl IntoView {
     let message = RwSignal::new(String::new());
     let input = move |evt| message.update(|v| *v = event_target_value(&evt));
     let send = move |_| {
-        chat.send(&message.get(), shared_types::chat_message::ChatDestination::Lobby);
+        chat.send(
+            &message.get(),
+            shared_types::chat_message::ChatDestination::Lobby,
+        );
     };
     view! {
         <div class="flex items-center p-4">

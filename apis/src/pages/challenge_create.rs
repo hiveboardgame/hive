@@ -169,7 +169,7 @@ pub fn ChallengeCreate(
                         (params.time_base)(),
                         (params.time_increment)(),
                     ));
-                Some((rating as i32).saturating_add(band_upper as i32))
+                Some((rating as i32).saturating_add(band_upper))
             } else {
                 None
             }
@@ -187,7 +187,7 @@ pub fn ChallengeCreate(
                         (params.time_base)(),
                         (params.time_increment)(),
                     ));
-                Some((rating as i32).saturating_add(band_lower as i32))
+                Some((rating as i32).saturating_add(band_lower))
             } else {
                 None
             }

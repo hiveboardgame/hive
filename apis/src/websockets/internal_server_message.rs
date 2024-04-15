@@ -1,7 +1,6 @@
 use super::messages::WsMessage;
 use crate::common::server_result::ServerMessage;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone)]
 pub struct InternalServerMessage {
