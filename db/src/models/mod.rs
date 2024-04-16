@@ -18,4 +18,3 @@ pub use tournament_series::{NewTournamentSeries, TournamentSeries};
 pub use tournament_series_organizer::TournamentSeriesOrganizer;
 pub use tournament_user::TournamentUser;
 pub use user::{NewUser, User};
-

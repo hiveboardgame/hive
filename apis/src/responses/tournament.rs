@@ -38,7 +38,7 @@ pub struct TournamentResponse {
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use anyhow::Result;
-use db_lib::{models::tournament::Tournament, DbPool};
+use db_lib::{models::Tournament, DbPool};
 
 impl TournamentAbstractResponse {
     pub async fn from_uuid(id: &Uuid, pool: &DbPool) -> Result<Self> {
@@ -53,7 +53,6 @@ impl TournamentAbstractResponse {
             name: tournament.name.clone(),
         })
     }
-
 }
 
 

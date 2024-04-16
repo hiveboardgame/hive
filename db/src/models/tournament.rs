@@ -17,7 +17,7 @@ use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use shared_types::time_mode::TimeMode;
+use shared_types::TimeMode;
 use std::str::FromStr;
 use uuid::Uuid;
 
