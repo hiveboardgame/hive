@@ -53,7 +53,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     has_invalid_char.set(true);
                 } else {
                     has_invalid_char.set(false);
-                    username.update(|v| *v = potential_username.clone());
+                    username.update(|v| v.clone_from(&potential_username));
                     if potential_username.len() > 1 {
                         username_taken.dispatch(functions::users::get::UsernameTaken {
                             username: potential_username,
@@ -146,7 +146,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <Show when=is_invalid_email>
                         <small class="text-ladybug-red ">"Invalid email"</small>
                     </Show>
-
+                    <br/>
                     <small>Email notifications and password reset once we implement them</small>
                 </label>
                 <label>
@@ -184,9 +184,11 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         attr:maxlength="128"
                     />
                 </label>
+
                 <Show when=move || pw_invalid() && (!pw().is_empty())>
                     <small class="text-ladybug-red ">"Password too short or does not match"</small>
                 </Show>
+
                 <input type="hidden" name="pathname" value=pathname().0/>
                 <div class="flex items-center mb-2">
                     <input

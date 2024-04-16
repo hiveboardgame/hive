@@ -1,19 +1,20 @@
 use crate::providers::chat::Chat;
-use leptos::logging::log;
 use leptos::*;
+use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};
 use shared_types::chat_message::ChatMessage;
 
 #[component]
 pub fn Message(message: ChatMessage) -> impl IntoView {
-    log!("Message is: {}", message.message);
+    let formatted_timestamp = message
+        .timestamp
+        .unwrap()
+        .format("%Y-%m-%d %H:%M")
+        .to_string();
     view! {
-        <div class="flex items-center mb-4">
-            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500"></div>
-            <div class="ml-4">
-                <div class="text-sm text-gray-900">
-                    {message.username} at {message.timestamp.unwrap().to_string()}
-                </div>
-                <div class="text-sm text-gray-900">{message.message}</div>
+        <div class="flex items-center mb-1 w-full">
+            <div class="w-full px-2">
+                <div class="text-sm select-text">{message.username} at {formatted_timestamp}</div>
+                <div class="text-sm select-text max-w-fit break-words">{message.message}</div>
             </div>
         </div>
     }
@@ -24,44 +25,58 @@ pub fn ChatInput() -> impl IntoView {
     let chat = expect_context::<Chat>();
     let message = RwSignal::new(String::new());
     let input = move |evt| message.update(|v| *v = event_target_value(&evt));
-    let send = move |_| {
-        chat.send(
-            &message.get(),
-            shared_types::chat_message::ChatDestination::Lobby,
-        );
+    let send = move || {
+        let the_message = message();
+        if !the_message.is_empty() {
+            chat.send(
+                &the_message,
+                shared_types::chat_message::ChatDestination::Lobby,
+            );
+            message.set(String::new());
+        };
     };
     view! {
-        <div class="flex items-center p-4">
-            <input
-                type="text"
-                class="flex-grow bg-gray-200 rounded-lg px-4 py-2 focus:outline-none"
-                placeholder="Type your message..."
-                prop:value=message
-                on:input=input
-            />
-            <button
-                on:click=send
-                class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer"
-            >
-                Send
-            </button>
-        </div>
+        <input
+            type="text"
+            class="bg-odd-light dark:bg-odd-dark rounded-lg px-4 py-2 focus:outline-none w-full resize-none h-auto box-border shrink-0"
+            prop:value=message
+            on:input=input
+            on:keydown=move |evt| {
+                if evt.key() == "Enter" {
+                    evt.prevent_default();
+                    send();
+                }
+            }
+
+            attr:maxlength="1000"
+        />
     }
 }
 
 #[component]
 pub fn ChatWindow() -> impl IntoView {
     let chat = expect_context::<Chat>();
+    let div = create_node_ref::<html::Div>();
+    let _ = use_mutation_observer_with_options(
+        div,
+        move |mutations, _| {
+            if let Some(_mutation) = mutations.first() {
+                let div = div.get_untracked().expect("div to be loaded");
+                div.set_scroll_top(div.scroll_height())
+            }
+        },
+        UseMutationObserverOptions::default()
+            .child_list(true)
+            .attributes(true),
+    );
     view! {
-        <div class="pt-10">
-            <div class="container mx-auto px-4 py-10">
-                <div class="shadow-lg rounded-lg overflow-hidden">
-                    <For each=chat.lobby key=|message| message.timestamp let:message>
-                        <Message message=message/>
-                    </For>
-                    <ChatInput/>
-                </div>
+        <div class="h-full flex flex-col">
+            <div ref=div class="overflow-y-auto h-full">
+                <For each=chat.lobby key=|message| message.timestamp let:message>
+                    <Message message=message/>
+                </For>
             </div>
+            <ChatInput/>
         </div>
     }
 }
