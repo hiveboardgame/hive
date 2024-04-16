@@ -7,6 +7,7 @@ pub fn Hamburger<T: IntoView>(
     hamburger_show: RwSignal<bool>,
     children: ChildrenFn,
     #[prop(into)] button_style: MaybeSignal<String>,
+    #[prop(optional)] extend_tw_classes: &'static str,
     dropdown_style: &'static str,
     content: T,
 ) -> impl IntoView {
@@ -15,7 +16,7 @@ pub fn Hamburger<T: IntoView>(
     let children = store_value(children);
 
     view! {
-        <div node_ref=target class="inline-block">
+        <div node_ref=target class=format!("inline-block {extend_tw_classes}")>
             <button
                 on:click=move |_| { hamburger_show.update(|b| *b = !*b) }
 

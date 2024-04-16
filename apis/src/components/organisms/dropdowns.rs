@@ -1,5 +1,6 @@
 use crate::components::layouts::base_layout::{DROPDOWN_BUTTON_STYLE, DROPDOWN_LINK_STYLE};
 use crate::components::molecules::{hamburger::Hamburger, ping::Ping};
+use crate::components::organisms::chat::ChatWindow;
 use crate::components::organisms::header::set_redirect;
 use crate::components::organisms::logout::Logout;
 use leptos::*;
@@ -171,6 +172,23 @@ pub fn CommunityDropdown() -> impl IntoView {
             <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/socials">
                 Social Links
             </a>
+        </Hamburger>
+    }
+}
+
+#[component]
+pub fn ChatDropdown() -> impl IntoView {
+    let hamburger_show = create_rw_signal(false);
+    let chat_style = "flex flex-col absolute bg-even-light dark:bg-even-dark border border-gray-300 p-2 right-0 w-full h-[75%] z-50";
+    view! {
+        <Hamburger
+            hamburger_show=hamburger_show
+            button_style="h-7 m-1 grow bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0"
+            extend_tw_classes="mt-1"
+            dropdown_style=chat_style
+            content="Chat"
+        >
+            <ChatWindow/>
         </Hamburger>
     }
 }

@@ -18,8 +18,6 @@ pub fn HistoryMove(
 ) -> impl IntoView {
     let mut game_state_signal = expect_context::<GameStateSignal>();
     let div_ref = create_node_ref::<html::Div>();
-    // scrolls history when new move is made
-    // TODO: find a nicer way to do it, maybe do it just on_load and add div_height to scroll_heigt
     div_ref.on_load(move |_| {
         let _ = div_ref
             .get_untracked()
@@ -115,8 +113,23 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             elem.scroll_into_view_with_bool(false);
         }
     });
+    let go_to_end = Callback::new(move |()| {
+        let parent = parent.get_untracked().expect("div to be loaded");
+        parent.set_scroll_top(parent.scroll_height());
+    });
 
-    let white_black_styles = "col-span-2";
+    let if_last_go_to_end = Callback::new(move |()| {
+        focus(());
+        let gamestate = (game_state_signal.signal)();
+        {
+            if let Some(turn) = gamestate.history_turn {
+                if turn == gamestate.state.turn - 1 {
+                    go_to_end(());
+                }
+            }
+        }
+    });
+
     let is_repetition = move |turn: usize| {
         if let Some(game) = (game_state_signal.signal)().game_response {
             game.repetitions.contains(&turn)
@@ -125,8 +138,8 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         }
     };
     view! {
-        <div class=format!("h-[90%] grid grid-cols-4 grid-rows-6 gap-1 pb-4 {extend_tw_classes}")>
-            <div class="col-span-4 grid grid-cols-4 gap-1 dark:bg-dark bg-light min-h-0 row-span-3 row-start-1">
+        <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
+            <div class="flex gap-1 dark:bg-dark bg-light min-h-0 [&>*]:grow">
                 <HistoryButton
 
                     action=HistoryNavigation::First
@@ -141,25 +154,20 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 <HistoryButton
 
                     action=HistoryNavigation::Next
-                    post_action=focus
+                    post_action=if_last_go_to_end
                 />
 
                 <HistoryButton
 
                     action=HistoryNavigation::Last
-                    post_action=focus
+                    post_action=go_to_end
                 />
-                <div class=white_black_styles>
-                    <Reserve alignment=Alignment::DoubleRow color=Color::White/>
-                </div>
-                <div class=white_black_styles>
-                    <Reserve alignment=Alignment::DoubleRow color=Color::Black/>
-                </div>
             </div>
-            <div
-                ref=parent
-                class="col-span-4 grid grid-cols-4 gap-1 overflow-auto max-h-[inherit] min-h-[inherit] mt-8 row-span-3 row-start-4"
-            >
+            <div class="flex p-2">
+                <Reserve alignment=Alignment::DoubleRow color=Color::White/>
+                <Reserve alignment=Alignment::DoubleRow color=Color::Black/>
+            </div>
+            <div ref=parent class="grid grid-cols-4 gap-1 overflow-auto row-span-3 mb-8">
                 <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
                     <HistoryMove

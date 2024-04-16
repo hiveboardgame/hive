@@ -8,6 +8,7 @@ use crate::{
         organisms::{
             board::Board,
             display_timer::{DisplayTimer, Placement},
+            dropdowns::ChatDropdown,
             reserve::{Alignment, Reserve},
             side_board::SideboardTabs,
         },
@@ -90,7 +91,8 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
 
                 <div class="flex flex-col flex-grow h-full min-h-0">
                     <div class="flex flex-col shrink flex-grow">
-                        <div class="flex justify-between shrink flex-row-reverse">
+                        <div class="flex justify-between shrink flex-row-reverse items-center">
+                            <ChatDropdown/>
                             <AnalysisAndDownload/>
                             <Show when=show_buttons>
                                 <ControlButtons/>

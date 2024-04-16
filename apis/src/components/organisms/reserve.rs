@@ -55,7 +55,7 @@ pub fn Reserve(
 
     let (viewbox_str, viewbox_styles) = match alignment {
         Alignment::SingleRow => ("-40 -55 450 100", "inline max-h-[inherit] h-full w-fit"),
-        Alignment::DoubleRow => ("-32 -55 250 150", ""),
+        Alignment::DoubleRow => ("-32 -55 250 180", "p-1"),
     };
 
     let stacked_pieces = move || {
