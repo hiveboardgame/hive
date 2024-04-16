@@ -5,7 +5,7 @@ on:
       - main
 jobs:
   deploy:
-    name: BuggyLeptosArena
+    name: hivegame.test
     runs-on: ubuntu-latest
     steps:
       # This step checks out a copy of your repository.
