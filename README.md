@@ -29,3 +29,5 @@ Affero General Public License 3 license found in the LICENSE.md file in the
 root directory of this project.
 The official graphics for Hive are owned by [Gen42](https://gen42.com/) and may
 not be used without prior written consent.
+## Support
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/T6T8XFTVA)

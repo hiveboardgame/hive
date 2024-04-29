@@ -1,3 +1,4 @@
+use crate::components::molecules::banner::Banner;
 use crate::components::organisms::online_users::OnlineUsers;
 use crate::components::organisms::tv::Tv;
 use crate::providers::auth_context::AuthContext;
@@ -19,9 +20,13 @@ pub fn Home() -> impl IntoView {
             .close();
     });
     let logged_in = move || matches!((auth_context.user)(), Some(Ok(Some(_))));
+    let logo = move || {
+        view! { <img width="100%" height="100%" src="/assets/favicon-32x32.png" alt="ladybug"/> }
+    };
 
     view! {
         <div class="pt-16 flex flex-col justify-start md:justify-center items-center w-full overflow-x-clip">
+            <Banner title="hivegame.com" extend_tw_classes="w-10/12" logo=logo()/>
             <Show when=logged_in>
                 <button
                     class="m-5 grow md:grow-0 whitespace-nowrap bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"

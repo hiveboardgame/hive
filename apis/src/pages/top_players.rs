@@ -1,7 +1,7 @@
 use leptos::*;
 use shared_types::game_speed::GameSpeed;
 
-use crate::components::organisms::leaderboard::Leaderboard;
+use crate::components::{molecules::banner::Banner, organisms::leaderboard::Leaderboard};
 
 #[component]
 pub fn TopPlayers() -> impl IntoView {
@@ -12,7 +12,8 @@ pub fn TopPlayers() -> impl IntoView {
         })
         .collect_view();
     view! {
-        <div class="pt-20 flex">
+        <div class="pt-20 flex flex-col items-center">
+            <Banner title="Top Rated Players" extend_tw_classes="w-10/12"/>
             <div class="flex flex-col md:flex-row gap-1 items-center flex-wrap w-full justify-center">
                 {leaderboards}
             </div>
