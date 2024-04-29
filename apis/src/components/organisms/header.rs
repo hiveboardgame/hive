@@ -1,10 +1,7 @@
 use crate::components::atoms::next_game_button::NextGameButton;
-use crate::components::layouts::base_layout::DROPDOWN_BUTTON_STYLE;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle,
-    dropdowns::{
-        CommunityDropdown, LearnDropdown, MobileDropdown, TournamentDropdown, UserDropdown,
-    },
+    dropdowns::{CommunityDropdown, MobileDropdown, UserDropdown},
 };
 use crate::providers::auth_context::*;
 use leptos::*;
@@ -17,15 +14,35 @@ pub struct Redirect(pub RwSignal<String>);
 #[component]
 pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
+
     view! {
         <header class=format!(
-            "w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] {extend_tw_classes}",
+            "w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] select-none {extend_tw_classes}",
         )>
             <Transition fallback=|| {
                 view! {
-                    <a class="lg:ml-10" href="/">
-                        HiveGame.com
-                    </a>
+                    <div class="lg:ml-10 flex gap-1 items-center">
+                        <MobileDropdown/>
+
+                        <a class="hidden md:block m-2" href="/">
+                            Home
+                        </a>
+                        <div class="hidden lg:flex lg:items-center lg:gap-1">
+                            <CommunityDropdown/>
+                            <a
+                                class="h-full p-2 hover:text-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
+                                href="https://www.gen42.com/"
+                            >
+                                Buy Game
+                            </a>
+                            <a
+                                class="h-full p-2  text-queen-orange hover:text-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
+                                href="/donate"
+                            >
+                                Donate
+                            </a>
+                        </div>
+                    </div>
                     <div class="flex items-center lg:mr-10">
                         <DarkModeToggle/>
                         <a
@@ -45,13 +62,32 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                         _ => None,
                     };
                     view! {
+                        <div class="lg:ml-10 flex gap-1 items-center">
+                            <MobileDropdown/>
+
+                            <a class="hidden md:block m-2" href="/">
+                                Home
+                            </a>
+                            <div class="hidden lg:flex lg:items-center lg:gap-1">
+                                <CommunityDropdown/>
+                                <a
+                                    class="h-full p-2 hover:text-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
+                                    href="https://www.gen42.com/"
+                                >
+                                    Buy Game
+                                </a>
+                                <a
+                                    class="h-full p-2 text-queen-orange hover:text-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
+                                    href="/donate"
+                                >
+                                    Donate
+                                </a>
+                            </div>
+                        </div>
                         <Show
                             when=move || user().is_some()
                             fallback=|| {
                                 view! {
-                                    <a class="lg:ml-10" href="/">
-                                        HiveGame.com
-                                    </a>
                                     <div class="flex items-center lg:mr-10">
                                         <DarkModeToggle/>
                                         <a
@@ -67,24 +103,6 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             }
                         >
 
-                            <div class="lg:ml-10 flex gap-1 items-center">
-                                <MobileDropdown/>
-
-                                <a class="hidden md:block m-2" href="/">
-                                    HiveGame.com
-                                </a>
-                                <div class="hidden lg:flex lg:items-center lg:gap-1">
-                                    <LearnDropdown/>
-                                    <TournamentDropdown/>
-                                    <CommunityDropdown/>
-                                    <a class=DROPDOWN_BUTTON_STYLE href="https://www.gen42.com/">
-                                        Get Game
-                                    </a>
-                                    <a class=DROPDOWN_BUTTON_STYLE href="/donate">
-                                        Donate
-                                    </a>
-                                </div>
-                            </div>
                             <div class="flex items-center">
                                 <NextGameButton time_mode=store_value(TimeMode::RealTime)/>
                                 <NextGameButton time_mode=store_value(TimeMode::Correspondence)/>

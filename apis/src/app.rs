@@ -8,14 +8,15 @@ use crate::{
         config::Config,
         display_games::DisplayGames,
         donate::Donate,
+        faq::Faq,
         home::Home,
         login::Login,
         play::Play,
         profile_view::{ProfileGamesView, ProfileView},
         puzzles::Puzzles,
         register::Register,
+        resources::Resources,
         rules::Rules,
-        socials::Socials,
         strategy::Strategy,
         top_players::TopPlayers,
         tournaments::Tournaments,
@@ -106,10 +107,11 @@ pub fn App() -> impl IntoView {
                     <Route path="/config" view=|| view! { <Config/> }/>
                     <Route path="/tournaments" view=|| view! { <Tournaments/> }/>
                     <Route path="/donate" view=|| view! { <Donate/> }/>
+                    <Route path="/faq" view=|| view! { <Faq/> }/>
                     <Route path="/puzzles" view=|| view! { <Puzzles/> }/>
                     <Route path="/rules" view=|| view! { <Rules/> }/>
                     <Route path="/strategy" view=|| view! { <Strategy/> }/>
-                    <Route path="/socials" view=|| view! { <Socials/> }/>
+                    <Route path="/resources" view=|| view! { <Resources/> }/>
                     <Route path="/tutorial" view=|| view! { <Tutorial/> }/>
                     <Route path="/chat" view=|| view! { <ChatWindow/> }/>
                     <Route

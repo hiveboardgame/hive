@@ -1,4 +1,4 @@
-use crate::components::layouts::base_layout::{DROPDOWN_BUTTON_STYLE, DROPDOWN_LINK_STYLE};
+use crate::components::layouts::base_layout::{COMMON_LINK_STYLE, DROPDOWN_BUTTON_STYLE};
 use crate::components::molecules::{hamburger::Hamburger, ping::Ping};
 use crate::components::organisms::chat::ChatWindow;
 use crate::components::organisms::header::set_redirect;
@@ -20,7 +20,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             content=username.clone()
         >
             <a
-                class=DROPDOWN_LINK_STYLE
+                class=COMMON_LINK_STYLE
                 href=format!("/@/{}", username)
 
                 on:click=move |_| onclick_close()
@@ -28,7 +28,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
                 Profile
             </a>
             <a
-                class=DROPDOWN_LINK_STYLE
+                class=COMMON_LINK_STYLE
                 href="/account"
                 on:focus=move |_| set_redirect()
                 on:click=move |_| onclick_close()
@@ -36,7 +36,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
                 Edit Account
             </a>
             <a
-                class=DROPDOWN_LINK_STYLE
+                class=COMMON_LINK_STYLE
                 href="/config"
                 on:focus=move |_| set_redirect()
                 on:click=move |_| onclick_close()
@@ -62,44 +62,31 @@ pub fn MobileDropdown() -> impl IntoView {
             dropdown_style=DROPDOWN_MENU_STYLE
             content=view! { <Icon icon=icondata::ChMenuHamburger class="w-6 h-6"/> }
         >
-            <div class="flex flex-col md:flex-row flex-wrap">
-                <div class=div_style>
-                    Learn: <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/tutorial">
-                        Tutorial
-                    </a> <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/rules">
-                        Rules
-                    </a> <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/strategy">
-                        Strategy
-                    </a> <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/puzzles">
-                        Puzzles
-                    </a> <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/analysis">
-                        Analysis
-                    </a>
-                </div>
-                <div class=div_style>
-                    Tournaments: <button class=DROPDOWN_LINK_STYLE on:click=onclick_close>
-                        Create Tournament
-                    </button>
-                    <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/tournaments">
-                        View Tournaments
-                    </a> Community:
-                    <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/top_players">
-                        Top Players
-                    </a> <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/socials">
-                        Social Links
-                    </a> Support:
-                    <a
-                        class=DROPDOWN_LINK_STYLE
-                        on:click=onclick_close
-                        href="https://www.gen42.com/"
-                    >
-                        Get Game
-                    </a> <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/donate">
-                        Donate
-                    </a>
-                </div>
 
+            <div class=div_style>
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="/">
+                    Home
+                </a>
+                Community:
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="/top_players">
+                    Top Players
+                </a>
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="/resources">
+                    Resources
+                </a>
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="/faq">
+                    Faq
+                </a>
+
+                Support:
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="https://www.gen42.com/">
+                    Buy Game
+                </a>
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="/donate">
+                    Donate
+                </a>
             </div>
+
         </Hamburger>
     }
 }
@@ -115,19 +102,19 @@ pub fn LearnDropdown() -> impl IntoView {
             dropdown_style=DROPDOWN_MENU_STYLE
             content="Learn"
         >
-            <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/tutorial">
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tutorial">
                 Tutorial
             </a>
-            <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/rules">
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/rules">
                 Rules
             </a>
-            <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/strategy">
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/strategy">
                 Strategy
             </a>
-            <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/puzzles">
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/puzzles">
                 Puzzles
             </a>
-            <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/analysis">
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/analysis">
                 Analysis
             </a>
         </Hamburger>
@@ -145,10 +132,10 @@ pub fn TournamentDropdown() -> impl IntoView {
             dropdown_style=DROPDOWN_MENU_STYLE
             content="Tournament"
         >
-            <button class=DROPDOWN_LINK_STYLE on:click=onclick_close>
+            <button class=COMMON_LINK_STYLE on:click=onclick_close>
                 Create Tournament
             </button>
-            <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/tournaments">
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments">
                 View Tournaments
             </a>
         </Hamburger>
@@ -166,11 +153,14 @@ pub fn CommunityDropdown() -> impl IntoView {
             dropdown_style=DROPDOWN_MENU_STYLE
             content="Community"
         >
-            <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/top_players">
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/top_players">
                 Top Players
             </a>
-            <a class=DROPDOWN_LINK_STYLE on:click=onclick_close href="/socials">
-                Social Links
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/resources">
+                Resources
+            </a>
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/faq">
+                FAQ
             </a>
         </Hamburger>
     }

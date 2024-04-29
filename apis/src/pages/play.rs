@@ -70,7 +70,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     view! {
         <div class=move || {
             format!(
-                "max-h-[100dvh] min-h-[100dvh] pt-10 {} {extend_tw_classes}",
+                "max-h-[100dvh] min-h-[100dvh] pt-10 select-none {} {extend_tw_classes}",
                 parent_container_style(),
             )
         }>

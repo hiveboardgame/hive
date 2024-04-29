@@ -23,7 +23,7 @@ lazy_static! {
     static ref NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
 }
-pub const DROPDOWN_LINK_STYLE: &str = "bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
+pub const COMMON_LINK_STYLE: &str = "bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
 pub const DROPDOWN_BUTTON_STYLE: &str= "h-full p-2 hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block";
 
 #[component]
@@ -118,7 +118,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         }/>
 
         <Body/>
-        <main class="min-h-screen w-full bg-light dark:bg-dark text-xs sm:text-sm md:text-md touch-manipulation select-none">
+        <main class="min-h-screen w-full bg-light dark:bg-dark text-xs sm:text-sm md:text-md touch-manipulations">
             <Header/>
             <Alert/>
             {children()}
