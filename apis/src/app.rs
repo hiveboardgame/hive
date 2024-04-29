@@ -57,9 +57,6 @@ pub fn App() -> impl IntoView {
 
     view! {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
-
-        <meta name="viewport" content="width=device-width, initial-scale=1"/>
-
         <Router trailing_slash=TrailingSlash::Redirect>
             <Routes>
                 <Route

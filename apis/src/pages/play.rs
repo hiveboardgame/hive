@@ -25,6 +25,8 @@ pub struct TargetStack(pub RwSignal<Option<Position>>);
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
+    let mobile_chat = create_rw_signal(false);
+    provide_context(mobile_chat);
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let user = move || match (auth_context.user)() {
@@ -45,8 +47,9 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     });
 
     let is_tall = use_media_query("(min-height: 100vw)");
+    let is_tall_or_chat = Signal::derive(move || is_tall() || mobile_chat());
     let parent_container_style = move || {
-        if is_tall() {
+        if is_tall_or_chat() {
             "flex flex-col"
         } else {
             "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 mr-2"
@@ -75,7 +78,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             )
         }>
             <Show
-                when=is_tall
+                when=is_tall_or_chat
                 fallback=move || {
                     view! {
                         <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-light dark:bg-dark"/>
@@ -103,7 +106,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             <DisplayTimer vertical=true placement=Placement::Top/>
                         </div>
                         <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1 bg-inherit">
-                            <UserWithRating side=top_color() is_tall/>
+                            <UserWithRating side=top_color() is_tall=is_tall_or_chat/>
                             <GameInfo/>
                         </div>
 
@@ -111,7 +114,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                     <Board overwrite_tw_classes="flex grow min-h-0"/>
                     <div class="flex flex-col shrink flex-grow">
                         <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
-                            <UserWithRating side=bottom_color() is_tall/>
+                            <UserWithRating side=bottom_color() is_tall=is_tall_or_chat/>
                         </div>
                         <div class="flex max-h-16 justify-between h-full">
                             <Reserve alignment=Alignment::SingleRow color=bottom_color()/>
