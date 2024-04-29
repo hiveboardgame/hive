@@ -138,6 +138,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
                         name="email"
                         type="text"
+                        inputmode="email"
                         prop:value=email
                         autocomplete="email"
                         placeholder="Email"

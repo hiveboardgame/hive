@@ -26,6 +26,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         name="email"
                         id="email"
                         type="text"
+                        inputmode="email"
                         autocomplete="email"
                         placeholder="E-mail"
                     />
