@@ -8,8 +8,8 @@ pub fn Resources() -> impl IntoView {
     let header_class = "text-2xl font-semibold mb-4";
     let list_class = "space-y-2";
     view! {
-        <div class="pt-10 px-4">
-            <div class="container mx-auto px-4 py-8">
+        <div class="pt-20 px-4">
+            <div class="container mx-auto px-4">
                 <Banner title="Community links"/>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     <section>
