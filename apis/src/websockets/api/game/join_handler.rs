@@ -3,9 +3,9 @@ use crate::{
         game_reaction::GameReaction,
         server_result::{GameActionResponse, GameUpdate, ServerMessage},
     },
-    responses::game::GameResponse,
-    responses::user::UserResponse,
+    responses::{game::GameResponse, user::UserResponse},
     websockets::{
+        chat::Chats,
         internal_server_message::{InternalServerMessage, MessageDestination},
         messages::WsMessage,
     },
@@ -18,6 +18,7 @@ use uuid::Uuid;
 pub struct JoinHandler {
     pool: DbPool,
     received_from: actix::Recipient<WsMessage>,
+    chat_storage: actix_web::web::Data<Chats>,
     user_id: Uuid,
     username: String,
     game: Game,
@@ -29,6 +30,7 @@ impl JoinHandler {
         username: &str,
         user_id: Uuid,
         received_from: actix::Recipient<WsMessage>,
+        chat_storage: actix_web::web::Data<Chats>,
         pool: &DbPool,
     ) -> Self {
         Self {
@@ -36,6 +38,7 @@ impl JoinHandler {
             game,
             user_id,
             username: username.to_owned(),
+            chat_storage,
             pool: pool.clone(),
         }
     }
@@ -63,6 +66,17 @@ impl JoinHandler {
                 username: self.username.to_owned(),
             })),
         });
+        let games = if self.user_id == self.game.white_id || self.user_id == self.game.black_id {
+            self.chat_storage.games_private.read().unwrap()
+        } else {
+            self.chat_storage.games_public.read().unwrap()
+        };
+        if let Some(messages_to_push) = games.get(&self.game.nanoid) {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::User(self.user_id),
+                message: ServerMessage::Chat(messages_to_push.clone()),
+            });
+        };
         Ok(messages)
     }
 }

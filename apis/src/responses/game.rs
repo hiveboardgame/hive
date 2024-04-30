@@ -72,7 +72,7 @@ impl GameResponse {
 
     pub fn time_left(&self) -> Result<std::time::Duration> {
         if self.turn < 2 {
-            return Ok(std::time::Duration::from_nanos(std::u64::MAX));
+            return Ok(std::time::Duration::from_nanos(u64::MAX));
         }
         if self.time_mode == TimeMode::Untimed {
             return Ok(self
@@ -101,7 +101,7 @@ impl GameResponse {
                 return Ok(future.signed_duration_since(now).to_std()?);
             }
         }
-        Ok(std::time::Duration::from_nanos(std::u64::MAX))
+        Ok(std::time::Duration::from_nanos(u64::MAX))
     }
 }
 

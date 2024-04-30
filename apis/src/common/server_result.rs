@@ -41,7 +41,7 @@ pub enum ServerMessage {
         pong_sent: DateTime<Utc>,
     },
     ConnectionUpdated(Uuid, String),
-    Chat(ChatMessageContainer),
+    Chat(Vec<ChatMessageContainer>),
     Game(GameUpdate),
     Challenge(ChallengeUpdate),
     UserStatus(UserUpdate),

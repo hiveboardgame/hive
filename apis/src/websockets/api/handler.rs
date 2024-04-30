@@ -5,6 +5,7 @@ use crate::websockets::api::challenges::handler::ChallengeHandler;
 use crate::websockets::api::ping::handler::PingHandler;
 use crate::websockets::api::user_status::handler::UserStatusHandler;
 use crate::websockets::auth_error::AuthError;
+use crate::websockets::chat::Chats;
 use crate::websockets::internal_server_message::InternalServerMessage;
 use crate::websockets::messages::WsMessage;
 use anyhow::Result;
@@ -13,6 +14,7 @@ use uuid::Uuid;
 
 pub struct RequestHandler {
     command: ClientRequest,
+    chat_storage: actix_web::web::Data<Chats>,
     received_from: actix::Recipient<WsMessage>, // This is the socket the message was received over
     pool: DbPool,
     user_id: Uuid,
@@ -23,6 +25,7 @@ pub struct RequestHandler {
 impl RequestHandler {
     pub fn new(
         command: ClientRequest,
+        chat_storage: actix_web::web::Data<Chats>,
         sender_addr: actix::Recipient<WsMessage>,
         user_id: Uuid,
         username: &str,
@@ -32,6 +35,7 @@ impl RequestHandler {
         Self {
             received_from: sender_addr,
             command,
+            chat_storage,
             pool,
             user_id,
             username: username.to_owned(),
@@ -48,7 +52,13 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
-            ClientRequest::Chat(message) => ChatHandler::new(message).handle(),
+            ClientRequest::Chat(message_container) => {
+                self.ensure_auth()?;
+                if self.user_id != message_container.message.user_id {
+                    Err(AuthError::Unauthorized)?
+                }
+                ChatHandler::new(message_container, self.chat_storage.clone()).handle()
+            }
             ClientRequest::Ping(sent) => PingHandler::new(self.user_id, sent).handle(),
             ClientRequest::Game {
                 action: game_action,
@@ -64,6 +74,7 @@ impl RequestHandler {
                     &self.username,
                     self.user_id,
                     self.received_from.clone(),
+                    self.chat_storage.clone(),
                     &self.pool,
                 )
                 .await?

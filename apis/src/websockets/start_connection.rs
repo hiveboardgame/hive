@@ -1,4 +1,4 @@
-use crate::websockets::{connection::WsConnection, lobby::Lobby};
+use crate::websockets::{chat::Chats, connection::WsConnection, lobby::Lobby};
 use actix::Addr;
 use actix_identity::Identity;
 use actix_web::{get, web::Data, web::Payload, Error, HttpRequest, HttpResponse};
@@ -11,6 +11,7 @@ pub async fn start_connection(
     req: HttpRequest,
     stream: Payload,
     srv: Data<Addr<Lobby>>,
+    chat_storage: Data<Chats>,
     pool: Data<DbPool>,
     identity: Option<Identity>,
 ) -> Result<HttpResponse, Error> {
@@ -23,6 +24,7 @@ pub async fn start_connection(
                         Some(uuid),
                         Some(user.username),
                         srv.get_ref().clone(),
+                        chat_storage.clone(),
                         pool.get_ref().clone(),
                     );
                     let resp = ws::start(ws, &req, stream)?;
@@ -33,7 +35,13 @@ pub async fn start_connection(
     };
 
     println!("Welcome Anonymous!");
-    let ws = WsConnection::new(None, None, srv.get_ref().clone(), pool.get_ref().clone());
+    let ws = WsConnection::new(
+        None,
+        None,
+        srv.get_ref().clone(),
+        chat_storage.clone(),
+        pool.get_ref().clone(),
+    );
 
     let resp = ws::start(ws, &req, stream)?;
     Ok(resp)

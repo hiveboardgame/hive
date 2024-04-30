@@ -9,13 +9,12 @@ cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websockets::lobby::Lobby;
-    use crate::websockets::start_connection;
+    use crate::websockets::{chat::Chats, lobby::Lobby,start_connection};
     use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-    use actix_web::{cookie::Key, web, App, HttpServer};
+    use actix_web::{cookie::Key, App, HttpServer, web::Data,};
     use apis::app::App;
     use db_lib::{config::DbConfig, get_pool};
     use diesel::pg::PgConnection;
@@ -46,7 +45,8 @@ async fn main() -> std::io::Result<()> {
     let pool = get_pool(&config.database_url)
         .await
         .expect("Failed to get pool");
-    let chat_server = Lobby::new(pool.clone()).start();
+    let chat_history = Data::new(Chats::new());
+    let websocket_server = Data::new(Lobby::new(pool.clone()).start());
 
     println!("listening on http://{}", &addr);
 
@@ -55,8 +55,9 @@ async fn main() -> std::io::Result<()> {
         let site_root = &leptos_options.site_root;
 
         App::new()
-            .app_data(actix_web::web::Data::new(pool.clone()))
-            .app_data(actix_web::web::Data::new(chat_server.clone()))
+            .app_data(Data::new(pool.clone()))
+            .app_data(Data::clone(&chat_history))
+            .app_data(Data::clone(&websocket_server))
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             // serve other assets from the `assets` directory
@@ -70,7 +71,7 @@ async fn main() -> std::io::Result<()> {
                 routes.to_owned(),
                 || view! { <App/> },
             )
-            .app_data(web::Data::new(leptos_options.to_owned()))
+            .app_data(Data::new(leptos_options.to_owned()))
             //.wrap(Compress::default())
             // IdentityMiddleware needs to be first
             .wrap(IdentityMiddleware::default())

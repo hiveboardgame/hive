@@ -2,9 +2,9 @@ use super::{
     control_handler::GameControlHandler, join_handler::JoinHandler,
     timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
 };
-use crate::common::game_action::GameAction;
 use crate::websockets::internal_server_message::InternalServerMessage;
 use crate::websockets::messages::WsMessage;
+use crate::{common::game_action::GameAction, websockets::chat::Chats};
 use anyhow::Result;
 use db_lib::{models::game::Game, DbPool};
 use hive_lib::{game_error::GameError, game_status::GameStatus};
@@ -17,6 +17,7 @@ pub struct GameActionHandler {
     pool: DbPool,
     user_id: Uuid,
     received_from: actix::Recipient<WsMessage>,
+    chat_storage: actix_web::web::Data<Chats>,
     username: String,
 }
 
@@ -27,6 +28,7 @@ impl GameActionHandler {
         username: &str,
         user_id: Uuid,
         received_from: actix::Recipient<WsMessage>,
+        chat_storage: actix_web::web::Data<Chats>,
         pool: &DbPool,
     ) -> Result<Self> {
         let game = Game::find_by_nanoid(game_id, pool).await?;
@@ -36,6 +38,7 @@ impl GameActionHandler {
             username: username.to_owned(),
             game_action,
             received_from,
+            chat_storage,
             user_id,
         })
     }
@@ -79,6 +82,7 @@ impl GameActionHandler {
                     &self.username,
                     self.user_id,
                     self.received_from.clone(),
+                    self.chat_storage.clone(),
                     &self.pool,
                 )
                 .handle()
