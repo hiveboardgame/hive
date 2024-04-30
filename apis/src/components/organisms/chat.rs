@@ -1,7 +1,11 @@
-use crate::providers::chat::Chat;
+use crate::providers::{
+    auth_context::AuthContext, chat::Chat, game_state::GameStateSignal,
+    navigation_controller::NavigationControllerSignal,
+};
 use leptos::*;
 use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};
-use shared_types::chat_message::ChatMessage;
+use shared_types::chat_message::{ChatDestination, ChatMessage, SimpleDestination};
+use uuid::Uuid;
 
 #[component]
 pub fn Message(message: ChatMessage) -> impl IntoView {
@@ -21,25 +25,29 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 }
 
 #[component]
-pub fn ChatInput() -> impl IntoView {
+pub fn ChatInput(destination: ChatDestination) -> impl IntoView {
     let chat = expect_context::<Chat>();
-    let message = RwSignal::new(String::new());
-    let input = move |evt| message.update(|v| *v = event_target_value(&evt));
+    let destination = store_value(destination);
+    let message_signal = RwSignal::new(String::new());
+    let input = move |evt| message_signal.update(|v| *v = event_target_value(&evt));
     let send = move || {
-        let the_message = message();
-        if !the_message.is_empty() {
-            chat.send(
-                &the_message,
-                shared_types::chat_message::ChatDestination::Lobby,
-            );
-            message.set(String::new());
+        let message = message_signal();
+        if !message.is_empty() {
+            chat.send(&message, destination());
+            message_signal.set(String::new());
         };
+    };
+    let placeholder = move || match destination() {
+        ChatDestination::GamePlayers(_, _, _) => "Chat with opponent",
+        ChatDestination::GameSpectators(_, _, _) => "Chat with spectators",
+        _ => "Chat",
     };
     view! {
         <input
             type="text"
             class="bg-odd-light dark:bg-odd-dark rounded-lg px-4 py-2 focus:outline-none w-full resize-none h-auto box-border shrink-0"
-            prop:value=message
+            prop:value=message_signal
+            attr:placeholder=placeholder
             on:input=input
             on:keydown=move |evt| {
                 if evt.key() == "Enter" {
@@ -54,8 +62,42 @@ pub fn ChatInput() -> impl IntoView {
 }
 
 #[component]
-pub fn ChatWindow() -> impl IntoView {
+pub fn ChatWindow(
+    destination: SimpleDestination,
+    #[prop(optional)] correspondant_id: Option<Uuid>,
+    #[prop(optional)] correspondant_username: String,
+) -> impl IntoView {
     let chat = expect_context::<Chat>();
+    let auth_context = expect_context::<AuthContext>();
+    let game_state = expect_context::<GameStateSignal>();
+    let uid = if let Some(Ok(Some(account))) = untrack(auth_context.user) {
+        Some(account.user.uid)
+    } else {
+        None
+    };
+    let white_id = move || {
+        game_state
+            .signal
+            .get_untracked()
+            .white_id
+            .expect("Game has white player")
+    };
+    let black_id = move || {
+        game_state
+            .signal
+            .get_untracked()
+            .black_id
+            .expect("Game has black player")
+    };
+
+    let navi = expect_context::<NavigationControllerSignal>();
+    let game = store_value((navi.signal)().nanoid.unwrap_or_default());
+    let correspondant_id = store_value(if let Some(v) = correspondant_id {
+        v
+    } else {
+        Uuid::new_v4()
+    });
+    let correspondant_username = store_value(correspondant_username);
     let div = create_node_ref::<html::Div>();
     let _ = use_mutation_observer_with_options(
         div,
@@ -69,14 +111,49 @@ pub fn ChatWindow() -> impl IntoView {
             .child_list(true)
             .attributes(true),
     );
+
+    let actual_destination = move || match destination {
+        SimpleDestination::Game => {
+            if game_state.signal.get_untracked().uid_is_player(uid) {
+                ChatDestination::GamePlayers(game(), white_id(), black_id())
+            } else {
+                ChatDestination::GameSpectators(game(), white_id(), black_id())
+            }
+        }
+        SimpleDestination::User => {
+            ChatDestination::User((correspondant_id(), correspondant_username()))
+        }
+        SimpleDestination::Tournament => todo!(),
+    };
+    let cloned_fn = actual_destination.clone();
+    let messages = move || match actual_destination() {
+        ChatDestination::TournamentLobby(tournament) => (chat.tournament_lobby_messages)()
+            .get(&tournament)
+            .cloned()
+            .unwrap_or_default(),
+        ChatDestination::GamePlayers(game, ..) => (chat.games_private_messages)()
+            .get(&game)
+            .cloned()
+            .unwrap_or_default(),
+
+        ChatDestination::GameSpectators(game, ..) => (chat.games_public_messages)()
+            .get(&game)
+            .cloned()
+            .unwrap_or_default(),
+
+        ChatDestination::User((correspondant_id, _username)) => (chat.users_messages)()
+            .get(&correspondant_id)
+            .cloned()
+            .unwrap_or_default(),
+    };
     view! {
         <div class="h-full flex flex-col">
             <div ref=div class="overflow-y-auto h-full">
-                <For each=chat.lobby key=|message| message.timestamp let:message>
+                <For each=messages key=|message| message.timestamp let:message>
                     <Message message=message/>
                 </For>
             </div>
-            <ChatInput/>
+            <ChatInput destination=cloned_fn()/>
         </div>
     }
 }

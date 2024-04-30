@@ -3,8 +3,10 @@ use crate::components::molecules::{hamburger::Hamburger, ping::Ping};
 use crate::components::organisms::chat::ChatWindow;
 use crate::components::organisms::header::set_redirect;
 use crate::components::organisms::logout::Logout;
+use crate::providers::chat::Chat;
 use leptos::*;
 use leptos_icons::*;
+use shared_types::chat_message::SimpleDestination;
 
 const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-light dark:bg-even-dark text-black border border-gray-300 rounded-md left-34 p-2";
 
@@ -167,18 +169,36 @@ pub fn CommunityDropdown() -> impl IntoView {
 }
 
 #[component]
-pub fn ChatDropdown() -> impl IntoView {
-    let hamburger_show = expect_context::<RwSignal<bool>>();
+pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
+    let chat = expect_context::<Chat>();
+    let hamburger_show = create_rw_signal(false);
     let chat_style = "flex flex-col absolute bg-even-light dark:bg-even-dark border border-gray-300 p-2 right-0 w-full h-[75%] z-50";
+    let button_color = move || {
+        if hamburger_show() {
+            "bg-ant-blue"
+        } else if (chat.games_public_new_messages)() || (chat.games_private_new_messages)() {
+            "bg-ladybug-red"
+        } else {
+            "bg-ant-blue"
+        }
+    };
+
+    create_effect(move |_| {
+        hamburger_show();
+        batch(move || {
+            (chat.games_public_new_messages).set(false);
+            (chat.games_private_new_messages).set(false);
+        })
+    });
     view! {
         <Hamburger
             hamburger_show=hamburger_show
-            button_style="h-7 m-1 grow bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0"
+            button_style=Signal::derive(move || format!("{} h-7 m-1 grow hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0", button_color()))
             extend_tw_classes="mt-1"
             dropdown_style=chat_style
             content="Chat"
         >
-            <ChatWindow/>
+            <ChatWindow destination=destination.clone()/>
         </Hamburger>
     }
 }

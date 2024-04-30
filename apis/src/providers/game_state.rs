@@ -263,6 +263,10 @@ impl GameState {
         None
     }
 
+    pub fn uid_is_player(&self, user_id: Option<Uuid>) -> bool {
+        user_id.is_some() && (user_id == self.white_id || user_id == self.black_id)
+    }
+
     pub fn play_turn(&mut self, piece: Piece, position: Position) {
         if let Err(e) = self.state.play_turn_from_position(piece, position) {
             log!("Could not play turn: {} {} {}", piece, position, e);

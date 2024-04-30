@@ -1,5 +1,6 @@
 pub mod api;
 pub mod auth_error;
+pub mod chat;
 pub mod connection;
 pub mod internal_server_message;
 pub mod lobby;

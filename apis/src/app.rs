@@ -1,6 +1,5 @@
 use crate::{
     components::layouts::base_layout::BaseLayout,
-    components::organisms::chat::ChatWindow,
     pages::{
         account::Account,
         analysis::Analysis,
@@ -110,7 +109,6 @@ pub fn App() -> impl IntoView {
                     <Route path="/strategy" view=|| view! { <Strategy/> }/>
                     <Route path="/resources" view=|| view! { <Resources/> }/>
                     <Route path="/tutorial" view=|| view! { <Tutorial/> }/>
-                    <Route path="/chat" view=|| view! { <ChatWindow/> }/>
                     <Route
                         path="/game/:nanoid"
                         ssr=SsrMode::PartiallyBlocked

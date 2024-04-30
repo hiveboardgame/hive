@@ -239,11 +239,6 @@ impl Handler<Connect> for Lobby {
 
         let actor_future = future.into_actor(self);
         ctx.wait(actor_future);
-
-        // if msg.game_id == self.id {
-        //     self.send_message(&format!("You joined {}", msg.game_id), &msg.user_id);
-        //     return ();
-        // }
     }
 }
 
@@ -281,9 +276,27 @@ impl Handler<ClientActorMessage> for Lobby {
                     .iter()
                     .for_each(|client| self.send_message(&cam.serialized, client));
             }
+            MessageDestination::GameSpectators(game_id, white_id, black_id) => {
+                // Make sure the user is in the game:
+                self.games_users
+                    .entry(game_id.clone())
+                    .or_default()
+                    .insert(cam.from);
+                // Send the message to everyone except white_id and black_id
+                self.games_users
+                    .get(&game_id)
+                    .expect("Game to exists")
+                    .iter()
+                    .for_each(|user| {
+                        if *user != white_id && *user != black_id {
+                            self.send_message(&cam.serialized, user);
+                        }
+                    });
+            }
             MessageDestination::User(user_id) => {
                 self.send_message(&cam.serialized, &user_id);
             }
+            MessageDestination::Tournament(_tournament) => todo!(),
         }
     }
 }

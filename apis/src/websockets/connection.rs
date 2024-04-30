@@ -5,6 +5,7 @@ use crate::{
         server_result::{ExternalServerError, ServerResult},
     },
     websockets::{
+        chat::Chats,
         lobby::Lobby,
         messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
     },
@@ -27,6 +28,7 @@ pub struct WsConnection {
     username: String,
     #[allow(dead_code)]
     authed: bool,
+    chat_storage: actix_web::web::Data<Chats>,
     lobby_addr: Addr<Lobby>,
     hb: Instant, // websocket heartbeat
     pool: DbPool,
@@ -72,6 +74,7 @@ impl WsConnection {
         user_uid: Option<Uuid>,
         username: Option<String>,
         lobby: Addr<Lobby>,
+        chat_storage: actix_web::web::Data<Chats>,
         pool: DbPool,
     ) -> WsConnection {
         let id = user_uid.unwrap_or(Uuid::new_v4());
@@ -80,6 +83,7 @@ impl WsConnection {
             user_uid: id,
             username: name,
             authed: user_uid.is_some(),
+            chat_storage,
             hb: Instant::now(),
             lobby_addr: lobby,
             pool,
@@ -128,11 +132,19 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 let user_id = self.user_uid;
                 let username = self.username.clone();
                 let authed = self.authed;
+                let chat_storage = self.chat_storage.clone();
                 let addr = ctx.address().recipient();
 
                 let future = async move {
-                    let handler =
-                        RequestHandler::new(request, addr, user_id, &username, authed, pool);
+                    let handler = RequestHandler::new(
+                        request,
+                        chat_storage,
+                        addr,
+                        user_id,
+                        &username,
+                        authed,
+                        pool,
+                    );
                     let handler_result = handler.handle().await;
                     match handler_result {
                         Ok(messages) => {

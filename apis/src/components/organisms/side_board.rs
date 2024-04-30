@@ -8,10 +8,11 @@ use crate::{
             reserve::{Alignment, Reserve},
         },
     },
-    providers::{auth_context::AuthContext, game_state::GameStateSignal},
+    providers::{auth_context::AuthContext, chat::Chat, game_state::GameStateSignal},
 };
 use hive_lib::color::Color;
 use leptos::*;
+use shared_types::chat_message::SimpleDestination;
 
 #[derive(Clone, PartialEq)]
 enum SideboardTabView {
@@ -27,6 +28,7 @@ pub fn SideboardTabs(
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     let mut game_state_signal = expect_context::<GameStateSignal>();
+    let chat = expect_context::<Chat>();
     let tab_view = RwSignal::new(SideboardTabView::Reserve);
     let auth_context = expect_context::<AuthContext>();
     let user = move || match (auth_context.user)() {
@@ -48,6 +50,17 @@ pub fn SideboardTabs(
             "bg-inherit"
         }
     };
+    let button_color_chat = move || {
+        let chat_view = SideboardTabView::Chat;
+        if tab_view() == chat_view {
+            button_color(chat_view)
+        } else if (chat.games_private_new_messages)() || (chat.games_public_new_messages)() {
+            "bg-ladybug-red"
+        } else {
+            "bg-inherit"
+        }
+    };
+
     let top_color = Signal::derive(move || {
         if player_is_black() {
             Color::White
@@ -77,8 +90,14 @@ pub fn SideboardTabs(
                     }
 
                     on:click=move |_| {
-                        game_state_signal.view_game();
-                        tab_view.set(SideboardTabView::Reserve);
+                        batch(move || {
+                            game_state_signal.view_game();
+                            if tab_view() == SideboardTabView::Chat {
+                                (chat.games_private_new_messages).set(false);
+                                (chat.games_public_new_messages).set(false);
+                            }
+                            tab_view.set(SideboardTabView::Reserve);
+                        });
                     }
                 >
 
@@ -94,8 +113,14 @@ pub fn SideboardTabs(
                     }
 
                     on:click=move |_| {
-                        game_state_signal.view_history();
-                        tab_view.set(SideboardTabView::History);
+                        batch(move || {
+                            game_state_signal.view_history();
+                            if tab_view() == SideboardTabView::Chat {
+                                (chat.games_private_new_messages).set(false);
+                                (chat.games_public_new_messages).set(false);
+                            }
+                            tab_view.set(SideboardTabView::History);
+                        });
                     }
                 >
 
@@ -106,12 +131,16 @@ pub fn SideboardTabs(
                         class=move || {
                             format!(
                                 "transform transition-transform duration-300 active:scale-95 hover:bg-blue-300 {}",
-                                button_color(SideboardTabView::Chat),
+                                button_color_chat(),
                             )
                         }
 
                         on:click=move |_| {
-                            tab_view.set(SideboardTabView::Chat);
+                            batch(move || {
+                                tab_view.set(SideboardTabView::Chat);
+                                (chat.games_private_new_messages).set(false);
+                                (chat.games_public_new_messages).set(false);
+                            });
                         }
                     >
 
@@ -148,7 +177,7 @@ pub fn SideboardTabs(
                 SideboardTabView::Chat => {
                     view! {
                         <div class="h-[95%]">
-                            <ChatWindow/>
+                            <ChatWindow destination=SimpleDestination::Game/>
                         </div>
                     }
                         .into_view()

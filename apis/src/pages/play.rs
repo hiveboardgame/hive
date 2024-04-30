@@ -18,6 +18,7 @@ use crate::{
 use hive_lib::{color::Color, position::Position};
 use leptos::*;
 use leptos_use::use_media_query;
+use shared_types::chat_message::SimpleDestination;
 
 #[derive(Clone)]
 pub struct TargetStack(pub RwSignal<Option<Position>>);
@@ -95,7 +96,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 <div class="flex flex-col flex-grow h-full min-h-0">
                     <div class="flex flex-col shrink flex-grow">
                         <div class="flex justify-between shrink flex-row-reverse items-center">
-                            <ChatDropdown/>
+                            <ChatDropdown destination=SimpleDestination::Game/>
                             <AnalysisAndDownload/>
                             <Show when=show_buttons>
                                 <ControlButtons/>

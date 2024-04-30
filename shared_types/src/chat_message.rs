@@ -4,11 +4,19 @@ use uuid::Uuid;
 
 const MAX_MESSAGE_LENGTH: usize = 1000;
 
+#[derive(Debug, Clone)]
+pub enum SimpleDestination {
+    User,
+    Game,
+    Tournament,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ChatDestination {
-    User((Uuid, String)), // user_id, username
-    Game(String),         // to everyone in the game
-    Lobby,                // to everyone online
+    User((Uuid, String)),               // user_id, username
+    GamePlayers(String, Uuid, Uuid),    // to players in the game, nanoid, white uuid, black uuid
+    GameSpectators(String, Uuid, Uuid), // to spectators of the game, nanoid, white uuid, black uuid
+    TournamentLobby(String),            // to tournament lobby
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -22,6 +30,7 @@ pub struct ChatMessage {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChatMessageContainer {
     pub destination: ChatDestination,
+    // TODO: @ion maybe even better to change this to messages: Vec<ChatMessage>
     pub message: ChatMessage,
 }
 
