@@ -8,7 +8,7 @@ pub fn Faq() -> impl IntoView {
     let paragraph_class = "mt-2 text-base";
     let div_class = "p-3";
     view! {
-        <div class="pt-10">
+        <div class="pt-20">
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                 <Banner title="Frequently asked questions"/>
                 <div class="space-y-10 md:space-y-0 md:grid md:grid-cols-1 md:gap-x-6 lg:gap-x-8">
@@ -36,7 +36,7 @@ pub fn Faq() -> impl IntoView {
                                 <li>
                                     You can support us with ideas, feedback, and graphics check on
                                     <a
-                                        href="https://discord.gg/djdQZPFa7E"
+                                        href="https://discord.gg/jNTjr5vj9Z"
                                         rel="external"
                                         target="_blank"
                                         class="text-blue-500 hover:underline"
@@ -137,6 +137,31 @@ pub fn Faq() -> impl IntoView {
                         <h3 class=header_class>"What can I do if I forgot my password?"</h3>
                         <p class=paragraph_class>
                             "We don't have automatic password recovery yet, you can contact us via Discord @klautcomputing / @ionoi and ask us to reset your password."
+                        </p>
+                    </div>
+                    <div class=div_class>
+                        <h3 class=header_class>"Why is chat so basic?"</h3>
+                        <p class=paragraph_class>
+                            "The chat feature is very much a work in progress, we are aware it has issues, important things to keep in mind when using it:"
+                            <ol class="list-decimal list-inside">
+                                <li>
+                                    "Currently the chat is not persisted in the database so whenever we deploy an update your chat messages will be lost!"
+                                </li>
+                                <li>
+                                    "For now it is only possible to chat in a game (direct messages and other ways will be added), spectators don't see the player chat nor do the players see the spectator chat."
+                                </li>
+                                <li>
+                                    "Sometimes the red chat notification will show new messages when there aren't any."
+                                </li>
+                            </ol>
+                        </p>
+                    </div>
+                    <div class=div_class>
+                        <h3 class=header_class>
+                            "My opponent is abusive or disruptive in game/chat or has an innapropriate username, what can I do?"
+                        </h3>
+                        <p class=paragraph_class>
+                            "Screenshot the behaviour and contact us via Discord @klautcomputing / @ionoi we will sort it out."
                         </p>
                     </div>
                     <div class=div_class>

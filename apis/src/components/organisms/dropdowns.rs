@@ -75,7 +75,7 @@ pub fn MobileDropdown() -> impl IntoView {
                     Resources
                 </a>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/faq">
-                    Faq
+                    FAQ
                 </a>
 
                 Support:

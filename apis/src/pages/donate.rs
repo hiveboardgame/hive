@@ -5,7 +5,7 @@ use crate::components::{layouts::base_layout::COMMON_LINK_STYLE, molecules::bann
 #[component]
 pub fn Donate() -> impl IntoView {
     view! {
-        <div class="pt-10">
+        <div class="pt-20">
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                 <Banner
                     title="Free Hive® for everyone, forever!"
@@ -19,6 +19,9 @@ pub fn Donate() -> impl IntoView {
                 <div class="flex items-center justify-center my-4">
                     <a href="https://ko-fi.com/hivedevs" class=COMMON_LINK_STYLE>
                         Ko-fi
+                    </a>
+                    <a href="https://www.patreon.com/HiveDevs" class=COMMON_LINK_STYLE>
+                        Patreon
                     </a>
                 </div>
 
@@ -35,7 +38,7 @@ pub fn Donate() -> impl IntoView {
                         Are some features reserved for Patrons?
                     </h3>
                     <p class="mt-2 text-base">
-                        "No, because hivegame is entirely free, forever, and for everyone. That's a promise. Everyone is equal, but patreons are more equal as we will listen to their opinions first!"
+                        "No, because hivegame is entirely free, forever, and for everyone. That's a promise."
                     </p>
                 </div>
 

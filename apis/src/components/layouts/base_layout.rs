@@ -110,7 +110,10 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
     view! {
         <Title/>
         <Meta name="color-scheme" content=color_scheme_meta/>
-        <Meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content, virtual-keyboard=resize-layout"/>
+        <Meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, interactive-widget=resizes-content, virtual-keyboard=resize-layout"
+        />
         <Html class=move || {
             match (color_scheme.prefers_dark)() {
                 true => "dark",

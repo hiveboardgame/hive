@@ -25,7 +25,7 @@ pub fn Home() -> impl IntoView {
     };
 
     view! {
-        <div class="pt-16 flex flex-col justify-start md:justify-center items-center w-full overflow-x-clip">
+        <div class="pt-20 flex flex-col justify-start md:justify-center items-center w-full overflow-x-clip">
             <Banner title="hivegame.com" extend_tw_classes="w-10/12" logo=logo()/>
             <Show when=logged_in>
                 <button
