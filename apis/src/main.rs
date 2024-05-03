@@ -2,6 +2,7 @@ pub mod common;
 pub mod functions;
 pub mod responses;
 pub mod websockets;
+use actix_web::middleware::Compress;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
 use cfg_if::cfg_if;
@@ -72,7 +73,6 @@ async fn main() -> std::io::Result<()> {
                 || view! { <App/> },
             )
             .app_data(Data::new(leptos_options.to_owned()))
-            //.wrap(Compress::default())
             // IdentityMiddleware needs to be first
             .wrap(IdentityMiddleware::default())
             // Now SessionMiddleware, this is a bit confusing but actix invokes middlesware in
@@ -85,7 +85,7 @@ async fn main() -> std::io::Result<()> {
                     )
                     .build()
             )
-        //.wrap(middleware::Compress::default())
+        .wrap(Compress::default())
     })
     .bind(&addr)?
     .run()
