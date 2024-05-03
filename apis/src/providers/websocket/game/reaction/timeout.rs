@@ -8,5 +8,9 @@ pub fn handle_timeout(gar: GameActionResponse) {
     let nanoid = &gar.game.nanoid;
     games.own_games_remove(nanoid);
     games.live_games_remove(nanoid);
-    game_state.set_game_response(gar.game.clone());
+    if let Some(current_game_id) = game_state.signal.get_untracked().game_id {
+        if current_game_id == *nanoid {
+            game_state.set_game_response(gar.game.clone());
+        }
+    }
 }
