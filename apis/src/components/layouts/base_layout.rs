@@ -1,4 +1,5 @@
 use crate::components::atoms::title::Title;
+use crate::components::atoms::og::OG;
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
 use crate::providers::api_requests::ApiRequests;
@@ -109,6 +110,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
 
     view! {
         <Title/>
+        <OG/>
         <Meta name="color-scheme" content=color_scheme_meta/>
         <Meta
             name="viewport"
