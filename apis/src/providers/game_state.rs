@@ -361,15 +361,11 @@ impl GameState {
 
     pub fn show_spawns(&mut self, piece: Piece, position: Position) {
         self.reset();
-        if self.state.turn == 1 {
-            self.target_positions = vec![Position::initial_spawn_black()];
-        } else {
-            self.target_positions = self
-                .state
-                .board
-                .spawnable_positions(self.state.turn_color)
-                .collect::<Vec<Position>>();
-        }
+        self.target_positions = self
+            .state
+            .board
+            .spawnable_positions(self.state.turn_color)
+            .collect::<Vec<Position>>();
         self.active = Some(piece);
         self.reserve_position = Some(position);
     }
