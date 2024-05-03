@@ -7,8 +7,8 @@ use shared_types::{certainty::Certainty, game_speed::GameSpeed};
 #[component]
 pub fn Rating(rating: RatingResponse) -> impl IntoView {
     let certainty_str = match rating.certainty {
-        Certainty::Rankable => "",
-        _ => "?",
+        Certainty::Clueless => "?",
+        _ => "",
     };
     view! {
         {rating.rating}
