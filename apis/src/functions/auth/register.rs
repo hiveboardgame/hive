@@ -44,7 +44,7 @@ pub async fn register(
         .hash_password(password.as_bytes(), &salt)
         .map_err(ServerFnError::new)?
         .to_string();
-
+    let email = email.to_lowercase();
     let new_user = NewUser::new(&username, &password, &email)?;
     let user = User::create(&new_user, &pool).await?;
     let req = use_context::<actix_web::HttpRequest>()
