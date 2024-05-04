@@ -34,8 +34,7 @@ const VALID_USERNAME_CHARS: &str = "-_";
 const BANNED_USERNAMES: [&str; 3] = ["black", "white", "admin"];
 
 lazy_static! {
-    static ref EMAIL_RE: Regex =
-        Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+    static ref EMAIL_RE: Regex = Regex::new(r"^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$").unwrap();
 }
 
 fn valid_username_char(c: char) -> bool {
@@ -204,7 +203,7 @@ impl User {
     pub async fn find_by_email(email: &str, pool: &DbPool) -> Result<User, DbError> {
         let conn = &mut get_conn(pool).await?;
         Ok(users_table
-            .filter(email_field.eq(email))
+            .filter(email_field.eq(email.to_lowercase()))
             .first(conn)
             .await?)
     }
