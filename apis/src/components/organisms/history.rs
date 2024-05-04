@@ -4,8 +4,8 @@ use crate::components::{
 };
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::{color::Color, game_status::GameStatus};
-use leptos::*;
-use leptos_use::use_window;
+use leptos::{ev::keydown, *};
+use leptos_use::{use_event_listener, use_window};
 use shared_types::conclusion::Conclusion;
 
 #[component]
@@ -137,6 +137,21 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             false
         }
     };
+    let prev_button = create_node_ref::<html::Button>();
+    let next_button = create_node_ref::<html::Button>();
+    _ = use_event_listener(document().body(), keydown, move |evt| {
+        if evt.key() == "ArrowLeft" {
+            evt.prevent_default();
+            if let Some(prev) = prev_button.get_untracked() {
+                prev.click()
+            };
+        } else if evt.key() == "ArrowRight" {
+            evt.prevent_default();
+            if let Some(next) = next_button.get_untracked() {
+                next.click()
+            };
+        }
+    });
     view! {
         <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
             <div class="flex gap-1 dark:bg-dark bg-light min-h-0 [&>*]:grow">
@@ -147,12 +162,12 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 />
 
                 <HistoryButton
-
+                    node_ref=prev_button
                     action=HistoryNavigation::Previous
                     post_action=focus
                 />
                 <HistoryButton
-
+                    node_ref=next_button
                     action=HistoryNavigation::Next
                     post_action=if_last_go_to_end
                 />
@@ -167,7 +182,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 <Reserve alignment=Alignment::DoubleRow color=Color::White/>
                 <Reserve alignment=Alignment::DoubleRow color=Color::Black/>
             </div>
-            <div ref=parent class="grid grid-cols-4 gap-1 overflow-auto row-span-3 mb-8">
+            <div ref=parent class="grid grid-cols-4 gap-1 overflow-auto row-span-3 mb-8 h-full">
                 <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
                     <HistoryMove

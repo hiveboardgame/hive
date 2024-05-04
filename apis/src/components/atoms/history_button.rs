@@ -15,6 +15,7 @@ pub enum HistoryNavigation {
 pub fn HistoryButton(
     action: HistoryNavigation,
     #[prop(optional)] post_action: Option<Callback<()>>,
+    #[prop(optional)] node_ref: Option<NodeRef<html::Button>>,
 ) -> impl IntoView {
     let cloned_action = action.clone();
     let nav_buttons_style = "flex place-items-center justify-center hover:bg-grasshopper-green transform transition-transform duration-300 active:scale-95 m-1 h-6 rounded-md border-cyan-500 border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -42,9 +43,10 @@ pub fn HistoryButton(
             post_action(())
         }
     });
+    let _definite_node_ref = node_ref.unwrap_or(create_node_ref::<html::Button>());
 
     view! {
-        <button class=nav_buttons_style prop:disabled=is_disabled on:click=debounced_action>
+        <button ref=_definite_node_ref class=nav_buttons_style prop:disabled=is_disabled on:click=debounced_action>
 
             <Icon icon=icon/>
         </button>
