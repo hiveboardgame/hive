@@ -17,6 +17,9 @@ pub fn OG() -> impl IntoView {
         <meta property="twitter:url" content="https://hivegame.com"/>
         <meta name="twitter:title" content="The best free, adless Hive server"/>
         <meta name="twitter:description" content=content/>
-        <meta name="twitter:image" content="https://hivegame.com/assets/android-chrome-512x512.png"/>
+        <meta
+            name="twitter:image"
+            content="https://hivegame.com/assets/android-chrome-512x512.png"
+        />
     }
 }

@@ -193,7 +193,12 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
     view! {
         <Hamburger
             hamburger_show=hamburger_show
-            button_style=Signal::derive(move || format!("{} h-7 m-1 grow hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0", button_color()))
+            button_style=Signal::derive(move || {
+                format!(
+                    "{} h-7 m-1 grow hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0",
+                    button_color(),
+                )
+            })
             extend_tw_classes="mt-1"
             dropdown_style=chat_style
             content="Chat"
