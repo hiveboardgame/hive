@@ -29,6 +29,7 @@ pub struct AllUserGames {
 #[component]
 pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let params = use_params::<UsernameParams>();
+    //TODO: @ion fix finished.clear()
     let finished: RwSignal<Vec<GameResponse>> = RwSignal::new(Vec::new());
     let username = move || {
         params.with(|params| {
@@ -82,16 +83,16 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     });
 
     view! {
-        <div class="bg-light dark:bg-dark pt-12">
+        <div class="bg-light dark:bg-dark pt-12 flex flex-col">
             <Transition>
                 {move || {
-                    let (finished_games, more_games) = finished_games()
+                    let (current_finished_games, more_games) = finished_games()
                         .and_then(|games| games.ok())
                         .unwrap_or((Vec::new(), false));
                     let ongoing_games = ongoing_games()
                         .and_then(|games| games.ok())
                         .unwrap_or(Vec::new());
-                    finished.update(move |v| v.extend(finished_games));
+                    finished.update(move |v| v.extend(current_finished_games));
                     still_more_games.set(more_games);
                     let playing = RwSignal::from(ongoing_games);
                     last_id.update(move |v| { *v = finished().last().map(|gr| gr.game_id) });
@@ -108,17 +109,22 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                         <A
                                             href="playing"
                                             class=move || active(ProfileGamesView::Playing)
+                                            on:click=move |_| finished.update(|v| v.clear())
                                         >
                                             "Playing "
                                         </A>
                                         <A
                                             href="finished"
                                             class=move || active(ProfileGamesView::Finished)
+                                            on:click=move |_| finished.update(|v| v.clear())
                                         >
                                             "Finished Games "
                                         </A>
                                     </div>
                                     {stored_children()()}
+                                    <Show when=finished_games.loading()>
+                                        <div class="animate-spin h-5 w-5 border-t-2 border-b-2 border-blue-500 rounded-full place-self-center p-4"></div>
+                                    </Show>
                                 }
                                     .into_view()
                             }

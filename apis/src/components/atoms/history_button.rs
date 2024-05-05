@@ -46,7 +46,12 @@ pub fn HistoryButton(
     let _definite_node_ref = node_ref.unwrap_or(create_node_ref::<html::Button>());
 
     view! {
-        <button ref=_definite_node_ref class=nav_buttons_style prop:disabled=is_disabled on:click=debounced_action>
+        <button
+            ref=_definite_node_ref
+            class=nav_buttons_style
+            prop:disabled=is_disabled
+            on:click=debounced_action
+        >
 
             <Icon icon=icon/>
         </button>
