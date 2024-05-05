@@ -7,7 +7,6 @@ use crate::{
     },
 };
 use hive_lib::{game_control::GameControl, game_result::GameResult, game_status::GameStatus};
-use leptos::logging::log;
 use leptos::*;
 
 pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
@@ -19,7 +18,7 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
             game_state.set_pending_gc(game_control.clone())
         }
     }
-    log!("Got a GC: {}", game_control);
+    //log!("Got a GC: {}", game_control);
     match game_control {
         GameControl::Abort(_) => {
             games.own_games_remove(&gar.game.nanoid);

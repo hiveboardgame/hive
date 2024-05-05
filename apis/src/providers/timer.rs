@@ -1,6 +1,5 @@
 use chrono::DateTime;
 use chrono::Utc;
-use leptos::logging::log;
 use leptos::*;
 use shared_types::time_mode::TimeMode;
 use std::time::Duration;
@@ -26,7 +25,7 @@ impl TimerSignal {
     }
 
     pub fn update_from(&self, game: &GameResponse) {
-        log!("Updating the timer");
+        //log!("Updating the timer");
         self.signal.update(|timer| {
             game.nanoid.clone_into(&mut timer.nanoid);
             timer.finished = game.finished;

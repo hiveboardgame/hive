@@ -22,7 +22,7 @@ pub fn handle_response(m: String) {
             handle_user_status(user_update)
         }
         Ok(ServerResult::Ok(ServerMessage::Game(game_update))) => {
-            log!("{:?}", game_update);
+            //log!("{:?}", game_update);
             handle_game(game_update);
         }
         Ok(ServerResult::Ok(ServerMessage::Challenge(challenge))) => {

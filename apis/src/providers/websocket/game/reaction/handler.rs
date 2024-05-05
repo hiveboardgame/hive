@@ -14,13 +14,12 @@ use crate::{
     responses::game::GameResponse,
 };
 use hive_lib::{game_status::GameStatus, history::History, state::State};
-use leptos::logging::log;
 use leptos::*;
 
 pub fn handle_reaction(gar: GameActionResponse) {
     let _games = expect_context::<GamesSignal>();
     let _game_state = expect_context::<GameStateSignal>();
-    log!("Got a game action response message: {:?}", gar);
+    //log!("Got a game action response message: {:?}", gar);
     match gar.game_action.clone() {
         GameReaction::New => {
             handle_new_game(gar.game.clone());

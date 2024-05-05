@@ -401,7 +401,7 @@ pub fn ChallengeCreate(
 
                     on:click=move |_| has_expansions(GameType::MLP)
                 >
-                    MLP
+                    PLM
                 </button>
                 <button
                     class=move || {

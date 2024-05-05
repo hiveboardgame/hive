@@ -1,7 +1,6 @@
 use crate::functions::hostname::hostname_and_port;
 
 use lazy_static::lazy_static;
-use leptos::logging::log;
 use leptos::*;
 
 use leptos_use::core::ConnectionReadyState;
@@ -50,13 +49,13 @@ impl WebsocketContext {
 
     #[inline(always)]
     pub fn open(&self) {
-        log!("Opening connection");
+        //log!("Opening connection");
         (self.open)()
     }
 
     #[inline(always)]
     pub fn close(&self) {
-        log!("Closing connection");
+        //log!("Closing connection");
         (self.close)()
     }
 }
@@ -81,7 +80,7 @@ fn fix_wss(url: &str) -> String {
 
 pub fn provide_websocket(url: &str) {
     let url = fix_wss(url);
-    log!("Establishing new websocket connection");
+    //log!("Establishing new websocket connection");
     let UseWebsocketReturn {
         message,
         send,

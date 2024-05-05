@@ -32,6 +32,8 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             <a
                                 class="h-full p-2 hover:text-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
                                 href="https://www.gen42.com/"
+                                rel="external"
+                                target="_blank"
                             >
                                 Buy Game
                             </a>
@@ -73,6 +75,8 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                 <a
                                     class="h-full p-2 hover:text-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
                                     href="https://www.gen42.com/"
+                                    rel="external"
+                                    target="_blank"
                                 >
                                     Buy Game
                                 </a>
