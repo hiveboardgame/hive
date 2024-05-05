@@ -1,5 +1,5 @@
-use crate::components::atoms::title::Title;
 use crate::components::atoms::og::OG;
+use crate::components::atoms::title::Title;
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
 use crate::providers::api_requests::ApiRequests;
@@ -11,7 +11,6 @@ use crate::providers::refocus::RefocusSignal;
 use crate::providers::websocket::context::WebsocketContext;
 use chrono::Utc;
 use lazy_static::lazy_static;
-use leptos::logging::log;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::use_location;
@@ -63,7 +62,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         focused,
         move |focused, _, _| {
             let mut refocus = expect_context::<RefocusSignal>();
-            log!("Focus changed");
+            //log!("Focus changed");
             if *focused {
                 refocus.refocus();
             } else {
@@ -82,7 +81,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
             match ws.ready_state.get() {
                 ConnectionReadyState::Closed => {
                     if retry_at.get() == counter.get() {
-                        log!("Reconnecting due to ReadyState");
+                        //log!("Reconnecting due to ReadyState");
                         ws.open();
                         counter.update(|c| *c = 0);
                         counter.update(|r| *r *= 2);
@@ -99,7 +98,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
                 >= 5
                 && retry_at.get() == counter.get()
             {
-                log!("Reconnecting due to ping duration");
+                //log!("Reconnecting due to ping duration");
                 ws.open();
                 counter.update(|c| *c = 0);
                 counter.update(|r| *r *= 2);

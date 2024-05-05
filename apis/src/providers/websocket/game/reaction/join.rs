@@ -6,14 +6,13 @@ use crate::{
     },
 };
 use hive_lib::game_control::GameControl;
-use leptos::logging::log;
 use leptos::*;
 
 pub fn handle_join(gar: GameActionResponse) {
     let _games = expect_context::<GamesSignal>();
     let game_state = expect_context::<GameStateSignal>();
     game_state.loaded.set(false);
-    log!("joined the game, reconstructing game state");
+    //log!("joined the game, reconstructing game state");
     reset_game_state(&gar.game);
     let timer = expect_context::<TimerSignal>();
     timer.update_from(&gar.game);
@@ -21,7 +20,7 @@ pub fn handle_join(gar: GameActionResponse) {
     game_state.loaded.set(true);
     // TODO: @leex try this again once the play page works correctly.
     if let Some((_turn, gc)) = gar.game.game_control_history.last() {
-        log!("Got a GC: {}", gc);
+        //log!("Got a GC: {}", gc);
         match gc {
             GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
                 game_state.set_pending_gc(gc.clone())

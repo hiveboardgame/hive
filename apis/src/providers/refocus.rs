@@ -1,8 +1,6 @@
 use chrono::{DateTime, Utc};
-use leptos::logging::log;
 use leptos::*;
 
-use crate::providers::ping::PingSignal;
 
 #[derive(Clone, Debug, Copy)]
 pub struct RefocusSignal {
@@ -23,16 +21,16 @@ impl RefocusSignal {
     }
 
     pub fn refocus(&mut self) {
-        let now = Utc::now();
-        let time_away = now.signed_duration_since(self.signal.get().defocus_at);
-        log!("Was away for: {}", time_away);
-        let ping = expect_context::<PingSignal>();
-        let time_last_ping = now.signed_duration_since(ping.signal.get().last_update);
-        log!(
-            "Was away for: {} last_ping was {}s ago",
-            time_away,
-            time_last_ping
-        );
+        //let now = Utc::now();
+        //let time_away = now.signed_duration_since(self.signal.get().defocus_at);
+        //log!("Was away for: {}", time_away);
+        //let ping = expect_context::<PingSignal>();
+        //let time_last_ping = now.signed_duration_since(ping.signal.get().last_update);
+        //log!(
+        //    "Was away for: {} last_ping was {}s ago",
+        //    time_away,
+        //    time_last_ping
+        //);
         self.signal.update(|s| s.focused = true);
     }
 

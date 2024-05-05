@@ -325,7 +325,7 @@ impl GameState {
     }
 
     pub fn move_active(&mut self) {
-        log!("Moved active!");
+        //log!("Moved active!");
         if let (Some(active), Some(position)) = (self.active, self.target_position) {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);

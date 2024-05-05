@@ -81,7 +81,7 @@ pub fn MobileDropdown() -> impl IntoView {
                 </a>
 
                 Support:
-                <a class=COMMON_LINK_STYLE on:click=onclick_close href="https://www.gen42.com/">
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="https://www.gen42.com/" target="_blank" rel="external">
                     Buy Game
                 </a>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/donate">

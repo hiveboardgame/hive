@@ -3,7 +3,6 @@ use crate::{
     providers::game_state::GameStateSignal,
 };
 use hive_lib::{history::History, position::Position, state::State};
-use leptos::logging::log;
 use leptos::*;
 
 #[component]
@@ -14,7 +13,7 @@ pub fn HistoryPieces() -> impl IntoView {
         let mut history_pieces = Vec::new();
         let game_state = (game_state_signal.signal)();
         let mut history = History::new();
-        log!("history_turn: {:?}", game_state.history_turn);
+        //log!("history_turn: {:?}", game_state.history_turn);
         if let Some(turn) = game_state.history_turn {
             history.moves = game_state.state.history.moves[0..=turn].into();
         }
