@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{
     db_error::DbError,
     models::user::User,
@@ -95,24 +97,31 @@ impl Rating {
         pool: &DbPool,
     ) -> Result<Self, DbError> {
         let conn = &mut get_conn(pool).await?;
+        let game_speed = match game_speed {
+            GameSpeed::Untimed => GameSpeed::Correspondence.to_string(),
+            _ => game_speed.to_string(),
+        };
         Ok(ratings_table
-            .filter(user_uid.eq(uuid).and(speed.eq(game_speed.to_string())))
+            .filter(user_uid.eq(uuid).and(speed.eq(game_speed)))
             .first(conn)
             .await?)
     }
 
     pub async fn update(
         rated: bool,
-        game_speed: &str,
+        mut game_speed: String,
         white_id: Uuid,
         black_id: Uuid,
         game_result: GameResult,
         conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
     ) -> Result<(f64, f64, Option<f64>, Option<f64>), DbError> {
         // TODO: @leex this update needs to do everything in one transaction!
+        if GameSpeed::from_str(&game_speed).expect("Valid GameSpeed") == GameSpeed::Untimed {
+            game_speed = GameSpeed::Correspondence.to_string()
+        }
         let white_rating: Rating = ratings_table
             .filter(user_uid.eq(white_id))
-            .filter(speed.eq(game_speed))
+            .filter(speed.eq(game_speed.clone()))
             .first(conn)
             .await?;
         let black_rating: Rating = ratings_table

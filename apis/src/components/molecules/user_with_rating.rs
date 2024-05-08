@@ -1,5 +1,6 @@
 use hive_lib::color::Color;
 use leptos::*;
+use shared_types::game_speed::GameSpeed;
 
 use crate::{
     components::{
@@ -34,7 +35,10 @@ pub fn UserWithRating(
             .signal
             .get_untracked()
             .game_response
-            .map(|resp| resp.speed)
+            .map(|resp| match resp.speed {
+                GameSpeed::Untimed => GameSpeed::Correspondence,
+                _ => resp.speed,
+            })
     };
     let username = move || player().map_or(String::new(), |p| p.username);
     // TODO: Display proper rating for game use <Rating/>
