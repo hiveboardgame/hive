@@ -1,6 +1,7 @@
+use crate::components::atoms::rating::icon_for_speed;
 use leptos::*;
 use leptos_icons::*;
-use shared_types::time_mode::TimeMode;
+use shared_types::{game_speed::GameSpeed, time_mode::TimeMode};
 
 #[component]
 pub fn TimeRow(
@@ -10,10 +11,13 @@ pub fn TimeRow(
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     let time_mode = store_value(time_mode);
-    let icon = move || match time_mode() {
-        TimeMode::Untimed => icondata::BiInfiniteRegular,
-        TimeMode::RealTime => icondata::BiStopwatchRegular,
-        TimeMode::Correspondence => icondata::AiMailOutlined,
+    let icon = move || {
+        let speed = match time_mode() {
+            TimeMode::Untimed => GameSpeed::Untimed,
+            TimeMode::Correspondence => GameSpeed::Correspondence,
+            TimeMode::RealTime => GameSpeed::from_base_increment(time_base, increment),
+        };
+        view! { <Icon icon=icon_for_speed(&speed) class="w-4 h-4"/> }
     };
     let text = move || match time_mode() {
         TimeMode::Untimed => "No time limit".to_owned(),
@@ -35,7 +39,7 @@ pub fn TimeRow(
     };
     view! {
         <div class="flex items-center gap-1 justify-start">
-            <Icon icon=icon() class="w-4 h-4"/>
+            {icon}
             <p class=extend_tw_classes>{text}</p>
         </div>
     }

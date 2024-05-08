@@ -7,6 +7,7 @@ use crate::{
     pages::challenge_create::ChallengeCreate,
 };
 use leptos::{html::Dialog, *};
+use leptos_router::use_navigate;
 
 #[component]
 pub fn Home() -> impl IntoView {
@@ -27,14 +28,19 @@ pub fn Home() -> impl IntoView {
     view! {
         <div class="pt-20 flex flex-col justify-start md:justify-center items-center w-full overflow-x-clip">
             <Banner title="hivegame.com" extend_tw_classes="w-10/12" logo=logo()/>
-            <Show when=logged_in>
-                <button
-                    class="m-5 grow md:grow-0 whitespace-nowrap bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
-                    on:click=move |_| open.update(move |b| *b = true)
-                >
-                    Create New Game
-                </button>
-            </Show>
+            <button
+                class="m-5 grow md:grow-0 whitespace-nowrap bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
+                on:click=move |_| {
+                    if logged_in() {
+                        open.update(move |b| *b = true)
+                    } else {
+                        let navigate = use_navigate();
+                        navigate("/login", Default::default());
+                    }
+                }
+            >
+                Play
+            </button>
             <div class="flex flex-col md:flex-row justify-center items-center">
                 <Modal open=open dialog_el=dialog_el>
                     <ChallengeCreate close=close_modal/>

@@ -46,7 +46,7 @@ impl GameSpeed {
             GameSpeed::Blitz
         } else if total < 1500 {
             GameSpeed::Rapid
-        } else if total < 18000 {
+        } else if total <= 18000 {
             GameSpeed::Classic
         } else {
             GameSpeed::Correspondence
