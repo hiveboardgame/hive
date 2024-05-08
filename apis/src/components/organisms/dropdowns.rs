@@ -81,7 +81,13 @@ pub fn MobileDropdown() -> impl IntoView {
                 </a>
 
                 Support:
-                <a class=COMMON_LINK_STYLE on:click=onclick_close href="https://www.gen42.com/" target="_blank" rel="external">
+                <a
+                    class=COMMON_LINK_STYLE
+                    on:click=onclick_close
+                    href="https://www.gen42.com/"
+                    target="_blank"
+                    rel="external"
+                >
                     Buy Game
                 </a>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/donate">
@@ -199,6 +205,7 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
                     button_color(),
                 )
             })
+
             extend_tw_classes="mt-1"
             dropdown_style=chat_style
             content="Chat"

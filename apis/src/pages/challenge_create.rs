@@ -1,6 +1,6 @@
 use crate::{
     common::challenge_action::{ChallengeAction, ChallengeVisibility},
-    components::atoms::select_options::SelectOption,
+    components::atoms::{rating::icon_for_speed, select_options::SelectOption},
     providers::{api_requests::ApiRequests, auth_context::AuthContext, color_scheme::ColorScheme},
 };
 use hive_lib::{color::ColorChoice, game_type::GameType};
@@ -209,11 +209,6 @@ pub fn ChallengeCreate(
             band_lower: lower_rating(),
         };
         api.challenge(challenge_action);
-        params
-            .visibility
-            .update(|v| *v = ChallengeVisibility::Public);
-        params.game_type.update(|v| *v = GameType::MLP);
-        params.rated.set(true);
         close(());
     };
 
@@ -252,14 +247,27 @@ pub fn ChallengeCreate(
     let throttled_slider = move |signal_to_update| {
         use_debounce_fn_with_arg(update_from_slider(signal_to_update), 50.0)
     };
+    let gamespeed_icon = move || {
+        let speed = match time_control() {
+            TimeMode::Untimed => GameSpeed::Untimed,
+            TimeMode::Correspondence => GameSpeed::Correspondence,
+            TimeMode::RealTime => {
+                GameSpeed::from_base_increment(Some(total_seconds()), Some(sec_per_move()))
+            }
+        };
+        view! { <Icon width="50" height="50" icon=icon_for_speed(&speed)/> }
+    };
 
     view! {
-        <div class="flex flex-col m-2 w-80 sm:w-96 items-center">
+        <div class="flex flex-col xs:m-2 w-72 xs:w-80 sm:w-96 items-center">
             <div class=move || {
                 opponent().map_or("hidden", |_| "block")
             }>"Opponent: " {opponent()}</div>
             <div class="flex">
                 <label class="mr-1">
+                    <div class="flex items-center">
+                        {gamespeed_icon} <p class="font-extrabold text-3xl">" Create a game:"</p>
+                    </div>
                     Time Control:
                     <select
                         class="bg-odd-light dark:bg-gray-700"
