@@ -137,7 +137,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
 
                 let future = async move {
                     let handler = RequestHandler::new(
-                        request,
+                        request.clone(),
                         chat_storage,
                         addr,
                         user_id,
@@ -162,6 +162,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                         }
                         Err(err) => {
                             // TODO: @leex the error here needs to be nicer
+                            println!(
+                                "---------------------------------------\n
+                                                ERROR\n
+                                Request:\n  {request:?}\n
+                                Error:\n  {err:?}\n
+                                User:\n  {username} {user_id}\n
+                                ---------------------------------------",
+                            );
                             let message = ServerResult::Err(ExternalServerError {
                                 user_id,
                                 field: "foo".to_string(),
