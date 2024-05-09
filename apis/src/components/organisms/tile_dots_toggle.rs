@@ -5,7 +5,7 @@ use leptos_router::ActionForm;
 #[component]
 pub fn TileDotsToggle() -> impl IntoView {
     view! {
-        <p class="text-dark dark:text-white m-1">Show dots:</p>
+        <p class="text-black dark:text-white m-1">Show dots:</p>
         <div class="flex">
             <TileDotsButton tile_dots=TileDots::No/>
             <TileDotsButton tile_dots=TileDots::Yes/>
@@ -21,7 +21,7 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
         if (config.tile_dots.preferred_tile_dots)() == tile_dots() {
             "bg-pillbug-teal"
         } else {
-            "bg-ant-blue hover:bg-pillbug-teal"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
         }
     };
 

@@ -29,7 +29,7 @@ pub fn Home() -> impl IntoView {
         <div class="pt-20 flex flex-col justify-start md:justify-center items-center w-full overflow-x-clip">
             <Banner title="hivegame.com" extend_tw_classes="w-10/12" logo=logo()/>
             <button
-                class="m-5 grow md:grow-0 whitespace-nowrap bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
+                class="m-5 grow md:grow-0 whitespace-nowrap bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
                 on:click=move |_| {
                     if logged_in() {
                         open.update(move |b| *b = true)
@@ -39,6 +39,7 @@ pub fn Home() -> impl IntoView {
                     }
                 }
             >
+
                 Play
             </button>
             <div class="flex flex-col md:flex-row justify-center items-center">

@@ -33,7 +33,7 @@ pub fn PreviewTiles() -> impl IntoView {
     };
 
     view! {
-        <div class="rounded h-36 w-72 sm:h-40 sm:w-80 mx-1 my-2 relative dark:odd:bg-odd-dark dark:even:bg-even-dark  odd:bg-odd-light even:bg-even-light flex flex-col items-center">
+        <div class="rounded h-36 w-72 sm:h-40 sm:w-80 mx-1 my-2 relative dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light flex flex-col items-center">
             <svg
                 viewBox="1224 730 225 100"
                 class="touch-none h-full w-full"

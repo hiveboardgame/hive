@@ -208,7 +208,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <input
                     type="submit"
                     disabled=conditionally_disable
-                    class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                     value="Sign Up"
                 />
                 <Show when=display_register_error>
@@ -217,12 +217,15 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
 
             </ActionForm>
 
-            <a
-                class="inline-block align-baseline font-bold text-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95"
-                href="/login"
-            >
+            <p class="text-center text-gray-500 text-xs">
                 Already have an account?
-            </a>
+                <a
+                    class="text-blue-500 hover:underline transform transition-transform duration-300"
+                    href="/login"
+                >
+                    Sign in
+                </a>
+            </p>
         </div>
     }
 }

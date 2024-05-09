@@ -6,7 +6,7 @@ use leptos_router::ActionForm;
 #[component]
 pub fn TileDesignToggle() -> impl IntoView {
     view! {
-        <p class="text-dark dark:text-white m-1">Piece style:</p>
+        <p class="text-black dark:text-white m-1">Piece style:</p>
         <div class="flex">
             <TileDesignButton tile_design=TileDesign::Official/>
             <TileDesignButton tile_design=TileDesign::Flat/>
@@ -22,7 +22,7 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
         if (config.tile_design.preferred_tile_design)() == tile_design() {
             "bg-pillbug-teal"
         } else {
-            "bg-ant-blue hover:bg-pillbug-teal"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
         }
     };
 

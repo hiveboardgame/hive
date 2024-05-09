@@ -111,7 +111,7 @@ pub fn ControlButtons() -> impl IntoView {
                 }
             }
         }
-        "bg-ant-blue hover:bg-pillbug-teal"
+        "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
     };
 
     let rematch_text = move || {
@@ -242,7 +242,7 @@ pub fn ControlButtons() -> impl IntoView {
                     {rematch_text}
                 </button>
                 <button
-                    class="h-7 m-1 grow bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0"
+                    class="h-7 m-1 grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0"
                     on:click=new_opponent
                 >
                     New Game

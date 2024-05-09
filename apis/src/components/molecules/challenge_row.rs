@@ -57,7 +57,11 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             .expect("div_ref to be loaded by now")
             .class_list();
         class_list
-            .remove_2("bg-ant-blue", "hover:bg-pillbug-teal")
+            .remove_3(
+                "dark:bg-button-twilight",
+                "bg-button-dawn",
+                "hover:bg-pillbug-teal",
+            )
             .expect("tw classes to exist");
         class_list
             .add_2("bg-grasshopper-green", "hover:bg-green-500")
@@ -119,7 +123,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     };
 
     view! {
-        <tr class="dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light text-center items-center cursor-pointer max-w-fit">
+        <tr class="dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light text-center items-center cursor-pointer max-w-fit">
             <td class=td_class>
                 <div>{icon}</div>
             </td>
@@ -166,7 +170,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     <button
                                         ref=button_ref
                                         on:click=copy
-                                        class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                        class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                                     >
                                         <Icon icon=icondata::AiCopyOutlined class="w-6 h-6"/>
                                     </button>
@@ -199,7 +203,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                 }
                             }
 
-                            class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                            class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                         >
                             <Icon icon=icondata::AiCheckOutlined class="w-6 h-6"/>
 

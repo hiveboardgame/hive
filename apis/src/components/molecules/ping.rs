@@ -29,5 +29,5 @@ pub fn Ping() -> impl IntoView {
         }
     };
 
-    view! { <div class="m-1 text-dark dark:text-white">{signal}</div> }
+    view! { <div class="m-1 text-black dark:text-white">{signal}</div> }
 }

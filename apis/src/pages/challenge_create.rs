@@ -223,7 +223,7 @@ pub fn ChallengeCreate(
 
     let active_color = move |b| {
         if b {
-            "bg-ant-blue"
+            "bg-button-dawn dark:bg-button-twilight"
         } else {
             "bg-odd-light dark:bg-gray-700"
         }
@@ -255,7 +255,7 @@ pub fn ChallengeCreate(
                 GameSpeed::from_base_increment(Some(total_seconds()), Some(sec_per_move()))
             }
         };
-        view! { <Icon width="50" height="50" icon=icon_for_speed(&speed)/> }
+        view! { <Icon width="50" height="50" class="p-2" icon=icon_for_speed(&speed)/> }
     };
 
     view! {

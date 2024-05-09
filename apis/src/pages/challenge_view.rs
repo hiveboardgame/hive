@@ -41,7 +41,11 @@ pub fn ChallengeView() -> impl IntoView {
             .expect("div_ref to be loaded by now")
             .class_list();
         class_list
-            .remove_2("bg-ant-blue", "hover:bg-pillbug-teal")
+            .remove_3(
+                "dark:bg-button-twilight",
+                "bg-button-dawn",
+                "hover:bg-pillbug-teal",
+            )
             .expect("tw classes to exist");
         class_list
             .add_2("bg-grasshopper-green", "hover:bg-green-500")
@@ -80,7 +84,7 @@ pub fn ChallengeView() -> impl IntoView {
                                                 title="Copy link"
                                                 ref=button_ref
                                                 on:click=copy
-                                                class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                                class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
                                             >
                                                 <Icon icon=icondata::AiCopyOutlined class="h-6 w-6"/>
                                             </button>

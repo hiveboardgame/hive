@@ -16,7 +16,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=auth_context.login
-                class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800 "
+                class="shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-reserve-twilight"
             >
                 <label class="block font-bold mb-2" for="email">
                     E-Mail
@@ -51,7 +51,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                     </Show>
                 </p>
                 <input
-                    class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer"
+                    class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer"
                     type="submit"
                     value="Sign In"
                 />
@@ -59,7 +59,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
             <p class="text-center text-gray-500 text-xs">
                 "Don't have an account?"
                 <a
-                    class="text-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300"
+                    class="text-blue-500 hover:underline transform transition-transform duration-300"
                     href="/register"
                 >
                     Sign Up
