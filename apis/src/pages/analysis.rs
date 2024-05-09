@@ -45,7 +45,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     view! {
         <div class=move || {
             format!(
-                "max-h-[100dvh] min-h-[100dvh] pt-10 {} {extend_tw_classes}",
+                "max-h-[100dvh] min-h-[100dvh] pt-10 bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
                 parent_container_style(),
             )
         }>
