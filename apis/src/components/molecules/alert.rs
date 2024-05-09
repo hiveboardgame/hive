@@ -18,7 +18,7 @@ pub fn Alert() -> impl IntoView {
     };
     let color_and_text = move || match (alerts.last_alert)() {
         Some(AlertType::Error(_)) => ("bg-red-100 border-ladybug-red", "Error! "),
-        Some(AlertType::Warn(_)) => ("bg-yellow-100 border-queen-orange", "Warning! "),
+        Some(AlertType::Warn(_)) => ("bg-yellow-100 border-orange-twilight", "Warning! "),
         Some(AlertType::Notification(_)) => ("bg-blue-100 border-pillbug-teal", "Notification: "),
         None => ("", ""),
     };

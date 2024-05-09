@@ -6,7 +6,7 @@ use leptos_router::ActionForm;
 #[component]
 pub fn TileRotationToggle() -> impl IntoView {
     view! {
-        <p class="text-dark dark:text-white m-1">Rotation:</p>
+        <p class="text-black dark:text-white m-1">Rotation:</p>
         <div class="flex">
             <TileRotationButton tile_rotation=TileRotation::No/>
             <TileRotationButton tile_rotation=TileRotation::Yes/>
@@ -22,7 +22,7 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
         if (config.tile_rotation.preferred_tile_rotation)() == tile_rotation() {
             "bg-pillbug-teal"
         } else {
-            "bg-ant-blue hover:bg-pillbug-teal"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
         }
     };
 

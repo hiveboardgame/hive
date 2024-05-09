@@ -6,7 +6,7 @@ use leptos_router::ActionForm;
 #[component]
 pub fn ConfirmModeToggle() -> impl IntoView {
     view! {
-        <p class="text-dark dark:text-white m-1">Move confirmation:</p>
+        <p class="text-black dark:text-white m-1">Move confirmation:</p>
         <div class="flex">
             <ConfirmModeButton move_confirm=MoveConfirm::Single/>
             <ConfirmModeButton move_confirm=MoveConfirm::Double/>
@@ -28,7 +28,7 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm) -> impl IntoView {
         if (config.confirm_mode.preferred_confirm)() == move_confirm() {
             "bg-pillbug-teal"
         } else {
-            "bg-ant-blue hover:bg-pillbug-teal"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
         }
     };
 

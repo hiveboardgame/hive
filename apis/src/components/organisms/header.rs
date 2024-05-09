@@ -17,7 +17,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
 
     view! {
         <header class=format!(
-            "w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-gray-700 z-50 max-w-[100vw] select-none {extend_tw_classes}",
+            "w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none {extend_tw_classes}",
         )>
             <Transition fallback=|| {
                 view! {
@@ -38,7 +38,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                 Buy Game
                             </a>
                             <a
-                                class="h-full p-2  text-queen-orange hover:text-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
+                                class="h-full p-2  text-orange-twilight hover:text-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
                                 href="/donate"
                             >
                                 Donate
@@ -48,7 +48,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                     <div class="flex items-center lg:mr-10">
                         <DarkModeToggle/>
                         <a
-                            class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 m-1 px-4 rounded"
+                            class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 m-1 px-4 rounded"
                             href="/login"
                             on:focus=move |_| set_redirect()
                         >
@@ -81,7 +81,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                     Buy Game
                                 </a>
                                 <a
-                                    class="h-full p-2 text-queen-orange hover:text-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
+                                    class="h-full p-2 text-orange-twilight hover:text-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
                                     href="/donate"
                                 >
                                     Donate
@@ -95,7 +95,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                     <div class="flex items-center lg:mr-10">
                                         <DarkModeToggle/>
                                         <a
-                                            class="bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 m-1 px-4 rounded"
+                                            class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 m-1 px-4 rounded"
                                             href="/login"
                                             on:focus=move |_| set_redirect()
                                         >

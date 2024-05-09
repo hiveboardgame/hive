@@ -53,7 +53,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         if is_tall_or_chat() {
             "flex flex-col"
         } else {
-            "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 mr-2"
+            "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 pr-2"
         }
     };
     let go_to_game = Callback::new(move |()| {
@@ -74,7 +74,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     view! {
         <div class=move || {
             format!(
-                "max-h-[100dvh] min-h-[100dvh] pt-10 select-none {} {extend_tw_classes}",
+                "max-h-[100dvh] min-h-[100dvh] pt-10 select-none bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
                 parent_container_style(),
             )
         }>
@@ -82,7 +82,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 when=is_tall_or_chat
                 fallback=move || {
                     view! {
-                        <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-light dark:bg-dark"/>
+                        <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight"/>
                         <Board/>
                         <div class="grid col-start-9 col-span-2 row-span-full grid-cols-2 grid-rows-6">
                             <DisplayTimer placement=Placement::Top vertical=false/>
@@ -94,7 +94,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             >
 
                 <div class="flex flex-col flex-grow h-full min-h-0">
-                    <div class="flex flex-col shrink flex-grow">
+                    <div class="flex flex-col shrink flex-grow bg-board-dawn dark:bg-reserve-twilight">
                         <div class="flex justify-between shrink flex-row-reverse items-center">
                             <ChatDropdown destination=SimpleDestination::Game/>
                             <AnalysisAndDownload/>
@@ -113,7 +113,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
 
                     </div>
                     <Board overwrite_tw_classes="flex grow min-h-0"/>
-                    <div class="flex flex-col shrink flex-grow">
+                    <div class="flex flex-col shrink flex-grow bg-board-dawn dark:bg-reserve-twilight">
                         <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
                             <UserWithRating side=bottom_color() is_tall=is_tall_or_chat/>
                         </div>
@@ -121,7 +121,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             <Reserve alignment=Alignment::SingleRow color=bottom_color()/>
                             <DisplayTimer vertical=true placement=Placement::Bottom/>
                         </div>
-                        <div class="grid grid-cols-4 gap-8">
+                        <div class="grid grid-cols-4 gap-8 pb-1">
                             <HistoryButton action=HistoryNavigation::First/>
                             <HistoryButton action=HistoryNavigation::Previous/>
                             <HistoryButton action=HistoryNavigation::Next post_action=go_to_game/>

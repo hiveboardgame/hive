@@ -8,7 +8,7 @@ use leptos::*;
 use leptos_icons::*;
 use shared_types::chat_message::SimpleDestination;
 
-const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-light dark:bg-even-dark text-black border border-gray-300 rounded-md left-34 p-2";
+const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md left-34 p-2";
 
 #[component]
 pub fn UserDropdown(username: String) -> impl IntoView {
@@ -17,8 +17,8 @@ pub fn UserDropdown(username: String) -> impl IntoView {
     view! {
         <Hamburger
             hamburger_show=hamburger_show
-            button_style="bg-ant-blue text-white rounded-md px-2 py-1 m-1 hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap"
-            dropdown_style="mr-1 xs:mt-0 mt-1 flex flex-col items-stretch absolute bg-even-light dark:bg-even-dark text-black border border-gray-300 rounded-md p-2 right-0 lg:right-10"
+            button_style="bg-button-dawn dark:bg-button-twilight text-white rounded-md px-2 py-1 m-1 hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap"
+            dropdown_style="mr-1 xs:mt-0 mt-1 flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md p-2 right-0 lg:right-10"
             content=username.clone()
         >
             <a
@@ -178,14 +178,14 @@ pub fn CommunityDropdown() -> impl IntoView {
 pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let hamburger_show = expect_context::<RwSignal<bool>>();
-    let chat_style = "flex flex-col absolute bg-even-light dark:bg-even-dark border border-gray-300 p-2 right-0 w-full h-[75%] z-50";
+    let chat_style = "flex flex-col absolute bg-even-light dark:bg-gray-950 border border-gray-300 p-2 right-0 w-full h-[75%] z-50";
     let button_color = move || {
         if hamburger_show() {
-            "bg-ant-blue"
+            "bg-button-dawn dark:bg-button-twilight"
         } else if (chat.games_public_new_messages)() || (chat.games_private_new_messages)() {
             "bg-ladybug-red"
         } else {
-            "bg-ant-blue"
+            "bg-button-dawn dark:bg-button-twilight"
         }
     };
 

@@ -12,6 +12,7 @@ use shared_types::game_speed::GameSpeed;
 pub fn UserRow(
     user: StoredValue<UserResponse>,
     #[prop(optional)] game_speed: Option<StoredValue<GameSpeed>>,
+    #[prop(optional)] on_profile: bool,
 ) -> impl IntoView {
     let rating = move || {
         if let Some(speed) = game_speed {
@@ -20,17 +21,30 @@ pub fn UserRow(
             None
         }
     };
+    let color = if on_profile {
+        "bg-light dark:bg-gray-950"
+    } else {
+        "dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light"
+    };
+    let profile_link = move || {
+        if on_profile {
+            view! { <ProfileLink username=user().username extend_tw_classes="truncate max-w-[120px]"/> }
+        } else {
+            view! {
+                <ProfileLink
+                    username=user().username
+                    extend_tw_classes="truncate max-w-[120px]"
+                    user_is_hoverable=user
+                />
+            }
+        }
+    };
     view! {
-        <div class="flex p-1 dark:odd:bg-odd-dark dark:even:bg-even-dark odd:bg-odd-light even:bg-even-light items-center justify-between h-10">
+        <div class=format!("flex p-1 items-center justify-between h-10 {color}")>
             <div class="flex w-48 mr-2 justify-between">
-
                 <div class="flex items-center">
                     <StatusIndicator username=user().username/>
-                    <ProfileLink
-                        username=user().username
-                        extend_tw_classes="truncate max-w-[120px]"
-                        user_is_hoverable=user
-                    />
+                    {profile_link()}
                 </div>
                 <Show when=move || { rating().is_some() }>
                     <Rating rating=rating().expect("Rating is some")/>

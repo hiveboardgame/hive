@@ -23,7 +23,7 @@ lazy_static! {
     static ref NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
 }
-pub const COMMON_LINK_STYLE: &str = "bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
+pub const COMMON_LINK_STYLE: &str = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
 pub const DROPDOWN_BUTTON_STYLE: &str= "h-full p-2 hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block";
 
 #[component]
@@ -113,7 +113,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         <Meta name="color-scheme" content=color_scheme_meta/>
         <Meta
             name="viewport"
-            content="width=device-width, initial-scale=1, interactive-widget=resizes-content, virtual-keyboard=resize-layout"
+            content="width=device-width, initial-scale=1, interactive-widget=resizes-content, user-scalable=no"
         />
         <Html class=move || {
             match (color_scheme.prefers_dark)() {
@@ -123,7 +123,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         }/>
 
         <Body/>
-        <main class="min-h-screen w-full bg-light dark:bg-dark text-xs sm:text-sm md:text-md touch-manipulations">
+        <main class="min-h-screen w-full bg-light dark:bg-gray-950 text-xs sm:text-sm md:text-md touch-manipulations">
             <Header/>
             <Alert/>
             {children()}

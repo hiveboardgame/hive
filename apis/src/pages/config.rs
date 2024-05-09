@@ -8,17 +8,17 @@ use leptos::*;
 #[component]
 pub fn Config() -> impl IntoView {
     view! {
-        <div class="flex flex-col sm:flex-row pt-10 m-1">
+        <div class="flex flex-col sm:flex-row pt-10">
             <div class="m-1">
                 <TileDesignToggle/>
                 <TileRotationToggle/>
                 <TileDotsToggle/>
                 <ConfirmModeToggle/>
-                <p class="text-dark dark:text-white m-1">Colorscheme:</p>
+                <p class="text-black dark:text-white m-1">Colorscheme:</p>
                 <DarkModeToggle/>
             </div>
             <div class="m-1">
-                <p class="text-dark dark:text-white m-1">Preview:</p>
+                <p class="text-black dark:text-white m-1">Preview:</p>
                 <PreviewTiles/>
             </div>
         </div>

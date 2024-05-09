@@ -59,12 +59,12 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     };
     let timer = expect_context::<TimerSignal>();
     let active_side = create_memo(move |_| match timer.signal.get().finished {
-        true => "bg-stone-200 dark:bg-dark",
+        true => "bg-stone-200 dark:reserve-twilight",
         false => {
             if (side() == Color::White) == (timer.signal.get().turn % 2 == 0) {
                 "bg-grasshopper-green"
             } else {
-                "bg-stone-200 dark:bg-dark"
+                "bg-stone-200 dark:reserve-twilight"
             }
         }
     });
@@ -116,7 +116,12 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                 {move || {
                     match timer.signal.get().time_mode {
                         TimeMode::Untimed => {
-                            view! { <Icon icon=icondata::BiInfiniteRegular class="h-full w-full"/> }
+                            view! {
+                                <Icon
+                                    icon=icondata::BiInfiniteRegular
+                                    class="h-full w-full dark:bg-reserve-twilight"
+                                />
+                            }
                         }
                         TimeMode::Correspondence | TimeMode::RealTime => {
                             view! { <LiveTimer side=side()/> }

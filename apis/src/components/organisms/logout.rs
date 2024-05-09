@@ -16,7 +16,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                     }
                 }
 
-                class="w-full h-full flex place-content-start bg-ant-blue hover:bg-ladybug-red transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
+                class="w-full h-full flex place-content-start bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
                 type="submit"
             >
                 Logout

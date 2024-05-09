@@ -31,10 +31,10 @@ pub fn HistoryMove(
         game_state_signal.show_history_turn(turn);
     };
     let get_class = move || {
-        let mut class = "ml-3 hover:bg-blue-300 col-span-2 leading-6 h-auto max-h-6 transform transition-transform duration-300 active:scale-95";
+        let mut class = "ml-3 hover:bg-pillbug-teal col-span-2 leading-6 h-auto max-h-6 transform transition-transform duration-300 active:scale-95";
         if let Some(history_turn) = (game_state_signal.signal)().history_turn {
             if turn == history_turn {
-                class = "ml-3 hover:bg-blue-300 col-span-2 bg-queen-orange leading-6 h-auto max-h-6 transform transition-transform duration-300 active:scale-95"
+                class = "ml-3 hover:bg-pillbug-teal col-span-2 bg-orange-twilight leading-6 h-auto max-h-6 transform transition-transform duration-300 active:scale-95"
             }
         }
         class
@@ -101,7 +101,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 .expect("window to exist")
                 .document()
                 .expect("window to have a document")
-                .query_selector(".bg-queen-orange")
+                .query_selector(".bg-orange-twilight")
                 .expect("to have an Element")
         } else {
             None
@@ -154,7 +154,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     });
     view! {
         <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
-            <div class="flex gap-1 dark:bg-dark bg-light min-h-0 [&>*]:grow">
+            <div class="flex gap-1 min-h-0 [&>*]:grow">
                 <HistoryButton
 
                     action=HistoryNavigation::First

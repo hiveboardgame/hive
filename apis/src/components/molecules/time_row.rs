@@ -39,8 +39,7 @@ pub fn TimeRow(
     };
     view! {
         <div class="flex items-center gap-1 justify-start">
-            {icon}
-            <p class=extend_tw_classes>{text}</p>
+            {icon} <p class=extend_tw_classes>{text}</p>
         </div>
     }
 }

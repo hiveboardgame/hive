@@ -33,7 +33,7 @@ pub fn DirectChallengeButton(user: StoredValue<UserResponse>) -> impl IntoView {
             <button
                 title="Challenge to a game"
                 on:click=move |_| open.update(move |b| *b = true)
-                class="mx-2 bg-ant-blue hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 rounded p-1 text-white"
+                class="mx-2 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 rounded p-1 text-white"
             >
                 <Icon icon=icondata::RiSwordOthersLine class="h-6 w-6"/>
             </button>

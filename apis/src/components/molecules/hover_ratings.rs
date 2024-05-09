@@ -16,7 +16,7 @@ pub fn HoverRating(user: StoredValue<UserResponse>) -> impl IntoView {
         })
         .collect_view();
     view! {
-        <div class="absolute z-40 bg-even-light dark:bg-even-dark rounded p-2 bottom-0 right-12">
+        <div class="absolute z-40 bg-even-light dark:bg-gray-950 rounded p-2 bottom-0 -left-24">
             {ratings}
         </div>
     }

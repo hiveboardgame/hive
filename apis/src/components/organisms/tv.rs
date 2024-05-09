@@ -14,7 +14,7 @@ pub fn Tv() -> impl IntoView {
         <div class="flex flex-col items-center md:pt-12">
             <div class="flex flex-col md:flex-row gap-1 items-center flex-wrap w-full">
                 <For each=live_games key=|(k, v)| (k.to_owned(), v.turn) let:game>
-                    <div class="h-60 w-60 mx-2 relative dark:odd:bg-odd-dark dark:even:bg-even-dark  odd:bg-odd-light even:bg-even-light flex flex-col items-center">
+                    <div class="h-60 w-60 mx-2 relative dark:odd:bg-header-twilight dark:even:bg-reserve-twilight  odd:bg-odd-light even:bg-even-light flex flex-col items-center">
                         <div class="flex flex-col items-center">
                             {format!(
                                 "{} {} vs {} {}",

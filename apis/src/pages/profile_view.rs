@@ -62,7 +62,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
         if tab_view() == view {
             button_style + " bg-pillbug-teal"
         } else {
-            button_style + " bg-ant-blue"
+            button_style + " bg-button-dawn dark:bg-button-twilight"
         }
     };
     let still_more_games = RwSignal::from(true);
@@ -83,7 +83,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     });
 
     view! {
-        <div class="bg-light dark:bg-dark pt-12 flex flex-col">
+        <div class="bg-light dark:bg-gray-950 pt-12 flex flex-col">
             <Transition>
                 {move || {
                     let (current_finished_games, more_games) = finished_games()

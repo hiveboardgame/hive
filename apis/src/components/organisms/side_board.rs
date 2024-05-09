@@ -45,7 +45,7 @@ pub fn SideboardTabs(
 
     let button_color = move |button_view: SideboardTabView| {
         if tab_view() == button_view {
-            "bg-slate-400"
+            "dark:bg-button-twilight bg-slate-400"
         } else {
             "bg-inherit"
         }
@@ -77,14 +77,14 @@ pub fn SideboardTabs(
 
     view! {
         <div class=format!(
-            "h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 {row_start} {extend_tw_classes}",
+            "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 {row_start} {extend_tw_classes}",
         )>
             <div class="z-10 border-b-2 border-black dark:border-white flex justify-between [&>*]:grow sticky top-0 bg-inherit">
 
                 <button
                     class=move || {
                         format!(
-                            "transform transition-transform duration-300 active:scale-95 hover:bg-blue-300 {}",
+                            "transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal {}",
                             button_color(SideboardTabView::Reserve),
                         )
                     }
@@ -107,7 +107,7 @@ pub fn SideboardTabs(
                 <button
                     class=move || {
                         format!(
-                            "transform transition-transform duration-300 active:scale-95 hover:bg-blue-300 {}",
+                            "transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal {}",
                             button_color(SideboardTabView::History),
                         )
                     }
@@ -130,7 +130,7 @@ pub fn SideboardTabs(
                     <button
                         class=move || {
                             format!(
-                                "transform transition-transform duration-300 active:scale-95 hover:bg-blue-300 {}",
+                                "transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal {}",
                                 button_color_chat(),
                             )
                         }

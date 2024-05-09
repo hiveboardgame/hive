@@ -17,7 +17,7 @@ pub fn AnalysisAndDownload() -> impl IntoView {
             <div class="flex items-center justify-center mt-1">
                 <a
                     href="/analysis"
-                    class="bg-ant-blue hover:bg-pillbug-teal duration-300 text-white rounded m-1 place-self-center justify-self-end"
+                    class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal duration-300 text-white rounded m-1 place-self-center justify-self-end"
                     on:click=analysis_setup
                 >
                     <Icon icon=icondata::TbMicroscope class="h-7 w-7 py-1"/>

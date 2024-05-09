@@ -31,7 +31,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
         <div class="m-1">
             <div class="flex flex-col items-start ml-3">
                 <div class="max-w-fit">
-                    <UserRow user=user/>
+                    <UserRow user=user on_profile=true/>
                 </div>
                 <div class="flex gap-1 flex-wrap">{ratings}</div>
             </div>

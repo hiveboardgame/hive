@@ -69,7 +69,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
         if time_left() == Duration::from_secs(0) {
             String::from("bg-ladybug-red")
         } else {
-            String::new()
+            String::from("dark:bg-reserve-twilight")
         }
     });
     let ticks = create_rw_signal(0);
