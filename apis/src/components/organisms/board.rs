@@ -15,8 +15,9 @@ use leptos::leptos_dom::helpers::debounce;
 use leptos::svg::Svg;
 use leptos::*;
 use leptos_use::{
-    use_event_listener, use_event_listener_with_options, use_resize_observer,
-    use_throttle_fn_with_arg, UseEventListenerOptions,
+    use_event_listener, use_event_listener_with_options, use_intersection_observer_with_options,
+    use_resize_observer, use_throttle_fn_with_arg, UseEventListenerOptions,
+    UseIntersectionObserverOptions,
 };
 use std::time::Duration;
 use wasm_bindgen::JsCast;
@@ -161,6 +162,17 @@ pub fn Board(
         throttled_resize(rect);
     });
 
+    let is_visible = RwSignal::new(true);
+    _ = use_intersection_observer_with_options(
+        g_ref,
+        move |entries, _| {
+            is_visible.set(entries[0].is_intersecting());
+        },
+        UseIntersectionObserverOptions::default()
+            .root(Some(viewbox_ref))
+            .thresholds(vec![0.5]),
+    );
+
     //Start panning and record point where it starts for mouse on left mouse button hold and touch
     _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
         if evt.button() == 0 {
@@ -181,7 +193,12 @@ pub fn Board(
             let mut future_viewbox = viewbox_signal.get_untracked();
             future_viewbox.x -= moved_point.x() - future_viewbox.drag_start_x;
             future_viewbox.y -= moved_point.y() - future_viewbox.drag_start_y;
-            if is_svg_still_visible(g_bbox, &future_viewbox) {
+            if is_visible() {
+                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                    viewbox_controls.x = future_viewbox.x;
+                    viewbox_controls.y = future_viewbox.y
+                });
+            } else if will_svg_be_visible(g_bbox, &future_viewbox) {
                 viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                     viewbox_controls.x = future_viewbox.x;
                     viewbox_controls.y = future_viewbox.y
@@ -208,17 +225,25 @@ pub fn Board(
                 future_viewbox.y = initial_point.y()
                     - (initial_point.y() - future_viewbox.y) / initial_height
                         * future_viewbox.height;
-                if is_svg_still_visible(g_bbox, &future_viewbox)
-                    && ((scale < 0.0 && initial_height >= zoom_in_limit)
-                        || (scale > 0.0 && initial_height <= zoom_out_limit))
+                if (scale < 0.0 && initial_height >= zoom_in_limit)
+                    || (scale > 0.0 && initial_height <= zoom_out_limit)
                 {
-                    batch(move || {
-                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                            *viewbox_controls = future_viewbox;
+                    if is_visible() {
+                        batch(move || {
+                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                                *viewbox_controls = future_viewbox;
+                            });
+                            has_zoomed.set(true);
                         });
-                        has_zoomed.set(true);
-                    });
-                };
+                    } else if will_svg_be_visible(g_bbox, &future_viewbox) {
+                        batch(move || {
+                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                                *viewbox_controls = future_viewbox;
+                            });
+                            has_zoomed.set(true);
+                        })
+                    }
+                }
             }
         }),
         UseEventListenerOptions::default().passive(true),
@@ -258,16 +283,22 @@ pub fn Board(
                     current_point_0.x() - (current_point_0.x() - future_viewbox.x) / scale;
                 future_viewbox.y =
                     current_point_0.y() - (current_point_0.y() - future_viewbox.y) / scale;
-                if is_svg_still_visible(g_bbox, &future_viewbox)
-                    && intermediate_height >= zoom_in_limit
-                    && intermediate_height <= zoom_out_limit
-                {
-                    batch(move || {
-                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                            *viewbox_controls = future_viewbox
+                if intermediate_height >= zoom_in_limit && intermediate_height <= zoom_out_limit {
+                    if is_visible() {
+                        batch(move || {
+                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                                *viewbox_controls = future_viewbox
+                            });
+                            has_zoomed.set(true);
                         });
-                        has_zoomed.set(true);
-                    });
+                    } else if will_svg_be_visible(g_bbox, &future_viewbox) {
+                        batch(move || {
+                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                                *viewbox_controls = future_viewbox
+                            });
+                            has_zoomed.set(true);
+                        });
+                    }
                 };
             }
         }),
@@ -375,7 +406,7 @@ fn get_touch_distance(point_0: SvgPoint, point_1: SvgPoint) -> f32 {
     (distance_x * distance_x + distance_y * distance_y).sqrt()
 }
 
-fn is_svg_still_visible(bbox: SvgRect, viewbox: &ViewBoxControls) -> bool {
+fn will_svg_be_visible(bbox: SvgRect, viewbox: &ViewBoxControls) -> bool {
     let bbox_mid_x = bbox.x() + viewbox.x_transform + bbox.width() / 2.0;
     let bbox_mid_y = bbox.y() + viewbox.y_transform + bbox.height() / 2.0;
     let viewbox_right = viewbox.x + viewbox.width;
