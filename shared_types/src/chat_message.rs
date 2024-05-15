@@ -25,6 +25,7 @@ pub struct ChatMessage {
     pub username: String,
     pub timestamp: Option<DateTime<Utc>>,
     pub message: String,
+    pub turn: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -53,6 +54,7 @@ impl ChatMessage {
         user_id: Uuid,
         message: &str,
         timestamp: Option<DateTime<Utc>>,
+        turn: Option<usize>,
     ) -> Self {
         let mut message = message.to_owned();
         message.truncate(MAX_MESSAGE_LENGTH);
@@ -61,6 +63,7 @@ impl ChatMessage {
             user_id,
             message,
             timestamp,
+            turn,
         }
     }
 

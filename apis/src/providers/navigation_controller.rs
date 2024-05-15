@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use leptos::*;
 use regex::Regex;
 
-use crate::providers::{api_requests::ApiRequests, game_state::GameStateSignal};
+use crate::providers::{api_requests::ApiRequests, chat::Chat, game_state::GameStateSignal};
 
 lazy_static! {
     static ref NANOID: Regex =
@@ -32,8 +32,10 @@ impl NavigationControllerSignal {
         let api = ApiRequests::new();
         if let Some(game_id) = nanoid {
             let mut game_state = expect_context::<GameStateSignal>();
+            let chat = expect_context::<Chat>();
             game_state.set_game_id(game_id.to_owned());
             api.join(game_id.to_owned());
+            chat.typed_message.update(|s| s.clear());
         }
     }
 }
