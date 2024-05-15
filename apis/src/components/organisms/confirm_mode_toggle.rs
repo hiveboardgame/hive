@@ -1,4 +1,4 @@
-use crate::{common::config_options::MoveConfirm, providers::config::config::Config};
+use crate::{common::MoveConfirm, providers::Config};
 use leptos::*;
 use leptos_icons::Icon;
 use leptos_router::ActionForm;
@@ -6,7 +6,7 @@ use leptos_router::ActionForm;
 #[component]
 pub fn ConfirmModeToggle() -> impl IntoView {
     view! {
-        <p class="text-black dark:text-white m-1">Move confirmation:</p>
+        <p class="m-1 text-black dark:text-white">Move confirmation:</p>
         <div class="flex">
             <ConfirmModeButton move_confirm=MoveConfirm::Single/>
             <ConfirmModeButton move_confirm=MoveConfirm::Double/>
@@ -35,7 +35,7 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm) -> impl IntoView {
     view! {
         <ActionForm
             action=config.confirm_mode.action
-            class="m-1 inline-flex items-center border border-transparent text-base font-medium rounded-md shadow justify-center cursor-pointer"
+            class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer"
         >
             <input type="hidden" name="move_confirm" value=move_confirm().to_string()/>
             <button
@@ -49,7 +49,7 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm) -> impl IntoView {
                 type="submit"
                 title=title
             >
-                <Icon icon=icon class="h-6 w-6"/>
+                <Icon icon=icon class="w-6 h-6"/>
             </button>
         </ActionForm>
     }

@@ -1,7 +1,7 @@
 use super::get::GetHandler;
 use super::get_own::GetOwnHandler;
 use super::get_public::GetPublicHandler;
-use crate::common::challenge_action::ChallengeAction;
+use crate::common::ChallengeAction;
 use crate::websockets::api::challenges::accept::AcceptHandler;
 use crate::websockets::api::challenges::create::CreateHandler;
 use crate::websockets::api::challenges::delete::DeleteHandler;

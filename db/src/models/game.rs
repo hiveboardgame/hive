@@ -2,7 +2,7 @@ use super::challenge::Challenge;
 use crate::{
     db_error::DbError,
     get_conn,
-    models::{game_user::GameUser, rating::Rating},
+    models::{GameUser, Rating},
     schema::{
         challenges::{self, nanoid as nanoid_field},
         games::{self, dsl::*},
@@ -15,12 +15,9 @@ use diesel::{prelude::*, Identifiable, Insertable, Queryable};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
-use hive_lib::{
-    color::Color, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
-    history::History, state::State,
-};
+use hive_lib::{Color, GameControl, GameResult, GameStatus, History, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{conclusion::Conclusion, game_speed::GameSpeed, time_mode::TimeMode};
+use shared_types::{Conclusion, GameSpeed, TimeMode};
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;

@@ -2,7 +2,7 @@ use super::rating::Rating;
 use crate::{
     db_error::DbError,
     get_conn,
-    models::{game::Game, game_user::GameUser, rating::NewRating},
+    models::{Game, GameUser, NewRating},
     schema::{
         games::{self, current_player_id, finished},
         ratings::{self, rating},
@@ -25,7 +25,7 @@ use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 use uuid::Uuid;
 
 const MAX_USERNAME_LENGTH: usize = 20;
@@ -248,7 +248,7 @@ impl User {
         let conn = &mut get_conn(pool).await?;
         Ok(users::table
             .inner_join(ratings::table)
-            .filter(ratings::deviation.le(shared_types::certainty::RANKABLE_DEVIATION))
+            .filter(ratings::deviation.le(shared_types::RANKABLE_DEVIATION))
             .filter(ratings::speed.eq(game_speed.to_string()))
             .order_by(rating.desc())
             .limit(limit)

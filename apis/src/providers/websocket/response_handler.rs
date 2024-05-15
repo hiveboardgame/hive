@@ -1,5 +1,5 @@
 use crate::{
-    common::server_result::{ServerMessage, ServerResult},
+    common::{ServerMessage, ServerResult},
     providers::{game_state::GameStateSignal, games::GamesSignal},
 };
 

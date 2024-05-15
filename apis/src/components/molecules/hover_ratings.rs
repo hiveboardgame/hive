@@ -1,7 +1,7 @@
 use crate::components::atoms::rating::RatingWithIcon;
-use crate::responses::user::UserResponse;
+use crate::responses::UserResponse;
 use leptos::*;
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 
 #[component]
 pub fn HoverRating(user: StoredValue<UserResponse>) -> impl IntoView {
@@ -16,7 +16,7 @@ pub fn HoverRating(user: StoredValue<UserResponse>) -> impl IntoView {
         })
         .collect_view();
     view! {
-        <div class="absolute z-40 bg-even-light dark:bg-gray-950 rounded p-2 bottom-0 -left-24">
+        <div class="absolute bottom-0 -left-24 z-40 p-2 rounded bg-even-light dark:bg-gray-950">
             {ratings}
         </div>
     }

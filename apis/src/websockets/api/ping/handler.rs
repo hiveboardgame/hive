@@ -1,5 +1,5 @@
 use crate::{
-    common::server_result::ServerMessage,
+    common::ServerMessage,
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use chrono::{DateTime, Utc};

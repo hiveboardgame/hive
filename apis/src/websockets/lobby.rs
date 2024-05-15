@@ -1,14 +1,12 @@
 use crate::{
-    common::server_result::{
-        ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate,
-    },
-    responses::{challenge::ChallengeResponse, game::GameResponse, user::UserResponse},
+    common::{ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
+    responses::{ChallengeResponse, GameResponse, UserResponse},
     websockets::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
 };
 use actix::prelude::{Actor, Context, Handler, Recipient};
 use actix::AsyncContext;
 use actix::WrapFuture;
-use db_lib::{models::challenge::Challenge, models::user::User, DbPool};
+use db_lib::{models::Challenge, models::User, DbPool};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 

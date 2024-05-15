@@ -1,5 +1,5 @@
 use crate::{
-    common::server_result::{UserStatus, UserUpdate},
+    common::{UserStatus, UserUpdate},
     providers::online_users::OnlineUsersSignal,
 };
 

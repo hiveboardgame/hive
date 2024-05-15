@@ -6,7 +6,7 @@ use crate::components::organisms::logout::Logout;
 use crate::providers::chat::Chat;
 use leptos::*;
 use leptos_icons::*;
-use shared_types::chat_message::SimpleDestination;
+use shared_types::SimpleDestination;
 
 const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md left-34 p-2";
 

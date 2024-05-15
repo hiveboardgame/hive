@@ -1,5 +1,5 @@
 use crate::components::molecules::hover_ratings::HoverRating;
-use crate::responses::user::UserResponse;
+use crate::responses::UserResponse;
 use leptos::*;
 
 #[component]
@@ -11,7 +11,7 @@ pub fn ProfileLink(
     let profile_link = format!("/@/{}", username);
     let hover_show = RwSignal::new(false);
     view! {
-        <div class="w-full relative">
+        <div class="relative w-full">
             <a
                 class="z-20 font-bold duration-300 hover:text-pillbug-teal"
                 on:mouseover=move |_| {

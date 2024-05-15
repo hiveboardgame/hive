@@ -1,9 +1,9 @@
-use crate::common::challenge_action::ChallengeVisibility;
+use crate::common::ChallengeVisibility;
 use crate::responses::user::UserResponse;
 use chrono::prelude::*;
-use hive_lib::color::ColorChoice;
+use hive_lib::ColorChoice;
 use serde::{Deserialize, Serialize};
-use shared_types::{game_speed::GameSpeed, time_mode::TimeMode};
+use shared_types::{GameSpeed, TimeMode};
 use std::str;
 use uuid::Uuid;
 
@@ -31,7 +31,7 @@ use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use std::str::FromStr;
 use db_lib::{
-    models::{challenge::Challenge, rating::Rating, user::User},
+    models::{Challenge, Rating, User},
     DbPool,
 };
 use anyhow::Result;

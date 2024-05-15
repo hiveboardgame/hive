@@ -26,10 +26,10 @@ impl From<diesel::result::Error> for DbError {
     }
 }
 
-impl From<shared_types::challenge_error::ChallengeError> for DbError {
-    fn from(err: shared_types::challenge_error::ChallengeError) -> DbError {
+impl From<shared_types::ChallengeError> for DbError {
+    fn from(err: shared_types::ChallengeError) -> DbError {
         match err {
-            shared_types::challenge_error::ChallengeError::NotValidTimeMode { found } => {
+            shared_types::ChallengeError::NotValidTimeMode { found } => {
                 DbError::TimeNotFound { reason: found }
             }
             _ => DbError::InternalError,

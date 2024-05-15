@@ -3,7 +3,7 @@ use crate::{
     providers::games::GamesSignal,
 };
 use leptos::*;
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 
 #[component]
 pub fn Tv() -> impl IntoView {
@@ -12,9 +12,9 @@ pub fn Tv() -> impl IntoView {
 
     view! {
         <div class="flex flex-col items-center md:pt-12">
-            <div class="flex flex-col md:flex-row gap-1 items-center flex-wrap w-full">
+            <div class="flex flex-col flex-wrap gap-1 items-center w-full md:flex-row">
                 <For each=live_games key=|(k, v)| (k.to_owned(), v.turn) let:game>
-                    <div class="h-60 w-60 mx-2 relative dark:odd:bg-header-twilight dark:even:bg-reserve-twilight  odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900 flex flex-col items-center">
+                    <div class="flex relative flex-col items-center mx-2 w-60 h-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
                         <div class="flex flex-col items-center">
                             {format!(
                                 "{} {} vs {} {}",
@@ -56,7 +56,7 @@ pub fn Tv() -> impl IntoView {
                         </div>
                         <ThumbnailPieces game=game.1/>
                         <a
-                            class="h-full w-full absolute top-0 left-0 z-10"
+                            class="absolute top-0 left-0 z-10 w-full h-full"
                             href=format!("/game/{}", game.0)
                         ></a>
                     </div>

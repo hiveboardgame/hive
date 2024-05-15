@@ -1,9 +1,6 @@
 use crate::providers::api_requests::ApiRequests;
-use crate::responses::game::GameResponse;
-use hive_lib::color::Color;
-use hive_lib::game_control::GameControl;
-use hive_lib::game_status::GameStatus;
-use hive_lib::{game_type::GameType, piece::Piece, position::Position, state::State, turn::Turn};
+use crate::responses::GameResponse;
+use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
 use leptos::*;
 use uuid::Uuid;

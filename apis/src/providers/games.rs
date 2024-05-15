@@ -1,11 +1,10 @@
 use super::auth_context::AuthContext;
 use super::navigation_controller::NavigationControllerSignal;
-use crate::responses::game::GameResponse;
+use crate::responses::GameResponse;
 use chrono::{DateTime, Utc};
-use hive_lib::color::Color;
-use hive_lib::game_control::GameControl;
+use hive_lib::{Color, GameControl};
 use leptos::*;
-use shared_types::time_mode::TimeMode;
+use shared_types::TimeMode;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;

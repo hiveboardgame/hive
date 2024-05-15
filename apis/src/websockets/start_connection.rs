@@ -3,7 +3,7 @@ use actix::Addr;
 use actix_identity::Identity;
 use actix_web::{get, web::Data, web::Payload, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
-use db_lib::{models::user::User, DbPool};
+use db_lib::{models::User, DbPool};
 use uuid::Uuid;
 
 #[get("/ws/")]

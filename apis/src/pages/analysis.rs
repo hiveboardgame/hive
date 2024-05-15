@@ -13,7 +13,7 @@ use crate::{
     pages::play::TargetStack,
     providers::game_state::GameStateSignal,
 };
-use hive_lib::color::Color;
+use hive_lib::Color;
 use leptos::*;
 use leptos_use::use_media_query;
 
@@ -54,7 +54,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 fallback=move || {
                     view! {
                         <Board/>
-                        <div class="grid border-y-2 border-black dark:border-white col-start-9 col-span-2 row-start-2 row-span-4 grid-cols-2 grid-rows-4">
+                        <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-4 row-span-4 row-start-2 border-black border-y-2 dark:border-white">
                             <SideboardTabs player_is_black=player_is_black analysis=true/>
                         </div>
                     }
@@ -62,14 +62,14 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             >
 
                 <div class="flex flex-col flex-grow h-full min-h-0">
-                    <div class="flex flex-col shrink flex-grow">
-                        <div class="flex max-h-16 justify-between h-full">
+                    <div class="flex flex-col flex-grow shrink">
+                        <div class="flex justify-between h-full max-h-16">
                             <Reserve alignment=Alignment::SingleRow color=top_color/>
                         </div>
                     </div>
                     <Board overwrite_tw_classes="flex grow min-h-0"/>
-                    <div class="flex flex-col shrink flex-grow">
-                        <div class="flex max-h-16 justify-between h-full">
+                    <div class="flex flex-col flex-grow shrink">
+                        <div class="flex justify-between h-full max-h-16">
                             <Reserve alignment=Alignment::SingleRow color=bottom_color/>
                             <UndoButton/>
                         </div>

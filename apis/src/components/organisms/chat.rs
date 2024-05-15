@@ -1,11 +1,11 @@
 use crate::providers::{
-    auth_context::AuthContext, chat::Chat, game_state::GameStateSignal,
-    navigation_controller::NavigationControllerSignal,
+    chat::Chat, game_state::GameStateSignal, navigation_controller::NavigationControllerSignal,
+    AuthContext,
 };
 use chrono::Local;
 use leptos::*;
 use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};
-use shared_types::chat_message::{ChatDestination, ChatMessage, SimpleDestination};
+use shared_types::{ChatDestination, ChatMessage, SimpleDestination};
 use uuid::Uuid;
 
 #[component]
@@ -53,7 +53,7 @@ pub fn ChatInput(destination: ChatDestination) -> impl IntoView {
         <input
             ref=my_input
             type="text"
-            class="bg-odd-light dark:bg-odd-dark rounded-lg px-4 py-2 focus:outline-none w-full resize-none h-auto box-border shrink-0"
+            class="box-border px-4 py-2 w-full h-auto rounded-lg resize-none bg-odd-light dark:bg-odd-dark focus:outline-none shrink-0"
             prop:value=chat.typed_message
             attr:placeholder=placeholder
             on:input=input
@@ -155,8 +155,8 @@ pub fn ChatWindow(
             .unwrap_or_default(),
     };
     view! {
-        <div class="h-full flex flex-col max-w-full">
-            <div ref=div class="overflow-y-auto h-full w-full">
+        <div class="flex flex-col h-full">
+            <div ref=div class="overflow-y-auto h-full">
                 <For each=messages key=|message| message.timestamp let:message>
                     <Message message=message/>
                 </For>

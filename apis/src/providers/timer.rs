@@ -1,10 +1,10 @@
 use chrono::DateTime;
 use chrono::Utc;
 use leptos::*;
-use shared_types::time_mode::TimeMode;
+use shared_types::TimeMode;
 use std::time::Duration;
 
-use crate::responses::game::GameResponse;
+use crate::responses::GameResponse;
 
 #[derive(Clone, Debug, Copy)]
 pub struct TimerSignal {

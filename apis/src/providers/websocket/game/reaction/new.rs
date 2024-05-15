@@ -3,12 +3,12 @@ use crate::{
         auth_context::AuthContext, games::GamesSignal,
         navigation_controller::NavigationControllerSignal,
     },
-    responses::game::GameResponse,
+    responses::GameResponse,
 };
 
 use leptos::*;
 use leptos_router::use_navigate;
-use shared_types::time_mode::TimeMode;
+use shared_types::TimeMode;
 
 // if gar.game.finished {
 //     log!("Removing finished game {}", gar.game.nanoid.clone());

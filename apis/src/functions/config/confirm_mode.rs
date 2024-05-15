@@ -1,4 +1,4 @@
-use crate::common::config_options::MoveConfirm;
+use crate::common::MoveConfirm;
 use leptos::*;
 
 #[server]

@@ -1,5 +1,5 @@
 use super::messages::WsMessage;
-use crate::common::server_result::ServerMessage;
+use crate::common::ServerMessage;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]

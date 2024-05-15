@@ -1,4 +1,4 @@
-use crate::responses::challenge::ChallengeResponse;
+use crate::responses::ChallengeResponse;
 use leptos::*;
 use std::collections::HashMap;
 

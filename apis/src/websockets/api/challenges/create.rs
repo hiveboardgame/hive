@@ -1,15 +1,14 @@
-use crate::common::challenge_action::ChallengeVisibility;
-use crate::common::server_result::{ChallengeUpdate, ServerMessage};
-use crate::responses::challenge::ChallengeResponse;
+use crate::common::ChallengeVisibility;
+use crate::common::{ChallengeUpdate, ServerMessage};
+use crate::responses::ChallengeResponse;
 use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
 use anyhow::Result;
 use db_lib::{
-    models::challenge::{Challenge, NewChallenge},
-    models::user::User,
+    models::{Challenge, NewChallenge, User},
     DbPool,
 };
-use hive_lib::{color::ColorChoice, game_type::GameType};
-use shared_types::time_mode::TimeMode;
+use hive_lib::{ColorChoice, GameType};
+use shared_types::TimeMode;
 use std::str::FromStr;
 use uuid::Uuid;
 

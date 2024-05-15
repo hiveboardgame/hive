@@ -1,11 +1,11 @@
-use crate::{common::config_options::TileDots, providers::config::config::Config};
+use crate::{common::TileDots, providers::Config};
 use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
 pub fn TileDotsToggle() -> impl IntoView {
     view! {
-        <p class="text-black dark:text-white m-1">Show dots:</p>
+        <p class="m-1 text-black dark:text-white">Show dots:</p>
         <div class="flex">
             <TileDotsButton tile_dots=TileDots::No/>
             <TileDotsButton tile_dots=TileDots::Yes/>
@@ -28,7 +28,7 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
     view! {
         <ActionForm
             action=config.tile_dots.action
-            class="m-1 inline-flex items-center border border-transparent text-base font-medium rounded-md shadow justify-center cursor-pointer"
+            class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer"
         >
             <input type="hidden" name="tile_dots" value=tile_dots().to_string()/>
 
