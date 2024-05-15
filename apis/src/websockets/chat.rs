@@ -3,7 +3,7 @@ use std::{
     sync::RwLock,
 };
 
-use shared_types::chat_message::ChatMessageContainer;
+use shared_types::ChatMessageContainer;
 use uuid::Uuid;
 
 #[derive(Debug, Eq, Hash, PartialEq)]

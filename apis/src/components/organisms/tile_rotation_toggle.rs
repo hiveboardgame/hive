@@ -1,4 +1,4 @@
-use crate::{common::config_options::TileRotation, providers::config::config::Config};
+use crate::{common::TileRotation, providers::Config};
 use leptos::*;
 
 use leptos_router::ActionForm;
@@ -6,7 +6,7 @@ use leptos_router::ActionForm;
 #[component]
 pub fn TileRotationToggle() -> impl IntoView {
     view! {
-        <p class="text-black dark:text-white m-1">Rotation:</p>
+        <p class="m-1 text-black dark:text-white">Rotation:</p>
         <div class="flex">
             <TileRotationButton tile_rotation=TileRotation::No/>
             <TileRotationButton tile_rotation=TileRotation::Yes/>
@@ -29,7 +29,7 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
     view! {
         <ActionForm
             action=config.tile_rotation.action
-            class="m-1 inline-flex items-center border border-transparent text-base font-medium rounded-md shadow justify-center cursor-pointer"
+            class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer"
         >
             <input type="hidden" name="tile_rotation" value=tile_rotation().to_string()/>
 

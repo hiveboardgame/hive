@@ -1,11 +1,11 @@
 use crate::{
-    common::server_result::GameActionResponse,
+    common::GameActionResponse,
     providers::{
         game_state::GameStateSignal, games::GamesSignal, timer::TimerSignal,
         websocket::game::reaction::handler::reset_game_state,
     },
 };
-use hive_lib::game_control::GameControl;
+use hive_lib::GameControl;
 use leptos::*;
 
 pub fn handle_join(gar: GameActionResponse) {

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -79,7 +79,7 @@ use cfg_if::cfg_if;
 use super::rating::RatingResponse;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
-    models::user::User,
+    models::User,
     DbPool,
 };
 use anyhow::Result;

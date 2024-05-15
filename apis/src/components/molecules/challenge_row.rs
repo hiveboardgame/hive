@@ -1,17 +1,15 @@
-use crate::common::challenge_action::ChallengeVisibility;
+use crate::common::ChallengeVisibility;
 use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::components::molecules::time_row::TimeRow;
-use crate::providers::api_requests::ApiRequests;
+use crate::providers::ApiRequests;
 use crate::{
     components::atoms::game_type::GameType,
     components::atoms::profile_link::ProfileLink,
     functions::hostname::hostname_and_port,
-    providers::{
-        auth_context::AuthContext, color_scheme::ColorScheme, game_state::GameStateSignal,
-    },
-    responses::challenge::ChallengeResponse,
+    providers::{game_state::GameStateSignal, AuthContext, ColorScheme},
+    responses::ChallengeResponse,
 };
-use hive_lib::color::ColorChoice;
+use hive_lib::ColorChoice;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::*;
@@ -123,7 +121,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
     };
 
     view! {
-        <tr class="dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light text-center items-center cursor-pointer max-w-fit">
+        <tr class="items-center text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
             <td class=td_class>
                 <div>{icon}</div>
             </td>
@@ -170,7 +168,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     <button
                                         ref=button_ref
                                         on:click=copy
-                                        class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                        class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
                                     >
                                         <Icon icon=icondata::AiCopyOutlined class="w-6 h-6"/>
                                     </button>
@@ -180,7 +178,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                         ApiRequests::new().challenge_cancel(challenge().nanoid)
                                     }
 
-                                    class="bg-ladybug-red hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                    class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
                                 >
                                     <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/>
                                 </button>
@@ -203,7 +201,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                 }
                             }
 
-                            class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                            class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
                         >
                             <Icon icon=icondata::AiCheckOutlined class="w-6 h-6"/>
 
@@ -223,7 +221,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                         }
                                     }
 
-                                    class="bg-ladybug-red hover:bg-red-400 transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                    class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
                                 >
                                     <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/>
 

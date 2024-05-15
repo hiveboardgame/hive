@@ -1,6 +1,6 @@
 use crate::{
     components::molecules::modal::Modal, pages::challenge_create::ChallengeCreate,
-    providers::auth_context::AuthContext, responses::user::UserResponse,
+    providers::AuthContext, responses::UserResponse,
 };
 use leptos::{html::Dialog, *};
 use leptos_icons::*;
@@ -33,9 +33,9 @@ pub fn DirectChallengeButton(user: StoredValue<UserResponse>) -> impl IntoView {
             <button
                 title="Challenge to a game"
                 on:click=move |_| open.update(move |b| *b = true)
-                class="mx-2 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 rounded p-1 text-white"
+                class="p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
             >
-                <Icon icon=icondata::RiSwordOthersLine class="h-6 w-6"/>
+                <Icon icon=icondata::RiSwordOthersLine class="w-6 h-6"/>
             </button>
         </Show>
     }

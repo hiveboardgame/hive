@@ -3,7 +3,7 @@ use crate::{
     functions::users::get::{
         get_finished_games_in_batches, get_ongoing_games, get_user_by_username,
     },
-    responses::game::GameResponse,
+    responses::GameResponse,
 };
 use leptos::{ev::scroll, *};
 use leptos_router::*;
@@ -83,7 +83,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     });
 
     view! {
-        <div class="bg-light dark:bg-gray-950 pt-12 flex flex-col">
+        <div class="flex flex-col pt-12 bg-light dark:bg-gray-950">
             <Transition>
                 {move || {
                     let (current_finished_games, more_games) = finished_games()
@@ -123,7 +123,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                     </div>
                                     {stored_children()()}
                                     <Show when=finished_games.loading()>
-                                        <div class="animate-spin h-5 w-5 border-t-2 border-b-2 border-blue-500 rounded-full place-self-center p-4"></div>
+                                        <div class="place-self-center p-4 w-5 h-5 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
                                     </Show>
                                 }
                                     .into_view()

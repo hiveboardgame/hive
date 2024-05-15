@@ -3,10 +3,10 @@ use crate::{
         direct_challenge_button::DirectChallengeButton, profile_link::ProfileLink, rating::Rating,
         status_indicator::StatusIndicator,
     },
-    responses::user::UserResponse,
+    responses::UserResponse,
 };
 use leptos::*;
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 
 #[component]
 pub fn UserRow(
@@ -41,7 +41,7 @@ pub fn UserRow(
     };
     view! {
         <div class=format!("flex p-1 items-center justify-between h-10 {color}")>
-            <div class="flex w-48 mr-2 justify-between">
+            <div class="flex justify-between mr-2 w-48">
                 <div class="flex items-center">
                     <StatusIndicator username=user().username/>
                     {profile_link()}

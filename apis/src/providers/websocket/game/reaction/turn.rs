@@ -1,11 +1,11 @@
 use crate::{
-    common::server_result::GameActionResponse,
+    common::GameActionResponse,
     providers::{
         game_state::GameStateSignal, games::GamesSignal,
         navigation_controller::NavigationControllerSignal, timer::TimerSignal,
     },
 };
-use hive_lib::turn::Turn;
+use hive_lib::Turn;
 use leptos::*;
 
 pub fn handle_turn(turn: Turn, gar: GameActionResponse) {

@@ -8,12 +8,12 @@ use crate::{
             reserve::{Alignment, Reserve},
         },
     },
-    providers::{auth_context::AuthContext, chat::Chat, game_state::GameStateSignal},
+    providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
-use hive_lib::color::Color;
+use hive_lib::Color;
 use leptos::*;
 use leptos_router::use_location;
-use shared_types::chat_message::SimpleDestination;
+use shared_types::SimpleDestination;
 
 #[derive(Clone, PartialEq)]
 enum SideboardTabView {
@@ -157,7 +157,7 @@ pub fn SideboardTabs(
                     view! {
                         <div class="flex flex-col h-full">
                             <Reserve color=top_color alignment=Alignment::DoubleRow/>
-                            <div class="flex justify-center flex-row-reverse items-center">
+                            <div class="flex flex-row-reverse justify-center items-center">
                                 <Show
                                     when=move || !analysis
                                     fallback=move || {

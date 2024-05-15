@@ -1,8 +1,7 @@
-use crate::responses::game::GameResponse;
-use crate::responses::user::UserResponse;
+use crate::responses::{GameResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use leptos::*;
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 use uuid::Uuid;
 
 #[server]
@@ -26,7 +25,7 @@ pub async fn get_user_by_username(username: String) -> Result<UserResponse, Serv
 #[server]
 pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::models::user::User;
+    use db_lib::models::User;
     let pool = pool()?;
     Ok(User::username_exists(&username, &pool).await?)
 }
@@ -34,7 +33,7 @@ pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
 #[server]
 pub async fn get_ongoing_games(username: String) -> Result<Vec<GameResponse>, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::models::game::Game;
+    use db_lib::models::Game;
     let pool = pool()?;
     let games: Vec<Game> = Game::get_ongoing_games_for_username(&username, &pool).await?;
     let mut results: Vec<GameResponse> = Vec::new();
@@ -54,7 +53,7 @@ pub async fn get_finished_games_in_batches(
     amount: i64,
 ) -> Result<(Vec<GameResponse>, bool), ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::models::game::Game;
+    use db_lib::models::Game;
     let pool = pool()?;
     let games: Vec<Game> =
         Game::get_x_finished_games_for_username(&username, &pool, last_timestamp, last_id, amount)
@@ -75,7 +74,7 @@ pub async fn get_top_users(
     limit: i64,
 ) -> Result<Vec<UserResponse>, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::models::{rating::Rating, user::User};
+    use db_lib::models::{Rating, User};
     let pool = pool()?;
     let top_users: Vec<(User, Rating)> = User::get_top_users(&game_speed, limit, &pool).await?;
     let mut results: Vec<UserResponse> = Vec::new();

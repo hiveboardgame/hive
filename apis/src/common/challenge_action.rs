@@ -1,7 +1,7 @@
-use hive_lib::{color::ColorChoice, game_type::GameType};
+use hive_lib::{ColorChoice, GameType};
 use serde::{Deserialize, Serialize};
-use shared_types::challenge_error::ChallengeError;
-use shared_types::time_mode::TimeMode;
+use shared_types::ChallengeError;
+use shared_types::TimeMode;
 use std::fmt;
 use std::str::FromStr;
 

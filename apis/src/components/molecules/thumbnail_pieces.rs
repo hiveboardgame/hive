@@ -1,8 +1,8 @@
-use crate::common::svg_pos::SvgPos;
+use crate::common::SvgPos;
 use crate::components::atoms::svgs::Svgs;
-use crate::responses::game::GameResponse;
-use crate::{common::hex_stack::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
-use hive_lib::position::Position;
+use crate::responses::GameResponse;
+use crate::{common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
+use hive_lib::Position;
 use leptos::*;
 
 #[component]
@@ -33,7 +33,7 @@ pub fn ThumbnailPieces(game: GameResponse) -> impl IntoView {
     view! {
         <svg
             viewBox=format!("0 0 {width} {height}")
-            class="touch-none h-full w-full"
+            class="w-full h-full touch-none"
             xmlns="http://www.w3.org/2000/svg"
         >
             <Svgs/>

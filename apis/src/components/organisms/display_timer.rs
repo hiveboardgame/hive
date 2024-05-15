@@ -1,15 +1,12 @@
 use crate::{
-    common::config_options::MoveConfirm,
+    common::MoveConfirm,
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
-    providers::{
-        auth_context::AuthContext, config::config::Config, game_state::GameStateSignal,
-        timer::TimerSignal,
-    },
+    providers::{game_state::GameStateSignal, timer::TimerSignal, AuthContext, Config},
 };
-use hive_lib::color::Color;
+use hive_lib::Color;
 use leptos::*;
 use leptos_icons::*;
-use shared_types::time_mode::TimeMode;
+use shared_types::TimeMode;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Placement {
@@ -119,7 +116,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                             view! {
                                 <Icon
                                     icon=icondata::BiInfiniteRegular
-                                    class="h-full w-full bg-inherit"
+                                    class="w-full h-full bg-inherit"
                                 />
                             }
                         }

@@ -1,4 +1,4 @@
-use crate::{common::server_result::UserStatus, responses::user::UserResponse};
+use crate::{common::UserStatus, responses::UserResponse};
 use leptos::*;
 use std::collections::BTreeMap;
 

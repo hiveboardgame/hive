@@ -1,6 +1,6 @@
-use hive_lib::color::Color;
+use hive_lib::Color;
 use leptos::*;
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 
 use crate::{
     components::{

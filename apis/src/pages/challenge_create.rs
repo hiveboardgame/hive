@@ -1,16 +1,13 @@
 use crate::{
-    common::challenge_action::{ChallengeAction, ChallengeVisibility},
+    common::{ChallengeAction, ChallengeVisibility},
     components::atoms::{rating::icon_for_speed, select_options::SelectOption},
-    providers::{api_requests::ApiRequests, auth_context::AuthContext, color_scheme::ColorScheme},
+    providers::{ApiRequests, AuthContext, ColorScheme},
 };
-use hive_lib::{color::ColorChoice, game_type::GameType};
+use hive_lib::{ColorChoice, GameType};
 use leptos::*;
 use leptos_icons::*;
 use leptos_use::use_debounce_fn_with_arg;
-use shared_types::{
-    game_speed::GameSpeed,
-    time_mode::{CorrespondenceMode, TimeMode},
-};
+use shared_types::{CorrespondenceMode, GameSpeed, TimeMode};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
@@ -66,16 +63,16 @@ pub fn ChallengeCreate(
             }
             ColorChoice::White => {
                 if (color_context().prefers_dark)() {
-                    view! { <Icon icon=icondata::BsHexagonFill class="fill-white w-full h-full"/> }
+                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-white"/> }
                 } else {
-                    view! { <Icon icon=icondata::BsHexagon class="stroke-black stroke-1 w-full h-full"/> }
+                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-black"/> }
                 }
             }
             ColorChoice::Black => {
                 if (color_context().prefers_dark)() {
-                    view! { <Icon icon=icondata::BsHexagon class="stroke-white stroke-1 w-full h-full"/> }
+                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-white"/> }
                 } else {
-                    view! { <Icon icon=icondata::BsHexagonFill class="fill-black w-full h-full"/> }
+                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-black"/> }
                 }
             }
         }
@@ -259,14 +256,14 @@ pub fn ChallengeCreate(
     };
 
     view! {
-        <div class="flex flex-col xs:m-2 w-72 xs:w-80 sm:w-96 items-center">
+        <div class="flex flex-col items-center w-72 xs:m-2 xs:w-80 sm:w-96">
             <div class=move || {
                 opponent().map_or("hidden", |_| "block")
             }>"Opponent: " {opponent()}</div>
             <div class="flex">
                 <label class="mr-1">
                     <div class="flex items-center">
-                        {gamespeed_icon} <p class="font-extrabold text-3xl">" Create a game:"</p>
+                        {gamespeed_icon} <p class="text-3xl font-extrabold">" Create a game:"</p>
                     </div>
                     Time Control:
                     <select
@@ -303,7 +300,7 @@ pub fn ChallengeCreate(
                                 <label class="flex flex-col items-center">
                                     <div class="flex gap-1 p-1">
                                         <select
-                                            class="bg-odd-light dark:bg-gray-700 mr-1"
+                                            class="mr-1 bg-odd-light dark:bg-gray-700"
                                             name="Correspondence Mode"
                                             on:change=move |ev| {
                                                 if let Ok(new_value) = CorrespondenceMode::from_str(
@@ -459,9 +456,9 @@ pub fn ChallengeCreate(
                 )
             }>
                 <p class="flex justify-center">Rating range</p>
-                <div class="w-24 flex justify-center">{rating_string}</div>
+                <div class="flex justify-center w-24">{rating_string}</div>
                 <div class="flex">
-                    <div class="flex mx-1 gap-1">
+                    <div class="flex gap-1 mx-1">
                         <label class="flex items-center">
                             <input
                                 on:input=move |evt| {
@@ -474,7 +471,7 @@ pub fn ChallengeCreate(
                                 max="0"
                                 prop:value=band_lower
                                 step="50"
-                                class="appearance-none accent-gray-500 dark:accent-gray-400 rounded-full bg-odd-light dark:bg-gray-700 h-4 p-1"
+                                class="p-1 h-4 rounded-full appearance-none accent-gray-500 dark:accent-gray-400 bg-odd-light dark:bg-gray-700"
                             />
                         </label>
                         <label class="flex items-center">
@@ -489,7 +486,7 @@ pub fn ChallengeCreate(
                                 min="0"
                                 prop:value=band_upper
                                 step="50"
-                                class="appearance-none accent-gray-500 dark:accent-gray-400 rounded-full bg-odd-light dark:bg-gray-700 h-4 p-1"
+                                class="p-1 h-4 rounded-full appearance-none accent-gray-500 dark:accent-gray-400 bg-odd-light dark:bg-gray-700"
                             />
                         </label>
                     </div>

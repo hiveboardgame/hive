@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use shared_types::{certainty::Certainty, game_speed::GameSpeed};
+use shared_types::{Certainty, GameSpeed};
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct RatingResponse {
@@ -16,7 +16,7 @@ use cfg_if::cfg_if;
 
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
-    models::{rating::Rating, user::User},
+    models::{Rating, User},
     DbPool,
 };
 use std::str::FromStr;

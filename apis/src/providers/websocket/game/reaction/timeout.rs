@@ -1,4 +1,4 @@
-use crate::common::server_result::GameActionResponse;
+use crate::common::GameActionResponse;
 use crate::providers::{game_state::GameStateSignal, games::GamesSignal};
 use leptos::*;
 

@@ -1,11 +1,9 @@
 use super::game_reaction::GameReaction;
-use crate::responses::challenge::ChallengeResponse;
-use crate::responses::game::GameResponse;
-use crate::responses::user::UserResponse;
+use crate::responses::{ChallengeResponse, GameResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use shared_types::chat_message::ChatMessageContainer;
+use shared_types::ChatMessageContainer;
 use std::fmt;
 use uuid::Uuid;
 

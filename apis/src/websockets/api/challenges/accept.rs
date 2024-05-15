@@ -1,21 +1,14 @@
 use crate::{
-    common::{
-        game_reaction::GameReaction,
-        server_result::{ChallengeUpdate, GameActionResponse, GameUpdate, ServerMessage},
-    },
-    responses::game::GameResponse,
+    common::{ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage},
+    responses::GameResponse,
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{
-    models::{
-        challenge::Challenge,
-        game::{Game, NewGame},
-        rating::Rating,
-    },
+    models::{Challenge, Game, NewGame, Rating},
     DbPool,
 };
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 use uuid::Uuid;
 
 pub struct AcceptHandler {

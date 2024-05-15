@@ -1,12 +1,12 @@
 use super::handler::reset_game_state;
 use crate::{
-    common::server_result::GameActionResponse,
+    common::GameActionResponse,
     providers::{
         alerts::AlertType, alerts::AlertsContext, game_state::GameStateSignal, games::GamesSignal,
         navigation_controller::NavigationControllerSignal, timer::TimerSignal,
     },
 };
-use hive_lib::{game_control::GameControl, game_result::GameResult, game_status::GameStatus};
+use hive_lib::{GameControl, GameResult, GameStatus};
 use leptos::*;
 
 pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {

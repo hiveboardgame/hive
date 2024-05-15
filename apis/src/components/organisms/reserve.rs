@@ -1,15 +1,9 @@
-use crate::common::{
-    hex::{Hex, HexType},
-    hex_stack::HexStack,
-    piece_type::PieceType,
-};
+use crate::common::{Hex, HexStack, HexType, PieceType};
+
 use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
 use crate::providers::game_state::{GameStateSignal, View};
-use hive_lib::history::History;
-use hive_lib::{
-    bug::Bug, bug_stack::BugStack, color::Color, game_status::GameStatus, piece::Piece,
-    position::Position, state::State,
-};
+use hive_lib::History;
+use hive_lib::{Bug, BugStack, Color, GameStatus, Piece, Position, State};
 use leptos::*;
 use std::str::FromStr;
 

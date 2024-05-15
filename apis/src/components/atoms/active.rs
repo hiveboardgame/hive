@@ -1,6 +1,6 @@
-use crate::common::svg_pos::SvgPos;
+use crate::common::SvgPos;
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::position::Position;
+use hive_lib::Position;
 use leptos::*;
 
 #[component]

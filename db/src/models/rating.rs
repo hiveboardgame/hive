@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::{
     db_error::DbError,
-    models::user::User,
+    models::User,
     schema::ratings::{
         dsl::ratings as ratings_table,
         {self, *},
@@ -17,9 +17,9 @@ use diesel::{
 use diesel_async::{
     pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl,
 };
-use hive_lib::{color::Color, game_result::GameResult};
+use hive_lib::{Color, GameResult};
 use serde::{Deserialize, Serialize};
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 use skillratings::{
     glicko2::{glicko2, Glicko2Config, Glicko2Rating},
     Outcomes,

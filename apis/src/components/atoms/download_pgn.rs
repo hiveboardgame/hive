@@ -1,10 +1,10 @@
-use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
+use hive_lib::{Color, GameResult, GameStatus};
 use leptos::*;
 use leptos_icons::*;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{js_sys::Array, Blob, Url};
 
-use crate::{providers::game_state::GameStateSignal, responses::game::GameResponse};
+use crate::{providers::game_state::GameStateSignal, responses::GameResponse};
 
 #[component]
 pub fn DownloadPgn(
@@ -42,10 +42,10 @@ pub fn DownloadPgn(
     view! {
         <Show when=move || maybe_game().is_some()>
             <button
-                class="aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal rounded-sm transform transition-transform duration-300 active:scale-95 flex items-center justify-center z-20 m-1 text-white"
+                class="flex z-20 justify-center items-center m-1 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                 on:click=download
             >
-                <Icon icon=icondata::AiDownloadOutlined class="h-7 w-7 py-1"/>
+                <Icon icon=icondata::AiDownloadOutlined class="py-1 w-7 h-7"/>
             </button>
         </Show>
     }

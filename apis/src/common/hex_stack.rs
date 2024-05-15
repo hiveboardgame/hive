@@ -2,7 +2,7 @@ use crate::common::{
     hex::{ActiveState, Direction, Hex, HexType},
     piece_type::PieceType,
 };
-use hive_lib::{bug_stack::BugStack, piece::Piece, position::Position};
+use hive_lib::{BugStack, Piece, Position};
 
 #[derive(Debug)]
 pub struct HexStack {

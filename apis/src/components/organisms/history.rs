@@ -3,10 +3,10 @@ use crate::components::{
     organisms::reserve::{Alignment, Reserve},
 };
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::{color::Color, game_status::GameStatus};
+use hive_lib::{Color, GameStatus};
 use leptos::{ev::keydown, *};
 use leptos_use::{use_event_listener, use_window};
-use shared_types::conclusion::Conclusion;
+use shared_types::Conclusion;
 
 #[component]
 pub fn HistoryMove(
@@ -31,10 +31,10 @@ pub fn HistoryMove(
         game_state_signal.show_history_turn(turn);
     };
     let get_class = move || {
-        let mut class = "ml-3 hover:bg-pillbug-teal col-span-2 leading-6 h-auto max-h-6 transform transition-transform duration-300 active:scale-95";
+        let mut class = "col-span-2 ml-3 h-auto max-h-6 leading-6 transition-transform duration-300 transform hover:bg-pillbug-teal active:scale-95";
         if let Some(history_turn) = (game_state_signal.signal)().history_turn {
             if turn == history_turn {
-                class = "ml-3 hover:bg-pillbug-teal col-span-2 bg-orange-twilight leading-6 h-auto max-h-6 transform transition-transform duration-300 active:scale-95"
+                class = "col-span-2 ml-3 h-auto max-h-6 leading-6 transition-transform duration-300 transform hover:bg-pillbug-teal bg-orange-twilight active:scale-95"
             }
         }
         class
@@ -182,7 +182,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 <Reserve alignment=Alignment::DoubleRow color=Color::White/>
                 <Reserve alignment=Alignment::DoubleRow color=Color::Black/>
             </div>
-            <div ref=parent class="grid grid-cols-4 gap-1 overflow-auto mb-8 max-h-full h-fit">
+            <div ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
                 <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
                     <HistoryMove

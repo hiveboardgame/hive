@@ -4,10 +4,10 @@ use super::{
 };
 use crate::websockets::internal_server_message::InternalServerMessage;
 use crate::websockets::messages::WsMessage;
-use crate::{common::game_action::GameAction, websockets::chat::Chats};
+use crate::{common::GameAction, websockets::chat::Chats};
 use anyhow::Result;
-use db_lib::{models::game::Game, DbPool};
-use hive_lib::{game_error::GameError, game_status::GameStatus};
+use db_lib::{models::Game, DbPool};
+use hive_lib::{GameError, GameStatus};
 use std::str::FromStr;
 use uuid::Uuid;
 

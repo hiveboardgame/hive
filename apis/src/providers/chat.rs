@@ -3,7 +3,7 @@ use super::{
     navigation_controller::NavigationControllerSignal,
 };
 use leptos::*;
-use shared_types::chat_message::{ChatDestination, ChatMessage, ChatMessageContainer};
+use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer};
 use std::collections::HashMap;
 use uuid::Uuid;
 

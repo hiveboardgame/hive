@@ -1,4 +1,4 @@
-use crate::{components::organisms::header::Redirect, providers::auth_context::AuthContext};
+use crate::{components::organisms::header::Redirect, providers::AuthContext};
 use leptos::*;
 use leptos_router::ActionForm;
 
@@ -16,13 +16,13 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=auth_context.login
-                class="shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-reserve-twilight"
+                class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-stone-300 dark:bg-reserve-twilight"
             >
-                <label class="block font-bold mb-2" for="email">
+                <label class="block mb-2 font-bold" for="email">
                     E-Mail
                     <input
                         ref=my_input
-                        class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
+                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="email"
                         id="email"
                         type="text"
@@ -34,7 +34,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 <label class="block font-bold" for="password">
                     Password
                     <input
-                        class="shadow appearance-none border rounded w-full py-2 px-3 mb-3 leading-tight focus:outline-none"
+                        class="px-3 py-2 mb-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="password"
                         id="password"
                         type="password"
@@ -51,15 +51,15 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                     </Show>
                 </p>
                 <input
-                    class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer"
+                    class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none"
                     type="submit"
                     value="Sign In"
                 />
             </ActionForm>
-            <p class="text-center text-gray-500 text-xs">
+            <p class="text-xs text-center text-gray-500">
                 "Don't have an account?"
                 <a
-                    class="text-blue-500 hover:underline transform transition-transform duration-300"
+                    class="text-blue-500 transition-transform duration-300 transform hover:underline"
                     href="/register"
                 >
                     Sign Up

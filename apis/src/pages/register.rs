@@ -1,6 +1,6 @@
 use crate::functions;
 use crate::functions::users::get::UsernameTaken;
-use crate::{components::organisms::header::Redirect, providers::auth_context::AuthContext};
+use crate::{components::organisms::header::Redirect, providers::AuthContext};
 use lazy_static::lazy_static;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::*;
@@ -92,14 +92,14 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=auth_context.register
-                class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800 "
+                class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
             >
                 <label class="block mb-2">
                     <p class="font-bold">Username</p>
                     <input
                         on:input=validate_username
                         ref=my_input
-                        class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
+                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="username"
                         type="text"
                         prop:value=username
@@ -110,10 +110,10 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     />
 
                     <Show when=username_exists>
-                        <small class="text-ladybug-red ">"Username taken"</small>
+                        <small class="text-ladybug-red">"Username taken"</small>
                     </Show>
                     <Show when=has_invalid_char>
-                        <small class="text-ladybug-red ">"Invalid character in username"</small>
+                        <small class="text-ladybug-red">"Invalid character in username"</small>
                     </Show>
                     <br/>
                     <small>
@@ -135,7 +135,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             }
                         }
 
-                        class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
+                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="email"
                         type="text"
                         inputmode="email"
@@ -145,7 +145,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     />
 
                     <Show when=is_invalid_email>
-                        <small class="text-ladybug-red ">"Invalid email"</small>
+                        <small class="text-ladybug-red">"Invalid email"</small>
                     </Show>
                     <br/>
                     <small>Email notifications and password reset once we implement them</small>
@@ -157,7 +157,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             throttled_input(pw)(evt);
                         }
 
-                        class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
+                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="password"
                         type="password"
                         prop:value=pw
@@ -175,7 +175,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             throttled_input(pw_confirm)(evt);
                         }
 
-                        class="shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none"
+                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="password_confirmation"
                         type="password"
                         prop:value=pw_confirm
@@ -187,7 +187,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 </label>
 
                 <Show when=move || pw_invalid() && (!pw().is_empty())>
-                    <small class="text-ladybug-red ">"Password too short or does not match"</small>
+                    <small class="text-ladybug-red">"Password too short or does not match"</small>
                 </Show>
 
                 <input type="hidden" name="pathname" value=pathname().0/>
@@ -195,7 +195,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <input
                         on:change=move |_| agree.update(|b| *b = !*b)
                         type="checkbox"
-                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                         prop:value=agree
                     />
                     <label
@@ -208,19 +208,19 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <input
                     type="submit"
                     disabled=conditionally_disable
-                    class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                     value="Sign Up"
                 />
                 <Show when=display_register_error>
-                    <small class="text-ladybug-red ">"Registration failed"</small>
+                    <small class="text-ladybug-red">"Registration failed"</small>
                 </Show>
 
             </ActionForm>
 
-            <p class="text-center text-gray-500 text-xs">
+            <p class="text-xs text-center text-gray-500">
                 Already have an account?
                 <a
-                    class="text-blue-500 hover:underline transform transition-transform duration-300"
+                    class="text-blue-500 transition-transform duration-300 transform hover:underline"
                     href="/login"
                 >
                     Sign in

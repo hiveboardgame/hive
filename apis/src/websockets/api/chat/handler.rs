@@ -1,11 +1,11 @@
 use crate::{
-    common::server_result::ServerMessage,
+    common::ServerMessage,
     websockets::{
         chat::{Chats, UserToUser},
         internal_server_message::{InternalServerMessage, MessageDestination},
     },
 };
-use shared_types::chat_message::{ChatDestination, ChatMessageContainer};
+use shared_types::{ChatDestination, ChatMessageContainer};
 
 pub struct ChatHandler {
     message: ChatMessageContainer,

@@ -1,9 +1,9 @@
 use crate::{
     components::{atoms::rating::RatingWithIcon, molecules::user_row::UserRow},
-    responses::user::UserResponse,
+    responses::UserResponse,
 };
 use leptos::*;
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 
 #[component]
 pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
@@ -12,7 +12,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
         .map(|speed| {
             if let Some(rating) = user().ratings.get(speed) {
                 view! {
-                    <div class="border border-dark dark:border-white p-2">
+                    <div class="p-2 border border-dark dark:border-white">
                         <RatingWithIcon rating=store_value(rating.clone())/>
                         <div>{format!("Total: {}", rating.played)}</div>
                         <div>{format!("Wins: {}", rating.win)}</div>
@@ -33,7 +33,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
                 <div class="max-w-fit">
                     <UserRow user=user on_profile=true/>
                 </div>
-                <div class="flex gap-1 flex-wrap">{ratings}</div>
+                <div class="flex flex-wrap gap-1">{ratings}</div>
             </div>
 
         </div>

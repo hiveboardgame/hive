@@ -1,12 +1,9 @@
 use crate::responses::user::UserResponse;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use hive_lib::{
-    bug::Bug, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
-    game_type::GameType, history::History, position::Position, state::State,
-};
+use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{conclusion::Conclusion, game_speed::GameSpeed, time_mode::TimeMode};
+use shared_types::{Conclusion, GameSpeed, TimeMode};
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
@@ -108,11 +105,11 @@ impl GameResponse {
 use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
-    models::game::Game,
+    models::Game,
     DbPool,
 };
 use hive_lib::{
-    color::Color, game_status::GameStatus::Finished, piece::Piece,
+    Color, GameStatus::Finished, Piece,
 };
 use std::str::FromStr;
 

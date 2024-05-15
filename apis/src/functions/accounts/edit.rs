@@ -15,7 +15,7 @@ pub async fn edit_account(
         password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
         Argon2,
     };
-    use db_lib::models::user::User;
+    use db_lib::models::User;
     use rand_core::OsRng;
 
     if new_password != new_password_confirmation {
