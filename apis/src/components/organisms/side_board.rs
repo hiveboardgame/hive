@@ -12,6 +12,7 @@ use crate::{
 };
 use hive_lib::Color;
 use leptos::*;
+use leptos_router::use_location;
 use shared_types::SimpleDestination;
 
 #[derive(Clone, PartialEq)]
@@ -35,7 +36,12 @@ pub fn SideboardTabs(
         Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
-
+    // On navigation switch to reserve
+    create_effect(move |_| {
+        let location = use_location();
+        let _ = (location.pathname)();
+        tab_view.set(SideboardTabView::Reserve);
+    });
     let show_buttons = move || {
         user().map_or(false, |user| {
             let game_state = game_state_signal.signal.get();
@@ -54,7 +60,7 @@ pub fn SideboardTabs(
         let chat_view = SideboardTabView::Chat;
         if tab_view() == chat_view {
             button_color(chat_view)
-        } else if (chat.games_private_new_messages)() || (chat.games_public_new_messages)() {
+        } else if chat.has_messages() {
             "bg-ladybug-red"
         } else {
             "bg-inherit"
@@ -93,8 +99,7 @@ pub fn SideboardTabs(
                         batch(move || {
                             game_state_signal.view_game();
                             if tab_view() == SideboardTabView::Chat {
-                                (chat.games_private_new_messages).set(false);
-                                (chat.games_public_new_messages).set(false);
+                                chat.seen_messages();
                             }
                             tab_view.set(SideboardTabView::Reserve);
                         });
@@ -116,8 +121,7 @@ pub fn SideboardTabs(
                         batch(move || {
                             game_state_signal.view_history();
                             if tab_view() == SideboardTabView::Chat {
-                                (chat.games_private_new_messages).set(false);
-                                (chat.games_public_new_messages).set(false);
+                                chat.seen_messages();
                             }
                             tab_view.set(SideboardTabView::History);
                         });
@@ -138,8 +142,7 @@ pub fn SideboardTabs(
                         on:click=move |_| {
                             batch(move || {
                                 tab_view.set(SideboardTabView::Chat);
-                                (chat.games_private_new_messages).set(false);
-                                (chat.games_public_new_messages).set(false);
+                                chat.seen_messages();
                             });
                         }
                     >
