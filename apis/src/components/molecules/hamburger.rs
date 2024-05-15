@@ -12,13 +12,20 @@ pub fn Hamburger<T: IntoView>(
     content: T,
 ) -> impl IntoView {
     let target = create_node_ref::<Div>();
-    let _ = on_click_outside(target, move |_| hamburger_show.update(|b| *b = false));
+    create_effect(move |_| {
+        if hamburger_show() {
+            let _ = on_click_outside(target, move |_| {
+                hamburger_show.update(|b| *b = false);
+            });
+        }
+    });
+
     let children = store_value(children);
 
     view! {
         <div node_ref=target class=format!("inline-block {extend_tw_classes}")>
             <button
-                on:click=move |_| { hamburger_show.update(|b| *b = !*b) }
+                on:click=move |_| hamburger_show.update(|b| *b = !*b)
 
                 class=button_style
             >

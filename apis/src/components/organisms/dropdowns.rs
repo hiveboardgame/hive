@@ -182,7 +182,7 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
     let button_color = move || {
         if hamburger_show() {
             "bg-button-dawn dark:bg-button-twilight"
-        } else if (chat.games_public_new_messages)() || (chat.games_private_new_messages)() {
+        } else if chat.has_messages() {
             "bg-ladybug-red"
         } else {
             "bg-button-dawn dark:bg-button-twilight"
@@ -191,11 +191,9 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
 
     create_effect(move |_| {
         hamburger_show();
-        batch(move || {
-            (chat.games_public_new_messages).set(false);
-            (chat.games_private_new_messages).set(false);
-        })
+        chat.seen_messages()
     });
+
     view! {
         <Hamburger
             hamburger_show=hamburger_show

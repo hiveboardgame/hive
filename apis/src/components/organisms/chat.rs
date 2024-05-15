@@ -2,6 +2,7 @@ use crate::providers::{
     auth_context::AuthContext, chat::Chat, game_state::GameStateSignal,
     navigation_controller::NavigationControllerSignal,
 };
+use chrono::Local;
 use leptos::*;
 use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};
 use shared_types::chat_message::{ChatDestination, ChatMessage, SimpleDestination};
@@ -9,17 +10,18 @@ use uuid::Uuid;
 
 #[component]
 pub fn Message(message: ChatMessage) -> impl IntoView {
-    let formatted_timestamp = message
+    let user_local_time = message
         .timestamp
         .unwrap()
-        .format("%Y-%m-%d %H:%M")
+        .with_timezone(&Local)
+        .format(" %d/%m/%Y %H:%M")
         .to_string();
+    let turn = message.turn.map(|turn| (format!(" on turn {turn}:")));
+
     view! {
-        <div class="flex items-center mb-1 w-full">
-            <div class="w-full px-2">
-                <div class="text-sm select-text">{message.username} at {formatted_timestamp}</div>
-                <div class="text-sm select-text max-w-fit break-words">{message.message}</div>
-            </div>
+        <div class="flex flex-col items-start mb-1 w-full">
+            <div class="flex px-2 gap-1"><div class="font-bold">{message.username}</div>{user_local_time}{turn}</div>
+            <div class="px-2 max-w-fit break-words">{message.message}</div>
         </div>
     }
 }
@@ -28,25 +30,31 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 pub fn ChatInput(destination: ChatDestination) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let destination = store_value(destination);
-    let message_signal = RwSignal::new(String::new());
-    let input = move |evt| message_signal.update(|v| *v = event_target_value(&evt));
+    let input = move |evt| chat.typed_message.update(|v| *v = event_target_value(&evt));
     let send = move || {
-        let message = message_signal();
-        if !message.is_empty() {
-            chat.send(&message, destination());
-            message_signal.set(String::new());
-        };
+        batch(move || {
+            let message = chat.typed_message.get();
+            if !message.is_empty() {
+                chat.send(&message, destination());
+                chat.typed_message.set(String::new());
+            };
+        })
     };
     let placeholder = move || match destination() {
         ChatDestination::GamePlayers(_, _, _) => "Chat with opponent",
         ChatDestination::GameSpectators(_, _, _) => "Chat with spectators",
         _ => "Chat",
     };
+    let my_input = NodeRef::<html::Input>::new();
+    create_effect(move |_| {
+        let _ = my_input.get_untracked().map(|el| el.focus());
+    });
     view! {
         <input
+            ref=my_input
             type="text"
             class="bg-odd-light dark:bg-odd-dark rounded-lg px-4 py-2 focus:outline-none w-full resize-none h-auto box-border shrink-0"
-            prop:value=message_signal
+            prop:value=chat.typed_message
             attr:placeholder=placeholder
             on:input=input
             on:keydown=move |evt| {
@@ -147,8 +155,8 @@ pub fn ChatWindow(
             .unwrap_or_default(),
     };
     view! {
-        <div class="h-full flex flex-col">
-            <div ref=div class="overflow-y-auto h-full">
+        <div class="h-full flex flex-col max-w-full">
+            <div ref=div class="overflow-y-auto h-full w-full">
                 <For each=messages key=|message| message.timestamp let:message>
                     <Message message=message/>
                 </For>
