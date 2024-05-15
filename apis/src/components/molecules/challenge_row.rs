@@ -11,7 +11,7 @@ use crate::{
     },
     responses::ChallengeResponse,
 };
-use hive_lib::color::ColorChoice;
+use hive_lib::ColorChoice;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::*;

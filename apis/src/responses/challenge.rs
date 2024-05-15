@@ -1,7 +1,7 @@
 use crate::common::ChallengeVisibility;
 use crate::responses::user::UserResponse;
 use chrono::prelude::*;
-use hive_lib::color::ColorChoice;
+use hive_lib::ColorChoice;
 use serde::{Deserialize, Serialize};
 use shared_types::{GameSpeed, TimeMode};
 use std::str;

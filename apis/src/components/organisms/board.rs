@@ -7,7 +7,7 @@ use crate::{
     },
     pages::play::TargetStack,
 };
-use hive_lib::game_status::GameStatus;
+use hive_lib::GameStatus;
 use leptos::ev::{
     contextmenu, pointerdown, pointerleave, pointermove, pointerup, touchmove, touchstart, wheel,
 };

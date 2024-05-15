@@ -6,7 +6,7 @@ use crate::{
         timer::TimerSignal,
     },
 };
-use hive_lib::color::Color;
+use hive_lib::Color;
 use leptos::*;
 use leptos_icons::*;
 use shared_types::TimeMode;

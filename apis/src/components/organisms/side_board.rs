@@ -10,7 +10,7 @@ use crate::{
     },
     providers::{AuthContext, chat::Chat, game_state::GameStateSignal},
 };
-use hive_lib::color::Color;
+use hive_lib::Color;
 use leptos::*;
 use shared_types::SimpleDestination;
 

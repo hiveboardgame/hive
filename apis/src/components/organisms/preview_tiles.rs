@@ -2,7 +2,7 @@ use crate::{
     common::HexStack,
     components::{atoms::svgs::Svgs, molecules::simple_hex_stack::SimpleHexStack},
 };
-use hive_lib::{game_type::GameType, position::Position, state::State};
+use hive_lib::{GameType, Position, State};
 use leptos::*;
 
 #[component]

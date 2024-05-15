@@ -13,7 +13,7 @@ use crate::{
     },
     responses::GameResponse,
 };
-use hive_lib::{game_status::GameStatus, history::History, state::State};
+use hive_lib::{GameStatus, History, State};
 use leptos::*;
 
 pub fn handle_reaction(gar: GameActionResponse) {

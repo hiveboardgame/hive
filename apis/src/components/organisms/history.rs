@@ -3,7 +3,7 @@ use crate::components::{
     organisms::reserve::{Alignment, Reserve},
 };
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::{color::Color, game_status::GameStatus};
+use hive_lib::{Color, GameStatus};
 use leptos::{ev::keydown, *};
 use leptos_use::{use_event_listener, use_window};
 use shared_types::Conclusion;

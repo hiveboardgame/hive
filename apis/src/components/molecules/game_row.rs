@@ -11,7 +11,7 @@ use crate::{
     responses::GameResponse,
 };
 use chrono::Utc;
-use hive_lib::{color::Color, game_result::GameResult, game_status::GameStatus};
+use hive_lib::{Color, GameResult, GameStatus};
 use leptos::*;
 use leptos_icons::*;
 use shared_types::Conclusion;

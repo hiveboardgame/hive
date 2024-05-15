@@ -11,7 +11,7 @@ use db_lib::{
     models::{Game, User},
     DbPool
 };
-use hive_lib::{game_control::GameControl, game_error::GameError};
+use hive_lib::{GameControl,GameError};
 use shared_types::TimeMode;
 use uuid::Uuid;
 

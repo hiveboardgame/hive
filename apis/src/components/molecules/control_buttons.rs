@@ -6,7 +6,7 @@ use crate::{
         game_state::GameStateSignal,
     },
 };
-use hive_lib::{color::ColorChoice, game_control::GameControl};
+use hive_lib::{ColorChoice, GameControl};
 use leptos::*;
 
 #[component]

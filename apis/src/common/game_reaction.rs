@@ -1,4 +1,4 @@
-use hive_lib::{game_control::GameControl, turn::Turn};
+use hive_lib::{GameControl, Turn};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

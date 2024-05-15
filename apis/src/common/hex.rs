@@ -1,6 +1,5 @@
 use crate::common::piece_type::PieceType;
-use hive_lib::piece::Piece;
-use hive_lib::position::Position;
+use hive_lib::{Piece,Position};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Direction {

@@ -1,7 +1,7 @@
 use crate::providers::ApiRequests;
 use crate::providers::timer::TimerSignal;
 use chrono::prelude::*;
-use hive_lib::color::Color;
+use hive_lib::Color;
 use lazy_static::lazy_static;
 use leptos::*;
 use leptos_router::RouterContext;

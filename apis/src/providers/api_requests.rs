@@ -2,7 +2,7 @@ use crate::common::ChallengeAction;
 use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
 use chrono::Utc;
-use hive_lib::{game_control::GameControl, turn::Turn};
+use hive_lib::{GameControl, Turn};
 use leptos::*;
 use shared_types::ChatMessageContainer;
 

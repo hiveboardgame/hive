@@ -1,6 +1,6 @@
 use crate::providers::game_state::GameStateSignal;
 use crate::responses::GameResponse;
-use hive_lib::color::Color;
+use hive_lib::Color;
 use leptos::*;
 use std::cmp::Ordering;
 

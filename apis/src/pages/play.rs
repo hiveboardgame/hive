@@ -15,7 +15,7 @@ use crate::{
     },
     providers::{AuthContext, game_state::GameStateSignal},
 };
-use hive_lib::{color::Color, position::Position};
+use hive_lib::{Color, Position};
 use leptos::*;
 use leptos_use::use_media_query;
 use shared_types::SimpleDestination;

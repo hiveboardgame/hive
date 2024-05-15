@@ -1,5 +1,5 @@
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::game_control::GameControl;
+use hive_lib::GameControl;
 use icondata::Icon;
 use leptos::*;
 use leptos_icons::*;
@@ -39,7 +39,7 @@ pub fn AcceptDenyGc(
             }
         >
 
-            <Icon icon=icon class="h-6 w-6 lg:h-8 lg:w-8"/>
+            <Icon icon=icon class="w-6 h-6 lg:h-8 lg:w-8"/>
         </button>
     }
 }
@@ -154,9 +154,9 @@ pub fn ConfirmButton(
                 <button
                     title="Cancel"
                     on:click=cancel
-                    class="ml-1 aspect-square bg-red-700 hover:bg-ladybug-red rounded-sm absolute duration-300"
+                    class="absolute ml-1 bg-red-700 rounded-sm duration-300 aspect-square hover:bg-ladybug-red"
                 >
-                    <Icon icon=icondata::IoCloseSharp class="h-6 w-6 lg:h-8 lg:w-8"/>
+                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6 lg:h-8 lg:w-8"/>
                 </button>
             </Show>
         </div>

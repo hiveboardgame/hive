@@ -2,7 +2,7 @@ use crate::{
     common::HexStack, components::molecules::hex_stack::HexStack as HexStackView,
     providers::game_state::GameStateSignal,
 };
-use hive_lib::{history::History, position::Position, state::State};
+use hive_lib::{History, Position, State};
 use leptos::*;
 
 #[component]

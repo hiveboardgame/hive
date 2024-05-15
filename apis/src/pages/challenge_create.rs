@@ -3,7 +3,7 @@ use crate::{
     components::atoms::{rating::icon_for_speed, select_options::SelectOption},
     providers::{ApiRequests, AuthContext, ColorScheme},
 };
-use hive_lib::{color::ColorChoice, game_type::GameType};
+use hive_lib::{ColorChoice, GameType};
 use leptos::*;
 use leptos_icons::*;
 use leptos_use::use_debounce_fn_with_arg;

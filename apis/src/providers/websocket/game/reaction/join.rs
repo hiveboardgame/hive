@@ -5,7 +5,7 @@ use crate::{
         websocket::game::reaction::handler::reset_game_state,
     },
 };
-use hive_lib::game_control::GameControl;
+use hive_lib::GameControl;
 use leptos::*;
 
 pub fn handle_join(gar: GameActionResponse) {

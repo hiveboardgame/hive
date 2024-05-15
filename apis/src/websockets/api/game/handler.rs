@@ -7,7 +7,7 @@ use crate::websockets::messages::WsMessage;
 use crate::{common::GameAction, websockets::chat::Chats};
 use anyhow::Result;
 use db_lib::{models::Game, DbPool};
-use hive_lib::{game_error::GameError, game_status::GameStatus};
+use hive_lib::{GameError, GameStatus};
 use std::str::FromStr;
 use uuid::Uuid;
 

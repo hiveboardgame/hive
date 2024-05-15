@@ -17,7 +17,7 @@ use diesel::{
 use diesel_async::{
     pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl,
 };
-use hive_lib::{color::Color, game_result::GameResult};
+use hive_lib::{Color, GameResult};
 use serde::{Deserialize, Serialize};
 use shared_types::GameSpeed;
 use skillratings::{

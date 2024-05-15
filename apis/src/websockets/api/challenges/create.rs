@@ -7,7 +7,7 @@ use db_lib::{
     models::{Challenge, NewChallenge,User},
     DbPool,
 };
-use hive_lib::{color::ColorChoice, game_type::GameType};
+use hive_lib::{ColorChoice, GameType};
 use shared_types::TimeMode;
 use std::str::FromStr;
 use uuid::Uuid;

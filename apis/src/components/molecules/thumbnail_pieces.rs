@@ -2,7 +2,7 @@ use crate::common::SvgPos;
 use crate::components::atoms::svgs::Svgs;
 use crate::responses::GameResponse;
 use crate::{common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
-use hive_lib::position::Position;
+use hive_lib::Position;
 use leptos::*;
 
 #[component]

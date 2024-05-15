@@ -16,8 +16,8 @@ use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
 use hive_lib::{
-    color::Color, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
-    history::History, state::State,
+    Color, GameControl, GameResult, GameStatus,
+    History, State,
 };
 use serde::{Deserialize, Serialize};
 use shared_types::{Conclusion, GameSpeed, TimeMode};

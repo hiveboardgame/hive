@@ -1,5 +1,5 @@
 use crate::common::{Direction, SvgPos};
-use hive_lib::position::Position;
+use hive_lib::Position;
 use leptos::*;
 
 #[component]

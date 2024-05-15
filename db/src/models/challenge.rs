@@ -11,7 +11,7 @@ use crate::{
 use chrono::prelude::*;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use hive_lib::game_type::GameType;
+use hive_lib::GameType;
 use nanoid::nanoid;
 use serde::Serialize;
 use shared_types::TimeMode;

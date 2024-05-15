@@ -1,4 +1,4 @@
-use hive_lib::color::Color;
+use hive_lib::Color;
 use leptos::*;
 use shared_types::GameSpeed;
 

@@ -3,7 +3,7 @@ use crate::common::SvgPos;
 use crate::pages::analysis::InAnalysis;
 use crate::providers::Config;
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::position::Position;
+use hive_lib::Position;
 use leptos::*;
 
 #[component]

@@ -5,7 +5,7 @@ use crate::{
         navigation_controller::NavigationControllerSignal, timer::TimerSignal,
     },
 };
-use hive_lib::turn::Turn;
+use hive_lib::Turn;
 use leptos::*;
 
 pub fn handle_turn(turn: Turn, gar: GameActionResponse) {

@@ -2,8 +2,8 @@ use crate::responses::user::UserResponse;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use hive_lib::{
-    bug::Bug, game_control::GameControl, game_result::GameResult, game_status::GameStatus,
-    game_type::GameType, history::History, position::Position, state::State,
+    Bug, GameControl, GameResult, GameStatus,
+    GameType, History, Position, State,
 };
 use serde::{Deserialize, Serialize};
 use shared_types::{Conclusion, GameSpeed, TimeMode};
@@ -112,7 +112,7 @@ use db_lib::{
     DbPool,
 };
 use hive_lib::{
-    color::Color, game_status::GameStatus::Finished, piece::Piece,
+    Color, GameStatus::Finished, Piece,
 };
 use std::str::FromStr;
 

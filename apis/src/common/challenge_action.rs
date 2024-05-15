@@ -1,4 +1,4 @@
-use hive_lib::{color::ColorChoice, game_type::GameType};
+use hive_lib::{ColorChoice, GameType};
 use serde::{Deserialize, Serialize};
 use shared_types::ChallengeError;
 use shared_types::TimeMode;
