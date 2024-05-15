@@ -1,5 +1,5 @@
 use crate::{
-    common::hex_stack::HexStack, components::molecules::hex_stack::HexStack as HexStackView,
+    common::HexStack, components::molecules::hex_stack::HexStack as HexStackView,
     providers::game_state::GameStateSignal,
 };
 use hive_lib::{history::History, position::Position, state::State};

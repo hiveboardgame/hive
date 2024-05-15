@@ -1,5 +1,5 @@
 use crate::providers::api_requests::ApiRequests;
-use crate::responses::game::GameResponse;
+use crate::responses::GameResponse;
 use hive_lib::color::Color;
 use hive_lib::game_control::GameControl;
 use hive_lib::game_status::GameStatus;

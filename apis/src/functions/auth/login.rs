@@ -11,7 +11,7 @@ pub async fn login(
     use actix_identity::Identity;
     use actix_web::HttpMessage;
     use argon2::{password_hash::PasswordHash, Argon2, PasswordVerifier};
-    use db_lib::models::user::User;
+    use db_lib::models::User;
     let pool = pool()?;
     let user: User = User::find_by_email(&email, &pool)
         .await

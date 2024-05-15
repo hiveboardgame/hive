@@ -1,7 +1,7 @@
-use crate::common::config_options::{MoveConfirm, TileDesign, TileDots, TileRotation};
-use crate::common::{piece_type::PieceType, svg_pos::SvgPos};
+use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
+use crate::common::{PieceType, SvgPos};
 use crate::pages::analysis::InAnalysis;
-use crate::providers::config::config::Config;
+use crate::providers::Config;
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::{bug::Bug, piece::Piece, position::Position};
 use leptos::*;

@@ -1,8 +1,8 @@
 use crate::{
-    common::challenge_action::{ChallengeAction, ChallengeVisibility},
+    common::{ChallengeAction, ChallengeVisibility},
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
     providers::{
-        api_requests::ApiRequests, auth_context::AuthContext, challenges::ChallengeStateSignal,
+        ApiRequests, AuthContext, challenges::ChallengeStateSignal,
         game_state::GameStateSignal,
     },
 };
@@ -167,7 +167,7 @@ pub fn ControlButtons() -> impl IntoView {
     };
 
     view! {
-        <div class="flex justify-around items-center grow shrink w-full mt-1">
+        <div class="flex justify-around items-center mt-1 w-full grow shrink">
             <Show
                 when=is_finished
                 fallback=move || {
@@ -242,7 +242,7 @@ pub fn ControlButtons() -> impl IntoView {
                     {rematch_text}
                 </button>
                 <button
-                    class="h-7 m-1 grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0"
+                    class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 transform grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                     on:click=new_opponent
                 >
                     New Game

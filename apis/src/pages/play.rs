@@ -13,12 +13,12 @@ use crate::{
             side_board::SideboardTabs,
         },
     },
-    providers::{auth_context::AuthContext, game_state::GameStateSignal},
+    providers::{AuthContext, game_state::GameStateSignal},
 };
 use hive_lib::{color::Color, position::Position};
 use leptos::*;
 use leptos_use::use_media_query;
-use shared_types::chat_message::SimpleDestination;
+use shared_types::SimpleDestination;
 
 #[derive(Clone)]
 pub struct TargetStack(pub RwSignal<Option<Position>>);
@@ -84,7 +84,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                     view! {
                         <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight"/>
                         <Board/>
-                        <div class="grid col-start-9 col-span-2 row-span-full grid-cols-2 grid-rows-6">
+                        <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full">
                             <DisplayTimer placement=Placement::Top vertical=false/>
                             <SideboardTabs player_is_black=player_is_black/>
                             <DisplayTimer placement=Placement::Bottom vertical=false/>
@@ -94,15 +94,15 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             >
 
                 <div class="flex flex-col flex-grow h-full min-h-0">
-                    <div class="flex flex-col shrink flex-grow bg-board-dawn dark:bg-reserve-twilight">
-                        <div class="flex justify-between shrink flex-row-reverse items-center">
+                    <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
+                        <div class="flex flex-row-reverse justify-between items-center shrink">
                             <ChatDropdown destination=SimpleDestination::Game/>
                             <AnalysisAndDownload/>
                             <Show when=show_buttons>
                                 <ControlButtons/>
                             </Show>
                         </div>
-                        <div class="flex max-h-16 justify-between h-full">
+                        <div class="flex justify-between h-full max-h-16">
                             <Reserve alignment=Alignment::SingleRow color=top_color()/>
                             <DisplayTimer vertical=true placement=Placement::Top/>
                         </div>
@@ -113,11 +113,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
 
                     </div>
                     <Board overwrite_tw_classes="flex grow min-h-0"/>
-                    <div class="flex flex-col shrink flex-grow bg-board-dawn dark:bg-reserve-twilight">
+                    <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
                         <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
                             <UserWithRating side=bottom_color() is_tall=is_tall_or_chat/>
                         </div>
-                        <div class="flex max-h-16 justify-between h-full">
+                        <div class="flex justify-between h-full max-h-16">
                             <Reserve alignment=Alignment::SingleRow color=bottom_color()/>
                             <DisplayTimer vertical=true placement=Placement::Bottom/>
                         </div>

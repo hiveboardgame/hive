@@ -1,5 +1,5 @@
 use crate::{
-    common::{game_reaction::GameReaction, server_result::GameActionResponse},
+    common::{GameReaction, GameActionResponse},
     providers::{
         game_state::GameStateSignal,
         games::GamesSignal,
@@ -11,7 +11,7 @@ use crate::{
             tv::handler::handle_tv,
         },
     },
-    responses::game::GameResponse,
+    responses::GameResponse,
 };
 use hive_lib::{game_status::GameStatus, history::History, state::State};
 use leptos::*;

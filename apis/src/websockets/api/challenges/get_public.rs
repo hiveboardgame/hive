@@ -1,10 +1,10 @@
 use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
 use crate::{
-    common::server_result::{ChallengeUpdate, ServerMessage},
-    responses::challenge::ChallengeResponse,
+    common::{ChallengeUpdate, ServerMessage},
+    responses::ChallengeResponse,
 };
 use anyhow::Result;
-use db_lib::{models::challenge::Challenge, DbPool};
+use db_lib::{models::Challenge, DbPool};
 use uuid::Uuid;
 
 pub struct GetPublicHandler {

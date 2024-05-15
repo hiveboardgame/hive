@@ -11,10 +11,10 @@ pub struct AccountResponse {
 
 use cfg_if::cfg_if;
 
-use crate::responses::user::UserResponse;
+use crate::responses::UserResponse;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
-    models::user::User,
+    models::User,
     DbPool,
 };
 use leptos::*;

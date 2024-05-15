@@ -1,10 +1,10 @@
 use crate::providers::{
-    auth_context::AuthContext, chat::Chat, game_state::GameStateSignal,
+    AuthContext, chat::Chat, game_state::GameStateSignal,
     navigation_controller::NavigationControllerSignal,
 };
 use leptos::*;
 use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};
-use shared_types::chat_message::{ChatDestination, ChatMessage, SimpleDestination};
+use shared_types::{ChatDestination, ChatMessage, SimpleDestination};
 use uuid::Uuid;
 
 #[component]
@@ -16,9 +16,9 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
         .to_string();
     view! {
         <div class="flex items-center mb-1 w-full">
-            <div class="w-full px-2">
+            <div class="px-2 w-full">
                 <div class="text-sm select-text">{message.username} at {formatted_timestamp}</div>
-                <div class="text-sm select-text max-w-fit break-words">{message.message}</div>
+                <div class="text-sm break-words select-text max-w-fit">{message.message}</div>
             </div>
         </div>
     }
@@ -45,7 +45,7 @@ pub fn ChatInput(destination: ChatDestination) -> impl IntoView {
     view! {
         <input
             type="text"
-            class="bg-odd-light dark:bg-odd-dark rounded-lg px-4 py-2 focus:outline-none w-full resize-none h-auto box-border shrink-0"
+            class="box-border px-4 py-2 w-full h-auto rounded-lg resize-none bg-odd-light dark:bg-odd-dark focus:outline-none shrink-0"
             prop:value=message_signal
             attr:placeholder=placeholder
             on:input=input
@@ -147,7 +147,7 @@ pub fn ChatWindow(
             .unwrap_or_default(),
     };
     view! {
-        <div class="h-full flex flex-col">
+        <div class="flex flex-col h-full">
             <div ref=div class="overflow-y-auto h-full">
                 <For each=messages key=|message| message.timestamp let:message>
                     <Message message=message/>

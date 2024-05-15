@@ -22,12 +22,12 @@ use crate::{
         tutorial::Tutorial,
     },
     providers::{
-        alerts::provide_alerts, auth_context::provide_auth, challenges::provide_challenges,
-        chat::provide_chat, color_scheme::provide_color_scheme, config::config::provide_config,
+        provide_alerts, provide_auth, challenges::provide_challenges,
+        chat::provide_chat, provide_color_scheme, provide_config,
         game_state::provide_game_state, games::provide_games,
         navigation_controller::provide_navigation_controller, online_users::provide_users,
-        ping::provide_ping, refocus::provide_refocus, timer::provide_timer,
-        websocket::context::provide_websocket,
+        provide_ping, refocus::provide_refocus, timer::provide_timer,
+        websocket::provide_websocket,
     },
 };
 use leptos::*;

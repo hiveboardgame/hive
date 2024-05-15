@@ -1,5 +1,5 @@
 use crate::{
-    common::server_result::GameActionResponse,
+    common::GameActionResponse,
     providers::{
         game_state::GameStateSignal, games::GamesSignal, timer::TimerSignal,
         websocket::game::reaction::handler::reset_game_state,

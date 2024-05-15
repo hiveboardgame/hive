@@ -1,4 +1,4 @@
-use crate::common::config_options::TileDesign;
+use crate::common::TileDesign;
 use crate::functions::config::tile_design::ChangeTileDesign;
 use leptos::*;
 

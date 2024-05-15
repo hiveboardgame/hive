@@ -1,4 +1,4 @@
-use crate::common::{hex::Direction, svg_pos::SvgPos};
+use crate::common::{Direction, SvgPos};
 use hive_lib::position::Position;
 use leptos::*;
 

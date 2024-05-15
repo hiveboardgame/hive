@@ -1,4 +1,4 @@
-use crate::providers::api_requests::ApiRequests;
+use crate::providers::ApiRequests;
 use crate::providers::timer::TimerSignal;
 use chrono::prelude::*;
 use hive_lib::color::Color;

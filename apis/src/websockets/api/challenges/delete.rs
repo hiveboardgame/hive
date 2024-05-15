@@ -1,14 +1,14 @@
 use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
 use crate::{
     common::{
-        challenge_action::ChallengeVisibility,
-        server_result::{ChallengeUpdate, ServerMessage},
+        ChallengeVisibility,
+        {ChallengeUpdate, ServerMessage},
     },
-    responses::challenge::ChallengeResponse,
+    responses::ChallengeResponse,
 };
 use anyhow::Result;
-use db_lib::{models::challenge::Challenge, DbPool};
-use shared_types::challenge_error::ChallengeError;
+use db_lib::{models::Challenge, DbPool};
+use shared_types::ChallengeError;
 use uuid::Uuid;
 
 pub struct DeleteHandler {

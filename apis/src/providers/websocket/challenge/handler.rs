@@ -1,7 +1,7 @@
 use crate::{
-    common::server_result::ChallengeUpdate,
+    common::ChallengeUpdate,
     providers::{auth_context::AuthContext, challenges::ChallengeStateSignal},
-    responses::challenge::ChallengeResponse,
+    responses::ChallengeResponse,
 };
 use leptos::*;
 

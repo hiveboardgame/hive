@@ -1,4 +1,4 @@
-use crate::providers::{auth_context::AuthContext, online_users::OnlineUsersSignal};
+use crate::providers::{AuthContext, online_users::OnlineUsersSignal};
 use leptos::*;
 use leptos_router::ActionForm;
 
@@ -16,7 +16,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                     }
                 }
 
-                class="w-full h-full flex place-content-start bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
+                class="flex place-content-start px-4 py-2 w-full h-full font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red active:scale-95"
                 type="submit"
             >
                 Logout

@@ -1,7 +1,7 @@
 use crate::components::molecules::banner::Banner;
 use crate::components::organisms::online_users::OnlineUsers;
 use crate::components::organisms::tv::Tv;
-use crate::providers::auth_context::AuthContext;
+use crate::providers::AuthContext;
 use crate::{
     components::{molecules::modal::Modal, organisms::challenges::Challenges},
     pages::challenge_create::ChallengeCreate,
@@ -26,10 +26,10 @@ pub fn Home() -> impl IntoView {
     };
 
     view! {
-        <div class="pt-20 flex flex-col justify-start md:justify-center items-center w-full overflow-x-clip">
+        <div class="flex flex-col justify-start items-center pt-20 w-full md:justify-center overflow-x-clip">
             <Banner title="hivegame.com" extend_tw_classes="w-10/12" logo=logo()/>
             <button
-                class="m-5 grow md:grow-0 whitespace-nowrap bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded"
+                class="px-4 py-2 m-5 font-bold text-white whitespace-nowrap rounded transition-transform duration-300 transform grow md:grow-0 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                 on:click=move |_| {
                     if logged_in() {
                         open.update(move |b| *b = true)
@@ -42,11 +42,11 @@ pub fn Home() -> impl IntoView {
 
                 Play
             </button>
-            <div class="flex flex-col md:flex-row justify-center items-center">
+            <div class="flex flex-col justify-center items-center md:flex-row">
                 <Modal open=open dialog_el=dialog_el>
                     <ChallengeCreate close=close_modal/>
                 </Modal>
-                <div class="flex flex-col md:flex-row w-full items-center md:items-start">
+                <div class="flex flex-col items-center w-full md:flex-row md:items-start">
                     <div class="flex flex-col">
                         <Challenges/>
                         <Tv/>

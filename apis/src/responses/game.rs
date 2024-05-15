@@ -6,7 +6,7 @@ use hive_lib::{
     game_type::GameType, history::History, position::Position, state::State,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::{conclusion::Conclusion, game_speed::GameSpeed, time_mode::TimeMode};
+use shared_types::{Conclusion, GameSpeed, TimeMode};
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
@@ -108,7 +108,7 @@ impl GameResponse {
 use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
-    models::game::Game,
+    models::Game,
     DbPool,
 };
 use hive_lib::{

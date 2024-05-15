@@ -2,13 +2,12 @@ use crate::components::atoms::og::OG;
 use crate::components::atoms::title::Title;
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
-use crate::providers::api_requests::ApiRequests;
-use crate::providers::auth_context::AuthContext;
-use crate::providers::color_scheme::ColorScheme;
+use crate::providers::{ApiRequests, AuthContext, ColorScheme};
+
 use crate::providers::navigation_controller::NavigationControllerSignal;
-use crate::providers::ping::PingSignal;
+use crate::providers::PingSignal;
 use crate::providers::refocus::RefocusSignal;
-use crate::providers::websocket::context::WebsocketContext;
+use crate::providers::websocket::WebsocketContext;
 use chrono::Utc;
 use lazy_static::lazy_static;
 use leptos::*;
@@ -123,7 +122,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         }/>
 
         <Body/>
-        <main class="min-h-screen w-full bg-light dark:bg-gray-950 text-xs sm:text-sm md:text-md touch-manipulations">
+        <main class="w-full min-h-screen text-xs bg-light dark:bg-gray-950 sm:text-sm md:text-md touch-manipulations">
             <Header/>
             <Alert/>
             {children()}

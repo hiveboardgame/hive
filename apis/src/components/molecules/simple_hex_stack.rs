@@ -1,4 +1,4 @@
-use crate::common::hex_stack::HexStack;
+use crate::common::HexStack;
 use crate::components::atoms::simple_hex::SimpleHex;
 use leptos::*;
 

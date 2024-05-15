@@ -1,5 +1,5 @@
 use crate::{
-    common::server_result::GameUpdate,
+    common::GameUpdate,
     providers::websocket::game::{
         reaction::handler::handle_reaction, tv::handler::handle_tv, urgent::handler::handle_urgent,
     },

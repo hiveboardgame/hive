@@ -1,5 +1,5 @@
 use crate::{
-    common::server_result::GameActionResponse,
+    common::GameActionResponse,
     providers::{
         game_state::GameStateSignal, games::GamesSignal,
         navigation_controller::NavigationControllerSignal, timer::TimerSignal,

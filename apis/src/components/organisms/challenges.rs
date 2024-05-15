@@ -1,7 +1,7 @@
 use crate::{
     components::molecules::challenge_row::ChallengeRow,
-    providers::{auth_context::AuthContext, challenges::ChallengeStateSignal},
-    responses::challenge::ChallengeResponse,
+    providers::{AuthContext, challenges::ChallengeStateSignal},
+    responses::ChallengeResponse,
 };
 use leptos::*;
 

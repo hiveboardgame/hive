@@ -1,4 +1,4 @@
-use crate::common::config_options::MoveConfirm;
+use crate::common::MoveConfirm;
 use crate::functions::config::confirm_mode::ToggleConfirmMode;
 use leptos::*;
 

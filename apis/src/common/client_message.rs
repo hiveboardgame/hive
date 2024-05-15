@@ -2,7 +2,7 @@ use super::challenge_action::ChallengeAction;
 use super::game_action::GameAction;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared_types::chat_message::ChatMessageContainer;
+use shared_types::ChatMessageContainer;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClientRequest {

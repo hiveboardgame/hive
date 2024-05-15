@@ -1,6 +1,6 @@
 use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
-use crate::common::{client_message::ClientRequest, game_action::GameAction};
+use crate::common::{ClientRequest, GameAction};
 use crate::websockets::api::challenges::handler::ChallengeHandler;
 use crate::websockets::api::ping::handler::PingHandler;
 use crate::websockets::api::user_status::handler::UserStatusHandler;

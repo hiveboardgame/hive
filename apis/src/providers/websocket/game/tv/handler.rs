@@ -1,4 +1,4 @@
-use crate::{providers::games::GamesSignal, responses::game::GameResponse};
+use crate::{providers::games::GamesSignal, responses::GameResponse};
 
 use leptos::*;
 

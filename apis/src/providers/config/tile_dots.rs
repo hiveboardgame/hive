@@ -1,4 +1,4 @@
-use crate::common::config_options::TileDots;
+use crate::common::TileDots;
 use crate::functions::config::tile_dots::ChangeTileDots;
 use leptos::*;
 

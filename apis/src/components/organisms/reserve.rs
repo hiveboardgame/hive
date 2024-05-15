@@ -1,8 +1,5 @@
-use crate::common::{
-    hex::{Hex, HexType},
-    hex_stack::HexStack,
-    piece_type::PieceType,
-};
+use crate::common::{Hex, HexType,HexStack, PieceType};
+
 use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
 use crate::providers::game_state::{GameStateSignal, View};
 use hive_lib::history::History;

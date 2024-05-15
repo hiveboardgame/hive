@@ -1,6 +1,6 @@
 use super::handler::reset_game_state;
 use crate::{
-    common::server_result::GameActionResponse,
+    common::GameActionResponse,
     providers::{
         alerts::AlertType, alerts::AlertsContext, game_state::GameStateSignal, games::GamesSignal,
         navigation_controller::NavigationControllerSignal, timer::TimerSignal,

@@ -1,7 +1,7 @@
 use crate::components::atoms::rating::icon_for_speed;
 use leptos::*;
 use leptos_icons::*;
-use shared_types::{game_speed::GameSpeed, time_mode::TimeMode};
+use shared_types::{GameSpeed, TimeMode};
 
 #[component]
 pub fn TimeRow(
@@ -38,7 +38,7 @@ pub fn TimeRow(
         _ => unreachable!(),
     };
     view! {
-        <div class="flex items-center gap-1 justify-start">
+        <div class="flex gap-1 justify-start items-center">
             {icon} <p class=extend_tw_classes>{text}</p>
         </div>
     }

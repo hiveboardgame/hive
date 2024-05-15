@@ -1,4 +1,4 @@
-use crate::common::config_options::TileRotation;
+use crate::common::TileRotation;
 use leptos::*;
 
 #[server]

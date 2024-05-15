@@ -3,7 +3,7 @@ use crate::{components::molecules::user_row::UserRow, functions::users::get::get
 use leptos::logging::log;
 use leptos::*;
 use leptos_icons::Icon;
-use shared_types::game_speed::GameSpeed;
+use shared_types::GameSpeed;
 
 #[component]
 pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
@@ -23,8 +23,8 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                             let users = store_value(users);
                             let is_empty = move || users().is_empty();
                             view! {
-                                <div class="m-2 flex flex-col w-fit">
-                                    <div class="flex items-center gap-1">
+                                <div class="flex flex-col m-2 w-fit">
+                                    <div class="flex gap-1 items-center">
                                         <Icon icon=icon_for_speed(&speed())/>
                                         {speed().to_string()}
                                         :

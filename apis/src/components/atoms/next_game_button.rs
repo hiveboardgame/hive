@@ -4,7 +4,7 @@ use crate::providers::{
 };
 use leptos::*;
 use leptos_icons::Icon;
-use shared_types::time_mode::TimeMode;
+use shared_types::TimeMode;
 
 #[component]
 pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {

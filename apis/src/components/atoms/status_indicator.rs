@@ -1,8 +1,8 @@
 use crate::{
-    common::server_result::UserStatus,
+    common::UserStatus,
     providers::{
-        auth_context::AuthContext, online_users::OnlineUsersSignal, ping::PingSignal,
-        websocket::context::WebsocketContext,
+        AuthContext, online_users::OnlineUsersSignal, PingSignal,
+        websocket::WebsocketContext,
     },
 };
 use chrono::Utc;

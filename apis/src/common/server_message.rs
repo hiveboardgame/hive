@@ -1,5 +1,5 @@
 use crate::common::game_action::GameAction;
-use crate::responses::game::GameResponse;
+use crate::responses::GameResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

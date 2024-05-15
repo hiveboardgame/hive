@@ -1,4 +1,4 @@
-use crate::responses::game::GameResponse;
+use crate::responses::GameResponse;
 use leptos::*;
 use uuid::Uuid;
 

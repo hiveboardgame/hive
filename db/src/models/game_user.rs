@@ -1,6 +1,6 @@
 use crate::{
     db_error::DbError,
-    models::{game::Game, user::User},
+    models::{Game, User},
     schema::{games_users, games_users::dsl::games_users as games_users_table},
     {get_conn, DbPool},
 };

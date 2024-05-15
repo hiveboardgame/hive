@@ -1,15 +1,10 @@
 use super::{api::handler::RequestHandler, internal_server_message::MessageDestination};
-use crate::{
-    common::{
-        client_message::ClientRequest,
-        server_result::{ExternalServerError, ServerResult},
-    },
-    websockets::{
-        chat::Chats,
-        lobby::Lobby,
-        messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
-    },
-};
+use crate::common::{ClientRequest, ExternalServerError, ServerResult};
+use crate::websockets::{
+    chat::Chats,
+    lobby::Lobby,
+    messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
+    };
 use actix::{
     fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
     Running, StreamHandler, WrapFuture,

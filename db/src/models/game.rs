@@ -2,7 +2,7 @@ use super::challenge::Challenge;
 use crate::{
     db_error::DbError,
     get_conn,
-    models::{game_user::GameUser, rating::Rating},
+    models::{GameUser, Rating},
     schema::{
         challenges::{self, nanoid as nanoid_field},
         games::{self, dsl::*},
@@ -20,7 +20,7 @@ use hive_lib::{
     history::History, state::State,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::{conclusion::Conclusion, game_speed::GameSpeed, time_mode::TimeMode};
+use shared_types::{Conclusion, GameSpeed, TimeMode};
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;

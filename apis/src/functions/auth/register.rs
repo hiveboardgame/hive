@@ -15,7 +15,7 @@ pub async fn register(
         password_hash::{PasswordHasher, SaltString},
         Argon2,
     };
-    use db_lib::models::user::{NewUser, User};
+    use db_lib::models::{NewUser, User};
     use rand_core::OsRng;
     const MIN_PASSWORD_LENGTH: usize = 8;
     const MAX_PASSWORD_LENGTH: usize = 128;

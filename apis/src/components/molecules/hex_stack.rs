@@ -1,8 +1,8 @@
-use crate::common::hex::HexType;
-use crate::common::piece_type::PieceType;
+use crate::common::HexType;
+use crate::common::PieceType;
 use crate::pages::play::TargetStack;
 use crate::{
-    common::{hex::ActiveState, hex_stack::HexStack},
+    common::{ActiveState, HexStack},
     components::atoms::hex::Hex,
 };
 use leptos::ev::pointerup;

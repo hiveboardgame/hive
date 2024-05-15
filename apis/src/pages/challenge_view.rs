@@ -1,6 +1,6 @@
 use crate::components::molecules::challenge_row::ChallengeRow;
 use crate::functions::{challenges::get::get_challenge_by_nanoid, hostname::hostname_and_port};
-use crate::providers::auth_context::AuthContext;
+use crate::providers::AuthContext;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::*;
@@ -53,7 +53,7 @@ pub fn ChallengeView() -> impl IntoView {
     };
 
     view! {
-        <div class="pt-20 mx-auto flex flex-col items-center">
+        <div class="flex flex-col items-center pt-20 mx-auto">
             <Transition>
                 {move || {
                     challenge()
@@ -84,9 +84,9 @@ pub fn ChallengeView() -> impl IntoView {
                                                 title="Copy link"
                                                 ref=button_ref
                                                 on:click=copy
-                                                class="bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-1 rounded focus:outline-none focus:shadow-outline m-1"
+                                                class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
                                             >
-                                                <Icon icon=icondata::AiCopyOutlined class="h-6 w-6"/>
+                                                <Icon icon=icondata::AiCopyOutlined class="w-6 h-6"/>
                                             </button>
                                         </div>
                                         <p>

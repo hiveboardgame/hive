@@ -1,6 +1,6 @@
 use db_lib::config::DbConfig;
 use db_lib::get_pool;
-use db_lib::models::user::{NewUser, User};
+use db_lib::models::{NewUser, User};
 
 #[tokio::main]
 async fn main() {

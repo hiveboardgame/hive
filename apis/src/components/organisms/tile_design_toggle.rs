@@ -1,4 +1,4 @@
-use crate::{common::config_options::TileDesign, providers::config::config::Config};
+use crate::{common::TileDesign, providers::Config};
 use leptos::*;
 
 use leptos_router::ActionForm;
@@ -6,7 +6,7 @@ use leptos_router::ActionForm;
 #[component]
 pub fn TileDesignToggle() -> impl IntoView {
     view! {
-        <p class="text-black dark:text-white m-1">Piece style:</p>
+        <p class="m-1 text-black dark:text-white">Piece style:</p>
         <div class="flex">
             <TileDesignButton tile_design=TileDesign::Official/>
             <TileDesignButton tile_design=TileDesign::Flat/>
@@ -29,7 +29,7 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
     view! {
         <ActionForm
             action=config.tile_design.action
-            class="m-1 inline-flex items-center border border-transparent text-base font-medium rounded-md shadow justify-center cursor-pointer"
+            class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer"
         >
             <input type="hidden" name="tile_design" value=tile_design().to_string()/>
             <button

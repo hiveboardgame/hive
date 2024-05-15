@@ -1,7 +1,6 @@
 use crate::{
     common::{
-        hex::{Direction, Hex, HexType},
-        piece_type::PieceType,
+        {Direction, Hex, HexType, PieceType}
     },
     components::atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
     pages::play::TargetStack,

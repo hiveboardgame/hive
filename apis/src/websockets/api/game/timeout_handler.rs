@@ -1,13 +1,13 @@
 use crate::{
     common::{
-        game_reaction::GameReaction,
-        server_result::{GameActionResponse, GameUpdate, ServerMessage},
+        GameReaction,
+        {GameActionResponse, GameUpdate, ServerMessage},
     },
-    responses::game::GameResponse,
+    responses::GameResponse,
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
-use db_lib::{models::game::Game, DbPool};
+use db_lib::{models::Game, DbPool};
 use uuid::Uuid;
 
 pub struct TimeoutHandler {
