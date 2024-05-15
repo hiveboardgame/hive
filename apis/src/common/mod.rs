@@ -36,4 +36,13 @@ pub use hex::{
     ActiveState
 };
 
-pub use server_result::*;
+pub use server_result::{
+    ServerResult,
+    ExternalServerError,
+    ServerMessage,
+    GameUpdate,
+    GameActionResponse,
+    ChallengeUpdate,
+    UserStatus,
+    UserUpdate
+};
