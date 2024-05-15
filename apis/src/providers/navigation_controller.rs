@@ -1,13 +1,6 @@
-use lazy_static::lazy_static;
 use leptos::*;
-use regex::Regex;
 
 use crate::providers::{api_requests::ApiRequests, chat::Chat, game_state::GameStateSignal};
-
-lazy_static! {
-    static ref NANOID: Regex =
-        Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
-}
 
 #[derive(Clone, Debug, Copy)]
 pub struct NavigationControllerSignal {

@@ -1,3 +1,4 @@
+use crate::common::regexp_wrapper::NANOID_REGEX;
 use crate::components::atoms::og::OG;
 use crate::components::atoms::title::Title;
 use crate::components::molecules::alert::Alert;
@@ -10,19 +11,13 @@ use crate::providers::ping::PingSignal;
 use crate::providers::refocus::RefocusSignal;
 use crate::providers::websocket::context::WebsocketContext;
 use chrono::Utc;
-use lazy_static::lazy_static;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::use_location;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn, use_window_focus};
-use regex::Regex;
-
-lazy_static! {
-    static ref NANOID: Regex =
-        Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
-}
+use wasm_bindgen::JsValue;
 pub const COMMON_LINK_STYLE: &str = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
 pub const DROPDOWN_BUTTON_STYLE: &str= "h-full p-2 hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block";
 
@@ -43,8 +38,8 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         let location = use_location();
         let mut navi = expect_context::<NavigationControllerSignal>();
         let pathname = (location.pathname)();
-        let nanoid = if let Some(caps) = NANOID.captures(&pathname) {
-            caps.name("nanoid").map(|m| m.as_str().to_string())
+        let nanoid = if let Some(matched_group) = NANOID_REGEX.get().exec(&pathname) {
+            JsValue::as_string(&matched_group.get(1))
         } else {
             None
         };

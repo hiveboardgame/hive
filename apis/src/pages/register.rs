@@ -1,3 +1,4 @@
+use crate::common::regexp_wrapper::RegExpWrapper;
 use crate::functions;
 use crate::functions::users::get::UsernameTaken;
 use crate::{components::organisms::header::Redirect, providers::auth_context::AuthContext};
@@ -6,16 +7,16 @@ use leptos::leptos_dom::helpers::debounce;
 use leptos::*;
 use leptos_router::ActionForm;
 use leptos_use::use_debounce_fn_with_arg;
-use regex::Regex;
 use std::time::Duration;
+use web_sys::js_sys::RegExp;
 use web_sys::Event;
 
 const BANNED_USERNAMES: [&str; 3] = ["black", "white", "admin"];
 const VALID_USERNAME_CHARS: &str = "-_";
 
 lazy_static! {
-    static ref EMAIL_RE: Regex =
-        Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+    static ref EMAIL_RE: RegExpWrapper =
+        RegExpWrapper::new(|| RegExp::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", ""));
 }
 
 #[component]
@@ -239,5 +240,5 @@ fn valid_username_char(c: char) -> bool {
 }
 
 fn invalid_email(email: &str) -> bool {
-    !EMAIL_RE.is_match(email)
+    !EMAIL_RE.get().test(email)
 }

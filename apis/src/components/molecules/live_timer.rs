@@ -1,19 +1,14 @@
+use crate::common::regexp_wrapper::NANOID_REGEX;
 use crate::providers::api_requests::ApiRequests;
 use crate::providers::timer::TimerSignal;
 use chrono::prelude::*;
 use hive_lib::color::Color;
-use lazy_static::lazy_static;
 use leptos::*;
 use leptos_router::RouterContext;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn_with_options, UseIntervalFnOptions};
-use regex::Regex;
-
 use std::time::Duration;
-lazy_static! {
-    static ref NANOID: Regex =
-        Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
-}
+use wasm_bindgen::JsValue;
 
 #[component]
 pub fn LiveTimer(side: Color) -> impl IntoView {
@@ -113,10 +108,13 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
             if !timer.finished {
                 let api = ApiRequests::new();
                 let router = expect_context::<RouterContext>();
-                if let Some(caps) = NANOID.captures(&router.pathname().get_untracked()) {
-                    let nanoid = caps.name("nanoid").map_or("", |m| m.as_str());
-                    if !nanoid.is_empty() {
-                        api.game_check_time(nanoid);
+                if let Some(matched_group) =
+                    NANOID_REGEX.get().exec(&router.pathname().get_untracked())
+                {
+                    if let Some(nanoid) = JsValue::as_string(&matched_group.get(1)) {
+                        if !nanoid.is_empty() {
+                            api.game_check_time(&nanoid);
+                        }
                     }
                 }
             }
