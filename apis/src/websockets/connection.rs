@@ -4,7 +4,7 @@ use crate::websockets::{
     chat::Chats,
     lobby::Lobby,
     messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
-    };
+};
 use actix::{
     fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
     Running, StreamHandler, WrapFuture,

@@ -4,7 +4,7 @@ use crate::responses::ChallengeResponse;
 use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
 use anyhow::Result;
 use db_lib::{
-    models::{Challenge, NewChallenge,User},
+    models::{Challenge, NewChallenge, User},
     DbPool,
 };
 use hive_lib::{ColorChoice, GameType};

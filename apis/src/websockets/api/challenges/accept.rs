@@ -1,14 +1,11 @@
 use crate::{
-    common::{
-        GameReaction,
-        ChallengeUpdate, GameActionResponse, GameUpdate, ServerMessage,
-    },
+    common::{ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{
-    models::{Challenge,Game, NewGame, Rating},
+    models::{Challenge, Game, NewGame, Rating},
     DbPool,
 };
 use shared_types::GameSpeed;

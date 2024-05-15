@@ -1,5 +1,5 @@
-use crate::providers::ApiRequests;
 use crate::providers::timer::TimerSignal;
+use crate::providers::ApiRequests;
 use chrono::prelude::*;
 use hive_lib::Color;
 use lazy_static::lazy_static;

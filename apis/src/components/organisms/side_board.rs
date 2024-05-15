@@ -8,7 +8,7 @@ use crate::{
             reserve::{Alignment, Reserve},
         },
     },
-    providers::{AuthContext, chat::Chat, game_state::GameStateSignal},
+    providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
 use hive_lib::Color;
 use leptos::*;

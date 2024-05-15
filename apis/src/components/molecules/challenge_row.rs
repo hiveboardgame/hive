@@ -6,9 +6,7 @@ use crate::{
     components::atoms::game_type::GameType,
     components::atoms::profile_link::ProfileLink,
     functions::hostname::hostname_and_port,
-    providers::{
-        AuthContext, ColorScheme, game_state::GameStateSignal,
-    },
+    providers::{game_state::GameStateSignal, AuthContext, ColorScheme},
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;

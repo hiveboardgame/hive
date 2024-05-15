@@ -1,7 +1,6 @@
 use chrono::{DateTime, Utc};
 use leptos::*;
 
-
 #[derive(Clone, Debug, Copy)]
 pub struct RefocusSignal {
     pub signal: RwSignal<RefocusState>,

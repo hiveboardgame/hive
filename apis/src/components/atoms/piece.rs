@@ -1,8 +1,8 @@
 use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
 use crate::common::{PieceType, SvgPos};
 use crate::pages::analysis::InAnalysis;
-use crate::providers::Config;
 use crate::providers::game_state::GameStateSignal;
+use crate::providers::Config;
 use hive_lib::{Bug, Piece, Position};
 use leptos::*;
 use web_sys::MouseEvent;

@@ -15,10 +15,7 @@ use diesel::{prelude::*, Identifiable, Insertable, Queryable};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
-use hive_lib::{
-    Color, GameControl, GameResult, GameStatus,
-    History, State,
-};
+use hive_lib::{Color, GameControl, GameResult, GameStatus, History, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{Conclusion, GameSpeed, TimeMode};
 use std::str::FromStr;

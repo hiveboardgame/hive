@@ -1,12 +1,4 @@
-use hive_lib::{
-    Color,
-    GameError,
-    GameResult,
-    GameStatus,
-    GameType,
-    History,
-    State
-};
+use hive_lib::{Color, GameError, GameResult, GameStatus, GameType, History, State};
 use std::env;
 
 fn play_game_from_file(file_path: &str) -> Result<State, GameError> {

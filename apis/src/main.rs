@@ -2,9 +2,9 @@ pub mod common;
 pub mod functions;
 pub mod responses;
 pub mod websockets;
-use actix_web::middleware::Compress;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
+use actix_web::middleware::Compress;
 use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 

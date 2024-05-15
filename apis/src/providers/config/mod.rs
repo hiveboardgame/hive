@@ -1,5 +1,5 @@
 mod conf;
-pub use conf::{Config, provide_config};
+pub use conf::{provide_config, Config};
 pub mod confirm_mode;
 pub mod tile_design;
 pub mod tile_dots;

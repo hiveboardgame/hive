@@ -1,8 +1,8 @@
 use crate::common::MoveConfirm;
 use crate::common::SvgPos;
 use crate::pages::analysis::InAnalysis;
-use crate::providers::Config;
 use crate::providers::game_state::GameStateSignal;
+use crate::providers::Config;
 use hive_lib::Position;
 use leptos::*;
 

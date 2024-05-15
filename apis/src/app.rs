@@ -22,11 +22,10 @@ use crate::{
         tutorial::Tutorial,
     },
     providers::{
-        provide_alerts, provide_auth, challenges::provide_challenges,
-        chat::provide_chat, provide_color_scheme, provide_config,
-        game_state::provide_game_state, games::provide_games,
-        navigation_controller::provide_navigation_controller, online_users::provide_users,
-        provide_ping, refocus::provide_refocus, timer::provide_timer,
+        challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state,
+        games::provide_games, navigation_controller::provide_navigation_controller,
+        online_users::provide_users, provide_alerts, provide_auth, provide_color_scheme,
+        provide_config, provide_ping, refocus::provide_refocus, timer::provide_timer,
         websocket::provide_websocket,
     },
 };

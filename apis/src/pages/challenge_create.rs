@@ -7,7 +7,7 @@ use hive_lib::{ColorChoice, GameType};
 use leptos::*;
 use leptos_icons::*;
 use leptos_use::use_debounce_fn_with_arg;
-use shared_types::{GameSpeed, CorrespondenceMode, TimeMode};
+use shared_types::{CorrespondenceMode, GameSpeed, TimeMode};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]

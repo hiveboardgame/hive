@@ -17,32 +17,13 @@ pub use hex_stack::HexStack;
 pub use piece_type::PieceType;
 pub use svg_pos::SvgPos;
 
-pub use challenge_action::{
-    ChallengeAction, 
-    ChallengeVisibility
-};
+pub use challenge_action::{ChallengeAction, ChallengeVisibility};
 
-pub use config_options::{
-    MoveConfirm, 
-    TileDesign, 
-    TileDots, 
-    TileRotation
-};
+pub use config_options::{MoveConfirm, TileDesign, TileDots, TileRotation};
 
-pub use hex::{
-    Direction,
-    Hex, 
-    HexType, 
-    ActiveState
-};
+pub use hex::{ActiveState, Direction, Hex, HexType};
 
 pub use server_result::{
-    ServerResult,
-    ExternalServerError,
-    ServerMessage,
-    GameUpdate,
-    GameActionResponse,
-    ChallengeUpdate,
-    UserStatus,
-    UserUpdate
+    ChallengeUpdate, ExternalServerError, GameActionResponse, GameUpdate, ServerMessage,
+    ServerResult, UserStatus, UserUpdate,
 };

@@ -1,6 +1,6 @@
 use crate::providers::{
-    AuthContext, chat::Chat, game_state::GameStateSignal,
-    navigation_controller::NavigationControllerSignal,
+    chat::Chat, game_state::GameStateSignal, navigation_controller::NavigationControllerSignal,
+    AuthContext,
 };
 use leptos::*;
 use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};

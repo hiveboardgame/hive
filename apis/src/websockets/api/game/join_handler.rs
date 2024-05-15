@@ -1,7 +1,6 @@
 use crate::{
     common::{
-        GameReaction,
-        {GameActionResponse, GameUpdate, ServerMessage},
+        GameReaction, {GameActionResponse, GameUpdate, ServerMessage},
     },
     responses::{GameResponse, UserResponse},
     websockets::{

@@ -1,10 +1,7 @@
 use crate::responses::user::UserResponse;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use hive_lib::{
-    Bug, GameControl, GameResult, GameStatus,
-    GameType, History, Position, State,
-};
+use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{Conclusion, GameSpeed, TimeMode};
 use std::{collections::HashMap, time::Duration};

@@ -1,8 +1,7 @@
 use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
 use crate::{
     common::{
-        ChallengeVisibility,
-        {ChallengeUpdate, ServerMessage},
+        ChallengeVisibility, {ChallengeUpdate, ServerMessage},
     },
     responses::ChallengeResponse,
 };

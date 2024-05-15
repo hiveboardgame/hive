@@ -2,7 +2,7 @@ use super::auth_context::AuthContext;
 use super::navigation_controller::NavigationControllerSignal;
 use crate::responses::GameResponse;
 use chrono::{DateTime, Utc};
-use hive_lib::{Color,GameControl};
+use hive_lib::{Color, GameControl};
 use leptos::*;
 use shared_types::TimeMode;
 use std::cmp::Ordering;

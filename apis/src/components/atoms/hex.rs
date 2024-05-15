@@ -1,7 +1,5 @@
 use crate::{
-    common::{
-        {Direction, Hex, HexType, PieceType}
-    },
+    common::{Direction, Hex, HexType, PieceType},
     components::atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
     pages::play::TargetStack,
     providers::game_state::GameStateSignal,

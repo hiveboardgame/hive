@@ -1,12 +1,9 @@
-use crate::common::{Hex, HexType,HexStack, PieceType};
+use crate::common::{Hex, HexStack, HexType, PieceType};
 
 use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
 use crate::providers::game_state::{GameStateSignal, View};
 use hive_lib::History;
-use hive_lib::{
-    Bug,BugStack, Color, GameStatus, Piece,
-    Position, State,
-};
+use hive_lib::{Bug, BugStack, Color, GameStatus, Piece, Position, State};
 use leptos::*;
 use std::str::FromStr;
 

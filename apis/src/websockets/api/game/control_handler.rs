@@ -1,7 +1,6 @@
 use crate::{
     common::{
-        GameReaction,
-        {GameActionResponse, GameUpdate, ServerMessage},
+        GameReaction, {GameActionResponse, GameUpdate, ServerMessage},
     },
     responses::GameResponse,
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
@@ -9,9 +8,9 @@ use crate::{
 use anyhow::Result;
 use db_lib::{
     models::{Game, User},
-    DbPool
+    DbPool,
 };
-use hive_lib::{GameControl,GameError};
+use hive_lib::{GameControl, GameError};
 use shared_types::TimeMode;
 use uuid::Uuid;
 

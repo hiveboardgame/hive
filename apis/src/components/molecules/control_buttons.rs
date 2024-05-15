@@ -2,8 +2,7 @@ use crate::{
     common::{ChallengeAction, ChallengeVisibility},
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
     providers::{
-        ApiRequests, AuthContext, challenges::ChallengeStateSignal,
-        game_state::GameStateSignal,
+        challenges::ChallengeStateSignal, game_state::GameStateSignal, ApiRequests, AuthContext,
     },
 };
 use hive_lib::{ColorChoice, GameControl};

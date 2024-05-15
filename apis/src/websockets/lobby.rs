@@ -1,7 +1,5 @@
 use crate::{
-    common::{
-        ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate,
-    },
+    common::{ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
     responses::{ChallengeResponse, GameResponse, UserResponse},
     websockets::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
 };

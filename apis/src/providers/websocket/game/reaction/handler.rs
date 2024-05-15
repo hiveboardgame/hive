@@ -1,5 +1,5 @@
 use crate::{
-    common::{GameReaction, GameActionResponse},
+    common::{GameActionResponse, GameReaction},
     providers::{
         game_state::GameStateSignal,
         games::GamesSignal,

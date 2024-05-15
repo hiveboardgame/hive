@@ -1,10 +1,7 @@
 use crate::{
     common::MoveConfirm,
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
-    providers::{
-        AuthContext, Config, game_state::GameStateSignal,
-        timer::TimerSignal,
-    },
+    providers::{game_state::GameStateSignal, timer::TimerSignal, AuthContext, Config},
 };
 use hive_lib::Color;
 use leptos::*;

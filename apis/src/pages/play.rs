@@ -13,7 +13,7 @@ use crate::{
             side_board::SideboardTabs,
         },
     },
-    providers::{AuthContext, game_state::GameStateSignal},
+    providers::{game_state::GameStateSignal, AuthContext},
 };
 use hive_lib::{Color, Position};
 use leptos::*;
