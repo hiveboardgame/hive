@@ -75,24 +75,24 @@ impl AcceptHandler {
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.white_id),
-            message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
+            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_action: GameReaction::New,
                 game: game_response.clone(),
                 game_id: game_response.nanoid.clone(),
                 user_id: self.user_id,
                 username: self.username.to_owned(),
-            })),
+            }))),
         });
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.black_id),
-            message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
+            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_action: GameReaction::New,
                 game: game_response.clone(),
                 game_id: game_response.nanoid.clone(),
                 user_id: self.user_id,
                 username: self.username.to_owned(),
-            })),
+            }))),
         });
 
         for challenge_nanoid in deleted_challenges {

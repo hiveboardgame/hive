@@ -1,5 +1,5 @@
 use crate::{
-    common::{ChallengeAction, ChallengeVisibility},
+    common::ChallengeAction,
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
     providers::{
         challenges::ChallengeStateSignal, game_state::GameStateSignal, ApiRequests, AuthContext,
@@ -7,6 +7,7 @@ use crate::{
 };
 use hive_lib::{ColorChoice, GameControl};
 use leptos::*;
+use shared_types::{ChallengeDetails, ChallengeVisibility};
 
 #[component]
 pub fn ControlButtons() -> impl IntoView {
@@ -46,7 +47,7 @@ pub fn ControlButtons() -> impl IntoView {
         let game_state = expect_context::<GameStateSignal>();
 
         if let Some(game) = game_state.signal.get_untracked().game_response {
-            let challenge_action = ChallengeAction::Create {
+            let details = ChallengeDetails {
                 rated: game.rated,
                 game_type: game.game_type,
                 visibility: ChallengeVisibility::Public,
@@ -58,6 +59,7 @@ pub fn ControlButtons() -> impl IntoView {
                 band_upper: None,
                 band_lower: None,
             };
+            let challenge_action = ChallengeAction::Create(details);
             let api = ApiRequests::new();
             let navigate = leptos_router::use_navigate();
             api.challenge(challenge_action);
@@ -146,7 +148,7 @@ pub fn ControlButtons() -> impl IntoView {
                     } else {
                         unreachable!();
                     };
-                    let challenge_action = ChallengeAction::Create {
+                    let details = ChallengeDetails {
                         rated: game.rated,
                         game_type: game.game_type,
                         visibility: ChallengeVisibility::Direct,
@@ -158,6 +160,7 @@ pub fn ControlButtons() -> impl IntoView {
                         band_upper: None,
                         band_lower: None,
                     };
+                    let challenge_action = ChallengeAction::Create(details);
                     let api = ApiRequests::new();
                     api.challenge(challenge_action);
                 }

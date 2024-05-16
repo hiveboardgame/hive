@@ -264,7 +264,7 @@ impl Bug {
         //                               found  explored
         let mut state = TorusArray::new((false, false));
         state.set(position, (true, true));
-        let board = MidMoveBoard::new(board, board.top_piece(position).unwrap(), position);
+        let board = MidMoveBoard::new(board, position);
         let mut found_pos = Vec::with_capacity(24);
         let mut unexplored = Vec::with_capacity(24);
         unexplored.push(position);
@@ -407,7 +407,7 @@ impl Bug {
     }
 
     fn spider_moves(position: Position, board: &Board) -> Vec<Position> {
-        let board = MidMoveBoard::new(board, board.top_piece(position).unwrap(), position);
+        let board = MidMoveBoard::new(board, position);
         let mut res = Vec::new();
         for pos1 in Bug::crawl_negative_space(position, &board) {
             for pos2 in Bug::crawl_negative_space(pos1, &board).filter(move |pos| *pos != position)

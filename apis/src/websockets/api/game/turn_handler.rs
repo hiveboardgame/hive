@@ -56,24 +56,24 @@ impl TurnHandler {
         }
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.current_player_id),
-            message: ServerMessage::Game(GameUpdate::Urgent(game_responses)),
+            message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
         });
         let response = GameResponse::new_from_db(&game, &self.pool).await?;
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(self.game.nanoid.clone()),
-            message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
+            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: self.game.nanoid.to_owned(),
                 game: response.clone(),
                 game_action: GameReaction::Turn(self.turn.clone()),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
-            })),
+            }))),
         });
         // TODO: Just add the few top games and keep them rated
         if response.time_mode == TimeMode::RealTime {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Game(GameUpdate::Tv(response)),
+                message: ServerMessage::Game(Box::new(GameUpdate::Tv(response))),
             });
         };
         Ok(messages)

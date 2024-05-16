@@ -1,11 +1,11 @@
 mod certainty;
-mod challenge_error;
+mod challenge;
 mod chat_message;
 mod conclusion;
 mod game_speed;
 mod time_mode;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
-pub use challenge_error::ChallengeError;
+pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
 pub use chat_message::{ChatDestination, ChatMessage, ChatMessageContainer, SimpleDestination};
 pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;

@@ -1,5 +1,5 @@
 use crate::{
-    common::{ChallengeAction, ChallengeVisibility},
+    common::ChallengeAction,
     components::atoms::{rating::icon_for_speed, select_options::SelectOption},
     providers::{ApiRequests, AuthContext, ColorScheme},
 };
@@ -7,7 +7,9 @@ use hive_lib::{ColorChoice, GameType};
 use leptos::*;
 use leptos_icons::*;
 use leptos_use::use_debounce_fn_with_arg;
-use shared_types::{CorrespondenceMode, GameSpeed, TimeMode};
+use shared_types::{
+    ChallengeDetails, ChallengeVisibility, CorrespondenceMode, GameSpeed, TimeMode,
+};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
@@ -189,7 +191,7 @@ pub fn ChallengeCreate(
                 None
             }
         };
-        let challenge_action = ChallengeAction::Create {
+        let details = ChallengeDetails {
             rated: params.rated.get_untracked(),
             game_type: params.game_type.get_untracked(),
             visibility: if opponent().is_none() {
@@ -205,6 +207,7 @@ pub fn ChallengeCreate(
             band_upper: upper_rating(),
             band_lower: lower_rating(),
         };
+        let challenge_action = ChallengeAction::Create(details);
         api.challenge(challenge_action);
         close(());
     };

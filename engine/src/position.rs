@@ -20,7 +20,6 @@ pub struct Position {
 pub struct CircleIter {
     pub current_position: Position,
     pub direction: Direction,      // Direction that gets explored next
-    pub origin: Position,          // postion of "wQ" aka lowest piece
     pub main_direction: Direction, // in which direction of the wQ is the bQ
     pub level: usize,              // ring'th level
     pub index: Option<usize>,      // how many steps have to explored so far
@@ -53,7 +52,6 @@ impl CircleIter {
     pub fn new(origin: Position, direction: Direction, revolution: Rotation) -> Self {
         CircleIter {
             revolution,
-            origin,
             current_position: origin,
             main_direction: direction,
             direction,

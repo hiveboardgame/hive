@@ -34,13 +34,13 @@ impl TimeoutHandler {
         if game.finished {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
+                message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                     game_action: GameReaction::TimedOut,
                     game: game_response,
                     game_id: self.game.nanoid.clone(),
                     user_id: self.user_id,
                     username: self.username.clone(),
-                })),
+                }))),
             });
         }
         // TODO: Figure why/whether we need this code :D

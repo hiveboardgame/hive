@@ -1,9 +1,8 @@
-use crate::common::ChallengeVisibility;
 use crate::responses::user::UserResponse;
 use chrono::prelude::*;
 use hive_lib::ColorChoice;
 use serde::{Deserialize, Serialize};
-use shared_types::{GameSpeed, TimeMode};
+use shared_types::{ChallengeVisibility, GameSpeed, TimeMode};
 use std::str;
 use uuid::Uuid;
 

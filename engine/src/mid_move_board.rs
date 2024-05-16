@@ -1,16 +1,13 @@
-use crate::{
-    board::Board, bug_stack::BugStack, piece::Piece, position::Position, torus_array::TorusArray,
-};
+use crate::{board::Board, bug_stack::BugStack, position::Position, torus_array::TorusArray};
 
 pub struct MidMoveBoard<'this> {
     pub board: &'this Board,
     pub position_in_flight: Position,
     pub neighbor_count: TorusArray<u8>,
-    pub piece_in_flight: Piece,
 }
 
 impl<'this> MidMoveBoard<'this> {
-    pub fn new(board: &'this Board, piece: Piece, position: Position) -> Self {
+    pub fn new(board: &'this Board, position: Position) -> Self {
         let mut neighbor_count = board.neighbor_count.clone();
         debug_assert_eq!(board.level(position), 1);
 
@@ -20,7 +17,6 @@ impl<'this> MidMoveBoard<'this> {
 
         Self {
             board,
-            piece_in_flight: piece,
             position_in_flight: position,
             neighbor_count,
         }

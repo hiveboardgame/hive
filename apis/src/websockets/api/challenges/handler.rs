@@ -34,35 +34,11 @@ impl ChallengeHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.challenge_action.clone() {
-            ChallengeAction::Create {
-                rated,
-                game_type,
-                visibility,
-                opponent,
-                color_choice,
-                time_mode,
-                time_base,
-                time_increment,
-                band_upper,
-                band_lower,
-            } => {
-                CreateHandler::new(
-                    rated,
-                    game_type,
-                    visibility,
-                    color_choice,
-                    opponent,
-                    time_mode,
-                    time_base,
-                    time_increment,
-                    band_upper,
-                    band_lower,
-                    self.user_id,
-                    &self.pool,
-                )
-                .await?
-                .handle()
-                .await?
+            ChallengeAction::Create(details) => {
+                CreateHandler::new(details, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
             }
             ChallengeAction::Accept(nanoid) => {
                 AcceptHandler::new(nanoid, &self.username, self.user_id, &self.pool)

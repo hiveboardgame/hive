@@ -20,7 +20,11 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 
     view! {
         <div class="flex flex-col items-start mb-1 w-full">
-            <div class="flex px-2 gap-1"><div class="font-bold">{message.username}</div>{user_local_time}{turn}</div>
+            <div class="flex px-2 gap-1">
+                <div class="font-bold">{message.username}</div>
+                {user_local_time}
+                {turn}
+            </div>
             <div class="px-2 max-w-fit break-words">{message.message}</div>
         </div>
     }

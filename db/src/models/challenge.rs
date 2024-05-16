@@ -3,18 +3,17 @@ use crate::{
     get_conn,
     models::user::User,
     schema::{
-        challenges, challenges::nanoid as nanoid_field,
-        challenges::opponent_id as opponent_id_field, users,
+        challenges::{self, nanoid as nanoid_field, opponent_id as opponent_id_field},
+        users,
     },
     DbPool,
 };
 use chrono::prelude::*;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use hive_lib::GameType;
 use nanoid::nanoid;
 use serde::Serialize;
-use shared_types::TimeMode;
+use shared_types::{ChallengeDetails, TimeMode};
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -40,42 +39,34 @@ impl NewChallenge {
     pub fn new(
         challenger_id: Uuid,
         opponent_id: Option<Uuid>,
-        game_type: GameType,
-        rated: bool,
-        visibility: String,
-        color_choice: String,
-        time_mode: TimeMode,         // Correspondence, Timed, Untimed
-        time_base: Option<i32>,      // Secons
-        time_increment: Option<i32>, // Seconds
-        band_upper: Option<i32>,
-        band_lower: Option<i32>,
+        d: &ChallengeDetails,
     ) -> Result<Self, DbError> {
-        match time_mode {
+        match d.time_mode {
             TimeMode::Untimed => {
-                if time_base.is_some() || time_increment.is_some() {
+                if d.time_base.is_some() || d.time_increment.is_some() {
                     return Err(DbError::InvalidInput {
                         info: String::from("Untimed game has time_base or time_increment"),
                         error: format!(
                             "time_base: {:?}, time_increment: {:?}",
-                            time_base, time_increment
+                            d.time_base, d.time_increment
                         ),
                     });
                 }
             }
             TimeMode::RealTime => {
-                if time_base.is_none() || time_increment.is_none() {
+                if d.time_base.is_none() || d.time_increment.is_none() {
                     return Err(DbError::InvalidInput {
                         info: String::from("Realtime game is missing time_base or time_increment"),
                         error: format!(
                             "time_base: {:?}, time_increment: {:?}",
-                            time_base, time_increment
+                            d.time_base, d.time_increment
                         ),
                     });
                 }
             }
             TimeMode::Correspondence => {
-                if (time_base.is_some() && time_increment.is_some())
-                    || (time_base.is_none() && time_increment.is_none())
+                if (d.time_base.is_some() && d.time_increment.is_some())
+                    || (d.time_base.is_none() && d.time_increment.is_none())
                 {
                     return Err(DbError::InvalidInput {
                         info: String::from(
@@ -83,7 +74,7 @@ impl NewChallenge {
                         ),
                         error: format!(
                             "time_base: {:?}, time_increment: {:?}",
-                            time_base, time_increment
+                            d.time_base, d.time_increment
                         ),
                     });
                 }
@@ -99,17 +90,17 @@ impl NewChallenge {
             nanoid: nanoid!(10),
             challenger_id,
             opponent_id,
-            game_type: game_type.to_string(),
-            rated,
-            visibility,
+            game_type: d.game_type.to_string(),
+            rated: d.rated,
+            visibility: d.visibility.to_string(),
             tournament_queen_rule: true,
-            color_choice,
+            color_choice: d.color_choice.to_string(),
             created_at: Utc::now(),
-            time_mode: time_mode.to_string(),
-            time_base,
-            time_increment,
-            band_upper,
-            band_lower,
+            time_mode: d.time_mode.to_string(),
+            time_base: d.time_base,
+            time_increment: d.time_increment,
+            band_upper: d.band_upper,
+            band_lower: d.band_lower,
         })
     }
 }

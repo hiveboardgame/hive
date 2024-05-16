@@ -1,13 +1,11 @@
 use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
 use crate::{
-    common::{
-        ChallengeVisibility, {ChallengeUpdate, ServerMessage},
-    },
+    common::{ChallengeUpdate, ServerMessage},
     responses::ChallengeResponse,
 };
 use anyhow::Result;
 use db_lib::{models::Challenge, DbPool};
-use shared_types::ChallengeError;
+use shared_types::{ChallengeError, ChallengeVisibility};
 use uuid::Uuid;
 
 pub struct DeclineHandler {

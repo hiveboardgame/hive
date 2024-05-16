@@ -3018,6 +3018,7 @@ name = "shared_types"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "hive",
  "serde",
  "thiserror",
  "uuid",

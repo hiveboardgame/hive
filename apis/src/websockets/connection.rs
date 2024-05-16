@@ -144,9 +144,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                     match handler_result {
                         Ok(messages) => {
                             for message in messages {
-                                let serialized =
-                                    serde_json::to_string(&ServerResult::Ok(message.message))
-                                        .expect("Failed to serialize a server message");
+                                let serialized = serde_json::to_string(&ServerResult::Ok(
+                                    Box::new(message.message),
+                                ))
+                                .expect("Failed to serialize a server message");
                                 let cam = ClientActorMessage {
                                     destination: message.destination,
                                     serialized,
