@@ -51,13 +51,13 @@ impl GameControlHandler {
         let game_response = GameResponse::new_from_db(&game, &self.pool).await?;
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(self.game.nanoid.clone()),
-            message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
+            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: self.game.nanoid.to_owned(),
                 game: game_response.clone(),
                 game_action: GameReaction::Control(self.control.clone()),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
-            })),
+            }))),
         });
         match self.control {
             GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
@@ -71,7 +71,7 @@ impl GameControlHandler {
                 }
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(game.current_player_id),
-                    message: ServerMessage::Game(GameUpdate::Urgent(game_responses)),
+                    message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
                 });
             }
             _ => {}
@@ -79,7 +79,7 @@ impl GameControlHandler {
         if game_response.time_mode == TimeMode::RealTime {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Game(GameUpdate::Tv(game_response)),
+                message: ServerMessage::Game(Box::new(GameUpdate::Tv(game_response))),
             });
         };
         Ok(messages)

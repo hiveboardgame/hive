@@ -1,4 +1,4 @@
-use crate::challenge_error::ChallengeError;
+use crate::challenge::ChallengeError;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;

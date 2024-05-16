@@ -75,11 +75,11 @@ impl Handler<Disconnect> for Lobby {
                     }
                 }
             }
-            let message = ServerResult::Ok(ServerMessage::UserStatus(UserUpdate {
+            let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
                 status: UserStatus::Offline,
                 user: None,
                 username: msg.username,
-            }));
+            })));
             let serialized =
                 serde_json::to_string(&message).expect("Failed to serialize a server message");
             if let Some(lobby) = self.games_users.get_mut(&self.id) {
@@ -119,11 +119,12 @@ impl Handler<Connect> for Lobby {
             //Get currently online users
             for uuid in sessions.keys() {
                 if let Ok(user_response) = UserResponse::from_uuid(uuid, &pool).await {
-                    let message = ServerResult::Ok(ServerMessage::UserStatus(UserUpdate {
-                        status: UserStatus::Online,
-                        user: Some(user_response.clone()),
-                        username: user_response.username,
-                    }));
+                    let message =
+                        ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
+                            status: UserStatus::Online,
+                            user: Some(user_response.clone()),
+                            username: user_response.username,
+                        })));
                     let serialized = serde_json::to_string(&message)
                         .expect("Failed to serialize a server message");
                     let cam = ClientActorMessage {
@@ -136,11 +137,12 @@ impl Handler<Connect> for Lobby {
             }
             let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &pool).await {
                 if let Ok(user_response) = UserResponse::from_user(&user, &pool).await {
-                    let message = ServerResult::Ok(ServerMessage::UserStatus(UserUpdate {
-                        status: UserStatus::Online,
-                        user: Some(user_response),
-                        username: msg.username,
-                    }));
+                    let message =
+                        ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
+                            status: UserStatus::Online,
+                            user: Some(user_response),
+                            username: msg.username,
+                        })));
                     let serialized = serde_json::to_string(&message)
                         .expect("Failed to serialize a server message");
                     // TODO: one needs to be a game::join to everyone in the game, the other one just to the
@@ -172,7 +174,9 @@ impl Handler<Connect> for Lobby {
                             games.push(game)
                         }
                     }
-                    let message = ServerResult::Ok(ServerMessage::Game(GameUpdate::Urgent(games)));
+                    let message = ServerResult::Ok(Box::new(ServerMessage::Game(Box::new(
+                        GameUpdate::Urgent(games),
+                    ))));
                     let serialized = serde_json::to_string(&message)
                         .expect("Failed to serialize a server message");
                     let cam = ClientActorMessage {
@@ -208,9 +212,9 @@ impl Handler<Connect> for Lobby {
                         }
                     }
                 }
-                let message = ServerResult::Ok(ServerMessage::Challenge(
+                let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
                     ChallengeUpdate::Challenges(responses),
-                ));
+                )));
                 serde_json::to_string(&message).expect("Failed to serialize a server message")
             } else {
                 let mut responses = Vec::new();
@@ -222,9 +226,9 @@ impl Handler<Connect> for Lobby {
                         }
                     }
                 }
-                let message = ServerResult::Ok(ServerMessage::Challenge(
+                let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
                     ChallengeUpdate::Challenges(responses),
-                ));
+                )));
                 serde_json::to_string(&message).expect("Failed to serialize a server message")
             };
             let cam = ClientActorMessage {

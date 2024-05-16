@@ -1,5 +1,5 @@
 use crate::{
-    common::{ServerMessage, ServerResult},
+    common::{ServerMessage::*, ServerResult},
     providers::{game_state::GameStateSignal, games::GamesSignal},
 };
 
@@ -15,26 +15,19 @@ pub fn handle_response(m: String) {
     let _game_state = expect_context::<GameStateSignal>();
     let _games = expect_context::<GamesSignal>();
     match serde_json::from_str::<ServerResult>(&m) {
-        Ok(ServerResult::Ok(ServerMessage::Pong { ping_sent, .. })) => {
-            handle_ping(ping_sent);
-        }
-        Ok(ServerResult::Ok(ServerMessage::UserStatus(user_update))) => {
-            handle_user_status(user_update)
-        }
-        Ok(ServerResult::Ok(ServerMessage::Game(game_update))) => {
-            //log!("{:?}", game_update);
-            handle_game(game_update);
-        }
-        Ok(ServerResult::Ok(ServerMessage::Challenge(challenge))) => {
-            handle_challenge(challenge);
-        }
-        Ok(ServerResult::Ok(ServerMessage::Chat(message))) => {
-            handle_chat(message);
-        }
-        Ok(ServerResult::Err(e)) => log!("Got error from server: {e}"),
+        Ok(result) => match result {
+            ServerResult::Ok(message) => match *message {
+                Pong { ping_sent, .. } => handle_ping(ping_sent),
+                UserStatus(user_update) => handle_user_status(user_update),
+                Game(game_update) => handle_game(*game_update),
+                Challenge(challenge) => handle_challenge(challenge),
+                Chat(message) => handle_chat(message),
+                todo => {
+                    log!("Got {todo:?} which is currently still unimplemented");
+                } // GameRequiresAction, UserStatusChange, ...
+            },
+            ServerResult::Err(e) => log!("Got error from server: {e}"),
+        },
         Err(e) => log!("Can't parse: {m}, error is: {e}"),
-        todo => {
-            log!("Got {todo:?} which is currently still unimplemented");
-        } // GameRequiresAction, UserStatusChange, ...
     }
 }

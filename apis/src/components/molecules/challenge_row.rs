@@ -1,4 +1,3 @@
-use crate::common::ChallengeVisibility;
 use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::components::molecules::time_row::TimeRow;
 use crate::providers::ApiRequests;
@@ -14,6 +13,7 @@ use leptos::*;
 use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::use_window;
+use shared_types::ChallengeVisibility;
 
 #[component]
 pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {

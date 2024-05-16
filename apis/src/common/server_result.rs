@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerResult {
-    Ok(ServerMessage),
+    Ok(Box<ServerMessage>),
     Err(ExternalServerError),
 }
 
@@ -40,7 +40,7 @@ pub enum ServerMessage {
     },
     ConnectionUpdated(Uuid, String),
     Chat(Vec<ChatMessageContainer>),
-    Game(GameUpdate),
+    Game(Box<GameUpdate>),
     Challenge(ChallengeUpdate),
     UserStatus(UserUpdate),
     // sent to everyone in the game when a user joins the game

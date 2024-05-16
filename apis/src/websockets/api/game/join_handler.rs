@@ -57,13 +57,13 @@ impl JoinHandler {
         }
         messages.push(InternalServerMessage {
             destination: MessageDestination::Direct(self.received_from.clone()),
-            message: ServerMessage::Game(GameUpdate::Reaction(GameActionResponse {
+            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: self.game.nanoid.to_owned(),
                 game: GameResponse::new_from_db(&self.game, &self.pool).await?,
                 game_action: GameReaction::Join,
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
-            })),
+            }))),
         });
         let games = if self.user_id == self.game.white_id || self.user_id == self.game.black_id {
             self.chat_storage.games_private.read().unwrap()

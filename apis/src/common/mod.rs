@@ -17,7 +17,7 @@ pub use hex_stack::HexStack;
 pub use piece_type::PieceType;
 pub use svg_pos::SvgPos;
 
-pub use challenge_action::{ChallengeAction, ChallengeVisibility};
+pub use challenge_action::ChallengeAction;
 
 pub use config_options::{MoveConfirm, TileDesign, TileDots, TileRotation};
 
