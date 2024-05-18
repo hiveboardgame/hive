@@ -155,7 +155,7 @@ pub fn Resources() -> impl IntoView {
                             </li>
                             <li>
                                 <a
-                                    href="https://www.instagram.com/hiveworldcommunity/"
+                                    href="https://www.instagram.com/world_hive_community/"
                                     rel="external"
                                     target="_blank"
                                     class=link_class

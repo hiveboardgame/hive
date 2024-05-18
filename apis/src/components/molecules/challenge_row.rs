@@ -80,6 +80,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                         <StatusIndicator username=opponent.username.to_owned()/>
                         <ProfileLink
                             username=opponent.username
+                            patreon=opponent.patreon
                             extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-[150px]"
                         />
                     </div>
@@ -90,6 +91,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                         <StatusIndicator username=challenge().challenger.username/>
                         <ProfileLink
                             username=challenge().challenger.username
+                            patreon=challenge().challenger.patreon
                             extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-[150px]"
                         />
                     </div>
@@ -101,6 +103,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                     <StatusIndicator username=challenge().challenger.username/>
                     <ProfileLink
                         username=challenge().challenger.username
+                        patreon=challenge().challenger.patreon
                         extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-[150px]"
                     />
                 </div>

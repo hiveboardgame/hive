@@ -108,7 +108,10 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     <div class="mr-2">
                         <div class="flex items-center">
                             <StatusIndicator username=game().white_player.username/>
-                            <ProfileLink username=game().white_player.username/>
+                            <ProfileLink
+                                patreon=game().white_player.patreon
+                                username=game().white_player.username
+                            />
                         </div>
                         <br/>
                         <Show when=is_finished fallback=move || { game().white_rating() }>
@@ -120,7 +123,10 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     <div class="ml-2">
                         <div class="flex items-center">
                             <StatusIndicator username=game().black_player.username/>
-                            <ProfileLink username=game().black_player.username/>
+                            <ProfileLink
+                                username=game().black_player.username
+                                patreon=game().white_player.patreon
+                            />
                         </div>
                         <br/>
                         <Show when=is_finished fallback=move || { game().black_rating() }>

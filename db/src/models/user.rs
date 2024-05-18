@@ -92,6 +92,7 @@ pub struct NewUser {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub normalized_username: String,
+    pub patreon: bool,
 }
 
 impl NewUser {
@@ -105,6 +106,7 @@ impl NewUser {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             normalized_username: username.to_lowercase(),
+            patreon: false,
         })
     }
 }
@@ -119,6 +121,7 @@ pub struct User {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub normalized_username: String,
+    pub patreon: bool,
 }
 
 impl User {

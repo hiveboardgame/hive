@@ -41,6 +41,7 @@ pub fn UserWithRating(
             })
     };
     let username = move || player().map_or(String::new(), |p| p.username);
+    let patreon = move || player().map_or(false, |p| p.patreon);
     // TODO: Display proper rating for game use <Rating/>
     let rating = move || match (player(), speed()) {
         (Some(player), Some(speed)) => {
@@ -59,7 +60,11 @@ pub fn UserWithRating(
                 view! {
                     <div class="flex items-center">
                         <StatusIndicator username=username()/>
-                        <ProfileLink username=username() extend_tw_classes=text_color/>
+                        <ProfileLink
+                            patreon=patreon()
+                            username=username()
+                            extend_tw_classes=text_color
+                        />
                     </div>
                 }
             }}

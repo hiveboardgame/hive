@@ -61,6 +61,10 @@ pub fn Faq() -> impl IntoView {
                         </p>
                     </div>
                     <div class=div_class>
+                        <h3 class=header_class>"How do I get a 👑 next to my username?"</h3>
+                        <p class=paragraph_class>"By donating to the project!"</p>
+                    </div>
+                    <div class=div_class>
                         <h3 class=header_class>"What is Hive?"</h3>
                         <p class=paragraph_class>
                             "Hive is an award-winning abstract strategy game designed by John Yianni in 2000 and published by"

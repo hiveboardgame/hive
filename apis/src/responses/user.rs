@@ -7,6 +7,7 @@ use uuid::Uuid;
 pub struct UserResponse {
     pub username: String,
     pub uid: Uuid,
+    pub patreon: bool,
     pub ratings: HashMap<GameSpeed, RatingResponse>,
 }
 
@@ -15,6 +16,7 @@ impl UserResponse {
         Self {
             username: uuid.to_string(),
             uid: uuid,
+            patreon: false,
             ratings: HashMap::new(),
         }
     }
@@ -103,6 +105,7 @@ impl UserResponse {
         Ok(Self {
             username: user.username.clone(),
             uid: user.id,
+            patreon: user.patreon,
             ratings,
         })
     }
