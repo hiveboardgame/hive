@@ -1,4 +1,5 @@
 use crate::components::atoms::next_game_button::NextGameButton;
+use crate::components::molecules::chat_and_controls::ChatAndControls;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle,
     dropdowns::{CommunityDropdown, MobileDropdown, UserDropdown},
@@ -12,13 +13,11 @@ use shared_types::TimeMode;
 pub struct Redirect(pub RwSignal<String>);
 
 #[component]
-pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
 
     view! {
-        <header class=format!(
-            "w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none {extend_tw_classes}",
-        )>
+        <header class="w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none">
             <Transition fallback=|| {
                 view! {
                     <div class="flex gap-1 items-center lg:ml-10">
@@ -46,7 +45,8 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                         </div>
                     </div>
                     <div class="flex items-center lg:mr-10">
-                        <DarkModeToggle/>
+                        <ChatAndControls/>
+                        <DarkModeToggle extend_tw_classes="max-h-6 sm:max-h-7"/>
                         <a
                             class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                             href="/login"
@@ -93,7 +93,8 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             fallback=|| {
                                 view! {
                                     <div class="flex items-center lg:mr-10">
-                                        <DarkModeToggle/>
+                                        <ChatAndControls/>
+                                        <DarkModeToggle extend_tw_classes="max-h-6 sm:max-h-7"/>
                                         <a
                                             class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                                             href="/login"
@@ -113,7 +114,7 @@ pub fn Header(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                                 <NextGameButton time_mode=store_value(TimeMode::Untimed)/>
                             </div>
                             <div class="flex items-center lg:mr-10">
-                                <DarkModeToggle/>
+                                <ChatAndControls/>
                                 <UserDropdown username=user().expect("User is some").username/>
                             </div>
                         </Show>

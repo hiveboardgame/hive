@@ -29,7 +29,6 @@ pub fn UserWithRating(
             .game_response
             .map(|g| g.black_player),
     };
-    let is_finished = move || (game_state.signal)().is_finished();
     let speed = move || {
         game_state
             .signal
@@ -64,7 +63,7 @@ pub fn UserWithRating(
                 }
             }}
             <Show
-                when=is_finished
+                when=game_state.is_finished()
                 fallback=move || {
                     view! { <div class=format!("{text_color}")>{rating}</div> }
                 }

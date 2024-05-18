@@ -1,6 +1,9 @@
-use crate::components::layouts::base_layout::{COMMON_LINK_STYLE, DROPDOWN_BUTTON_STYLE};
+use crate::components::layouts::base_layout::{
+    OrientationSignal, COMMON_LINK_STYLE, DROPDOWN_BUTTON_STYLE,
+};
 use crate::components::molecules::{hamburger::Hamburger, ping::Ping};
 use crate::components::organisms::chat::ChatWindow;
+use crate::components::organisms::darkmode_toggle::DarkModeToggle;
 use crate::components::organisms::header::set_redirect;
 use crate::components::organisms::logout::Logout;
 use crate::providers::chat::Chat;
@@ -45,6 +48,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             >
                 Config
             </a>
+            <DarkModeToggle/>
             <Logout on:submit=move |_| onclick_close()/>
             <Ping/>
         </Hamburger>
@@ -177,15 +181,16 @@ pub fn CommunityDropdown() -> impl IntoView {
 #[component]
 pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
     let chat = expect_context::<Chat>();
-    let hamburger_show = expect_context::<RwSignal<bool>>();
-    let chat_style = "flex flex-col absolute bg-even-light dark:bg-gray-950 border border-gray-300 p-2 right-0 w-full h-[75%] z-50";
+    let destination = StoredValue::new(destination);
+    let hamburger_show = expect_context::<OrientationSignal>().chat_dropdown_open;
+    let chat_style = "absolute z-50 flex-col w-full h-[80dvh] max-w-screen bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md left-0 p-2";
     let button_color = move || {
         if hamburger_show() {
-            "bg-button-dawn dark:bg-button-twilight"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
         } else if chat.has_messages() {
             "bg-ladybug-red"
         } else {
-            "bg-button-dawn dark:bg-button-twilight"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
         }
     };
 
@@ -199,16 +204,15 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
             hamburger_show=hamburger_show
             button_style=Signal::derive(move || {
                 format!(
-                    "{} h-7 m-1 grow hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded flex-shrink-0",
+                    "{} transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 m-1 px-4 rounded",
                     button_color(),
                 )
             })
 
-            extend_tw_classes="mt-1"
             dropdown_style=chat_style
-            content="Chat"
+            content=view! { <Icon icon=icondata::BiChatRegular class="w-4 h-4"/> }
         >
-            <ChatWindow destination=destination.clone()/>
+            <ChatWindow destination=destination()/>
         </Hamburger>
     }
 }

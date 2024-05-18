@@ -3,6 +3,7 @@ pub mod analysis_and_download;
 pub mod banner;
 pub mod board_pieces;
 pub mod challenge_row;
+pub mod chat_and_controls;
 pub mod control_buttons;
 pub mod game_info;
 pub mod game_row;

@@ -12,7 +12,6 @@ use shared_types::{ChallengeDetails, ChallengeVisibility};
 #[component]
 pub fn ControlButtons() -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let is_finished = move || (game_state.signal)().is_finished();
     let auth_context = expect_context::<AuthContext>();
     let user = move || match untrack(auth_context.user) {
         Some(Ok(Some(user))) => Some(user),
@@ -171,7 +170,7 @@ pub fn ControlButtons() -> impl IntoView {
     view! {
         <div class="flex justify-around items-center mt-1 w-full grow shrink">
             <Show
-                when=is_finished
+                when=game_state.is_finished()
                 fallback=move || {
                     view! {
                         <div class="flex justify-around items-center grow shrink">

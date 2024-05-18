@@ -3,14 +3,16 @@ use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
-pub fn DarkModeToggle() -> impl IntoView {
+pub fn DarkModeToggle(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let color_scheme = expect_context::<ColorScheme>();
-
     view! {
         <ActionForm
             action=color_scheme.action
-            class="inline-flex justify-center items-center max-h-6 text-base font-medium rounded-md border border-transparent shadow md:max-h-7 dark:bg-orange-twilight bg-gray-950"
+            class=format!(
+                "inline-flex justify-center items-center m-1 rounded dark:bg-orange-twilight bg-gray-950 {extend_tw_classes}",
+            )
         >
+
             <input
                 type="hidden"
                 name="prefers_dark"

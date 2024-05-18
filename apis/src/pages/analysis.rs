@@ -4,6 +4,7 @@ use crate::{
             history_button::{HistoryButton, HistoryNavigation},
             undo_button::UndoButton,
         },
+        layouts::base_layout::OrientationSignal,
         organisms::{
             board::Board,
             reserve::{Alignment, Reserve},
@@ -15,7 +16,6 @@ use crate::{
 };
 use hive_lib::Color;
 use leptos::*;
-use leptos_use::use_media_query;
 
 #[derive(Clone)]
 pub struct InAnalysis(pub RwSignal<bool>);
@@ -24,7 +24,7 @@ pub struct InAnalysis(pub RwSignal<bool>);
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
     provide_context(InAnalysis(RwSignal::new(true)));
-    let is_tall = use_media_query("(min-height: 100vw)");
+    let is_tall = expect_context::<OrientationSignal>().is_tall;
     let parent_container_style = move || {
         if is_tall() {
             "flex flex-col"
