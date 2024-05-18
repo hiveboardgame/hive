@@ -1,6 +1,6 @@
 use leptos::html::Div;
 use leptos::*;
-use leptos_use::on_click_outside;
+use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
 
 #[component]
 pub fn Hamburger<T: IntoView>(
@@ -11,20 +11,25 @@ pub fn Hamburger<T: IntoView>(
     dropdown_style: &'static str,
     content: T,
 ) -> impl IntoView {
-    let target = create_node_ref::<Div>();
+    let children_ref = create_node_ref::<Div>();
     create_effect(move |_| {
         if hamburger_show() {
-            let _ = on_click_outside(target, move |_| {
-                hamburger_show.update(|b| *b = false);
-            });
+            let _ = on_click_outside_with_options(
+                children_ref,
+                move |_| {
+                    hamburger_show.update(|b| *b = false);
+                },
+                OnClickOutsideOptions::default().ignore(["input", "#ignoreChat", "#ignoreButton"]),
+            );
         }
     });
 
     let children = store_value(children);
 
     view! {
-        <div node_ref=target class=format!("inline-block {extend_tw_classes}")>
+        <div class=format!("inline-block {extend_tw_classes}")>
             <button
+                id="ignoreButton"
                 on:click=move |_| hamburger_show.update(|b| *b = !*b)
 
                 class=button_style
@@ -32,7 +37,9 @@ pub fn Hamburger<T: IntoView>(
                 {content}
             </button>
             <Show when=hamburger_show>
-                <div class=dropdown_style>{children()}</div>
+                <div ref=children_ref class=dropdown_style>
+                    {children()}
+                </div>
             </Show>
         </div>
     }

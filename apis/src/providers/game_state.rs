@@ -188,6 +188,19 @@ impl GameStateSignal {
         self.signal
             .update(|s| s.game_response = Some(game_response))
     }
+
+    pub fn is_finished(&self) -> Memo<bool> {
+        let game_status_finished = create_read_slice(self.signal, |game_state| {
+            matches!(game_state.state.game_status, GameStatus::Finished(_))
+        });
+        let game_response_finished = create_read_slice(self.signal, |game_state| {
+            game_state
+                .game_response
+                .as_ref()
+                .is_some_and(|gr| gr.finished)
+        });
+        Memo::new(move |_| game_status_finished() || game_response_finished())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -314,11 +327,6 @@ impl GameState {
                 black_id.is_some_and(|black| black == user.id)
             }
         })
-    }
-
-    pub fn is_finished(&self) -> bool {
-        matches!(self.state.game_status, GameStatus::Finished(_))
-            || self.game_response.as_ref().is_some_and(|gr| gr.finished)
     }
 
     pub fn move_active(&mut self) {

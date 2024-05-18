@@ -31,7 +31,6 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
                             gar.username
                         )));
                     });
-                    // TODO: Once we have notifications tell the user the game was aborted
                     let navigate = leptos_router::use_navigate();
                     navigate("/", Default::default());
                 }

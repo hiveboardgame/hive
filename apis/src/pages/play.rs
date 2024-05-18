@@ -1,6 +1,7 @@
 use crate::{
     components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
+        layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
             analysis_and_download::AnalysisAndDownload, control_buttons::ControlButtons,
             game_info::GameInfo, user_with_rating::UserWithRating,
@@ -8,7 +9,6 @@ use crate::{
         organisms::{
             board::Board,
             display_timer::{DisplayTimer, Placement},
-            dropdowns::ChatDropdown,
             reserve::{Alignment, Reserve},
             side_board::SideboardTabs,
         },
@@ -17,8 +17,6 @@ use crate::{
 };
 use hive_lib::{Color, Position};
 use leptos::*;
-use leptos_use::use_media_query;
-use shared_types::SimpleDestination;
 
 #[derive(Clone)]
 pub struct TargetStack(pub RwSignal<Option<Position>>);
@@ -26,8 +24,7 @@ pub struct TargetStack(pub RwSignal<Option<Position>>);
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
-    let mobile_chat = create_rw_signal(false);
-    provide_context(mobile_chat);
+    let orientation_signal = expect_context::<OrientationSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let user = move || match (auth_context.user)() {
@@ -46,11 +43,8 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             Some(user.id) == game_state.black_id
         })
     });
-
-    let is_tall = use_media_query("(min-height: 100vw)");
-    let is_tall_or_chat = Signal::derive(move || is_tall() || mobile_chat());
     let parent_container_style = move || {
-        if is_tall_or_chat() {
+        if orientation_signal.orientation_vertical.get() {
             "flex flex-col"
         } else {
             "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 pr-2"
@@ -70,6 +64,9 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         }
     };
     let top_color = move || bottom_color().opposite_color();
+    let controls_signal = expect_context::<ControlsSignal>();
+    let show_controls =
+        Signal::derive(move || !controls_signal.hidden.get() || game_state.is_finished()());
 
     view! {
         <div class=move || {
@@ -79,7 +76,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             )
         }>
             <Show
-                when=is_tall_or_chat
+                when=orientation_signal.orientation_vertical
                 fallback=move || {
                     view! {
                         <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight"/>
@@ -95,19 +92,24 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
 
                 <div class="flex flex-col flex-grow h-full min-h-0">
                     <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
-                        <div class="flex flex-row-reverse justify-between items-center shrink">
-                            <ChatDropdown destination=SimpleDestination::Game/>
-                            <AnalysisAndDownload/>
-                            <Show when=show_buttons>
-                                <ControlButtons/>
-                            </Show>
-                        </div>
-                        <div class="flex justify-between h-full max-h-16">
+                        <Show when=show_controls>
+                            <div class="flex flex-row-reverse justify-between items-center shrink">
+                                <AnalysisAndDownload/>
+                                <Show when=show_buttons>
+                                    <ControlButtons/>
+                                </Show>
+                            </div>
+                        </Show>
+
+                        <div class="flex justify-between ml-1 h-full max-h-16">
                             <Reserve alignment=Alignment::SingleRow color=top_color()/>
                             <DisplayTimer vertical=true placement=Placement::Top/>
                         </div>
                         <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1 bg-inherit">
-                            <UserWithRating side=top_color() is_tall=is_tall_or_chat/>
+                            <UserWithRating
+                                side=top_color()
+                                is_tall=orientation_signal.orientation_vertical
+                            />
                             <GameInfo/>
                         </div>
 
@@ -115,18 +117,27 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                     <Board overwrite_tw_classes="flex grow min-h-0"/>
                     <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
                         <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
-                            <UserWithRating side=bottom_color() is_tall=is_tall_or_chat/>
+                            <UserWithRating
+                                side=bottom_color()
+                                is_tall=orientation_signal.orientation_vertical
+                            />
                         </div>
-                        <div class="flex justify-between h-full max-h-16">
+                        <div class="flex justify-between mb-2 ml-1 h-full max-h-16">
                             <Reserve alignment=Alignment::SingleRow color=bottom_color()/>
                             <DisplayTimer vertical=true placement=Placement::Bottom/>
                         </div>
-                        <div class="grid grid-cols-4 gap-8 pb-1">
-                            <HistoryButton action=HistoryNavigation::First/>
-                            <HistoryButton action=HistoryNavigation::Previous/>
-                            <HistoryButton action=HistoryNavigation::Next post_action=go_to_game/>
-                            <HistoryButton action=HistoryNavigation::MobileLast/>
-                        </div>
+                        <Show when=show_controls>
+                            <div class="grid grid-cols-4 gap-8 pb-1">
+                                <HistoryButton action=HistoryNavigation::First/>
+                                <HistoryButton action=HistoryNavigation::Previous/>
+                                <HistoryButton
+                                    action=HistoryNavigation::Next
+                                    post_action=go_to_game
+                                />
+                                <HistoryButton action=HistoryNavigation::MobileLast/>
+                            </div>
+                        </Show>
+
                     </div>
                 </div>
             </Show>

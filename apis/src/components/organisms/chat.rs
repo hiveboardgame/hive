@@ -20,12 +20,12 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 
     view! {
         <div class="flex flex-col items-start mb-1 w-full">
-            <div class="flex px-2 gap-1">
+            <div class="flex gap-1 px-2">
                 <div class="font-bold">{message.username}</div>
                 {user_local_time}
                 {turn}
             </div>
-            <div class="px-2 max-w-fit break-words">{message.message}</div>
+            <div class="px-2 break-words max-w-fit">{message.message}</div>
         </div>
     }
 }
@@ -159,8 +159,8 @@ pub fn ChatWindow(
             .unwrap_or_default(),
     };
     view! {
-        <div class="flex flex-col h-full">
-            <div ref=div class="overflow-y-auto h-full">
+        <div id="ignoreChat" class="flex flex-col max-w-full h-full min-h-full">
+            <div ref=div class="overflow-y-auto overflow-x-hidden w-full h-full">
                 <For each=messages key=|message| message.timestamp let:message>
                     <Message message=message/>
                 </For>

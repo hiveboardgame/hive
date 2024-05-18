@@ -44,7 +44,7 @@ impl Chat {
     pub fn has_messages(&self) -> bool {
         let navi = expect_context::<NavigationControllerSignal>();
 
-        if let Some(nanoid) = navi.signal.get_untracked().nanoid {
+        if let Some(nanoid) = navi.signal.get().nanoid {
             self.games_public_new_messages
                 .get()
                 .get(&nanoid)

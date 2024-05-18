@@ -2,6 +2,7 @@ use crate::components::atoms::og::OG;
 use crate::components::atoms::title::Title;
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
+use crate::providers::game_state::GameStateSignal;
 use crate::providers::{ApiRequests, AuthContext, ColorScheme};
 
 use crate::providers::navigation_controller::NavigationControllerSignal;
@@ -9,13 +10,14 @@ use crate::providers::refocus::RefocusSignal;
 use crate::providers::websocket::WebsocketContext;
 use crate::providers::PingSignal;
 use chrono::Utc;
+use hive_lib::GameControl;
 use lazy_static::lazy_static;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::use_location;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::utils::Pausable;
-use leptos_use::{use_interval_fn, use_window_focus};
+use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
 use regex::Regex;
 
 lazy_static! {
@@ -25,9 +27,37 @@ lazy_static! {
 pub const COMMON_LINK_STYLE: &str = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
 pub const DROPDOWN_BUTTON_STYLE: &str= "h-full p-2 hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block";
 
+#[derive(Clone)]
+pub struct ControlsSignal {
+    pub hidden: RwSignal<bool>,
+    pub notify: Signal<bool>,
+}
+
+#[derive(Clone)]
+pub struct OrientationSignal {
+    pub is_tall: Signal<bool>,
+    pub chat_dropdown_open: RwSignal<bool>,
+    pub orientation_vertical: Signal<bool>,
+}
+
 #[component]
-pub fn BaseLayout(children: Children) -> impl IntoView {
+pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let color_scheme = expect_context::<ColorScheme>();
+    let ping = expect_context::<PingSignal>();
+    let ws = expect_context::<WebsocketContext>();
+    let ws_ready = ws.ready_state;
+    let auth_context = expect_context::<AuthContext>();
+    let gamestate = expect_context::<GameStateSignal>();
+    let stored_children = store_value(children);
+    let is_tall = use_media_query("(min-height: 100vw)");
+    let chat_dropdown_open = RwSignal::new(false);
+    let orientation_vertical = Signal::derive(move || is_tall() || chat_dropdown_open());
+    provide_context(OrientationSignal {
+        is_tall,
+        chat_dropdown_open,
+        orientation_vertical,
+    });
+
     let color_scheme_meta = move || {
         if (color_scheme.prefers_dark)() {
             "dark".to_string()
@@ -35,8 +65,39 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
             "light".to_string()
         }
     };
-    let auth_context = expect_context::<AuthContext>();
-    let ws = expect_context::<WebsocketContext>();
+
+    let user = move || match untrack(auth_context.user) {
+        Some(Ok(Some(user))) => Some(user),
+        _ => None,
+    };
+
+    let color = move || {
+        if let Some(user) = user() {
+            gamestate.user_color(user.id)
+        } else {
+            None
+        }
+    };
+    let has_gamecontrol = create_read_slice(gamestate.signal, move |gs| {
+        if let Some(color) = color() {
+            let opp_color = color.opposite_color();
+            matches!(
+                gs.game_control_pending,
+                Some(GameControl::TakebackRequest(color) | GameControl::DrawOffer(color)) if color == opp_color
+            )
+        } else {
+            false
+        }
+    });
+    let hide_controls = ControlsSignal {
+        hidden: RwSignal::new(true),
+        notify: has_gamecontrol,
+    };
+
+    provide_context(hide_controls);
+
+    let is_hidden = RwSignal::new("hidden");
+    create_effect(move |_| is_hidden.set(""));
 
     create_effect(move |_| {
         let location = use_location();
@@ -47,14 +108,12 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         } else {
             None
         };
-        if (auth_context.user)().is_some() && (ws.ready_state)() == ConnectionReadyState::Open {
+        if ws_ready() == ConnectionReadyState::Open {
             navi.update_nanoid(nanoid);
         };
     });
 
     let api = ApiRequests::new();
-    let ping = expect_context::<PingSignal>();
-    let ws = expect_context::<WebsocketContext>();
 
     let focused = use_window_focus();
     let _ = watch(
@@ -77,7 +136,7 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         move || {
             api.ping();
             counter.update(|c| *c += 1);
-            match ws.ready_state.get() {
+            match ws_ready() {
                 ConnectionReadyState::Closed => {
                     if retry_at.get() == counter.get() {
                         //log!("Reconnecting due to ReadyState");
@@ -122,10 +181,19 @@ pub fn BaseLayout(children: Children) -> impl IntoView {
         }/>
 
         <Body/>
-        <main class="w-full min-h-screen text-xs bg-light dark:bg-gray-950 sm:text-sm md:text-md touch-manipulations">
+        <main class=move || {
+            format!(
+                "w-full min-h-screen text-xs bg-light dark:bg-gray-950 sm:text-sm touch-manipulations {}",
+                is_hidden(),
+            )
+        }>
             <Header/>
             <Alert/>
-            {children()}
+            <Show when=move || ws_ready() != ConnectionReadyState::Open>
+                <div class="absolute top-1/2 left-1/2 w-10 h-10 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
+            </Show>
+            {stored_children()()}
+
         </main>
     }
 }
