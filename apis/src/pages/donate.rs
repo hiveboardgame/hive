@@ -38,7 +38,7 @@ pub fn Donate() -> impl IntoView {
                         Are some features reserved for Patrons?
                     </h3>
                     <p class="mt-2 text-base">
-                        "No, because hivegame is entirely free, forever, and for everyone. That's a promise."
+                        "No, because hivegame is entirely free, forever, and for everyone. That's a promise. You do get a 👑 though."
                     </p>
                 </div>
 

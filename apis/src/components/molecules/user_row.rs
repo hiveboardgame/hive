@@ -28,10 +28,17 @@ pub fn UserRow(
     };
     let profile_link = move || {
         if on_profile {
-            view! { <ProfileLink username=user().username extend_tw_classes="truncate max-w-[120px]"/> }
+            view! {
+                <ProfileLink
+                    patreon=user().patreon
+                    username=user().username
+                    extend_tw_classes="truncate max-w-[120px]"
+                />
+            }
         } else {
             view! {
                 <ProfileLink
+                    patreon=user().patreon
                     username=user().username
                     extend_tw_classes="truncate max-w-[120px]"
                     user_is_hoverable=user

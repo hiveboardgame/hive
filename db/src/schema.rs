@@ -86,6 +86,7 @@ diesel::table! {
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         normalized_username -> Text,
+        patreon -> Bool,
     }
 }
 
