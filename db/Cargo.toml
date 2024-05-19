@@ -14,20 +14,20 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bb8.workspace = true
-diesel.workspace = true
-diesel-async.workspace = true
-diesel_migrations.workspace = true
-uuid.workspace = true
-nanoid.workspace = true
-dotenvy.workspace = true
-thiserror.workspace = true
-serde.workspace = true
-serde_with.workspace = true
-tokio.workspace = true
+bb8 = { workspace = true }
+diesel = { workspace = true }
+diesel-async = { workspace = true }
+diesel_migrations = { workspace = true }
+uuid = { workspace = true }
+nanoid = { workspace = true }
+dotenvy = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_with = { workspace = true }
+tokio = { workspace = true }
 hive = { path = "../engine/" }
-skillratings.workspace = true
-chrono.workspace = true
+skillratings = { workspace = true }
+chrono = { workspace = true }
 shared_types = { path = "../shared_types/" }
-lazy_static.workspace = true
-regex.workspace = true
+lazy_static = { workspace = true }
+regex = { workspace = true }
