@@ -2,7 +2,7 @@ use crate::components::atoms::next_game_button::NextGameButton;
 use crate::components::molecules::chat_and_controls::ChatAndControls;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle,
-    dropdowns::{CommunityDropdown, MobileDropdown, UserDropdown},
+    dropdowns::{CommunityDropdown, LearnDropdown, MobileDropdown, UserDropdown},
 };
 use crate::providers::AuthContext;
 use leptos::*;
@@ -28,6 +28,7 @@ pub fn Header() -> impl IntoView {
                         </a>
                         <div class="hidden lg:flex lg:items-center lg:gap-1">
                             <CommunityDropdown/>
+                            <LearnDropdown/>
                             <a
                                 class="block p-2 h-full whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
                                 href="https://www.gen42.com/"
@@ -72,6 +73,7 @@ pub fn Header() -> impl IntoView {
                             </a>
                             <div class="hidden lg:flex lg:items-center lg:gap-1">
                                 <CommunityDropdown/>
+                                <LearnDropdown/>
                                 <a
                                     class="block p-2 h-full whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
                                     href="https://www.gen42.com/"

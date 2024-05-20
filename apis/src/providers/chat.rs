@@ -1,6 +1,6 @@
 use super::{
     api_requests::ApiRequests, auth_context::AuthContext, game_state::GameStateSignal,
-    navigation_controller::NavigationControllerSignal,
+    navigation_controller::NavigationControllerSignal, AlertType, AlertsContext,
 };
 use leptos::*;
 use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer};
@@ -44,7 +44,7 @@ impl Chat {
     pub fn has_messages(&self) -> bool {
         let navi = expect_context::<NavigationControllerSignal>();
 
-        if let Some(nanoid) = navi.signal.get().nanoid {
+        if let Some(nanoid) = navi.signal.get_untracked().nanoid {
             self.games_public_new_messages
                 .get()
                 .get(&nanoid)
@@ -181,6 +181,12 @@ impl Chat {
                         m.entry(id.clone())
                             .and_modify(|value| *value = true)
                             .or_insert(true);
+                    });
+                }
+                ChatDestination::Global => {
+                    let alerts = expect_context::<AlertsContext>();
+                    alerts.last_alert.update(|v| {
+                        *v = Some(AlertType::Warn(last_message.message.message.to_string()))
                     });
                 }
             }

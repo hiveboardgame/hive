@@ -8,6 +8,7 @@ pub struct UserResponse {
     pub username: String,
     pub uid: Uuid,
     pub patreon: bool,
+    pub admin: bool,
     pub ratings: HashMap<GameSpeed, RatingResponse>,
 }
 
@@ -17,6 +18,7 @@ impl UserResponse {
             username: uuid.to_string(),
             uid: uuid,
             patreon: false,
+            admin: false,
             ratings: HashMap::new(),
         }
     }
@@ -106,6 +108,7 @@ impl UserResponse {
             username: user.username.clone(),
             uid: user.id,
             patreon: user.patreon,
+            admin: user.admin,
             ratings,
         })
     }

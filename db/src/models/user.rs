@@ -122,6 +122,7 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
     pub normalized_username: String,
     pub patreon: bool,
+    pub admin: bool,
 }
 
 impl User {
