@@ -12,6 +12,7 @@ pub mod leaderboard;
 pub mod logout;
 pub mod online_users;
 pub mod preview_tiles;
+pub mod quickplay;
 pub mod reserve;
 pub mod side_board;
 pub mod tile_design_toggle;

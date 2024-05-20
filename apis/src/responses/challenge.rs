@@ -1,9 +1,12 @@
+use crate::common::ChallengeAction;
 use crate::responses::user::UserResponse;
 use chrono::prelude::*;
-use hive_lib::ColorChoice;
+use hive_lib::{ColorChoice, GameType};
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeVisibility, GameSpeed, TimeMode};
+use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
+use std::collections::hash_map::Values;
 use std::str;
+use std::str::FromStr;
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -28,7 +31,6 @@ pub struct ChallengeResponse {
 
 use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
-use std::str::FromStr;
 use db_lib::{
     models::{Challenge, Rating, User},
     DbPool,
@@ -70,5 +72,61 @@ impl ChallengeResponse {
             band_lower: challenge.band_lower,
         })
     }
+
 }
-}}
+}
+}
+
+fn is_compatible(challenge: &ChallengeResponse, user: &str, details: &ChallengeDetails) -> bool {
+    details.game_type == GameType::from_str(&challenge.game_type).unwrap()
+        && details.rated == challenge.rated
+        && details.time_mode == challenge.time_mode
+        && details.time_base == challenge.time_base
+        && details.time_increment == challenge.time_increment
+        && match details.color_choice {
+            ColorChoice::Random => challenge.color_choice == ColorChoice::Random,
+            ColorChoice::White => challenge.color_choice == ColorChoice::Black,
+            ColorChoice::Black => challenge.color_choice == ColorChoice::White,
+        }
+        && if let Some(opponent) = &details.opponent {
+            opponent == &challenge.challenger.username
+        } else if let Some(opponent) = &challenge.opponent {
+            opponent.username == user
+        } else {
+            challenge.challenger.username != user
+        }
+}
+
+fn has_same_details(challenge: &ChallengeResponse, user: &str, details: &ChallengeDetails) -> bool {
+    let challenge_opponent = challenge
+        .opponent
+        .as_ref()
+        .map(|opponent| opponent.username.as_str());
+
+    details.game_type == GameType::from_str(&challenge.game_type).unwrap()
+        && details.rated == challenge.rated
+        && details.band_lower == challenge.band_upper
+        && details.band_upper == challenge.band_lower
+        && details.time_mode == challenge.time_mode
+        && details.time_base == challenge.time_base
+        && details.time_increment == challenge.time_increment
+        && details.color_choice == challenge.color_choice
+        && challenge_opponent == details.opponent.as_deref()
+        && challenge.challenger.username == user
+}
+
+pub fn create_challenge_handler(
+    user: String,
+    details: ChallengeDetails,
+    mut challenges: Values<String, ChallengeResponse>,
+) -> Option<ChallengeAction> {
+    if details.time_mode == TimeMode::RealTime
+        && challenges.any(|c| has_same_details(c, &user, &details))
+    {
+        None
+    } else if let Some(challenge) = challenges.find(|c| is_compatible(c, &user, &details)) {
+        Some(ChallengeAction::Accept(challenge.nanoid.clone()))
+    } else {
+        Some(ChallengeAction::Create(details))
+    }
+}

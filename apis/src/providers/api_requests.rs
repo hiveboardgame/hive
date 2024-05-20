@@ -1,13 +1,14 @@
+use super::challenges::ChallengeStateSignal;
+use super::games::GamesSignal;
+use super::AuthContext;
 use crate::common::ChallengeAction;
 use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
+use crate::responses::create_challenge_handler;
 use chrono::Utc;
 use hive_lib::{GameControl, Turn};
 use leptos::*;
 use shared_types::ChatMessageContainer;
-
-use super::games::GamesSignal;
-
 #[derive(Clone)]
 pub struct ApiRequests {
     websocket: WebsocketContext,
@@ -77,9 +78,28 @@ impl ApiRequests {
     }
 
     pub fn challenge(&self, challenge_action: ChallengeAction) {
-        let msg = ClientRequest::Challenge(challenge_action);
-        self.websocket
-            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+        let challenge_action = match challenge_action {
+            ChallengeAction::Create(details) => {
+                let auth_context = expect_context::<AuthContext>();
+                let account = match (auth_context.user)() {
+                    Some(Ok(Some(account))) => Some(account),
+                    _ => None,
+                };
+                if let Some(account) = account {
+                    let challenges = expect_context::<ChallengeStateSignal>().signal.get();
+                    let challenges = challenges.challenges.values();
+                    create_challenge_handler(account.user.username, details, challenges)
+                } else {
+                    None
+                }
+            }
+            other => Some(other),
+        };
+        if let Some(challenge_action) = challenge_action {
+            let msg = ClientRequest::Challenge(challenge_action);
+            self.websocket
+                .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+        }
     }
 
     pub fn challenge_cancel(&self, nanoid: String) {
