@@ -12,6 +12,7 @@ use actix::{
 use actix_web_actors::ws::{self, Message::Text};
 use anyhow::Result;
 use db_lib::DbPool;
+use shared_types::SimpleUser;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
@@ -21,8 +22,8 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 pub struct WsConnection {
     user_uid: Uuid,
     username: String,
-    #[allow(dead_code)]
     authed: bool,
+    admin: bool,
     chat_storage: actix_web::web::Data<Chats>,
     lobby_addr: Addr<Lobby>,
     hb: Instant, // websocket heartbeat
@@ -68,15 +69,18 @@ impl WsConnection {
     pub fn new(
         user_uid: Option<Uuid>,
         username: Option<String>,
+        admin: Option<bool>,
         lobby: Addr<Lobby>,
         chat_storage: actix_web::web::Data<Chats>,
         pool: DbPool,
     ) -> WsConnection {
         let id = user_uid.unwrap_or(Uuid::new_v4());
         let name = username.unwrap_or(id.to_string());
+        let admin = admin.unwrap_or_default();
         WsConnection {
             user_uid: id,
             username: name,
+            admin,
             authed: user_uid.is_some(),
             chat_storage,
             hb: Instant::now(),
@@ -126,20 +130,18 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 let lobby = self.lobby_addr.clone();
                 let user_id = self.user_uid;
                 let username = self.username.clone();
-                let authed = self.authed;
+                let user = SimpleUser {
+                    user_id,
+                    username: username.clone(),
+                    authed: self.authed,
+                    admin: self.admin,
+                };
                 let chat_storage = self.chat_storage.clone();
                 let addr = ctx.address().recipient();
 
                 let future = async move {
-                    let handler = RequestHandler::new(
-                        request.clone(),
-                        chat_storage,
-                        addr,
-                        user_id,
-                        &username,
-                        authed,
-                        pool,
-                    );
+                    let handler =
+                        RequestHandler::new(request.clone(), chat_storage, addr, user, pool);
                     let handler_result = handler.handle().await;
                     match handler_result {
                         Ok(messages) => {

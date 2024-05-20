@@ -103,7 +103,7 @@ pub fn ChatWindow(
     };
 
     let navi = expect_context::<NavigationControllerSignal>();
-    let game = store_value((navi.signal)().nanoid.unwrap_or_default());
+    let game = store_value(navi.signal.get_untracked().nanoid.unwrap_or_default());
     let correspondant_id = store_value(if let Some(v) = correspondant_id {
         v
     } else {
@@ -135,6 +135,7 @@ pub fn ChatWindow(
         SimpleDestination::User => {
             ChatDestination::User((correspondant_id(), correspondant_username()))
         }
+        SimpleDestination::Global => ChatDestination::Global,
         SimpleDestination::Tournament => todo!(),
     };
     let cloned_fn = actual_destination.clone();
@@ -157,6 +158,7 @@ pub fn ChatWindow(
             .get(&correspondant_id)
             .cloned()
             .unwrap_or_default(),
+        _ => Vec::new(),
     };
     view! {
         <div id="ignoreChat" class="flex flex-col max-w-full h-full min-h-full">

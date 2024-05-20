@@ -2,6 +2,7 @@ use crate::{
     components::layouts::base_layout::BaseLayout,
     pages::{
         account::Account,
+        admin::Admin,
         analysis::Analysis,
         challenge_view::ChallengeView,
         config::Config,
@@ -113,6 +114,7 @@ pub fn App() -> impl IntoView {
                         ssr=SsrMode::PartiallyBlocked
                         view=|| view! { <Play/> }
                     />
+                    <Route path="/admin" view=|| view! { <Admin/> }/>
                 </Route>
             </Routes>
         </Router>

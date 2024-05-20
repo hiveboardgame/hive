@@ -9,6 +9,7 @@ pub enum SimpleDestination {
     User,
     Game,
     Tournament,
+    Global,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -17,6 +18,7 @@ pub enum ChatDestination {
     GamePlayers(String, Uuid, Uuid),    // to players in the game, nanoid, white uuid, black uuid
     GameSpectators(String, Uuid, Uuid), // to spectators of the game, nanoid, white uuid, black uuid
     TournamentLobby(String),            // to tournament lobby
+    Global,                             // to everyone if you have superpowers
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

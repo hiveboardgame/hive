@@ -10,6 +10,7 @@ use crate::websockets::internal_server_message::InternalServerMessage;
 use crate::websockets::messages::WsMessage;
 use anyhow::Result;
 use db_lib::DbPool;
+use shared_types::{ChatDestination, SimpleUser};
 use uuid::Uuid;
 
 pub struct RequestHandler {
@@ -20,6 +21,7 @@ pub struct RequestHandler {
     user_id: Uuid,
     username: String,
     authed: bool,
+    admin: bool,
 }
 
 impl RequestHandler {
@@ -27,9 +29,7 @@ impl RequestHandler {
         command: ClientRequest,
         chat_storage: actix_web::web::Data<Chats>,
         sender_addr: actix::Recipient<WsMessage>,
-        user_id: Uuid,
-        username: &str,
-        authed: bool,
+        user: SimpleUser,
         pool: DbPool,
     ) -> Self {
         Self {
@@ -37,14 +37,22 @@ impl RequestHandler {
             command,
             chat_storage,
             pool,
-            user_id,
-            username: username.to_owned(),
-            authed,
+            user_id: user.user_id,
+            username: user.username,
+            authed: user.authed,
+            admin: user.admin,
         }
     }
 
     fn ensure_auth(&self) -> Result<()> {
         if !self.authed {
+            Err(AuthError::Unauthorized)?
+        }
+        Ok(())
+    }
+
+    fn ensure_admin(&self) -> Result<()> {
+        if !self.admin {
             Err(AuthError::Unauthorized)?
         }
         Ok(())
@@ -56,6 +64,9 @@ impl RequestHandler {
                 self.ensure_auth()?;
                 if self.user_id != message_container.message.user_id {
                     Err(AuthError::Unauthorized)?
+                }
+                if message_container.destination == ChatDestination::Global {
+                    self.ensure_admin()?;
                 }
                 ChatHandler::new(message_container, self.chat_storage.clone()).handle()
             }

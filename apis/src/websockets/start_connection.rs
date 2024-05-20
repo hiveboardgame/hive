@@ -23,6 +23,7 @@ pub async fn start_connection(
                     let ws = WsConnection::new(
                         Some(uuid),
                         Some(user.username),
+                        Some(user.admin),
                         srv.get_ref().clone(),
                         chat_storage.clone(),
                         pool.get_ref().clone(),
@@ -36,6 +37,7 @@ pub async fn start_connection(
 
     println!("Welcome Anonymous!");
     let ws = WsConnection::new(
+        None,
         None,
         None,
         srv.get_ref().clone(),
