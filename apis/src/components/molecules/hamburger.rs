@@ -11,15 +11,15 @@ pub fn Hamburger<T: IntoView>(
     dropdown_style: &'static str,
     content: T,
 ) -> impl IntoView {
-    let children_ref = create_node_ref::<Div>();
+    let target = create_node_ref::<Div>();
     create_effect(move |_| {
         if hamburger_show() {
             let _ = on_click_outside_with_options(
-                children_ref,
+                target,
                 move |_| {
                     hamburger_show.update(|b| *b = false);
                 },
-                OnClickOutsideOptions::default().ignore(["input", "#ignoreChat", "#ignoreButton"]),
+                OnClickOutsideOptions::default().ignore(["input", "#ignoreChat"]),
             );
         }
     });
@@ -27,9 +27,8 @@ pub fn Hamburger<T: IntoView>(
     let children = store_value(children);
 
     view! {
-        <div class=format!("inline-block {extend_tw_classes}")>
+        <div ref=target class=format!("inline-block {extend_tw_classes}")>
             <button
-                id="ignoreButton"
                 on:click=move |_| hamburger_show.update(|b| *b = !*b)
 
                 class=button_style
@@ -37,7 +36,7 @@ pub fn Hamburger<T: IntoView>(
                 {content}
             </button>
             <Show when=hamburger_show>
-                <div ref=children_ref class=dropdown_style>
+                <div class=dropdown_style>
                     {children()}
                 </div>
             </Show>
