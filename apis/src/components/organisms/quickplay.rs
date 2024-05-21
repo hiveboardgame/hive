@@ -21,7 +21,7 @@ pub enum QuickPlayTimeControl {
     Classic30p30,
 }
 use QuickPlayTimeControl::*;
-const BUTTON_STYLE: &str = "flex justify-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
+const BUTTON_STYLE: &str = "flex w-full gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
 
 #[component]
 pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
@@ -82,19 +82,17 @@ pub fn QuickPlay() -> impl IntoView {
             .close();
     });
     view! {
-        <div>
+        <div class="flex flex-col items-center pt-1 m-2 grow">
             <Modal open=open dialog_el=dialog_el>
                 <ChallengeCreate close=close_modal/>
             </Modal>
             <span class="flex justify-center mb-4 text-xl font-bold">Quick Play</span>
-            <div class="grid grid-cols-2 gap-4 w-full md:grid-cols-3">
+            <div class="grid grid-cols-2 gap-2 place-items-center w-full sm:gap-4 sm:grid-cols-3">
                 <GridButton time_control=Bullet1p2/>
                 <GridButton time_control=Blitz3p3/>
                 <GridButton time_control=Blitz5p4/>
                 <GridButton time_control=Rapid10p10/>
-                <GridButton time_control=Rapid15p10/>
                 <GridButton time_control=Classic20p20/>
-                <GridButton time_control=Classic30p30/>
                 <button
                     class=BUTTON_STYLE
                     on:click=move |_| {

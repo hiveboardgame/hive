@@ -12,18 +12,19 @@ pub fn Home() -> impl IntoView {
     };
 
     view! {
-        <div class="flex flex-col justify-start items-center pt-20 w-full md:justify-center overflow-x-clip">
+        <div class="flex overflow-x-hidden flex-col justify-start items-center pt-20 w-full md:justify-center">
             <Banner title="hivegame.com" extend_tw_classes="w-10/12" logo=logo()/>
-            <div class="flex flex-col justify-center items-center md:flex-row">
-
-                <div class="flex flex-col items-center w-full md:flex-row md:items-start">
-                    <div class="flex flex-col">
-                        <Challenges/>
-                        <QuickPlay/>
+            <div class="flex flex-col justify-center items-center lg:flex-row lg:items-start">
+                <div class="flex flex-col items-center w-full md:flex-row">
+                    <div class="flex flex-col items-center">
+                        <div class="flex flex-col items-center sm:w-[500px] lg:w-[550px]">
+                            <Challenges/>
+                            <QuickPlay/>
+                        </div>
                         <Tv/>
                     </div>
-                    <OnlineUsers/>
                 </div>
+                <OnlineUsers/>
             </div>
         </div>
     }

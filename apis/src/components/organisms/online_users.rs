@@ -8,8 +8,8 @@ pub fn OnlineUsers() -> impl IntoView {
     let online_players = move || (online_users.signal)().username_user;
     let is_empty = move || online_players().is_empty();
     view! {
-        <div class="flex flex-col m-2 w-fit pt-2 md:pt-6">
-            Online players: <div>
+        <div class="flex flex-col pt-10 m-2 w-fit">
+            Online players: <div class="overflow-y-auto max-h-96 h-fit">
                 <div class=move || {
                     format!("p-1 h-6 {}", if !is_empty() { "hidden" } else { "flex" })
                 }>{move || if is_empty() { "Only you" } else { "" }}</div>
