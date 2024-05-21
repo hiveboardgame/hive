@@ -9,6 +9,7 @@ use crate::providers::navigation_controller::NavigationControllerSignal;
 use crate::providers::refocus::RefocusSignal;
 use crate::providers::websocket::WebsocketContext;
 use crate::providers::PingSignal;
+use cfg_if::cfg_if;
 use chrono::Utc;
 use hive_lib::GameControl;
 use lazy_static::lazy_static;
@@ -19,6 +20,13 @@ use leptos_use::core::ConnectionReadyState;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
 use regex::Regex;
+cfg_if! { if #[cfg(not(feature = "ssr"))] {
+    use leptos_use::utils::IS_IOS;
+    use std::sync::RwLock;
+    use web_sys::js_sys::Function;
+
+    static IOS_WORKAROUND: RwLock<bool> = RwLock::new(false);
+}}
 
 lazy_static! {
     static ref NANOID: Regex =
@@ -57,6 +65,27 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         chat_dropdown_open,
         orientation_vertical,
     });
+
+    //Copied from leptos-use https://github.com/Synphonyte/leptos-use/blob/main/src/on_click_outside.rs#L123-#L144
+    #[cfg(not(feature = "ssr"))]
+    {
+        if *IS_IOS {
+            if let Ok(mut ios_workaround) = IOS_WORKAROUND.write() {
+                if !*ios_workaround {
+                    *ios_workaround = true;
+                    if let Some(body) = document().body() {
+                        let children = body.children();
+                        for i in 0..children.length() {
+                            let _ = children
+                                .get_with_index(i)
+                                .expect("checked index")
+                                .add_event_listener_with_callback("click", &Function::default());
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     let color_scheme_meta = move || {
         if (color_scheme.prefers_dark)() {
