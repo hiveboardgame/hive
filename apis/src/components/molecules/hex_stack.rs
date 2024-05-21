@@ -5,12 +5,9 @@ use crate::{
     common::{ActiveState, HexStack},
     components::atoms::hex::Hex,
 };
-use leptos::ev::{pointerup, touchend, touchstart};
+use leptos::ev::pointerup;
 use leptos::*;
-use leptos_use::{
-    use_event_listener, use_event_listener_with_options, use_interval_with_options, use_window,
-    UseEventListenerOptions, UseIntervalOptions,
-};
+use leptos_use::{use_event_listener, use_interval_with_options, use_window, UseIntervalOptions};
 use std::rc::Rc;
 use web_sys::PointerEvent;
 
@@ -39,28 +36,15 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
             target_stack.set(None);
         }
     });
-    let g_ref = NodeRef::<svg::G>::new();
-    let _longpress_expand = use_event_listener_with_options(
-        g_ref,
-        touchstart,
-        move |_| {
-            (interval().reset)();
-            (interval().resume)();
-        },
-        UseEventListenerOptions::default().passive(true),
-    );
-
-    let _collapse_expand = use_event_listener_with_options(
-        g_ref,
-        touchend,
-        move |_| {
-            (interval().reset)();
-            (interval().pause)();
-            target_stack.set(None);
-        },
-        UseEventListenerOptions::default().passive(true),
-    );
-
+    let longpress_expand = move |_| {
+        (interval().reset)();
+        (interval().resume)();
+    };
+    let collapse_stack = move |_| {
+        (interval().reset)();
+        (interval().pause)();
+        target_stack.set(None);
+    };
     hex_stack
         .hexes
         .into_iter()
@@ -75,11 +59,13 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
             };
             if is_expandable {
                 view! {
-                    <g ref=g_ref>
-                        <Hex hex=hex on:pointerdown=rightclick_expand/>
-                    </g>
+                    <Hex
+                        hex=hex
+                        on:pointerdown=rightclick_expand
+                        on:touchstart=longpress_expand
+                        on:touchend=collapse_stack
+                    />
                 }
-                .into_view()
             } else {
                 view! { <Hex hex=hex/> }
             }
