@@ -13,9 +13,9 @@ pub fn Banner(
     );
     view! {
         <div class=format!(
-            "flex flex-col items-center justify-center bg-gradient-to-r from-pillbug-teal to-button-dawn text-black p-8 mb-4 rounded-sm {extend_tw_classes}",
+            "flex flex-col items-center justify-center bg-gradient-to-r from-pillbug-teal to-button-dawn text-black p-6 mb-3 xs:p-8 xs:mb-4 rounded-sm {extend_tw_classes}",
         )>
-            <h1 class="text-4xl font-bold mb-4 flex items-center">{logo} {title}</h1>
+            <h1 class="flex items-center mb-4 text-2xl font-bold xs:text-4xl">{logo} {title}</h1>
             <div class=text_class>{text}</div>
         </div>
     }

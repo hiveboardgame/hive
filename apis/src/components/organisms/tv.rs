@@ -11,8 +11,8 @@ pub fn Tv() -> impl IntoView {
     let live_games = move || (games.live)().live_games;
 
     view! {
-        <div class="flex flex-col items-center md:pt-12">
-            <div class="flex flex-col flex-wrap gap-1 items-center w-full md:flex-row">
+        <div class="flex flex-col items-center md:pt-12 lg:w-[780px] md:w-[700px]">
+            <div class="flex flex-col flex-wrap gap-1 justify-center items-center w-full md:flex-row">
                 <For each=live_games key=|(k, v)| (k.to_owned(), v.turn) let:game>
                     <div class="flex relative flex-col items-center mx-2 w-60 h-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
                         <div class="flex flex-col items-center">
