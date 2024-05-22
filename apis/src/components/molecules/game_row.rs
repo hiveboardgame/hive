@@ -125,7 +125,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                             <StatusIndicator username=game().black_player.username/>
                             <ProfileLink
                                 username=game().black_player.username
-                                patreon=game().white_player.patreon
+                                patreon=game().black_player.patreon
                             />
                         </div>
                         <br/>

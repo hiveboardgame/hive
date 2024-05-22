@@ -7,22 +7,24 @@ pub fn OnlineUsers() -> impl IntoView {
     let online_users = expect_context::<OnlineUsersSignal>();
     let online_players = move || (online_users.signal)().username_user;
     let total_online = move || online_players().len();
-    let search = create_rw_signal("".to_string());
+    let search = RwSignal::new(String::new());
     view! {
-        <div class="flex flex-col pt-10 m-2 w-fit">
+        <div class="flex flex-col m-2 w-fit">
             <input
+                class="p-1 w-64"
                 type="text"
                 on:input=move |ev| {
                     search.set(event_target_value(&ev));
                 }
 
-                placeholder="Search for a player"
+                placeholder="Search online players"
                 prop:value=search
+                attr:maxlength="20"
             />
 
             {total_online}
             Online players:
-            <div class="overflow-y-auto max-h-96 h-fit">
+            <div class="overflow-y-auto h-96">
                 <div class=move || {
                     format!("p-1 h-6 {}", if total_online() > 0 { "hidden" } else { "flex" })
                 }>{move || if total_online() == 0 { "Only you" } else { "" }}</div>
