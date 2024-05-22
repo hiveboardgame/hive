@@ -1,24 +1,23 @@
-use std::str::FromStr;
-
+use crate::{
+    common::{ChallengeUpdate, ServerMessage},
+    responses::ChallengeResponse,
+    websockets::internal_server_message::{InternalServerMessage, MessageDestination},
+};
 use anyhow::Result;
 use db_lib::{
     models::{Challenge, NewChallenge, User},
     DbPool,
 };
 use shared_types::{ChallengeDetails, ChallengeVisibility};
+use std::str::FromStr;
 use uuid::Uuid;
-
-use crate::{
-    common::{ChallengeUpdate, ServerMessage},
-    responses::ChallengeResponse,
-    websockets::internal_server_message::{InternalServerMessage, MessageDestination},
-};
 
 pub struct CreateHandler {
     details: ChallengeDetails,
     user_id: Uuid,
     pool: DbPool,
 }
+
 impl CreateHandler {
     pub async fn new(details: ChallengeDetails, user_id: Uuid, pool: &DbPool) -> Result<Self> {
         Ok(Self {

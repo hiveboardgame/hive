@@ -3,6 +3,7 @@ use super::game::handler::GameActionHandler;
 use crate::common::{ClientRequest, GameAction};
 use crate::websockets::api::challenges::handler::ChallengeHandler;
 use crate::websockets::api::ping::handler::PingHandler;
+use crate::websockets::api::tournaments::handler::TournamentHandler;
 use crate::websockets::api::user_status::handler::UserStatusHandler;
 use crate::websockets::auth_error::AuthError;
 use crate::websockets::chat::Chats;
@@ -69,6 +70,12 @@ impl RequestHandler {
                     self.ensure_admin()?;
                 }
                 ChatHandler::new(message_container, self.chat_storage.clone()).handle()
+            }
+            ClientRequest::Tournament(tournament_action) => {
+                TournamentHandler::new(tournament_action, &self.username, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
             }
             ClientRequest::Ping(sent) => PingHandler::new(self.user_id, sent).handle(),
             ClientRequest::Game {

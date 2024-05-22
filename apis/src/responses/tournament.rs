@@ -55,7 +55,6 @@ impl TournamentAbstractResponse {
     }
 }
 
-
 impl TournamentResponse {
     pub async fn from_uuid(id: &Uuid, pool: &DbPool) -> Result<Self> {
         let tournament = Tournament::from_uuid(id, pool).await?;

@@ -8,7 +8,8 @@ use leptos::*;
 
 use super::{
     challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
-    ping::handle::handle_ping, user_status::handle::handle_user_status,
+    ping::handle::handle_ping, tournament::handler::handle_tournament,
+    user_status::handle::handle_user_status,
 };
 
 pub fn handle_response(m: String) {
@@ -22,6 +23,7 @@ pub fn handle_response(m: String) {
                 Game(game_update) => handle_game(*game_update),
                 Challenge(challenge) => handle_challenge(challenge),
                 Chat(message) => handle_chat(message),
+                Tournament(tournament_update) => handle_tournament(tournament_update),
                 todo => {
                     log!("Got {todo:?} which is currently still unimplemented");
                 } // GameRequiresAction, UserStatusChange, ...

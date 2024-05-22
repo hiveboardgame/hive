@@ -17,9 +17,11 @@ use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use shared_types::TimeMode;
+use shared_types::{TimeMode, TournamentDetails};
 use std::str::FromStr;
 use uuid::Uuid;
+
+use super::Game;
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = tournaments)]
@@ -47,50 +49,36 @@ pub struct NewTournament {
 }
 
 impl NewTournament {
-    pub fn new(
-        series: Option<Uuid>,
-        name: String,
-        description: String,
-        scoring: String,
-        tiebreaker: Vec<Option<String>>,
-        invitees: Vec<Option<Uuid>>,
-        seats: i32,
-        rounds: i32,
-        joinable: bool,
-        invite_only: bool,
-        mode: String,
-        time_mode: String,
-        time_base: Option<i32>,
-        time_increment: Option<i32>,
-        band_upper: Option<i32>,
-        band_lower: Option<i32>,
-    ) -> Self {
-        if matches!(TimeMode::from_str(&time_mode).unwrap(), TimeMode::Untimed) {
-            panic!("You cannot play untimed tournaments");
+    pub fn new(details: TournamentDetails) -> Result<Self, DbError> {
+        if matches!(details.time_mode, TimeMode::Untimed) {
+            return Err(DbError::InvalidInput {
+                info: String::from("How did you trigger this?"),
+                error: String::from("Cannot create untimed tournament."),
+            });
         }
 
-        Self {
+        Ok(Self {
             nanoid: nanoid!(11),
-            name,
-            description,
-            scoring,
-            tiebreaker,
-            invitees,
-            seats,
-            rounds,
-            joinable,
-            invite_only,
-            mode,
-            time_mode,
-            time_base,
-            time_increment,
-            band_upper,
-            band_lower,
-            start_at: Some(Utc::now()),
+            name: details.name,
+            description: details.description,
+            scoring: details.scoring,
+            tiebreaker: details.tiebreaker,
+            invitees: details.invitees,
+            seats: details.seats,
+            rounds: details.rounds,
+            joinable: details.joinable,
+            invite_only: details.invite_only,
+            mode: details.mode,
+            time_mode: details.time_mode.to_string(),
+            time_base: details.time_base,
+            time_increment: details.time_increment,
+            band_upper: details.band_upper,
+            band_lower: details.band_lower,
+            start_at: details.start_at,
             created_at: Utc::now(),
             updated_at: Utc::now(),
-            series,
-        }
+            series: details.series,
+        })
     }
 }
 
@@ -125,14 +113,24 @@ pub struct Tournament {
 
 impl Tournament {
     pub async fn create(
+        _user_id: Uuid,
         new_tournament: &NewTournament,
         pool: &DbPool,
     ) -> Result<Tournament, DbError> {
         let connection = &mut get_conn(pool).await?;
+        // TODO: create only works when user's rating is RANKABLE
         Ok(diesel::insert_into(tournaments::table)
             .values(new_tournament)
             .get_result(connection)
             .await?)
+    }
+
+    pub async fn delete(&mut self, pool: &DbPool) -> Result<(), DbError> {
+        let connection = &mut get_conn(pool).await?;
+        diesel::delete(tournaments::table.find(self.id))
+            .execute(connection)
+            .await?;
+        Ok(())
     }
 
     pub async fn decline_invitation(
@@ -225,5 +223,10 @@ impl Tournament {
             .select(User::as_select())
             .get_results(connection)
             .await?)
+    }
+
+    pub async fn start(&self, pool: &DbPool) -> Result<Vec<Game>, DbError> {
+        let connection = &mut get_conn(pool).await?;
+        Ok(Vec::new())
     }
 }

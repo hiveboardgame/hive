@@ -27,7 +27,7 @@ use crate::{
         games::provide_games, navigation_controller::provide_navigation_controller,
         online_users::provide_users, provide_alerts, provide_auth, provide_color_scheme,
         provide_config, provide_ping, refocus::provide_refocus, timer::provide_timer,
-        websocket::provide_websocket,
+        tournaments::provide_tournaments, websocket::provide_websocket,
     },
 };
 use leptos::*;
@@ -53,6 +53,7 @@ pub fn App() -> impl IntoView {
     provide_alerts();
     provide_refocus();
     provide_chat();
+    provide_tournaments();
 
     view! {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
