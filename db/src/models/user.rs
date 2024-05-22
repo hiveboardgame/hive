@@ -19,7 +19,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use diesel::{
     dsl::exists, query_dsl::BelongingToDsl, select, ExpressionMethods, Identifiable, Insertable,
-    QueryDsl, Queryable, SelectableHelper,
+    QueryDsl, Queryable, Selectable, SelectableHelper,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use lazy_static::lazy_static;
@@ -111,7 +111,7 @@ impl NewUser {
     }
 }
 
-#[derive(Queryable, Identifiable, Serialize, Deserialize, Debug, Clone)]
+#[derive(Queryable, Identifiable, Serialize, Selectable, Deserialize, Debug, Clone)]
 #[diesel(primary_key(id))]
 pub struct User {
     pub id: Uuid,

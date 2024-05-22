@@ -139,6 +139,9 @@ impl GameControlHandler {
     }
 
     async fn handle_abort(&self) -> Result<()> {
+        if self.game.tournament_id.is_some() {
+            Err(GameError::TournamentAbort)?
+        }
         Ok(self.game.delete(&self.pool).await?)
     }
 
