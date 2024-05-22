@@ -26,7 +26,14 @@ pub fn Hex(hex: Hex) -> impl IntoView {
 
     match hex.kind {
         HexType::Active(_) => {
-            if game_state.signal.get_untracked().target_position.is_none() || hex.level == 0 {
+            if game_state
+                .signal
+                .get_untracked()
+                .move_info
+                .target_position
+                .is_none()
+                || hex.level == 0
+            {
                 view! { <Active position=hex.position level=expanded_level/> }
             } else {
                 view! { <Active position=hex.position level=expanded_sublevel/> }

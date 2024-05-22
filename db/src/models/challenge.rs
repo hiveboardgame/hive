@@ -1,19 +1,18 @@
 use crate::{
     db_error::DbError,
-    get_conn,
     models::user::User,
     schema::{
         challenges::{self, nanoid as nanoid_field, opponent_id as opponent_id_field},
         users,
     },
-    DbPool,
+    DbConn,
 };
 use chrono::prelude::*;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::Serialize;
-use shared_types::{ChallengeDetails, TimeMode};
+use shared_types::{ChallengeDetails, ChallengeId, TimeMode};
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -129,24 +128,24 @@ pub struct Challenge {
 }
 
 impl Challenge {
-    pub async fn create(new_challenge: &NewChallenge, pool: &DbPool) -> Result<Challenge, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn create(
+        new_challenge: &NewChallenge,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Challenge, DbError> {
         Ok(diesel::insert_into(challenges::table)
             .values(new_challenge)
             .get_result(conn)
             .await?)
     }
 
-    pub async fn get_public(pool: &DbPool) -> Result<Vec<Challenge>, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn get_public(conn: &mut DbConn<'_>) -> Result<Vec<Challenge>, DbError> {
         Ok(challenges::table
             .filter(challenges::visibility.eq("Public"))
             .get_results(conn)
             .await?)
     }
 
-    pub async fn get_own(user: Uuid, pool: &DbPool) -> Result<Vec<Challenge>, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn get_own(user: Uuid, conn: &mut DbConn<'_>) -> Result<Vec<Challenge>, DbError> {
         Ok(challenges::table
             .filter(challenges::challenger_id.eq(user))
             .get_results(conn)
@@ -155,9 +154,8 @@ impl Challenge {
 
     pub async fn get_public_exclude_user(
         user: Uuid,
-        pool: &DbPool,
+        conn: &mut DbConn<'_>,
     ) -> Result<Vec<Challenge>, DbError> {
-        let conn = &mut get_conn(pool).await?;
         Ok(challenges::table
             .filter(challenges::visibility.eq("Public"))
             .filter(challenges::challenger_id.ne(user))
@@ -165,34 +163,35 @@ impl Challenge {
             .await?)
     }
 
-    pub async fn direct_challenges(id: Uuid, pool: &DbPool) -> Result<Vec<Challenge>, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn direct_challenges(
+        id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Challenge>, DbError> {
         Ok(challenges::table
             .filter(opponent_id_field.eq(id))
             .get_results(conn)
             .await?)
     }
 
-    pub async fn find_by_uuid(id: &Uuid, pool: &DbPool) -> Result<Challenge, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn find_by_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Challenge, DbError> {
         Ok(challenges::table.find(id).first(conn).await?)
     }
 
-    pub async fn find_by_nanoid(u: &str, pool: &DbPool) -> Result<Challenge, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn find_by_challenge_id(
+        u: &ChallengeId,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Challenge, DbError> {
         Ok(challenges::table
-            .filter(nanoid_field.eq(u))
+            .filter(nanoid_field.eq(u.0.clone()))
             .first(conn)
             .await?)
     }
 
-    pub async fn get_challenger(&self, pool: &DbPool) -> Result<User, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn get_challenger(&self, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         Ok(users::table.find(&self.challenger_id).first(conn).await?)
     }
 
-    pub async fn delete(&self, pool: &DbPool) -> Result<(), DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn delete(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
         diesel::delete(challenges::table.find(self.id))
             .execute(conn)
             .await?;

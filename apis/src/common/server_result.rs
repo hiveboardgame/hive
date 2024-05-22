@@ -3,7 +3,8 @@ use crate::responses::{ChallengeResponse, GameResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use shared_types::ChatMessageContainer;
+use shared_types::GameId;
+use shared_types::{ChallengeId, ChatMessageContainer};
 use std::fmt;
 use uuid::Uuid;
 
@@ -42,6 +43,7 @@ pub enum ServerMessage {
     Chat(Vec<ChatMessageContainer>),
     Game(Box<GameUpdate>),
     Challenge(ChallengeUpdate),
+    UserSearch(Vec<UserResponse>),
     UserStatus(UserUpdate),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
@@ -59,7 +61,7 @@ pub enum GameUpdate {
 pub struct GameActionResponse {
     pub game_action: GameReaction,
     pub game: GameResponse,
-    pub game_id: String,
+    pub game_id: GameId,
     pub user_id: Uuid,
     pub username: String,
 }
@@ -67,7 +69,7 @@ pub struct GameActionResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChallengeUpdate {
     Created(ChallengeResponse),         // A new challenge was created
-    Removed(String),                    // A challenge was removed
+    Removed(ChallengeId),               // A challenge was removed
     Direct(ChallengeResponse),          // Player got directly invited to a game
     Challenges(Vec<ChallengeResponse>), //
 }

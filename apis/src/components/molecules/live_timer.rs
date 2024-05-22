@@ -8,6 +8,7 @@ use leptos_router::RouterContext;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn_with_options, UseIntervalFnOptions};
 use regex::Regex;
+use shared_types::GameId;
 
 use std::time::Duration;
 lazy_static! {
@@ -80,17 +81,19 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
         is_active,
     } = use_interval_fn_with_options(
         move || {
-            ticks.update(|t| *t += 1);
-            time_left.update(|t| {
-                if ticks.get_untracked() > 10 {
-                    ticks.update(|t| *t = 0);
-                    *t = match side {
-                        Color::Black => black_time(),
-                        Color::White => white_time(),
-                    };
-                } else {
-                    *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
-                }
+            batch(move || {
+                ticks.update(|t| *t += 1);
+                time_left.update(|t| {
+                    if ticks.get_untracked() > 10 {
+                        ticks.update(|t| *t = 0);
+                        *t = match side {
+                            Color::Black => black_time(),
+                            Color::White => white_time(),
+                        };
+                    } else {
+                        *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
+                    }
+                })
             })
         },
         100,
@@ -114,9 +117,9 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
                 let api = ApiRequests::new();
                 let router = expect_context::<RouterContext>();
                 if let Some(caps) = NANOID.captures(&router.pathname().get_untracked()) {
-                    let nanoid = caps.name("nanoid").map_or("", |m| m.as_str());
-                    if !nanoid.is_empty() {
-                        api.game_check_time(nanoid);
+                    if let Some(nanoid) = caps.name("nanoid") {
+                        let game_id = GameId(nanoid.as_str().to_string());
+                        api.game_check_time(&game_id);
                     }
                 }
             }

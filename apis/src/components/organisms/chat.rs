@@ -103,7 +103,7 @@ pub fn ChatWindow(
     };
 
     let navi = expect_context::<NavigationControllerSignal>();
-    let game = store_value(navi.signal.get_untracked().nanoid.unwrap_or_default());
+    let game_id = store_value(navi.signal.get_untracked().game_id.unwrap_or_default());
     let correspondant_id = store_value(if let Some(v) = correspondant_id {
         v
     } else {
@@ -127,9 +127,9 @@ pub fn ChatWindow(
     let actual_destination = move || match destination {
         SimpleDestination::Game => {
             if game_state.signal.get_untracked().uid_is_player(uid) {
-                ChatDestination::GamePlayers(game(), white_id(), black_id())
+                ChatDestination::GamePlayers(game_id(), white_id(), black_id())
             } else {
-                ChatDestination::GameSpectators(game(), white_id(), black_id())
+                ChatDestination::GameSpectators(game_id(), white_id(), black_id())
             }
         }
         SimpleDestination::User => {
@@ -144,13 +144,13 @@ pub fn ChatWindow(
             .get(&tournament)
             .cloned()
             .unwrap_or_default(),
-        ChatDestination::GamePlayers(game, ..) => (chat.games_private_messages)()
-            .get(&game)
+        ChatDestination::GamePlayers(game_id, ..) => (chat.games_private_messages)()
+            .get(&game_id)
             .cloned()
             .unwrap_or_default(),
 
-        ChatDestination::GameSpectators(game, ..) => (chat.games_public_messages)()
-            .get(&game)
+        ChatDestination::GameSpectators(game_id, ..) => (chat.games_public_messages)()
+            .get(&game_id)
             .cloned()
             .unwrap_or_default(),
 

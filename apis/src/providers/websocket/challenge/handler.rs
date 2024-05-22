@@ -38,9 +38,9 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
             filter_challenges(&mut new_challanges);
             challenges.add(new_challanges);
         }
-        ChallengeUpdate::Removed(nanoid) => {
+        ChallengeUpdate::Removed(challenger_id) => {
             let mut challenges = expect_context::<ChallengeStateSignal>();
-            challenges.remove(nanoid);
+            challenges.remove(challenger_id);
         }
         ChallengeUpdate::Created(challenge) | ChallengeUpdate::Direct(challenge) => {
             let mut challenges = expect_context::<ChallengeStateSignal>();

@@ -36,9 +36,7 @@ pub fn Hamburger<T: IntoView>(
                 {content}
             </button>
             <Show when=hamburger_show>
-                <div class=dropdown_style>
-                    {children()}
-                </div>
+                <div class=dropdown_style>{children()}</div>
             </Show>
         </div>
     }

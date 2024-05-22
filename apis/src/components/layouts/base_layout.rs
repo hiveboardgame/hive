@@ -20,6 +20,7 @@ use leptos_use::core::ConnectionReadyState;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
 use regex::Regex;
+use shared_types::GameId;
 cfg_if! { if #[cfg(not(feature = "ssr"))] {
     use leptos_use::utils::IS_IOS;
     use std::sync::RwLock;
@@ -133,16 +134,14 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         let mut navi = expect_context::<NavigationControllerSignal>();
         let pathname = (location.pathname)();
         let nanoid = if let Some(caps) = NANOID.captures(&pathname) {
-            caps.name("nanoid").map(|m| m.as_str().to_string())
+            caps.name("nanoid").map(|m| GameId(m.as_str().to_string()))
         } else {
             None
         };
         if ws_ready() == ConnectionReadyState::Open {
-            navi.update_nanoid(nanoid);
+            navi.update_game_id(nanoid);
         };
     });
-
-    let api = ApiRequests::new();
 
     let focused = use_window_focus();
     let _ = watch(
@@ -161,35 +160,43 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
     let counter = RwSignal::new(0_u64);
     let retry_at = RwSignal::new(2_u64);
+
     let Pausable { .. } = use_interval_fn(
         move || {
-            api.ping();
-            counter.update(|c| *c += 1);
-            match ws_ready() {
-                ConnectionReadyState::Closed => {
-                    if retry_at.get() == counter.get() {
-                        //log!("Reconnecting due to ReadyState");
+            batch({
+                let ws = ws.clone();
+                let api = ApiRequests::new();
+                move || {
+                    api.ping();
+                    counter.update(|c| *c += 1);
+                    match ws_ready() {
+                        ConnectionReadyState::Closed => {
+                            if retry_at.get() == counter.get() {
+                                //log!("Reconnecting due to ReadyState");
+                                ws.open();
+                                counter.update(|c| *c = 0);
+                                retry_at.update(|r| *r *= 2);
+                            }
+                        }
+                        ConnectionReadyState::Open => {
+                            counter.update(|c| *c = 0);
+                            retry_at.update(|r| *r = 2);
+                        }
+                        _ => {}
+                    }
+                    if Utc::now()
+                        .signed_duration_since(ping.signal.get_untracked().last_update)
+                        .num_seconds()
+                        >= 5
+                        && retry_at.get() == counter.get()
+                    {
+                        //log!("Reconnecting due to ping duration");
                         ws.open();
                         counter.update(|c| *c = 0);
-                        counter.update(|r| *r *= 2);
-                    }
+                        retry_at.update(|r| *r *= 2);
+                    };
                 }
-                ConnectionReadyState::Open => {
-                    counter.update(|c| *c = 0);
-                }
-                _ => {}
-            }
-            if Utc::now()
-                .signed_duration_since(ping.signal.get_untracked().last_update)
-                .num_seconds()
-                >= 5
-                && retry_at.get() == counter.get()
-            {
-                //log!("Reconnecting due to ping duration");
-                ws.open();
-                counter.update(|c| *c = 0);
-                counter.update(|r| *r *= 2);
-            };
+            })
         },
         1000,
     );

@@ -3,7 +3,7 @@ use std::{
     sync::RwLock,
 };
 
-use shared_types::ChatMessageContainer;
+use shared_types::{ChatMessageContainer, GameId};
 use uuid::Uuid;
 
 #[derive(Debug, Eq, Hash, PartialEq)]
@@ -28,8 +28,8 @@ impl UserToUser {
 #[derive(Debug)]
 pub struct Chats {
     pub tournament: RwLock<HashMap<String, Vec<ChatMessageContainer>>>,
-    pub games_public: RwLock<HashMap<String, Vec<ChatMessageContainer>>>,
-    pub games_private: RwLock<HashMap<String, Vec<ChatMessageContainer>>>,
+    pub games_public: RwLock<HashMap<GameId, Vec<ChatMessageContainer>>>,
+    pub games_private: RwLock<HashMap<GameId, Vec<ChatMessageContainer>>>,
     pub direct: RwLock<HashMap<UserToUser, Vec<ChatMessageContainer>>>,
     pub direct_lookup: RwLock<HashMap<Uuid, HashSet<Uuid>>>,
 }

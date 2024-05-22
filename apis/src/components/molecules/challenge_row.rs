@@ -39,8 +39,13 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
         }
     };
 
-    let challenge_address =
-        move || format!("{}/challenge/{}", hostname_and_port(), challenge().nanoid);
+    let challenge_address = move || {
+        format!(
+            "{}/challenge/{}",
+            hostname_and_port(),
+            challenge().challenge_id
+        )
+    };
     let button_ref = create_node_ref::<html::Button>();
     let copy = move |_| {
         let clipboard = use_window()
@@ -178,7 +183,8 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                 </Show>
                                 <button
                                     on:click=move |_| {
-                                        ApiRequests::new().challenge_cancel(challenge().nanoid)
+                                        ApiRequests::new()
+                                            .challenge_cancel(challenge().challenge_id)
                                     }
 
                                     class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
@@ -195,7 +201,8 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     Some(Ok(Some(_))) => {
                                         let mut game_state = expect_context::<GameStateSignal>();
                                         game_state.full_reset();
-                                        ApiRequests::new().challenge_accept(challenge().nanoid);
+                                        ApiRequests::new()
+                                            .challenge_accept(challenge().challenge_id);
                                     }
                                     _ => {
                                         let navigate = use_navigate();
@@ -215,7 +222,8 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     on:click=move |_| {
                                         match (auth_context.user)() {
                                             Some(Ok(Some(_))) => {
-                                                ApiRequests::new().challenge_cancel(challenge().nanoid);
+                                                ApiRequests::new()
+                                                    .challenge_cancel(challenge().challenge_id);
                                             }
                                             _ => {
                                                 let navigate = use_navigate();

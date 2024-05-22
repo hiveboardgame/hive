@@ -1,51 +1,43 @@
 use crate::{
+    common::MoveConfirm,
     components::{
-        atoms::{
-            history_button::{HistoryButton, HistoryNavigation},
-            undo_button::UndoButton,
-        },
         layouts::base_layout::OrientationSignal,
         organisms::{
+            analysis::{AnalysisSignal, AnalysisTree, History, ToggleStates},
             board::Board,
             reserve::{Alignment, Reserve},
-            side_board::SideboardTabs,
         },
     },
-    pages::play::TargetStack,
+    pages::play::{CurrentConfirm, TargetStack},
     providers::game_state::GameStateSignal,
 };
 use hive_lib::Color;
 use leptos::*;
-
-#[derive(Clone)]
-pub struct InAnalysis(pub RwSignal<bool>);
+use std::collections::HashSet;
 
 #[component]
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
-    provide_context(InAnalysis(RwSignal::new(true)));
+    provide_context(AnalysisSignal(RwSignal::new(Some(
+        AnalysisTree::from_state(expect_context::<GameStateSignal>()).unwrap_or_default(),
+    ))));
+    provide_context(ToggleStates(RwSignal::new(HashSet::new())));
+    provide_context(CurrentConfirm(Memo::new(move |_| MoveConfirm::Single)));
     let is_tall = expect_context::<OrientationSignal>().is_tall;
     let parent_container_style = move || {
         if is_tall() {
-            "flex flex-col"
+            "flex flex-col h-full"
         } else {
-            "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 pr-1"
+            "max-h-[100dvh] min-h-[100dvh] grid grid-cols-10  grid-rows-6 pr-1"
         }
     };
-    let player_is_black = create_memo(move |_| false);
-    let go_to_game = Callback::new(move |()| {
-        let mut game_state = expect_context::<GameStateSignal>();
-        if game_state.signal.get_untracked().is_last_turn() {
-            game_state.view_game();
-        }
-    });
     let bottom_color = Color::Black;
     let top_color = Color::White;
 
     view! {
         <div class=move || {
             format!(
-                "max-h-[100dvh] min-h-[100dvh] pt-10 bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
+                "pt-12 bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
                 parent_container_style(),
             )
         }>
@@ -54,14 +46,14 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 fallback=move || {
                     view! {
                         <Board/>
-                        <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-4 row-span-4 row-start-2 border-black border-y-2 dark:border-white">
-                            <SideboardTabs player_is_black=player_is_black analysis=true/>
+                        <div class="flex flex-col col-span-2 row-span-6 p-1 h-full border-2 border-black select-none dark:border-white">
+                            <History/>
                         </div>
                     }
                 }
             >
 
-                <div class="flex flex-col flex-grow h-full min-h-0">
+                <div class="flex flex-col h-[85dvh]">
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
                             <Reserve alignment=Alignment::SingleRow color=top_color/>
@@ -71,16 +63,10 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
                             <Reserve alignment=Alignment::SingleRow color=bottom_color/>
-                            <UndoButton/>
-                        </div>
-                        <div class="grid grid-cols-4 gap-8">
-                            <HistoryButton action=HistoryNavigation::First/>
-                            <HistoryButton action=HistoryNavigation::Previous/>
-                            <HistoryButton action=HistoryNavigation::Next post_action=go_to_game/>
-                            <HistoryButton action=HistoryNavigation::MobileLast/>
                         </div>
                     </div>
                 </div>
+                <History mobile=true/>
             </Show>
         </div>
     }

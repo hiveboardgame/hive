@@ -1,6 +1,7 @@
 use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
 use crate::common::{PieceType, SvgPos};
-use crate::pages::analysis::InAnalysis;
+use crate::components::organisms::analysis::AnalysisSignal;
+use crate::pages::play::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
 use hive_lib::{Bug, Piece, Position};
@@ -62,28 +63,25 @@ pub fn Piece(
         ""
     };
 
-    let mut game_state_signal = expect_context::<GameStateSignal>();
-    let in_analysis = use_context::<InAnalysis>().unwrap_or(InAnalysis(RwSignal::new(false)));
-
+    let mut game_state = expect_context::<GameStateSignal>();
+    let current_confirm = expect_context::<CurrentConfirm>().0;
+    let analysis = use_context::<AnalysisSignal>()
+        .unwrap_or(AnalysisSignal(RwSignal::new(None)))
+        .0;
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
-        let in_analysis = in_analysis.0.get_untracked();
-        if in_analysis || game_state_signal.is_move_allowed() {
+        let in_analysis = analysis.get_untracked().is_some();
+        if in_analysis || game_state.is_move_allowed() {
             match piece_type {
                 PieceType::Board => {
-                    game_state_signal.show_moves(piece, position);
+                    game_state.show_moves(piece, position);
                 }
                 PieceType::Reserve => {
-                    game_state_signal.show_spawns(piece, position);
+                    game_state.show_spawns(piece, position);
                 }
                 PieceType::Move | PieceType::Spawn => {
-                    if in_analysis
-                        || matches!(
-                            (config.confirm_mode.preferred_confirm)(),
-                            MoveConfirm::Double
-                        )
-                    {
-                        game_state_signal.move_active();
+                    if current_confirm() == MoveConfirm::Double {
+                        game_state.move_active();
                     }
                 }
                 _ => {}
@@ -126,7 +124,7 @@ pub fn Piece(
         String::new()
     };
 
-    let top_piece = game_state_signal
+    let top_piece = game_state
         .signal
         .get_untracked()
         .state
@@ -134,20 +132,15 @@ pub fn Piece(
         .top_piece(position)
         .unwrap_or(piece);
 
+    let active_piece = create_read_slice(game_state.signal, |gs| gs.move_info.active);
     let show_ds = move || {
-        if let Some(active) = game_state_signal.signal.get().active {
+        if let Some(active) = active_piece() {
             if active == piece {
                 return "#no_ds";
             }
             return "#ds";
         };
-        if match game_state_signal
-            .signal
-            .get_untracked()
-            .state
-            .board
-            .last_move
-        {
+        if match game_state.signal.get_untracked().state.board.last_move {
             (Some(_), Some(pos)) => position != pos || piece != top_piece,
             (Some(pos), None) => position != pos || piece != top_piece,
             (None, Some(pos)) => position != pos || piece != top_piece,

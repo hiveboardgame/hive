@@ -8,7 +8,7 @@ use crate::responses::create_challenge_handler;
 use chrono::Utc;
 use hive_lib::{GameControl, Turn};
 use leptos::*;
-use shared_types::ChatMessageContainer;
+use shared_types::{ChallengeId, ChatMessageContainer, GameId};
 #[derive(Clone)]
 pub struct ApiRequests {
     websocket: WebsocketContext,
@@ -26,9 +26,9 @@ impl ApiRequests {
         Self { websocket }
     }
 
-    pub fn turn(&self, game_id: String, turn: Turn) {
+    pub fn turn(&self, game_id: GameId, turn: Turn) {
         let msg = ClientRequest::Game {
-            id: game_id.to_owned(),
+            game_id: game_id.clone(),
             action: GameAction::Turn(turn),
         };
         self.websocket
@@ -44,9 +44,9 @@ impl ApiRequests {
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
-    pub fn game_control(&self, game_id: String, gc: GameControl) {
+    pub fn game_control(&self, game_id: GameId, gc: GameControl) {
         let msg = ClientRequest::Game {
-            id: game_id,
+            game_id,
             action: GameAction::Control(gc),
         };
         self.websocket
@@ -59,18 +59,18 @@ impl ApiRequests {
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
-    pub fn game_check_time(&self, game_id: &str) {
+    pub fn game_check_time(&self, game_id: &GameId) {
         let msg = ClientRequest::Game {
-            id: game_id.to_owned(),
+            game_id: game_id.clone(),
             action: GameAction::CheckTime,
         };
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
-    pub fn join(&self, game_id: String) {
+    pub fn join(&self, game_id: GameId) {
         let msg = ClientRequest::Game {
-            id: game_id,
+            game_id,
             action: GameAction::Join,
         };
         self.websocket
@@ -102,21 +102,29 @@ impl ApiRequests {
         }
     }
 
-    pub fn challenge_cancel(&self, nanoid: String) {
-        let msg = ClientRequest::Challenge(ChallengeAction::Delete(nanoid));
+    pub fn challenge_cancel(&self, challenger_id: ChallengeId) {
+        let msg = ClientRequest::Challenge(ChallengeAction::Delete(challenger_id));
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
-    pub fn challenge_accept(&self, nanoid: String) {
-        let msg = ClientRequest::Challenge(ChallengeAction::Accept(nanoid));
+    pub fn challenge_accept(&self, challenger_id: ChallengeId) {
+        let msg = ClientRequest::Challenge(ChallengeAction::Accept(challenger_id));
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
-    pub fn challenge_get(&self, nanoid: String) {
-        let msg = ClientRequest::Challenge(ChallengeAction::Get(nanoid));
+    pub fn challenge_get(&self, challenger_id: ChallengeId) {
+        let msg = ClientRequest::Challenge(ChallengeAction::Get(challenger_id));
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    }
+
+    pub fn search_user(&self, pattern: String) {
+        if !pattern.is_empty() {
+            let msg = ClientRequest::UserSearch(pattern);
+            self.websocket
+                .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+        }
     }
 }

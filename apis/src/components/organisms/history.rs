@@ -16,7 +16,7 @@ pub fn HistoryMove(
     repetition: bool,
     parent_div: NodeRef<html::Div>,
 ) -> impl IntoView {
-    let mut game_state_signal = expect_context::<GameStateSignal>();
+    let mut game_state = expect_context::<GameStateSignal>();
     let div_ref = create_node_ref::<html::Div>();
     div_ref.on_load(move |_| {
         let _ = div_ref
@@ -28,11 +28,12 @@ pub fn HistoryMove(
             });
     });
     let onclick = move |_| {
-        game_state_signal.show_history_turn(turn);
+        game_state.show_history_turn(turn);
     };
+    let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
     let get_class = move || {
         let mut class = "col-span-2 ml-3 h-auto max-h-6 leading-6 transition-transform duration-300 transform hover:bg-pillbug-teal active:scale-95";
-        if let Some(history_turn) = (game_state_signal.signal)().history_turn {
+        if let Some(history_turn) = history_turn() {
             if turn == history_turn {
                 class = "col-span-2 ml-3 h-auto max-h-6 leading-6 transition-transform duration-300 transform hover:bg-pillbug-teal bg-orange-twilight active:scale-95"
             }
@@ -53,10 +54,13 @@ pub fn HistoryMove(
 
 #[component]
 pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateSignal>();
+    let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
+    let repetitions = create_read_slice(game_state.signal, |gs| {
+        gs.game_response.as_ref().map(|gr| gr.repetitions.clone())
+    });
     let history_moves = move || {
-        (game_state_signal.signal)()
-            .state
+        state()
             .history
             .moves
             .into_iter()
@@ -66,20 +70,13 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     };
 
     let parent = create_node_ref::<html::Div>();
-    let is_finished = move || {
-        matches!(
-            (game_state_signal.signal)().state.game_status,
-            GameStatus::Finished(_)
-        )
-    };
-
-    let game_result = move || match (game_state_signal.signal)().state.game_status {
+    let game_result = move || match state().game_status {
         GameStatus::Finished(result) => result.to_string(),
         _ => "".to_string(),
     };
 
-    let conclusion = move || {
-        if let Some(game) = (game_state_signal.signal)().game_response {
+    let conclusion = create_read_slice(game_state.signal, |gs| {
+        if let Some(game) = &gs.game_response {
             match game.conclusion {
                 Conclusion::Board => String::from("Finished on board"),
                 Conclusion::Draw => String::from("Draw agreed"),
@@ -91,7 +88,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         } else {
             String::from("No data")
         }
-    };
+    });
 
     let window = use_window();
     let active = Signal::derive(move || {
@@ -120,7 +117,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
 
     let if_last_go_to_end = Callback::new(move |()| {
         focus(());
-        let gamestate = (game_state_signal.signal)();
+        let gamestate = game_state.signal.get_untracked();
         {
             if let Some(turn) = gamestate.history_turn {
                 if turn == gamestate.state.turn - 1 {
@@ -131,8 +128,8 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     });
 
     let is_repetition = move |turn: usize| {
-        if let Some(game) = (game_state_signal.signal)().game_response {
-            game.repetitions.contains(&turn)
+        if let Some(repetitions) = repetitions() {
+            repetitions.contains(&turn)
         } else {
             false
         }
@@ -194,7 +191,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     />
                 </For>
 
-                <Show when=is_finished>
+                <Show when=game_state.is_finished()>
                     <div class="col-span-4 text-center">{game_result}</div>
                     <div class="col-span-4 text-center">{conclusion}</div>
                 </Show>

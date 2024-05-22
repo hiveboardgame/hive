@@ -29,14 +29,15 @@ pub fn ControlButtons() -> impl IntoView {
             unreachable!()
         }
     };
+    let pending = create_read_slice(game_state.signal, |gs| gs.game_control_pending.clone());
 
-    let pending_draw = move || match (game_state.signal)().game_control_pending {
+    let pending_draw = move || match pending() {
         Some(GameControl::DrawOffer(gc_color)) => gc_color.opposite_color() == color(),
 
         _ => false,
     };
 
-    let pending_takeback = move || match (game_state.signal)().game_control_pending {
+    let pending_takeback = move || match pending() {
         Some(GameControl::TakebackRequest(gc_color)) => gc_color.opposite_color() == color(),
 
         _ => false,
@@ -133,7 +134,7 @@ pub fn ControlButtons() -> impl IntoView {
     let rematch = move |_| {
         if let Some(challenge) = rematch_present() {
             let api = ApiRequests::new();
-            api.challenge_accept(challenge.nanoid);
+            api.challenge_accept(challenge.challenge_id);
         } else {
             let game_state = expect_context::<GameStateSignal>();
             let auth_context = expect_context::<AuthContext>();
@@ -173,57 +174,77 @@ pub fn ControlButtons() -> impl IntoView {
                 when=game_state.is_finished()
                 fallback=move || {
                     view! {
-                        <div class="flex justify-around items-center grow shrink">
-                            <div class="relative">
-                                <ConfirmButton
-                                    game_control=store_value(GameControl::Abort(color()))
-                                    user_id=user_id()
-                                    hidden=memo_for_hidden_class(move || {
-                                        (game_state.signal)().state.turn > 1
-                                    })
-                                />
+                        <div class="flex flex-col w-full">
+                            <div class="flex justify-around items-center grow shrink">
+                                <div class="relative">
+                                    <ConfirmButton
+                                        game_control=store_value(GameControl::Abort(color()))
+                                        user_id=user_id()
+                                        hidden=memo_for_hidden_class(move || {
+                                            (game_state.signal)().state.turn > 1
+                                        })
+                                    />
 
-                                <ConfirmButton
-                                    game_control=store_value(GameControl::TakebackRequest(color()))
-                                    user_id=user_id()
-                                    hidden=memo_for_hidden_class(move || {
-                                        pending_takeback() || (game_state.signal)().state.turn < 2
-                                    })
-                                />
+                                    <ConfirmButton
+                                        game_control=store_value(
+                                            GameControl::TakebackRequest(color()),
+                                        )
 
-                                <AcceptDenyGc
-                                    game_control=store_value(GameControl::TakebackAccept(color()))
+                                        user_id=user_id()
+                                        hidden=memo_for_hidden_class(move || {
+                                            pending_takeback() || (game_state.signal)().state.turn < 2
+                                        })
+                                    />
+
+                                    <AcceptDenyGc
+                                        game_control=store_value(
+                                            GameControl::TakebackAccept(color()),
+                                        )
+
+                                        user_id=user_id()
+                                        hidden=memo_for_hidden_class(move || !pending_takeback())
+                                    />
+                                    <AcceptDenyGc
+                                        game_control=store_value(
+                                            GameControl::TakebackReject(color()),
+                                        )
+
+                                        user_id=user_id()
+                                        hidden=memo_for_hidden_class(move || !pending_takeback())
+                                    />
+                                </div>
+                                <div class="relative">
+                                    <ConfirmButton
+                                        game_control=store_value(GameControl::DrawOffer(color()))
+                                        user_id=user_id()
+                                        hidden=memo_for_hidden_class(pending_draw)
+                                    />
+
+                                    <AcceptDenyGc
+                                        game_control=store_value(GameControl::DrawAccept(color()))
+                                        user_id=user_id()
+                                        hidden=memo_for_hidden_class(move || !pending_draw())
+                                    />
+                                    <AcceptDenyGc
+                                        game_control=store_value(GameControl::DrawReject(color()))
+                                        user_id=user_id()
+                                        hidden=memo_for_hidden_class(move || !pending_draw())
+                                    />
+                                </div>
+                                <ConfirmButton
+                                    game_control=store_value(GameControl::Resign(color()))
                                     user_id=user_id()
-                                    hidden=memo_for_hidden_class(move || !pending_takeback())
-                                />
-                                <AcceptDenyGc
-                                    game_control=store_value(GameControl::TakebackReject(color()))
-                                    user_id=user_id()
-                                    hidden=memo_for_hidden_class(move || !pending_takeback())
                                 />
                             </div>
-                            <div class="relative">
-                                <ConfirmButton
-                                    game_control=store_value(GameControl::DrawOffer(color()))
-                                    user_id=user_id()
-                                    hidden=memo_for_hidden_class(pending_draw)
-                                />
 
-                                <AcceptDenyGc
-                                    game_control=store_value(GameControl::DrawAccept(color()))
-                                    user_id=user_id()
-                                    hidden=memo_for_hidden_class(move || !pending_draw())
-                                />
-                                <AcceptDenyGc
-                                    game_control=store_value(GameControl::DrawReject(color()))
-                                    user_id=user_id()
-                                    hidden=memo_for_hidden_class(move || !pending_draw())
-                                />
+                            <div class="flex justify-center w-full h-5">
+                                <Show when=pending_takeback>
+                                    <span class="font-bold">"Opponent wants a takeback"</span>
+                                </Show>
+                                <Show when=pending_draw>
+                                    <span class="font-bold">"Opponent offers a draw"</span>
+                                </Show>
                             </div>
-                            <ConfirmButton
-                                game_control=store_value(GameControl::Resign(color()))
-                                user_id=user_id()
-                            />
                         </div>
                     }
                 }

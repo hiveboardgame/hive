@@ -4,6 +4,7 @@ use crate::responses::GameResponse;
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameControl};
 use leptos::*;
+use shared_types::GameId;
 use shared_types::TimeMode;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
@@ -29,64 +30,65 @@ impl GamesSignal {
         }
     }
 
-    pub fn visit(&mut self, time_mode: TimeMode) -> Option<String> {
+    pub fn visit(&mut self, time_mode: TimeMode) -> Option<GameId> {
         let navigation_controller = expect_context::<NavigationControllerSignal>();
         let auth_context = expect_context::<AuthContext>();
         if let Some(Ok(Some(user))) = untrack(auth_context.user) {
             self.own.update(|s| {
-                if let Some(nanoid) = navigation_controller.signal.get_untracked().nanoid {
-                    if let Some(game) = s.untimed.get(&nanoid) {
+                if let Some(game_id) = navigation_controller.signal.get_untracked().game_id {
+                    if let Some(game) = s.untimed.get(&game_id) {
                         if game.current_player_id == user.id {
-                            if let Some(gp) =
-                                s.next_untimed.clone().iter().find(|gp| gp.nanoid == nanoid)
+                            if let Some(gp) = s
+                                .next_untimed
+                                .clone()
+                                .iter()
+                                .find(|gp| gp.game_id == game_id)
                             {
-                                s.next_untimed.retain(|gp| gp.nanoid != nanoid);
+                                s.next_untimed.retain(|gp| gp.game_id != game_id);
                                 if let Ok(time_left) = game.time_left() {
                                     s.next_untimed.push(GamePriority {
                                         last_interaction: gp.last_interaction,
                                         time_left,
                                         skipped: gp.skipped + 1,
-                                        nanoid: gp.nanoid.clone(),
+                                        game_id: gp.game_id.clone(),
                                     });
                                 }
                             }
                         }
-                    }
-                    if let Some(game) = s.realtime.get(&nanoid) {
+                    } else if let Some(game) = s.realtime.get(&game_id) {
                         if game.current_player_id == user.id {
                             if let Some(gp) = s
                                 .next_realtime
                                 .clone()
                                 .iter()
-                                .find(|gp| gp.nanoid == nanoid)
+                                .find(|gp| gp.game_id == game_id)
                             {
-                                s.next_realtime.retain(|gp| gp.nanoid != nanoid);
+                                s.next_realtime.retain(|gp| gp.game_id != game_id);
                                 if let Ok(time_left) = game.time_left() {
                                     s.next_realtime.push(GamePriority {
                                         last_interaction: gp.last_interaction,
                                         time_left,
                                         skipped: gp.skipped + 1,
-                                        nanoid: gp.nanoid.clone(),
+                                        game_id: gp.game_id.clone(),
                                     });
                                 }
                             }
                         }
-                    }
-                    if let Some(game) = s.correspondence.get(&nanoid) {
+                    } else if let Some(game) = s.correspondence.get(&game_id) {
                         if game.current_player_id == user.id {
                             if let Some(gp) = s
                                 .next_correspondence
                                 .clone()
                                 .iter()
-                                .find(|gp| gp.nanoid == nanoid)
+                                .find(|gp| gp.game_id == game_id)
                             {
-                                s.next_correspondence.retain(|gp| gp.nanoid != nanoid);
+                                s.next_correspondence.retain(|gp| gp.game_id != game_id);
                                 if let Ok(time_left) = game.time_left() {
                                     s.next_correspondence.push(GamePriority {
                                         last_interaction: gp.last_interaction,
                                         time_left,
                                         skipped: gp.skipped + 1,
-                                        nanoid: gp.nanoid.clone(),
+                                        game_id: gp.game_id.clone(),
                                     });
                                 }
                             }
@@ -100,19 +102,19 @@ impl GamesSignal {
                     .get_untracked()
                     .next_realtime
                     .peek()
-                    .map(|gp| gp.nanoid.clone()),
+                    .map(|gp| gp.game_id.clone()),
                 TimeMode::Correspondence => self
                     .own
                     .get_untracked()
                     .next_correspondence
                     .peek()
-                    .map(|gp| gp.nanoid.clone()),
+                    .map(|gp| gp.game_id.clone()),
                 TimeMode::Untimed => self
                     .own
                     .get_untracked()
                     .next_untimed
                     .peek()
-                    .map(|gp| gp.nanoid.clone()),
+                    .map(|gp| gp.game_id.clone()),
             };
         };
         None
@@ -143,9 +145,9 @@ impl GamesSignal {
         self.own.update(|s| {
             let mut update_required = true;
             if let Some(already_present_game) = match game.time_mode {
-                TimeMode::Untimed => s.untimed.get(&game.nanoid),
-                TimeMode::Correspondence => s.correspondence.get(&game.nanoid),
-                TimeMode::RealTime => s.realtime.get(&game.nanoid),
+                TimeMode::Untimed => s.untimed.get(&game.game_id),
+                TimeMode::Correspondence => s.correspondence.get(&game.game_id),
+                TimeMode::RealTime => s.realtime.get(&game.game_id),
             } {
                 if already_present_game.updated_at == game.updated_at {
                     update_required = false;
@@ -154,54 +156,56 @@ impl GamesSignal {
             if update_required {
                 match game.time_mode {
                     TimeMode::Untimed => {
-                        s.untimed.insert(game.nanoid.to_owned(), game.clone());
-                        s.next_untimed.retain(|gp| gp.nanoid != game.nanoid);
+                        s.untimed.insert(game.game_id.to_owned(), game.clone());
+                        s.next_untimed.retain(|gp| gp.game_id != game.game_id);
                         if next_required {
                             if let Ok(time_left) = game.time_left() {
                                 s.next_untimed.push(GamePriority {
                                     last_interaction: Some(game.updated_at),
                                     time_left,
                                     skipped: 0,
-                                    nanoid: game.nanoid.clone(),
+                                    game_id: game.game_id.clone(),
                                 });
                             }
                         }
                         if game.finished {
-                            s.next_untimed.retain(|gp| gp.nanoid != game.nanoid);
+                            s.next_untimed.retain(|gp| gp.game_id != game.game_id);
                         }
                     }
                     TimeMode::Correspondence => {
                         s.correspondence
-                            .insert(game.nanoid.to_owned(), game.clone());
-                        s.next_correspondence.retain(|gp| gp.nanoid != game.nanoid);
+                            .insert(game.game_id.to_owned(), game.clone());
+                        s.next_correspondence
+                            .retain(|gp| gp.game_id != game.game_id);
                         if next_required {
                             if let Ok(time_left) = game.time_left() {
                                 s.next_correspondence.push(GamePriority {
                                     last_interaction: game.last_interaction,
                                     time_left,
                                     skipped: 0,
-                                    nanoid: game.nanoid.clone(),
+                                    game_id: game.game_id.clone(),
                                 });
                             }
                         }
                         if game.finished {
-                            s.next_correspondence.retain(|gp| gp.nanoid != game.nanoid);
+                            s.next_correspondence
+                                .retain(|gp| gp.game_id != game.game_id);
                         }
                     }
                     TimeMode::RealTime => {
-                        s.realtime.insert(game.nanoid.to_owned(), game.clone());
-                        s.next_realtime.retain(|gp| gp.nanoid != game.nanoid);
+                        s.realtime.insert(game.game_id.to_owned(), game.clone());
+                        s.next_realtime.retain(|gp| gp.game_id != game.game_id);
                         if next_required {
                             if let Ok(time_left) = game.time_left() {
                                 s.next_realtime.push(GamePriority {
                                     last_interaction: game.last_interaction,
                                     time_left,
                                     skipped: 0,
-                                    nanoid: game.nanoid.clone(),
+                                    game_id: game.game_id.clone(),
                                 });
                             }
                             if game.finished {
-                                s.next_realtime.retain(|gp| gp.nanoid != game.nanoid);
+                                s.next_realtime.retain(|gp| gp.game_id != game.game_id);
                             }
                         }
                     }
@@ -210,14 +214,14 @@ impl GamesSignal {
         });
     }
 
-    pub fn own_games_remove(&mut self, game_id: &str) {
+    pub fn own_games_remove(&mut self, game_id: &GameId) {
         self.own.update(|s| {
             s.realtime.remove(game_id);
-            s.next_realtime.retain(|gp| gp.nanoid != game_id);
+            s.next_realtime.retain(|gp| gp.game_id != *game_id);
             s.correspondence.remove(game_id);
-            s.next_correspondence.retain(|gp| gp.nanoid != game_id);
+            s.next_correspondence.retain(|gp| gp.game_id != *game_id);
             s.untimed.remove(game_id);
-            s.next_untimed.retain(|gp| gp.nanoid != game_id);
+            s.next_untimed.retain(|gp| gp.game_id != *game_id);
         });
     }
 
@@ -236,15 +240,15 @@ impl GamesSignal {
             }
         }
         if game.finished {
-            self.live_games_remove(&game.nanoid);
+            self.live_games_remove(&game.game_id);
         } else if should_show {
             self.live.update(|s| {
-                s.live_games.insert(game.nanoid.to_owned(), game);
+                s.live_games.insert(game.game_id.to_owned(), game);
             });
         }
     }
 
-    pub fn live_games_remove(&mut self, game_id: &str) {
+    pub fn live_games_remove(&mut self, game_id: &GameId) {
         self.live.update(|s| {
             s.live_games.remove(game_id);
         });
@@ -256,7 +260,7 @@ pub struct GamePriority {
     pub last_interaction: Option<DateTime<Utc>>,
     pub time_left: std::time::Duration,
     pub skipped: usize,
-    pub nanoid: String,
+    pub game_id: GameId,
 }
 
 impl Ord for GamePriority {
@@ -276,9 +280,9 @@ impl PartialOrd for GamePriority {
 
 #[derive(Clone, Debug)]
 pub struct OwnGames {
-    pub realtime: HashMap<String, GameResponse>,
-    pub untimed: HashMap<String, GameResponse>,
-    pub correspondence: HashMap<String, GameResponse>,
+    pub realtime: HashMap<GameId, GameResponse>,
+    pub untimed: HashMap<GameId, GameResponse>,
+    pub correspondence: HashMap<GameId, GameResponse>,
     pub next_realtime: BinaryHeap<GamePriority>,
     pub next_untimed: BinaryHeap<GamePriority>,
     pub next_correspondence: BinaryHeap<GamePriority>,
@@ -305,7 +309,7 @@ impl Default for OwnGames {
 
 #[derive(Clone, Debug)]
 pub struct LiveGames {
-    pub live_games: HashMap<String, GameResponse>,
+    pub live_games: HashMap<GameId, GameResponse>,
 }
 
 impl LiveGames {

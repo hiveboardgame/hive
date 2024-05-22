@@ -6,7 +6,8 @@ use crate::{
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
-use db_lib::{models::Game, DbPool};
+use db_lib::{get_conn, models::Game, DbPool};
+use shared_types::GameId;
 use uuid::Uuid;
 
 pub struct TimeoutHandler {
@@ -17,9 +18,9 @@ pub struct TimeoutHandler {
 }
 
 impl TimeoutHandler {
-    pub fn new(game: Game, username: &str, user_id: Uuid, pool: &DbPool) -> Self {
+    pub fn new(game: &Game, username: &str, user_id: Uuid, pool: &DbPool) -> Self {
         Self {
-            game,
+            game: game.to_owned(),
             username: username.to_owned(),
             user_id,
             pool: pool.clone(),
@@ -27,27 +28,23 @@ impl TimeoutHandler {
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+        let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
-        let game = self.game.check_time(&self.pool).await?;
-        let game_response = GameResponse::new_from_db(&game, &self.pool).await?;
 
-        if game.finished {
+        let game_response = GameResponse::new_from_model(&self.game, &mut conn).await?;
+        if self.game.finished {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
                 message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                     game_action: GameReaction::TimedOut,
                     game: game_response,
-                    game_id: self.game.nanoid.clone(),
+                    game_id: GameId(self.game.nanoid.clone()),
                     user_id: self.user_id,
                     username: self.username.clone(),
                 }))),
             });
         }
-        // TODO: Figure why/whether we need this code :D
-        // messages.push(InternalServerMessage {
-        //     destination: MessageDestination::Game(self.game.nanoid.clone()),
-        //     message: ServerMessage::Game(TimeoutCheck(game_response)),
-        // });
+
         Ok(messages)
     }
 }

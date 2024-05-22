@@ -82,7 +82,7 @@ pub fn QuickPlay() -> impl IntoView {
             .close();
     });
     view! {
-        <div class="flex flex-col items-center pt-1 m-2 grow">
+        <div class="flex flex-col items-center m-2 grow">
             <Modal open=open dialog_el=dialog_el>
                 <ChallengeCreate close=close_modal/>
             </Modal>

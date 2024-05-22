@@ -1,7 +1,8 @@
 use crate::{
     common::MoveConfirm,
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
-    providers::{game_state::GameStateSignal, timer::TimerSignal, AuthContext, Config},
+    pages::play::CurrentConfirm,
+    providers::{game_state::GameStateSignal, timer::TimerSignal, AuthContext},
 };
 use hive_lib::Color;
 use leptos::*;
@@ -16,20 +17,16 @@ pub enum Placement {
 
 #[component]
 pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let mut game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
-    let config = expect_context::<Config>();
-    let mut game_state_signal = expect_context::<GameStateSignal>();
+    let current_confirm = expect_context::<CurrentConfirm>().0;
     let user = move || match (auth_context.user)() {
         Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
-    let player_is_black = create_memo(move |_| {
-        user().map_or(false, |user| {
-            let game_state = game_state.signal.get();
-            Some(user.id) == game_state.black_id
-        })
-    });
+    let black_id = create_read_slice(game_state.signal, |gs| gs.black_id);
+    let player_is_black =
+        create_memo(move |_| user().map_or(false, |user| Some(user.id) == black_id()));
     let side = move || match (player_is_black(), placement) {
         (true, Placement::Top) => Color::White,
         (true, Placement::Bottom) => Color::Black,
@@ -55,13 +52,16 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
         true => ("flex grow justify-end items-center", "w-14 h-14 grow-0 duration-300",""),
     };
     let timer = expect_context::<TimerSignal>();
-    let active_side = create_memo(move |_| match timer.signal.get().finished {
-        true => "bg-stone-200 dark:bg-reserve-twilight",
-        false => {
-            if (side() == Color::White) == (timer.signal.get().turn % 2 == 0) {
-                "bg-grasshopper-green"
-            } else {
-                "bg-stone-200 dark:bg-reserve-twilight"
+    let active_side = create_memo(move |_| {
+        let timer = timer.signal.get();
+        match timer.finished {
+            true => "bg-stone-200 dark:bg-reserve-twilight",
+            false => {
+                if (side() == Color::White) == (timer.turn % 2 == 0) {
+                    "bg-grasshopper-green"
+                } else {
+                    "bg-stone-200 dark:bg-reserve-twilight"
+                }
             }
         }
     });
@@ -75,41 +75,37 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
 
     let is_button = move || {
         placement == Placement::Bottom
-            && matches!(
-                (config.confirm_mode.preferred_confirm)(),
-                MoveConfirm::Clock
+            && current_confirm() == MoveConfirm::Clock
+            && game_state.is_move_allowed()
+    };
+
+    let button_class = move || {
+        let cursor_style = if !is_button() {
+            "cursor-[unset]"
+        } else {
+            "cursor-pointer"
+        };
+        if vertical {
+            format!("{timer_container_style} {} {}", active_side(), cursor_style,)
+        } else {
+            format!(
+                "{timer_container_style} {} {} {}",
+                css_grid_row(),
+                active_side(),
+                cursor_style,
             )
-            && game_state_signal.is_move_allowed()
+        }
     };
 
     let onclick = move |_| {
         if is_button() {
-            game_state_signal.move_active();
+            game_state.move_active();
         }
     };
 
     view! {
         <div class=outer_container_style>
-            <button
-                on:click=onclick
-                class=move || {
-                    if vertical {
-                        format!(
-                            "{timer_container_style} {} {}",
-                            active_side(),
-                            if !is_button() { "cursor-[unset]" } else { "cursor-pointer" },
-                        )
-                    } else {
-                        format!(
-                            "{timer_container_style} {} {} {}",
-                            css_grid_row(),
-                            active_side(),
-                            if !is_button() { "cursor-[unset]" } else { "cursor-pointer" },
-                        )
-                    }
-                }
-            >
-
+            <button on:click=onclick class=button_class>
                 {move || {
                     match timer.signal.get().time_mode {
                         TimeMode::Untimed => {

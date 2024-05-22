@@ -1,6 +1,8 @@
-use db_lib::config::DbConfig;
-use db_lib::get_pool;
-use db_lib::models::{NewUser, User};
+use db_lib::{
+    config::DbConfig,
+    get_conn, get_pool,
+    models::{NewUser, User},
+};
 
 #[tokio::main]
 async fn main() {
@@ -9,10 +11,11 @@ async fn main() {
         .await
         .expect("Failed to get pool");
     let new_user = NewUser::new("leex", "hunter2", "leex").expect("Failed to make new_user");
-    let user = User::create(&new_user, pool)
+    let mut conn = get_conn(pool).await.expect("to get connection");
+    let user = User::create(new_user, &mut conn)
         .await
         .expect("Failed to create user");
     println!("User {:?}", user);
-    let deleted = user.delete(pool).await.expect("Failed to delete user");
+    let deleted = user.delete(&mut conn).await.expect("Failed to delete user");
     println!("Deleted {:?}", deleted);
 }

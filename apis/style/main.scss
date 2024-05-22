@@ -1,1 +1,18 @@
-// WARN: Hot reloads don't work without this file using cargo leptos v 0.2.0
+.nested-content {    
+    padding-left: 1em; /* Level 1 padding */
+    .nested-content {
+        padding-left: 1em; /* Level 2 padding */
+        .nested-content {
+            padding-left: 1em; /* Level 3 padding */
+            .nested-content {
+                padding-left: 1em; /* Level 4 padding */
+                .nested-content {
+                    padding-left: 1em; /* Level 5 padding */
+                    .nested-content {
+                        padding-left: 1em; /* Level 6 padding */
+                    }
+                }
+            }
+        }
+    }
+}

@@ -208,4 +208,36 @@ impl History {
         }
         Ok(history)
     }
+    pub fn from_pgn_str(string: String) -> Result<Self, GameError> {
+        let mut history = History::new();
+        lazy_static! {
+            static ref HEADER: Regex = Regex::new(r"\[.*").expect("This regex should compile");
+        }
+        lazy_static! {
+            static ref RESULT: Regex = Regex::new(r"\[Result").expect("This regex should compile");
+        }
+        lazy_static! {
+            static ref GAME_TYPE_LINE: Regex =
+                Regex::new(r"\[GameType.*").expect("This regex should compile");
+        }
+        for line in string.lines() {
+            if line.is_empty() {
+                continue;
+            }
+            let tokens = line.split_whitespace().collect::<Vec<&str>>();
+            if RESULT.is_match(line) {
+                if let Some(game_result) = tokens.get(1) {
+                    history.parse_game_result(game_result);
+                }
+            }
+            if GAME_TYPE_LINE.is_match(line) {
+                history.parse_game_type(line)?;
+            }
+            if HEADER.is_match(line) {
+                continue;
+            }
+            history.parse_turn(&tokens)?;
+        }
+        Ok(history)
+    }
 }

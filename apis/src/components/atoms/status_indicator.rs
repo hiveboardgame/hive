@@ -30,7 +30,7 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
 
     let icon_color = move || {
         if user_is_player() {
-            if user_has_ws() {
+            if batch(user_has_ws) {
                 "fill-grasshopper-green"
             } else {
                 "fill-ladybug-red"

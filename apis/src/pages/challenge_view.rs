@@ -1,10 +1,11 @@
 use crate::components::molecules::challenge_row::ChallengeRow;
-use crate::functions::{challenges::get::get_challenge_by_nanoid, hostname::hostname_and_port};
+use crate::functions::{challenges::get::get_challenge, hostname::hostname_and_port};
 use crate::providers::AuthContext;
 use leptos::*;
 use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::use_window;
+use shared_types::ChallengeId;
 
 #[derive(Params, PartialEq, Eq)]
 struct ChallengeParams {
@@ -24,8 +25,9 @@ pub fn ChallengeView() -> impl IntoView {
                 .unwrap_or_default()
         })
     };
+    let challenge_id = move || ChallengeId(nanoid());
 
-    let challenge = Resource::once(move || get_challenge_by_nanoid(nanoid()));
+    let challenge = Resource::once(move || get_challenge(challenge_id()));
     let challenge_address = move || format!("{}/challenge/{}", hostname_and_port(), nanoid());
     let button_ref = create_node_ref::<html::Button>();
     let copy = move |_| {

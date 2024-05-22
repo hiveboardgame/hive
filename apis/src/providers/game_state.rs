@@ -1,8 +1,12 @@
+use std::str::FromStr;
+
+use crate::common::MoveInfo;
 use crate::providers::api_requests::ApiRequests;
 use crate::responses::GameResponse;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
 use leptos::*;
+use shared_types::{GameId, GameSpeed};
 use uuid::Uuid;
 
 use super::auth_context::AuthContext;
@@ -35,11 +39,7 @@ impl GameStateSignal {
             s.state = state;
             s.black_id = None;
             s.white_id = None;
-            s.target_positions = vec![];
-            s.active = None;
-            s.target_position = None;
-            s.current_position = None;
-            s.reserve_position = None;
+            s.move_info.reset();
             s.history_turn = None;
             s.view = View::Game;
             s.game_control_pending = None;
@@ -55,8 +55,19 @@ impl GameStateSignal {
         });
     }
 
+    // No longer access the whole signal when getting user_color
     pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
-        self.signal.get().user_color(user_id)
+        let ids = create_read_slice(self.signal, |gamestate| {
+            (gamestate.white_id, gamestate.black_id)
+        });
+        let (white_id, black_id) = ids();
+        if Some(user_id) == black_id {
+            return Some(Color::Black);
+        }
+        if Some(user_id) == white_id {
+            return Some(Color::White);
+        }
+        None
     }
 
     pub fn undo_move(&mut self) {
@@ -97,33 +108,35 @@ impl GameStateSignal {
     }
 
     pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
-        self.reset();
-        let turn = if state.turn != 0 {
-            Some(state.turn - 1)
-        } else {
-            None
-        };
-        self.signal.update(|s| {
-            s.history_turn = turn;
-            s.state = state;
-            s.black_id = Some(black_id);
-            s.white_id = Some(white_id);
-        })
+        batch(move || {
+            self.reset();
+            let turn = if state.turn != 0 {
+                Some(state.turn - 1)
+            } else {
+                None
+            };
+            self.signal.update(|s| {
+                s.history_turn = turn;
+                s.state = state;
+                s.black_id = Some(black_id);
+                s.white_id = Some(white_id);
+            })
+        });
     }
 
-    pub fn set_game_id(&mut self, game_id: String) {
+    pub fn set_game_id(&mut self, game_id: GameId) {
         self.signal.update_untracked(|s| s.game_id = Some(game_id))
     }
 
     pub fn play_turn(&mut self, piece: Piece, position: Position) {
         self.signal.update(|s| {
             s.play_turn(piece, position);
-            s.reset()
+            s.move_info.reset()
         })
     }
 
     pub fn reset(&mut self) {
-        self.signal.update(|s| s.reset())
+        self.signal.update(|s| s.move_info.reset())
     }
 
     pub fn move_active(&mut self) {
@@ -186,7 +199,7 @@ impl GameStateSignal {
 
     pub fn set_game_response(&mut self, game_response: GameResponse) {
         self.signal
-            .update(|s| s.game_response = Some(game_response))
+            .update(|s| s.game_response = Some(game_response));
     }
 
     pub fn is_finished(&self) -> Memo<bool> {
@@ -201,6 +214,22 @@ impl GameStateSignal {
         });
         Memo::new(move |_| game_status_finished() || game_response_finished())
     }
+
+    pub fn is_last_turn_as_signal(&self) -> Signal<bool> {
+        create_read_slice(self.signal, |gs| {
+            if gs.state.turn == 0 {
+                true
+            } else {
+                gs.history_turn == Some(gs.state.turn - 1)
+            }
+        })
+    }
+
+    pub fn is_first_turn_as_signal(&self) -> Signal<bool> {
+        create_read_slice(self.signal, |gs| {
+            gs.history_turn.is_none() || gs.history_turn == Some(0)
+        })
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -212,21 +241,12 @@ pub enum View {
 #[derive(Clone, Debug)]
 pub struct GameState {
     // game_id is the nanoid of the game
-    pub game_id: Option<String>,
+    pub game_id: Option<GameId>,
     // the gamestate
     pub state: State,
     pub black_id: Option<Uuid>,
     pub white_id: Option<Uuid>,
-    // possible destinations of selected piece
-    pub target_positions: Vec<Position>,
-    // the piece (either from reserve or board) that has been clicked last
-    pub active: Option<Piece>,
-    // the position of the piece that has been clicked last
-    pub current_position: Option<Position>,
-    // the position of the target that got clicked last
-    pub target_position: Option<Position>,
-    // the position of the reserve piece that got clicked last
-    pub reserve_position: Option<Position>,
+    pub move_info: MoveInfo,
     // the turn we want to display the history at
     pub history_turn: Option<usize>,
     // show history or reserve
@@ -251,11 +271,7 @@ impl GameState {
             state,
             black_id: None,
             white_id: None,
-            target_positions: vec![],
-            active: None,
-            target_position: None,
-            current_position: None,
-            reserve_position: None,
+            move_info: MoveInfo::new(),
             history_turn: None,
             view: View::Game,
             game_control_pending: None,
@@ -263,6 +279,7 @@ impl GameState {
         }
     }
 
+    // Still needed because send_game_control uses it, maybe this should be moved out of the gamestate?
     pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
         if Some(user_id) == self.black_id {
             return Some(Color::Black);
@@ -284,15 +301,7 @@ impl GameState {
     }
 
     pub fn set_target(&mut self, position: Position) {
-        self.target_position = Some(position);
-    }
-
-    pub fn reset(&mut self) {
-        self.target_positions.clear();
-        self.active = None;
-        self.target_position = None;
-        self.current_position = None;
-        self.reserve_position = None;
+        self.move_info.target_position = Some(position);
     }
 
     pub fn send_game_control(&mut self, game_control: GameControl, user_id: Uuid) {
@@ -331,17 +340,19 @@ impl GameState {
 
     pub fn move_active(&mut self) {
         //log!("Moved active!");
-        if let (Some(active), Some(position)) = (self.active, self.target_position) {
+        if let (Some(active), Some(position)) =
+            (self.move_info.active, self.move_info.target_position)
+        {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
                 ApiRequests::new().turn(game_id.to_owned(), turn);
-                self.reset();
+                self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             } else {
                 log!("We should be in analysis");
-                self.reset();
+                self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             }
         }
@@ -349,30 +360,40 @@ impl GameState {
 
     // TODO refactor to not take a position, the position and piece are in self already
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
-        if let Some(already) = self.active {
+        if let Some(already) = self.move_info.active {
             if piece == already {
-                self.reset();
+                self.move_info.reset();
                 return;
             }
         }
-        self.reset();
-        self.current_position = Some(position);
+        self.move_info.reset();
+        self.move_info.current_position = Some(position);
         let moves = self.state.board.moves(self.state.turn_color);
         if let Some(positions) = moves.get(&(piece, position)) {
-            positions.clone_into(&mut self.target_positions);
-            self.active = Some(piece);
+            positions.clone_into(&mut self.move_info.target_positions);
+            self.move_info.active = Some(piece);
         }
     }
 
     pub fn show_spawns(&mut self, piece: Piece, position: Position) {
-        self.reset();
-        self.target_positions = self
+        self.move_info.reset();
+        self.move_info.target_positions = self
             .state
             .board
             .spawnable_positions(self.state.turn_color)
             .collect::<Vec<Position>>();
-        self.active = Some(piece);
-        self.reserve_position = Some(position);
+        let reserve = self
+            .state
+            .board
+            .reserve(self.state.turn_color, self.state.game_type);
+        if let Some(pieces) = reserve.get(&piece.bug()) {
+            if let Some(piece) = pieces.first() {
+                if let Ok(piece) = Piece::from_str(piece) {
+                    self.move_info.active = Some(piece);
+                    self.move_info.reserve_position = Some(position);
+                }
+            }
+        }
     }
 
     pub fn show_history_turn(&mut self, turn: usize) {
@@ -386,6 +407,7 @@ impl GameState {
         }
     }
 
+    //TODO: is this still useful for play and analysis where gamestate is untracked for the callback?
     pub fn is_last_turn(&self) -> bool {
         if self.state.turn == 0 {
             return true;
@@ -423,6 +445,10 @@ impl GameState {
         } else {
             self.history_turn = None;
         }
+    }
+
+    pub fn get_game_speed(&self) -> Option<GameSpeed> {
+        self.game_response.as_ref().map(|gr| gr.speed.clone())
     }
 }
 

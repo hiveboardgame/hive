@@ -1,5 +1,6 @@
 use crate::responses::ChallengeResponse;
 use leptos::*;
+use shared_types::ChallengeId;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Copy)]
@@ -20,16 +21,17 @@ impl ChallengeStateSignal {
         }
     }
 
-    pub fn remove(&mut self, nanoid: String) {
+    pub fn remove(&mut self, challenger_id: ChallengeId) {
         self.signal.update(|s| {
-            s.challenges.remove(&nanoid);
+            s.challenges.remove(&challenger_id);
         });
     }
 
     pub fn add(&mut self, challenges: Vec<ChallengeResponse>) {
         self.signal.update(|s| {
             for challenge in challenges {
-                s.challenges.insert(challenge.nanoid.to_owned(), challenge);
+                s.challenges
+                    .insert(challenge.challenge_id.to_owned(), challenge);
             }
         })
     }
@@ -37,7 +39,7 @@ impl ChallengeStateSignal {
 
 #[derive(Clone, Debug)]
 pub struct ChallengeState {
-    pub challenges: HashMap<String, ChallengeResponse>,
+    pub challenges: HashMap<ChallengeId, ChallengeResponse>,
 }
 
 impl ChallengeState {

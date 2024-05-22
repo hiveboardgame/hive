@@ -10,29 +10,6 @@ use leptos::*;
 use leptos_router::use_navigate;
 use shared_types::TimeMode;
 
-// if gar.game.finished {
-//     log!("Removing finished game {}", gar.game.nanoid.clone());
-//     games.own_games_remove(&gar.game.nanoid);
-// } else {
-//     games.own_games_add(gar.game.to_owned());
-// }
-// let navigation_controller = expect_context::<NavigationControllerSignal>();
-// if let Some(nanoid) = navigation_controller.signal.get_untracked().nanoid {
-//     if nanoid == gar.game.nanoid {
-//         if game_state.signal.get_untracked().state.history.moves != gar.game.history {
-//             log!("history diverged, reconstructing please report this as a bug to the developers");
-//             log!(
-//                 "game_state history is: {:?}",
-//                 game_state.signal.get_untracked().state.history.moves
-//             );
-//             log!("server_message history is: {:?}", gar.game.history);
-//             reset_game_state(&gar.game);
-//             let timer = expect_context::<TimerSignal>();
-//             timer.update_from(&gar.game);
-//         }
-//     }
-// }
-
 pub fn handle_new_game(game_response: GameResponse) {
     let mut games = expect_context::<GamesSignal>();
     games.own_games_add(game_response.to_owned());
@@ -43,7 +20,7 @@ pub fn handle_new_game(game_response: GameResponse) {
             navigation_controller
                 .signal
                 .get_untracked()
-                .nanoid
+                .game_id
                 .is_none()
         }
     };
@@ -57,7 +34,7 @@ pub fn handle_new_game(game_response: GameResponse) {
             if id == game_response.white_player.uid || id == game_response.black_player.uid {
                 let navigate = use_navigate();
                 navigate(
-                    &format!("/game/{}", game_response.nanoid),
+                    &format!("/game/{}", game_response.game_id),
                     Default::default(),
                 );
             }

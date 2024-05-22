@@ -1,4 +1,5 @@
 use crate::{
+    common::MoveConfirm,
     components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
@@ -13,7 +14,7 @@ use crate::{
             side_board::SideboardTabs,
         },
     },
-    providers::{game_state::GameStateSignal, AuthContext},
+    providers::{config::Config, game_state::GameStateSignal, AuthContext},
 };
 use hive_lib::{Color, Position};
 use leptos::*;
@@ -21,26 +22,50 @@ use leptos::*;
 #[derive(Clone)]
 pub struct TargetStack(pub RwSignal<Option<Position>>);
 
+#[derive(Clone)]
+pub struct CurrentConfirm(pub Memo<MoveConfirm>);
+
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
     let orientation_signal = expect_context::<OrientationSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
+    let config = expect_context::<Config>();
+    let current_confirm = Memo::new(move |_| {
+        game_state
+            .loaded
+            .get()
+            .then(|| {
+                let preferred_confirms = (config.confirm_mode.preferred_confirms)();
+                game_state
+                    .signal
+                    .get_untracked()
+                    .get_game_speed()
+                    .and_then(|game_speed| preferred_confirms.get(&game_speed).cloned())
+                    .unwrap_or(MoveConfirm::Single)
+            })
+            .unwrap_or(MoveConfirm::Single)
+    });
+    provide_context(CurrentConfirm(current_confirm));
     let user = move || match (auth_context.user)() {
         Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
+    let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
     let show_buttons = move || {
         user().map_or(false, |user| {
-            let game_state = game_state.signal.get();
-            Some(user.id) == game_state.black_id || Some(user.id) == game_state.white_id
+            let (white_id, black_id) = white_and_black();
+            Some(user.id) == black_id || Some(user.id) == white_id
         })
     };
-    let player_is_black = create_memo(move |_| {
-        user().map_or(false, |user| {
-            let game_state = game_state.signal.get();
-            Some(user.id) == game_state.black_id
+    let player_color = create_memo(move |_| {
+        user().map_or(Color::White, |user| {
+            let black_id = white_and_black().1;
+            match Some(user.id) == black_id {
+                true => Color::Black,
+                false => Color::White,
+            }
         })
     });
     let parent_container_style = move || {
@@ -56,14 +81,8 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             game_state.view_game();
         }
     });
-    let bottom_color = move || {
-        if player_is_black() {
-            Color::Black
-        } else {
-            Color::White
-        }
-    };
-    let top_color = move || bottom_color().opposite_color();
+    let bottom_color = player_color;
+    let top_color = move || player_color().opposite_color();
     let controls_signal = expect_context::<ControlsSignal>();
     let show_controls =
         Signal::derive(move || !controls_signal.hidden.get() || game_state.is_finished()());
@@ -83,7 +102,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         <Board/>
                         <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full">
                             <DisplayTimer placement=Placement::Top vertical=false/>
-                            <SideboardTabs player_is_black=player_is_black/>
+                            <SideboardTabs player_color/>
                             <DisplayTimer placement=Placement::Bottom vertical=false/>
                         </div>
                     }

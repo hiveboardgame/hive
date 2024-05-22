@@ -1,29 +1,31 @@
 use crate::common::MoveConfirm;
 use crate::functions::config::confirm_mode::ToggleConfirmMode;
 use leptos::*;
+use shared_types::GameSpeed;
+use std::collections::HashMap;
 
 #[cfg(not(feature = "ssr"))]
-fn initial_prefers_confirm() -> MoveConfirm {
+fn initial_prefers_confirm(game_speed: GameSpeed) -> MoveConfirm {
     use wasm_bindgen::JsCast;
 
     let doc = document().unchecked_into::<web_sys::HtmlDocument>();
     let cookie = doc.cookie().unwrap_or_default();
-    if cookie.contains("confirm_mode=Clock") {
+    if cookie.contains(&format!("{game_speed}_confirm_mode=Clock")) {
         return MoveConfirm::Clock;
-    } else if cookie.contains("confirm_mode=Single") {
+    } else if cookie.contains(&format!("{game_speed}_confirm_mode=Single")) {
         return MoveConfirm::Single;
     }
     return MoveConfirm::Double;
 }
 
 #[cfg(feature = "ssr")]
-fn initial_prefers_confirm() -> MoveConfirm {
+fn initial_prefers_confirm(game_speed: GameSpeed) -> MoveConfirm {
     use std::str::FromStr;
 
     if let Some(request) = use_context::<actix_web::HttpRequest>() {
         if let Ok(cookies) = request.cookies() {
             for cookie in cookies.iter() {
-                if cookie.name() == "confirm_mode" {
+                if cookie.name() == format!("{game_speed}_confirm_mode") {
                     if let Ok(confirm_mode) = MoveConfirm::from_str(cookie.value()) {
                         return confirm_mode;
                     }
@@ -36,8 +38,8 @@ fn initial_prefers_confirm() -> MoveConfirm {
 
 #[derive(Clone)]
 pub struct ConfirmMode {
-    pub action: Action<ToggleConfirmMode, Result<MoveConfirm, ServerFnError>>,
-    pub preferred_confirm: Signal<MoveConfirm>,
+    pub action: Action<ToggleConfirmMode, Result<(GameSpeed, MoveConfirm), ServerFnError>>,
+    pub preferred_confirms: Signal<HashMap<GameSpeed, MoveConfirm>>,
 }
 
 impl Default for ConfirmMode {
@@ -55,20 +57,28 @@ impl ConfirmMode {
         let value = toggle_move_confirm_action.value();
 
         let prefers_confirm_fn = move || {
-            let initial = initial_prefers_confirm();
-            match (input(), value()) {
-                // if there's some current input, use that optimistically
-                (Some(submission), _) => submission.move_confirm,
-                // otherwise, if there was a previous value confirmed by server, use that
-                (_, Some(Ok(value))) => value,
-                // otherwise, use the initial value
-                _ => initial,
+            let mut move_confirms = HashMap::new();
+            for game_speed in GameSpeed::all() {
+                let initial = initial_prefers_confirm(game_speed.clone());
+                move_confirms.insert(game_speed, initial);
             }
+            match (input(), value()) {
+                (Some(submission), _) => {
+                    move_confirms.insert(submission.game_speed, submission.move_confirm);
+                }
+
+                (_, Some(Ok(value))) => {
+                    move_confirms.insert(value.0, value.1);
+                }
+
+                _ => {}
+            }
+            move_confirms
         };
 
         ConfirmMode {
             action: toggle_move_confirm_action,
-            preferred_confirm: Signal::derive(prefers_confirm_fn),
+            preferred_confirms: Signal::derive(prefers_confirm_fn),
         }
     }
 }

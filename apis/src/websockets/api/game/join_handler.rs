@@ -10,7 +10,8 @@ use crate::{
     },
 };
 use anyhow::Result;
-use db_lib::{models::Game, DbPool};
+use db_lib::{get_conn, models::Game, DbPool};
+use shared_types::GameId;
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -25,7 +26,7 @@ pub struct JoinHandler {
 
 impl JoinHandler {
     pub fn new(
-        game: Game,
+        game: &Game,
         username: &str,
         user_id: Uuid,
         received_from: actix::Recipient<WsMessage>,
@@ -34,7 +35,7 @@ impl JoinHandler {
     ) -> Self {
         Self {
             received_from,
-            game,
+            game: game.to_owned(),
             user_id,
             username: username.to_owned(),
             chat_storage,
@@ -43,8 +44,9 @@ impl JoinHandler {
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+        let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
-        if let Ok(user) = UserResponse::from_uuid(&self.user_id, &self.pool).await {
+        if let Ok(user) = UserResponse::from_uuid(&self.user_id, &mut conn).await {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Game(self.game.nanoid.clone()),
                 message: ServerMessage::Join(user),
@@ -58,8 +60,8 @@ impl JoinHandler {
         messages.push(InternalServerMessage {
             destination: MessageDestination::Direct(self.received_from.clone()),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
-                game_id: self.game.nanoid.to_owned(),
-                game: GameResponse::new_from_db(&self.game, &self.pool).await?,
+                game_id: GameId(self.game.nanoid.to_owned()),
+                game: GameResponse::new_from_model(&self.game, &mut conn).await?,
                 game_action: GameReaction::Join,
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
@@ -70,7 +72,7 @@ impl JoinHandler {
         } else {
             self.chat_storage.games_public.read().unwrap()
         };
-        if let Some(messages_to_push) = games.get(&self.game.nanoid) {
+        if let Some(messages_to_push) = games.get(&GameId(self.game.nanoid.clone())) {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::User(self.user_id),
                 message: ServerMessage::Chat(messages_to_push.clone()),

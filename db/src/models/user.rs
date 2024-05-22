@@ -1,7 +1,6 @@
 use super::rating::Rating;
 use crate::{
     db_error::DbError,
-    get_conn,
     models::{Game, GameUser, NewRating},
     schema::{
         games::{self, current_player_id, finished},
@@ -14,18 +13,18 @@ use crate::{
             },
         },
     },
-    DbPool,
+    DbConn,
 };
 use chrono::{DateTime, Utc};
 use diesel::{
     dsl::exists, query_dsl::BelongingToDsl, select, ExpressionMethods, Identifiable, Insertable,
-    QueryDsl, Queryable, SelectableHelper,
+    PgTextExpressionMethods, QueryDsl, Queryable, SelectableHelper,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
+use diesel_async::RunQueryDsl;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use shared_types::GameSpeed;
+use shared_types::{GameId, GameSpeed};
 use uuid::Uuid;
 
 const MAX_USERNAME_LENGTH: usize = 20;
@@ -126,35 +125,26 @@ pub struct User {
 }
 
 impl User {
-    pub async fn create(new_user: &NewUser, pool: &DbPool) -> Result<User, DbError> {
-        let connection = &mut get_conn(pool).await?;
-        connection
-            .transaction::<_, DbError, _>(|conn| {
-                async move {
-                    let user: User = diesel::insert_into(users::table)
-                        .values(new_user)
-                        .get_result(conn)
-                        .await?;
-                    for game_speed in GameSpeed::all_rated().into_iter() {
-                        diesel::insert_into(ratings::table)
-                            .values(NewRating::for_uuid(&user.id, game_speed))
-                            .execute(conn)
-                            .await?;
-                    }
-                    Ok(user)
-                }
-                .scope_boxed()
-            })
-            .await
+    pub async fn create(new_user: NewUser, conn: &mut DbConn<'_>) -> Result<User, DbError> {
+        let user: User = diesel::insert_into(users::table)
+            .values(new_user)
+            .get_result(conn)
+            .await?;
+        for game_speed in GameSpeed::all_rated().into_iter() {
+            diesel::insert_into(ratings::table)
+                .values(NewRating::for_uuid(&user.id, game_speed))
+                .execute(conn)
+                .await?;
+        }
+        Ok(user)
     }
 
     pub async fn edit(
         &self,
         new_password: &str,
         new_email: &str,
-        pool: &DbPool,
+        conn: &mut DbConn<'_>,
     ) -> Result<User, DbError> {
-        let conn = &mut get_conn(pool).await?;
         Ok(match (new_password.is_empty(), new_email.is_empty()) {
             (true, true) => users_table.find(&self.id).first(conn).await?,
             (true, false) => {
@@ -182,21 +172,31 @@ impl User {
         })
     }
 
-    pub async fn find_by_uuid(uuid: &Uuid, pool: &DbPool) -> Result<User, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn find_by_uuid(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         Ok(users_table.find(uuid).first(conn).await?)
     }
 
-    pub async fn find_by_username(username: &str, pool: &DbPool) -> Result<User, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn find_by_username(username: &str, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         Ok(users_table
             .filter(normalized_username.eq(username.to_lowercase()))
             .first(conn)
             .await?)
     }
 
-    pub async fn username_exists(username: &str, pool: &DbPool) -> Result<bool, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn search_usernames(
+        pattern: &str,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<User>, DbError> {
+        if pattern.is_empty() {
+            return Ok(vec![]);
+        }
+        Ok(users_table
+            .filter(normalized_username.ilike(format!("%{}%", pattern)))
+            .load(conn)
+            .await?)
+    }
+
+    pub async fn username_exists(username: &str, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
         Ok(select(exists(
             users_table.filter(normalized_username.eq(username.to_lowercase())),
         ))
@@ -204,23 +204,23 @@ impl User {
         .await?)
     }
 
-    pub async fn find_by_email(email: &str, pool: &DbPool) -> Result<User, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn find_by_email(email: &str, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         Ok(users_table
             .filter(email_field.eq(email.to_lowercase()))
             .first(conn)
             .await?)
     }
 
-    pub async fn delete(&self, pool: &DbPool) -> Result<usize, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn delete(&self, conn: &mut DbConn<'_>) -> Result<usize, DbError> {
         Ok(diesel::delete(users_table.find(&self.id))
             .execute(conn)
             .await?)
     }
 
-    pub async fn get_games_with_notifications(&self, pool: &DbPool) -> Result<Vec<Game>, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn get_games_with_notifications(
+        &self,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
         Ok(GameUser::belonging_to(self)
             .inner_join(games::table)
             .select(Game::as_select())
@@ -230,8 +230,7 @@ impl User {
             .await?)
     }
 
-    pub async fn get_urgent_nanoids(&self, pool: &DbPool) -> Result<Vec<String>, DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn get_urgent_nanoids(&self, conn: &mut DbConn<'_>) -> Result<Vec<GameId>, DbError> {
         Ok(GameUser::belonging_to(self)
             .inner_join(games::table)
             .select(Game::as_select())
@@ -240,16 +239,15 @@ impl User {
             .get_results(conn)
             .await?
             .into_iter()
-            .map(|game| game.nanoid)
+            .map(|game| GameId(game.nanoid))
             .collect())
     }
 
     pub async fn get_top_users(
         game_speed: &GameSpeed,
         limit: i64,
-        pool: &DbPool,
+        conn: &mut DbConn<'_>,
     ) -> Result<Vec<(User, Rating)>, DbError> {
-        let conn = &mut get_conn(pool).await?;
         Ok(users::table
             .inner_join(ratings::table)
             .filter(ratings::deviation.le(shared_types::RANKABLE_DEVIATION))

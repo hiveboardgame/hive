@@ -1,3 +1,4 @@
+use super::rating::RatingResponse;
 use serde::{Deserialize, Serialize};
 use shared_types::GameSpeed;
 use std::collections::HashMap;
@@ -78,39 +79,37 @@ impl UserResponse {
     }
 }
 
-use cfg_if::cfg_if;
-
-use super::rating::RatingResponse;
-cfg_if! { if #[cfg(feature = "ssr")] {
+cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::User,
-    DbPool,
+    DbConn,
 };
 use anyhow::Result;
 impl UserResponse {
-    pub async fn from_uuid(id: &Uuid, pool: &DbPool) -> Result<Self> {
-        let user = User::find_by_uuid(id, pool).await?;
-        Self::from_user(&user, pool).await
+    pub async fn from_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
+        let user = User::find_by_uuid(id, conn).await?;
+        Self::from_user(&user, conn).await
     }
 
-    pub async fn from_username(username: &str, pool: &DbPool) -> Result<Self> {
-        let user = User::find_by_username(username, pool).await?;
-        Self::from_user(&user, pool).await
+    pub async fn from_username(username: &str, conn: &mut DbConn<'_>) -> Result<Self> {
+        let user = User::find_by_username(username, conn).await?;
+        Self::from_user(&user, conn).await
     }
 
-    pub async fn from_user(user: &User, pool: &DbPool) -> Result<Self> {
+    pub async fn from_user(user: &User, conn: &mut DbConn<'_>) -> Result<Self> {
         let mut ratings = HashMap::new();
         for game_speed in GameSpeed::all_rated().into_iter() {
-            let rating = RatingResponse::from_user(user, &game_speed, pool).await?;
+            let rating = RatingResponse::from_user(user, &game_speed, conn).await?;
             ratings.insert(game_speed, rating);
         }
-        Ok(Self {
+        let response = UserResponse {
             username: user.username.clone(),
             uid: user.id,
             patreon: user.patreon,
             admin: user.admin,
             ratings,
-        })
+        };
+        Ok(response)
     }
 }
 }}
