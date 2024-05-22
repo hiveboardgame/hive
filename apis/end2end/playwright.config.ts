@@ -36,7 +36,7 @@ const config: PlaywrightTestConfig = {
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
     /* Base URL to use in actions like `await page.goto('/')`. */ 
-    baseURL: 'http://localhost:3000',
+    baseURL: 'https://hivegame.fly.dev',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -66,18 +66,18 @@ const config: PlaywrightTestConfig = {
     },
 
     /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: {
-    //     ...devices['Pixel 5'],
-    //   },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: {
-    //     ...devices['iPhone 12'],
-    //   },
-    // },
+    {
+       name: 'Mobile Chrome',
+       use: {
+         ...devices['Pixel 5'],
+       },
+     },
+     {
+       name: 'Mobile Safari',
+       use: {
+         ...devices['iPhone 12'],
+       },
+     },
 
     /* Test against branded browsers. */
     // {
