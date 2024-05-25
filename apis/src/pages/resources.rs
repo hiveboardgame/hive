@@ -246,7 +246,7 @@ pub fn Resources() -> impl IntoView {
                                     target="_blank"
                                     class=link_class
                                 >
-                                    OrdepCubick
+                                    OrdepCubik
                                     "🇪🇸"
                                 </a>
                                 <span>
