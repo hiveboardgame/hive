@@ -52,10 +52,35 @@ pub fn Tournaments() -> impl IntoView {
         <div>
             <For
                 each=move || { tournament.signal.get().tournaments }
-                key=|(nanoid, tournament)| nanoid.to_owned()
+                key=|(nanoid, _tournament)| nanoid.to_owned()
                 let:tournament
             >
-                <div>{tournament.1.nanoid}</div>
+                <div>
+                    {tournament.1.nanoid.clone()}
+                    <For each=move|| {tournament.1.players.clone()}
+                        key=|player| player.uid
+                        let:player
+                    >
+                        {player.username}
+                    </For>
+                    <button
+                        class=BUTTON_STYLE
+                        on:click=move |_| {
+                            let auth_context = expect_context::<AuthContext>();
+                            let account = match (auth_context.user)() {
+                                Some(Ok(Some(account))) => Some(account),
+                                _ => None,
+                            };
+                            if account.is_some() {
+                                let api = ApiRequests::new();
+                                let action = TournamentAction::Join(tournament.1.nanoid.clone());
+                                api.tournament(action);
+                            }
+                        }
+                    >
+                        "Join Tournament"
+                    </button>
+                </div>
             </For>
         </div>
     }

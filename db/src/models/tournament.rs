@@ -7,6 +7,7 @@ use crate::{
     schema::{
         tournaments::{self, invitees as invitees_column, series as series_column},
         users,
+        tournaments::nanoid as nanoid_field,
     },
     DbPool,
 };
@@ -205,6 +206,14 @@ impl Tournament {
     pub async fn from_uuid(uuid: &Uuid, pool: &DbPool) -> Result<Tournament, DbError> {
         let connection = &mut get_conn(pool).await?;
         Ok(tournaments::table.find(uuid).first(connection).await?)
+    }
+
+    pub async fn from_nanoid(nano: &String, pool: &DbPool) -> Result<Tournament, DbError> {
+        let connection = &mut get_conn(pool).await?;
+        Ok(tournaments::table
+            .filter(nanoid_field.eq(nano))
+            .first(connection)
+            .await?)
     }
 
     pub async fn players(&self, pool: &DbPool) -> Result<Vec<User>, DbError> {

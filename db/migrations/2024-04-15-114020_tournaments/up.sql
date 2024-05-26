@@ -20,6 +20,7 @@ create table tournaments (
   -- or when did it start for tournaments that start when enough players signed up
   -- TODO: @leex start_mode text not null,
   start_at timestamp with time zone, 
+  status text not null,
   created_at timestamp with time zone not null, -- when was it created
   updated_at timestamp with time zone not null -- when was the last update made to the model
 )

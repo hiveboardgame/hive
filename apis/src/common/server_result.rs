@@ -52,7 +52,7 @@ pub enum ServerMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TournamentUpdate {
     Created(TournamentResponse),
-    Deleted(TournamentResponse),
+    Deleted(String),
     Modified(TournamentResponse),
     Joined(TournamentResponse),
     Left(TournamentResponse),

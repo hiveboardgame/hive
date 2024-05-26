@@ -6,7 +6,7 @@ use db_lib::{
 };
 use uuid::Uuid;
 
-use super::create::CreateHandler;
+use super::{create::CreateHandler, join::JoinHandler};
 
 pub struct TournamentHandler {
     pub action: TournamentAction,
@@ -34,6 +34,12 @@ impl TournamentHandler {
         let messages = match self.action.clone() {
             TournamentAction::Create(details) => {
                 CreateHandler::new(*details, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            TournamentAction::Join(nanoid) => {
+                JoinHandler::new(nanoid, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?

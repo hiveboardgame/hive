@@ -6,7 +6,7 @@ use crate::{
     },
     {get_conn, DbPool},
 };
-use diesel::{prelude::*, Identifiable, Insertable, Queryable};
+use diesel::{prelude::*, Identifiable, Insertable, Queryable, Selectable};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
