@@ -25,7 +25,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="email"
                         id="email"
-                        type="text"
+                        type="email"
                         inputmode="email"
                         autocomplete="email"
                         placeholder="E-mail"
