@@ -33,8 +33,8 @@ pub struct Board {
     // last move contains a from and to position of the last move
     pub last_move: (Option<Position>, Option<Position>),
     pub stunned: Option<Piece>,
-    pub positions: [Option<Position>; 48],
-    pinned: [bool; 48],
+    pub positions: [Option<Position>; 28],
+    pinned: [bool; 28],
     pub played: usize,
     pub hasher: Hasher,
     pub smallest: Option<(Piece, Position)>,
@@ -52,8 +52,8 @@ impl Board {
             stunned: None,
             last_moved: None,
             last_move: (None, None),
-            positions: [None; 48],
-            pinned: [false; 48],
+            positions: [None; 28],
+            pinned: [false; 28],
             played: 0,
             hasher: Hasher::new(),
             smallest: None,
@@ -399,14 +399,16 @@ impl Board {
     }
 
     pub fn piece_to_offset(&self, piece: Piece) -> usize {
-        piece.color() as usize * 24 + piece.bug() as usize * 3 + piece.order().saturating_sub(1)
+        piece.to_u5() as usize - 1
+        //piece.color() as usize * 24 + piece.bug() as usize * 3 + piece.order().saturating_sub(1)
     }
 
     pub fn offset_to_piece(&self, offset: usize) -> Piece {
-        let color = offset as u8 / 24;
-        let bug = (offset as u8 - color * 24) / 3;
-        let order = (offset as u8 + 1 - bug * 3 - color * 24) as usize;
-        Piece::new_from(Bug::from(bug), Color::from(color), order)
+        Piece::from_u5(1 + offset as u8)
+        // let color = offset as u8 / 24;
+        // let bug = (offset as u8 - color * 24) / 3;
+        // let order = (offset as u8 + 1 - bug * 3 - color * 24) as usize;
+        // Piece::new_from(Bug::from(bug), Color::from(color), order)
     }
 
     pub fn is_pinned(&self, piece: Piece) -> bool {
@@ -652,12 +654,12 @@ impl Board {
 
     pub fn reserve(&self, color: Color, game_type: GameType) -> HashMap<Bug, Vec<String>> {
         let mut res = HashMap::<Bug, Vec<String>>::new();
-        let start = 24 * color as usize;
-        let end = 24 + start;
+        let start = 14 * color as usize;
+        let end = 14 + start;
         let bugs_for_game_type = Bug::bugs_count(game_type);
         for (i, maybe_pos) in self.positions[start..end].iter().enumerate() {
             if maybe_pos.is_none() {
-                let piece = self.offset_to_piece(i + 24 * color as usize);
+                let piece = self.offset_to_piece(i + 14 * color as usize);
                 if let Some(number_of_bugs) = bugs_for_game_type.get(&piece.bug()) {
                     if (*number_of_bugs as usize) > (i % 3) {
                         res.entry(piece.bug()).or_default().push(piece.to_string());

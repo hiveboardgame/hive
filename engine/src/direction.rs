@@ -5,7 +5,7 @@ use crate::position::Rotation;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord, Deserialize, Serialize)]
 pub enum Direction {
-    NW,
+    NW = 1,
     NE,
     E,
     SE,
@@ -90,5 +90,16 @@ impl Direction {
             SW => "/".to_string() + &piece,
             W => "-".to_string() + &piece,
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_order() {
+        assert_eq!(Direction::(1), Direction::NW);
     }
 }
