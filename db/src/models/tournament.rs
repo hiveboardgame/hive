@@ -44,6 +44,7 @@ pub struct NewTournament {
     pub band_upper: Option<i32>,
     pub band_lower: Option<i32>,
     pub start_at: Option<DateTime<Utc>>,
+    pub status: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub series: Option<Uuid>,
@@ -76,6 +77,7 @@ impl NewTournament {
             band_upper: details.band_upper,
             band_lower: details.band_lower,
             start_at: details.start_at,
+            status: String::from("NotStarted"), // TODO @leex make this an enum
             created_at: Utc::now(),
             updated_at: Utc::now(),
             series: details.series,
@@ -107,6 +109,7 @@ pub struct Tournament {
     pub band_upper: Option<i32>,
     pub band_lower: Option<i32>,
     pub start_at: Option<DateTime<Utc>>,
+    pub status: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub series: Option<Uuid>,

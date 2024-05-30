@@ -116,6 +116,7 @@ diesel::table! {
         band_upper -> Nullable<Int4>,
         band_lower -> Nullable<Int4>,
         start_at -> Nullable<Timestamptz>,
+        status -> Text,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         series -> Nullable<Uuid>,
