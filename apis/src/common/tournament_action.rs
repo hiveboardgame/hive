@@ -13,4 +13,6 @@ pub enum TournamentAction {
     Leave(String),
     Invite(String),
     Start(String),
+    Get(String),
+    GetAll,
 }

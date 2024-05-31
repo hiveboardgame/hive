@@ -1,17 +1,14 @@
-use lazy_static::lazy_static;
 use leptos::*;
-use regex::Regex;
 
-use crate::providers::{api_requests::ApiRequests, chat::Chat, game_state::GameStateSignal};
-
-lazy_static! {
-    static ref NANOID: Regex =
-        Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
-}
+use crate::{
+    common::TournamentAction,
+    providers::{api_requests::ApiRequests, chat::Chat, game_state::GameStateSignal},
+};
 
 #[derive(Clone, Debug, Copy)]
 pub struct NavigationControllerSignal {
-    pub signal: RwSignal<NavigationControllerState>,
+    pub game_signal: RwSignal<NavigationControllerState>,
+    pub tournament_signal: RwSignal<NavigationControllerState>,
 }
 
 impl Default for NavigationControllerSignal {
@@ -23,20 +20,34 @@ impl Default for NavigationControllerSignal {
 impl NavigationControllerSignal {
     pub fn new() -> Self {
         Self {
-            signal: create_rw_signal(NavigationControllerState::new()),
+            game_signal: create_rw_signal(NavigationControllerState::new()),
+            tournament_signal: create_rw_signal(NavigationControllerState::new()),
         }
     }
 
-    pub fn update_nanoid(&mut self, nanoid: Option<String>) {
-        self.signal.update(|s| nanoid.clone_into(&mut s.nanoid));
-        let api = ApiRequests::new();
-        if let Some(game_id) = nanoid {
-            let mut game_state = expect_context::<GameStateSignal>();
-            let chat = expect_context::<Chat>();
-            game_state.set_game_id(game_id.to_owned());
-            api.join(game_id.to_owned());
-            chat.typed_message.update(|s| s.clear());
-        }
+    pub fn update_nanoids(
+        &mut self,
+        game_nanoid: Option<String>,
+        tournament_nanoid: Option<String>,
+    ) {
+        batch(move || {
+            self.game_signal
+                .update(|s| game_nanoid.clone_into(&mut s.nanoid));
+            self.tournament_signal
+                .update(|s| tournament_nanoid.clone_into(&mut s.nanoid));
+            if let Some(game_id) = game_nanoid {
+                let api = ApiRequests::new();
+                let mut game_state = expect_context::<GameStateSignal>();
+                let chat = expect_context::<Chat>();
+                game_state.set_game_id(game_id.to_owned());
+                api.join(game_id.to_owned());
+                chat.typed_message.update(|s| s.clear());
+            }
+            if let Some(tournament_id) = tournament_nanoid {
+                let api = ApiRequests::new();
+                api.tournament(TournamentAction::Get(tournament_id))
+            }
+        });
     }
 }
 

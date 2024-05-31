@@ -5,7 +5,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{
-    models::{NewTournament, Tournament, User},
+    models::{NewTournament, Tournament},
     DbPool,
 };
 use shared_types::TournamentDetails;
@@ -30,11 +30,10 @@ impl CreateHandler {
         let new_tournament = NewTournament::new(self.details.clone())?;
         let tournament = Tournament::create(self.user_id, &new_tournament, &self.pool).await?;
         let response = TournamentResponse::from_model(&tournament, &self.pool).await?;
-        let mut messages = Vec::new();
-        messages.push(InternalServerMessage {
+
+        Ok(vec![InternalServerMessage {
             destination: MessageDestination::Global,
             message: ServerMessage::Tournament(TournamentUpdate::Created(response)),
-        });
-        Ok(messages)
+        }])
     }
 }

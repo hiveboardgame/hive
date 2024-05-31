@@ -103,7 +103,7 @@ pub fn ChatWindow(
     };
 
     let navi = expect_context::<NavigationControllerSignal>();
-    let game = store_value(navi.signal.get_untracked().nanoid.unwrap_or_default());
+    let game = store_value(navi.game_signal.get_untracked().nanoid.unwrap_or_default());
     let correspondant_id = store_value(if let Some(v) = correspondant_id {
         v
     } else {

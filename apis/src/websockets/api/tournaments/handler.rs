@@ -1,12 +1,9 @@
 use crate::{common::TournamentAction, websockets::internal_server_message::InternalServerMessage};
 use anyhow::Result;
-use db_lib::{
-    models::{NewTournament, Tournament, User},
-    DbPool,
-};
+use db_lib::DbPool;
 use uuid::Uuid;
 
-use super::{create::CreateHandler, join::JoinHandler};
+use super::{create::CreateHandler, get::GetHandler, get_all::GetAllHandler, join::JoinHandler};
 
 pub struct TournamentHandler {
     pub action: TournamentAction,
@@ -40,6 +37,18 @@ impl TournamentHandler {
             }
             TournamentAction::Join(nanoid) => {
                 JoinHandler::new(nanoid, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            TournamentAction::Get(nanoid) => {
+                GetHandler::new(nanoid, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            TournamentAction::GetAll => {
+                GetAllHandler::new(self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?

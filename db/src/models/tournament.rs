@@ -5,9 +5,9 @@ use crate::{
         tournament_organizer::TournamentOrganizer, tournament_user::TournamentUser, user::User,
     },
     schema::{
+        tournaments::nanoid as nanoid_field,
         tournaments::{self, invitees as invitees_column, series as series_column},
         users,
-        tournaments::nanoid as nanoid_field,
     },
     DbPool,
 };
@@ -19,7 +19,6 @@ use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use shared_types::{TimeMode, TournamentDetails};
-use std::str::FromStr;
 use uuid::Uuid;
 
 use super::Game;
@@ -237,8 +236,21 @@ impl Tournament {
             .await?)
     }
 
-    pub async fn start(&self, pool: &DbPool) -> Result<Vec<Game>, DbError> {
-        let connection = &mut get_conn(pool).await?;
+    pub async fn start(&self, _pool: &DbPool) -> Result<Vec<Game>, DbError> {
+        //let connection = &mut get_conn(pool).await?;
         Ok(Vec::new())
+    }
+
+    pub async fn get_all(pool: &DbPool) -> Result<Vec<Tournament>, DbError> {
+        let conn = &mut get_conn(pool).await?;
+        Ok(tournaments::table.get_results(conn).await?)
+    }
+
+    pub async fn find_by_nanoid(u: &str, pool: &DbPool) -> Result<Tournament, DbError> {
+        let conn = &mut get_conn(pool).await?;
+        Ok(tournaments::table
+            .filter(nanoid_field.eq(u))
+            .first(conn)
+            .await?)
     }
 }

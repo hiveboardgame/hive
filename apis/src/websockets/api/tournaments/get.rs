@@ -7,13 +7,13 @@ use anyhow::Result;
 use db_lib::{models::Tournament, DbPool};
 use uuid::Uuid;
 
-pub struct JoinHandler {
+pub struct GetHandler {
     nanoid: String,
     user_id: Uuid,
     pool: DbPool,
 }
 
-impl JoinHandler {
+impl GetHandler {
     pub async fn new(nanoid: String, user_id: Uuid, pool: &DbPool) -> Result<Self> {
         Ok(Self {
             nanoid,
@@ -23,13 +23,13 @@ impl JoinHandler {
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        // TODO: This needs to go into a one commit
-        let tournament = Tournament::from_nanoid(&self.nanoid, &self.pool).await?;
-        tournament.join(&self.user_id, &self.pool).await?;
-        let response = TournamentResponse::from_model(&tournament, &self.pool).await?;
+        let tournament = Tournament::find_by_nanoid(&self.nanoid, &self.pool).await?;
+        let tournament_response = TournamentResponse::from_model(&tournament, &self.pool).await?;
         Ok(vec![InternalServerMessage {
-            destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Joined(response)),
+            destination: MessageDestination::User(self.user_id),
+            message: ServerMessage::Tournament(TournamentUpdate::Tournaments(vec![
+                tournament_response,
+            ])),
         }])
     }
 }

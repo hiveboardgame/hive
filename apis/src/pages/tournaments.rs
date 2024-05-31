@@ -1,17 +1,47 @@
 use crate::{
     common::TournamentAction,
-    providers::{tournaments::TournamentStateSignal, ApiRequests, AuthContext},
+    providers::{
+        tournaments::TournamentStateSignal, websocket::WebsocketContext, ApiRequests, AuthContext,
+    },
 };
 use leptos::*;
+use leptos_use::core::ConnectionReadyState;
 use shared_types::{TimeMode, TournamentDetails};
+use uuid::Uuid;
 
-const BUTTON_STYLE: &str = "flex w-full gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
+const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
+
+#[derive(Debug, Clone, Copy)]
+pub struct TournamentParams {
+    pub name: RwSignal<String>,
+    pub description: RwSignal<String>,
+    pub scoring: RwSignal<String>,
+    pub tiebreaker: RwSignal<Vec<Option<String>>>,
+    pub seats: RwSignal<i32>,
+    pub rounds: RwSignal<i32>,
+    pub joinable: RwSignal<bool>,
+    pub invite_only: RwSignal<bool>,
+    pub mode: RwSignal<String>,
+    pub time_mode: RwSignal<TimeMode>,
+    pub time_base: StoredValue<Option<i32>>,
+    pub time_increment: StoredValue<Option<i32>>,
+    pub band_upper: RwSignal<Option<i32>>,
+    pub band_lower: RwSignal<Option<i32>>,
+    pub series: RwSignal<Option<Uuid>>,
+}
 
 #[component]
 pub fn Tournaments() -> impl IntoView {
     let tournament = expect_context::<TournamentStateSignal>();
+    let ws = expect_context::<WebsocketContext>();
+    create_effect(move |_| {
+        if ws.ready_state.get() == ConnectionReadyState::Open {
+            let api = ApiRequests::new();
+            api.tournament(TournamentAction::GetAll);
+        };
+    });
     view! {
-        <div class="pt-10">Tournaments</div>
+        <div class="pt-10 m-2">Tournaments</div>
         <button
             class=BUTTON_STYLE
             on:click=move |_| {
@@ -21,7 +51,7 @@ pub fn Tournaments() -> impl IntoView {
                     _ => None,
                 };
                 let details = TournamentDetails {
-                    name: String::from("TestTournament"),
+                    name: String::from("Test"),
                     description: String::from("Great tournament"),
                     scoring: String::from("meh"),
                     tiebreaker: Vec::new(),
@@ -55,14 +85,13 @@ pub fn Tournaments() -> impl IntoView {
                 key=|(nanoid, _tournament)| nanoid.to_owned()
                 let:tournament
             >
-                <div>
-                    {tournament.1.nanoid.clone()}
-                    <For each=move|| {tournament.1.players.clone()}
-                        key=|player| player.uid
-                        let:player
+                <div class="flex relative justify-between">
+                    <a
+                        class="text-blue-500 hover:underline"
+                        href=format!("/tournament/{}", tournament.1.nanoid)
                     >
-                        {player.username}
-                    </For>
+                        {tournament.1.nanoid.clone()}
+                    </a>
                     <button
                         class=BUTTON_STYLE
                         on:click=move |_| {
@@ -78,6 +107,7 @@ pub fn Tournaments() -> impl IntoView {
                             }
                         }
                     >
+
                         "Join Tournament"
                     </button>
                 </div>

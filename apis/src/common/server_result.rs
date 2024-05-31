@@ -56,6 +56,7 @@ pub enum TournamentUpdate {
     Modified(TournamentResponse),
     Joined(TournamentResponse),
     Left(TournamentResponse),
+    Tournaments(Vec<TournamentResponse>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
