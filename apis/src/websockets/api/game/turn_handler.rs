@@ -9,7 +9,6 @@ use anyhow::Result;
 use db_lib::{models::Game, models::User, DbPool};
 use hive_lib::{GameError, State, Turn};
 use shared_types::TimeMode;
-
 use uuid::Uuid;
 
 pub struct TurnHandler {

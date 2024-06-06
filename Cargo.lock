@@ -618,6 +618,9 @@ dependencies = [
 [[package]]
 name = "book"
 version = "0.1.0"
+dependencies = [
+ "hive",
+]
 
 [[package]]
 name = "brotli"

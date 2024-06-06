@@ -62,30 +62,21 @@ impl Piece {
     }
 
     pub fn to_u5(&self) -> u8 {
-        match self.color() {
-            Color::White => match self.bug() {
-                Bug::Ant => self.order() as u8,
-                Bug::Beetle => 3 + self.order() as u8,
-                Bug::Grasshopper => 5 + self.order() as u8,
-                Bug::Spider => 8 + self.order() as u8,
-                Bug::Mosquito => 11,
-                Bug::Ladybug => 12,
-                Bug::Pillbug => 13,
-                Bug::Queen => 14,
-            },
-            Color::Black => {
-                14 + match self.bug() {
-                    Bug::Ant => self.order() as u8,
-                    Bug::Beetle => 3 + self.order() as u8,
-                    Bug::Grasshopper => 5 + self.order() as u8,
-                    Bug::Spider => 8 + self.order() as u8,
-                    Bug::Mosquito => 11,
-                    Bug::Ladybug => 12,
-                    Bug::Pillbug => 13,
-                    Bug::Queen => 14,
-                }
-            }
-        }
+        let bug = match self.bug() {
+            Bug::Ant => self.order() as u8,
+            Bug::Beetle => 3 + self.order() as u8,
+            Bug::Grasshopper => 5 + self.order() as u8,
+            Bug::Spider => 8 + self.order() as u8,
+            Bug::Mosquito => 11,
+            Bug::Ladybug => 12,
+            Bug::Pillbug => 13,
+            Bug::Queen => 14,
+        };
+        let color = match self.color() {
+            Color::White => 0,
+            Color::Black => 14,
+        };
+        bug + color
     }
 
     pub fn from_u5(u5: u8) -> Piece {

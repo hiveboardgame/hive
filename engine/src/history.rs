@@ -10,6 +10,8 @@ use std::{
 
 #[derive(Debug, Clone, Serialize, Default, Deserialize, PartialEq, Eq)]
 pub struct History {
+    pub white: String,
+    pub black: String,
     pub moves: Vec<(String, String)>,
     pub hashes: Vec<u64>,
     pub result: GameResult,
@@ -29,6 +31,8 @@ impl fmt::Display for History {
 impl History {
     pub fn new() -> Self {
         History {
+            black: String::new(),
+            white: String::new(),
             moves: Vec::new(),
             hashes: Vec::new(),
             result: GameResult::Unknown,
@@ -43,6 +47,8 @@ impl History {
         game_type: GameType,
     ) -> Self {
         History {
+            black: String::new(),
+            white: String::new(),
             hashes: hashes.to_owned(),
             moves,
             result,
@@ -109,6 +115,34 @@ impl History {
         }
 
         false
+    }
+
+    pub fn extract_player_names(&mut self, input: &str) -> Result<(), GameError> {
+        lazy_static! {
+            static ref NAME: Regex =
+                Regex::new(r#"\[(White|Black) "(\w+)\""#).expect("Player regex to compile");
+        };
+        if let Some(caps) = NAME.captures(input) {
+            if let Some(name) = caps.get(2) {
+                if let Some(color) = caps.get(1) {
+                    match color.as_str() {
+                        "White" => {
+                            self.white = name.as_str().to_string();
+                            return Ok(());
+                        }
+                        "Black" => {
+                            self.black = name.as_str().to_string();
+                            return Ok(());
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        Err(GameError::ParsingError {
+            found: input.to_owned(),
+            typ: "Player name".to_string(),
+        })
     }
 
     fn parse_game_result(&mut self, str: &str) {
@@ -178,6 +212,12 @@ impl History {
             static ref RESULT: Regex = Regex::new(r"\[Result").expect("This regex should compile");
         }
         lazy_static! {
+            static ref WHITE: Regex = Regex::new(r"\[White").expect("This regex should compile");
+        }
+        lazy_static! {
+            static ref BLACK: Regex = Regex::new(r"\[Black").expect("This regex should compile");
+        }
+        lazy_static! {
             static ref GAME_TYPE_LINE: Regex =
                 Regex::new(r"\[GameType.*").expect("This regex should compile");
         }
@@ -195,6 +235,12 @@ impl History {
                     }
                     if GAME_TYPE_LINE.is_match(&line) {
                         history.parse_game_type(&line)?;
+                    }
+                    if WHITE.is_match(&line) {
+                        history.extract_player_names(&line)?;
+                    }
+                    if BLACK.is_match(&line) {
+                        history.extract_player_names(&line)?;
                     }
                     if HEADER.is_match(&line) {
                         continue;
