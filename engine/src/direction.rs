@@ -23,12 +23,12 @@ impl fmt::Display for Direction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Direction::*;
         match self {
-            NW => write!(f, "NorthWest"),
-            NE => write!(f, "NorthEast"),
-            E => write!(f, "East"),
-            SE => write!(f, "SouthEast"),
-            SW => write!(f, "SouthWest"),
-            W => write!(f, "West"),
+            NW => write!(f, "\\"),
+            NE => write!(f, "/"),
+            E => write!(f, "-"),
+            SE => write!(f, "\\"),
+            SW => write!(f, "/"),
+            W => write!(f, "-"),
         }
     }
 }

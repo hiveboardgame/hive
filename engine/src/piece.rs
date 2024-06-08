@@ -173,7 +173,7 @@ impl Piece {
             26 => Piece::new().with_bug(Bug::Ladybug).with_color(Color::Black),
             27 => Piece::new().with_bug(Bug::Pillbug).with_color(Color::Black),
             28 => Piece::new().with_bug(Bug::Queen).with_color(Color::Black),
-            _ => panic!("Got an invalid u5 bug"),
+            any => panic!("Got an invalid u5 bug: {}", any),
         }
     }
 

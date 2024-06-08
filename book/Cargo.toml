@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow.workspace = true
 hive = { path = "../engine" }
+rayon = "1.10.0"
