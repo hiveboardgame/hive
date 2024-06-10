@@ -1,10 +1,11 @@
 use anyhow::{anyhow, Result};
 use hive_lib::{
-    Color, Direction, GameError, GameResult, GameStatus, GameType, History, Piece, State,
+    Bug, Color, Direction, GameError, GameResult, GameStatus, GameType, History, Piece, State,
 };
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs;
+use std::str::FromStr;
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 struct Nanoid(usize);
@@ -70,22 +71,6 @@ impl Chapter {
     }
 }
 
-pub struct Book {
-    chapters: HashMap<u64, Chapter>,
-    total_games: usize,
-    moves: Vec<u16>,
-    games: Vec<(usize, usize)>, // start position in "moves"
-    hashes: HashMap<u64, Vec<usize>>,
-    // number of moves to get
-    nanoid_games: HashMap<Nanoid, usize>,
-    players_games: HashMap<Username, Vec<Nanoid>>,
-    white_wins: Vec<Nanoid>,
-    black_wins: Vec<Nanoid>,
-    draws: Vec<Nanoid>,
-    // TODO
-    first_move: HashMap<u16, Vec<Nanoid>>,
-}
-
 pub struct Page {
     moves: Vec<u16>,
     hashes: Vec<u64>,
@@ -122,6 +107,22 @@ impl Default for Book {
     }
 }
 
+pub struct Book {
+    chapters: HashMap<u64, Chapter>,
+    total_games: usize,
+    moves: Vec<u16>,
+    games: Vec<(usize, usize)>, // start position in "moves"
+    hashes: HashMap<u64, Vec<usize>>,
+    // number of moves to get
+    nanoid_games: HashMap<Nanoid, usize>,
+    players_games: HashMap<Username, Vec<Nanoid>>,
+    white_wins: Vec<Nanoid>,
+    black_wins: Vec<Nanoid>,
+    draws: Vec<Nanoid>,
+    // TODO
+    first_move: HashMap<u16, Vec<Nanoid>>,
+}
+
 impl Book {
     pub fn new() -> Self {
         Self {
@@ -135,7 +136,6 @@ impl Book {
             white_wins: Vec::new(),
             black_wins: Vec::new(),
             draws: Vec::new(),
-            // these need to be implemented
             first_move: HashMap::new(),
         }
     }
@@ -198,42 +198,6 @@ impl Book {
         Ok(())
     }
 
-    // pub fn make_page(path: String, id: Nanoid) -> Result<Box<Page>> {
-    //     let history = History::from_filepath(&path)?;
-    //     if history.game_type != GameType::MLP {
-    //         return Err(anyhow!("Non-PLM"));
-    //     }
-    //     let mut page = Page::new();
-    //     let state = State::new_from_history(&history)?;
-    //     match state.game_status {
-    //         GameStatus::Finished(GameResult::Winner(winner)) => match winner {
-    //             Color::White => page.white_win += 1,
-    //             Color::Black => page.black_win += 1,
-    //         },
-    //         GameStatus::Finished(GameResult::Draw) => {
-    //             page.draw += 1;
-    //         }
-    //         _ => return Err(anyhow!("Non result found")),
-    //     }
-    //     // if let Some((piece, position)) = history.moves.first() {
-    //     //     self.categorize_first_move(piece, position, id.clone())?;
-    //     // }
-    //     page.hashes = state.hashes.clone();
-    //     for (i, (piece, position)) in history.moves.iter().enumerate() {
-    //         let encoded = Self::encode_move(piece, position)?;
-    //         let (piece_decoded, position_decoded) = Self::decode_move(encoded)?;
-    //         //assert_eq!(piece, &piece_decoded);
-    //         //assert_eq!(position, &position_decoded);
-    //         page.moves.push(encoded);
-    //     }
-    //     //let end = self.moves.len() - 1;
-    //     //self.games.push((start, end));
-    //     //self.nanoid_games.insert(id.clone(), game_id);
-    //     page.black = Username(history.black);
-    //     page.white = Username(history.white);
-    //     Ok(Box::new(page))
-    // }
-
     pub fn add_game_from_file(&mut self, path: String, id: Nanoid) -> Result<(), GameError> {
         let history = History::from_filepath(&path)?;
         if history.game_type != GameType::MLP {
@@ -242,6 +206,15 @@ impl Book {
         let state = State::new_from_history(&history)?;
         let game_id = self.games.len();
         let start = self.moves.len();
+        if history.moves.is_empty() {
+            return Ok(());
+        }
+        let (piece, position) = history.moves.first().expect("there to be a move");
+        let encoded = Self::encode_move(piece, position)?;
+        let (piece, _) = Self::decode_move(encoded)?;
+        if Piece::from_str(&piece)?.bug() != Bug::Ladybug {
+            return Ok(());
+        }
         let outcome = match state.game_status {
             GameStatus::Finished(GameResult::Winner(winner)) => match winner {
                 Color::White => {
@@ -263,19 +236,21 @@ impl Book {
         if let Some((piece, position)) = history.moves.first() {
             self.categorize_first_move(piece, position, id.clone())?;
         }
+        let length = 10;
         for (i, (piece, position)) in history.moves.iter().enumerate() {
             let encoded = Self::encode_move(piece, position)?;
-            // let (piece_decoded, position_decoded) = Self::decode_move(encoded)?;
-            // assert_eq!(piece, &piece_decoded);
-            // assert_eq!(position, &position_decoded);
             let hash = state.hashes.get(i).expect("Hash to be present");
             self.hashes.entry(*hash).or_default().push(self.moves.len());
             self.moves.push(encoded);
-            if i == 7 {
+            if i == length - 1 {
                 let mut sub = String::new();
-                for encoded in &self.moves[self.moves.len()-8..] {
+                for encoded in &self.moves[self.moves.len() - length..] {
                     let (piece, position) = Self::decode_move(*encoded)?;
-                    sub.push_str(&format!("{} {};", piece, position));
+                    if position.is_empty() {
+                        sub.push_str(&format!("{};", piece));
+                    } else {
+                        sub.push_str(&format!("{} {};", piece, position));
+                    }
                 }
                 self.chapters
                     .entry(*hash)
@@ -328,6 +303,7 @@ fn main() {
         book.moves.len(),
         book.hashes.keys().len()
     );
+    println!("first_move.len: {}", book.first_move.len());
     for (piece, games) in book.first_move.iter() {
         let (mut win, mut loss, mut draw) = (0, 0, 0);
         for game in games.iter() {
@@ -355,10 +331,10 @@ fn main() {
     let mut occ: Vec<usize> = book.chapters.values().map(|c| c.total).collect();
     occ.sort();
     occ.reverse();
-    println!("occ: {:?}", occ);
-    println!("{:?}", book.chapters);
+    // println!("occ: {:?}", occ);
+    // println!("{:?}", book.chapters);
     let cutoff = occ.get(10).expect("we have more than 10").clone();
-    println!("#chapters: {}", book.chapters.len());
+    // println!("#chapters: {}", book.chapters.len());;
     for c in book.chapters.values() {
         if c.total > cutoff {
             println!(
