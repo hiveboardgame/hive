@@ -58,7 +58,7 @@ pub fn Board(
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] overwrite_tw_classes: &'static str,
 ) -> impl IntoView {
-    let mut game_state_signal = expect_context::<GameStateSignal>();
+    let mut game_state = expect_context::<GameStateSignal>();
     let target_stack = expect_context::<TargetStack>().0;
     let is_panning = RwSignal::new(false);
     let has_zoomed = RwSignal::new(false);
@@ -69,12 +69,15 @@ pub fn Board(
     let div_ref = NodeRef::<html::Div>::new();
     let zoom_in_limit = 150.0;
     let zoom_out_limit = 2500.0;
-    let history_style = move || match (game_state_signal.signal)().view {
+    let last_turn = game_state.is_last_turn_as_signal();
+    let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
+    let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
+    let history_style = move || match board_view() {
         View::Game => "",
-        View::History => match (game_state_signal.signal)().state.game_status {
+        View::History => match game_status() {
             GameStatus::Finished(_) => "",
             _ => {
-                if (game_state_signal.signal)().is_last_turn() {
+                if last_turn() {
                     ""
                 } else {
                     "sepia-[.75]"
@@ -102,7 +105,7 @@ pub fn Board(
     };
 
     let current_center = move || {
-        game_state_signal
+        game_state
             .signal
             .get_untracked()
             .state
@@ -111,7 +114,7 @@ pub fn Board(
     };
 
     let update_once = create_effect(move |_| {
-        if game_state_signal.loaded.get() {
+        if game_state.loaded.get() {
             let div = div_ref.get_untracked().expect("it exists");
             let rect = div.get_bounding_client_rect();
             let svg_pos = SvgPos::center_for_level(current_center(), 0);
@@ -126,7 +129,7 @@ pub fn Board(
         };
     });
     create_effect(move |_| {
-        if game_state_signal.loaded.get() {
+        if game_state.loaded.get() {
             update_once.dispose();
         }
     });
@@ -337,16 +340,13 @@ pub fn Board(
                 class=move || format!("touch-none duration-300 {}", history_style())
                 ref=viewbox_ref
                 xmlns="http://www.w3.org/2000/svg"
-                on:click=move |_| { game_state_signal.reset() }
+                on:click=move |_| { game_state.reset() }
             >
 
                 <Svgs/>
                 <g transform=transform ref=g_ref>
                     <Show
-                        when=move || {
-                            View::History == (game_state_signal.signal)().view
-                                && !(game_state_signal.signal)().is_last_turn()
-                        }
+                        when=move || { View::History == board_view() && !last_turn() }
 
                         fallback=move || {
                             view! { <BoardPieces/> }

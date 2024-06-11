@@ -28,15 +28,17 @@ impl NavigationControllerSignal {
     }
 
     pub fn update_nanoid(&mut self, nanoid: Option<String>) {
-        self.signal.update(|s| nanoid.clone_into(&mut s.nanoid));
-        let api = ApiRequests::new();
-        if let Some(game_id) = nanoid {
-            let mut game_state = expect_context::<GameStateSignal>();
-            let chat = expect_context::<Chat>();
-            game_state.set_game_id(game_id.to_owned());
-            api.join(game_id.to_owned());
-            chat.typed_message.update(|s| s.clear());
-        }
+        batch(move || {
+            self.signal.update(|s| nanoid.clone_into(&mut s.nanoid));
+            let api = ApiRequests::new();
+            if let Some(game_id) = nanoid {
+                let mut game_state = expect_context::<GameStateSignal>();
+                let chat = expect_context::<Chat>();
+                game_state.set_game_id(game_id.to_owned());
+                api.join(game_id.to_owned());
+                chat.typed_message.update(|s| s.clear());
+            }
+        });
     }
 }
 

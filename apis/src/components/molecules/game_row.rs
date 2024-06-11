@@ -1,4 +1,5 @@
 use crate::{
+    common::RatingChangeInfo,
     components::{
         atoms::{
             download_pgn::DownloadPgn, profile_link::ProfileLink, status_indicator::StatusIndicator,
@@ -85,6 +86,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
         Conclusion::Repetition => String::from(" 3 move repetition"),
         Conclusion::Unknown => String::new(),
     };
+    let ratings = store_value(RatingChangeInfo::from_game_response(&game()));
 
     view! {
         <article class="flex relative px-2 py-4 mx-2 w-full h-72 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
@@ -115,7 +117,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                         </div>
                         <br/>
                         <Show when=is_finished fallback=move || { game().white_rating() }>
-                            <RatingAndChange game=game() side=Color::White/>
+                            <RatingAndChange ratings=ratings() side=Color::White/>
                         </Show>
 
                     </div>
@@ -130,7 +132,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                         </div>
                         <br/>
                         <Show when=is_finished fallback=move || { game().black_rating() }>
-                            <RatingAndChange game=game() side=Color::Black/>
+                            <RatingAndChange ratings=ratings() side=Color::Black/>
                         </Show>
                     </div>
                 </div>

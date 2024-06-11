@@ -13,17 +13,24 @@ pub fn BoardPieces() -> impl IntoView {
     let board = move || {
         let mut board = Vec::new();
         let game_state = (game_state_signal.signal)();
-        let targets = game_state.target_positions;
+        let targets = game_state.move_info.target_positions;
         let last_move = game_state.state.board.last_move;
-        let active_piece = (game_state.active, game_state.target_position);
-        let from_to_position = (game_state.current_position, game_state.target_position);
+        let active_piece = (
+            game_state.move_info.active,
+            game_state.move_info.target_position,
+        );
+        let from_to_position = (
+            game_state.move_info.current_position,
+            game_state.move_info.target_position,
+        );
+        // TODO: Find a better solution instead of the nested loop here
         for r in 0..32 {
             for q in 0..32 {
                 let position = Position::new(q, r);
                 // start this empty and only add
                 let bug_stack = game_state.state.board.board.get(position).clone();
                 let mut hs = HexStack::new(&bug_stack, position);
-                if game_state.active.is_none() {
+                if game_state.move_info.active.is_none() {
                     if let (_, Some(to)) = last_move {
                         if to == position {
                             hs.add_last_move(Direction::To);

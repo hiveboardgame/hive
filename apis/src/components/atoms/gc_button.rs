@@ -78,27 +78,31 @@ pub fn ConfirmButton(
             (interval().pause)();
         }
     });
+
+    let pending_slice =
+        create_read_slice(game_state().signal, |gs| gs.game_control_pending.clone());
+
     let cancel = move |_| is_clicked.update(|v| *v = false);
-    let pending =
-        move |game_control: GameControl| match (game_state().signal)().game_control_pending {
-            Some(GameControl::DrawOffer(gc_color)) => {
-                if color == gc_color && matches!(game_control, GameControl::DrawOffer(_)) {
-                    return true;
-                }
-                false
+    let pending = move |game_control: GameControl| match pending_slice() {
+        Some(GameControl::DrawOffer(gc_color)) => {
+            if color == gc_color && matches!(game_control, GameControl::DrawOffer(_)) {
+                return true;
             }
-            Some(GameControl::TakebackRequest(gc_color)) => {
-                if color == gc_color && matches!(game_control, GameControl::TakebackRequest(_)) {
-                    return true;
-                }
-                false
+            false
+        }
+        Some(GameControl::TakebackRequest(gc_color)) => {
+            if color == gc_color && matches!(game_control, GameControl::TakebackRequest(_)) {
+                return true;
             }
-            _ => false,
-        };
+            false
+        }
+        _ => false,
+    };
+
+    let turn = create_read_slice(game_state().signal, |gs| gs.state.turn as i32);
 
     let disabled = move || {
-        let turn = (game_state().signal)().state.turn as i32;
-        if game_control().allowed_on_turn(turn) {
+        if game_control().allowed_on_turn(turn()) {
             !matches!(game_control(), GameControl::Resign(_))
                 && (pending(GameControl::DrawOffer(color))
                     || pending(GameControl::TakebackRequest(color)))

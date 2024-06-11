@@ -17,6 +17,9 @@ pub fn HistoryButton(
     #[prop(optional)] post_action: Option<Callback<()>>,
     #[prop(optional)] node_ref: Option<NodeRef<html::Button>>,
 ) -> impl IntoView {
+    let game_state_signal = expect_context::<GameStateSignal>();
+    let is_last_turn = game_state_signal.is_last_turn_as_signal();
+    let is_first_turn = game_state_signal.is_first_turn_as_signal();
     let cloned_action = action.clone();
     let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
@@ -25,17 +28,13 @@ pub fn HistoryButton(
         HistoryNavigation::Next => icondata::AiStepForwardFilled,
         HistoryNavigation::Previous => icondata::AiStepBackwardFilled,
     };
-    let is_disabled = move || {
-        let game_state_signal = expect_context::<GameStateSignal>();
-        let game_state = game_state_signal.signal.get();
-        match cloned_action {
-            HistoryNavigation::Last | HistoryNavigation::MobileLast | HistoryNavigation::Next => {
-                game_state.is_last_turn()
-            }
-            HistoryNavigation::Previous | HistoryNavigation::First => {
-                game_state.history_turn.is_none() || game_state.history_turn == Some(0)
-            }
+
+    let is_disabled = move || match cloned_action {
+        HistoryNavigation::Last | HistoryNavigation::MobileLast | HistoryNavigation::Next => {
+            is_last_turn()
         }
+
+        HistoryNavigation::Previous | HistoryNavigation::First => is_first_turn(),
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
         send_action(&action);
