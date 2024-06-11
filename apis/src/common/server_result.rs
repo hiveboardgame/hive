@@ -1,5 +1,5 @@
 use super::game_reaction::GameReaction;
-use crate::responses::{ChallengeResponse, GameResponse, UserResponse};
+use crate::responses::{ChallengeResponse, GameResponse, TournamentResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -44,9 +44,20 @@ pub enum ServerMessage {
     Challenge(ChallengeUpdate),
     UserSearch(Vec<UserResponse>),
     UserStatus(UserUpdate),
+    Tournament(TournamentUpdate),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
     Error(String),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TournamentUpdate {
+    Created(TournamentResponse),
+    Deleted(String),
+    Modified(TournamentResponse),
+    Joined(TournamentResponse),
+    Left(TournamentResponse),
+    Tournaments(Vec<TournamentResponse>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

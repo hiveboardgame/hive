@@ -90,15 +90,15 @@ use anyhow::Result;
 impl UserResponse {
     pub async fn from_uuid(id: &Uuid, pool: &DbPool) -> Result<Self> {
         let user = User::find_by_uuid(id, pool).await?;
-        Self::from_user(&user, pool).await
+        Self::from_model(&user, pool).await
     }
 
     pub async fn from_username(username: &str, pool: &DbPool) -> Result<Self> {
         let user = User::find_by_username(username, pool).await?;
-        Self::from_user(&user, pool).await
+        Self::from_model(&user, pool).await
     }
 
-    pub async fn from_user(user: &User, pool: &DbPool) -> Result<Self> {
+    pub async fn from_model(user: &User, pool: &DbPool) -> Result<Self> {
         let mut ratings = HashMap::new();
         for game_speed in GameSpeed::all_rated().into_iter() {
             let rating = RatingResponse::from_user(user, &game_speed, pool).await?;

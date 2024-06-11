@@ -10,6 +10,7 @@ use uuid::Uuid;
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameResponse {
     pub game_id: Uuid,
+    pub tournament: Option<TournamentAbstractResponse>,
     pub nanoid: String,
     pub current_player_id: Uuid,
     pub turn: usize,
@@ -112,6 +113,8 @@ impl GameResponse {
 }
 
 use cfg_if::cfg_if;
+
+use super::tournament::TournamentAbstractResponse;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::Game,
@@ -165,7 +168,14 @@ impl GameResponse {
         };
         let white_time_left = game.white_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
         let black_time_left = game.black_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
+        let mut tournament = None;
+        if game.tournament_id.is_some() {
+            if let Some(id) = game.tournament_id {
+                tournament = Some(TournamentAbstractResponse::from_uuid(&id, pool).await?)
+            }
+        }
         Ok(Self {
+            tournament,
             game_id: game.id,
             nanoid: game.nanoid.clone(),
             game_status: GameStatus::from_str(&game.game_status)?,

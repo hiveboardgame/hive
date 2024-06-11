@@ -87,7 +87,7 @@ impl NewChallenge {
             });
         };
         Ok(Self {
-            nanoid: nanoid!(10),
+            nanoid: nanoid!(12),
             challenger_id,
             opponent_id,
             game_type: d.game_type.to_string(),

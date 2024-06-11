@@ -136,7 +136,7 @@ impl Handler<Connect> for Lobby {
                 }
             }
             let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &pool).await {
-                if let Ok(user_response) = UserResponse::from_user(&user, &pool).await {
+                if let Ok(user_response) = UserResponse::from_model(&user, &pool).await {
                     let message =
                         ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
                             status: UserStatus::Online,

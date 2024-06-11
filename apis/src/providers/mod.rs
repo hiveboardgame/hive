@@ -12,6 +12,7 @@ pub mod online_users;
 mod ping;
 pub mod refocus;
 pub mod timer;
+pub mod tournaments;
 pub mod user_search;
 pub mod websocket;
 pub use alerts::{provide_alerts, AlertType, AlertsContext};

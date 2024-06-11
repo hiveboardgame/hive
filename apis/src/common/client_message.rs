@@ -1,5 +1,5 @@
-use super::challenge_action::ChallengeAction;
 use super::game_action::GameAction;
+use super::{challenge_action::ChallengeAction, TournamentAction};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use shared_types::ChatMessageContainer;
@@ -11,6 +11,7 @@ pub enum ClientRequest {
     Challenge(ChallengeAction),
     Game { id: String, action: GameAction },
     Ping(DateTime<Utc>),
+    Tournament(TournamentAction),
     // leptos-use idle or window unfocused will send
     Away, // Online and Offline are not needed because they will be handled by the WS connection
           // being established/torn down

@@ -12,9 +12,7 @@ pub struct RatingResponse {
     pub certainty: Certainty,
 }
 
-use cfg_if::cfg_if;
-
-cfg_if! { if #[cfg(feature = "ssr")] {
+cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::{Rating, User},
     DbPool,

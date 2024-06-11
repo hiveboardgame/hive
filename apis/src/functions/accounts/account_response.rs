@@ -21,7 +21,7 @@ use leptos::*;
 impl AccountResponse {
     pub async fn from_uuid(id: &Uuid, pool: &DbPool) -> Result<Self, ServerFnError> {
         let user = User::find_by_uuid(id, pool).await?;
-        let response = UserResponse::from_user(&user, pool).await.map_err(ServerFnError::new)?;
+        let response = UserResponse::from_model(&user, pool).await.map_err(ServerFnError::new)?;
         Ok(Self {
             username: user.username,
             email: user.email,
