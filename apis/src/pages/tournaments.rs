@@ -1,14 +1,10 @@
 use crate::{
     common::TournamentAction,
-    providers::{
-        tournaments::TournamentStateSignal, websocket::WebsocketContext, ApiRequests, AuthContext,
-    },
+    components::molecules::tournament_row::TournamentRow,
+    providers::{tournaments::TournamentStateSignal, websocket::WebsocketContext, ApiRequests},
 };
 use leptos::*;
 use leptos_use::core::ConnectionReadyState;
-use shared_types::{TimeMode, TournamentDetails};
-
-const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
 
 #[component]
 pub fn Tournaments() -> impl IntoView {
@@ -21,22 +17,17 @@ pub fn Tournaments() -> impl IntoView {
         };
     });
     view! {
-        <div class="pt-10 m-2">Tournaments</div>
-        <div>
-            <For
-                each=move || { tournament.signal.get().tournaments }
-                key=|(nanoid, _tournament)| nanoid.to_owned()
-                let:tournament
-            >
-                <div class="flex relative justify-between">
-                    <a
-                        class="text-blue-500 hover:underline"
-                        href=format!("/tournament/{}", tournament.1.nanoid)
-                    >
-                        {tournament.1.nanoid.clone()}
-                    </a>
-                </div>
-            </For>
+        <div class="pt-10">
+            <div class="container px-4 mx-auto">
+                Tournaments
+                <For
+                    each=move || { tournament.signal.get().tournaments }
+                    key=|(nanoid, tournament)| { (nanoid.to_owned(), tournament.updated_at) }
+                    let:tournament
+                >
+                    <TournamentRow tournament=tournament.1/>
+                </For>
+            </div>
         </div>
     }
 }

@@ -5,8 +5,10 @@ use crate::{
         tournament_organizer::TournamentOrganizer, tournament_user::TournamentUser, user::User,
     },
     schema::{
-        tournaments::nanoid as nanoid_field,
-        tournaments::{self, invitees as invitees_column, series as series_column},
+        tournaments::{
+            self, invitees as invitees_column, nanoid as nanoid_field, series as series_column,
+            updated_at,
+        },
         tournaments_organizers, users,
     },
     DbPool,
@@ -213,21 +215,43 @@ impl Tournament {
     }
 
     pub async fn join(&self, user_id: &Uuid, pool: &DbPool) -> Result<Tournament, DbError> {
-        let players = self.players(pool).await?;
-        if players.len() as i32 == self.seats {
-            return Ok(self.clone());
-        }
-        if players.iter().any(|player| player.id == *user_id) {
-            return Ok(self.clone());
-        }
-        let tournament_user = TournamentUser::new(self.id, *user_id);
-        tournament_user.insert(pool).await?;
-        Ok(self.clone())
+        get_conn(pool)
+            .await?
+            .transaction::<_, DbError, _>(move |conn| {
+                async move {
+                    let players = self.players(pool).await?;
+                    if players.len() as i32 == self.seats {
+                        return Ok(self.clone());
+                    }
+                    if players.iter().any(|player| player.id == *user_id) {
+                        return Ok(self.clone());
+                    }
+                    let tournament_user = TournamentUser::new(self.id, *user_id);
+                    tournament_user.insert(pool).await?;
+                    Ok(diesel::update(tournaments::table.find(self.id))
+                        .set(updated_at.eq(Utc::now()))
+                        .get_result(conn)
+                        .await?)
+                }
+                .scope_boxed()
+            })
+            .await
     }
 
     pub async fn leave(&self, user_id: &Uuid, pool: &DbPool) -> Result<Self, DbError> {
-        TournamentUser::delete(self.id, *user_id, pool).await?;
-        Ok(self.clone())
+        get_conn(pool)
+            .await?
+            .transaction::<_, DbError, _>(move |conn| {
+                async move {
+                    TournamentUser::delete(self.id, *user_id, pool).await?;
+                    Ok(diesel::update(tournaments::table.find(self.id))
+                        .set(updated_at.eq(Utc::now()))
+                        .get_result(conn)
+                        .await?)
+                }
+                .scope_boxed()
+            })
+            .await
     }
 
     pub async fn from_uuid(uuid: &Uuid, pool: &DbPool) -> Result<Tournament, DbError> {

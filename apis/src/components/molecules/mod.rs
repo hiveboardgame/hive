@@ -19,5 +19,6 @@ pub mod rating_and_change;
 pub mod simple_hex_stack;
 pub mod thumbnail_pieces;
 pub mod time_row;
+pub mod tournament_row;
 pub mod user_row;
 pub mod user_with_rating;
