@@ -6,6 +6,7 @@ use shared_types::ChatMessageContainer;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClientRequest {
+    UserSearch(String),
     Chat(ChatMessageContainer),
     Challenge(ChallengeAction),
     Game { id: String, action: GameAction },

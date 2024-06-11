@@ -119,4 +119,12 @@ impl ApiRequests {
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
+
+    pub fn search_user(&self, pattern: String) {
+        if !pattern.is_empty() {
+            let msg = ClientRequest::UserSearch(pattern);
+            self.websocket
+                .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+        }
+    }
 }
