@@ -31,16 +31,17 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
+    let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
     let show_buttons = move || {
         user().map_or(false, |user| {
-            let game_state = game_state.signal.get();
-            Some(user.id) == game_state.black_id || Some(user.id) == game_state.white_id
+            let (white_id, black_id) = white_and_black();
+            Some(user.id) == black_id || Some(user.id) == white_id
         })
     };
     let player_is_black = create_memo(move |_| {
         user().map_or(false, |user| {
-            let game_state = game_state.signal.get();
-            Some(user.id) == game_state.black_id
+            let black_id = white_and_black().1;
+            Some(user.id) == black_id
         })
     });
     let parent_container_style = move || {

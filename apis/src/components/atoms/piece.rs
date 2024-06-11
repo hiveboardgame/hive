@@ -134,8 +134,9 @@ pub fn Piece(
         .top_piece(position)
         .unwrap_or(piece);
 
+    let active_piece = create_read_slice(game_state_signal.signal, |gs| gs.move_info.active);
     let show_ds = move || {
-        if let Some(active) = game_state_signal.signal.get().active {
+        if let Some(active) = active_piece() {
             if active == piece {
                 return "#no_ds";
             }

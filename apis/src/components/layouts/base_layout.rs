@@ -142,8 +142,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         };
     });
 
-    let api = ApiRequests::new();
-
     let focused = use_window_focus();
     let _ = watch(
         focused,
@@ -161,35 +159,43 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
     let counter = RwSignal::new(0_u64);
     let retry_at = RwSignal::new(2_u64);
+
     let Pausable { .. } = use_interval_fn(
         move || {
-            api.ping();
-            counter.update(|c| *c += 1);
-            match ws_ready() {
-                ConnectionReadyState::Closed => {
-                    if retry_at.get() == counter.get() {
-                        //log!("Reconnecting due to ReadyState");
+            batch({
+                let ws = ws.clone();
+                let api = ApiRequests::new();
+                move || {
+                    api.ping();
+                    counter.update(|c| *c += 1);
+                    match ws_ready() {
+                        ConnectionReadyState::Closed => {
+                            if retry_at.get() == counter.get() {
+                                //log!("Reconnecting due to ReadyState");
+                                ws.open();
+                                counter.update(|c| *c = 0);
+                                retry_at.update(|r| *r *= 2);
+                            }
+                        }
+                        ConnectionReadyState::Open => {
+                            counter.update(|c| *c = 0);
+                            retry_at.update(|r| *r = 2);
+                        }
+                        _ => {}
+                    }
+                    if Utc::now()
+                        .signed_duration_since(ping.signal.get_untracked().last_update)
+                        .num_seconds()
+                        >= 5
+                        && retry_at.get() == counter.get()
+                    {
+                        //log!("Reconnecting due to ping duration");
                         ws.open();
                         counter.update(|c| *c = 0);
-                        counter.update(|r| *r *= 2);
-                    }
+                        retry_at.update(|r| *r *= 2);
+                    };
                 }
-                ConnectionReadyState::Open => {
-                    counter.update(|c| *c = 0);
-                }
-                _ => {}
-            }
-            if Utc::now()
-                .signed_duration_since(ping.signal.get_untracked().last_update)
-                .num_seconds()
-                >= 5
-                && retry_at.get() == counter.get()
-            {
-                //log!("Reconnecting due to ping duration");
-                ws.open();
-                counter.update(|c| *c = 0);
-                counter.update(|r| *r *= 2);
-            };
+            })
         },
         1000,
     );

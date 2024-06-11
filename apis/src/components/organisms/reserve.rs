@@ -45,32 +45,43 @@ pub fn Reserve(
     alignment: Alignment,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateSignal>();
 
     let (viewbox_str, viewbox_styles) = match alignment {
         Alignment::SingleRow => ("-40 -55 450 100", "inline max-h-[inherit] h-full w-fit"),
         Alignment::DoubleRow => ("-32 -55 250 180", "p-1"),
     };
+    // For some reason getting a slice of the whole state is a problem and leads to wasm oob errors, because of that the other slices are less useful
+    let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
+    let move_info = create_read_slice(game_state.signal, |gs| gs.move_info.clone());
+    let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
+    let last_turn = game_state.is_last_turn_as_signal();
 
     let stacked_pieces = move || {
-        let game_state = (game_state_signal.signal)();
-        let reserve = match game_state.view {
+        let board_view = board_view();
+        let move_info = move_info();
+        let history_turn = history_turn();
+        let game_state = game_state.signal.get();
+        let reserve = match board_view {
             View::Game => game_state
                 .state
                 .board
                 .reserve(color(), game_state.state.game_type),
             View::History => {
                 let mut history = History::new();
-                if let Some(turn) = game_state.history_turn {
+                if let Some(turn) = history_turn {
                     history.moves = game_state.state.history.moves[0..=turn].into();
                 }
-                let state = State::new_from_history(&history).expect("Got state from history");
-                state.board.reserve(color(), game_state.state.game_type)
+                let history_state =
+                    State::new_from_history(&history).expect("Got state from history");
+                history_state
+                    .board
+                    .reserve(color(), game_state.state.game_type)
             }
         };
         let mut clicked_position = None;
         if color() == game_state.state.turn_color {
-            clicked_position = game_state.reserve_position;
+            clicked_position = move_info.reserve_position;
         }
         let mut seen = -1;
         let mut res = Vec::new();
@@ -87,20 +98,16 @@ pub fn Reserve(
                 let stack_height = piece_strings.len() - 1;
                 for (i, piece_str) in piece_strings.iter().rev().enumerate() {
                     let piece = Piece::from_str(piece_str).expect("Parsed piece");
-                    let piece_type = if piece_active(
-                        &game_state.state,
-                        &game_state.view,
-                        &piece,
-                        game_state.is_last_turn(),
-                    ) {
-                        if i == stack_height {
-                            PieceType::Reserve
+                    let piece_type =
+                        if piece_active(&game_state.state, &board_view, &piece, last_turn()) {
+                            if i == stack_height {
+                                PieceType::Reserve
+                            } else {
+                                PieceType::Nope
+                            }
                         } else {
-                            PieceType::Nope
-                        }
-                    } else {
-                        PieceType::Inactive
-                    };
+                            PieceType::Inactive
+                        };
                     hs.hexes.push(Hex {
                         kind: HexType::Tile(piece, piece_type),
                         position,
@@ -109,7 +116,7 @@ pub fn Reserve(
                 }
                 if let Some(click) = clicked_position {
                     if click == position {
-                        if game_state.target_position.is_some() {
+                        if move_info.target_position.is_some() {
                             hs.add_active(true);
                         } else {
                             hs.add_active(false);

@@ -51,8 +51,7 @@ impl GamesSignal {
                                 }
                             }
                         }
-                    }
-                    if let Some(game) = s.realtime.get(&nanoid) {
+                    } else if let Some(game) = s.realtime.get(&nanoid) {
                         if game.current_player_id == user.id {
                             if let Some(gp) = s
                                 .next_realtime
@@ -71,8 +70,7 @@ impl GamesSignal {
                                 }
                             }
                         }
-                    }
-                    if let Some(game) = s.correspondence.get(&nanoid) {
+                    } else if let Some(game) = s.correspondence.get(&nanoid) {
                         if game.current_player_id == user.id {
                             if let Some(gp) = s
                                 .next_correspondence

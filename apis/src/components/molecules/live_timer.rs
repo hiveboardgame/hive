@@ -80,17 +80,19 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
         is_active,
     } = use_interval_fn_with_options(
         move || {
-            ticks.update(|t| *t += 1);
-            time_left.update(|t| {
-                if ticks.get_untracked() > 10 {
-                    ticks.update(|t| *t = 0);
-                    *t = match side {
-                        Color::Black => black_time(),
-                        Color::White => white_time(),
-                    };
-                } else {
-                    *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
-                }
+            batch(move || {
+                ticks.update(|t| *t += 1);
+                time_left.update(|t| {
+                    if ticks.get_untracked() > 10 {
+                        ticks.update(|t| *t = 0);
+                        *t = match side {
+                            Color::Black => black_time(),
+                            Color::White => white_time(),
+                        };
+                    } else {
+                        *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
+                    }
+                })
             })
         },
         100,

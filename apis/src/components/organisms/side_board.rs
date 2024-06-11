@@ -28,7 +28,7 @@ pub fn SideboardTabs(
     #[prop(optional)] analysis: bool,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let mut game_state_signal = expect_context::<GameStateSignal>();
+    let mut game_state = expect_context::<GameStateSignal>();
     let chat = expect_context::<Chat>();
     let tab_view = RwSignal::new(SideboardTabView::Reserve);
     let auth_context = expect_context::<AuthContext>();
@@ -36,6 +36,7 @@ pub fn SideboardTabs(
         Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
+    let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
     // On navigation switch to reserve
     create_effect(move |_| {
         let location = use_location();
@@ -44,8 +45,8 @@ pub fn SideboardTabs(
     });
     let show_buttons = move || {
         user().map_or(false, |user| {
-            let game_state = game_state_signal.signal.get();
-            Some(user.id) == game_state.black_id || Some(user.id) == game_state.white_id
+            let (white_id, black_id) = white_and_black();
+            Some(user.id) == black_id || Some(user.id) == white_id
         }) && !analysis
     };
 
@@ -97,7 +98,7 @@ pub fn SideboardTabs(
 
                     on:click=move |_| {
                         batch(move || {
-                            game_state_signal.view_game();
+                            game_state.view_game();
                             if tab_view() == SideboardTabView::Chat {
                                 chat.seen_messages();
                             }
@@ -119,7 +120,7 @@ pub fn SideboardTabs(
 
                     on:click=move |_| {
                         batch(move || {
-                            game_state_signal.view_history();
+                            game_state.view_history();
                             if tab_view() == SideboardTabView::Chat {
                                 chat.seen_messages();
                             }

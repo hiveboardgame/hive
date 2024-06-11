@@ -44,6 +44,15 @@ pub struct GameResponse {
     pub repetitions: Vec<usize>,
 }
 
+impl PartialEq for GameResponse {
+    fn eq(&self, other: &Self) -> bool {
+        self.game_id == other.game_id
+            && self.turn == other.turn
+            && self.finished == other.finished
+            && self.last_interaction == other.last_interaction
+    }
+}
+
 impl GameResponse {
     pub fn white_rating(&self) -> u64 {
         self.white_player.rating_for_speed(&self.speed)

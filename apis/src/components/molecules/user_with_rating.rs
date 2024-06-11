@@ -17,31 +17,19 @@ pub fn UserWithRating(
     #[prop(optional)] is_tall: Signal<bool>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
+    let game_response = create_read_slice(game_state.signal, |gs| gs.game_response.clone());
     let player = move || match side {
-        Color::White => game_state
-            .signal
-            .get()
-            .game_response
-            .map(|g| g.white_player),
-        Color::Black => game_state
-            .signal
-            .get()
-            .game_response
-            .map(|g| g.black_player),
+        Color::White => game_response().map(|g| g.white_player),
+        Color::Black => game_response().map(|g| g.black_player),
     };
     let speed = move || {
-        game_state
-            .signal
-            .get_untracked()
-            .game_response
-            .map(|resp| match resp.speed {
-                GameSpeed::Untimed => GameSpeed::Correspondence,
-                _ => resp.speed,
-            })
+        game_response().map(|resp| match resp.speed {
+            GameSpeed::Untimed => GameSpeed::Correspondence,
+            _ => resp.speed,
+        })
     };
     let username = move || player().map_or(String::new(), |p| p.username);
     let patreon = move || player().map_or(false, |p| p.patreon);
-    // TODO: Display proper rating for game use <Rating/>
     let rating = move || match (player(), speed()) {
         (Some(player), Some(speed)) => {
             view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone()/> }

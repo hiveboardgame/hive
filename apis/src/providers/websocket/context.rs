@@ -61,7 +61,7 @@ impl WebsocketContext {
 }
 
 fn on_message_callback(m: String) {
-    handle_response(m)
+    handle_response(m);
 }
 
 fn fix_wss(url: &str) -> String {

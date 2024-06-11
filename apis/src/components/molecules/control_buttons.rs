@@ -29,14 +29,15 @@ pub fn ControlButtons() -> impl IntoView {
             unreachable!()
         }
     };
+    let pending = create_read_slice(game_state.signal, |gs| gs.game_control_pending.clone());
 
-    let pending_draw = move || match (game_state.signal)().game_control_pending {
+    let pending_draw = move || match pending() {
         Some(GameControl::DrawOffer(gc_color)) => gc_color.opposite_color() == color(),
 
         _ => false,
     };
 
-    let pending_takeback = move || match (game_state.signal)().game_control_pending {
+    let pending_takeback = move || match pending() {
         Some(GameControl::TakebackRequest(gc_color)) => gc_color.opposite_color() == color(),
 
         _ => false,
