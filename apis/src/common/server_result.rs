@@ -42,6 +42,7 @@ pub enum ServerMessage {
     Chat(Vec<ChatMessageContainer>),
     Game(Box<GameUpdate>),
     Challenge(ChallengeUpdate),
+    UserSearch(Vec<UserResponse>),
     UserStatus(UserUpdate),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),

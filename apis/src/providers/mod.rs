@@ -1,19 +1,19 @@
+mod alerts;
+mod api_requests;
+mod auth_context;
 pub mod challenges;
 pub mod chat;
+mod color_scheme;
+pub mod config;
 pub mod game_state;
 pub mod games;
 pub mod navigation_controller;
 pub mod online_users;
+mod ping;
 pub mod refocus;
 pub mod timer;
+pub mod user_search;
 pub mod websocket;
-
-mod alerts;
-mod api_requests;
-mod auth_context;
-mod color_scheme;
-pub mod config;
-mod ping;
 pub use alerts::{provide_alerts, AlertType, AlertsContext};
 pub use api_requests::ApiRequests;
 pub use auth_context::{provide_auth, AuthContext};

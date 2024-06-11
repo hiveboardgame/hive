@@ -19,7 +19,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use diesel::{
     dsl::exists, query_dsl::BelongingToDsl, select, ExpressionMethods, Identifiable, Insertable,
-    QueryDsl, Queryable, SelectableHelper,
+    PgTextExpressionMethods, QueryDsl, Queryable, SelectableHelper,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use lazy_static::lazy_static;
@@ -192,6 +192,17 @@ impl User {
         Ok(users_table
             .filter(normalized_username.eq(username.to_lowercase()))
             .first(conn)
+            .await?)
+    }
+
+    pub async fn search_usernames(pattern: &str, pool: &DbPool) -> Result<Vec<User>, DbError> {
+        if pattern.is_empty() {
+            return Ok(vec![]);
+        }
+        let conn = &mut get_conn(pool).await?;
+        Ok(users_table
+            .filter(normalized_username.ilike(format!("%{}%", pattern)))
+            .load(conn)
             .await?)
     }
 

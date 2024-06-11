@@ -1,5 +1,6 @@
 use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
+use super::search::handler::UserSearchHandler;
 use crate::common::{ClientRequest, GameAction};
 use crate::websockets::api::challenges::handler::ChallengeHandler;
 use crate::websockets::api::ping::handler::PingHandler;
@@ -60,6 +61,11 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
+            ClientRequest::UserSearch(pattern) => {
+                UserSearchHandler::new(self.user_id, pattern, &self.pool)
+                    .handle()
+                    .await?
+            }
             ClientRequest::Chat(message_container) => {
                 self.ensure_auth()?;
                 if self.user_id != message_container.message.user_id {
