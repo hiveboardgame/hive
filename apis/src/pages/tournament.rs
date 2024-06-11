@@ -117,7 +117,7 @@ pub fn Tournament() -> impl IntoView {
                 </div>
                 <InviteUser tournament=tournament().nanoid/>
                 Seats
-                <div>{number_of_players}/{tournament().seats}</div>
+                <div>{number_of_players} / {tournament().seats}</div>
                 Rounds
                 <div>{tournament().rounds}</div>
                 <TimeRow
@@ -125,17 +125,11 @@ pub fn Tournament() -> impl IntoView {
                     time_base=tournament().time_base
                     increment=tournament().time_increment
                 />
-                <button
-                    class=BUTTON_STYLE
-                    on:click=leave_or_join
-                >
+                <button class=BUTTON_STYLE on:click=leave_or_join>
                     {join_leave_text}
                 </button>
                 <Show when=user_is_organizer>
-                    <button
-                        class=BUTTON_STYLE
-                        on:click=delete
-                    >
+                    <button class=BUTTON_STYLE on:click=delete>
                         {"Delete"}
                     </button>
                 </Show>

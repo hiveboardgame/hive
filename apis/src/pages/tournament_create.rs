@@ -1,6 +1,7 @@
 use crate::common::TournamentAction;
 use crate::providers::ApiRequests;
 use crate::providers::AuthContext;
+use chrono::Utc;
 use leptos::*;
 use shared_types::TimeMode;
 use shared_types::TournamentDetails;
@@ -88,7 +89,7 @@ pub fn TournamentCreate() -> impl IntoView {
             band_upper: tournament.band_upper.get_untracked(),
             band_lower: tournament.band_lower.get_untracked(),
             series: tournament.series.get_untracked(),
-            start_at: None,
+            start_at: Some(Utc::now()),
         };
         if account.is_some() {
             let api = ApiRequests::new();
@@ -122,21 +123,14 @@ pub fn TournamentCreate() -> impl IntoView {
                 />
             </div>
 
-            <div>
-                Max number of players:
-            </div>
+            <div>Max number of players:</div>
 
-            <div>
-                Mode: round robin
-            </div>
+            <div>Mode: round robin</div>
         </div>
         <div>
-        <button
-            class=BUTTON_STYLE
-            on:click=create
-        >
-            "Create Tournament"
-        </button>
+            <button class=BUTTON_STYLE on:click=create>
+                "Create Tournament"
+            </button>
         </div>
     }
 }

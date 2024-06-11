@@ -8,9 +8,8 @@ use leptos::*;
 
 use super::{
     challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
-    ping::handle::handle_ping, user_search::handle::handle_user_search,
-    tournament::handler::handle_tournament,
-    user_status::handle::handle_user_status,
+    ping::handle::handle_ping, tournament::handler::handle_tournament,
+    user_search::handle::handle_user_search, user_status::handle::handle_user_status,
 };
 
 pub fn handle_response(m: String) {

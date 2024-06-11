@@ -1,9 +1,7 @@
 use super::{
     create::CreateHandler, delete::DeleteHandler, get::GetHandler, get_all::GetAllHandler,
-    invitation_accept::InvitationAccept,
-    invitation_create::InvitationCreate,
-    invitation_decline::InvitationDecline,
-    join::JoinHandler, leave::LeaveHandler,
+    invitation_accept::InvitationAccept, invitation_create::InvitationCreate,
+    invitation_decline::InvitationDecline, join::JoinHandler, leave::LeaveHandler,
 };
 use crate::{common::TournamentAction, websockets::internal_server_message::InternalServerMessage};
 use anyhow::Result;
