@@ -7,7 +7,6 @@ use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::*;
 use std::time::Duration;
-use uuid::Uuid;
 
 #[component]
 pub fn InviteUser(tournament: String) -> impl IntoView {
@@ -40,7 +39,10 @@ pub fn InviteUser(tournament: String) -> impl IntoView {
             />
             <div class="overflow-y-auto h-96">
                 <For each=users key=move |(_, user)| user.uid let:user>
-                    <UserRow actions=vec![UserAction::Invite(tournament.clone())] user=store_value(user.1)/>
+                    <UserRow
+                        actions=vec![UserAction::Invite(tournament.clone())]
+                        user=store_value(user.1)
+                    />
                 </For>
 
             </div>

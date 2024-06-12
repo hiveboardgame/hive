@@ -111,9 +111,11 @@ pub fn Tournament() -> impl IntoView {
                         key=|users| (users.uid)
                         let:user
                     >
-                        <UserRow actions=vec![UserAction::Invite(tournament().nanoid.clone())] user=store_value(user)/>
+                        <UserRow
+                            actions=vec![UserAction::Invite(tournament().nanoid.clone())]
+                            user=store_value(user)
+                        />
                     </For>
-                    
                 </div>
                 <InviteUser tournament=tournament().nanoid/>
                 Seats

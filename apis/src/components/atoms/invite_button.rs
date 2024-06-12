@@ -5,7 +5,6 @@ use crate::{
 };
 use leptos::*;
 use leptos_icons::*;
-use uuid::Uuid;
 
 #[component]
 pub fn InviteButton(user: StoredValue<UserResponse>, tournament_nanoid: String) -> impl IntoView {

@@ -43,7 +43,11 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                             key=|users| (users.uid)
                                             let:user
                                         >
-                                            <UserRow actions=vec![UserAction::Challenge] user=store_value(user) game_speed=speed/>
+                                            <UserRow
+                                                actions=vec![UserAction::Challenge]
+                                                user=store_value(user)
+                                                game_speed=speed
+                                            />
                                         </For>
                                     </div>
                                 </div>

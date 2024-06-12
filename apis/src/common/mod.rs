@@ -1,5 +1,4 @@
 mod challenge_action;
-mod user_action;
 mod client_message;
 mod config_options;
 mod game_action;
@@ -13,7 +12,7 @@ mod server_message;
 mod server_result;
 mod svg_pos;
 mod tournament_action;
-pub use user_action::UserAction;
+mod user_action;
 pub use challenge_action::ChallengeAction;
 pub use client_message::ClientRequest;
 pub use config_options::{MoveConfirm, TileDesign, TileDots, TileRotation};
@@ -30,3 +29,4 @@ pub use server_result::{
 };
 pub use svg_pos::SvgPos;
 pub use tournament_action::TournamentAction;
+pub use user_action::UserAction;

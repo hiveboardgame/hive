@@ -1,5 +1,7 @@
 use crate::{
-    common::UserAction, components::{atoms::rating::RatingWithIcon, molecules::user_row::UserRow}, responses::UserResponse
+    common::UserAction,
+    components::{atoms::rating::RatingWithIcon, molecules::user_row::UserRow},
+    responses::UserResponse,
 };
 use leptos::*;
 use shared_types::GameSpeed;

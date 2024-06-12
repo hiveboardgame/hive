@@ -1,5 +1,7 @@
 use crate::{
-    common::UserAction, components::molecules::user_row::UserRow, providers::{online_users::OnlineUsersSignal, user_search::UserSearchSignal, ApiRequests}
+    common::UserAction,
+    components::molecules::user_row::UserRow,
+    providers::{online_users::OnlineUsersSignal, user_search::UserSearchSignal, ApiRequests},
 };
 use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;

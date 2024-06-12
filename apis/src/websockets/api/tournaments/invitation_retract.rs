@@ -4,7 +4,7 @@ use crate::{
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
-use db_lib::{models::{Tournament, TournamentInvitation}, DbPool};
+use db_lib::DbPool;
 use uuid::Uuid;
 
 pub struct InvitationRetract {

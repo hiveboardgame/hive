@@ -54,19 +54,12 @@ pub fn UserRow(
         for action in actions {
             match action {
                 UserAction::Challenge => {
-                    views.push(
-                    view! {
-                        <DirectChallengeButton user=user/>
-                    }
-                            );
+                    views.push(view! { <DirectChallengeButton user=user/> });
                 }
                 UserAction::Invite(tournament_id) => {
-                    views.push(
-                    view! {
-                        <InviteButton user=user tournament_nanoid=tournament_id/>
-                    });
-                },
-                _ =>  {},
+                    views.push(view! { <InviteButton user=user tournament_nanoid=tournament_id/> });
+                }
+                _ => {}
             };
         }
         views.collect_view()
