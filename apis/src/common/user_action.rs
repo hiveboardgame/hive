@@ -1,5 +1,3 @@
-use uuid::Uuid;
-
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum UserAction {
     Block,

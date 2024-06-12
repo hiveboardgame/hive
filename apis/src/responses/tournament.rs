@@ -59,6 +59,11 @@ impl TournamentAbstractResponse {
 }
 
 impl TournamentResponse {
+    pub async fn from_nanoid(nanoid: &str, pool: &DbPool) -> Result<Self> {
+        let tournament = Tournament::from_nanoid(nanoid, pool).await?;
+        Self::from_model(&tournament, pool).await
+    }
+
     pub async fn from_uuid(id: &Uuid, pool: &DbPool) -> Result<Self> {
         let tournament = Tournament::from_uuid(id, pool).await?;
         Self::from_model(&tournament, pool).await

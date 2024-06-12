@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use shared_types::{TimeMode, TournamentDetails};
 use uuid::Uuid;
 
-use super::Game;
+use super::{Game, TournamentInvitation};
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = tournaments)]
@@ -156,6 +156,39 @@ impl Tournament {
         Ok(())
     }
 
+    pub async fn create_invitation_for_nanoid(
+        nanoid: String,
+        id: Uuid,
+        pool: &DbPool,
+    ) -> Result<Tournament, DbError> {
+        let connection = &mut get_conn(pool).await?;
+        connection
+            .transaction::<_, DbError, _>(move |_conn| {
+                async move {
+                    let mut tournament = Tournament::from_nanoid(&nanoid, pool).await?;
+                    tournament.create_invitation(id, pool).await
+                }
+                .scope_boxed()
+            })
+            .await
+    }
+
+    pub async fn create_invitation(
+        &mut self,
+        id: Uuid,
+        pool: &DbPool,
+    ) -> Result<Tournament, DbError> {
+        let conn = &mut get_conn(pool).await?;
+        let mut invited = self.invitees.clone();
+        invited.push(Some(id));
+        let invitation = TournamentInvitation::new(self.id, id);
+        invitation.insert(pool).await?;
+        Ok(diesel::update(tournaments::table.find(self.id))
+            .set(invitees_column.eq(invited))
+            .get_result(conn)
+            .await?)
+    }
+
     pub async fn decline_invitation(
         &mut self,
         id: &Uuid,
@@ -259,7 +292,7 @@ impl Tournament {
         Ok(tournaments::table.find(uuid).first(connection).await?)
     }
 
-    pub async fn from_nanoid(nano: &String, pool: &DbPool) -> Result<Tournament, DbError> {
+    pub async fn from_nanoid(nano: &str, pool: &DbPool) -> Result<Tournament, DbError> {
         let connection = &mut get_conn(pool).await?;
         Ok(tournaments::table
             .filter(nanoid_field.eq(nano))
