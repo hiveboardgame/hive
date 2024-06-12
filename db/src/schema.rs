@@ -124,6 +124,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    tournaments_invitations (tournament_id, invitee_id) {
+        tournament_id -> Uuid,
+        invitee_id -> Uuid,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     tournaments_organizers (tournament_id, organizer_id) {
         tournament_id -> Uuid,
         organizer_id -> Uuid,
@@ -157,6 +165,8 @@ diesel::joinable!(ratings -> users (user_uid));
 diesel::joinable!(tournament_series_organizers -> tournament_series (tournament_series_id));
 diesel::joinable!(tournament_series_organizers -> users (organizer_id));
 diesel::joinable!(tournaments -> tournament_series (series));
+diesel::joinable!(tournaments_invitations -> tournaments (tournament_id));
+diesel::joinable!(tournaments_invitations -> users (invitee_id));
 diesel::joinable!(tournaments_organizers -> tournaments (tournament_id));
 diesel::joinable!(tournaments_organizers -> users (organizer_id));
 diesel::joinable!(tournaments_users -> tournaments (tournament_id));
@@ -170,6 +180,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     tournament_series,
     tournament_series_organizers,
     tournaments,
+    tournaments_invitations,
     tournaments_organizers,
     tournaments_users,
     users,

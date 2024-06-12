@@ -1,4 +1,5 @@
-use crate::common::TournamentAction;
+use crate::common::{TournamentAction, UserAction};
+use crate::components::molecules::invite_user::InviteUser;
 use crate::components::molecules::time_row::TimeRow;
 use crate::components::molecules::user_row::UserRow;
 use crate::providers::{
@@ -76,40 +77,53 @@ pub fn Tournament() -> impl IntoView {
     };
     let display_tournament = move || {
         current_tournament().and_then(|tournament| {
+            let tournament = store_value(tournament);
             view! {
-                <div>{tournament.name}</div>
-                <div>{tournament.description}</div>
-                <div>{tournament.scoring}</div>
+                <div>{tournament().name}</div>
+                <div>{tournament().description}</div>
+                <div>{tournament().scoring}</div>
                 <div>
                     Organizers
                     <For
-                        each=move || { tournament.organizers.clone() }
+                        each=move || { tournament().organizers.clone() }
 
                         key=|users| (users.uid)
                         let:user
                     >
-                        <UserRow user=store_value(user)/>
+                        <UserRow actions=vec![] user=store_value(user)/>
                     </For>
                 </div>
                 <div>
                     Players
                     <For
-                        each=move || { tournament.players.clone() }
+                        each=move || { tournament().players.clone() }
 
                         key=|users| (users.uid)
                         let:user
                     >
-                        <UserRow user=store_value(user)/>
+                        <UserRow actions=vec![] user=store_value(user)/>
                     </For>
                 </div>
+                <div>
+                    Invited
+                    <For
+                        each=move || { tournament().invitees.clone() }
+                        key=|users| (users.uid)
+                        let:user
+                    >
+                        <UserRow actions=vec![UserAction::Invite(tournament().nanoid.clone())] user=store_value(user)/>
+                    </For>
+                    
+                </div>
+                <InviteUser tournament=tournament().nanoid/>
                 Seats
-                <div>{number_of_players}/{tournament.seats}</div>
+                <div>{number_of_players}/{tournament().seats}</div>
                 Rounds
-                <div>{tournament.rounds}</div>
+                <div>{tournament().rounds}</div>
                 <TimeRow
-                    time_mode=tournament.time_mode
-                    time_base=tournament.time_base
-                    increment=tournament.time_increment
+                    time_mode=tournament().time_mode
+                    time_base=tournament().time_base
+                    increment=tournament().time_increment
                 />
                 <button
                     class=BUTTON_STYLE

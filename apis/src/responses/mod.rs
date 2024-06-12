@@ -1,10 +1,12 @@
 mod challenge;
+mod invitation;
 mod game;
 mod rating;
 mod tournament;
 mod tournament_series;
 mod user;
 pub use challenge::{create_challenge_handler, ChallengeResponse};
+pub use invitation::InvitationResponse;
 pub use game::GameResponse;
 pub use rating::RatingResponse;
 pub use tournament::TournamentAbstractResponse;

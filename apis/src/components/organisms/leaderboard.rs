@@ -1,3 +1,4 @@
+use crate::common::UserAction;
 use crate::components::atoms::rating::icon_for_speed;
 use crate::{components::molecules::user_row::UserRow, functions::users::get::get_top_users};
 use leptos::logging::log;
@@ -42,7 +43,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                             key=|users| (users.uid)
                                             let:user
                                         >
-                                            <UserRow user=store_value(user) game_speed=speed/>
+                                            <UserRow actions=vec![UserAction::Challenge] user=store_value(user) game_speed=speed/>
                                         </For>
                                     </div>
                                 </div>

@@ -1,9 +1,14 @@
+use super::{
+    create::CreateHandler, delete::DeleteHandler, get::GetHandler, get_all::GetAllHandler,
+    invitation_accept::InvitationAccept,
+    invitation_create::InvitationCreate,
+    invitation_decline::InvitationDecline,
+    join::JoinHandler, leave::LeaveHandler,
+};
 use crate::{common::TournamentAction, websockets::internal_server_message::InternalServerMessage};
 use anyhow::Result;
 use db_lib::DbPool;
 use uuid::Uuid;
-
-use super::{create::CreateHandler, delete::DeleteHandler, get::GetHandler, get_all::GetAllHandler, join::JoinHandler, leave::LeaveHandler};
 
 pub struct TournamentHandler {
     pub action: TournamentAction,
@@ -61,6 +66,24 @@ impl TournamentHandler {
             }
             TournamentAction::Delete(nanoid) => {
                 DeleteHandler::new(nanoid, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            TournamentAction::InvitationCreate(nanoid, user) => {
+                InvitationCreate::new(nanoid, self.user_id, user, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            TournamentAction::InvitationAccept(nanoid) => {
+                InvitationAccept::new(nanoid, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            TournamentAction::InvitationDecline(nanoid) => {
+                InvitationDecline::new(nanoid, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?

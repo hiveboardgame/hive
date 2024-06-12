@@ -1,6 +1,5 @@
 use crate::{
-    components::{atoms::rating::RatingWithIcon, molecules::user_row::UserRow},
-    responses::UserResponse,
+    common::UserAction, components::{atoms::rating::RatingWithIcon, molecules::user_row::UserRow}, responses::UserResponse
 };
 use leptos::*;
 use shared_types::GameSpeed;
@@ -31,7 +30,7 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
         <div class="m-1">
             <div class="flex flex-col items-start ml-3">
                 <div class="max-w-fit">
-                    <UserRow user=user on_profile=true/>
+                    <UserRow actions=vec![UserAction::Challenge] user=user on_profile=true/>
                 </div>
                 <div class="flex flex-wrap gap-1">{ratings}</div>
             </div>

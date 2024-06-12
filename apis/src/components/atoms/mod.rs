@@ -5,6 +5,7 @@ pub mod game_type;
 pub mod gc_button;
 pub mod hex;
 pub mod history_button;
+pub mod invite_button;
 pub mod last_move;
 pub mod next_game_button;
 pub mod og;

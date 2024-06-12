@@ -11,6 +11,7 @@ pub mod hamburger;
 pub mod hex_stack;
 pub mod history_pieces;
 pub mod hover_ratings;
+pub mod invite_user;
 pub mod live_timer;
 pub mod modal;
 pub mod ping;
