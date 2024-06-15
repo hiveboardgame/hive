@@ -8,7 +8,7 @@ use crate::{
         organisms::{
             board::Board,
             reserve::{Alignment, Reserve},
-            side_board::SideboardTabs,
+            analysis::SideboardTabs,
         },
     },
     pages::play::TargetStack,
@@ -55,7 +55,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     view! {
                         <Board/>
                         <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-4 row-span-4 row-start-2 border-black border-y-2 dark:border-white">
-                            <SideboardTabs player_is_black=player_is_black analysis=true/>
+                            <SideboardTabs player_is_black/>
                         </div>
                     }
                 }
