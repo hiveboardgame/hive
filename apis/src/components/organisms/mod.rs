@@ -19,3 +19,4 @@ pub mod tile_design_toggle;
 pub mod tile_dots_toggle;
 pub mod tile_rotation_toggle;
 pub mod tv;
+pub mod analysis;
