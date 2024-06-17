@@ -1,13 +1,8 @@
-use std::str::FromStr;
-
 use crate::{
     db_error::DbError,
     models::User,
-    schema::ratings::{
-        dsl::ratings as ratings_table,
-        {self, *},
-    },
-    {get_conn, DbPool},
+    schema::ratings::{self, dsl::ratings as ratings_table, *},
+    DbConn,
 };
 use bb8::PooledConnection;
 use chrono::{DateTime, Utc};
@@ -24,6 +19,7 @@ use skillratings::{
     glicko2::{glicko2, Glicko2Config, Glicko2Rating},
     Outcomes,
 };
+use std::str::FromStr;
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -94,9 +90,8 @@ impl Rating {
     pub async fn for_uuid(
         uuid: &Uuid,
         game_speed: &GameSpeed,
-        pool: &DbPool,
+        conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
-        let conn = &mut get_conn(pool).await?;
         let game_speed = match game_speed {
             GameSpeed::Untimed => GameSpeed::Correspondence.to_string(),
             _ => game_speed.to_string(),
@@ -113,9 +108,8 @@ impl Rating {
         white_id: Uuid,
         black_id: Uuid,
         game_result: GameResult,
-        conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
+        conn: &mut DbConn<'_>,
     ) -> Result<(f64, f64, Option<f64>, Option<f64>), DbError> {
-        // TODO: @leex this update needs to do everything in one transaction!
         if GameSpeed::from_str(&game_speed).expect("Valid GameSpeed") == GameSpeed::Untimed {
             game_speed = GameSpeed::Correspondence.to_string()
         }

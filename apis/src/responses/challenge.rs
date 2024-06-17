@@ -33,30 +33,30 @@ use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::{Challenge, Rating, User},
-    DbPool,
+    DbConn,
 };
 use anyhow::Result;
 impl ChallengeResponse {
-    pub async fn from_model(challenge: &Challenge, pool: &DbPool) -> Result<Self> {
-        let challenger = challenge.get_challenger(pool).await?;
-        ChallengeResponse::from_model_with_user(challenge, challenger, pool).await
+    pub async fn from_model(challenge: &Challenge, conn: &mut DbConn<'_>) -> Result<Self> {
+        let challenger = challenge.get_challenger(conn).await?;
+        ChallengeResponse::from_model_with_user(challenge, challenger, conn).await
     }
 
     pub async fn from_model_with_user(
         challenge: &Challenge,
         challenger: User,
-        pool: &DbPool,
+        conn: &mut DbConn<'_>,
     ) -> Result<Self> {
         let game_speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
-        let challenger_rating = Rating::for_uuid(&challenger.id, &game_speed, pool).await?;
+        let challenger_rating = Rating::for_uuid(&challenger.id, &game_speed, conn).await?;
         let opponent = match challenge.opponent_id {
             None => None,
-            Some(id) => Some(UserResponse::from_uuid(&id, pool).await?),
+            Some(id) => Some(UserResponse::from_uuid(&id, conn).await?),
         };
         Ok(ChallengeResponse {
             id: challenge.id,
             nanoid: challenge.nanoid.to_owned(),
-            challenger: UserResponse::from_uuid(&challenger.id, pool).await?,
+            challenger: UserResponse::from_uuid(&challenger.id, conn).await?,
             opponent,
             game_type: challenge.game_type.clone(),
             rated: challenge.rated,

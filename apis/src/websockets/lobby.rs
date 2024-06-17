@@ -6,7 +6,13 @@ use crate::{
 use actix::prelude::{Actor, Context, Handler, Recipient};
 use actix::AsyncContext;
 use actix::WrapFuture;
-use db_lib::{models::Challenge, models::User, DbPool};
+use db_lib::{
+    get_conn,
+    models::{Challenge, User},
+    DbPool,
+};
+use diesel_async::scoped_futures::ScopedFutureExt;
+use diesel_async::AsyncConnection;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -116,127 +122,149 @@ impl Handler<Connect> for Lobby {
         let games_users = self.games_users.clone();
         let sessions = self.sessions.clone();
         let future = async move {
-            //Get currently online users
-            for uuid in sessions.keys() {
-                if let Ok(user_response) = UserResponse::from_uuid(uuid, &pool).await {
-                    let message =
-                        ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
-                            status: UserStatus::Online,
-                            user: Some(user_response.clone()),
-                            username: user_response.username,
-                        })));
-                    let serialized = serde_json::to_string(&message)
-                        .expect("Failed to serialize a server message");
-                    let cam = ClientActorMessage {
-                        destination: MessageDestination::User(user_id),
-                        serialized,
-                        from: user_id,
-                    };
-                    address.do_send(cam);
+            if let Ok(mut conn) = get_conn(&pool).await {
+                //Get currently online users
+                for uuid in sessions.keys() {
+                    if let Ok(user_response) = UserResponse::from_uuid(uuid, &mut conn).await {
+                        let message =
+                            ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
+                                status: UserStatus::Online,
+                                user: Some(user_response.clone()),
+                                username: user_response.username,
+                            })));
+                        let serialized = serde_json::to_string(&message)
+                            .expect("Failed to serialize a server message");
+                        let cam = ClientActorMessage {
+                            destination: MessageDestination::User(user_id),
+                            serialized,
+                            from: user_id,
+                        };
+                        address.do_send(cam);
+                    }
                 }
-            }
-            let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &pool).await {
-                if let Ok(user_response) = UserResponse::from_user(&user, &pool).await {
-                    let message =
-                        ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
-                            status: UserStatus::Online,
-                            user: Some(user_response),
-                            username: msg.username,
-                        })));
-                    let serialized = serde_json::to_string(&message)
-                        .expect("Failed to serialize a server message");
-                    // TODO: one needs to be a game::join to everyone in the game, the other one just to the
-                    // lobby that the user came online
-                    if let Some(user_ids) = games_users.get(&msg.game_id) {
-                        for id in user_ids {
-                            if let Some(sockets) = sessions.get(id) {
-                                for socket in sockets {
-                                    socket.do_send(WsMessage(serialized.clone()));
+                let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
+                    if let Ok(user_response) = UserResponse::from_user(&user, &mut conn).await {
+                        let message =
+                            ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
+                                status: UserStatus::Online,
+                                user: Some(user_response),
+                                username: msg.username,
+                            })));
+                        let serialized = serde_json::to_string(&message)
+                            .expect("Failed to serialize a server message");
+                        // TODO: one needs to be a game::join to everyone in the game, the other one just to the
+                        // lobby that the user came online
+                        if let Some(user_ids) = games_users.get(&msg.game_id) {
+                            for id in user_ids {
+                                if let Some(sockets) = sessions.get(id) {
+                                    for socket in sockets {
+                                        socket.do_send(WsMessage(serialized.clone()));
+                                    }
+                                } else if let Ok(user) = User::find_by_uuid(id, &mut conn).await {
+                                    println!("Game_users has stale user: {}", user.username);
+                                } else {
+                                    println!("Game_users has stale anoymous user");
                                 }
-                            } else if let Ok(user) = User::find_by_uuid(id, &pool).await {
-                                println!("Game_users has stale user: {}", user.username);
-                            } else {
-                                println!("Game_users has stale anoymous user");
                             }
                         }
                     }
-                }
 
-                // Send games which require input from the user
-                let game_ids = user
-                    .get_urgent_nanoids(&pool)
-                    .await
-                    .expect("to get urgent game_ids");
-                if !game_ids.is_empty() {
-                    let mut games = Vec::new();
-                    for game_id in game_ids {
-                        if let Ok(game) = GameResponse::new_from_nanoid(&game_id, &pool).await {
-                            games.push(game)
+                    // Send games which require input from the user
+                    let game_ids = user
+                        .get_urgent_nanoids(&mut conn)
+                        .await
+                        .expect("to get urgent game_ids");
+                    if !game_ids.is_empty() {
+                        let games = conn
+                            .transaction::<_, anyhow::Error, _>(move |tc| {
+                                let mut games = Vec::new();
+                                async move {
+                                    for game_id in game_ids {
+                                        if let Ok(game) =
+                                            GameResponse::new_from_nanoid(&game_id, tc).await
+                                        {
+                                            if !game.finished {
+                                                games.push(game)
+                                            }
+                                        }
+                                    }
+                                    Ok(games)
+                                }
+                                .scope_boxed()
+                            })
+                            .await;
+                        if let Ok(games) = games {
+                            let message = ServerResult::Ok(Box::new(ServerMessage::Game(
+                                Box::new(GameUpdate::Urgent(games)),
+                            )));
+                            let serialized = serde_json::to_string(&message)
+                                .expect("Failed to serialize a server message");
+                            let cam = ClientActorMessage {
+                                destination: MessageDestination::User(user_id),
+                                serialized,
+                                from: user_id,
+                            };
+                            address.do_send(cam);
                         }
                     }
-                    let message = ServerResult::Ok(Box::new(ServerMessage::Game(Box::new(
-                        GameUpdate::Urgent(games),
-                    ))));
-                    let serialized = serde_json::to_string(&message)
-                        .expect("Failed to serialize a server message");
-                    let cam = ClientActorMessage {
-                        destination: MessageDestination::User(user_id),
-                        serialized,
-                        from: user_id,
-                    };
-                    address.do_send(cam);
-                }
-                // Send challenges on join
-                let mut responses = Vec::new();
-                if let Ok(challenges) = Challenge::get_public_exclude_user(user.id, &pool).await {
-                    for challenge in challenges {
-                        if let Ok(response) = ChallengeResponse::from_model(&challenge, &pool).await
-                        {
-                            responses.push(response);
+                    // Send challenges on join
+                    let mut responses = Vec::new();
+                    if let Ok(challenges) =
+                        Challenge::get_public_exclude_user(user.id, &mut conn).await
+                    {
+                        for challenge in challenges {
+                            if let Ok(response) =
+                                ChallengeResponse::from_model(&challenge, &mut conn).await
+                            {
+                                responses.push(response);
+                            }
                         }
                     }
-                }
-                if let Ok(challenges) = Challenge::get_own(user.id, &pool).await {
-                    for challenge in challenges {
-                        if let Ok(response) = ChallengeResponse::from_model(&challenge, &pool).await
-                        {
-                            responses.push(response);
+                    if let Ok(challenges) = Challenge::get_own(user.id, &mut conn).await {
+                        for challenge in challenges {
+                            if let Ok(response) =
+                                ChallengeResponse::from_model(&challenge, &mut conn).await
+                            {
+                                responses.push(response);
+                            }
                         }
                     }
-                }
-                if let Ok(challenges) = Challenge::direct_challenges(user.id, &pool).await {
-                    for challenge in challenges {
-                        if let Ok(response) = ChallengeResponse::from_model(&challenge, &pool).await
-                        {
-                            responses.push(response);
+                    if let Ok(challenges) = Challenge::direct_challenges(user.id, &mut conn).await {
+                        for challenge in challenges {
+                            if let Ok(response) =
+                                ChallengeResponse::from_model(&challenge, &mut conn).await
+                            {
+                                responses.push(response);
+                            }
                         }
                     }
-                }
-                let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
-                    ChallengeUpdate::Challenges(responses),
-                )));
-                serde_json::to_string(&message).expect("Failed to serialize a server message")
-            } else {
-                let mut responses = Vec::new();
-                if let Ok(challenges) = Challenge::get_public(&pool).await {
-                    for challenge in challenges {
-                        if let Ok(response) = ChallengeResponse::from_model(&challenge, &pool).await
-                        {
-                            responses.push(response);
+                    let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
+                        ChallengeUpdate::Challenges(responses),
+                    )));
+                    serde_json::to_string(&message).expect("Failed to serialize a server message")
+                } else {
+                    let mut responses = Vec::new();
+                    if let Ok(challenges) = Challenge::get_public(&mut conn).await {
+                        for challenge in challenges {
+                            if let Ok(response) =
+                                ChallengeResponse::from_model(&challenge, &mut conn).await
+                            {
+                                responses.push(response);
+                            }
                         }
                     }
-                }
-                let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
-                    ChallengeUpdate::Challenges(responses),
-                )));
-                serde_json::to_string(&message).expect("Failed to serialize a server message")
-            };
-            let cam = ClientActorMessage {
-                destination: MessageDestination::User(user_id),
-                serialized,
-                from: user_id,
-            };
-            address.do_send(cam);
+                    let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
+                        ChallengeUpdate::Challenges(responses),
+                    )));
+                    serde_json::to_string(&message).expect("Failed to serialize a server message")
+                };
+                let cam = ClientActorMessage {
+                    destination: MessageDestination::User(user_id),
+                    serialized,
+                    from: user_id,
+                };
+                address.do_send(cam);
+            }
         };
 
         let actor_future = future.into_actor(self);

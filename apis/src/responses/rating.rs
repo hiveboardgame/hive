@@ -17,25 +17,25 @@ use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::{Rating, User},
-    DbPool,
+    DbConn,
 };
 use std::str::FromStr;
 use uuid::Uuid;
 use anyhow::Result;
 impl RatingResponse {
-    pub async fn from_uuid(id: &Uuid, game_speed: &GameSpeed, pool: &DbPool) -> Result<Self> {
-        let rating = Rating::for_uuid(id, game_speed, pool).await?;
+    pub async fn from_uuid(id: &Uuid, game_speed: &GameSpeed, conn: &mut DbConn<'_>) -> Result<Self> {
+        let rating = Rating::for_uuid(id, game_speed, conn).await?;
         Ok(Self::from_rating(&rating))
     }
 
-    pub async fn from_user(user: &User, game_speed: &GameSpeed, pool: &DbPool) -> Result<Self> {
-        let rating = Rating::for_uuid(&user.id, game_speed, pool).await?;
+    pub async fn from_user(user: &User, game_speed: &GameSpeed, conn: &mut DbConn<'_>) -> Result<Self> {
+        let rating = Rating::for_uuid(&user.id, game_speed, conn).await?;
         Ok(Self::from_rating(&rating))
     }
 
-    pub async fn from_username(username: &str, game_speed: &GameSpeed, pool: &DbPool) -> Result<Self> {
-        let user = User::find_by_username(username, pool).await?;
-        let rating = Rating::for_uuid(&user.id, game_speed, pool).await?;
+    pub async fn from_username(username: &str, game_speed: &GameSpeed, conn: &mut DbConn<'_>) -> Result<Self> {
+        let user = User::find_by_username(username, conn).await?;
+        let rating = Rating::for_uuid(&user.id, game_speed, conn).await?;
         Ok(Self::from_rating(&rating))
     }
 

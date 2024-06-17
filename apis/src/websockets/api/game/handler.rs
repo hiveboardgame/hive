@@ -6,7 +6,10 @@ use crate::websockets::internal_server_message::InternalServerMessage;
 use crate::websockets::messages::WsMessage;
 use crate::{common::GameAction, websockets::chat::Chats};
 use anyhow::Result;
+use db_lib::get_conn;
 use db_lib::{models::Game, DbPool};
+use diesel_async::scoped_futures::ScopedFutureExt;
+use diesel_async::AsyncConnection;
 use hive_lib::{GameError, GameStatus};
 use std::str::FromStr;
 use uuid::Uuid;
@@ -31,7 +34,14 @@ impl GameActionHandler {
         chat_storage: actix_web::web::Data<Chats>,
         pool: &DbPool,
     ) -> Result<Self> {
-        let game = Game::find_by_nanoid(game_id, pool).await?;
+        let mut connection = get_conn(pool).await?;
+
+        let game = connection
+            .transaction::<_, anyhow::Error, _>(move |conn| {
+                async move { Ok(Game::find_by_nanoid(game_id, conn).await?) }.scope_boxed()
+            })
+            .await?;
+
         Ok(Self {
             pool: pool.clone(),
             game,
@@ -46,29 +56,23 @@ impl GameActionHandler {
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.game_action.clone() {
             GameAction::CheckTime => {
-                TimeoutHandler::new(self.game.clone(), &self.username, self.user_id, &self.pool)
+                TimeoutHandler::new(&self.game, &self.username, self.user_id, &self.pool)
                     .handle()
                     .await?
             }
             GameAction::Turn(turn) => {
                 self.ensure_not_finished()?;
                 self.ensure_user_is_player()?;
-                TurnHandler::new(
-                    turn,
-                    self.game.clone(),
-                    &self.username,
-                    self.user_id,
-                    &self.pool,
-                )
-                .handle()
-                .await?
+                TurnHandler::new(turn, &self.game, &self.username, self.user_id, &self.pool)
+                    .handle()
+                    .await?
             }
             GameAction::Control(control) => {
                 self.ensure_not_finished()?;
                 self.ensure_user_is_player()?;
                 GameControlHandler::new(
                     &control,
-                    self.game.clone(),
+                    &self.game,
                     &self.username,
                     self.user_id,
                     &self.pool,
@@ -78,7 +82,7 @@ impl GameActionHandler {
             }
             GameAction::Join => {
                 JoinHandler::new(
-                    self.game.clone(),
+                    &self.game,
                     &self.username,
                     self.user_id,
                     self.received_from.clone(),

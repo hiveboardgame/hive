@@ -4,7 +4,7 @@ use crate::{
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
-use db_lib::{models::User, DbPool};
+use db_lib::{get_conn, models::User, DbPool};
 use uuid::Uuid;
 
 pub struct UserSearchHandler {
@@ -23,10 +23,11 @@ impl UserSearchHandler {
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        let users = User::search_usernames(&self.pattern, &self.pool).await?;
+        let mut conn = get_conn(&self.pool).await?;
+        let users = User::search_usernames(&self.pattern, &mut conn).await?;
         let mut response = vec![];
         for user in users {
-            let user_response = UserResponse::from_user(&user, &self.pool).await?;
+            let user_response = UserResponse::from_user(&user, &mut conn).await?;
             response.push(user_response);
         }
         Ok(vec![InternalServerMessage {

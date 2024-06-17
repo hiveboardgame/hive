@@ -5,9 +5,12 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{
+    get_conn,
     models::{Challenge, Game, NewGame, Rating},
     DbPool,
 };
+use diesel_async::scoped_futures::ScopedFutureExt;
+use diesel_async::AsyncConnection;
 use shared_types::GameSpeed;
 use uuid::Uuid;
 
@@ -29,10 +32,11 @@ impl AcceptHandler {
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+        let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
-        let challenge = Challenge::find_by_nanoid(&self.nanoid, &self.pool).await?;
+        let challenge = Challenge::find_by_nanoid(&self.nanoid, &mut conn).await?;
         let speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
-        let rating = Rating::for_uuid(&self.user_id, &speed, &self.pool)
+        let rating = Rating::for_uuid(&self.user_id, &speed, &mut conn)
             .await?
             .rating;
         if let Some(band_upper) = challenge.band_upper {
@@ -69,9 +73,17 @@ impl AcceptHandler {
             }
         };
 
-        let new_game = NewGame::new(white_id, black_id, &challenge);
-        let (game, deleted_challenges) = Game::create(&new_game, &self.pool).await?;
-        let game_response = GameResponse::new_from_db(&game, &self.pool).await?;
+        let (game, deleted_challenges, game_response) = conn
+            .transaction::<_, anyhow::Error, _>(move |tc| {
+                async move {
+                    let new_game = NewGame::new(white_id, black_id, &challenge);
+                    let (game, deleted_challenges) = Game::create(new_game, tc).await?;
+                    let game_response = GameResponse::new_from_db(&game, tc).await?;
+                    Ok((game, deleted_challenges, game_response))
+                }
+                .scope_boxed()
+            })
+            .await?;
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.white_id),

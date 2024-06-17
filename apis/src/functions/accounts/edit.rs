@@ -1,4 +1,4 @@
-use super::account_response::AccountResponse;
+use crate::responses::AccountResponse;
 use leptos::*;
 
 #[server]
@@ -15,18 +15,17 @@ pub async fn edit_account(
         password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
         Argon2,
     };
+    use db_lib::get_conn;
     use db_lib::models::User;
     use rand_core::OsRng;
 
     if new_password != new_password_confirmation {
         return Err(ServerFnError::new("Passwords don't match."));
     }
-
-    let pool = pool()?;
-
     let uuid = uuid()?;
-    let user = User::find_by_uuid(&uuid, &pool).await?;
-
+    let pool = pool()?;
+    let mut conn = get_conn(&pool).await?;
+    let user = User::find_by_uuid(&uuid, &mut conn).await?;
     let argon2 = Argon2::default();
     let parsed_hash = PasswordHash::new(&user.password).map_err(ServerFnError::new)?;
 
@@ -43,7 +42,7 @@ pub async fn edit_account(
         .map_err(ServerFnError::new)?
         .to_string();
 
-    user.edit(&hashed_password, &new_email, &pool).await?;
+    user.edit(&hashed_password, &new_email, &mut conn).await?;
     leptos_actix::redirect(&pathname);
-    AccountResponse::from_uuid(&user.id, &pool).await
+    AccountResponse::from_uuid(&user.id, &mut conn).await
 }

@@ -15,7 +15,11 @@ pub async fn register(
         password_hash::{PasswordHasher, SaltString},
         Argon2,
     };
+    use db_lib::db_error::DbError;
+    use db_lib::get_conn;
     use db_lib::models::{NewUser, User};
+    use diesel_async::scoped_futures::ScopedFutureExt;
+    use diesel_async::AsyncConnection;
     use rand_core::OsRng;
     const MIN_PASSWORD_LENGTH: usize = 8;
     const MAX_PASSWORD_LENGTH: usize = 128;
@@ -38,6 +42,7 @@ pub async fn register(
     }
 
     let pool = pool()?;
+    let mut conn = get_conn(&pool).await?;
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
     let password = argon2
@@ -46,7 +51,13 @@ pub async fn register(
         .to_string();
     let email = email.to_lowercase();
     let new_user = NewUser::new(&username, &password, &email)?;
-    let user = User::create(&new_user, &pool).await?;
+
+    let user = conn
+        .transaction::<_, DbError, _>(move |tc| {
+            async move { User::create(new_user, tc).await }.scope_boxed()
+        })
+        .await?;
+
     let req = use_context::<actix_web::HttpRequest>()
         .ok_or("Failed to get HttpRequest")
         .map_err(ServerFnError::new)?;

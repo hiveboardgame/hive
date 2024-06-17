@@ -115,7 +115,7 @@ use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::Game,
-    DbPool,
+    DbConn,
 };
 use hive_lib::{
     Color, GameStatus::Finished, Piece,
@@ -123,29 +123,29 @@ use hive_lib::{
 use std::str::FromStr;
 
 impl GameResponse {
-    pub async fn new_from_uuid(game_id: Uuid, pool: &DbPool) -> Result<Self> {
-        let game = Game::find_by_uuid(&game_id, pool).await?;
-        GameResponse::new_from_db(&game, pool).await
+    pub async fn new_from_uuid(game_id: Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
+        let game = Game::find_by_uuid(&game_id, conn).await?;
+        GameResponse::new_from_db(&game, conn).await
     }
 
-    pub async fn new_from_nanoid(game_id: &str, pool: &DbPool) -> Result<Self> {
-        let game = Game::find_by_nanoid(game_id, pool).await?;
-        GameResponse::new_from_db(&game, pool).await
+    pub async fn new_from_nanoid(game_id: &str, conn: &mut DbConn<'_>) -> Result<Self> {
+        let game = Game::find_by_nanoid(game_id, conn).await?;
+        GameResponse::new_from_db(&game, conn).await
     }
 
-    pub async fn new_from_db(game: &Game, pool: &DbPool) -> Result<Self> {
+    pub async fn new_from_db(game: &Game, conn: &mut DbConn<'_>) -> Result<Self> {
         let history = History::new_from_str(&game.history)?;
         let state = State::new_from_history(&history)?;
-        GameResponse::new_from(game, &state, pool).await
+        GameResponse::new_from(game, &state, conn).await
     }
 
     async fn new_from(
         game: &Game,
         state: &State,
-        pool: &DbPool,
+        conn: &mut DbConn<'_>,
     ) -> Result<Self> {
-        let white_player = UserResponse::from_uuid(&game.white_id, pool).await?;
-        let black_player = UserResponse::from_uuid(&game.black_id, pool).await?;
+        let white_player = UserResponse::from_uuid(&game.white_id, conn).await?;
+        let black_player = UserResponse::from_uuid(&game.black_id, conn).await?;
         let (white_rating, black_rating, white_rating_change, black_rating_change) = {
             if let Finished(_) = GameStatus::from_str(&game.game_status).expect("GameStatus parsed") {
                 (
