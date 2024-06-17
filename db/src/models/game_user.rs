@@ -1,8 +1,8 @@
 use crate::{
     db_error::DbError,
     models::{Game, User},
-    schema::{games_users, games_users::dsl::games_users as games_users_table},
-    {get_conn, DbPool},
+    schema::games_users::{self, dsl::games_users as games_users_table},
+    DbConn,
 };
 use diesel::{prelude::*, Identifiable, Insertable, Queryable};
 use diesel_async::RunQueryDsl;
@@ -23,8 +23,7 @@ impl GameUser {
         Self { game_id, user_id }
     }
 
-    pub async fn insert(&self, pool: &DbPool) -> Result<(), DbError> {
-        let conn = &mut get_conn(pool).await?;
+    pub async fn insert(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
         self.insert_into(games_users_table).execute(conn).await?;
         Ok(())
     }

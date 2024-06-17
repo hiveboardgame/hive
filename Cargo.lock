@@ -424,6 +424,7 @@ dependencies = [
  "cookie 0.18.1",
  "db",
  "diesel",
+ "diesel-async",
  "diesel_migrations",
  "hive",
  "http 1.1.0",

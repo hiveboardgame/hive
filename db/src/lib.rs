@@ -11,14 +11,13 @@ pub mod models;
 pub mod schema;
 
 pub type DbPool = Pool<AsyncPgConnection>;
+pub type DbConn<'a> = PooledConnection<'a, AsyncDieselConnectionManager<AsyncPgConnection>>;
 
 pub async fn get_pool(db_uri: &str) -> Result<DbPool, PoolError> {
     let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(db_uri);
     Pool::builder().build(manager).await
 }
 
-pub async fn get_conn(
-    pool: &DbPool,
-) -> Result<PooledConnection<AsyncDieselConnectionManager<AsyncPgConnection>>, DieselError> {
+pub async fn get_conn(pool: &DbPool) -> Result<DbConn, DieselError> {
     pool.get().await.map_err(|e| QueryBuilderError(e.into()))
 }

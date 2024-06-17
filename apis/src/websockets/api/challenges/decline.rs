@@ -4,6 +4,7 @@ use crate::{
     responses::ChallengeResponse,
 };
 use anyhow::Result;
+use db_lib::get_conn;
 use db_lib::{models::Challenge, DbPool};
 use shared_types::{ChallengeError, ChallengeVisibility};
 use uuid::Uuid;
@@ -24,12 +25,13 @@ impl DeclineHandler {
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        let challenge = Challenge::find_by_nanoid(&self.nanoid, &self.pool).await?;
+        let mut conn = get_conn(&self.pool).await?;
+        let challenge = Challenge::find_by_nanoid(&self.nanoid, &mut conn).await?;
         if challenge.opponent_id != Some(self.user_id) {
             return Err(ChallengeError::NotUserChallenge.into());
         }
-        let challenge_response = ChallengeResponse::from_model(&challenge, &self.pool).await?;
-        challenge.delete(&self.pool).await?;
+        let challenge_response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
+        challenge.delete(&mut conn).await?;
         let mut messages = Vec::new();
         match challenge_response.visibility {
             ChallengeVisibility::Public => {

@@ -1,4 +1,4 @@
-use crate::functions::accounts::account_response::AccountResponse;
+use crate::responses::AccountResponse;
 use leptos::*;
 
 #[server]
@@ -11,9 +11,11 @@ pub async fn login(
     use actix_identity::Identity;
     use actix_web::HttpMessage;
     use argon2::{password_hash::PasswordHash, Argon2, PasswordVerifier};
+    use db_lib::get_conn;
     use db_lib::models::User;
     let pool = pool()?;
-    let user: User = User::find_by_email(&email, &pool)
+    let mut conn = get_conn(&pool).await?;
+    let user: User = User::find_by_email(&email, &mut conn)
         .await
         .map_err(ServerFnError::new)?;
 
@@ -26,7 +28,7 @@ pub async fn login(
                 .map_err(ServerFnError::new)?;
             Identity::login(&req.extensions(), user.id.to_string())?;
             leptos_actix::redirect(&pathname);
-            AccountResponse::from_uuid(&user.id, &pool).await
+            AccountResponse::from_uuid(&user.id, &mut conn).await
         }
         Err(_) => Err(ServerFnError::new("Password does not match.")),
     }
