@@ -1,6 +1,9 @@
-use crate::providers::{
-    chat::Chat, game_state::GameStateSignal, navigation_controller::NavigationControllerSignal,
-    AuthContext,
+use crate::{
+    components::update_from_event::update_from_input,
+    providers::{
+        chat::Chat, game_state::GameStateSignal, navigation_controller::NavigationControllerSignal,
+        AuthContext,
+    },
 };
 use chrono::Local;
 use leptos::*;
@@ -34,7 +37,6 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 pub fn ChatInput(destination: ChatDestination) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let destination = store_value(destination);
-    let input = move |evt| chat.typed_message.update(|v| *v = event_target_value(&evt));
     let send = move || {
         batch(move || {
             let message = chat.typed_message.get();
@@ -60,7 +62,7 @@ pub fn ChatInput(destination: ChatDestination) -> impl IntoView {
             class="box-border px-4 py-2 w-full h-auto rounded-lg resize-none bg-odd-light dark:bg-odd-dark focus:outline-none shrink-0"
             prop:value=chat.typed_message
             attr:placeholder=placeholder
-            on:input=input
+            on:input=update_from_input(chat.typed_message)
             on:keydown=move |evt| {
                 if evt.key() == "Enter" {
                     evt.prevent_default();

@@ -11,6 +11,7 @@ mod rating_change_info;
 mod server_message;
 mod server_result;
 mod svg_pos;
+mod time_signals;
 mod tournament_action;
 mod user_action;
 pub use challenge_action::ChallengeAction;
@@ -28,5 +29,6 @@ pub use server_result::{
     ServerResult, TournamentUpdate, UserStatus, UserUpdate,
 };
 pub use svg_pos::SvgPos;
+pub use time_signals::TimeSignals;
 pub use tournament_action::TournamentAction;
 pub use user_action::UserAction;

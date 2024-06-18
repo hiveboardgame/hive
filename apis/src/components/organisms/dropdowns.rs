@@ -96,6 +96,9 @@ pub fn MobileDropdown() -> impl IntoView {
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments">
                     View Tournaments
                 </a>
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments/create">
+                    Create tournament
+                </a>
                 Support:
                 <a
                     class=COMMON_LINK_STYLE
@@ -151,6 +154,9 @@ pub fn TournamentDropdown() -> impl IntoView {
         >
             <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments">
                 View Tournaments
+            </a>
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments/create">
+                Create tournament
             </a>
         </Hamburger>
     }

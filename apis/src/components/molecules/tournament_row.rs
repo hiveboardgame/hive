@@ -39,6 +39,7 @@ pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
 
         format!("Min rating: {lower} Max rating: {upper}")
     };
+    // Not enough, needs to take into account filled seats as well
     let joinable = move || match (auth_context.user)() {
         Some(Ok(Some(account))) => tournament.joinable && user_qualifies(account.user),
         _ => tournament.joinable,

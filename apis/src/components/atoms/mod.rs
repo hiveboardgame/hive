@@ -1,10 +1,12 @@
 pub mod active;
+pub mod create_challenge_button;
 pub mod direct_challenge_button;
 pub mod download_pgn;
 pub mod game_type;
 pub mod gc_button;
 pub mod hex;
 pub mod history_button;
+pub mod input_slider;
 pub mod invite_button;
 pub mod last_move;
 pub mod next_game_button;
