@@ -237,7 +237,10 @@ pub fn ControlButtons() -> impl IntoView {
                                 />
                             </div>
                             <div class=memo_for_hidden_class(move || !pending_takeback())>
-                            <span class="font-bold"> "Opponent wants a takeback"</span>
+                                <span class="font-bold">"Opponent wants a takeback"</span>
+                            </div>
+                            <div class=memo_for_hidden_class(move || !pending_draw())>
+                                <span class="font-bold">"Opponent offers a draw"</span>
                             </div>
                         </div>
                     }
