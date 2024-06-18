@@ -1,12 +1,14 @@
 use crate::components::layouts::base_layout::{
     OrientationSignal, COMMON_LINK_STYLE, DROPDOWN_BUTTON_STYLE,
 };
-use crate::components::molecules::{hamburger::Hamburger, ping::Ping};
+use crate::components::molecules::{challenge_row::ChallengeRow, hamburger::Hamburger, ping::Ping};
 use crate::components::organisms::chat::ChatWindow;
 use crate::components::organisms::darkmode_toggle::DarkModeToggle;
 use crate::components::organisms::header::set_redirect;
 use crate::components::organisms::logout::Logout;
+use crate::providers::challenges::ChallengeStateSignal;
 use crate::providers::chat::Chat;
+use crate::providers::NotificationContext;
 use leptos::*;
 use leptos_icons::*;
 use shared_types::SimpleDestination;
@@ -215,6 +217,58 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
             content=view! { <Icon icon=icondata::BiChatRegular class="w-4 h-4"/> }
         >
             <ChatWindow destination=destination()/>
+        </Hamburger>
+    }
+}
+
+#[component]
+pub fn NotificationDropdown() -> impl IntoView {
+    let hamburger_show = create_rw_signal(false);
+    let onclick_close = move |_| hamburger_show.update(|b| *b = false);
+    let notifications_context = expect_context::<NotificationContext>();
+    let challenges = expect_context::<ChallengeStateSignal>();
+    let icon_style = TextProp::from(move || {
+        if (notifications_context.notifications)().is_empty() {
+            "w-4 h-4"
+        } else {
+            "w-4 h-4 fill-ladybug-red"
+        }
+    });
+    view! {
+        <Hamburger
+            hamburger_show=hamburger_show
+            button_style="h-full p-2 transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
+            dropdown_style="mr-1 items-center xs:mt-0 mt-1 flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md p-2 right-0"
+            content=view! { <Icon icon=icondata::IoNotifications class=icon_style/> }
+        >
+            <Show
+                when=move || !(notifications_context.notifications)().is_empty()
+                fallback=|| {
+                    view! { "No notifications right now" }
+                }
+            >
+                <For
+                    each=notifications_context.notifications
+                    key=|(nanoid, _notification)| { nanoid.clone() }
+                    let:notification
+                >
+                    <div on:click=onclick_close>
+                        <ChallengeRow
+                            challenge=store_value(
+                                challenges
+                                    .signal
+                                    .get_untracked()
+                                    .challenges
+                                    .get(&notification.0)
+                                    .expect("Challenge exists")
+                                    .clone(),
+                            )
+                            single=false
+                        />
+                    </div>
+                </For>
+            </Show>
+
         </Hamburger>
     }
 }

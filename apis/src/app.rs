@@ -28,8 +28,8 @@ use crate::{
         challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state,
         games::provide_games, navigation_controller::provide_navigation_controller,
         online_users::provide_users, provide_alerts, provide_auth, provide_color_scheme,
-        provide_config, provide_ping, refocus::provide_refocus, timer::provide_timer,
-        tournaments::provide_tournaments, user_search::provide_user_search,
+        provide_config, provide_notifications, provide_ping, refocus::provide_refocus,
+        timer::provide_timer, tournaments::provide_tournaments, user_search::provide_user_search,
         websocket::provide_websocket,
     },
 };
@@ -58,6 +58,7 @@ pub fn App() -> impl IntoView {
     provide_chat();
     provide_user_search();
     provide_tournaments();
+    provide_notifications();
 
     view! {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>

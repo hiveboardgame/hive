@@ -20,9 +20,9 @@ impl ChallengeStateSignal {
         }
     }
 
-    pub fn remove(&mut self, nanoid: String) {
+    pub fn remove(&mut self, nanoid: &str) {
         self.signal.update(|s| {
-            s.challenges.remove(&nanoid);
+            s.challenges.remove(nanoid);
         });
     }
 

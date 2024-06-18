@@ -3,7 +3,8 @@ use crate::components::molecules::chat_and_controls::ChatAndControls;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle,
     dropdowns::{
-        CommunityDropdown, LearnDropdown, MobileDropdown, TournamentDropdown, UserDropdown,
+        CommunityDropdown, LearnDropdown, MobileDropdown, NotificationDropdown, TournamentDropdown,
+        UserDropdown,
     },
 };
 use crate::providers::AuthContext;
@@ -122,6 +123,7 @@ pub fn Header() -> impl IntoView {
                             </div>
                             <div class="flex items-center lg:mr-10">
                                 <ChatAndControls/>
+                                <NotificationDropdown/>
                                 <UserDropdown username=user().expect("User is some").username/>
                             </div>
                         </Show>
