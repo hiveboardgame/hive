@@ -79,7 +79,7 @@ impl RequestHandler {
             ClientRequest::Ping(sent) => PingHandler::new(self.user_id, sent).handle(),
             ClientRequest::Game {
                 action: game_action,
-                id: game_id,
+                game_id,
             } => {
                 match game_action {
                     GameAction::Turn(_) | GameAction::Control(_) => self.ensure_auth()?,

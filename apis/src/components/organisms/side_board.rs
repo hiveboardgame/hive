@@ -1,17 +1,18 @@
 use crate::{
     components::{
-        molecules::{analysis_and_download::AnalysisAndDownload,control_buttons::ControlButtons}, organisms::{
+        molecules::{analysis_and_download::AnalysisAndDownload, control_buttons::ControlButtons},
+        organisms::{
             chat::ChatWindow,
             history::History,
             reserve::{Alignment, Reserve},
-        }
+        },
     },
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
 use hive_lib::Color;
+use leptix_primitives::components::tabs::{TabsContent, TabsList, TabsRoot, TabsTrigger};
 use leptos::*;
 use shared_types::SimpleDestination;
-use leptix_primitives::components::tabs::{TabsContent, TabsList, TabsRoot, TabsTrigger};
 #[derive(Clone, PartialEq, Copy)]
 enum TabView {
     Reserve,
@@ -74,7 +75,7 @@ pub fn SideboardTabs(
         _ => None,
     };
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
-    
+
     let show_buttons = move || {
         user().map_or(false, |user| {
             let (white_id, black_id) = white_and_black();
@@ -90,37 +91,37 @@ pub fn SideboardTabs(
         }
     });
     let bottom_color = Signal::derive(move || top_color().opposite_color());
-view! {
-    <TabsRoot
-        default_value="Game"
-        attr:class=format!(
-            "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 {extend_tw_classes}",
-        )
-    >
+    view! {
+        <TabsRoot
+            default_value="Game"
+            attr:class=format!(
+                "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 {extend_tw_classes}",
+            )
+        >
 
-        <TabsList>
-            <div class="z-10 border-b-2 border-black dark:border-white flex justify-between [&>*]:grow sticky top-0 bg-inherit">
-                <TriggerButton name=TabView::Reserve tab/>
-                <TriggerButton name=TabView::History tab/>
-                <TriggerButton name=TabView::Chat tab/>
-            </div>
-        </TabsList>
-        <TabsContent value="Game" attr:class="flex flex-col h-full">
-            <Reserve color=top_color alignment=Alignment::DoubleRow/>
-            <div class="flex flex-row-reverse justify-center items-center">
-                <AnalysisAndDownload/>
-                <Show when=show_buttons>
-                    <ControlButtons/>
-                </Show>
-            </div>
-            <Reserve color=bottom_color alignment=Alignment::DoubleRow/>
-        </TabsContent>
-        <TabsContent value="History">
-            <History/>
-        </TabsContent>
-        <TabsContent value="Chat" attr:class="h-[95%]">
-            <ChatWindow destination=SimpleDestination::Game/>
-        </TabsContent>
-    </TabsRoot>
-}
+            <TabsList>
+                <div class="z-10 border-b-2 border-black dark:border-white flex justify-between [&>*]:grow sticky top-0 bg-inherit">
+                    <TriggerButton name=TabView::Reserve tab/>
+                    <TriggerButton name=TabView::History tab/>
+                    <TriggerButton name=TabView::Chat tab/>
+                </div>
+            </TabsList>
+            <TabsContent value="Game" attr:class="flex flex-col h-full">
+                <Reserve color=top_color alignment=Alignment::DoubleRow/>
+                <div class="flex flex-row-reverse justify-center items-center">
+                    <AnalysisAndDownload/>
+                    <Show when=show_buttons>
+                        <ControlButtons/>
+                    </Show>
+                </div>
+                <Reserve color=bottom_color alignment=Alignment::DoubleRow/>
+            </TabsContent>
+            <TabsContent value="History">
+                <History/>
+            </TabsContent>
+            <TabsContent value="Chat" attr:class="h-[95%]">
+                <ChatWindow destination=SimpleDestination::Game/>
+            </TabsContent>
+        </TabsRoot>
+    }
 }

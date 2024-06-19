@@ -14,7 +14,7 @@ use db_lib::{
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use hive_lib::{GameError, State, Turn};
-use shared_types::TimeMode;
+use shared_types::{GameId, TimeMode};
 use uuid::Uuid;
 
 pub struct TurnHandler {
@@ -61,17 +61,17 @@ impl TurnHandler {
         let games = next_to_move.get_games_with_notifications(&mut conn).await?;
         let mut game_responses = Vec::new();
         for game in games {
-            game_responses.push(GameResponse::new_from_db(&game, &mut conn).await?);
+            game_responses.push(GameResponse::new_from_model(&game, &mut conn).await?);
         }
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.current_player_id),
             message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
         });
-        let response = GameResponse::new_from_db(&game, &mut conn).await?;
+        let response = GameResponse::new_from_model(&game, &mut conn).await?;
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(game.nanoid.clone()),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
-                game_id: game.nanoid.to_owned(),
+                game_id: GameId(game.nanoid.to_owned()),
                 game: response.clone(),
                 game_action: GameReaction::Turn(self.turn.clone()),
                 user_id: self.user_id.to_owned(),

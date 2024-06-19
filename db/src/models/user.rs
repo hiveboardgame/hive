@@ -24,7 +24,7 @@ use diesel_async::RunQueryDsl;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use shared_types::GameSpeed;
+use shared_types::{GameId, GameSpeed};
 use uuid::Uuid;
 
 const MAX_USERNAME_LENGTH: usize = 20;
@@ -230,7 +230,7 @@ impl User {
             .await?)
     }
 
-    pub async fn get_urgent_nanoids(&self, conn: &mut DbConn<'_>) -> Result<Vec<String>, DbError> {
+    pub async fn get_urgent_nanoids(&self, conn: &mut DbConn<'_>) -> Result<Vec<GameId>, DbError> {
         Ok(GameUser::belonging_to(self)
             .inner_join(games::table)
             .select(Game::as_select())
@@ -239,7 +239,7 @@ impl User {
             .get_results(conn)
             .await?
             .into_iter()
-            .map(|game| game.nanoid)
+            .map(|game| GameId(game.nanoid))
             .collect())
     }
 

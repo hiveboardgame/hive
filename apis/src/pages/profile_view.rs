@@ -95,7 +95,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                     finished.update(move |v| v.extend(current_finished_games));
                     still_more_games.set(more_games);
                     let playing = RwSignal::from(ongoing_games);
-                    last_id.update(move |v| { *v = finished().last().map(|gr| gr.game_id) });
+                    last_id.update(move |v| { *v = finished().last().map(|gr| gr.uuid) });
                     last_timestamp
                         .update(move |v| { *v = finished().last().map(|gr| gr.updated_at) });
                     provide_context(AllUserGames { finished, playing });

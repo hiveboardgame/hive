@@ -12,7 +12,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::Serialize;
-use shared_types::{ChallengeDetails, TimeMode};
+use shared_types::{ChallengeDetails, ChallengeId, TimeMode};
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -177,9 +177,12 @@ impl Challenge {
         Ok(challenges::table.find(id).first(conn).await?)
     }
 
-    pub async fn find_by_nanoid(u: &str, conn: &mut DbConn<'_>) -> Result<Challenge, DbError> {
+    pub async fn find_by_challenge_id(
+        u: &ChallengeId,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Challenge, DbError> {
         Ok(challenges::table
-            .filter(nanoid_field.eq(u))
+            .filter(nanoid_field.eq(u.0.clone()))
             .first(conn)
             .await?)
     }

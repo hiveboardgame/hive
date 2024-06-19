@@ -46,7 +46,7 @@ pub async fn get_ongoing_games(username: String) -> Result<Vec<GameResponse>, Se
     let games: Vec<Game> = Game::get_ongoing_games_for_username(&username, &mut conn).await?;
     let mut results: Vec<GameResponse> = Vec::new();
     for game in games.iter() {
-        if let Ok(game_response) = GameResponse::new_from_db(game, &mut conn).await {
+        if let Ok(game_response) = GameResponse::new_from_model(game, &mut conn).await {
             results.push(game_response);
         }
     }
@@ -76,7 +76,7 @@ pub async fn get_finished_games_in_batches(
     let mut results: Vec<GameResponse> = Vec::new();
     let got_amount = games.len() as i64 == amount;
     for game in games.iter() {
-        if let Ok(game_response) = GameResponse::new_from_db(game, &mut conn).await {
+        if let Ok(game_response) = GameResponse::new_from_model(game, &mut conn).await {
             results.push(game_response);
         }
     }

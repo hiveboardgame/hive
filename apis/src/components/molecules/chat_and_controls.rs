@@ -14,8 +14,9 @@ pub fn ChatAndControls() -> impl IntoView {
     let navi = expect_context::<NavigationControllerSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let is_finished = gamestate.is_finished();
-    let in_mobile_game =
-        move || orientation_signal.orientation_vertical.get() && navi.signal.get().nanoid.is_some();
+    let in_mobile_game = move || {
+        orientation_signal.orientation_vertical.get() && navi.signal.get().game_id.is_some()
+    };
     view! {
         <Show when=in_mobile_game>
             <Show when=move || !is_finished()>

@@ -6,19 +6,19 @@ use crate::{
 use anyhow::Result;
 use db_lib::get_conn;
 use db_lib::{models::Challenge, DbPool};
-use shared_types::{ChallengeError, ChallengeVisibility};
+use shared_types::{ChallengeError, ChallengeId, ChallengeVisibility};
 use uuid::Uuid;
 
 pub struct DeclineHandler {
-    nanoid: String,
+    challenge_id: ChallengeId,
     user_id: Uuid,
     pool: DbPool,
 }
 
 impl DeclineHandler {
-    pub async fn new(nanoid: String, user_id: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(challenge_id: ChallengeId, user_id: Uuid, pool: &DbPool) -> Result<Self> {
         Ok(Self {
-            nanoid,
+            challenge_id,
             user_id,
             pool: pool.clone(),
         })
@@ -26,7 +26,7 @@ impl DeclineHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
-        let challenge = Challenge::find_by_nanoid(&self.nanoid, &mut conn).await?;
+        let challenge = Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await?;
         if challenge.opponent_id != Some(self.user_id) {
             return Err(ChallengeError::NotUserChallenge.into());
         }
@@ -41,7 +41,7 @@ impl DeclineHandler {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(challenge_response.challenger.uid),
                     message: ServerMessage::Challenge(ChallengeUpdate::Removed(
-                        challenge_response.nanoid,
+                        challenge_response.challenge_id,
                     )),
                 });
             }
@@ -50,13 +50,13 @@ impl DeclineHandler {
                     messages.push(InternalServerMessage {
                         destination: MessageDestination::User(opponent.uid),
                         message: ServerMessage::Challenge(ChallengeUpdate::Removed(
-                            challenge_response.nanoid.clone(),
+                            challenge_response.challenge_id.clone(),
                         )),
                     });
                     messages.push(InternalServerMessage {
                         destination: MessageDestination::User(challenge_response.challenger.uid),
                         message: ServerMessage::Challenge(ChallengeUpdate::Removed(
-                            challenge_response.nanoid,
+                            challenge_response.challenge_id,
                         )),
                     });
                 }

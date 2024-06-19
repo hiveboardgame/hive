@@ -8,6 +8,7 @@ use leptos_router::RouterContext;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn_with_options, UseIntervalFnOptions};
 use regex::Regex;
+use shared_types::GameId;
 
 use std::time::Duration;
 lazy_static! {
@@ -116,9 +117,9 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
                 let api = ApiRequests::new();
                 let router = expect_context::<RouterContext>();
                 if let Some(caps) = NANOID.captures(&router.pathname().get_untracked()) {
-                    let nanoid = caps.name("nanoid").map_or("", |m| m.as_str());
-                    if !nanoid.is_empty() {
-                        api.game_check_time(nanoid);
+                    if let Some(nanoid) = caps.name("nanoid") {
+                        let game_id = GameId(nanoid.as_str().to_string());
+                        api.game_check_time(&game_id);
                     }
                 }
             }

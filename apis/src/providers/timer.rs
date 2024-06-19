@@ -1,6 +1,7 @@
 use chrono::DateTime;
 use chrono::Utc;
 use leptos::*;
+use shared_types::GameId;
 use shared_types::TimeMode;
 use std::time::Duration;
 
@@ -25,9 +26,8 @@ impl TimerSignal {
     }
 
     pub fn update_from(&self, game: &GameResponse) {
-        //log!("Updating the timer");
         self.signal.update(|timer| {
-            game.nanoid.clone_into(&mut timer.nanoid);
+            game.game_id.clone_into(&mut timer.game_id);
             timer.finished = game.finished;
             timer.turn = game.turn;
             timer.white_time_left = game.white_time_left;
@@ -43,7 +43,7 @@ impl TimerSignal {
 
 #[derive(Clone, Debug)]
 pub struct Timer {
-    pub nanoid: String,
+    pub game_id: GameId,
     pub finished: bool,
     pub turn: usize,
     pub white_time_left: Option<Duration>,
@@ -56,7 +56,7 @@ pub struct Timer {
 impl Timer {
     pub fn new() -> Self {
         Self {
-            nanoid: String::new(),
+            game_id: GameId(String::new()),
             finished: true,
             turn: 0,
             white_time_left: None,

@@ -14,7 +14,7 @@ use db_lib::{
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use hive_lib::{GameControl, GameError};
-use shared_types::TimeMode;
+use shared_types::{GameId, TimeMode};
 use uuid::Uuid;
 
 pub struct GameControlHandler {
@@ -57,12 +57,12 @@ impl GameControlHandler {
                 async move { self.match_control(tc).await }.scope_boxed()
             })
             .await?;
-        let game_response = GameResponse::new_from_db(&game, &mut conn).await?;
+        let game_response = GameResponse::new_from_model(&game, &mut conn).await?;
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(self.game.nanoid.clone()),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
-                game_id: self.game.nanoid.to_owned(),
+                game_id: GameId(self.game.nanoid.to_owned()),
                 game: game_response.clone(),
                 game_action: GameReaction::Control(self.control.clone()),
                 user_id: self.user_id.to_owned(),
@@ -75,7 +75,7 @@ impl GameControlHandler {
                 let games = current_user.get_games_with_notifications(&mut conn).await?;
                 let mut game_responses = Vec::new();
                 for game in games {
-                    game_responses.push(GameResponse::new_from_db(&game, &mut conn).await?);
+                    game_responses.push(GameResponse::new_from_model(&game, &mut conn).await?);
                 }
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(game.current_player_id),

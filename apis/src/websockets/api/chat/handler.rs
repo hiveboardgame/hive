@@ -31,9 +31,9 @@ impl ChatHandler {
                 destination: MessageDestination::Tournament(tournament.clone()),
                 message: ServerMessage::Chat(vec![self.container.to_owned()]),
             }),
-            ChatDestination::GamePlayers(game, white_id, black_id) => {
+            ChatDestination::GamePlayers(game_id, white_id, black_id) => {
                 let mut games_private = self.chat_storage.games_private.write().unwrap();
-                let entry = games_private.entry(game.clone()).or_default();
+                let entry = games_private.entry(game_id.clone()).or_default();
                 entry.push(self.container.clone());
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(*white_id),

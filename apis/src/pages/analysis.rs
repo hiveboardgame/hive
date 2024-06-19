@@ -6,9 +6,9 @@ use crate::{
         },
         layouts::base_layout::OrientationSignal,
         organisms::{
+            analysis::SideboardTabs,
             board::Board,
             reserve::{Alignment, Reserve},
-            analysis::SideboardTabs,
         },
     },
     pages::play::TargetStack,

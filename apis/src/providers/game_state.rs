@@ -4,6 +4,7 @@ use crate::responses::GameResponse;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
 use leptos::*;
+use shared_types::GameId;
 use uuid::Uuid;
 
 use super::auth_context::AuthContext;
@@ -121,7 +122,7 @@ impl GameStateSignal {
         });
     }
 
-    pub fn set_game_id(&mut self, game_id: String) {
+    pub fn set_game_id(&mut self, game_id: GameId) {
         self.signal.update_untracked(|s| s.game_id = Some(game_id))
     }
 
@@ -238,7 +239,7 @@ pub enum View {
 #[derive(Clone, Debug)]
 pub struct GameState {
     // game_id is the nanoid of the game
-    pub game_id: Option<String>,
+    pub game_id: Option<GameId>,
     // the gamestate
     pub state: State,
     pub black_id: Option<Uuid>,

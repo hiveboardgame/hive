@@ -12,10 +12,10 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
     let navigation_controller = expect_context::<NavigationControllerSignal>();
     let games = expect_context::<GamesSignal>();
     let next_games = move || {
-        let nanoid = navigation_controller
+        let game_id = navigation_controller
             .signal
             .get()
-            .nanoid
+            .game_id
             .unwrap_or_default();
         match time_mode() {
             TimeMode::Untimed => games.own.get().next_untimed,
@@ -23,7 +23,7 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
             TimeMode::Correspondence => games.own.get().next_correspondence,
         }
         .iter()
-        .filter(|gp| gp.nanoid != nanoid)
+        .filter(|gp| gp.game_id != game_id)
         .count()
     };
     let icon = move || match time_mode() {

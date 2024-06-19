@@ -19,7 +19,7 @@ pub fn DisplayGames(tab_view: ProfileGamesView) -> impl IntoView {
             <For
                 each=games
 
-                key=|game| (game.game_id)
+                key=|game| (game.uuid)
                 let:game
             >
                 <GameRow game=store_value(game)/>
