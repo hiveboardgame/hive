@@ -1,21 +1,21 @@
 use crate::responses::user::UserResponse;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared_types::TimeMode;
+use shared_types::{TimeMode, TournamentId};
 use std::str::FromStr;
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct TournamentAbstractResponse {
     pub id: Uuid,
-    pub nanoid: String,
+    pub tournament_id: TournamentId,
     pub name: String,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct TournamentResponse {
     pub id: Uuid,
-    pub nanoid: String,
+    pub tournament_id: TournamentId,
     pub name: String,
     pub description: String,
     pub scoring: String,
@@ -51,15 +51,15 @@ impl TournamentAbstractResponse {
     pub fn from_model(tournament: &Tournament) -> Result<Self> {
         Ok(Self {
             id: tournament.id,
-            nanoid: tournament.nanoid.clone(),
+            tournament_id: TournamentId(tournament.nanoid.clone()),
             name: tournament.name.clone(),
         })
     }
 }
 
 impl TournamentResponse {
-    pub async fn from_nanoid(nanoid: &str, conn: &mut DbConn<'_>) -> Result<Self> {
-        let tournament = Tournament::from_nanoid(nanoid, conn).await?;
+    pub async fn from_tournament_id(tournament_id: &TournamentId, conn: &mut DbConn<'_>) -> Result<Self> {
+        let tournament = Tournament::find_by_tournament_id(tournament_id, conn).await?;
         Self::from_model(&tournament, conn).await
     }
 
@@ -84,7 +84,7 @@ impl TournamentResponse {
         }
         Ok(Self {
             id: tournament.id,
-            nanoid: tournament.nanoid.clone(),
+            tournament_id: TournamentId(tournament.nanoid.clone()),
             name: tournament.name.clone(),
             description: tournament.description.clone(),
             scoring: tournament.scoring.clone(), // TODO: make a type for this

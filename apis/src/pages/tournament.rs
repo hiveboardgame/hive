@@ -15,9 +15,9 @@ const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 fon
 pub fn Tournament() -> impl IntoView {
     let navi = expect_context::<NavigationControllerSignal>();
     let tournaments = expect_context::<TournamentStateSignal>();
-    let nanoid = move || navi.tournament_signal.get().nanoid;
+    let tournament_id = move || navi.tournament_signal.get().tournament_id;
     let current_tournament = move || {
-        nanoid().and_then(|tournament_id| {
+        tournament_id().and_then(|tournament_id| {
             tournaments
                 .signal
                 .get()
@@ -54,9 +54,9 @@ pub fn Tournament() -> impl IntoView {
         }
     };
     let delete = move |_| {
-        if let Some(nanoid) = nanoid() {
+        if let Some(tournament_id) = tournament_id() {
             if user_is_organizer() {
-                let action = TournamentAction::Delete(nanoid);
+                let action = TournamentAction::Delete(tournament_id);
                 let api = ApiRequests::new();
                 api.tournament(action);
                 let navigate = use_navigate();
@@ -65,11 +65,11 @@ pub fn Tournament() -> impl IntoView {
         }
     };
     let leave_or_join = move |_| {
-        if let Some(nanoid) = nanoid() {
+        if let Some(tournament_id) = tournament_id() {
             let action = if user_joined() {
-                TournamentAction::Leave(nanoid)
+                TournamentAction::Leave(tournament_id)
             } else {
-                TournamentAction::Join(nanoid)
+                TournamentAction::Join(tournament_id)
             };
             let api = ApiRequests::new();
             api.tournament(action);
@@ -112,12 +112,12 @@ pub fn Tournament() -> impl IntoView {
                         let:user
                     >
                         <UserRow
-                            actions=vec![UserAction::Invite(tournament().nanoid.clone())]
+                            actions=vec![UserAction::Invite(tournament().tournament_id.clone())]
                             user=store_value(user)
                         />
                     </For>
                 </div>
-                <InviteUser tournament=tournament().nanoid/>
+                <InviteUser tournament_id=tournament().tournament_id/>
                 Seats
                 <div>{number_of_players} / {tournament().seats}</div>
                 Rounds

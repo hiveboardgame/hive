@@ -1,5 +1,6 @@
 use crate::responses::TournamentResponse;
 use leptos::*;
+use shared_types::TournamentId;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Copy)]
@@ -20,9 +21,9 @@ impl TournamentStateSignal {
         }
     }
 
-    pub fn remove(&mut self, nanoid: String) {
+    pub fn remove(&mut self, tournament_id: TournamentId) {
         self.signal.update(|s| {
-            s.tournaments.remove(&nanoid);
+            s.tournaments.remove(&tournament_id);
         });
     }
 
@@ -30,7 +31,7 @@ impl TournamentStateSignal {
         self.signal.update(|s| {
             for tournament in tournaments {
                 s.tournaments
-                    .insert(tournament.nanoid.to_owned(), tournament);
+                    .insert(tournament.tournament_id.to_owned(), tournament);
             }
         })
     }
@@ -38,7 +39,7 @@ impl TournamentStateSignal {
 
 #[derive(Clone, Debug)]
 pub struct TournamentState {
-    pub tournaments: HashMap<String, TournamentResponse>,
+    pub tournaments: HashMap<TournamentId, TournamentResponse>,
 }
 
 impl TournamentState {

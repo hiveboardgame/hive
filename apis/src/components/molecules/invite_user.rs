@@ -6,10 +6,11 @@ use crate::{
 use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::*;
+use shared_types::TournamentId;
 use std::time::Duration;
 
 #[component]
-pub fn InviteUser(tournament: String) -> impl IntoView {
+pub fn InviteUser(tournament_id: TournamentId) -> impl IntoView {
     let user_search = expect_context::<UserSearchSignal>();
     let pattern = RwSignal::new(String::new());
     let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
@@ -40,7 +41,7 @@ pub fn InviteUser(tournament: String) -> impl IntoView {
             <div class="overflow-y-auto h-96">
                 <For each=users key=move |(_, user)| user.uid let:user>
                     <UserRow
-                        actions=vec![UserAction::Invite(tournament.clone())]
+                        actions=vec![UserAction::Invite(tournament_id.clone())]
                         user=store_value(user.1)
                     />
                 </For>

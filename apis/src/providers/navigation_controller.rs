@@ -1,5 +1,5 @@
 use leptos::*;
-use shared_types::GameId;
+use shared_types::{GameId, TournamentId};
 
 use crate::{
     common::TournamentAction,
@@ -26,12 +26,12 @@ impl NavigationControllerSignal {
         }
     }
 
-    pub fn update_game_id(&mut self, game_id: Option<GameId>, tournament_nanoid: Option<String>) {
+    pub fn update_game_id(&mut self, game_id: Option<GameId>, tournament_id: Option<TournamentId>) {
         batch(move || {
             self.game_signal
                 .update(|s| game_id.clone_into(&mut s.game_id));
             self.tournament_signal
-                .update(|s| tournament_nanoid.clone_into(&mut s.nanoid));
+                .update(|s| tournament_id.clone_into(&mut s.tournament_id));
             if let Some(game_id) = game_id {
                 let api = ApiRequests::new();
                 let mut game_state = expect_context::<GameStateSignal>();
@@ -40,7 +40,7 @@ impl NavigationControllerSignal {
                 api.join(game_id);
                 chat.typed_message.update(|s| s.clear());
             }
-            if let Some(tournament_id) = tournament_nanoid {
+            if let Some(tournament_id) = tournament_id {
                 let api = ApiRequests::new();
                 api.tournament(TournamentAction::Get(tournament_id))
             }
@@ -50,12 +50,12 @@ impl NavigationControllerSignal {
 
 #[derive(Clone, Debug)]
 pub struct TournamentNavigationControllerState {
-    pub nanoid: Option<String>
+    pub tournament_id: Option<TournamentId>
 }
 
 impl TournamentNavigationControllerState {
     pub fn new() -> Self {
-        Self { nanoid: None }
+        Self { tournament_id: None }
     }
 }
 

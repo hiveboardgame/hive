@@ -3,7 +3,7 @@ use crate::responses::{ChallengeResponse, GameResponse, TournamentResponse, User
 use chrono::{DateTime, Utc};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use shared_types::GameId;
+use shared_types::{GameId, TournamentId};
 use shared_types::{ChallengeId, ChatMessageContainer};
 use std::fmt;
 use uuid::Uuid;
@@ -54,7 +54,7 @@ pub enum ServerMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TournamentUpdate {
     Created(TournamentResponse),
-    Deleted(String),
+    Deleted(TournamentId),
     Modified(TournamentResponse),
     Joined(TournamentResponse),
     Left(TournamentResponse),

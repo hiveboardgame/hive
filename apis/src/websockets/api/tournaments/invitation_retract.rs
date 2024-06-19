@@ -7,19 +7,20 @@ use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbPool};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
+use shared_types::TournamentId;
 use uuid::Uuid;
 
 pub struct InvitationRetract {
-    nanoid: String,
+    tournament_id: TournamentId,
     user_id: Uuid,
     invitee: Uuid,
     pool: DbPool,
 }
 
 impl InvitationRetract {
-    pub async fn new(nanoid: String, user_id: Uuid, invitee: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(tournament_id: TournamentId, user_id: Uuid, invitee: Uuid, pool: &DbPool) -> Result<Self> {
         Ok(Self {
-            nanoid,
+            tournament_id,
             user_id,
             invitee,
             pool: pool.clone(),
@@ -31,7 +32,7 @@ impl InvitationRetract {
         let tournament = conn
             .transaction::<_, anyhow::Error, _>(move |tc| {
                 async move {
-                    let tournament = Tournament::from_nanoid(&self.nanoid, tc).await?;
+                    let tournament = Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
                     Ok(tournament
                         .retract_invitation(&self.user_id, &self.invitee, tc)
                         .await?)

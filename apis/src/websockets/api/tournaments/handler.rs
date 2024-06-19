@@ -39,14 +39,14 @@ impl TournamentHandler {
                     .handle()
                     .await?
             }
-            TournamentAction::Join(nanoid) => {
-                JoinHandler::new(nanoid, self.user_id, &self.pool)
+            TournamentAction::Join(tournament_id) => {
+                JoinHandler::new(tournament_id, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?
             }
-            TournamentAction::Get(nanoid) => {
-                GetHandler::new(nanoid, self.user_id, &self.pool)
+            TournamentAction::Get(tournament_id) => {
+                GetHandler::new(tournament_id, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?
@@ -57,38 +57,38 @@ impl TournamentHandler {
                     .handle()
                     .await?
             }
-            TournamentAction::Leave(nanoid) => {
-                LeaveHandler::new(nanoid, self.user_id, &self.pool)
+            TournamentAction::Leave(tournament_id) => {
+                LeaveHandler::new(tournament_id, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?
             }
-            TournamentAction::Delete(nanoid) => {
-                DeleteHandler::new(nanoid, self.user_id, &self.pool)
+            TournamentAction::Delete(tournament_id) => {
+                DeleteHandler::new(tournament_id, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?
             }
-            TournamentAction::InvitationCreate(nanoid, user) => {
-                InvitationCreate::new(nanoid, self.user_id, user, &self.pool)
+            TournamentAction::InvitationCreate(tournament_id, user) => {
+                InvitationCreate::new(tournament_id, self.user_id, user, &self.pool)
                     .await?
                     .handle()
                     .await?
             }
-            TournamentAction::InvitationAccept(nanoid) => {
-                InvitationAccept::new(nanoid, self.user_id, &self.pool)
+            TournamentAction::InvitationAccept(tournament_id) => {
+                InvitationAccept::new(tournament_id, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?
             }
-            TournamentAction::InvitationDecline(nanoid) => {
-                InvitationDecline::new(nanoid, self.user_id, &self.pool)
+            TournamentAction::InvitationDecline(tournament_id) => {
+                InvitationDecline::new(tournament_id, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?
             }
-            TournamentAction::InvitationRetract(nanoid, user) => {
-                InvitationRetract::new(nanoid, self.user_id, user, &self.pool)
+            TournamentAction::InvitationRetract(tournament_id, user) => {
+                InvitationRetract::new(tournament_id, self.user_id, user, &self.pool)
                     .await?
                     .handle()
                     .await?

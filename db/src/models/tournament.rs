@@ -17,7 +17,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use shared_types::{TimeMode, TournamentDetails};
+use shared_types::{TimeMode, TournamentDetails, TournamentId};
 use uuid::Uuid;
 
 use super::{Game, TournamentInvitation};
@@ -292,9 +292,13 @@ impl Tournament {
         Ok(tournaments::table.get_results(conn).await?)
     }
 
-    pub async fn find_by_nanoid(u: &str, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
+    pub async fn find_by_tournament_id(
+        tournament_id: &TournamentId,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Tournament, DbError> {
+        let TournamentId(id) = tournament_id;
         Ok(tournaments::table
-            .filter(nanoid_field.eq(u))
+            .filter(nanoid_field.eq(id))
             .first(conn)
             .await?)
     }

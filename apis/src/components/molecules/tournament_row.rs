@@ -69,7 +69,7 @@ pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
             </div>
             <a
                 class="absolute top-0 left-0 z-10 w-full h-full"
-                href=format!("/tournament/{}", tournament.nanoid)
+                href=format!("/tournament/{}", tournament.tournament_id.0)
             ></a>
         </article>
     }

@@ -4,18 +4,19 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbPool};
+use shared_types::TournamentId;
 use uuid::Uuid;
 
 pub struct DeleteHandler {
-    nanoid: String,
+    tournament_id: TournamentId,
     user_id: Uuid,
     pool: DbPool,
 }
 
 impl DeleteHandler {
-    pub async fn new(nanoid: String, user_id: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(tournament_id: TournamentId, user_id: Uuid, pool: &DbPool) -> Result<Self> {
         Ok(Self {
-            nanoid,
+            tournament_id,
             user_id,
             pool: pool.clone(),
         })
@@ -23,11 +24,12 @@ impl DeleteHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
-        let mut tournament = Tournament::from_nanoid(&self.nanoid, &mut conn).await?;
+        let mut tournament =
+            Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
         tournament.delete(self.user_id, &mut conn).await?;
         Ok(vec![InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Deleted(self.nanoid.clone())),
+            message: ServerMessage::Tournament(TournamentUpdate::Deleted(self.tournament_id.clone())),
         }])
     }
 }

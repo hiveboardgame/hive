@@ -57,7 +57,7 @@ pub fn UserRow(
                     views.push(view! { <DirectChallengeButton user=user/> });
                 }
                 UserAction::Invite(tournament_id) => {
-                    views.push(view! { <InviteButton user=user tournament_nanoid=tournament_id/> });
+                    views.push(view! { <InviteButton user=user tournament_id=tournament_id/> });
                 }
                 _ => {}
             };

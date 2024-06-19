@@ -5,9 +5,10 @@ use crate::{
 };
 use leptos::*;
 use leptos_icons::*;
+use shared_types::TournamentId;
 
 #[component]
-pub fn InviteButton(user: StoredValue<UserResponse>, tournament_nanoid: String) -> impl IntoView {
+pub fn InviteButton(user: StoredValue<UserResponse>, tournament_id: TournamentId) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
 
     let logged_in_and_not_user = move || {
@@ -17,7 +18,8 @@ pub fn InviteButton(user: StoredValue<UserResponse>, tournament_nanoid: String) 
             false
         }
     };
-    let tournament_id = store_value(tournament_nanoid);
+
+    let tournament_id = store_value(tournament_id);
 
     let invite = move |_| {
         let api = ApiRequests::new();
