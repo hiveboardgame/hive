@@ -116,7 +116,7 @@ pub fn SideboardTabs(
                 </div>
                 <Reserve color=bottom_color alignment=Alignment::DoubleRow/>
             </TabsContent>
-            <TabsContent value="History">
+            <TabsContent value="History" attr:class="h-full">
                 <History/>
             </TabsContent>
             <TabsContent value="Chat" attr:class="h-[95%]">
