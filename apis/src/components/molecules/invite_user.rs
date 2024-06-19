@@ -2,15 +2,15 @@ use crate::{
     common::UserAction,
     components::molecules::user_row::UserRow,
     providers::{user_search::UserSearchSignal, ApiRequests},
+    responses::TournamentResponse,
 };
 use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::*;
-use shared_types::TournamentId;
 use std::time::Duration;
 
 #[component]
-pub fn InviteUser(tournament_id: TournamentId) -> impl IntoView {
+pub fn InviteUser(tournament: TournamentResponse) -> impl IntoView {
     let user_search = expect_context::<UserSearchSignal>();
     let pattern = RwSignal::new(String::new());
     let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
@@ -26,7 +26,14 @@ pub fn InviteUser(tournament_id: TournamentId) -> impl IntoView {
         if pattern().is_empty() {
             user_search.signal.update(|s| s.clear());
         }
-        user_search.signal.get()
+        let mut search_results = user_search.signal.get();
+        for user in tournament.players.iter() {
+            search_results.remove(&user.username);
+        }
+        for user in tournament.invitees.iter() {
+            search_results.remove(&user.username);
+        }
+        search_results
     };
     view! {
         <div class="flex flex-col m-2 w-fit">
@@ -41,7 +48,7 @@ pub fn InviteUser(tournament_id: TournamentId) -> impl IntoView {
             <div class="overflow-y-auto h-96">
                 <For each=users key=move |(_, user)| user.uid let:user>
                     <UserRow
-                        actions=vec![UserAction::Invite(tournament_id.clone())]
+                        actions=vec![UserAction::Invite(tournament.tournament_id.clone())]
                         user=store_value(user.1)
                     />
                 </For>

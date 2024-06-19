@@ -6,6 +6,7 @@ pub enum UserAction {
     Challenge,
     Follow,
     Invite(TournamentId),
+    Uninvite(TournamentId),
     Message,
     Unblock,
     Unfollow,

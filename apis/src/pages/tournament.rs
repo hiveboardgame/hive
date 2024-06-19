@@ -112,12 +112,12 @@ pub fn Tournament() -> impl IntoView {
                         let:user
                     >
                         <UserRow
-                            actions=vec![UserAction::Invite(tournament().tournament_id.clone())]
+                            actions=vec![UserAction::Uninvite(tournament().tournament_id.clone())]
                             user=store_value(user)
                         />
                     </For>
                 </div>
-                <InviteUser tournament_id=tournament().tournament_id/>
+                <InviteUser tournament=tournament()/>
                 Seats
                 <div>{number_of_players} / {tournament().seats}</div>
                 Rounds

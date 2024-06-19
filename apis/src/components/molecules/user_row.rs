@@ -3,6 +3,7 @@ use crate::{
     components::atoms::{
         direct_challenge_button::DirectChallengeButton, invite_button::InviteButton,
         profile_link::ProfileLink, rating::Rating, status_indicator::StatusIndicator,
+        uninvite_button::UninviteButton,
     },
     responses::UserResponse,
 };
@@ -58,6 +59,9 @@ pub fn UserRow(
                 }
                 UserAction::Invite(tournament_id) => {
                     views.push(view! { <InviteButton user=user tournament_id=tournament_id/> });
+                }
+                UserAction::Uninvite(tournament_id) => {
+                    views.push(view! { <UninviteButton user=user tournament_id=tournament_id/> });
                 }
                 _ => {}
             };

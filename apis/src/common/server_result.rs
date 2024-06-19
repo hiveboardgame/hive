@@ -59,6 +59,7 @@ pub enum TournamentUpdate {
     Joined(TournamentResponse),
     Left(TournamentResponse),
     Tournaments(Vec<TournamentResponse>),
+    Invited(TournamentResponse),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

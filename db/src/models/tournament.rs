@@ -180,7 +180,7 @@ impl Tournament {
         self.ensure_user_is_organizer(user_id, conn).await?;
         let invitation = TournamentInvitation::find_by_ids(&self.id, invitee, conn).await?;
         invitation.delete(conn).await?;
-        return Ok(self.clone());
+        Ok(self.clone())
     }
 
     pub async fn decline_invitation(
@@ -190,7 +190,7 @@ impl Tournament {
     ) -> Result<Tournament, DbError> {
         let invitation = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await?;
         invitation.delete(conn).await?;
-        return Ok(self.clone());
+        Ok(self.clone())
     }
 
     pub async fn accept_invitation(
