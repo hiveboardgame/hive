@@ -29,7 +29,9 @@ impl DeleteHandler {
         tournament.delete(self.user_id, &mut conn).await?;
         Ok(vec![InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Deleted(self.tournament_id.clone())),
+            message: ServerMessage::Tournament(TournamentUpdate::Deleted(
+                self.tournament_id.clone(),
+            )),
         }])
     }
 }

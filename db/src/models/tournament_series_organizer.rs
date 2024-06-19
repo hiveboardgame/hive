@@ -1,5 +1,10 @@
 use crate::{
-    db_error::DbError, models::{tournament_series::TournamentSeries, user::User}, schema::tournament_series_organizers::{self, dsl::tournament_series_organizers as tournament_series_organizers_table}, DbConn
+    db_error::DbError,
+    models::{tournament_series::TournamentSeries, user::User},
+    schema::tournament_series_organizers::{
+        self, dsl::tournament_series_organizers as tournament_series_organizers_table,
+    },
+    DbConn,
 };
 use diesel::{prelude::*, Identifiable, Insertable, Queryable};
 use diesel_async::RunQueryDsl;

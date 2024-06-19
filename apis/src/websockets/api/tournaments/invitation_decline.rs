@@ -30,7 +30,8 @@ impl InvitationDecline {
         let tournament = conn
             .transaction::<_, anyhow::Error, _>(move |tc| {
                 async move {
-                    let tournament = Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
+                    let tournament =
+                        Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
                     Ok(tournament.decline_invitation(&self.user_id, tc).await?)
                 }
                 .scope_boxed()

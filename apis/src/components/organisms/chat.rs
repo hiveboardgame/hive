@@ -105,12 +105,7 @@ pub fn ChatWindow(
     };
 
     let navi = expect_context::<NavigationControllerSignal>();
-    let game_id = store_value(
-        navi.game_signal
-            .get_untracked()
-            .game_id
-            .unwrap_or_default(),
-    );
+    let game_id = store_value(navi.game_signal.get_untracked().game_id.unwrap_or_default());
     let correspondant_id = store_value(correspondant_id.map_or(Uuid::new_v4(), |id| id));
     let correspondant_username = store_value(correspondant_username);
     let div = create_node_ref::<html::Div>();

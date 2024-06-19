@@ -49,8 +49,9 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
                 for challenge in &new_challanges {
                     if let Some(ref opponent) = challenge.opponent {
                         if opponent.uid == account.user.uid {
-                            notifications
-                                .add(vec![NotificationType::GameInvite(challenge.challenge_id.clone())])
+                            notifications.add(vec![NotificationType::GameInvite(
+                                challenge.challenge_id.clone(),
+                            )])
                         }
                     }
                 }
@@ -69,8 +70,9 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
                 if let Some(account) = account() {
                     if let Some(ref opponent) = challenge.opponent {
                         if opponent.uid == account.user.uid {
-                            notifications
-                                .add(vec![NotificationType::GameInvite(challenge.challenge_id.clone())])
+                            notifications.add(vec![NotificationType::GameInvite(
+                                challenge.challenge_id.clone(),
+                            )])
                         }
                     }
                 }

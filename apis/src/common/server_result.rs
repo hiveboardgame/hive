@@ -3,8 +3,8 @@ use crate::responses::{ChallengeResponse, GameResponse, TournamentResponse, User
 use chrono::{DateTime, Utc};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, TournamentId};
 use shared_types::{ChallengeId, ChatMessageContainer};
+use shared_types::{GameId, TournamentId};
 use std::fmt;
 use uuid::Uuid;
 

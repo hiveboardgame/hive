@@ -1,5 +1,8 @@
 use crate::{
-    db_error::DbError, models::{tournament::Tournament, user::User}, schema::tournaments_users::{self, dsl::tournaments_users as tournament_user_table}, DbConn
+    db_error::DbError,
+    models::{tournament::Tournament, user::User},
+    schema::tournaments_users::{self, dsl::tournaments_users as tournament_user_table},
+    DbConn,
 };
 use diesel::{prelude::*, Identifiable, Insertable, Queryable, Selectable};
 use diesel_async::RunQueryDsl;
@@ -30,7 +33,11 @@ impl TournamentUser {
         Ok(())
     }
 
-    pub async fn delete(tournament_id: Uuid, user_id: Uuid, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+    pub async fn delete(
+        tournament_id: Uuid,
+        user_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
         diesel::delete(tournaments_users::table.find((tournament_id, user_id)))
             .execute(conn)
             .await?;

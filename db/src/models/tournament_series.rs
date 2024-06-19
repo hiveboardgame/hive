@@ -53,7 +53,6 @@ impl TournamentSeries {
         new_tournament_series: &NewTournamentSeries,
         conn: &mut DbConn<'_>,
     ) -> Result<TournamentSeries, DbError> {
-
         Ok(diesel::insert_into(tournament_series::table)
             .values(new_tournament_series)
             .get_result(conn)

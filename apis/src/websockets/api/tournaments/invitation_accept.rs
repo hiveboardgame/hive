@@ -31,10 +31,7 @@ impl InvitationAccept {
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
         let tournament = conn
             .transaction::<_, anyhow::Error, _>(move |tc| {
-                async move {
-                    Ok(tournament.join(&self.user_id, tc).await?)
-                }
-                .scope_boxed()
+                async move { Ok(tournament.join(&self.user_id, tc).await?) }.scope_boxed()
             })
             .await?;
         let response = TournamentResponse::from_model(&tournament, &mut conn).await?;

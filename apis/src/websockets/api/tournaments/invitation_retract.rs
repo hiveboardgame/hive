@@ -18,7 +18,12 @@ pub struct InvitationRetract {
 }
 
 impl InvitationRetract {
-    pub async fn new(tournament_id: TournamentId, user_id: Uuid, invitee: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(
+        tournament_id: TournamentId,
+        user_id: Uuid,
+        invitee: Uuid,
+        pool: &DbPool,
+    ) -> Result<Self> {
         Ok(Self {
             tournament_id,
             user_id,
@@ -32,7 +37,8 @@ impl InvitationRetract {
         let tournament = conn
             .transaction::<_, anyhow::Error, _>(move |tc| {
                 async move {
-                    let tournament = Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
+                    let tournament =
+                        Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
                     Ok(tournament
                         .retract_invitation(&self.user_id, &self.invitee, tc)
                         .await?)

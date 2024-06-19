@@ -50,12 +50,14 @@ impl NavigationControllerSignal {
 
 #[derive(Clone, Debug)]
 pub struct TournamentNavigationControllerState {
-    pub tournament_id: Option<TournamentId>
+    pub tournament_id: Option<TournamentId>,
 }
 
 impl TournamentNavigationControllerState {
     pub fn new() -> Self {
-        Self { tournament_id: None }
+        Self {
+            tournament_id: None,
+        }
     }
 }
 

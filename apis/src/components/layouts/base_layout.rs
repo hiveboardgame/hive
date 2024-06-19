@@ -145,7 +145,8 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             None
         };
         let tournament_id = if let Some(caps) = TOURNAMENT_NANOID.captures(&pathname) {
-            caps.name("nanoid").map(|m| TournamentId(m.as_str().to_string()))
+            caps.name("nanoid")
+                .map(|m| TournamentId(m.as_str().to_string()))
         } else {
             None
         };

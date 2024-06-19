@@ -1,7 +1,10 @@
 use crate::{
-    db_error::DbError, models::{tournament::Tournament, user::User}, schema::tournaments_invitations::{
+    db_error::DbError,
+    models::{tournament::Tournament, user::User},
+    schema::tournaments_invitations::{
         self, dsl::tournaments_invitations as tournaments_invitations_table,
-    }, DbConn
+    },
+    DbConn,
 };
 use chrono::{DateTime, Utc};
 use diesel::{prelude::*, Identifiable, Insertable, Queryable};
