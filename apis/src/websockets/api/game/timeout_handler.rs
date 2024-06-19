@@ -7,8 +7,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Game, DbPool};
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
+use shared_types::GameId;
 use uuid::Uuid;
 
 pub struct TimeoutHandler {
@@ -32,24 +31,14 @@ impl TimeoutHandler {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
 
-        let game = conn
-            .transaction::<_, anyhow::Error, _>(move |tc| {
-                async move {
-                    // find_by_nanoid automatically times the game out if needed
-                    Ok(Game::find_by_nanoid(&self.game.nanoid, tc).await?)
-                }
-                .scope_boxed()
-            })
-            .await?;
-
-        let game_response = GameResponse::new_from_db(&game, &mut conn).await?;
-        if game.finished {
+        let game_response = GameResponse::new_from_model(&self.game, &mut conn).await?;
+        if self.game.finished {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
                 message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                     game_action: GameReaction::TimedOut,
                     game: game_response,
-                    game_id: game.nanoid,
+                    game_id: GameId(self.game.nanoid.clone()),
                     user_id: self.user_id,
                     username: self.username.clone(),
                 }))),

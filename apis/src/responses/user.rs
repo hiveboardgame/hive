@@ -1,7 +1,7 @@
+use super::rating::RatingResponse;
 use serde::{Deserialize, Serialize};
 use shared_types::GameSpeed;
 use std::collections::HashMap;
-use super::rating::RatingResponse;
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -79,7 +79,7 @@ impl UserResponse {
     }
 }
 
-cfg_if::cfg_if!{ if #[cfg(feature = "ssr")] {
+cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::User,
     DbConn,

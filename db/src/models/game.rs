@@ -16,7 +16,7 @@ use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, History, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{Conclusion, GameSpeed, TimeMode};
+use shared_types::{ChallengeId, Conclusion, GameId, GameSpeed, TimeMode};
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
@@ -148,7 +148,7 @@ impl Game {
     pub async fn create(
         new_game: NewGame,
         connection: &mut DbConn<'_>,
-    ) -> Result<(Game, Vec<String>), DbError> {
+    ) -> Result<(Game, Vec<ChallengeId>), DbError> {
         connection
             .transaction::<_, DbError, _>(move |conn| {
                 async move {
@@ -181,13 +181,13 @@ impl Game {
                             .get_results(conn)
                             .await?;
                         for challenge in challenges {
-                            deleted.push(challenge.nanoid.clone());
+                            deleted.push(ChallengeId(challenge.nanoid));
                             diesel::delete(challenges::table.find(challenge.id))
                                 .execute(conn)
                                 .await?;
                         }
                     } else {
-                        deleted.push(challenge.nanoid.clone());
+                        deleted.push(ChallengeId(challenge.nanoid));
                         diesel::delete(challenges::table.find(challenge.id))
                             .execute(conn)
                             .await?;
@@ -707,9 +707,9 @@ impl Game {
         }
     }
 
-    pub async fn find_by_nanoid(find_nanoid: &str, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
+    pub async fn find_by_game_id(game_id: &GameId, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
         let game: Game = games::table
-            .filter(nanoid.eq(find_nanoid))
+            .filter(nanoid.eq(game_id.0.clone()))
             .first(conn)
             .await?;
         if !game.finished && TimeMode::from_str(&game.time_mode)? != TimeMode::Untimed {

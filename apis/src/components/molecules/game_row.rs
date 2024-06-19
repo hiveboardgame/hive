@@ -145,7 +145,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
             </div>
             <a
                 class="absolute top-0 left-0 z-10 w-full h-full"
-                href=format!("/game/{}", game().nanoid)
+                href=format!("/game/{}", game().game_id)
             ></a>
         </article>
     }

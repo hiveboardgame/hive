@@ -181,7 +181,7 @@ impl Handler<Connect> for Lobby {
                                 async move {
                                     for game_id in game_ids {
                                         if let Ok(game) =
-                                            GameResponse::new_from_nanoid(&game_id, tc).await
+                                            GameResponse::new_from_game_id(&game_id, tc).await
                                         {
                                             if !game.finished {
                                                 games.push(game)

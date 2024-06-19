@@ -3,14 +3,14 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{Conclusion, GameSpeed, TimeMode};
+use shared_types::{Conclusion, GameId, GameSpeed, TimeMode};
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameResponse {
-    pub game_id: Uuid,
-    pub nanoid: String,
+    pub uuid: Uuid,
+    pub game_id: GameId,
     pub current_player_id: Uuid,
     pub turn: usize,
     pub finished: bool,
@@ -125,15 +125,15 @@ use std::str::FromStr;
 impl GameResponse {
     pub async fn new_from_uuid(game_id: Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
         let game = Game::find_by_uuid(&game_id, conn).await?;
-        GameResponse::new_from_db(&game, conn).await
+        GameResponse::new_from_model(&game, conn).await
     }
 
-    pub async fn new_from_nanoid(game_id: &str, conn: &mut DbConn<'_>) -> Result<Self> {
-        let game = Game::find_by_nanoid(game_id, conn).await?;
-        GameResponse::new_from_db(&game, conn).await
+    pub async fn new_from_game_id(game_id: &GameId, conn: &mut DbConn<'_>) -> Result<Self> {
+        let game = Game::find_by_game_id(game_id, conn).await?;
+        GameResponse::new_from_model(&game, conn).await
     }
 
-    pub async fn new_from_db(game: &Game, conn: &mut DbConn<'_>) -> Result<Self> {
+    pub async fn new_from_model(game: &Game, conn: &mut DbConn<'_>) -> Result<Self> {
         let history = History::new_from_str(&game.history)?;
         let state = State::new_from_history(&history)?;
         GameResponse::new_from(game, &state, conn).await
@@ -166,8 +166,8 @@ impl GameResponse {
         let white_time_left = game.white_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
         let black_time_left = game.black_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
         Ok(Self {
-            game_id: game.id,
-            nanoid: game.nanoid.clone(),
+            uuid: game.id,
+            game_id: GameId(game.nanoid.clone()),
             game_status: GameStatus::from_str(&game.game_status)?,
             current_player_id: game.current_player_id,
             finished: game.finished,

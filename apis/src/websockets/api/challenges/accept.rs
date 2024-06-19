@@ -11,20 +11,25 @@ use db_lib::{
 };
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
-use shared_types::GameSpeed;
+use shared_types::{ChallengeId, GameSpeed};
 use uuid::Uuid;
 
 pub struct AcceptHandler {
-    nanoid: String,
+    challenger_id: ChallengeId,
     user_id: Uuid,
     username: String,
     pool: DbPool,
 }
 
 impl AcceptHandler {
-    pub async fn new(nanoid: String, username: &str, user_id: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(
+        challenger_id: ChallengeId,
+        username: &str,
+        user_id: Uuid,
+        pool: &DbPool,
+    ) -> Result<Self> {
         Ok(Self {
-            nanoid,
+            challenger_id,
             user_id,
             username: username.to_owned(),
             pool: pool.clone(),
@@ -34,7 +39,7 @@ impl AcceptHandler {
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
-        let challenge = Challenge::find_by_nanoid(&self.nanoid, &mut conn).await?;
+        let challenge = Challenge::find_by_challenge_id(&self.challenger_id, &mut conn).await?;
         let speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
         let rating = Rating::for_uuid(&self.user_id, &speed, &mut conn)
             .await?
@@ -78,7 +83,7 @@ impl AcceptHandler {
                 async move {
                     let new_game = NewGame::new(white_id, black_id, &challenge);
                     let (game, deleted_challenges) = Game::create(new_game, tc).await?;
-                    let game_response = GameResponse::new_from_db(&game, tc).await?;
+                    let game_response = GameResponse::new_from_model(&game, tc).await?;
                     Ok((game, deleted_challenges, game_response))
                 }
                 .scope_boxed()
@@ -90,7 +95,7 @@ impl AcceptHandler {
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_action: GameReaction::New,
                 game: game_response.clone(),
-                game_id: game_response.nanoid.clone(),
+                game_id: game_response.game_id.clone(),
                 user_id: self.user_id,
                 username: self.username.to_owned(),
             }))),
@@ -101,7 +106,7 @@ impl AcceptHandler {
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_action: GameReaction::New,
                 game: game_response.clone(),
-                game_id: game_response.nanoid.clone(),
+                game_id: game_response.game_id.clone(),
                 user_id: self.user_id,
                 username: self.username.to_owned(),
             }))),

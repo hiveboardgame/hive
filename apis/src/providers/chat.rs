@@ -3,7 +3,7 @@ use super::{
     navigation_controller::NavigationControllerSignal, AlertType, AlertsContext,
 };
 use leptos::*;
-use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer};
+use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -11,10 +11,10 @@ use uuid::Uuid;
 pub struct Chat {
     pub users_messages: RwSignal<HashMap<Uuid, Vec<ChatMessage>>>, // Uuid -> Messages
     pub users_new_messages: RwSignal<HashMap<Uuid, bool>>,
-    pub games_private_messages: RwSignal<HashMap<String, Vec<ChatMessage>>>, // game_id -> Messages
-    pub games_private_new_messages: RwSignal<HashMap<String, bool>>,
-    pub games_public_messages: RwSignal<HashMap<String, Vec<ChatMessage>>>, // game_id -> Messages
-    pub games_public_new_messages: RwSignal<HashMap<String, bool>>,
+    pub games_private_messages: RwSignal<HashMap<GameId, Vec<ChatMessage>>>, // game_id -> Messages
+    pub games_private_new_messages: RwSignal<HashMap<GameId, bool>>,
+    pub games_public_messages: RwSignal<HashMap<GameId, Vec<ChatMessage>>>, // game_id -> Messages
+    pub games_public_new_messages: RwSignal<HashMap<GameId, bool>>,
     pub tournament_lobby_messages: RwSignal<HashMap<String, Vec<ChatMessage>>>, // tournament_id -> Messages
     pub tournament_lobby_new_messages: RwSignal<HashMap<String, bool>>,
     pub typed_message: RwSignal<String>,
@@ -44,15 +44,15 @@ impl Chat {
     pub fn has_messages(&self) -> bool {
         let navi = expect_context::<NavigationControllerSignal>();
 
-        if let Some(nanoid) = navi.signal.get().nanoid {
+        if let Some(game_id) = navi.signal.get().game_id {
             self.games_public_new_messages
                 .get()
-                .get(&nanoid)
+                .get(&game_id)
                 .map_or(false, |v| *v)
                 || self
                     .games_private_new_messages
                     .get()
-                    .get(&nanoid)
+                    .get(&game_id)
                     .map_or(false, |v| *v)
         } else {
             false
@@ -62,14 +62,14 @@ impl Chat {
     pub fn seen_messages(&self) {
         let navi = expect_context::<NavigationControllerSignal>();
         batch(move || {
-            if let Some(nanoid) = navi.signal.get_untracked().nanoid {
+            if let Some(game_id) = navi.signal.get_untracked().game_id {
                 self.games_public_new_messages.update(|m| {
-                    m.entry(nanoid.clone())
+                    m.entry(game_id.clone())
                         .and_modify(|b| *b = false)
                         .or_insert(false);
                 });
                 self.games_private_new_messages.update(|m| {
-                    m.entry(nanoid).and_modify(|b| *b = false).or_insert(false);
+                    m.entry(game_id).and_modify(|b| *b = false).or_insert(false);
                 });
             }
         })

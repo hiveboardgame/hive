@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::GameId;
+
 const MAX_MESSAGE_LENGTH: usize = 1000;
 
 #[derive(Debug, Clone)]
@@ -15,8 +17,8 @@ pub enum SimpleDestination {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ChatDestination {
     User((Uuid, String)),               // user_id, username
-    GamePlayers(String, Uuid, Uuid),    // to players in the game, nanoid, white uuid, black uuid
-    GameSpectators(String, Uuid, Uuid), // to spectators of the game, nanoid, white uuid, black uuid
+    GamePlayers(GameId, Uuid, Uuid),    // to players in the game, nanoid, white uuid, black uuid
+    GameSpectators(GameId, Uuid, Uuid), // to spectators of the game, nanoid, white uuid, black uuid
     TournamentLobby(String),            // to tournament lobby
     Global,                             // to everyone if you have superpowers
 }

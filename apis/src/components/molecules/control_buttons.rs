@@ -134,7 +134,7 @@ pub fn ControlButtons() -> impl IntoView {
     let rematch = move |_| {
         if let Some(challenge) = rematch_present() {
             let api = ApiRequests::new();
-            api.challenge_accept(challenge.nanoid);
+            api.challenge_accept(challenge.challenge_id);
         } else {
             let game_state = expect_context::<GameStateSignal>();
             let auth_context = expect_context::<AuthContext>();

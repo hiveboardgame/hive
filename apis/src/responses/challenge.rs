@@ -3,7 +3,7 @@ use crate::responses::user::UserResponse;
 use chrono::prelude::*;
 use hive_lib::{ColorChoice, GameType};
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
+use shared_types::{ChallengeDetails, ChallengeId, ChallengeVisibility, GameSpeed, TimeMode};
 use std::collections::hash_map::Values;
 use std::str;
 use std::str::FromStr;
@@ -12,7 +12,7 @@ use uuid::Uuid;
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ChallengeResponse {
     pub id: Uuid,
-    pub nanoid: String,
+    pub challenge_id: ChallengeId,
     pub challenger: UserResponse,
     pub opponent: Option<UserResponse>,
     pub game_type: String,
@@ -55,7 +55,7 @@ impl ChallengeResponse {
         };
         Ok(ChallengeResponse {
             id: challenge.id,
-            nanoid: challenge.nanoid.to_owned(),
+            challenge_id: ChallengeId(challenge.nanoid.clone()),
             challenger: UserResponse::from_uuid(&challenger.id, conn).await?,
             opponent,
             game_type: challenge.game_type.clone(),
@@ -118,14 +118,14 @@ fn has_same_details(challenge: &ChallengeResponse, user: &str, details: &Challen
 pub fn create_challenge_handler(
     user: String,
     details: ChallengeDetails,
-    mut challenges: Values<String, ChallengeResponse>,
+    mut challenges: Values<ChallengeId, ChallengeResponse>,
 ) -> Option<ChallengeAction> {
     if details.time_mode == TimeMode::RealTime
         && challenges.any(|c| has_same_details(c, &user, &details))
     {
         None
     } else if let Some(challenge) = challenges.find(|c| is_compatible(c, &user, &details)) {
-        Some(ChallengeAction::Accept(challenge.nanoid.clone()))
+        Some(ChallengeAction::Accept(challenge.challenge_id.clone()))
     } else {
         Some(ChallengeAction::Create(details))
     }

@@ -14,8 +14,8 @@ pub fn handle_turn(turn: Turn, gar: GameActionResponse) {
     let mut game_state = expect_context::<GameStateSignal>();
     let navigation_controller = expect_context::<NavigationControllerSignal>();
     let timer = expect_context::<TimerSignal>();
-    if let Some(nanoid) = navigation_controller.signal.get_untracked().nanoid {
-        if gar.game.nanoid == nanoid {
+    if let Some(game_id) = navigation_controller.signal.get_untracked().game_id {
+        if gar.game.game_id == game_id {
             timer.update_from(&gar.game);
             game_state.clear_gc();
             game_state.set_game_response(gar.game.clone());

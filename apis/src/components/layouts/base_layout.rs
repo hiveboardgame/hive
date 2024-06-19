@@ -20,6 +20,7 @@ use leptos_use::core::ConnectionReadyState;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
 use regex::Regex;
+use shared_types::GameId;
 cfg_if! { if #[cfg(not(feature = "ssr"))] {
     use leptos_use::utils::IS_IOS;
     use std::sync::RwLock;
@@ -133,12 +134,12 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         let mut navi = expect_context::<NavigationControllerSignal>();
         let pathname = (location.pathname)();
         let nanoid = if let Some(caps) = NANOID.captures(&pathname) {
-            caps.name("nanoid").map(|m| m.as_str().to_string())
+            caps.name("nanoid").map(|m| GameId(m.as_str().to_string()))
         } else {
             None
         };
         if ws_ready() == ConnectionReadyState::Open {
-            navi.update_nanoid(nanoid);
+            navi.update_game_id(nanoid);
         };
     });
 

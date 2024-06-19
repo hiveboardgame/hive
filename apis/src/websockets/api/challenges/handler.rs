@@ -40,26 +40,26 @@ impl ChallengeHandler {
                     .handle()
                     .await?
             }
-            ChallengeAction::Accept(nanoid) => {
-                AcceptHandler::new(nanoid, &self.username, self.user_id, &self.pool)
+            ChallengeAction::Accept(challenge_id) => {
+                AcceptHandler::new(challenge_id, &self.username, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?
             }
-            ChallengeAction::Delete(nanoid) => {
-                DeleteHandler::new(nanoid, self.user_id, &self.pool)
+            ChallengeAction::Delete(challenge_id) => {
+                DeleteHandler::new(challenge_id, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?
             }
-            ChallengeAction::Decline(nanoid) => {
-                DeleteHandler::new(nanoid, self.user_id, &self.pool)
+            ChallengeAction::Decline(challenge_id) => {
+                DeleteHandler::new(challenge_id, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?
             }
-            ChallengeAction::Get(nanoid) => {
-                GetHandler::new(nanoid, self.user_id, &self.pool)
+            ChallengeAction::Get(challenge_id) => {
+                GetHandler::new(challenge_id, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?

@@ -11,6 +11,7 @@ use db_lib::{models::Game, DbPool};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use hive_lib::{GameError, GameStatus};
+use shared_types::GameId;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -26,7 +27,7 @@ pub struct GameActionHandler {
 
 impl GameActionHandler {
     pub async fn new(
-        game_id: &str,
+        game_id: &GameId,
         game_action: GameAction,
         username: &str,
         user_id: Uuid,
@@ -38,7 +39,8 @@ impl GameActionHandler {
 
         let game = connection
             .transaction::<_, anyhow::Error, _>(move |conn| {
-                async move { Ok(Game::find_by_nanoid(game_id, conn).await?) }.scope_boxed()
+                // find_by_game_id automatically times the game out if needed
+                async move { Ok(Game::find_by_game_id(game_id, conn).await?) }.scope_boxed()
             })
             .await?;
 
