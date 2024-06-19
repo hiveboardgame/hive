@@ -5,7 +5,6 @@ create table tournaments (
   description text not null, -- a description of the tournament
   scoring text not null, -- per match or per game scoring
   tiebreaker text[] not null default '{}', -- list of tiebreakers
-  invitees uuid[] not null default '{}', -- invited players
   seats int not null, -- maximum number of players
   rounds int not null, -- Number of RR games, total number of SWISS games
   joinable bool not null default true, -- this means the tournament has started and people cannot join it anymore

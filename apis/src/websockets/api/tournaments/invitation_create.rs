@@ -4,11 +4,9 @@ use crate::{
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
-use db_lib::{
-    get_conn,
-    models::{Tournament, TournamentInvitation},
-    DbPool,
-};
+use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
+use diesel_async::scoped_futures::ScopedFutureExt;
+use diesel_async::AsyncConnection;
 use shared_types::TournamentId;
 use uuid::Uuid;
 
@@ -37,9 +35,16 @@ impl InvitationCreate {
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
-        let invitation = TournamentInvitation::new(tournament.id, self.invitee);
-        invitation.insert(&mut conn).await?;
-        // TODO: @leex needs to send the invitation as well
+        let tournament = conn
+            .transaction::<_, DbError, _>(move |tc| {
+                async move {
+                    tournament
+                        .create_invitation(&self.user_id, &self.invitee, tc)
+                        .await
+                }
+                .scope_boxed()
+            })
+            .await?;
         let response = TournamentResponse::from_model(&tournament, &mut conn).await?;
         Ok(vec![InternalServerMessage {
             destination: MessageDestination::Global,

@@ -104,7 +104,6 @@ diesel::table! {
         description -> Text,
         scoring -> Text,
         tiebreaker -> Array<Nullable<Text>>,
-        invitees -> Array<Nullable<Uuid>>,
         seats -> Int4,
         rounds -> Int4,
         joinable -> Bool,

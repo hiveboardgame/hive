@@ -4,10 +4,7 @@ use crate::{
         tournament_organizer::TournamentOrganizer, tournament_user::TournamentUser, user::User,
     },
     schema::{
-        tournaments::{
-            self, invitees as invitees_column, nanoid as nanoid_field, series as series_column,
-            updated_at,
-        },
+        tournaments::{self, nanoid as nanoid_field, series as series_column, updated_at},
         tournaments_organizers, users,
     },
     DbConn,
@@ -30,7 +27,6 @@ pub struct NewTournament {
     pub description: String,
     pub scoring: String,
     pub tiebreaker: Vec<Option<String>>,
-    pub invitees: Vec<Option<Uuid>>,
     pub seats: i32,
     pub rounds: i32,
     pub joinable: bool,
@@ -65,7 +61,6 @@ impl NewTournament {
             description: details.description,
             scoring: details.scoring,
             tiebreaker: details.tiebreaker,
-            invitees: details.invitees,
             seats: details.seats,
             rounds: details.rounds,
             joinable: details.joinable,
@@ -97,7 +92,6 @@ pub struct Tournament {
     pub description: String,
     pub scoring: String,
     pub tiebreaker: Vec<Option<String>>,
-    pub invitees: Vec<Option<Uuid>>,
     pub seats: i32,
     pub rounds: i32,
     pub joinable: bool,
@@ -145,28 +139,36 @@ impl Tournament {
         Err(DbError::Unauthorized)
     }
 
-    pub async fn create_invitation_for_nanoid(
-        nanoid: String,
-        id: Uuid,
+    async fn ensure_user_is_organizer(
+        &self,
+        user_id: &Uuid,
         conn: &mut DbConn<'_>,
-    ) -> Result<Tournament, DbError> {
-        let tournament = Tournament::from_nanoid(&nanoid, conn).await?;
-        tournament.create_invitation(id, conn).await
+    ) -> Result<(), DbError> {
+        let organizers = self.organizers(conn).await?;
+        if organizers.iter().any(|o| o.id == *user_id) {
+            return Ok(());
+        }
+        Err(DbError::Unauthorized)
     }
 
     pub async fn create_invitation(
         &self,
-        id: Uuid,
+        user_id: &Uuid,
+        invitee: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
-        let mut invited = self.invitees.clone();
-        invited.push(Some(id));
-        let invitation = TournamentInvitation::new(self.id, id);
+        self.ensure_user_is_organizer(user_id, conn).await?;
+        if TournamentInvitation::exists(&self.id, invitee, conn).await? {
+            return Ok(self.clone());
+        }
+        let invitation = TournamentInvitation::new(self.id, *invitee);
         invitation.insert(conn).await?;
-        Ok(diesel::update(tournaments::table.find(self.id))
-            .set(invitees_column.eq(invited))
-            .get_result(conn)
-            .await?)
+        // Ok(diesel::update(tournaments::table.find(self.id))
+        //     .set(invitees_column.eq(invited))
+        //     .get_result(conn)
+        //     .await?)
+        //     TODO: maybe change updated_at
+        Ok(self.clone())
     }
 
     pub async fn retract_invitation(
@@ -175,29 +177,20 @@ impl Tournament {
         invitee: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
-        let organizers = self.organizers(conn).await?;
-        if organizers.iter().any(|o| o.id == *user_id) {
-            let mut still_invited = self.invitees.clone();
-            still_invited.retain(|invited| *invited != Some(*invitee));
-            return Ok(diesel::update(tournaments::table.find(self.id))
-                .set(invitees_column.eq(still_invited))
-                .get_result(conn)
-                .await?);
-        }
-        Err(DbError::Unauthorized)
+        self.ensure_user_is_organizer(user_id, conn).await?;
+        let invitation = TournamentInvitation::find_by_ids(&self.id, invitee, conn).await?;
+        invitation.delete(conn).await?;
+        return Ok(self.clone());
     }
 
     pub async fn decline_invitation(
         &self,
-        id: &Uuid,
+        user_id: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
-        let mut still_invited = self.invitees.clone();
-        still_invited.retain(|invited| *invited != Some(*id));
-        Ok(diesel::update(tournaments::table.find(self.id))
-            .set(invitees_column.eq(still_invited))
-            .get_result(conn)
-            .await?)
+        let invitation = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await?;
+        invitation.delete(conn).await?;
+        return Ok(self.clone());
     }
 
     pub async fn accept_invitation(
@@ -205,14 +198,11 @@ impl Tournament {
         user_id: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
-        let mut still_invited = self.invitees.clone();
-        still_invited.retain(|invited| *invited != Some(*user_id));
+        let invitation = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await?;
+        invitation.delete(conn).await?;
         let tournament_user = TournamentUser::new(self.id, *user_id);
         tournament_user.insert(conn).await?;
-        Ok(diesel::update(tournaments::table.find(self.id))
-            .set(invitees_column.eq(still_invited))
-            .get_result(conn)
-            .await?)
+        Ok(self.clone())
     }
 
     pub async fn add_to_series(
@@ -265,6 +255,14 @@ impl Tournament {
         Ok(tournaments::table
             .filter(nanoid_field.eq(nano))
             .first(conn)
+            .await?)
+    }
+
+    pub async fn invitees(&self, conn: &mut DbConn<'_>) -> Result<Vec<User>, DbError> {
+        Ok(TournamentInvitation::belonging_to(self)
+            .inner_join(users::table)
+            .select(User::as_select())
+            .get_results(conn)
             .await?)
     }
 

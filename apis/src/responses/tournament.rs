@@ -71,8 +71,8 @@ impl TournamentResponse {
     pub async fn from_model(tournament: &Tournament, conn: &mut DbConn<'_>) -> Result<Self> {
         // TODO: make this one query
         let mut invitees = Vec::new();
-        for uuid in tournament.invitees.iter().flatten() {
-            invitees.push(UserResponse::from_uuid(uuid, conn).await?);
+        for user in tournament.invitees(conn).await? {
+            invitees.push(UserResponse::from_model(&user, conn).await?);
         }
         let mut players = Vec::new();
         for user in tournament.players(conn).await? {

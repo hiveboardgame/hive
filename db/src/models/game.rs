@@ -11,8 +11,6 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use diesel::{prelude::*, Identifiable, Insertable, Queryable};
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, History, State};
 use serde::{Deserialize, Serialize};
@@ -150,56 +148,46 @@ impl Game {
 
     pub async fn create(
         new_game: NewGame,
-        connection: &mut DbConn<'_>,
+        conn: &mut DbConn<'_>,
     ) -> Result<(Game, Vec<ChallengeId>), DbError> {
-        connection
-            .transaction::<_, DbError, _>(move |conn| {
-                async move {
-                    let game: Game = new_game.insert_into(games::table).get_result(conn).await?;
-                    let game_user_white = GameUser::new(game.id, game.white_id);
-                    game_user_white
-                        .insert_into(games_users::table)
-                        .execute(conn)
-                        .await?;
-                    let game_user_black = GameUser::new(game.id, game.black_id);
-                    game_user_black
-                        .insert_into(games_users::table)
-                        .execute(conn)
-                        .await?;
-                    let challenge: Challenge = challenges::table
-                        .filter(nanoid_field.eq(game.nanoid.clone()))
-                        .first(conn)
-                        .await?;
-                    let mut deleted = Vec::new();
-                    if let Ok(TimeMode::RealTime) = TimeMode::from_str(&challenge.time_mode) {
-                        let challenges: Vec<Challenge> = challenges::table
-                            .filter(
-                                challenges::time_mode
-                                    .eq(TimeMode::RealTime.to_string())
-                                    .and(
-                                        challenges::challenger_id
-                                            .eq_any(&[game.white_id, game.black_id]),
-                                    ),
-                            )
-                            .get_results(conn)
-                            .await?;
-                        for challenge in challenges {
-                            deleted.push(ChallengeId(challenge.nanoid));
-                            diesel::delete(challenges::table.find(challenge.id))
-                                .execute(conn)
-                                .await?;
-                        }
-                    } else {
-                        deleted.push(ChallengeId(challenge.nanoid));
-                        diesel::delete(challenges::table.find(challenge.id))
-                            .execute(conn)
-                            .await?;
-                    };
-                    Ok((game, deleted))
-                }
-                .scope_boxed()
-            })
-            .await
+        let game: Game = new_game.insert_into(games::table).get_result(conn).await?;
+        let game_user_white = GameUser::new(game.id, game.white_id);
+        game_user_white
+            .insert_into(games_users::table)
+            .execute(conn)
+            .await?;
+        let game_user_black = GameUser::new(game.id, game.black_id);
+        game_user_black
+            .insert_into(games_users::table)
+            .execute(conn)
+            .await?;
+        let challenge: Challenge = challenges::table
+            .filter(nanoid_field.eq(game.nanoid.clone()))
+            .first(conn)
+            .await?;
+        let mut deleted = Vec::new();
+        if let Ok(TimeMode::RealTime) = TimeMode::from_str(&challenge.time_mode) {
+            let challenges: Vec<Challenge> = challenges::table
+                .filter(
+                    challenges::time_mode
+                        .eq(TimeMode::RealTime.to_string())
+                        .and(challenges::challenger_id.eq_any(&[game.white_id, game.black_id])),
+                )
+                .get_results(conn)
+                .await?;
+            for challenge in challenges {
+                deleted.push(ChallengeId(challenge.nanoid));
+                diesel::delete(challenges::table.find(challenge.id))
+                    .execute(conn)
+                    .await?;
+            }
+        } else {
+            deleted.push(ChallengeId(challenge.nanoid));
+            diesel::delete(challenges::table.find(challenge.id))
+                .execute(conn)
+                .await?;
+        };
+        Ok((game, deleted))
     }
 
     pub async fn check_time(&self, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
