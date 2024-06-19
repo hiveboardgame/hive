@@ -30,8 +30,13 @@ cfg_if! { if #[cfg(not(feature = "ssr"))] {
 }}
 
 lazy_static! {
-    static ref NANOID: Regex =
+    static ref GAME_NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
+}
+
+lazy_static! {
+    static ref TOURNAMENT_NANOID: Regex =
+        Regex::new(r"/tournament/(?<nanoid>.*)").expect("This regex should compile");
 }
 pub const COMMON_LINK_STYLE: &str = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
 pub const DROPDOWN_BUTTON_STYLE: &str= "h-full p-2 hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block";
@@ -133,13 +138,20 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         let location = use_location();
         let mut navi = expect_context::<NavigationControllerSignal>();
         let pathname = (location.pathname)();
-        let nanoid = if let Some(caps) = NANOID.captures(&pathname) {
+
+        let game_id = if let Some(caps) = GAME_NANOID.captures(&pathname) {
             caps.name("nanoid").map(|m| GameId(m.as_str().to_string()))
         } else {
             None
         };
+        let tournament_nanoid = if let Some(caps) = TOURNAMENT_NANOID.captures(&pathname) {
+            caps.name("nanoid").map(|m| m.as_str().to_string())
+        } else {
+            None
+        };
+
         if ws_ready() == ConnectionReadyState::Open {
-            navi.update_game_id(nanoid);
+            navi.update_game_id(game_id, tournament_nanoid);
         };
     });
 

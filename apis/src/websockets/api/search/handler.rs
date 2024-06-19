@@ -27,7 +27,7 @@ impl UserSearchHandler {
         let users = User::search_usernames(&self.pattern, &mut conn).await?;
         let mut response = vec![];
         for user in users {
-            let user_response = UserResponse::from_user(&user, &mut conn).await?;
+            let user_response = UserResponse::from_model(&user, &mut conn).await?;
             response.push(user_response);
         }
         Ok(vec![InternalServerMessage {

@@ -1,7 +1,7 @@
 use super::challenges::ChallengeStateSignal;
 use super::games::GamesSignal;
 use super::AuthContext;
-use crate::common::ChallengeAction;
+use crate::common::{ChallengeAction, TournamentAction};
 use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
 use crate::responses::create_challenge_handler;
@@ -55,6 +55,11 @@ impl ApiRequests {
 
     pub fn chat(&self, message: &ChatMessageContainer) {
         let msg = ClientRequest::Chat(message.to_owned());
+        self.websocket
+            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    }
+    pub fn tournament(&self, action: TournamentAction) {
+        let msg = ClientRequest::Tournament(action.to_owned());
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }

@@ -17,5 +17,7 @@ pub mod resources;
 pub mod rules;
 pub mod strategy;
 pub mod top_players;
+pub mod tournament;
+pub mod tournament_create;
 pub mod tournaments;
 pub mod tutorial;

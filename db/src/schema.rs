@@ -50,6 +50,7 @@ diesel::table! {
         speed -> Text,
         hashes -> Array<Nullable<Int8>>,
         conclusion -> Text,
+        tournament_id -> Nullable<Uuid>,
     }
 }
 
@@ -78,6 +79,73 @@ diesel::table! {
 }
 
 diesel::table! {
+    tournament_series (id) {
+        id -> Uuid,
+        nanoid -> Text,
+        name -> Text,
+        description -> Text,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    tournament_series_organizers (tournament_series_id, organizer_id) {
+        tournament_series_id -> Uuid,
+        organizer_id -> Uuid,
+    }
+}
+
+diesel::table! {
+    tournaments (id) {
+        id -> Uuid,
+        nanoid -> Text,
+        name -> Text,
+        description -> Text,
+        scoring -> Text,
+        tiebreaker -> Array<Nullable<Text>>,
+        invitees -> Array<Nullable<Uuid>>,
+        seats -> Int4,
+        rounds -> Int4,
+        joinable -> Bool,
+        invite_only -> Bool,
+        mode -> Text,
+        time_mode -> Text,
+        time_base -> Nullable<Int4>,
+        time_increment -> Nullable<Int4>,
+        band_upper -> Nullable<Int4>,
+        band_lower -> Nullable<Int4>,
+        start_at -> Nullable<Timestamptz>,
+        status -> Text,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        series -> Nullable<Uuid>,
+    }
+}
+
+diesel::table! {
+    tournaments_invitations (tournament_id, invitee_id) {
+        tournament_id -> Uuid,
+        invitee_id -> Uuid,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    tournaments_organizers (tournament_id, organizer_id) {
+        tournament_id -> Uuid,
+        organizer_id -> Uuid,
+    }
+}
+
+diesel::table! {
+    tournaments_users (tournament_id, user_id) {
+        tournament_id -> Uuid,
+        user_id -> Uuid,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Uuid,
         username -> Text,
@@ -94,5 +162,26 @@ diesel::table! {
 diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
+diesel::joinable!(tournament_series_organizers -> tournament_series (tournament_series_id));
+diesel::joinable!(tournament_series_organizers -> users (organizer_id));
+diesel::joinable!(tournaments -> tournament_series (series));
+diesel::joinable!(tournaments_invitations -> tournaments (tournament_id));
+diesel::joinable!(tournaments_invitations -> users (invitee_id));
+diesel::joinable!(tournaments_organizers -> tournaments (tournament_id));
+diesel::joinable!(tournaments_organizers -> users (organizer_id));
+diesel::joinable!(tournaments_users -> tournaments (tournament_id));
+diesel::joinable!(tournaments_users -> users (user_id));
 
-diesel::allow_tables_to_appear_in_same_query!(challenges, games, games_users, ratings, users,);
+diesel::allow_tables_to_appear_in_same_query!(
+    challenges,
+    games,
+    games_users,
+    ratings,
+    tournament_series,
+    tournament_series_organizers,
+    tournaments,
+    tournaments_invitations,
+    tournaments_organizers,
+    tournaments_users,
+    users,
+);

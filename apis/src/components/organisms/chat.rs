@@ -1,6 +1,9 @@
-use crate::providers::{
-    chat::Chat, game_state::GameStateSignal, navigation_controller::NavigationControllerSignal,
-    AuthContext,
+use crate::{
+    components::update_from_event::update_from_input,
+    providers::{
+        chat::Chat, game_state::GameStateSignal, navigation_controller::NavigationControllerSignal,
+        AuthContext,
+    },
 };
 use chrono::Local;
 use leptos::*;
@@ -34,7 +37,6 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 pub fn ChatInput(destination: ChatDestination) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let destination = store_value(destination);
-    let input = move |evt| chat.typed_message.update(|v| *v = event_target_value(&evt));
     let send = move || {
         batch(move || {
             let message = chat.typed_message.get();
@@ -60,7 +62,7 @@ pub fn ChatInput(destination: ChatDestination) -> impl IntoView {
             class="box-border px-4 py-2 w-full h-auto rounded-lg resize-none bg-odd-light dark:bg-odd-dark focus:outline-none shrink-0"
             prop:value=chat.typed_message
             attr:placeholder=placeholder
-            on:input=input
+            on:input=update_from_input(chat.typed_message)
             on:keydown=move |evt| {
                 if evt.key() == "Enter" {
                     evt.prevent_default();
@@ -103,12 +105,13 @@ pub fn ChatWindow(
     };
 
     let navi = expect_context::<NavigationControllerSignal>();
-    let game_id = store_value(navi.signal.get_untracked().game_id.unwrap_or_default());
-    let correspondant_id = store_value(if let Some(v) = correspondant_id {
-        v
-    } else {
-        Uuid::new_v4()
-    });
+    let game_id = store_value(
+        navi.game_signal
+            .get_untracked()
+            .game_id
+            .unwrap_or_default(),
+    );
+    let correspondant_id = store_value(correspondant_id.map_or(Uuid::new_v4(), |id| id));
     let correspondant_username = store_value(correspondant_username);
     let div = create_node_ref::<html::Div>();
     let _ = use_mutation_observer_with_options(

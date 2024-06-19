@@ -97,7 +97,7 @@ pub async fn get_top_users(
     let mut results: Vec<UserResponse> = Vec::new();
     for (user, _rating) in top_users.iter() {
         results.push(
-            UserResponse::from_user(user, &mut conn)
+            UserResponse::from_model(user, &mut conn)
                 .await
                 .map_err(ServerFnError::new)?,
         )

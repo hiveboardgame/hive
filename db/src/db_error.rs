@@ -13,6 +13,8 @@ pub enum DbError {
     TimeNotFound { reason: String },
     #[error("Game is over")]
     GameIsOver,
+    #[error("You are not authorized to perform that action")]
+    Unauthorized,
 }
 
 impl From<diesel::result::Error> for DbError {

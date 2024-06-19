@@ -142,8 +142,9 @@ impl Handler<Connect> for Lobby {
                         address.do_send(cam);
                     }
                 }
+
                 let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
-                    if let Ok(user_response) = UserResponse::from_user(&user, &mut conn).await {
+                    if let Ok(user_response) = UserResponse::from_model(&user, &mut conn).await {
                         let message =
                             ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
                                 status: UserStatus::Online,
@@ -160,10 +161,6 @@ impl Handler<Connect> for Lobby {
                                     for socket in sockets {
                                         socket.do_send(WsMessage(serialized.clone()));
                                     }
-                                } else if let Ok(user) = User::find_by_uuid(id, &mut conn).await {
-                                    println!("Game_users has stale user: {}", user.username);
-                                } else {
-                                    println!("Game_users has stale anoymous user");
                                 }
                             }
                         }
@@ -266,7 +263,6 @@ impl Handler<Connect> for Lobby {
                 address.do_send(cam);
             }
         };
-
         let actor_future = future.into_actor(self);
         ctx.wait(actor_future);
     }

@@ -21,7 +21,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
 
-static NANOS_IN_SECOND: u64 = 1000000000_u64;
+pub static NANOS_IN_SECOND: u64 = 1000000000_u64;
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = games)]
@@ -53,6 +53,7 @@ pub struct NewGame {
     pub speed: String,
     pub hashes: Vec<Option<i64>>,
     pub conclusion: String,
+    pub tournament_id: Option<Uuid>,
 }
 
 impl NewGame {
@@ -98,6 +99,7 @@ impl NewGame {
                 .to_string(),
             hashes: Vec::new(),
             conclusion: Conclusion::Unknown.to_string(),
+            tournament_id: None,
         }
     }
 }
@@ -136,6 +138,7 @@ pub struct Game {
     pub speed: String,
     hashes: Vec<Option<i64>>,
     pub conclusion: String,
+    pub tournament_id: Option<Uuid>,
 }
 
 impl Game {

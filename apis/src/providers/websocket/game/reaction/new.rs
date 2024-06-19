@@ -18,7 +18,7 @@ pub fn handle_new_game(game_response: GameResponse) {
         TimeMode::Correspondence | TimeMode::Untimed => {
             let navigation_controller = expect_context::<NavigationControllerSignal>();
             navigation_controller
-                .signal
+                .game_signal
                 .get_untracked()
                 .game_id
                 .is_none()

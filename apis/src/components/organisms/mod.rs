@@ -19,4 +19,5 @@ pub mod side_board;
 pub mod tile_design_toggle;
 pub mod tile_dots_toggle;
 pub mod tile_rotation_toggle;
+pub mod time_select;
 pub mod tv;
