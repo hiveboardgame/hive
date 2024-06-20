@@ -8,9 +8,7 @@ use crate::{
     DbConn,
 };
 use chrono::{DateTime, Utc};
-use diesel::{
-    dsl::exists, prelude::*, select, Identifiable, Insertable, Queryable,
-};
+use diesel::{dsl::exists, prelude::*, select, Identifiable, Insertable, Queryable};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
@@ -39,6 +37,16 @@ impl TournamentInvitation {
             .execute(conn)
             .await?;
         Ok(())
+    }
+
+    pub async fn find_by_user(
+        user: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<TournamentInvitation>, DbError> {
+        Ok(tournaments_invitations_table
+            .filter(invitee_id_column.eq(user))
+            .get_results(conn)
+            .await?)
     }
 
     pub async fn find_by_ids(

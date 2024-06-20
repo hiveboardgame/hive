@@ -6,9 +6,10 @@ use crate::{
 use actix::prelude::{Actor, Context, Handler, Recipient};
 use actix::AsyncContext;
 use actix::WrapFuture;
+use crate::{common::TournamentUpdate, responses::TournamentResponse};
 use db_lib::{
     get_conn,
-    models::{Challenge, User},
+    models::{Challenge, TournamentInvitation, User},
     DbPool,
 };
 use diesel_async::scoped_futures::ScopedFutureExt;
@@ -204,6 +205,29 @@ impl Handler<Connect> for Lobby {
                             address.do_send(cam);
                         }
                     }
+                    // send tournament invitations
+                    if let Ok(invitations) =
+                        TournamentInvitation::find_by_user(&user.id, &mut conn).await
+                    {
+                        for invitation in invitations {
+                            if let Ok(response) =
+                                TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn).await
+                            {
+                                let message = ServerResult::Ok(Box::new(
+                                    ServerMessage::Tournament(TournamentUpdate::Invited(response)),
+                                ));
+                                let serialized = serde_json::to_string(&message)
+                                    .expect("Failed to serialize a server message");
+                                let cam = ClientActorMessage {
+                                    destination: MessageDestination::User(user_id),
+                                    serialized,
+                                    from: user_id,
+                                };
+                                address.do_send(cam);
+                            }
+                        }
+                    }
+
                     // Send challenges on join
                     let mut responses = Vec::new();
                     if let Ok(challenges) =

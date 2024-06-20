@@ -47,9 +47,15 @@ impl InvitationRetract {
             })
             .await?;
         let response = TournamentResponse::from_model(&tournament, &mut conn).await?;
-        Ok(vec![InternalServerMessage {
-            destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Modified(response)),
-        }])
+        Ok(vec![
+            InternalServerMessage {
+                destination: MessageDestination::User(self.invitee),
+                message: ServerMessage::Tournament(TournamentUpdate::Uninvited(response.clone())),
+            },
+            InternalServerMessage {
+                destination: MessageDestination::Global,
+                message: ServerMessage::Tournament(TournamentUpdate::Modified(response)),
+            },
+        ])
     }
 }

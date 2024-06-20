@@ -1,4 +1,5 @@
 pub mod alert;
+pub mod tournament_invitation_row;
 pub mod analysis_and_download;
 pub mod banner;
 pub mod board_pieces;

@@ -1,5 +1,9 @@
-use crate::components::molecules::{challenge_row::ChallengeRow, hamburger::Hamburger};
+use crate::components::molecules::{
+    challenge_row::ChallengeRow, hamburger::Hamburger,
+    tournament_invitation_row::TournamentInvitationRow,
+};
 use crate::providers::challenges::ChallengeStateSignal;
+use crate::providers::tournaments::TournamentStateSignal;
 use crate::providers::NotificationContext;
 use leptos::*;
 use leptos_icons::*;
@@ -10,6 +14,7 @@ pub fn NotificationDropdown() -> impl IntoView {
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
     let notifications_context = store_value(expect_context::<NotificationContext>());
     let challenges = expect_context::<ChallengeStateSignal>();
+    let tournaments = expect_context::<TournamentStateSignal>();
     let has_notifications = move || !notifications_context().is_empty();
     let icon_style = TextProp::from(move || {
         if has_notifications() {
@@ -48,6 +53,26 @@ pub fn NotificationDropdown() -> impl IntoView {
                                     .clone(),
                             )
                             single=false
+                        />
+                    </div>
+                </For>
+
+                <For
+                    each=move || notifications_context().tournaments.get()
+                    key=|t| { t.clone() }
+                    let:tournament_id
+                >
+                    <div on:click=onclick_close>
+                        <TournamentInvitationRow
+                            tournament=store_value(
+                                tournaments
+                                    .signal
+                                    .get_untracked()
+                                    .tournaments
+                                    .get(&tournament_id)
+                                    .expect("Tournament exists")
+                                    .clone(),
+                            )
                         />
                     </div>
                 </For>
