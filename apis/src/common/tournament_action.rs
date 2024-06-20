@@ -14,6 +14,7 @@ pub enum TournamentAction {
     InvitationCreate(TournamentId, Uuid),
     InvitationDecline(TournamentId),
     InvitationRetract(TournamentId, Uuid),
+    Kick(TournamentId, Uuid),
     Join(TournamentId),
     Leave(TournamentId),
     RemoveFromSeries(TournamentId),

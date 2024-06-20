@@ -8,4 +8,5 @@ pub mod invitation_create;
 pub mod invitation_decline;
 pub mod invitation_retract;
 pub mod join;
+pub mod kick;
 pub mod leave;

@@ -231,6 +231,11 @@ impl Tournament {
         if players.iter().any(|player| player.id == *user_id) {
             return Ok(self.clone());
         }
+        if let Ok(invitation) =
+            TournamentInvitation::find_by_ids(&self.id, user_id, conn).await
+        {
+            invitation.delete(conn).await?;
+        }
         let tournament_user = TournamentUser::new(self.id, *user_id);
         tournament_user.insert(conn).await?;
         Ok(diesel::update(tournaments::table.find(self.id))
@@ -241,6 +246,20 @@ impl Tournament {
 
     pub async fn leave(&self, user_id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self, DbError> {
         TournamentUser::delete(self.id, *user_id, conn).await?;
+        Ok(diesel::update(tournaments::table.find(self.id))
+            .set(updated_at.eq(Utc::now()))
+            .get_result(conn)
+            .await?)
+    }
+
+    pub async fn kick(
+        &self,
+        organizer: &Uuid,
+        player: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Self, DbError> {
+        self.ensure_user_is_organizer(organizer, conn).await?;
+        TournamentUser::delete(self.id, *player, conn).await?;
         Ok(diesel::update(tournaments::table.find(self.id))
             .set(updated_at.eq(Utc::now()))
             .get_result(conn)

@@ -101,7 +101,7 @@ pub fn Tournament() -> impl IntoView {
                         key=|users| (users.uid)
                         let:user
                     >
-                        <UserRow actions=vec![] user=store_value(user)/>
+                        <UserRow actions=vec![UserAction::Kick(Box::new(tournament()))] user=store_value(user)/>
                     </For>
                 </div>
                 <div>

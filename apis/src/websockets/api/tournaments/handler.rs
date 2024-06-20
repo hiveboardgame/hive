@@ -1,8 +1,5 @@
 use super::{
-    create::CreateHandler, delete::DeleteHandler, get::GetHandler, get_all::GetAllHandler,
-    invitation_accept::InvitationAccept, invitation_create::InvitationCreate,
-    invitation_decline::InvitationDecline, invitation_retract::InvitationRetract,
-    join::JoinHandler, leave::LeaveHandler,
+    create::CreateHandler, delete::DeleteHandler, get::GetHandler, get_all::GetAllHandler, invitation_accept::InvitationAccept, invitation_create::InvitationCreate, invitation_decline::InvitationDecline, invitation_retract::InvitationRetract, join::JoinHandler, kick::KickHandler, leave::LeaveHandler
 };
 use crate::{common::TournamentAction, websockets::internal_server_message::InternalServerMessage};
 use anyhow::Result;
@@ -89,6 +86,12 @@ impl TournamentHandler {
             }
             TournamentAction::InvitationRetract(tournament_id, user) => {
                 InvitationRetract::new(tournament_id, self.user_id, user, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            TournamentAction::Kick(tournament_id, user) => {
+                KickHandler::new(tournament_id, self.user_id, user, &self.pool)
                     .await?
                     .handle()
                     .await?

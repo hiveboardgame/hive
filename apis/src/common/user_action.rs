@@ -1,5 +1,7 @@
 use shared_types::TournamentId;
 
+use crate::responses::TournamentResponse;
+
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum UserAction {
     Block,
@@ -10,4 +12,5 @@ pub enum UserAction {
     Message,
     Unblock,
     Unfollow,
+    Kick(Box<TournamentResponse>)
 }

@@ -19,6 +19,5 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
             let mut tournaments_signal = expect_context::<TournamentStateSignal>();
             tournaments_signal.remove(nanoid);
         }
-        _ => unimplemented!("Got: {:?} which is not implemented yet", tournament),
     }
 }

@@ -1,4 +1,5 @@
 pub mod active;
+pub mod kick_button;
 pub mod create_challenge_button;
 pub mod direct_challenge_button;
 pub mod download_pgn;
