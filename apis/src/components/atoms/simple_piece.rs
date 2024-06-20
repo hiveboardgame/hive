@@ -1,25 +1,23 @@
-use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
-use crate::common::{PieceType, SvgPos};
-use crate::pages::{analysis::InAnalysis, play::CurrentConfirm};
+use crate::common::SvgPos;
+use crate::common::{TileDesign, TileDots, TileRotation};
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
 use hive_lib::{Bug, Piece, Position};
 use leptos::*;
-use web_sys::MouseEvent;
 
 #[component]
-pub fn Piece(
+pub fn SimplePiece(
     // WARN piece and position are untracked and might break reactivity if passed in as signals in the future
     #[prop(into)] piece: MaybeSignal<Piece>,
     #[prop(into)] position: MaybeSignal<Position>,
     #[prop(into)] level: MaybeSignal<usize>,
-    #[prop(optional, into)] piece_type: PieceType,
 ) -> impl IntoView {
+    let game_state = expect_context::<GameStateSignal>();
+    let config = expect_context::<Config>();
     let piece = piece.get_untracked();
     let position = position.get_untracked();
     let center = move || SvgPos::center_for_level(position, level());
     let order = piece.order();
-    let config = expect_context::<Config>();
     let ds_transform = move || format!("translate({},{})", center().0, center().1);
     let transform = move || {
         if (config.tile_rotation.preferred_tile_rotation)() == TileRotation::Yes {
@@ -53,36 +51,6 @@ pub fn Piece(
                 Bug::Spider => " color: #993c1e",
                 _ => " color: #FF0000",
             }
-        }
-    };
-
-    let sepia = if piece_type == PieceType::Inactive {
-        "sepia-[.75]"
-    } else {
-        ""
-    };
-
-    let mut game_state = expect_context::<GameStateSignal>();
-    let current_confirm = expect_context::<CurrentConfirm>().0;
-    let in_analysis = use_context::<InAnalysis>().unwrap_or(InAnalysis(RwSignal::new(false)));
-    let onclick = move |evt: MouseEvent| {
-        evt.stop_propagation();
-        let in_analysis = in_analysis.0.get_untracked();
-        if in_analysis || game_state.is_move_allowed() {
-            match piece_type {
-                PieceType::Board => {
-                    game_state.show_moves(piece, position);
-                }
-                PieceType::Reserve => {
-                    game_state.show_spawns(piece, position);
-                }
-                PieceType::Move | PieceType::Spawn => {
-                    if current_confirm() == MoveConfirm::Double {
-                        game_state.move_active();
-                    }
-                }
-                _ => {}
-            };
         }
     };
 
@@ -150,7 +118,7 @@ pub fn Piece(
     };
 
     view! {
-        <g on:click=onclick class=sepia style=dot_color>
+        <g style=dot_color>
             <g transform=ds_transform>
                 <use_ href=show_ds transform="scale(0.56, 0.56) translate(-67, -64.5)"></use_>
             </g>

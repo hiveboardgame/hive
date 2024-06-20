@@ -8,11 +8,11 @@ use leptos::*;
 
 #[component]
 pub fn BoardPieces() -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateSignal>();
     // TODO get the BOARD_SIZE from board
     let board = move || {
         let mut board = Vec::new();
-        let game_state = (game_state_signal.signal)();
+        let game_state = (game_state.signal)();
         let targets = game_state.move_info.target_positions;
         let last_move = game_state.state.board.last_move;
         let active_piece = (

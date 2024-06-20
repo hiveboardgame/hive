@@ -13,6 +13,7 @@ pub mod profile_link;
 pub mod rating;
 pub mod select_options;
 pub mod simple_hex;
+pub mod simple_piece;
 pub mod status_indicator;
 pub mod svgs;
 pub mod target;
