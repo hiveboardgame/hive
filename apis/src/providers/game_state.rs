@@ -4,7 +4,7 @@ use crate::responses::GameResponse;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
 use leptos::*;
-use shared_types::GameId;
+use shared_types::{GameId, GameSpeed};
 use uuid::Uuid;
 
 use super::auth_context::AuthContext;
@@ -197,7 +197,7 @@ impl GameStateSignal {
 
     pub fn set_game_response(&mut self, game_response: GameResponse) {
         self.signal
-            .update(|s| s.game_response = Some(game_response))
+            .update(|s| s.game_response = Some(game_response));
     }
 
     pub fn is_finished(&self) -> Memo<bool> {
@@ -433,6 +433,10 @@ impl GameState {
         } else {
             self.history_turn = None;
         }
+    }
+
+    pub fn get_game_speed(&self) -> Option<GameSpeed> {
+        self.game_response.as_ref().map(|gr| gr.speed.clone())
     }
 }
 

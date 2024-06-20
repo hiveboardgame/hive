@@ -1,4 +1,5 @@
 use crate::{
+    common::MoveConfirm,
     components::{
         atoms::{
             history_button::{HistoryButton, HistoryNavigation},
@@ -11,7 +12,7 @@ use crate::{
             reserve::{Alignment, Reserve},
         },
     },
-    pages::play::TargetStack,
+    pages::play::{CurrentConfirm, TargetStack},
     providers::game_state::GameStateSignal,
 };
 use hive_lib::Color;
@@ -24,6 +25,7 @@ pub struct InAnalysis(pub RwSignal<bool>);
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
     provide_context(InAnalysis(RwSignal::new(true)));
+    provide_context(CurrentConfirm(Memo::new(move |_| MoveConfirm::Single)));
     let is_tall = expect_context::<OrientationSignal>().is_tall;
     let parent_container_style = move || {
         if is_tall() {
