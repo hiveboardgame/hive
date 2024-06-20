@@ -21,5 +21,5 @@ pub use api_requests::ApiRequests;
 pub use auth_context::{provide_auth, AuthContext};
 pub use color_scheme::{provide_color_scheme, ColorScheme};
 pub use config::{provide_config, Config};
-pub use notifications::{provide_notifications, NotificationContext, NotificationType};
+pub use notifications::{provide_notifications, NotificationContext};
 pub use ping::{provide_ping, PingSignal};

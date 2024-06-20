@@ -3,8 +3,8 @@ use crate::components::molecules::chat_and_controls::ChatAndControls;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle,
     dropdowns::{
-        CommunityDropdown, LearnDropdown, MobileDropdown, NotificationDropdown, TournamentDropdown,
-        UserDropdown,
+        community::CommunityDropdown, learn::LearnDropdown, mobile::MobileDropdown,
+        notification::NotificationDropdown, tournament::TournamentDropdown, user::UserDropdown,
     },
 };
 use crate::providers::AuthContext;

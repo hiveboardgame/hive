@@ -1,53 +1,57 @@
 use leptos::*;
-use shared_types::ChallengeId;
-use std::{collections::HashMap, fmt};
-
-#[derive(Clone, Hash)]
-pub enum NotificationType {
-    GameInvite(ChallengeId),
-}
-
-impl fmt::Display for NotificationType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let message = match self {
-            NotificationType::GameInvite(nanoid) => format!("game: {nanoid}"),
-        };
-        write!(f, "Invited to {message}")
-    }
-}
-
-impl NotificationType {
-    pub fn get_nanoid(&self) -> String {
-        match self {
-            NotificationType::GameInvite(game_id) => game_id.0.clone(),
-        }
-    }
-}
+use shared_types::{ApisId, ChallengeId, TournamentId};
+use std::collections::HashSet;
 
 #[derive(Clone)]
 pub struct NotificationContext {
-    pub notifications: RwSignal<HashMap<String, NotificationType>>,
+    pub challenges: RwSignal<HashSet<ChallengeId>>,
+    pub tournaments: RwSignal<HashSet<TournamentId>>,
 }
 
 impl NotificationContext {
     pub fn new() -> Self {
         Self {
-            notifications: RwSignal::new(HashMap::new()),
+            challenges: RwSignal::new(HashSet::new()),
+            tournaments: RwSignal::new(HashSet::new()),
         }
     }
 
-    pub fn remove(&mut self, challenge_id: &ChallengeId) {
-        self.notifications.update(|s| {
-            s.remove(&challenge_id.0);
-        });
+    pub fn is_empty(&self) -> bool {
+        self.challenges.get().is_empty() && self.tournaments.get().is_empty()
     }
 
-    pub fn add(&mut self, notifications: Vec<NotificationType>) {
-        self.notifications.update(|s| {
-            for notification in notifications {
-                s.insert(notification.get_nanoid(), notification);
+    pub fn remove(&mut self, notification: &ApisId) {
+        match notification {
+            ApisId::Challenge(challenge_id) => {
+                self.challenges.update(|s| {
+                    s.remove(challenge_id);
+                });
             }
-        })
+            ApisId::Tournament(tournament_id) => {
+                self.tournaments.update(|s| {
+                    s.remove(tournament_id);
+                });
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    pub fn add(&mut self, notifications: Vec<ApisId>) {
+        for notification in notifications {
+            match notification {
+                ApisId::Challenge(challenge_id) => {
+                    self.challenges.update(|s| {
+                        s.insert(challenge_id);
+                    });
+                }
+                ApisId::Tournament(tournament_id) => {
+                    self.tournaments.update(|s| {
+                        s.insert(tournament_id);
+                    });
+                }
+                _ => unimplemented!(),
+            }
+        }
     }
 }
 

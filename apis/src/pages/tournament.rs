@@ -117,7 +117,9 @@ pub fn Tournament() -> impl IntoView {
                         />
                     </For>
                 </div>
-                <InviteUser tournament=tournament()/>
+                <Show when=user_is_organizer>
+                    <InviteUser tournament=tournament()/>
+                </Show>
                 Seats
                 <div>{number_of_players} / {tournament().seats}</div>
                 Rounds

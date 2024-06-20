@@ -1,12 +1,10 @@
 use crate::{
     common::ChallengeUpdate,
-    providers::{
-        auth_context::AuthContext, challenges::ChallengeStateSignal, NotificationContext,
-        NotificationType,
-    },
+    providers::{auth_context::AuthContext, challenges::ChallengeStateSignal, NotificationContext},
     responses::ChallengeResponse,
 };
 use leptos::*;
+use shared_types::ApisId;
 
 fn filter_challenges(challenges: &mut Vec<ChallengeResponse>) {
     let auth_context = expect_context::<AuthContext>();
@@ -49,9 +47,8 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
                 for challenge in &new_challanges {
                     if let Some(ref opponent) = challenge.opponent {
                         if opponent.uid == account.user.uid {
-                            notifications.add(vec![NotificationType::GameInvite(
-                                challenge.challenge_id.clone(),
-                            )])
+                            notifications
+                                .add(vec![ApisId::Challenge(challenge.challenge_id.clone())])
                         }
                     }
                 }
@@ -62,7 +59,7 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
             let mut challenges = expect_context::<ChallengeStateSignal>();
             batch(move || {
                 challenges.remove(challenge_id.clone());
-                notifications.remove(&challenge_id);
+                notifications.remove(&ApisId::Challenge(challenge_id));
             });
         }
         ChallengeUpdate::Created(challenge) | ChallengeUpdate::Direct(challenge) => {
@@ -70,9 +67,8 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
                 if let Some(account) = account() {
                     if let Some(ref opponent) = challenge.opponent {
                         if opponent.uid == account.user.uid {
-                            notifications.add(vec![NotificationType::GameInvite(
-                                challenge.challenge_id.clone(),
-                            )])
+                            notifications
+                                .add(vec![ApisId::Challenge(challenge.challenge_id.clone())])
                         }
                     }
                 }
