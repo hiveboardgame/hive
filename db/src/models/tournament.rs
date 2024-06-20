@@ -1,3 +1,4 @@
+use super::{Game, NewGame, TournamentInvitation};
 use crate::{
     db_error::DbError,
     models::{
@@ -12,12 +13,11 @@ use crate::{
 use chrono::prelude::*;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use itertools::Itertools;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use shared_types::{TimeMode, TournamentDetails, TournamentId};
 use uuid::Uuid;
-
-use super::{Game, TournamentInvitation};
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = tournaments)]
@@ -178,9 +178,14 @@ impl Tournament {
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
         self.ensure_user_is_organizer(user_id, conn).await?;
-        let invitation = TournamentInvitation::find_by_ids(&self.id, invitee, conn).await?;
-        invitation.delete(conn).await?;
-        Ok(self.clone())
+        if let Ok(invitation) = TournamentInvitation::find_by_ids(&self.id, invitee, conn).await {
+            invitation.delete(conn).await?;
+            Ok(self.clone())
+        } else {
+            Err(DbError::NotFound {
+                reason: String::from("No invitation found"),
+            })
+        }
     }
 
     pub async fn decline_invitation(
@@ -188,9 +193,14 @@ impl Tournament {
         user_id: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
-        let invitation = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await?;
-        invitation.delete(conn).await?;
-        Ok(self.clone())
+        if let Ok(invitation) = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await {
+            invitation.delete(conn).await?;
+            Ok(self.clone())
+        } else {
+            Err(DbError::NotFound {
+                reason: String::from("No invitation found"),
+            })
+        }
     }
 
     pub async fn accept_invitation(
@@ -198,11 +208,16 @@ impl Tournament {
         user_id: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
-        let invitation = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await?;
-        invitation.delete(conn).await?;
-        let tournament_user = TournamentUser::new(self.id, *user_id);
-        tournament_user.insert(conn).await?;
-        Ok(self.clone())
+        if let Ok(invitation) = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await {
+            invitation.delete(conn).await?;
+            let tournament_user = TournamentUser::new(self.id, *user_id);
+            tournament_user.insert(conn).await?;
+            Ok(self.clone())
+        } else {
+            Err(DbError::NotFound {
+                reason: String::from("No invitation found"),
+            })
+        }
     }
 
     pub async fn add_to_series(
@@ -231,9 +246,7 @@ impl Tournament {
         if players.iter().any(|player| player.id == *user_id) {
             return Ok(self.clone());
         }
-        if let Ok(invitation) =
-            TournamentInvitation::find_by_ids(&self.id, user_id, conn).await
-        {
+        if let Ok(invitation) = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await {
             invitation.delete(conn).await?;
         }
         let tournament_user = TournamentUser::new(self.id, *user_id);
@@ -301,8 +314,28 @@ impl Tournament {
             .await?)
     }
 
-    pub async fn start(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
-        Ok(Vec::new())
+    pub async fn start(&self, organizer: &Uuid, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+        self.ensure_user_is_organizer(organizer, conn).await?;
+        // Make sure all the conditions have been met
+        // and then call different starts for different tournament types
+        self.round_robin_start(conn).await
+    }
+
+    pub async fn round_robin_start(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+        let mut games = Vec::new();
+        let players = self.players(conn).await?;
+        let combinations: Vec<Vec<User>> = players.into_iter().combinations(2).collect();
+        for combination in combinations {
+            let white = combination[0].id;
+            let black = combination[1].id;
+            let new_game = NewGame::new_from_tournament(white, black, self);
+            let game = Game::create(new_game, conn).await?;
+            games.push(game);
+            let new_game = NewGame::new_from_tournament(black, white, self);
+            let game = Game::create(new_game, conn).await?;
+            games.push(game);
+        }
+        Ok(games)
     }
 
     pub async fn get_all(conn: &mut DbConn<'_>) -> Result<Vec<Tournament>, DbError> {

@@ -128,15 +128,15 @@ use std::str::FromStr;
 impl GameResponse {
     pub async fn new_from_uuid(game_id: Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
         let game = Game::find_by_uuid(&game_id, conn).await?;
-        GameResponse::new_from_model(&game, conn).await
+        GameResponse::from_model(&game, conn).await
     }
 
     pub async fn new_from_game_id(game_id: &GameId, conn: &mut DbConn<'_>) -> Result<Self> {
         let game = Game::find_by_game_id(game_id, conn).await?;
-        GameResponse::new_from_model(&game, conn).await
+        GameResponse::from_model(&game, conn).await
     }
 
-    pub async fn new_from_model(game: &Game, conn: &mut DbConn<'_>) -> Result<Self> {
+    pub async fn from_model(game: &Game, conn: &mut DbConn<'_>) -> Result<Self> {
         let history = History::new_from_str(&game.history)?;
         let state = State::new_from_history(&history)?;
         GameResponse::new_from(game, &state, conn).await

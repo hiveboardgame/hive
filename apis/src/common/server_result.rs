@@ -60,6 +60,7 @@ pub enum TournamentUpdate {
     Left(TournamentResponse),
     Tournaments(Vec<TournamentResponse>),
     Invited(TournamentResponse),
+    Declined(TournamentResponse),
     Uninvited(TournamentResponse),
 }
 

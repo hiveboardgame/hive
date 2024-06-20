@@ -1,4 +1,4 @@
-use super::challenge::Challenge;
+use super::{challenge::Challenge, Tournament};
 use crate::{
     db_error::DbError,
     models::{GameUser, Rating},
@@ -9,10 +9,11 @@ use crate::{
     },
     DbConn,
 };
+use ::nanoid::nanoid;
 use chrono::{DateTime, Utc};
 use diesel::{prelude::*, Identifiable, Insertable, Queryable};
 use diesel_async::RunQueryDsl;
-use hive_lib::{Color, GameControl, GameResult, GameStatus, History, State};
+use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{ChallengeId, Conclusion, GameId, GameSpeed, TimeMode};
 use std::str::FromStr;
@@ -55,6 +56,52 @@ pub struct NewGame {
 }
 
 impl NewGame {
+    pub fn new_from_tournament(white: Uuid, black: Uuid, tournament: &Tournament) -> Self {
+        let time_left = match TimeMode::from_str(&tournament.time_mode).unwrap() {
+            TimeMode::Untimed => unreachable!("Tournaments cannot be untimed"),
+            TimeMode::RealTime => tournament
+                .time_base
+                .map(|base| (base as u64 * NANOS_IN_SECOND) as i64),
+            TimeMode::Correspondence => match (tournament.time_base, tournament.time_increment) {
+                (Some(base), None) => Some((base as u64 * NANOS_IN_SECOND) as i64),
+                (None, Some(inc)) => Some((inc as u64 * NANOS_IN_SECOND) as i64),
+                _ => unreachable!(),
+            },
+        };
+
+        Self {
+            nanoid: nanoid!(12),
+            current_player_id: white,
+            black_id: black,
+            finished: false,
+            game_status: "NotStarted".to_owned(),
+            game_type: GameType::MLP.to_string(),
+            history: String::new(),
+            game_control_history: String::new(),
+            rated: true,
+            tournament_queen_rule: true,
+            turn: 0,
+            white_id: white,
+            white_rating: None,
+            black_rating: None,
+            white_rating_change: None,
+            black_rating_change: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            time_mode: tournament.time_mode.to_owned(),
+            time_base: tournament.time_base,
+            time_increment: tournament.time_increment,
+            last_interaction: None,
+            black_time_left: time_left,
+            white_time_left: time_left,
+            speed: GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment)
+                .to_string(),
+            hashes: Vec::new(),
+            conclusion: Conclusion::Unknown.to_string(),
+            tournament_id: Some(tournament.id),
+        }
+    }
+
     pub fn new(white: Uuid, black: Uuid, challenge: &Challenge) -> Self {
         let time_left = match TimeMode::from_str(&challenge.time_mode).unwrap() {
             TimeMode::Untimed => None,
@@ -149,7 +196,7 @@ impl Game {
     pub async fn create(
         new_game: NewGame,
         conn: &mut DbConn<'_>,
-    ) -> Result<(Game, Vec<ChallengeId>), DbError> {
+    ) -> Result<Game, DbError> {
         let game: Game = new_game.insert_into(games::table).get_result(conn).await?;
         let game_user_white = GameUser::new(game.id, game.white_id);
         game_user_white
@@ -161,6 +208,14 @@ impl Game {
             .insert_into(games_users::table)
             .execute(conn)
             .await?;
+        Ok(game)
+    }
+
+    pub async fn create_and_delete_challenges(
+        new_game: NewGame,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(Game, Vec<ChallengeId>), DbError> {
+        let game = Game::create(new_game, conn).await?;
         let challenge: Challenge = challenges::table
             .filter(nanoid_field.eq(game.nanoid.clone()))
             .first(conn)

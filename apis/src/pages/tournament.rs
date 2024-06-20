@@ -64,6 +64,15 @@ pub fn Tournament() -> impl IntoView {
             }
         }
     };
+    let start = move |_| {
+        if let Some(tournament_id) = tournament_id() {
+            if user_is_organizer() {
+                let action = TournamentAction::Start(tournament_id);
+                let api = ApiRequests::new();
+                api.tournament(action);
+            }
+        }
+    };
     let leave_or_join = move |_| {
         if let Some(tournament_id) = tournament_id() {
             let action = if user_joined() {
@@ -135,6 +144,11 @@ pub fn Tournament() -> impl IntoView {
                 <Show when=user_is_organizer>
                     <button class=BUTTON_STYLE on:click=delete>
                         {"Delete"}
+                    </button>
+                </Show>
+                <Show when=user_is_organizer>
+                    <button class=BUTTON_STYLE on:click=start>
+                        {"Start"}
                     </button>
                 </Show>
             }

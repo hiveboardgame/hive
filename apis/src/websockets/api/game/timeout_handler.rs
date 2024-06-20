@@ -31,7 +31,7 @@ impl TimeoutHandler {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
 
-        let game_response = GameResponse::new_from_model(&self.game, &mut conn).await?;
+        let game_response = GameResponse::from_model(&self.game, &mut conn).await?;
         if self.game.finished {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
