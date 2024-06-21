@@ -26,7 +26,7 @@ impl InvitationResponse {
 conn: &mut DbConn<'_>,
     ) -> Result<Self> {
         Ok(InvitationResponse {
-            tournament: TournamentResponse::from_model(tournament, conn).await?,
+            tournament: *TournamentResponse::from_model(tournament, conn).await?,
             invitee: UserResponse::from_model(invitee, conn).await?,
         })
     }

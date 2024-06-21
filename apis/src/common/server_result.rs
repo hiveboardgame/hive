@@ -53,15 +53,16 @@ pub enum ServerMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TournamentUpdate {
-    Created(TournamentResponse),
+    Started(Box<TournamentResponse>),
+    Created(Box<TournamentResponse>),
     Deleted(TournamentId),
-    Modified(TournamentResponse),
-    Joined(TournamentResponse),
-    Left(TournamentResponse),
-    Tournaments(Vec<TournamentResponse>),
-    Invited(TournamentResponse),
-    Declined(TournamentResponse),
-    Uninvited(TournamentResponse),
+    Modified(Box<TournamentResponse>),
+    Joined(Box<TournamentResponse>),
+    Left(Box<TournamentResponse>),
+    Tournaments(Vec<Box<TournamentResponse>>),
+    Invited(Box<TournamentResponse>),
+    Declined(Box<TournamentResponse>),
+    Uninvited(Box<TournamentResponse>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

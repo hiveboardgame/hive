@@ -1,5 +1,5 @@
 use crate::{
-    common::{GameAction, GameActionResponse, GameReaction, GameUpdate, ServerMessage, TournamentUpdate},
+    common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage, TournamentUpdate},
     responses::{GameResponse, TournamentResponse},
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
@@ -30,11 +30,16 @@ impl StartHandler {
         let mut messages = Vec::new();
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
         println!("Found tournament");
-        let games = conn
+        let (tournament, games) = conn
             .transaction::<_, DbError, _>(move |tc| {
                 async move { tournament.start(&self.user_id, tc).await }.scope_boxed()
             })
             .await?;
+        let tournament_response = TournamentResponse::from_model(&tournament, &mut conn).await?;
+        messages.push(InternalServerMessage {
+            destination: MessageDestination::Global,
+            message: ServerMessage::Tournament(TournamentUpdate::Started(tournament_response)),
+        });
         for game in games {
             let game_response = GameResponse::from_model(&game, &mut conn).await?;
 

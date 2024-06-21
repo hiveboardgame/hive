@@ -41,14 +41,14 @@ mod tests {
 
     #[test]
     fn tests_game_status() {
-        for gc in [
+        for ts in [
             TournamentStatus::NotStarted,
             TournamentStatus::InProgress,
             TournamentStatus::Finished,
         ]
-        .iter()
+        .into_iter()
         {
-            assert_eq!(Ok(gc.clone()), TournamentStatus::from_str(&format!("{gc}")));
+            assert_eq!(ts.clone(), TournamentStatus::from_str(&format!("{ts}")).unwrap());
         }
     }
 }

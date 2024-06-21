@@ -60,17 +60,17 @@ impl TournamentAbstractResponse {
 }
 
 impl TournamentResponse {
-    pub async fn from_tournament_id(tournament_id: &TournamentId, conn: &mut DbConn<'_>) -> Result<Self> {
+    pub async fn from_tournament_id(tournament_id: &TournamentId, conn: &mut DbConn<'_>) -> Result<Box<Self>> {
         let tournament = Tournament::find_by_tournament_id(tournament_id, conn).await?;
         Self::from_model(&tournament, conn).await
     }
 
-    pub async fn from_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
+    pub async fn from_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Box<Self>> {
         let tournament = Tournament::from_uuid(id, conn).await?;
         Self::from_model(&tournament, conn).await
     }
 
-    pub async fn from_model(tournament: &Tournament, conn: &mut DbConn<'_>) -> Result<Self> {
+    pub async fn from_model(tournament: &Tournament, conn: &mut DbConn<'_>) -> Result<Box<Self>> {
         // TODO: make this one query
         let mut invitees = Vec::new();
         for user in tournament.invitees(conn).await? {
@@ -84,11 +84,12 @@ impl TournamentResponse {
         for user in tournament.organizers(conn).await? {
             organizers.push(UserResponse::from_model(&user, conn).await?);
         }
-        let mut games = Vec::new();
-        for game in tournament.games(conn).await? {
-            games.push(GameResponse::from_model(&game, conn).await?);
+        let games = tournament.games(conn).await?;
+        let mut game_responses = Vec::new();
+        for (i, game) in games.iter().enumerate() {
+            game_responses.push(GameResponse::from_model(game, conn).await?);
         }
-        Ok(Self {
+        Ok(Box::new(Self {
             id: tournament.id,
             tournament_id: TournamentId(tournament.nanoid.clone()),
             name: tournament.name.clone(),
@@ -96,7 +97,7 @@ impl TournamentResponse {
             scoring: tournament.scoring.clone(), // TODO: make a type for this
             players,
             organizers,
-            games,
+            games: game_responses,
             tiebreaker: tournament.tiebreaker.clone().into_iter().flatten().collect(),
             invitees,
             seats: tournament.seats,
@@ -113,7 +114,7 @@ impl TournamentResponse {
             start_at: tournament.start_at,
             created_at: tournament.created_at,
             updated_at: tournament.updated_at,
-        })
+        }))
     }
 }
 }}

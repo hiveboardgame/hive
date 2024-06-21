@@ -6,10 +6,13 @@ use crate::{
     },
     schema::{
         games::{self, tournament_id as tournament_id_column},
-        tournaments::{self, nanoid as nanoid_field, series as series_column, updated_at},
+        tournaments::{
+            self, nanoid as nanoid_field, series as series_column, status as status_column,
+            updated_at,
+        },
         tournaments_organizers, users,
     },
-    DbConn, 
+    DbConn,
 };
 use chrono::prelude::*;
 use diesel::prelude::*;
@@ -326,14 +329,25 @@ impl Tournament {
         &self,
         organizer: &Uuid,
         conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Game>, DbError> {
+    ) -> Result<(Tournament, Vec<Game>), DbError> {
         self.ensure_user_is_organizer(organizer, conn).await?;
         // Make sure all the conditions have been met
         // and then call different starts for different tournament types
         if self.status != TournamentStatus::NotStarted.to_string() {
-            return Err(DbError::InvalidInput { info: format!("Tournament status is {}", self.status), error: String::from("Cannot start tournament a second time") });
+            return Err(DbError::InvalidInput {
+                info: format!("Tournament status is {}", self.status),
+                error: String::from("Cannot start tournament a second time"),
+            });
         }
-        self.round_robin_start(conn).await
+        let games = self.round_robin_start(conn).await?;
+        let tournament = diesel::update(self)
+            .set((
+                updated_at.eq(Utc::now()),
+                status_column.eq(TournamentStatus::InProgress.to_string()),
+            ))
+            .get_result(conn)
+            .await?;
+        Ok((tournament, games))
     }
 
     pub async fn round_robin_start(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
