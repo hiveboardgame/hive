@@ -5,10 +5,11 @@ use crate::{
         tournament_organizer::TournamentOrganizer, tournament_user::TournamentUser, user::User,
     },
     schema::{
+        games::{self, tournament_id as tournament_id_column},
         tournaments::{self, nanoid as nanoid_field, series as series_column, updated_at},
         tournaments_organizers, users,
     },
-    DbConn,
+    DbConn, 
 };
 use chrono::prelude::*;
 use diesel::prelude::*;
@@ -16,7 +17,7 @@ use diesel_async::RunQueryDsl;
 use itertools::Itertools;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
-use shared_types::{TimeMode, TournamentDetails, TournamentId};
+use shared_types::{TimeMode, TournamentDetails, TournamentId, TournamentStatus};
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -72,7 +73,7 @@ impl NewTournament {
             band_upper: details.band_upper,
             band_lower: details.band_lower,
             start_at: details.start_at,
-            status: String::from("NotStarted"), // TODO @leex make this an enum
+            status: TournamentStatus::NotStarted.to_string(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
             series: details.series,
@@ -314,10 +315,24 @@ impl Tournament {
             .await?)
     }
 
-    pub async fn start(&self, organizer: &Uuid, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+    pub async fn games(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+        Ok(games::table
+            .filter(tournament_id_column.eq(Some(self.id)))
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn start(
+        &self,
+        organizer: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
         self.ensure_user_is_organizer(organizer, conn).await?;
         // Make sure all the conditions have been met
         // and then call different starts for different tournament types
+        if self.status != TournamentStatus::NotStarted.to_string() {
+            return Err(DbError::InvalidInput { info: format!("Tournament status is {}", self.status), error: String::from("Cannot start tournament a second time") });
+        }
         self.round_robin_start(conn).await
     }
 

@@ -1,18 +1,18 @@
-use crate::responses::user::UserResponse;
+use super::{GameResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared_types::{TimeMode, TournamentId};
+use shared_types::{TimeMode, TournamentId, TournamentStatus};
 use std::str::FromStr;
 use uuid::Uuid;
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TournamentAbstractResponse {
     pub id: Uuid,
     pub tournament_id: TournamentId,
     pub name: String,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TournamentResponse {
     pub id: Uuid,
     pub tournament_id: TournamentId,
@@ -23,6 +23,7 @@ pub struct TournamentResponse {
     pub invitees: Vec<UserResponse>,
     pub players: Vec<UserResponse>,
     pub organizers: Vec<UserResponse>,
+    pub games: Vec<GameResponse>,
     pub seats: i32,
     pub rounds: i32,
     pub joinable: bool,
@@ -33,6 +34,7 @@ pub struct TournamentResponse {
     pub time_increment: Option<i32>,
     pub band_upper: Option<i32>,
     pub band_lower: Option<i32>,
+    pub status: TournamentStatus,
     pub start_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -82,6 +84,10 @@ impl TournamentResponse {
         for user in tournament.organizers(conn).await? {
             organizers.push(UserResponse::from_model(&user, conn).await?);
         }
+        let mut games = Vec::new();
+        for game in tournament.games(conn).await? {
+            games.push(GameResponse::from_model(&game, conn).await?);
+        }
         Ok(Self {
             id: tournament.id,
             tournament_id: TournamentId(tournament.nanoid.clone()),
@@ -90,6 +96,7 @@ impl TournamentResponse {
             scoring: tournament.scoring.clone(), // TODO: make a type for this
             players,
             organizers,
+            games,
             tiebreaker: tournament.tiebreaker.clone().into_iter().flatten().collect(),
             invitees,
             seats: tournament.seats,
@@ -102,6 +109,7 @@ impl TournamentResponse {
             time_increment: tournament.time_increment,
             band_upper: tournament.band_upper,
             band_lower: tournament.band_lower,
+            status: TournamentStatus::from_str(&tournament.status)?,
             start_at: tournament.start_at,
             created_at: tournament.created_at,
             updated_at: tournament.updated_at,

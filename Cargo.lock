@@ -3067,6 +3067,7 @@ dependencies = [
 name = "shared_types"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "chrono",
  "hive",
  "serde",

@@ -2,7 +2,7 @@ use shared_types::TournamentId;
 
 use crate::responses::TournamentResponse;
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum UserAction {
     Block,
     Challenge,

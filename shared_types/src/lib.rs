@@ -7,6 +7,8 @@ mod newtypes;
 mod simple_user;
 mod time_mode;
 mod tournament_details;
+mod tournament_status;
+pub use tournament_status::TournamentStatus;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
 pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
 pub use chat_message::{ChatDestination, ChatMessage, ChatMessageContainer, SimpleDestination};
