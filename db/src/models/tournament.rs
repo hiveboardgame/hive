@@ -133,14 +133,22 @@ impl Tournament {
     }
 
     pub async fn delete(&mut self, user_id: Uuid, conn: &mut DbConn<'_>) -> Result<(), DbError> {
-        let organizers = self.organizers(conn).await?;
-        if organizers.iter().any(|o| o.id == user_id) {
-            diesel::delete(tournaments::table.find(self.id))
-                .execute(conn)
-                .await?;
-            return Ok(());
+        self.ensure_not_started()?;
+        self.ensure_user_is_organizer(&user_id, conn).await?;
+        diesel::delete(tournaments::table.find(self.id))
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
+    fn ensure_not_started(&self) -> Result<(), DbError> {
+        if self.status != TournamentStatus::NotStarted.to_string() {
+            return Err(DbError::InvalidInput {
+                info: format!("Tournament status is {}", self.status),
+                error: String::from("Cannot start tournament a second time"),
+            });
         }
-        Err(DbError::Unauthorized)
+        Ok(())
     }
 
     async fn ensure_user_is_organizer(
@@ -161,6 +169,7 @@ impl Tournament {
         invitee: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
+        self.ensure_not_started()?;
         self.ensure_user_is_organizer(user_id, conn).await?;
         if TournamentInvitation::exists(&self.id, invitee, conn).await? {
             return Ok(self.clone());
@@ -181,6 +190,7 @@ impl Tournament {
         invitee: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
+        self.ensure_not_started()?;
         self.ensure_user_is_organizer(user_id, conn).await?;
         if let Ok(invitation) = TournamentInvitation::find_by_ids(&self.id, invitee, conn).await {
             invitation.delete(conn).await?;
@@ -197,6 +207,7 @@ impl Tournament {
         user_id: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
+        self.ensure_not_started()?;
         if let Ok(invitation) = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await {
             invitation.delete(conn).await?;
             Ok(self.clone())
@@ -212,6 +223,7 @@ impl Tournament {
         user_id: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
+        self.ensure_not_started()?;
         if let Ok(invitation) = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await {
             invitation.delete(conn).await?;
             let tournament_user = TournamentUser::new(self.id, *user_id);
@@ -243,6 +255,7 @@ impl Tournament {
     }
 
     pub async fn join(&self, user_id: &Uuid, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
+        self.ensure_not_started()?;
         let players = self.players(conn).await?;
         if players.len() as i32 == self.seats {
             return Ok(self.clone());
@@ -262,6 +275,7 @@ impl Tournament {
     }
 
     pub async fn leave(&self, user_id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self, DbError> {
+        self.ensure_not_started()?;
         TournamentUser::delete(self.id, *user_id, conn).await?;
         Ok(diesel::update(tournaments::table.find(self.id))
             .set(updated_at.eq(Utc::now()))
@@ -275,6 +289,7 @@ impl Tournament {
         player: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
+        self.ensure_not_started()?;
         self.ensure_user_is_organizer(organizer, conn).await?;
         TournamentUser::delete(self.id, *player, conn).await?;
         Ok(diesel::update(tournaments::table.find(self.id))
@@ -330,15 +345,10 @@ impl Tournament {
         organizer: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<(Tournament, Vec<Game>), DbError> {
+        self.ensure_not_started()?;
         self.ensure_user_is_organizer(organizer, conn).await?;
         // Make sure all the conditions have been met
         // and then call different starts for different tournament types
-        if self.status != TournamentStatus::NotStarted.to_string() {
-            return Err(DbError::InvalidInput {
-                info: format!("Tournament status is {}", self.status),
-                error: String::from("Cannot start tournament a second time"),
-            });
-        }
         let games = self.round_robin_start(conn).await?;
         let tournament = diesel::update(self)
             .set((

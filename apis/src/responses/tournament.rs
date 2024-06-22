@@ -86,8 +86,8 @@ impl TournamentResponse {
         }
         let games = tournament.games(conn).await?;
         let mut game_responses = Vec::new();
-        for (i, game) in games.iter().enumerate() {
-            game_responses.push(GameResponse::from_model(game, conn).await?);
+        for game in games {
+            game_responses.push(GameResponse::from_model(&game, conn).await?);
         }
         Ok(Box::new(Self {
             id: tournament.id,
