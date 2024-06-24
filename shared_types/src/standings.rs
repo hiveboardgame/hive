@@ -1,8 +1,8 @@
 use crate::TournamentGameResult;
 use hive_lib::Color;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, default::Default};
 use uuid::Uuid;
-use serde::{Serialize, Deserialize};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Pairing {
@@ -111,16 +111,21 @@ impl Standings {
             }
         }
     }
-
-    pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &f32)> {
-        let mut vec: Vec<_> = self.players_scores.iter().collect();
-        vec.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
-        vec.into_iter()
-    }
 }
 
 impl Default for Standings {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl IntoIterator for Standings {
+    type Item = (Uuid, f32);
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let mut vec: Vec<_> = self.players_scores.into_iter().collect();
+        vec.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        vec.into_iter()
     }
 }

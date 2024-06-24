@@ -1,13 +1,14 @@
 use crate::common::{TournamentAction, UserAction};
-use crate::components::molecules::invite_user::InviteUser;
-use crate::components::molecules::time_row::TimeRow;
-use crate::components::molecules::user_row::UserRow;
+use crate::components::molecules::{
+    game_previews::GamePreviews, invite_user::InviteUser, time_row::TimeRow, user_row::UserRow,
+};
 use crate::providers::{
     navigation_controller::NavigationControllerSignal, tournaments::TournamentStateSignal,
     ApiRequests, AuthContext,
 };
 use leptos::*;
 use leptos_router::use_navigate;
+use shared_types::{TimeInfo, TournamentStatus};
 
 const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
 
@@ -34,7 +35,8 @@ pub fn Tournament() -> impl IntoView {
     let number_of_players = move || current_tournament().map_or(0, |t| t.players.len());
     let user_joined = move || {
         if let Some(account) = account() {
-            current_tournament().map_or(false, |t| t.players.iter().any(|(id, _)| *id == account.id))
+            current_tournament()
+                .map_or(false, |t| t.players.iter().any(|(id, _)| *id == account.id))
         } else {
             false
         }
@@ -84,17 +86,28 @@ pub fn Tournament() -> impl IntoView {
             api.tournament(action);
         }
     };
+
     let display_tournament = move || {
         current_tournament().and_then(|tournament| {
+            let time_info = TimeInfo{mode:tournament.time_mode.clone() ,base: tournament.time_base, increment: tournament.time_increment};
             let tournament = store_value(tournament);
             view! {
-                <div>{tournament().name}</div>
-                <div>{tournament().description}</div>
-                <div>{tournament().scoring}</div>
+                <div>"Name: " {tournament().name}</div>
+                <div>"Description: " {tournament().description}</div>
+                <div>"Scoring: " {tournament().scoring}</div>
+
+                <div>"Seats: " {number_of_players} / {tournament().seats}</div>
+
+                <div>"Rounds: " {tournament().rounds}</div>
+                <div class="flex">
+                    "Time control: "
+                    <TimeRow time_info/>
+                </div>
+
                 <div>
                     Organizers
                     <For
-                        each=move || { tournament().organizers.clone() }
+                        each=move || { tournament().organizers }
 
                         key=|users| (users.uid)
                         let:user
@@ -102,58 +115,90 @@ pub fn Tournament() -> impl IntoView {
                         <UserRow actions=vec![] user=store_value(user)/>
                     </For>
                 </div>
-                <div>
-                    Players
-                    <For
-                        each=move || { tournament().players.clone() }
+                <Show
+                    when=move || tournament().status != TournamentStatus::NotStarted
+                    fallback=move || {
+                        view! {
+                            <div>
+                                Players
+                                <For
+                                    each=move || { tournament().players }
 
-                        key=|(id, _user)| *id
-                        let:user
-                    >
-                        <UserRow actions=vec![UserAction::Kick(Box::new(tournament()))] user=store_value(user.1)/>
-                    </For>
-                </div>
-                <div>
-                    Invited
-                    <For
-                        each=move || { tournament().invitees.clone() }
-                        key=|users| (users.uid)
-                        let:user
-                    >
-                        <UserRow
-                            actions=vec![UserAction::Uninvite(tournament().tournament_id.clone())]
-                            user=store_value(user)
-                        />
-                    </For>
-                </div>
-                <Show when=user_is_organizer>
-                    <InviteUser tournament=tournament()/>
-                </Show>
-                Seats
-                <div>{number_of_players} / {tournament().seats}</div>
-                Rounds
-                <div>{tournament().rounds}</div>
-                <TimeRow
-                    time_mode=tournament().time_mode
-                    time_base=tournament().time_base
-                    increment=tournament().time_increment
-                />
-                <button class=BUTTON_STYLE on:click=leave_or_join>
-                    {join_leave_text}
-                </button>
-                <Show when=user_is_organizer>
-                    <button class=BUTTON_STYLE on:click=delete>
-                        {"Delete"}
-                    </button>
-                </Show>
-                <Show when=user_is_organizer>
-                    <button class=BUTTON_STYLE on:click=start>
-                        {"Start"}
-                    </button>
+                                    key=|(id, _)| (*id)
+                                    let:user
+                                >
+                                    <UserRow
+                                        actions=vec![UserAction::Kick(Box::new(tournament()))]
+                                        user=store_value(user.1)
+                                    />
+                                </For>
+                            </div>
+                            <div>
+                                Invited
+                                <For
+                                    each=move || { tournament().invitees }
+                                    key=|users| (users.uid)
+                                    let:user
+                                >
+                                    <UserRow
+                                        actions=vec![
+                                            UserAction::Uninvite(tournament().tournament_id.clone()),
+                                        ]
+
+                                        user=store_value(user)
+                                    />
+                                </For>
+                            </div>
+                            <Show when=user_is_organizer>
+                                <InviteUser tournament=tournament()/>
+                            </Show>
+                            <button class=BUTTON_STYLE on:click=leave_or_join>
+                                {join_leave_text}
+                            </button>
+                            <Show when=user_is_organizer>
+                                <button class=BUTTON_STYLE on:click=delete>
+                                    {"Delete"}
+                                </button>
+                            </Show>
+                            <Show when=user_is_organizer>
+                                <button class=BUTTON_STYLE on:click=start>
+                                    {"Start"}
+                                </button>
+                            </Show>
+                        }
+                    }
+                >
+
+                    <div class="flex flex-col items-center w-full">
+                        <For
+                            each=move || { tournament().standings.into_iter() }
+
+                            key=|(id, _)| (*id)
+                            let:score
+                        >
+                            {
+                                let user_score = store_value(score.1.to_string());
+                                let user = store_value(tournament().players.get(&score.0).expect("User in tournament").clone());
+                                view! {
+                                    <div >
+                                        <div class="flex gap-1 items-center">
+                                        <UserRow actions=vec![] user/>
+                                        {user_score}
+                                        </div>
+                                    </div>
+                                }
+                            }
+
+                        </For>
+                        Tournament Games:
+                        <div class="flex flex-wrap">
+                            <GamePreviews games=Callback::new(move |_| (tournament().games))/>
+                        </div>
+                    </div>
                 </Show>
             }
             .into()
         })
     };
-    view! { <div class="flex flex-col pt-10">{display_tournament}</div> }
+    view! { <div class="flex flex-col pt-10 w-full">{display_tournament}</div> }
 }
