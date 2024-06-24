@@ -37,6 +37,20 @@
           echo $(git diff --shortstat)
           echo "You are welcome! ٩( ๑╹ ꇴ╹)۶"
         '')
+        (pkgs.writeShellScriptBin "testware" ''
+          #!/usr/bin/env bash
+          echo "Running tests"
+          pushd apis/end2end
+          playwright test "$@"
+          echo "Tests finished. run show-report to see the results"
+          popd
+        '')
+          (pkgs.writeShellScriptBin "show-report" ''
+          #!/usr/bin/env bash
+          pushd apis/end2end
+          playwright show-report
+          popd
+        '')
         ];
       in
       with pkgs;
@@ -60,6 +74,8 @@
             leptosfmt
             postgresql
             flyctl
+            playwright-test
+            playwright-driver
             (rust-bin.selectLatestNightlyWith( toolchain: toolchain.default.override {
               extensions= [ "rust-src" "rust-analyzer" ];
               targets = [ "wasm32-unknown-unknown" ];
@@ -72,8 +88,10 @@
             echo "'server' to start everything"
             echo "'format' to make the code look nice"
             echo "'migration' to 'run', 'revert', ... DB changes"
+            echo "'testware' to run end2end tests (start the server in a separate terminal)"
           '';
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath buildInputs;
+          PLAYWRIGHT_BROWSERS_PATH=pkgs.playwright-driver.browsers;
         };
       }
     );
