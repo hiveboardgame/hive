@@ -3,7 +3,7 @@ use crate::providers::AuthContext;
 use crate::responses::{TournamentResponse, UserResponse};
 use chrono::Local;
 use leptos::*;
-use shared_types::GameSpeed;
+use shared_types::{GameSpeed, TimeInfo};
 
 #[component]
 pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
@@ -45,6 +45,11 @@ pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
         _ => tournament.joinable,
     };
     let seats_taken = format!("{}/{}", tournament.players.len(), tournament.seats);
+    let time_info = TimeInfo {
+        mode: tournament.time_mode,
+        base: tournament.time_base,
+        increment: tournament.time_increment,
+    };
     view! {
         <article class="flex relative justify-between items-center px-2 py-4 mx-2 w-5/6 h-32 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="flex flex-col">
@@ -52,11 +57,7 @@ pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
                 <div>"Seats taken: " {seats_taken}</div>
             </div>
             <div class="flex flex-col">
-                <TimeRow
-                    time_mode=tournament.time_mode
-                    time_base=tournament.time_base
-                    increment=tournament.time_increment
-                />
+                <TimeRow time_info/>
                 <div class="flex gap-1">
                     <div>{tournament.mode}</div>
                     <div>{tournament.rounds} " Rounds"</div>

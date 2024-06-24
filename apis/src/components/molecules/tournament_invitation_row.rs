@@ -4,6 +4,7 @@ use crate::providers::ApiRequests;
 use crate::responses::TournamentResponse;
 use leptos::*;
 use leptos_icons::*;
+use shared_types::TimeInfo;
 
 #[component]
 pub fn TournamentInvitationRow(tournament: StoredValue<TournamentResponse>) -> impl IntoView {
@@ -22,6 +23,11 @@ pub fn TournamentInvitationRow(tournament: StoredValue<TournamentResponse>) -> i
             tournament().tournament_id,
         ));
     };
+    let time_info = TimeInfo {
+        mode: tournament().time_mode,
+        base: tournament().time_base,
+        increment: tournament().time_increment,
+    };
 
     view! {
         <div class="flex items-center text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
@@ -30,12 +36,7 @@ pub fn TournamentInvitationRow(tournament: StoredValue<TournamentResponse>) -> i
                     <div>{tournament().name}</div>
                 </div>
                 <div class=div_class>
-                    <TimeRow
-                        time_mode=tournament().time_mode
-                        time_base=tournament().time_base
-                        increment=tournament().time_increment
-                    />
-
+                    <TimeRow time_info/>
                 </div>
                 <div class=div_class>
                     <div>Players: {seats_taken}</div>
