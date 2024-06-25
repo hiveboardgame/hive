@@ -51,6 +51,7 @@ diesel::table! {
         hashes -> Array<Nullable<Int8>>,
         conclusion -> Text,
         tournament_id -> Nullable<Uuid>,
+        tournament_game_result -> Text,
     }
 }
 

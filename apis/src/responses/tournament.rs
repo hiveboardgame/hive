@@ -1,7 +1,7 @@
 use super::{GameResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared_types::{TimeMode, TournamentId, TournamentStatus};
+use shared_types::{Standings, TimeMode, TournamentGameResult, TournamentId, TournamentStatus};
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -16,6 +16,7 @@ pub struct TournamentAbstractResponse {
 pub struct TournamentResponse {
     pub id: Uuid,
     pub tournament_id: TournamentId,
+    pub standings: Standings,
     pub name: String,
     pub description: String,
     pub scoring: String,
@@ -60,7 +61,10 @@ impl TournamentAbstractResponse {
 }
 
 impl TournamentResponse {
-    pub async fn from_tournament_id(tournament_id: &TournamentId, conn: &mut DbConn<'_>) -> Result<Box<Self>> {
+    pub async fn from_tournament_id(
+        tournament_id: &TournamentId,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Box<Self>> {
         let tournament = Tournament::find_by_tournament_id(tournament_id, conn).await?;
         Self::from_model(&tournament, conn).await
     }
@@ -86,7 +90,13 @@ impl TournamentResponse {
         }
         let games = tournament.games(conn).await?;
         let mut game_responses = Vec::new();
+        let mut standings = Standings::new();
         for game in games {
+            standings.add_result(
+                game.white_id,
+                game.black_id,
+                TournamentGameResult::from_str(&game.tournament_game_result)?,
+            );
             game_responses.push(GameResponse::from_model(&game, conn).await?);
         }
         Ok(Box::new(Self {
@@ -94,11 +104,17 @@ impl TournamentResponse {
             tournament_id: TournamentId(tournament.nanoid.clone()),
             name: tournament.name.clone(),
             description: tournament.description.clone(),
+            standings,
             scoring: tournament.scoring.clone(), // TODO: make a type for this
             players,
             organizers,
             games: game_responses,
-            tiebreaker: tournament.tiebreaker.clone().into_iter().flatten().collect(),
+            tiebreaker: tournament
+                .tiebreaker
+                .clone()
+                .into_iter()
+                .flatten()
+                .collect(),
             invitees,
             seats: tournament.seats,
             rounds: tournament.rounds,

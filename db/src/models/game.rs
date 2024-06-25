@@ -15,7 +15,7 @@ use diesel::{prelude::*, Identifiable, Insertable, Queryable};
 use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeId, Conclusion, GameId, GameSpeed, TimeMode};
+use shared_types::{ChallengeId, Conclusion, GameId, GameSpeed, TimeMode, TournamentGameResult};
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
@@ -53,6 +53,7 @@ pub struct NewGame {
     pub hashes: Vec<Option<i64>>,
     pub conclusion: String,
     pub tournament_id: Option<Uuid>,
+    pub tournament_game_result: String,
 }
 
 impl NewGame {
@@ -99,6 +100,7 @@ impl NewGame {
             hashes: Vec::new(),
             conclusion: Conclusion::Unknown.to_string(),
             tournament_id: Some(tournament.id),
+            tournament_game_result: TournamentGameResult::Unknown.to_string(),
         }
     }
 
@@ -145,6 +147,7 @@ impl NewGame {
             hashes: Vec::new(),
             conclusion: Conclusion::Unknown.to_string(),
             tournament_id: None,
+            tournament_game_result: TournamentGameResult::Unknown.to_string(),
         }
     }
 }
@@ -184,6 +187,7 @@ pub struct Game {
     hashes: Vec<Option<i64>>,
     pub conclusion: String,
     pub tournament_id: Option<Uuid>,
+    pub tournament_game_result: String, 
 }
 
 impl Game {

@@ -1,5 +1,6 @@
 mod certainty;
 mod challenge;
+mod standings;
 mod chat_message;
 mod conclusion;
 mod game_speed;
@@ -8,6 +9,9 @@ mod simple_user;
 mod time_mode;
 mod tournament_details;
 mod tournament_status;
+mod tournament_game_result;
+pub use standings::Standings;
+pub use tournament_game_result::TournamentGameResult;
 pub use tournament_status::TournamentStatus;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
 pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
