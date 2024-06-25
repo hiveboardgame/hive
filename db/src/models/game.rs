@@ -187,7 +187,7 @@ pub struct Game {
     hashes: Vec<Option<i64>>,
     pub conclusion: String,
     pub tournament_id: Option<Uuid>,
-    pub tournament_game_result: String, 
+    pub tournament_game_result: String,
 }
 
 impl Game {
@@ -197,10 +197,7 @@ impl Game {
         Vec::new()
     }
 
-    pub async fn create(
-        new_game: NewGame,
-        conn: &mut DbConn<'_>,
-    ) -> Result<Game, DbError> {
+    pub async fn create(new_game: NewGame, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
         let game: Game = new_game.insert_into(games::table).get_result(conn).await?;
         let game_user_white = GameUser::new(game.id, game.white_id);
         game_user_white
@@ -280,6 +277,7 @@ impl Game {
                     GameResult::Winner(Color::White),
                 )
             };
+            let tgr = TournamentGameResult::new(&game_result);
             let new_game_status = GameStatus::Finished(game_result.clone());
             let (w_rating, b_rating, w_change, b_change) = Rating::update(
                 self.rated,
@@ -293,6 +291,7 @@ impl Game {
             let game = diesel::update(games::table.find(self.id))
                 .set((
                     finished.eq(true),
+                    tournament_game_result.eq(tgr.to_string()),
                     game_status.eq(new_game_status.to_string()),
                     white_rating.eq(w_rating),
                     black_rating.eq(b_rating),
@@ -486,6 +485,7 @@ impl Game {
             if let GameResult::Unknown = game_result {
                 panic!("GameResult is unknown but the game is over");
             };
+            let tgr = TournamentGameResult::new(&game_result);
             let (w_rating, b_rating, w_change, b_change) = Rating::update(
                 self.rated,
                 self.speed.clone(),
@@ -510,6 +510,7 @@ impl Game {
                     current_player_id.eq(next_player),
                     turn.eq(new_turn),
                     finished.eq(true),
+                    tournament_game_result.eq(tgr.to_string()),
                     game_status.eq(new_game_status.to_string()),
                     game_control_history.eq(game_control_history.concat(game_control_string)),
                     white_rating.eq(w_rating),
@@ -660,8 +661,8 @@ impl Game {
         if white_time == Some(0) || black_time == Some(0) {
             return self.check_time(conn).await;
         }
-        let (w_rating, b_rating, w_change, b_change) = match new_game_status.clone() {
-            GameStatus::Finished(game_result) => {
+        let ((w_rating, b_rating, w_change, b_change), tgr) = match new_game_status.clone() {
+            GameStatus::Finished(game_result) => (
                 Rating::update(
                     self.rated,
                     self.speed.clone(),
@@ -670,13 +671,15 @@ impl Game {
                     game_result.clone(),
                     conn,
                 )
-                .await?
-            }
+                .await?,
+                TournamentGameResult::new(&game_result),
+            ),
             _ => unreachable!(),
         };
         let game = diesel::update(games::table.find(self.id))
             .set((
                 finished.eq(true),
+                tournament_game_result.eq(tgr.to_string()),
                 game_status.eq(new_game_status.to_string()),
                 game_control_history.eq(game_control_history.concat(game_control_string)),
                 white_rating.eq(w_rating),
@@ -706,6 +709,7 @@ impl Game {
         if white_time == Some(0) || black_time == Some(0) {
             return self.check_time(conn).await;
         }
+        let tgr = TournamentGameResult::Draw;
         let (w_rating, b_rating, w_change, b_change) = Rating::update(
             self.rated,
             self.speed.clone(),
@@ -718,6 +722,7 @@ impl Game {
         let game = diesel::update(games::table.find(self.id))
             .set((
                 finished.eq(true),
+                tournament_game_result.eq(tgr.to_string()),
                 game_control_history.eq(game_control_history.concat(game_control_string)),
                 game_status.eq(GameStatus::Finished(GameResult::Draw).to_string()),
                 white_rating.eq(w_rating),

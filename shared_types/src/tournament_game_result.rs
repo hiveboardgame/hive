@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use hive_lib::Color;
+use hive_lib::{Color, GameResult};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
@@ -11,6 +11,18 @@ pub enum TournamentGameResult {
     Draw,
     Winner(Color),
     DoubeForfeit,
+}
+
+impl TournamentGameResult {
+    pub fn new(game_result: &GameResult) -> Self {
+        let mut result = TournamentGameResult::Unknown;
+        match game_result {
+            GameResult::Winner(color) => result = TournamentGameResult::Winner(*color),
+            GameResult::Draw => result = TournamentGameResult::Draw,
+            _ => {}
+        }
+        result
+    }
 }
 
 impl fmt::Display for TournamentGameResult {
