@@ -2,7 +2,7 @@ use super::{GameResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use shared_types::{Standings, TimeMode, TournamentGameResult, TournamentId, TournamentStatus};
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -22,7 +22,7 @@ pub struct TournamentResponse {
     pub scoring: String,
     pub tiebreaker: Vec<String>,
     pub invitees: Vec<UserResponse>,
-    pub players: Vec<UserResponse>,
+    pub players: HashMap<Uuid, UserResponse>,
     pub organizers: Vec<UserResponse>,
     pub games: Vec<GameResponse>,
     pub seats: i32,
@@ -80,9 +80,9 @@ impl TournamentResponse {
         for user in tournament.invitees(conn).await? {
             invitees.push(UserResponse::from_model(&user, conn).await?);
         }
-        let mut players = Vec::new();
+        let mut players = HashMap::new();
         for user in tournament.players(conn).await? {
-            players.push(UserResponse::from_model(&user, conn).await?);
+            players.insert(user.id, UserResponse::from_model(&user, conn).await?);
         }
         let mut organizers = Vec::new();
         for user in tournament.organizers(conn).await? {

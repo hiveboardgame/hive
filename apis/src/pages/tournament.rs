@@ -34,7 +34,7 @@ pub fn Tournament() -> impl IntoView {
     let number_of_players = move || current_tournament().map_or(0, |t| t.players.len());
     let user_joined = move || {
         if let Some(account) = account() {
-            current_tournament().map_or(false, |t| t.players.iter().any(|p| p.uid == account.id))
+            current_tournament().map_or(false, |t| t.players.iter().any(|(id, _)| *id == account.id))
         } else {
             false
         }
@@ -107,10 +107,10 @@ pub fn Tournament() -> impl IntoView {
                     <For
                         each=move || { tournament().players.clone() }
 
-                        key=|users| (users.uid)
+                        key=|(id, _user)| *id
                         let:user
                     >
-                        <UserRow actions=vec![UserAction::Kick(Box::new(tournament()))] user=store_value(user)/>
+                        <UserRow actions=vec![UserAction::Kick(Box::new(tournament()))] user=store_value(user.1)/>
                     </For>
                 </div>
                 <div>

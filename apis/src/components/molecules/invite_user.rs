@@ -27,7 +27,7 @@ pub fn InviteUser(tournament: TournamentResponse) -> impl IntoView {
             user_search.signal.update(|s| s.clear());
         }
         let mut search_results = user_search.signal.get();
-        for user in tournament.players.iter() {
+        for (_, user) in tournament.players.iter() {
             search_results.remove(&user.username);
         }
         for user in tournament.invitees.iter() {
