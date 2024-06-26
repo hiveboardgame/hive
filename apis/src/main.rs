@@ -6,6 +6,7 @@ use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
 use actix_web::middleware::Compress;
 use cfg_if::cfg_if;
+use websockets::tournament_game_start::TournamentGameStart;
 cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
@@ -48,6 +49,7 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to get pool");
     let chat_history = Data::new(Chats::new());
     let websocket_server = Data::new(Lobby::new(pool.clone()).start());
+    let tournament_game_start = Data::new(TournamentGameStart::new());
 
     println!("listening on http://{}", &addr);
 
@@ -59,6 +61,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(pool.clone()))
             .app_data(Data::clone(&chat_history))
             .app_data(Data::clone(&websocket_server))
+            .app_data(Data::clone(&tournament_game_start))
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             // serve other assets from the `assets` directory
