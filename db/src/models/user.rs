@@ -231,6 +231,7 @@ impl User {
     }
 
     pub async fn get_urgent_nanoids(&self, conn: &mut DbConn<'_>) -> Result<Vec<GameId>, DbError> {
+        // TODO: This is where unstarted tournament games should be filtered out, for loading all games
         Ok(GameUser::belonging_to(self)
             .inner_join(games::table)
             .select(Game::as_select())

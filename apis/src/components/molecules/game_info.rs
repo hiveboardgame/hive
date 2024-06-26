@@ -24,10 +24,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             view! {
                 <div class=extend_tw_classes>
                     <div class="flex gap-1 items-center">
-                        <TimeRow
-                            time_info
-                            extend_tw_classes="whitespace-nowrap"
-                        />
+                        <TimeRow time_info extend_tw_classes="whitespace-nowrap"/>
                         {rated}
                     </div>
                 </div>

@@ -99,10 +99,7 @@ pub fn Tournament() -> impl IntoView {
                 <div>"Seats: " {number_of_players} / {tournament().seats}</div>
 
                 <div>"Rounds: " {tournament().rounds}</div>
-                <div class="flex">
-                    "Time control: "
-                    <TimeRow time_info/>
-                </div>
+                <div class="flex">"Time control: " <TimeRow time_info/></div>
 
                 <div>
                     Organizers
@@ -176,14 +173,21 @@ pub fn Tournament() -> impl IntoView {
                             key=|(id, _)| (*id)
                             let:score
                         >
+
                             {
                                 let user_score = store_value(score.1.to_string());
-                                let user = store_value(tournament().players.get(&score.0).expect("User in tournament").clone());
+                                let user = store_value(
+                                    tournament()
+                                        .players
+                                        .get(&score.0)
+                                        .expect("User in tournament")
+                                        .clone(),
+                                );
                                 view! {
-                                    <div >
+                                    <div>
                                         <div class="flex gap-1 items-center">
-                                        <UserRow actions=vec![] user/>
-                                        {user_score}
+                                            <UserRow actions=vec![] user/>
+                                            {user_score}
                                         </div>
                                     </div>
                                 }

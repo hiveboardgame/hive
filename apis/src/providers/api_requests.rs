@@ -53,6 +53,15 @@ impl ApiRequests {
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
+    pub fn tournament_game_start(&self, game_id: GameId) {
+        let msg = ClientRequest::Game {
+            game_id,
+            action: GameAction::Start,
+        };
+        self.websocket
+            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    }
+
     pub fn chat(&self, message: &ChatMessageContainer) {
         let msg = ClientRequest::Chat(message.to_owned());
         self.websocket

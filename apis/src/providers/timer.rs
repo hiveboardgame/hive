@@ -30,6 +30,7 @@ impl TimerSignal {
             game.game_id.clone_into(&mut timer.game_id);
             timer.finished = game.finished;
             timer.turn = game.turn;
+            timer.tournament = game.tournament.is_some();
             timer.white_time_left = game.white_time_left;
             timer.black_time_left = game.black_time_left;
             timer.time_increment = game
@@ -45,6 +46,7 @@ impl TimerSignal {
 pub struct Timer {
     pub game_id: GameId,
     pub finished: bool,
+    pub tournament: bool,
     pub turn: usize,
     pub white_time_left: Option<Duration>,
     pub black_time_left: Option<Duration>,
@@ -57,7 +59,8 @@ impl Timer {
     pub fn new() -> Self {
         Self {
             game_id: GameId(String::new()),
-            finished: true,
+            finished: false,
+            tournament: false,
             turn: 0,
             white_time_left: None,
             black_time_left: None,

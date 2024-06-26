@@ -36,6 +36,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                     view! { "No notifications right now" }
                 }
             >
+
                 <For
                     each=move || notifications_context().challenges.get()
                     key=|c| { c.clone() }
@@ -52,6 +53,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                                     .expect("Challenge exists")
                                     .clone(),
                             )
+
                             single=false
                         />
                     </div>
@@ -63,17 +65,16 @@ pub fn NotificationDropdown() -> impl IntoView {
                     let:tournament_id
                 >
                     <div on:click=onclick_close>
-                        <TournamentInvitationRow
-                            tournament=store_value(
-                                tournaments
-                                    .signal
-                                    .get_untracked()
-                                    .tournaments
-                                    .get(&tournament_id)
-                                    .expect("Tournament exists")
-                                    .clone(),
-                            )
-                        />
+                        <TournamentInvitationRow tournament=store_value(
+                            tournaments
+                                .signal
+                                .get_untracked()
+                                .tournaments
+                                .get(&tournament_id)
+                                .expect("Tournament exists")
+                                .clone(),
+                        )/>
+
                     </div>
                 </For>
             </Show>
