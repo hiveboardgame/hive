@@ -422,7 +422,7 @@ impl Game {
         match TimeMode::from_str(&self.time_mode)? {
             TimeMode::Untimed => {}
             TimeMode::RealTime => {
-                if self.turn < 2 {
+                if self.turn < 2 && self.tournament_id.is_none() {
                     white_time = self.white_time_left;
                     black_time = self.black_time_left;
                 } else {

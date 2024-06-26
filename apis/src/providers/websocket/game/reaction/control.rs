@@ -18,7 +18,6 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
             game_state.set_pending_gc(game_control.clone())
         }
     }
-    //log!("Got a GC: {}", game_control);
     match game_control {
         GameControl::Abort(_) => {
             games.own_games_remove(&gar.game.game_id);

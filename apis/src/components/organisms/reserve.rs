@@ -3,7 +3,6 @@ use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
 use crate::providers::game_state::{GameStateSignal, View};
 use hive_lib::History;
 use hive_lib::{Bug, BugStack, Color, GameStatus, Piece, Position, State};
-use leptos::logging::log;
 use leptos::*;
 use std::str::FromStr;
 
@@ -17,37 +16,30 @@ fn piece_active(
 ) -> bool {
     //viewing history
     if viewing == &View::History && !is_last_turn {
-        log!("1");
         return false;
     }
     // game is over
     if let GameStatus::Finished(_) = game_status {
-        log!("2");
         return false;
     }
     // tournament game not started
     if tournament && matches!(game_status, GameStatus::NotStarted) {
-        log!("3");
         return false;
     }
     // #TODO make this come from global state
     if !piece.is_color(state.turn_color) {
-        log!("4");
         return false;
     };
     // first and second turn
     // -> disable queen
     if state.tournament && piece.bug() == Bug::Queen && state.turn < 2 {
-        log!("5");
         return false;
     };
     // if queen_required
     // -> disable all but queen
     if state.board.queen_required(state.turn, state.turn_color) && piece.bug() != Bug::Queen {
-        log!("6");
         return false;
     };
-    log!("7");
     true
 }
 

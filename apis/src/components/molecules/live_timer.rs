@@ -1,7 +1,8 @@
+use crate::providers::game_state::GameStateSignal;
 use crate::providers::timer::TimerSignal;
 use crate::providers::ApiRequests;
 use chrono::prelude::*;
-use hive_lib::Color;
+use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;
 use leptos::*;
 use leptos_router::RouterContext;
@@ -19,15 +20,21 @@ lazy_static! {
 #[component]
 pub fn LiveTimer(side: Color) -> impl IntoView {
     let timer_signal = expect_context::<TimerSignal>();
+    let game_state = expect_context::<GameStateSignal>();
+    let tournament_game_in_progress = move || {
+        game_state.signal.get().game_response.map_or(false, |gr| {
+            gr.tournament.is_some() && gr.game_status == GameStatus::InProgress
+        })
+    };
     let timer = timer_signal.signal.get_untracked();
     let color_time = move |color: Color| {
-        let (left, modulo_result) = match color {
-            Color::White => (timer.white_time_left.unwrap(), 1),
-            Color::Black => (timer.black_time_left.unwrap(), 0),
+        let (left, not_user_turn) = match color {
+            Color::White => (timer.white_time_left.unwrap(), timer.turn % 2 == 1),
+            Color::Black => (timer.black_time_left.unwrap(), timer.turn % 2 == 0),
         };
-        if timer.turn < 2
+        if (timer.turn < 2 && !tournament_game_in_progress())
             || left == Duration::from_millis(0)
-            || timer.turn % 2 == modulo_result
+            || not_user_turn
             || timer.finished
         {
             left
@@ -79,7 +86,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
     // WARN: Might lead to problems, if we get  re-render loops, this could be the cause.
     create_isomorphic_effect(move |_| {
         let timer = timer_signal.signal.get();
-        if timer.turn > 1 {
+        if timer.turn > 1 || tournament_game_in_progress() {
             if (side == Color::White) == (timer.turn % 2 == 0) && !timer.finished {
                 resume();
             } else if is_active() {
