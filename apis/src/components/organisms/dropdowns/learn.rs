@@ -1,6 +1,4 @@
-use crate::components::layouts::base_layout::{
-    COMMON_LINK_STYLE, DROPDOWN_BUTTON_STYLE,
-};
+use crate::components::layouts::base_layout::{COMMON_LINK_STYLE, DROPDOWN_BUTTON_STYLE};
 use crate::components::molecules::hamburger::Hamburger;
 use leptos::*;
 

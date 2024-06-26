@@ -1,7 +1,9 @@
 use crate::{
     common::UserAction,
     components::atoms::{
-        direct_challenge_button::DirectChallengeButton, invite_button::InviteButton, kick_button::KickButton, profile_link::ProfileLink, rating::Rating, status_indicator::StatusIndicator, uninvite_button::UninviteButton
+        direct_challenge_button::DirectChallengeButton, invite_button::InviteButton,
+        kick_button::KickButton, profile_link::ProfileLink, rating::Rating,
+        status_indicator::StatusIndicator, uninvite_button::UninviteButton,
     },
     responses::UserResponse,
 };

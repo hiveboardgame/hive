@@ -1,4 +1,3 @@
-
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
@@ -48,7 +47,10 @@ mod tests {
         ]
         .into_iter()
         {
-            assert_eq!(ts.clone(), TournamentStatus::from_str(&format!("{ts}")).unwrap());
+            assert_eq!(
+                ts.clone(),
+                TournamentStatus::from_str(&format!("{ts}")).unwrap()
+            );
         }
     }
 }

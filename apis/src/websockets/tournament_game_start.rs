@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
-use db_lib::{models::Game};
+use db_lib::models::Game;
 use shared_types::GameId;
 use std::{collections::HashMap, sync::RwLock};
 use uuid::Uuid;
@@ -17,11 +17,7 @@ impl TournamentGameStart {
         }
     }
 
-    pub fn should_start(
-        &self,
-        game: &Game,
-        user_id: Uuid,
-    ) -> Result<bool> {
+    pub fn should_start(&self, game: &Game, user_id: Uuid) -> Result<bool> {
         if game.black_id != user_id && game.white_id != user_id {
             return Err(anyhow!("Not your game to start"));
         }
@@ -37,12 +33,12 @@ impl TournamentGameStart {
                 }
             }
             games_date.insert(GameId(game.nanoid.clone()), (user_id, Utc::now()));
-            return Ok(false);
+            Ok(false)
         } else {
             println!("Could not aquire write lock for TournamentGameStart");
-            return Err(anyhow!(
+            Err(anyhow!(
                 "Could not aquire write lock for TournamentGameStart"
-            ));
+            ))
         }
     }
 }

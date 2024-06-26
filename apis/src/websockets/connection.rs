@@ -145,8 +145,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 let addr = ctx.address().recipient();
 
                 let future = async move {
-                    let handler =
-                        RequestHandler::new(request.clone(), chat_storage, game_start, addr, user, pool);
+                    let handler = RequestHandler::new(
+                        request.clone(),
+                        chat_storage,
+                        game_start,
+                        addr,
+                        user,
+                        pool,
+                    );
                     let handler_result = handler.handle().await;
                     match handler_result {
                         Ok(messages) => {

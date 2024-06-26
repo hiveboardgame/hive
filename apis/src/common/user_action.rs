@@ -12,5 +12,5 @@ pub enum UserAction {
     Message,
     Unblock,
     Unfollow,
-    Kick(Box<TournamentResponse>)
+    Kick(Box<TournamentResponse>),
 }

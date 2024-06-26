@@ -1,3 +1,4 @@
+use crate::{common::TournamentUpdate, responses::TournamentResponse};
 use crate::{
     common::{ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
     responses::{ChallengeResponse, GameResponse, UserResponse},
@@ -6,7 +7,6 @@ use crate::{
 use actix::prelude::{Actor, Context, Handler, Recipient};
 use actix::AsyncContext;
 use actix::WrapFuture;
-use crate::{common::TournamentUpdate, responses::TournamentResponse};
 use db_lib::{
     get_conn,
     models::{Challenge, TournamentInvitation, User},
@@ -211,7 +211,8 @@ impl Handler<Connect> for Lobby {
                     {
                         for invitation in invitations {
                             if let Ok(response) =
-                                TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn).await
+                                TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn)
+                                    .await
                             {
                                 let message = ServerResult::Ok(Box::new(
                                     ServerMessage::Tournament(TournamentUpdate::Invited(response)),

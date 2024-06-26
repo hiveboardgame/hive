@@ -8,7 +8,10 @@ use leptos_icons::*;
 use shared_types::TournamentId;
 
 #[component]
-pub fn UninviteButton(user: StoredValue<UserResponse>, tournament_id: TournamentId) -> impl IntoView {
+pub fn UninviteButton(
+    user: StoredValue<UserResponse>,
+    tournament_id: TournamentId,
+) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
 
     let logged_in_and_not_user = move || {
