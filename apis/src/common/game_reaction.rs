@@ -4,6 +4,7 @@ use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GameReaction {
+    Started,
     Control(GameControl),
     Join,
     Turn(Turn),
@@ -17,6 +18,7 @@ impl fmt::Display for GameReaction {
         match self {
             GameReaction::Control(ref gc) => write!(f, "{}", gc),
             GameReaction::Join => write!(f, "Join"),
+            GameReaction::Started => write!(f, "Started"),
             GameReaction::Turn(ref turn) => write!(f, "{}", turn),
             GameReaction::New => write!(f, "New"),
             GameReaction::TimedOut => write!(f, "TimedOut"),

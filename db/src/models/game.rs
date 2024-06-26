@@ -441,7 +441,7 @@ impl Game {
                 interaction = Some(Utc::now());
             }
             TimeMode::Correspondence => {
-                if self.turn < 2 {
+                if self.turn < 2 && self.tournament_id.is_none() {
                     white_time = self.white_time_left;
                     black_time = self.black_time_left;
                 } else {
@@ -839,6 +839,7 @@ impl Game {
             .set((
                 game_status.eq(GameStatus::InProgress.to_string()),
                 updated_at.eq(Utc::now()),
+                last_interaction.eq(Utc::now()),
             ))
             .get_result(conn)
             .await?)

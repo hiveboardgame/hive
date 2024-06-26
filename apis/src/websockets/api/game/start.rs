@@ -61,7 +61,7 @@ impl StartHandler {
                         GameActionResponse {
                             game_id: GameId(game.nanoid.to_owned()),
                             game: GameResponse::from_model(&game, &mut conn).await?,
-                            game_action: GameReaction::New,
+                            game_action: GameReaction::Started,
                             user_id: self.user_id.to_owned(),
                             username: self.username.to_owned(),
                         },
