@@ -20,11 +20,14 @@ lazy_static! {
 pub fn LiveTimer(side: Color) -> impl IntoView {
     let timer_signal = expect_context::<TimerSignal>();
     let timer = timer_signal.signal.get_untracked();
-    let white_time = move || {
-        let left = timer.white_time_left.unwrap();
+    let color_time = move |color: Color| {
+        let (left, modulo_result) = match color {
+            Color::White => (timer.white_time_left.unwrap(), 1),
+            Color::Black => (timer.black_time_left.unwrap(), 0),
+        };
         if timer.turn < 2
             || left == Duration::from_millis(0)
-            || timer.turn % 2 == 1
+            || timer.turn % 2 == modulo_result
             || timer.finished
         {
             left
@@ -40,32 +43,8 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
             }
         }
     };
-    let black_time = move || {
-        let left = timer.black_time_left.unwrap();
-        if timer.turn < 2
-            || left == Duration::from_millis(0)
-            || timer.turn % 2 == 0
-            || timer.finished
-        {
-            left
-        } else {
-            let left = chrono::Duration::from_std(left).unwrap();
-            let then = timer.last_interaction.unwrap();
-            let future = then.checked_add_signed(left).unwrap();
-            let now = Utc::now();
-            if now > future {
-                Duration::from_millis(0)
-            } else {
-                future.signed_duration_since(now).to_std().unwrap()
-            }
-        }
-    };
-    let time_left = create_rw_signal({
-        match side {
-            Color::Black => black_time(),
-            Color::White => white_time(),
-        }
-    });
+
+    let time_left = create_rw_signal(color_time(side));
     let time_is_red = Memo::new(move |_| {
         if time_left() == Duration::from_secs(0) {
             String::from("bg-ladybug-red")
@@ -86,10 +65,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
                 time_left.update(|t| {
                     if ticks.get_untracked() > 10 {
                         ticks.update(|t| *t = 0);
-                        *t = match side {
-                            Color::Black => black_time(),
-                            Color::White => white_time(),
-                        };
+                        *t = color_time(side)
                     } else {
                         *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
                     }

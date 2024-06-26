@@ -13,16 +13,20 @@ use shared_types::TimeMode;
 pub fn handle_new_game(game_response: GameResponse) {
     let mut games = expect_context::<GamesSignal>();
     games.own_games_add(game_response.to_owned());
-    let should_navigate = match game_response.time_mode {
-        TimeMode::RealTime => true,
-        TimeMode::Correspondence | TimeMode::Untimed => {
-            let navigation_controller = expect_context::<NavigationControllerSignal>();
-            navigation_controller
-                .game_signal
-                .get_untracked()
-                .game_id
-                .is_none()
+    let should_navigate = if game_response.tournament.is_none() {
+        match game_response.time_mode {
+            TimeMode::RealTime => true,
+            TimeMode::Correspondence | TimeMode::Untimed => {
+                let navigation_controller = expect_context::<NavigationControllerSignal>();
+                navigation_controller
+                    .game_signal
+                    .get_untracked()
+                    .game_id
+                    .is_none()
+            }
         }
+    } else {
+        false
     };
     if should_navigate {
         let auth_context = expect_context::<AuthContext>();

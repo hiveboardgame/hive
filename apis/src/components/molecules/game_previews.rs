@@ -26,12 +26,14 @@ pub fn GamePreviews(
             view! {
                 <div class="flex gap-1">
                     {game.white_player.username}
-                    <RatingAndChange ratings=ratings() side=Color::White/>
-                    vs
+                    <RatingAndChange ratings=ratings() side=Color::White/> vs
                     {game.black_player.username}
                     <RatingAndChange ratings=ratings() side=Color::Black/>
                 </div>
-                <div class="flex gap-1"> <div>{game_result}</div> {game.conclusion.verbose_conclusion()}</div>
+                <div class="flex gap-1">
+                    <div>{game_result}</div>
+                    {game.conclusion.verbose_conclusion()}
+                </div>
             }
             .into_view()
         } else {
@@ -69,11 +71,12 @@ pub fn GamePreviews(
                 let game = store_value(game);
                 view! {
                     <div class="flex relative flex-col items-center m-2 w-60 h-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
-                        <div class="flex flex-col items-center">{usernames_with_rating(game())}
+                        <div class="flex flex-col items-center">
+                            {usernames_with_rating(game())}
                         </div>
                         <Show when=move || show_time>
                             <div class="flex items-center">
-                                {if  game().rated { "RATED " } else { "CASUAL " }}
+                                {if game().rated { "RATED " } else { "CASUAL " }}
                                 <TimeRow time_info=time_info()/>
                             </div>
                         </Show>
