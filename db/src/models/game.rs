@@ -827,4 +827,20 @@ impl Game {
             .get_results(conn)
             .await?)
     }
+
+    pub async fn start(&self, conn: &mut DbConn<'_>) -> Result<Self, DbError> {
+        if self.finished || self.turn > 0 || self.game_status != GameStatus::NotStarted.to_string()
+        {
+            return Err(DbError::InvalidAction {
+                info: String::from("Cannot start this game"),
+            });
+        }
+        Ok(diesel::update(games::table.find(self.id))
+            .set((
+                game_status.eq(GameStatus::InProgress.to_string()),
+                updated_at.eq(Utc::now()),
+            ))
+            .get_result(conn)
+            .await?)
+    }
 }

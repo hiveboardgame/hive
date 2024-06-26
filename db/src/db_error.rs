@@ -7,6 +7,8 @@ pub enum DbError {
     InternalError,
     #[error("Invalid input")]
     InvalidInput { info: String, error: String },
+    #[error("Invalid action")]
+    InvalidAction { info: String },
     #[error("Not found")]
     NotFound { reason: String },
     #[error("Time not present")]
