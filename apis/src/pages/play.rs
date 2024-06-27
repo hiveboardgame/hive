@@ -34,9 +34,13 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     };
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
     let user_is_player = Signal::derive(move || {
-        user().map_or(false, |user| {
+        user().and_then(|user| {
             let (white_id, black_id) = white_and_black();
-            Some(user.id) == black_id || Some(user.id) == white_id
+            if Some(user.id) == black_id || Some(user.id) == white_id {
+                Some((user.username, user.id))
+            } else {
+                None
+            }
         })
     });
     let player_is_black = create_memo(move |_| {
@@ -110,7 +114,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         <Show when=show_controls>
                             <div class="flex flex-row-reverse justify-between items-center shrink">
                                 <AnalysisAndDownload/>
-                                <Show when=user_is_player>
+                                <Show when=move || user_is_player().is_some()>
                                     <ControlButtons/>
                                 </Show>
                             </div>

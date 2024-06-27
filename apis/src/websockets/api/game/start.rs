@@ -50,12 +50,6 @@ impl StartHandler {
                     })
                     .await?;
                 messages.push(InternalServerMessage {
-                    destination: MessageDestination::Game(self.game.nanoid.clone()),
-                    message: ServerMessage::Ready(
-                        UserResponse::from_uuid(&self.user_id, &mut conn).await?,
-                    ),
-                });
-                messages.push(InternalServerMessage {
                     destination: MessageDestination::Game(game.nanoid.clone()),
                     message: ServerMessage::Game(Box::new(GameUpdate::Reaction(
                         GameActionResponse {
@@ -70,9 +64,15 @@ impl StartHandler {
             } else {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::Game(self.game.nanoid.clone()),
-                    message: ServerMessage::Ready(
-                        UserResponse::from_uuid(&self.user_id, &mut conn).await?,
-                    ),
+                    message: ServerMessage::Game(Box::new(GameUpdate::Reaction(
+                        GameActionResponse {
+                            game_id: GameId(self.game.nanoid.to_owned()),
+                            game: GameResponse::from_model(&self.game, &mut conn).await?,
+                            game_action: GameReaction::Ready,
+                            user_id: self.user_id.to_owned(),
+                            username: self.username.to_owned(),
+                        },
+                    ))),
                 });
             }
         }

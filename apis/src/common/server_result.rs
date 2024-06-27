@@ -48,7 +48,6 @@ pub enum ServerMessage {
     Tournament(TournamentUpdate),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
-    Ready(UserResponse),
     Error(String),
 }
 

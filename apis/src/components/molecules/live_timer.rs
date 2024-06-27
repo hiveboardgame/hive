@@ -21,6 +21,7 @@ lazy_static! {
 pub fn LiveTimer(side: Color) -> impl IntoView {
     let timer_signal = expect_context::<TimerSignal>();
     let game_state = expect_context::<GameStateSignal>();
+    // TODO: PUT THIS IN PROVIDERS TIMER @ION
     let tournament_game_in_progress = move || {
         game_state.signal.get().game_response.map_or(false, |gr| {
             gr.tournament.is_some() && gr.game_status == GameStatus::InProgress

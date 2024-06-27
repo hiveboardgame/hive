@@ -8,6 +8,7 @@ pub enum GameReaction {
     Control(GameControl),
     Join,
     Turn(Turn),
+    Ready,
     New,
     TimedOut,
     Tv,
@@ -21,6 +22,7 @@ impl fmt::Display for GameReaction {
             GameReaction::Started => write!(f, "Started"),
             GameReaction::Turn(ref turn) => write!(f, "{}", turn),
             GameReaction::New => write!(f, "New"),
+            GameReaction::Ready => write!(f, "Ready"),
             GameReaction::TimedOut => write!(f, "TimedOut"),
             GameReaction::Tv => write!(f, "Tv"),
         }

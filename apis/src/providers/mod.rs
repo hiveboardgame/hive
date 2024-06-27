@@ -13,6 +13,7 @@ pub mod online_users;
 mod ping;
 pub mod refocus;
 pub mod timer;
+pub mod tournament_ready;
 pub mod tournaments;
 pub mod user_search;
 pub mod websocket;
