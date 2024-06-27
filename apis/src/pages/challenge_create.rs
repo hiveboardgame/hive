@@ -1,12 +1,18 @@
+use crate::common::TimeSignals;
 use crate::{
     common::ChallengeAction,
-    components::atoms::{rating::icon_for_speed, select_options::SelectOption},
-    providers::{ApiRequests, AuthContext, ColorScheme},
+    components::{
+        atoms::{
+            create_challenge_button::CreateChallengeButton, input_slider::InputSlider,
+            select_options::SelectOption,
+        },
+        organisms::time_select::TimeSelect,
+    },
+    providers::{ApiRequests, AuthContext},
 };
 use hive_lib::{ColorChoice, GameType};
+use leptos::ev::Event;
 use leptos::*;
-use leptos_icons::*;
-use leptos_use::use_debounce_fn_with_arg;
 use shared_types::{
     ChallengeDetails, ChallengeVisibility, CorrespondenceMode, GameSpeed, TimeMode,
 };
@@ -57,57 +63,11 @@ pub fn ChallengeCreate(
         };
     };
     let challenge_visibility = move |visibility| params.visibility.update(|v| *v = visibility);
-    let color_context = expect_context::<ColorScheme>;
-    let icon = move |color_choice: ColorChoice| {
-        move || match color_choice {
-            ColorChoice::Random => {
-                view! { <Icon icon=icondata::BsHexagonHalf class="w-full h-full"/> }
-            }
-            ColorChoice::White => {
-                if (color_context().prefers_dark)() {
-                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-white"/> }
-                } else {
-                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-black"/> }
-                }
-            }
-            ColorChoice::Black => {
-                if (color_context().prefers_dark)() {
-                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-white"/> }
-                } else {
-                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-black"/> }
-                }
-            }
-        }
-    };
-    let time_control = RwSignal::new(TimeMode::RealTime);
-    let corr_mode = RwSignal::new(CorrespondenceMode::DaysPerMove);
     let band_upper = RwSignal::new(550_i32);
     let band_lower = RwSignal::new(-550_i32);
-    let corr_days = RwSignal::new(2_i32);
-    let step_min = RwSignal::new(10_i32);
-    let step_sec = RwSignal::new(10_i32);
-    let total_seconds = Signal::derive(move || {
-        let step = step_min();
-        (match step {
-            1..=20 => step,
-            21 => step + 4,
-            22 => step + 8,
-            23..=32 => (step - 20) * 15,
-            i32::MIN..=0_i32 | 33_i32..=i32::MAX => unreachable!(),
-        }) * 60
-    });
-    let sec_per_move = Signal::derive(move || {
-        let step = step_sec();
-        match step {
-            0..=20 => step,
-            21 => step + 4,
-            22 => step + 8,
-            23..=32 => (step - 20) * 15,
-            i32::MIN..=-1_i32 | 33_i32..=i32::MAX => unreachable!(),
-        }
-    });
 
-    let create_challenge = move |color_choice| {
+    let time_signals = TimeSignals::default();
+    let create_challenge = Callback::new(move |color_choice| {
         params.color_choice.update_untracked(|p| *p = color_choice);
         let api = ApiRequests::new();
         params
@@ -118,7 +78,7 @@ pub fn ChallengeCreate(
             .update_untracked(|v| *v = Some(band_lower.get_untracked()));
         params
             .time_mode
-            .update_untracked(|v| *v = time_control.get_untracked());
+            .update_untracked(|v| *v = time_signals.time_control.get_untracked());
         match (params.time_mode)() {
             TimeMode::Untimed => {
                 params.time_base.update_value(|v| *v = None);
@@ -127,24 +87,24 @@ pub fn ChallengeCreate(
             TimeMode::RealTime => {
                 params
                     .time_base
-                    .update_value(|v| *v = Some(total_seconds.get_untracked()));
+                    .update_value(|v| *v = Some(time_signals.total_seconds.get_untracked()));
                 params
                     .time_increment
-                    .update_value(|v| *v = Some(sec_per_move.get_untracked()));
+                    .update_value(|v| *v = Some(time_signals.sec_per_move.get_untracked()));
             }
             TimeMode::Correspondence => {
-                match corr_mode.get_untracked() {
+                match time_signals.corr_mode.get_untracked() {
                     CorrespondenceMode::DaysPerMove => {
-                        params
-                            .time_increment
-                            .update_value(|v| *v = Some(corr_days.get_untracked() * 86400));
+                        params.time_increment.update_value(|v| {
+                            *v = Some(time_signals.corr_days.get_untracked() * 86400)
+                        });
                         params.time_base.update_value(|v| *v = None);
                     }
                     CorrespondenceMode::TotalTimeEach => {
                         params.time_increment.update_value(|v| *v = None);
-                        params
-                            .time_base
-                            .update_value(|v| *v = Some(corr_days.get_untracked() * 86400));
+                        params.time_base.update_value(|v| {
+                            *v = Some(time_signals.corr_days.get_untracked() * 86400)
+                        });
                     }
                 };
             }
@@ -210,12 +170,14 @@ pub fn ChallengeCreate(
         let challenge_action = ChallengeAction::Create(details);
         api.challenge(challenge_action);
         close(());
-    };
+    });
 
     let buttons_style =
         "my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded";
     let disable_rated = move || {
-        if (params.game_type)() == GameType::Base || time_control() == TimeMode::Untimed {
+        if (params.game_type)() == GameType::Base
+            || time_signals.time_control.get() == TimeMode::Untimed
+        {
             return true;
         }
         false
@@ -228,7 +190,6 @@ pub fn ChallengeCreate(
             "bg-odd-light dark:bg-gray-700"
         }
     };
-    let slider_style="appearance-none accent-gray-500 dark:accent-gray-400 rounded-full bg-odd-light dark:bg-gray-700 h-4 w-64 p-1";
     let rating_string = move || {
         format!(
             "{}/+{}",
@@ -244,139 +205,33 @@ pub fn ChallengeCreate(
             }
         )
     };
-    let throttled_slider = move |signal_to_update| {
-        use_debounce_fn_with_arg(update_from_slider(signal_to_update), 50.0)
-    };
-    let gamespeed_icon = move || {
-        let speed = match time_control() {
-            TimeMode::Untimed => GameSpeed::Untimed,
-            TimeMode::Correspondence => GameSpeed::Correspondence,
-            TimeMode::RealTime => {
-                GameSpeed::from_base_increment(Some(total_seconds()), Some(sec_per_move()))
+
+    let on_change: Callback<Event, ()> = Callback::from(move |ev: Event| {
+        if let Ok(new_value) = TimeMode::from_str(&event_target_value(&ev)) {
+            params
+                .visibility
+                .update(|v| *v = ChallengeVisibility::Public);
+            params.game_type.update(|v| *v = GameType::MLP);
+            time_signals.corr_days.update_untracked(|v| *v = 2);
+            if new_value == TimeMode::Untimed {
+                params.rated.set(false);
+            } else {
+                params.rated.set(true);
             }
+            time_signals.time_control.update(|v| *v = new_value);
         };
-        view! { <Icon width="50" height="50" class="p-2" icon=icon_for_speed(&speed)/> }
-    };
+    });
 
     view! {
         <div class="flex flex-col items-center w-72 xs:m-2 xs:w-80 sm:w-96">
             <div class=move || {
                 opponent().map_or("hidden", |_| "block")
             }>"Opponent: " {opponent()}</div>
-            <div class="flex">
-                <label class="mr-1">
-                    <div class="flex items-center">
-                        {gamespeed_icon} <p class="text-3xl font-extrabold">" Create a game:"</p>
-                    </div>
-                    Time Control:
-                    <select
-                        class="bg-odd-light dark:bg-gray-700"
-                        name="Time Control"
-                        on:change=move |ev| {
-                            if let Ok(new_value) = TimeMode::from_str(&event_target_value(&ev)) {
-                                params.visibility.update(|v| *v = ChallengeVisibility::Public);
-                                params.game_type.update(|v| *v = GameType::MLP);
-                                corr_days.update_untracked(|v| *v = 2);
-                                if new_value == TimeMode::Untimed {
-                                    params.rated.set(false);
-                                } else {
-                                    params.rated.set(true);
-                                }
-                                time_control.update(|v| *v = new_value);
-                            }
-                        }
-                    >
-
-                        <SelectOption value=time_control is="Real Time"/>
-                        <SelectOption value=time_control is="Correspondence"/>
-                        <SelectOption value=time_control is="Untimed"/>
-                    </select>
-                </label>
-            </div>
-            <Show when=move || time_control() != TimeMode::Untimed>
-                <Show
-                    when=move || time_control() == TimeMode::RealTime
-                    fallback=move || {
-                        view! {
-                            <div class="flex flex-col justify-center items-center mb-1">
-
-                                <label class="flex flex-col items-center">
-                                    <div class="flex gap-1 p-1">
-                                        <select
-                                            class="mr-1 bg-odd-light dark:bg-gray-700"
-                                            name="Correspondence Mode"
-                                            on:change=move |ev| {
-                                                if let Ok(new_value) = CorrespondenceMode::from_str(
-                                                    &event_target_value(&ev),
-                                                ) {
-                                                    corr_mode.update(|v| *v = new_value);
-                                                }
-                                            }
-                                        >
-
-                                            <SelectOption value=corr_mode is="Days per move"/>
-                                            <SelectOption value=corr_mode is="Total time each"/>
-
-                                        </select>
-                                        <div class="w-4">{corr_days}</div>
-                                    </div>
-                                    <input
-                                        on:input=move |evt| {
-                                            throttled_slider(corr_days)(evt);
-                                        }
-
-                                        type="range"
-                                        name="Correspondence"
-                                        min="1"
-                                        max="14"
-                                        prop:value=corr_days
-                                        step="1"
-                                        class=slider_style
-                                    />
-                                </label>
-                            </div>
-                        }
-                    }
-                >
-
-                    <div class="flex flex-col justify-center">
-                        <label class="flex-col items-center">
-                            <div>
-                                {move || format!("Minutes per side: {}", total_seconds() / 60)}
-                            </div>
-                            <input
-                                on:input=move |evt| {
-                                    throttled_slider(step_min)(evt);
-                                }
-
-                                type="range"
-                                name="minutes"
-                                min="1"
-                                max="32"
-                                prop:value=step_min
-                                step="1"
-                                class=slider_style
-                            />
-                        </label>
-                        <label class="flex-col items-center">
-                            <div>{move || format!("Increment in sec: {}", sec_per_move())}</div>
-                            <input
-                                on:input=move |evt| {
-                                    throttled_slider(step_sec)(evt);
-                                }
-
-                                type="range"
-                                name="increment"
-                                min="0"
-                                max="32"
-                                prop:value=step_sec
-                                step="1"
-                                class=slider_style
-                            />
-                        </label>
-                    </div>
-                </Show>
-            </Show>
+            <TimeSelect title=" Create a game:" time_signals on_change>
+                <SelectOption value=time_signals.time_control is="Real Time"/>
+                <SelectOption value=time_signals.time_control is="Correspondence"/>
+                <SelectOption value=time_signals.time_control is="Untimed"/>
+            </TimeSelect>
             <div class="flex justify-center">
                 <button
                     prop:disabled=disable_rated
@@ -463,76 +318,40 @@ pub fn ChallengeCreate(
                 <div class="flex">
                     <div class="flex gap-1 mx-1">
                         <label class="flex items-center">
-                            <input
-                                on:input=move |evt| {
-                                    throttled_slider(band_lower)(evt);
-                                }
-
-                                type="range"
+                            <InputSlider
+                                signal_to_update=band_lower
                                 name="above"
-                                min="-550"
-                                max="0"
-                                prop:value=band_lower
-                                step="50"
-                                class="p-1 h-4 rounded-full appearance-none accent-gray-500 dark:accent-gray-400 bg-odd-light dark:bg-gray-700"
+                                min=-550
+                                max=0
+                                step=50
                             />
                         </label>
                         <label class="flex items-center">
-                            <input
-                                on:input=move |evt| {
-                                    throttled_slider(band_upper)(evt);
-                                }
-
-                                type="range"
+                            <InputSlider
+                                signal_to_update=band_upper
                                 name="below"
-                                max="550"
-                                min="0"
-                                prop:value=band_upper
-                                step="50"
-                                class="p-1 h-4 rounded-full appearance-none accent-gray-500 dark:accent-gray-400 bg-odd-light dark:bg-gray-700"
+                                min=0
+                                max=550
+                                step=50
                             />
                         </label>
                     </div>
                 </div>
             </div>
             <div class="flex justify-center items-baseline">
-                <button
-                    title="White"
-                    class=format!(
-                        "m-1 h-[4.5rem] w-16 bg-odd-light dark:bg-gray-700 {buttons_style}",
-                    )
-
-                    on:click=move |_| { create_challenge(ColorChoice::White) }
-                >
-                    {icon(ColorChoice::White)}
-                </button>
-                <button
-                    title="Random Side"
-                    class=format!("m-1 h-20 w-20 bg-odd-light dark:bg-gray-700 {buttons_style}")
-
-                    on:click=move |_| { create_challenge(ColorChoice::Random) }
-                >
-                    {icon(ColorChoice::Random)}
-                </button>
-                <button
-                    title="Black"
-                    class=format!(
-                        "m-1 h-[4.5rem] w-16 bg-odd-light dark:bg-gray-700 {buttons_style}",
-                    )
-
-                    on:click=move |_| { create_challenge(ColorChoice::Black) }
-                >
-                    {icon(ColorChoice::Black)}
-                </button>
+                <CreateChallengeButton
+                    color_choice=store_value(ColorChoice::White)
+                    create_challenge
+                />
+                <CreateChallengeButton
+                    color_choice=store_value(ColorChoice::Random)
+                    create_challenge
+                />
+                <CreateChallengeButton
+                    color_choice=store_value(ColorChoice::Black)
+                    create_challenge
+                />
             </div>
         </div>
-    }
-}
-
-fn update_from_slider(signal_to_update: RwSignal<i32>) -> impl Fn(web_sys::Event) + Clone {
-    move |evt: web_sys::Event| {
-        if let Ok(value) = event_target_value(&evt).parse::<i32>() {
-            signal_to_update.update(|v| *v = value)
-        }
     }
 }

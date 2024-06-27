@@ -16,6 +16,8 @@ use crate::{
 use hive_lib::{GameStatus, History, State};
 use leptos::*;
 
+use super::{ready::handle_ready, start::handle_start};
+
 pub fn handle_reaction(gar: GameActionResponse) {
     let _games = expect_context::<GamesSignal>();
     let _game_state = expect_context::<GameStateSignal>();
@@ -38,6 +40,12 @@ pub fn handle_reaction(gar: GameActionResponse) {
         }
         GameReaction::Join => {
             handle_join(gar.clone());
+        }
+        GameReaction::Started => {
+            handle_start(gar.clone());
+        }
+        GameReaction::Ready => {
+            handle_ready(gar.clone());
         }
     };
 }

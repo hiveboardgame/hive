@@ -7,12 +7,16 @@ pub enum DbError {
     InternalError,
     #[error("Invalid input")]
     InvalidInput { info: String, error: String },
+    #[error("Invalid action")]
+    InvalidAction { info: String },
     #[error("Not found")]
     NotFound { reason: String },
     #[error("Time not present")]
     TimeNotFound { reason: String },
     #[error("Game is over")]
     GameIsOver,
+    #[error("You are not authorized to perform that action")]
+    Unauthorized,
 }
 
 impl From<diesel::result::Error> for DbError {

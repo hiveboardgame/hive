@@ -8,9 +8,26 @@ use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct GameAbstractResponse {
+    pub tournament: Option<TournamentAbstractResponse>,
+    pub game_id: GameId,
+    pub white_rating: Option<f64>,
+    pub black_rating: Option<f64>,
+    pub white_rating_change: Option<f64>,
+    pub black_rating_change: Option<f64>,
+    pub history: Vec<(String, String)>,
+    pub time_mode: TimeMode,
+    pub time_base: Option<i32>,
+    pub time_increment: Option<i32>,
+    pub speed: GameSpeed,
+    pub conclusion: Conclusion,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GameResponse {
     pub uuid: Uuid,
     pub game_id: GameId,
+    pub tournament: Option<TournamentAbstractResponse>,
     pub current_player_id: Uuid,
     pub turn: usize,
     pub finished: bool,
@@ -112,6 +129,8 @@ impl GameResponse {
 }
 
 use cfg_if::cfg_if;
+
+use super::tournament::TournamentAbstractResponse;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use db_lib::{
     models::Game,
@@ -125,23 +144,23 @@ use std::str::FromStr;
 impl GameResponse {
     pub async fn new_from_uuid(game_id: Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
         let game = Game::find_by_uuid(&game_id, conn).await?;
-        GameResponse::new_from_model(&game, conn).await
+        GameResponse::from_model(&game, conn).await
     }
 
     pub async fn new_from_game_id(game_id: &GameId, conn: &mut DbConn<'_>) -> Result<Self> {
         let game = Game::find_by_game_id(game_id, conn).await?;
-        GameResponse::new_from_model(&game, conn).await
+        GameResponse::from_model(&game, conn).await
     }
 
-    pub async fn new_from_model(game: &Game, conn: &mut DbConn<'_>) -> Result<Self> {
-        let history = History::new_from_str(&game.history)?;
-        let state = State::new_from_history(&history)?;
-        GameResponse::new_from(game, &state, conn).await
+    pub async fn from_model(game: &Game, conn: &mut DbConn<'_>) -> Result<Self> {
+        let history = Box::new(History::new_from_str(&game.history)?);
+        let state = Box::new(State::new_from_history(&history)?);
+        GameResponse::new_from(game, state, conn).await
     }
 
     async fn new_from(
         game: &Game,
-        state: &State,
+        state: Box<State>,
         conn: &mut DbConn<'_>,
     ) -> Result<Self> {
         let white_player = UserResponse::from_uuid(&game.white_id, conn).await?;
@@ -165,9 +184,16 @@ impl GameResponse {
         };
         let white_time_left = game.white_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
         let black_time_left = game.black_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
+        let mut tournament = None;
+         if game.tournament_id.is_some() {
+             if let Some(id) = game.tournament_id {
+                 tournament = Some(TournamentAbstractResponse::from_uuid(&id, conn).await?)
+             }
+         }
         Ok(Self {
             uuid: game.id,
             game_id: GameId(game.nanoid.clone()),
+            tournament,
             game_status: GameStatus::from_str(&game.game_status)?,
             current_player_id: game.current_player_id,
             finished: game.finished,

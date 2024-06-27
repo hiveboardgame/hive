@@ -12,11 +12,12 @@ use crate::{
             display_timer::{DisplayTimer, Placement},
             reserve::{Alignment, Reserve},
             side_board::SideboardTabs,
+            unstarted::Unstarted,
         },
     },
     providers::{config::Config, game_state::GameStateSignal, AuthContext},
 };
-use hive_lib::{Color, Position};
+use hive_lib::{Color, GameStatus, Position};
 use leptos::*;
 
 #[derive(Clone)]
@@ -53,12 +54,16 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         _ => None,
     };
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
-    let show_buttons = move || {
-        user().map_or(false, |user| {
+    let user_is_player = Signal::derive(move || {
+        user().and_then(|user| {
             let (white_id, black_id) = white_and_black();
-            Some(user.id) == black_id || Some(user.id) == white_id
+            if Some(user.id) == black_id || Some(user.id) == white_id {
+                Some((user.username, user.id))
+            } else {
+                None
+            }
         })
-    };
+    });
     let player_is_black = create_memo(move |_| {
         user().map_or(false, |user| {
             let black_id = white_and_black().1;
@@ -89,6 +94,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let controls_signal = expect_context::<ControlsSignal>();
     let show_controls =
         Signal::derive(move || !controls_signal.hidden.get() || game_state.is_finished()());
+    let show_board = create_read_slice(game_state.signal, |gs| {
+        !gs.game_response.as_ref().map_or(false, |gr| {
+            gr.tournament.is_some() && matches!(gr.game_status, GameStatus::NotStarted)
+        })
+    });
 
     view! {
         <div class=move || {
@@ -101,8 +111,16 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 when=orientation_signal.orientation_vertical
                 fallback=move || {
                     view! {
-                        <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight"/>
-                        <Board/>
+                        <Show
+                            when=show_board
+                            fallback=move || {
+                                view! { <Unstarted user_is_player/> }
+                            }
+                        >
+
+                            <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight"/>
+                            <Board/>
+                        </Show>
                         <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full">
                             <DisplayTimer placement=Placement::Top vertical=false/>
                             <SideboardTabs player_is_black=player_is_black/>
@@ -117,7 +135,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         <Show when=show_controls>
                             <div class="flex flex-row-reverse justify-between items-center shrink">
                                 <AnalysisAndDownload/>
-                                <Show when=show_buttons>
+                                <Show when=move || user_is_player().is_some()>
                                     <ControlButtons/>
                                 </Show>
                             </div>
@@ -136,7 +154,21 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         </div>
 
                     </div>
-                    <Board overwrite_tw_classes="flex grow min-h-0"/>
+
+                    <Show
+                        when=show_board
+                        fallback=move || {
+                            view! {
+                                <Unstarted
+                                    overwrite_tw_classes="flex grow min-h-0 h-[100dvh] justify-center items-center"
+                                    user_is_player
+                                />
+                            }
+                        }
+                    >
+
+                        <Board overwrite_tw_classes="flex grow min-h-0"/>
+                    </Show>
                     <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
                         <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
                             <UserWithRating

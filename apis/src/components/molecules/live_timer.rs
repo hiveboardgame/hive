@@ -1,7 +1,8 @@
+use crate::providers::game_state::GameStateSignal;
 use crate::providers::timer::TimerSignal;
 use crate::providers::ApiRequests;
 use chrono::prelude::*;
-use hive_lib::Color;
+use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;
 use leptos::*;
 use leptos_router::RouterContext;
@@ -19,12 +20,22 @@ lazy_static! {
 #[component]
 pub fn LiveTimer(side: Color) -> impl IntoView {
     let timer_signal = expect_context::<TimerSignal>();
+    let game_state = expect_context::<GameStateSignal>();
+    // TODO: PUT THIS IN PROVIDERS TIMER @ION
+    let tournament_game_in_progress = move || {
+        game_state.signal.get().game_response.map_or(false, |gr| {
+            gr.tournament.is_some() && gr.game_status == GameStatus::InProgress
+        })
+    };
     let timer = timer_signal.signal.get_untracked();
-    let white_time = move || {
-        let left = timer.white_time_left.unwrap();
-        if timer.turn < 2
+    let color_time = move |color: Color| {
+        let (left, not_user_turn) = match color {
+            Color::White => (timer.white_time_left.unwrap(), timer.turn % 2 == 1),
+            Color::Black => (timer.black_time_left.unwrap(), timer.turn % 2 == 0),
+        };
+        if (timer.turn < 2 && !tournament_game_in_progress())
             || left == Duration::from_millis(0)
-            || timer.turn % 2 == 1
+            || not_user_turn
             || timer.finished
         {
             left
@@ -40,32 +51,8 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
             }
         }
     };
-    let black_time = move || {
-        let left = timer.black_time_left.unwrap();
-        if timer.turn < 2
-            || left == Duration::from_millis(0)
-            || timer.turn % 2 == 0
-            || timer.finished
-        {
-            left
-        } else {
-            let left = chrono::Duration::from_std(left).unwrap();
-            let then = timer.last_interaction.unwrap();
-            let future = then.checked_add_signed(left).unwrap();
-            let now = Utc::now();
-            if now > future {
-                Duration::from_millis(0)
-            } else {
-                future.signed_duration_since(now).to_std().unwrap()
-            }
-        }
-    };
-    let time_left = create_rw_signal({
-        match side {
-            Color::Black => black_time(),
-            Color::White => white_time(),
-        }
-    });
+
+    let time_left = create_rw_signal(color_time(side));
     let time_is_red = Memo::new(move |_| {
         if time_left() == Duration::from_secs(0) {
             String::from("bg-ladybug-red")
@@ -86,10 +73,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
                 time_left.update(|t| {
                     if ticks.get_untracked() > 10 {
                         ticks.update(|t| *t = 0);
-                        *t = match side {
-                            Color::Black => black_time(),
-                            Color::White => white_time(),
-                        };
+                        *t = color_time(side)
                     } else {
                         *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
                     }
@@ -103,7 +87,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
     // WARN: Might lead to problems, if we get  re-render loops, this could be the cause.
     create_isomorphic_effect(move |_| {
         let timer = timer_signal.signal.get();
-        if timer.turn > 1 {
+        if timer.turn > 1 || tournament_game_in_progress() {
             if (side == Color::White) == (timer.turn % 2 == 0) && !timer.finished {
                 resume();
             } else if is_active() {
