@@ -4,6 +4,7 @@ use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GameAction {
+    Start,
     CheckTime,
     Control(GameControl),
     Join,
@@ -16,6 +17,7 @@ impl fmt::Display for GameAction {
             GameAction::CheckTime => write!(f, "CheckTime"),
             GameAction::Control(ref gc) => write!(f, "{}", gc),
             GameAction::Join => write!(f, "Join"),
+            GameAction::Start => write!(f, "Start"),
             GameAction::Turn(ref turn) => write!(f, "{}", turn),
         }
     }

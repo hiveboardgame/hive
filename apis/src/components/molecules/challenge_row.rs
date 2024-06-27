@@ -13,7 +13,7 @@ use leptos::*;
 use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::use_window;
-use shared_types::ChallengeVisibility;
+use shared_types::{ChallengeVisibility, TimeInfo};
 
 #[component]
 pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
@@ -128,6 +128,12 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
         }
     };
 
+    let time_info = TimeInfo {
+        mode: time_mode,
+        base: challenge().time_base,
+        increment: challenge().time_increment,
+    };
+
     view! {
         <tr class="items-center text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
             <td class=td_class>
@@ -147,9 +153,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             <td class=td_class>
                 <div class="flex justify-center items-center">
                     <TimeRow
-                        time_mode=time_mode
-                        time_base=challenge().time_base
-                        increment=challenge().time_increment
+                        time_info
                         extend_tw_classes="break-words max-w-[40px] sm:max-w-fit sm:whitespace-nowrap"
                     />
                 </div>
@@ -183,7 +187,8 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                 </Show>
                                 <button
                                     on:click=move |_| {
-                                        ApiRequests::new().challenge_cancel(challenge().challenge_id)
+                                        ApiRequests::new()
+                                            .challenge_cancel(challenge().challenge_id)
                                     }
 
                                     class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
@@ -200,7 +205,8 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     Some(Ok(Some(_))) => {
                                         let mut game_state = expect_context::<GameStateSignal>();
                                         game_state.full_reset();
-                                        ApiRequests::new().challenge_accept(challenge().challenge_id);
+                                        ApiRequests::new()
+                                            .challenge_accept(challenge().challenge_id);
                                     }
                                     _ => {
                                         let navigate = use_navigate();
@@ -220,7 +226,8 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     on:click=move |_| {
                                         match (auth_context.user)() {
                                             Some(Ok(Some(_))) => {
-                                                ApiRequests::new().challenge_cancel(challenge().challenge_id);
+                                                ApiRequests::new()
+                                                    .challenge_cancel(challenge().challenge_id);
                                             }
                                             _ => {
                                                 let navigate = use_navigate();

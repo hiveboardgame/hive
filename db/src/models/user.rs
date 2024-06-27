@@ -18,7 +18,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use diesel::{
     dsl::exists, query_dsl::BelongingToDsl, select, ExpressionMethods, Identifiable, Insertable,
-    PgTextExpressionMethods, QueryDsl, Queryable, SelectableHelper,
+    PgTextExpressionMethods, QueryDsl, Queryable, Selectable, SelectableHelper,
 };
 use diesel_async::RunQueryDsl;
 use lazy_static::lazy_static;
@@ -110,7 +110,7 @@ impl NewUser {
     }
 }
 
-#[derive(Queryable, Identifiable, Serialize, Deserialize, Debug, Clone)]
+#[derive(Queryable, Identifiable, Serialize, Selectable, Deserialize, Debug, Clone)]
 #[diesel(primary_key(id))]
 pub struct User {
     pub id: Uuid,
@@ -231,6 +231,7 @@ impl User {
     }
 
     pub async fn get_urgent_nanoids(&self, conn: &mut DbConn<'_>) -> Result<Vec<GameId>, DbError> {
+        // TODO: This is where unstarted tournament games should be filtered out, for loading all games
         Ok(GameUser::belonging_to(self)
             .inner_join(games::table)
             .select(Game::as_select())

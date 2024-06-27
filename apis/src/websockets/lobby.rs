@@ -1,3 +1,4 @@
+use crate::{common::TournamentUpdate, responses::TournamentResponse};
 use crate::{
     common::{ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
     responses::{ChallengeResponse, GameResponse, UserResponse},
@@ -8,7 +9,7 @@ use actix::AsyncContext;
 use actix::WrapFuture;
 use db_lib::{
     get_conn,
-    models::{Challenge, User},
+    models::{Challenge, TournamentInvitation, User},
     DbPool,
 };
 use diesel_async::scoped_futures::ScopedFutureExt;
@@ -142,8 +143,9 @@ impl Handler<Connect> for Lobby {
                         address.do_send(cam);
                     }
                 }
+
                 let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
-                    if let Ok(user_response) = UserResponse::from_user(&user, &mut conn).await {
+                    if let Ok(user_response) = UserResponse::from_model(&user, &mut conn).await {
                         let message =
                             ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
                                 status: UserStatus::Online,
@@ -160,10 +162,6 @@ impl Handler<Connect> for Lobby {
                                     for socket in sockets {
                                         socket.do_send(WsMessage(serialized.clone()));
                                     }
-                                } else if let Ok(user) = User::find_by_uuid(id, &mut conn).await {
-                                    println!("Game_users has stale user: {}", user.username);
-                                } else {
-                                    println!("Game_users has stale anoymous user");
                                 }
                             }
                         }
@@ -207,6 +205,30 @@ impl Handler<Connect> for Lobby {
                             address.do_send(cam);
                         }
                     }
+                    // send tournament invitations
+                    if let Ok(invitations) =
+                        TournamentInvitation::find_by_user(&user.id, &mut conn).await
+                    {
+                        for invitation in invitations {
+                            if let Ok(response) =
+                                TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn)
+                                    .await
+                            {
+                                let message = ServerResult::Ok(Box::new(
+                                    ServerMessage::Tournament(TournamentUpdate::Invited(response)),
+                                ));
+                                let serialized = serde_json::to_string(&message)
+                                    .expect("Failed to serialize a server message");
+                                let cam = ClientActorMessage {
+                                    destination: MessageDestination::User(user_id),
+                                    serialized,
+                                    from: user_id,
+                                };
+                                address.do_send(cam);
+                            }
+                        }
+                    }
+
                     // Send challenges on join
                     let mut responses = Vec::new();
                     if let Ok(challenges) =
@@ -266,7 +288,6 @@ impl Handler<Connect> for Lobby {
                 address.do_send(cam);
             }
         };
-
         let actor_future = future.into_actor(self);
         ctx.wait(actor_future);
     }

@@ -6,3 +6,4 @@ pub mod internal_server_message;
 pub mod lobby;
 pub mod messages;
 pub mod start_connection;
+pub mod tournament_game_start;

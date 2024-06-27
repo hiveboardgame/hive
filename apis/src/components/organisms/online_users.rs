@@ -1,4 +1,5 @@
 use crate::{
+    common::UserAction,
     components::molecules::user_row::UserRow,
     providers::{online_users::OnlineUsersSignal, user_search::UserSearchSignal, ApiRequests},
 };
@@ -54,7 +55,7 @@ pub fn OnlineUsers() -> impl IntoView {
             {text}
             <div class="overflow-y-auto h-96">
                 <For each=users key=move |(_, user)| user.uid let:user>
-                    <UserRow user=store_value(user.1)/>
+                    <UserRow actions=vec![UserAction::Challenge] user=store_value(user.1)/>
                 </For>
 
             </div>

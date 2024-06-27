@@ -1035,6 +1035,7 @@ dependencies = [
  "diesel_migrations",
  "dotenvy",
  "hive",
+ "itertools 0.13.0",
  "lazy_static",
  "nanoid",
  "regex",
@@ -1485,7 +1486,7 @@ name = "hive"
 version = "0.1.0"
 dependencies = [
  "bitfield-struct",
- "itertools",
+ "itertools 0.12.1",
  "lazy_static",
  "regex",
  "serde",
@@ -1866,6 +1867,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1907,7 +1917,7 @@ version = "0.1.0"
 source = "git+https://github.com/leptix/leptix.git#867728677f7372767938f71df901655f2ba5f872"
 dependencies = [
  "derive_more",
- "itertools",
+ "itertools 0.12.1",
  "leptos",
  "leptos-use",
  "nanoid",
@@ -2008,7 +2018,7 @@ dependencies = [
  "getrandom",
  "html-escape",
  "indexmap 2.2.6",
- "itertools",
+ "itertools 0.12.1",
  "js-sys",
  "leptos_reactive",
  "once_cell",
@@ -2082,7 +2092,7 @@ dependencies = [
  "cfg-if",
  "convert_case 0.6.0",
  "html-escape",
- "itertools",
+ "itertools 0.12.1",
  "leptos_hot_reload",
  "prettyplease",
  "proc-macro-error",
@@ -2145,7 +2155,7 @@ dependencies = [
  "cached",
  "cfg-if",
  "gloo-net",
- "itertools",
+ "itertools 0.12.1",
  "js-sys",
  "lazy_static",
  "leptos",
@@ -3057,6 +3067,7 @@ dependencies = [
 name = "shared_types"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "chrono",
  "hive",
  "serde",
