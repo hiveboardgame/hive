@@ -1,10 +1,9 @@
-use super::{challenge::Challenge, Tournament};
 use crate::{
     db_error::DbError,
-    models::{GameUser, Rating},
+    models::{Challenge, GameUser, Rating, Tournament},
     schema::{
         challenges::{self, nanoid as nanoid_field},
-        games::{self, dsl::*},
+        games::{self, dsl::*, tournament_game_result},
         games_users, users,
     },
     DbConn,
@@ -826,6 +825,30 @@ impl Game {
             .select(games::all_columns)
             .get_results(conn)
             .await?)
+    }
+
+    pub async fn adjudicate_tournament_result(
+        &self,
+        user_id: &Uuid,
+        new_result: &TournamentGameResult,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Self, DbError> {
+        if let Some(tid) = self.tournament_id {
+            let tournament = Tournament::find(tid, conn).await?;
+            tournament.ensure_user_is_organizer(user_id, conn).await?;
+            let game = diesel::update(games::table.find(self.id))
+                .set((
+                    tournament_game_result.eq(new_result.to_string()),
+                    updated_at.eq(Utc::now()),
+                ))
+                .get_result(conn)
+                .await?;
+            Ok(game)
+        } else {
+            Err(DbError::InvalidAction {
+                info: String::from("Not a tournament game"),
+            })
+        }
     }
 
     pub async fn start(&self, conn: &mut DbConn<'_>) -> Result<Self, DbError> {

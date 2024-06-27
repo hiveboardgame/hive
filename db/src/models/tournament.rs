@@ -151,7 +151,7 @@ impl Tournament {
         Ok(())
     }
 
-    async fn ensure_user_is_organizer(
+    pub async fn ensure_user_is_organizer(
         &self,
         user_id: &Uuid,
         conn: &mut DbConn<'_>,
@@ -379,6 +379,10 @@ impl Tournament {
 
     pub async fn get_all(conn: &mut DbConn<'_>) -> Result<Vec<Tournament>, DbError> {
         Ok(tournaments::table.get_results(conn).await?)
+    }
+
+    pub async fn find(id: Uuid, conn: &mut DbConn<'_>) -> Result<Self, DbError> {
+        Ok(tournaments::table.find(id).first(conn).await?)
     }
 
     pub async fn find_by_tournament_id(

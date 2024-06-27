@@ -1,5 +1,6 @@
 use super::{
-    create::CreateHandler, delete::DeleteHandler, get::GetHandler, get_all::GetAllHandler,
+    abandon::AbandonHandler, adjudicate_result::AdjudicateResultHandler, create::CreateHandler,
+    delete::DeleteHandler, get::GetHandler, get_all::GetAllHandler,
     invitation_accept::InvitationAccept, invitation_create::InvitationCreate,
     invitation_decline::InvitationDecline, invitation_retract::InvitationRetract,
     join::JoinHandler, kick::KickHandler, leave::LeaveHandler, start::StartHandler,
@@ -105,7 +106,23 @@ impl TournamentHandler {
                     .handle()
                     .await?
             }
-            _ => unimplemented!(),
+            TournamentAction::AdjudicateResult(game_id, new_result) => {
+                AdjudicateResultHandler::new(game_id, new_result, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            TournamentAction::Abandon(tournament_id) => {
+                AbandonHandler::new(
+                    tournament_id,
+                    self.user_id,
+                    self.username.clone(),
+                    &self.pool,
+                )
+                .await?
+                .handle()
+                .await?
+            }
         };
         Ok(messages)
     }
