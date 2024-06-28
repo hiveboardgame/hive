@@ -32,7 +32,7 @@ impl StartHandler {
         println!("Found tournament");
         let (tournament, games) = conn
             .transaction::<_, DbError, _>(move |tc| {
-                async move { tournament.start(&self.user_id, tc).await }.scope_boxed()
+                async move { tournament.start_by_organizer(&self.user_id, tc).await }.scope_boxed()
             })
             .await?;
         let tournament_response = TournamentResponse::from_model(&tournament, &mut conn).await?;

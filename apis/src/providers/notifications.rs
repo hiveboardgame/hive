@@ -5,19 +5,19 @@ use std::collections::HashSet;
 #[derive(Clone)]
 pub struct NotificationContext {
     pub challenges: RwSignal<HashSet<ChallengeId>>,
-    pub tournaments: RwSignal<HashSet<TournamentId>>,
+    pub tournament_invitations: RwSignal<HashSet<TournamentId>>,
 }
 
 impl NotificationContext {
     pub fn new() -> Self {
         Self {
             challenges: RwSignal::new(HashSet::new()),
-            tournaments: RwSignal::new(HashSet::new()),
+            tournament_invitations: RwSignal::new(HashSet::new()),
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.challenges.get().is_empty() && self.tournaments.get().is_empty()
+        self.challenges.get().is_empty() && self.tournament_invitations.get().is_empty()
     }
 
     pub fn remove(&mut self, notification: &ApisId) {
@@ -28,7 +28,7 @@ impl NotificationContext {
                 });
             }
             ApisId::Tournament(tournament_id) => {
-                self.tournaments.update(|s| {
+                self.tournament_invitations.update(|s| {
                     s.remove(tournament_id);
                 });
             }
@@ -45,7 +45,7 @@ impl NotificationContext {
                     });
                 }
                 ApisId::Tournament(tournament_id) => {
-                    self.tournaments.update(|s| {
+                    self.tournament_invitations.update(|s| {
                         s.insert(tournament_id);
                     });
                 }

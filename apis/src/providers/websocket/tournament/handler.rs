@@ -56,6 +56,8 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
         TournamentUpdate::Started(tournament) => {
             let mut tournaments_signal = expect_context::<TournamentStateSignal>();
             tournaments_signal.add(vec![*tournament.clone()]);
+            let mut notifications = expect_context::<NotificationContext>();
+            notifications.remove(&ApisId::Tournament(tournament.tournament_id.clone()))
             // TODO: Inform users the tournament started
         }
     }

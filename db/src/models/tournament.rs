@@ -7,8 +7,8 @@ use crate::{
     schema::{
         games::{self, tournament_id as tournament_id_column},
         tournaments::{
-            self, nanoid as nanoid_field, series as series_column, status as status_column,
-            updated_at,
+            self, nanoid as nanoid_field, series as series_column, start_at,
+            status as status_column, updated_at,
         },
         tournaments_organizers, users,
     },
@@ -340,24 +340,39 @@ impl Tournament {
             .await?)
     }
 
-    pub async fn start(
+    pub async fn start_by_organizer(
         &self,
         organizer: &Uuid,
         conn: &mut DbConn<'_>,
-    ) -> Result<(Tournament, Vec<Game>), DbError> {
-        self.ensure_not_started()?;
+    ) -> Result<(Tournament, Vec<Game>, Vec<Uuid>), DbError> {
         self.ensure_user_is_organizer(organizer, conn).await?;
+        self.start(conn).await
+    }
+
+    pub async fn start(
+        &self,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(Tournament, Vec<Game>, Vec<Uuid>), DbError> {
+        self.ensure_not_started()?;
         // Make sure all the conditions have been met
         // and then call different starts for different tournament types
+        let mut deleted_invitees = Vec::new();
         let games = self.round_robin_start(conn).await?;
-        let tournament = diesel::update(self)
+        let tournament: Tournament = diesel::update(self)
             .set((
                 updated_at.eq(Utc::now()),
                 status_column.eq(TournamentStatus::InProgress.to_string()),
             ))
             .get_result(conn)
             .await?;
-        Ok((tournament, games))
+        let invitations: Vec<TournamentInvitation> = TournamentInvitation::belonging_to(self)
+            .get_results(conn)
+            .await?;
+        for invitation in invitations.iter() {
+            deleted_invitees.push(invitation.invitee_id);
+            invitation.delete(conn).await?;
+        }
+        Ok((tournament, games, deleted_invitees))
     }
 
     pub async fn round_robin_start(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
@@ -394,5 +409,26 @@ impl Tournament {
             .filter(nanoid_field.eq(id))
             .first(conn)
             .await?)
+    }
+
+    pub async fn unstarted(conn: &mut DbConn<'_>) -> Result<Vec<Self>, DbError> {
+        Ok(tournaments::table
+            .filter(status_column.eq(TournamentStatus::NotStarted.to_string()))
+            .filter(start_at.le(Utc::now()))
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn automatic_start(conn: &mut DbConn<'_>) -> Result<Vec<String>, DbError> {
+        let mut messages = Vec::new();
+        for tournament in Tournament::unstarted(conn).await? {
+            let (tournament, games) = tournament.start(conn).await?;
+            messages.push(format!(
+                "Tournament {} with {} new games",
+                tournament.name,
+                games.len()
+            ));
+        }
+        Ok(messages)
     }
 }

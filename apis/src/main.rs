@@ -1,13 +1,14 @@
 pub mod common;
 pub mod functions;
+pub mod jobs;
 pub mod responses;
 pub mod websockets;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
 use actix_web::middleware::Compress;
-use cfg_if::cfg_if;
 use websockets::tournament_game_start::TournamentGameStart;
-cfg_if! { if #[cfg(feature = "ssr")] {
+
+cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -50,6 +51,8 @@ async fn main() -> std::io::Result<()> {
     let chat_history = Data::new(Chats::new());
     let websocket_server = Data::new(Lobby::new(pool.clone()).start());
     let tournament_game_start = Data::new(TournamentGameStart::new());
+
+    jobs::tournament_start::run(pool.clone());
 
     println!("listening on http://{}", &addr);
 
