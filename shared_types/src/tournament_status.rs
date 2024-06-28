@@ -10,6 +10,16 @@ pub enum TournamentStatus {
     Finished,
 }
 
+impl TournamentStatus {
+    pub fn pretty_string(&self) -> String {
+        match self {
+            Self::NotStarted => String::from("Not started"),
+            Self::InProgress => String::from("Ongoing"),
+            Self::Finished => String::from("Finished"),
+        }
+    }
+}
+
 impl fmt::Display for TournamentStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let game_status = match self {

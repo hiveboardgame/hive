@@ -94,8 +94,8 @@ pub fn Tournament() -> impl IntoView {
             view! {
                 <h1 class="place-self-center p-2 text-3xl font-bold">{tournament().name}</h1>
                 <div class="overflow-y-auto w-60 md:w-[720px] max-h-96">
-                {tournament().description}
-            </div>
+                    {tournament().description}
+                </div>
                 <div>
                     <p class="font-bold">Tournament details:</p>
                     <div class="flex gap-1">"Time control: " <TimeRow time_info/></div>
@@ -120,7 +120,7 @@ pub fn Tournament() -> impl IntoView {
                 </Show>
                 <div class="flex flex-col flex-wrap place-content-center md:flex-row">
                     <div class="flex flex-col">
-                        <div class="flex flex-col gap-1 items-center px-1">
+                        <div class="flex flex-col items-center">
                             <p class="font-bold">Organizers</p>
                             <For
                                 each=move || { tournament().organizers }
@@ -191,7 +191,6 @@ pub fn Tournament() -> impl IntoView {
                             >
 
                                 {
-                                    let user_score = store_value(score.1.to_string());
                                     let user = store_value(
                                         tournament()
                                             .players
@@ -200,16 +199,13 @@ pub fn Tournament() -> impl IntoView {
                                             .clone(),
                                     );
                                     view! {
-                                        <div class="flex gap-1 items-center">
-                                            <UserRow actions=vec![] user/>
-                                            {user_score}
-                                        </div>
+                                        <UserRow actions=vec![] user end_str=score.1.to_string()/>
                                     }
                                 }
 
                             </For>
                             Tournament Games:
-                            <div class="flex flex-wrap">
+                            <div class="flex flex-wrap justify-center items-center">
                                 <GamePreviews games=Callback::new(move |_| (tournament().games))/>
                             </div>
                         </div>

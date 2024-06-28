@@ -12,7 +12,7 @@ use leptos_router::use_navigate;
 use shared_types::{CorrespondenceMode, TimeMode, TournamentDetails};
 use uuid::Uuid;
 
-const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
+const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
 #[derive(Debug, Clone, Copy)]
 pub struct TournamentTournamentSignals {
@@ -21,6 +21,7 @@ pub struct TournamentTournamentSignals {
     pub scoring: RwSignal<String>,
     pub tiebreaker: RwSignal<Vec<Option<String>>>,
     pub seats: RwSignal<i32>,
+    pub min_seats: RwSignal<i32>,
     pub rounds: RwSignal<i32>,
     pub joinable: RwSignal<bool>,
     pub invite_only: RwSignal<bool>,
@@ -32,6 +33,7 @@ pub struct TournamentTournamentSignals {
     pub band_lower: RwSignal<Option<i32>>,
     pub series: RwSignal<Option<Uuid>>,
     pub start_at: RwSignal<DateTime<Utc>>,
+    pub round_duration: RwSignal<i32>,
 }
 
 impl TournamentTournamentSignals {
@@ -42,6 +44,7 @@ impl TournamentTournamentSignals {
             scoring: RwSignal::new(String::from("Match")),
             tiebreaker: RwSignal::new(vec![Some(String::from("Buchholz"))]),
             seats: RwSignal::new(4),
+            min_seats: RwSignal::new(4),
             rounds: RwSignal::new(2),
             joinable: RwSignal::new(true),
             invite_only: RwSignal::new(false),
@@ -54,6 +57,7 @@ impl TournamentTournamentSignals {
             band_lower: RwSignal::new(None),
             series: RwSignal::new(None),
             start_at: RwSignal::new(Utc::now()),
+            round_duration: RwSignal::new(7),
         }
     }
 }
@@ -71,6 +75,7 @@ pub fn TournamentCreate() -> impl IntoView {
     let min_rating = RwSignal::new(500);
     let max_rating = RwSignal::new(2500);
     let organizer_start = RwSignal::new(true);
+    let fixed_round_duration = RwSignal::new(false);
     let rating_string = move || {
         format!(
             "Min Rating: {}/ Max Rating: {}",
@@ -86,6 +91,8 @@ pub fn TournamentCreate() -> impl IntoView {
             }
         )
     };
+    let disable_create =
+        move || tournament.name.get().len() < 4 || tournament.description.get().len() < 50;
 
     let create = move |_| {
         let auth_context = expect_context::<AuthContext>();
@@ -147,6 +154,7 @@ pub fn TournamentCreate() -> impl IntoView {
             tiebreaker: tournament.tiebreaker.get_untracked(),
             invitees: vec![],
             seats: tournament.seats.get_untracked(),
+            min_seats: tournament.min_seats.get_untracked(),
             rounds: tournament.rounds.get_untracked(),
             joinable: tournament.joinable.get_untracked(),
             invite_only: tournament.invite_only.get_untracked(),
@@ -162,6 +170,11 @@ pub fn TournamentCreate() -> impl IntoView {
             } else {
                 Some(tournament.start_at.get_untracked())
             },
+            round_duration: if fixed_round_duration.get_untracked() {
+                Some(tournament.round_duration.get_untracked())
+            } else {
+                None
+            },
         };
         if account.is_some() {
             let api = ApiRequests::new();
@@ -176,51 +189,7 @@ pub fn TournamentCreate() -> impl IntoView {
 
     //let unused = move || {
     //    view! {
-    //    <div class="flex flex-col">
-    //        <div class="flex">
-    //            <input
-    //                on:change=move |_| organizer_start.update(|b| *b = !*b)
-    //                type="checkbox"
-    //                class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-    //                prop:checked=organizer_start
-    //            />
-    //            <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-    //                Manual start
-    //            </label>
-    //        </div>
-    //        <Show when=move || !organizer_start()>
-    //            <label for="start-time">Choose a start time:</label>
-    //            <input
-    //                type="datetime-local"
-    //                id="start-time"
-    //                name="start-time"
-    //                attr:min=move || Local::now().format("%Y-%m-%dT%H:%M").to_string()
-    //                attr:max=move || {
-    //                    (Local::now() + Duration::weeks(12))
-    //                        .format("%Y-%m-%dT%H:%M")
-    //                        .to_string()
-    //                }
-    //
-    //    //                value=(Local::now() + Duration::days(1))
-    //    //                    .format("%Y-%m-%dT%H:%M")
-    //    //                    .to_string()
-    //    //                on:input=move |evt| {
-    //    //                    if let Ok(date) = NaiveDateTime::parse_from_str(
-    //    //                        &event_target_value(&evt),
-    //    //                        "%Y-%m-%dT%H:%M",
-    //    //                    ) {
-    //    //                        tournament
-    //    //                            .start_at
-    //    //                            .update(|v| {
-    //    //                                *v = DateTime::<Utc>::from_naive_utc_and_offset(date, Utc);
-    //    //                            })
-    //    //                    } else {
-    //                        organizer_start.set(true)
-    //                    }
-    //                }
-    //            />
-    //
-    //        </Show>
+
     //        <div class="p-1">
     //            Number of rounds:
     //            <InputSlider
@@ -245,7 +214,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             name="Tournament name"
                             type="text"
                             prop:value=tournament.name
-                            placeholder="Tournament Name"
+                            placeholder="At least a 4 character name"
                             on:input=update_from_input(tournament.name)
                             attr:maxlength="128"
                         />
@@ -258,10 +227,20 @@ pub fn TournamentCreate() -> impl IntoView {
                             name="Tournament description"
                             type="text"
                             prop:value=tournament.description
-                            placeholder="Tournament description"
+                            placeholder="At least a 50 character description"
                             on:input=update_from_input(tournament.description)
                             attr:maxlength="2000"
                         ></textarea>
+                    </div>
+                    <div class="p-1">
+                        Min number of players:
+                        <InputSlider
+                            signal_to_update=tournament.min_seats
+                            name="Seats"
+                            min=2
+                            max=tournament.seats
+                            step=1
+                        />{tournament.min_seats}
                     </div>
 
                     <div class="p-1">
@@ -269,7 +248,7 @@ pub fn TournamentCreate() -> impl IntoView {
                         <InputSlider
                             signal_to_update=tournament.seats
                             name="Seats"
-                            min=4
+                            min=tournament.min_seats
                             max=16
                             step=1
                         /> {tournament.seats}
@@ -296,6 +275,56 @@ pub fn TournamentCreate() -> impl IntoView {
                         <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
                             Invite Only
                         </label>
+                    </div>
+                    <div class="flex flex-col">
+                        <div class="flex">
+                            <input
+                                on:change=move |_| organizer_start.update(|b| *b = !*b)
+                                type="checkbox"
+                                class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                prop:checked=organizer_start
+                            />
+                            <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                                Manual start
+                            </label>
+                        </div>
+                        <Show when=move || !organizer_start()>
+                            <label for="start-time">Choose a start time:</label>
+                            <input
+                                type="datetime-local"
+                                id="start-time"
+                                name="start-time"
+                                attr:min=move || {
+                                    (Local::now() + Duration::minutes(10))
+                                        .format("%Y-%m-%dT%H:%M")
+                                        .to_string()
+                                }
+                                attr:max=move || {
+                                    (Local::now() + Duration::weeks(12))
+                                        .format("%Y-%m-%dT%H:%M")
+                                        .to_string()
+                                }
+
+                                value=(Local::now() + Duration::days(1))
+                                    .format("%Y-%m-%dT%H:%M")
+                                    .to_string()
+                                on:input=move |evt| {
+                                    if let Ok(date) = NaiveDateTime::parse_from_str(
+                                        &event_target_value(&evt),
+                                        "%Y-%m-%dT%H:%M",
+                                    ) {
+                                        tournament
+                                            .start_at
+                                            .update(|v| {
+                                                *v = DateTime::<Utc>::from_naive_utc_and_offset(date, Utc);
+                                            })
+                                    } else {
+                                        organizer_start.set(true)
+                                    }
+                                }
+                            />
+
+                        </Show>
                     </div>
 
                 </div>
@@ -327,9 +356,34 @@ pub fn TournamentCreate() -> impl IntoView {
                             </label>
                         </div>
                     </div>
+                    <div class="flex gap-1 p-1">
+                        <Show when=move || time_signals.time_control.get() == TimeMode::RealTime>
+                            <input
+                                on:change=move |_| fixed_round_duration.update(|b| *b = !*b)
+                                type="checkbox"
+                                class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                prop:checked=fixed_round_duration
+                            />
+                            <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                                Fixed round duration
+                            </label>
+                            <Show when=fixed_round_duration>
+                                <label class="flex items-center">
+                                    <InputSlider
+                                        signal_to_update=tournament.round_duration
+                                        name="Round duration in days"
+                                        min=1
+                                        max=90
+                                        step=1
+                                    />
+                                </label>
+                                {tournament.round_duration} " Days"
+                            </Show>
+                        </Show>
+                    </div>
                 </div>
                 <div>
-                    <button class=BUTTON_STYLE on:click=create>
+                    <button class=BUTTON_STYLE prop:disabled=disable_create on:click=create>
                         "Create Tournament"
                     </button>
                 </div>
