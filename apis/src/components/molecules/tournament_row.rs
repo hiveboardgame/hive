@@ -3,7 +3,7 @@ use crate::providers::AuthContext;
 use crate::responses::{TournamentResponse, UserResponse};
 use chrono::Local;
 use leptos::*;
-use shared_types::{GameSpeed, TimeInfo};
+use shared_types::{GameSpeed, TimeInfo, TournamentStatus};
 
 #[component]
 pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
@@ -19,12 +19,18 @@ pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
             (Some(lower), Some(upper)) => rating > lower && rating < upper,
         }
     };
-    let starts = move || match tournament.start_at {
-        None => "Up to organizer".to_string(),
-        Some(time) => time
-            .with_timezone(&Local)
-            .format("on: %d/%m/%Y %H:%M")
-            .to_string(),
+    let starts = move || {
+        if matches!(tournament.status, TournamentStatus::NotStarted) {
+            match tournament.start_at {
+                None => "Start up to organizer".to_string(),
+                Some(time) => time
+                    .with_timezone(&Local)
+                    .format("Starts on: %d/%m/%Y %H:%M")
+                    .to_string(),
+            }
+        } else {
+            tournament.status.pretty_string()
+        }
     };
     let range = move || {
         let lower = match tournament.band_lower {
@@ -39,11 +45,7 @@ pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
 
         format!("Min rating: {lower} Max rating: {upper}")
     };
-    // Not enough, needs to take into account filled seats as well
-    let joinable = move || match (auth_context.user)() {
-        Some(Ok(Some(account))) => tournament.joinable && user_qualifies(account.user),
-        _ => tournament.joinable,
-    };
+
     let seats_taken = format!("{}/{}", tournament.players.len(), tournament.seats);
     let time_info = TimeInfo {
         mode: tournament.time_mode,
@@ -65,8 +67,10 @@ pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
             </div>
             <div class="flex flex-col">
                 <div>{range}</div>
-                <div>Joinable? {joinable}</div>
-                <div>Starts {starts}</div>
+                <Show when=move || tournament.invite_only>
+                <div>Invite only </div>
+                </Show>
+                <div>{starts}</div>
             </div>
             <a
                 class="absolute top-0 left-0 z-10 w-full h-full"
