@@ -14,6 +14,7 @@ use shared_types::GameSpeed;
 pub fn UserRow(
     user: StoredValue<UserResponse>,
     actions: Vec<UserAction>,
+    #[prop(optional)] end_str: String,
     #[prop(optional)] game_speed: Option<StoredValue<GameSpeed>>,
     #[prop(optional)] on_profile: bool,
 ) -> impl IntoView {
@@ -73,7 +74,7 @@ pub fn UserRow(
     };
 
     view! {
-        <div class=format!("flex p-1 items-center justify-between h-10 {color}")>
+        <div class=format!("flex p-1 items-center justify-between h-10 w-64 {color}")>
             <div class="flex justify-between mr-2 w-48">
                 <div class="flex items-center">
                     <StatusIndicator username=user().username/>
@@ -85,6 +86,7 @@ pub fn UserRow(
 
             </div>
             {display_actions()}
+            {end_str}
         </div>
     }
 }

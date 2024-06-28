@@ -69,6 +69,10 @@ pub fn GamePreviews(
                     increment: game.time_increment,
                 });
                 let game = store_value(game);
+                let needs_start = move || {
+                    let game = game();
+                    game.tournament.is_some() && matches!(game.game_status, GameStatus::NotStarted)
+                };
                 view! {
                     <div class="flex relative flex-col items-center m-2 w-60 h-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
                         <div class="flex flex-col items-center">
@@ -78,6 +82,11 @@ pub fn GamePreviews(
                             <div class="flex items-center">
                                 {if game().rated { "RATED " } else { "CASUAL " }}
                                 <TimeRow time_info=time_info()/>
+                            </div>
+                        </Show>
+                        <Show when=needs_start>
+                            <div class="flex p-2">
+                                "The game will start once both players agree on a time"
                             </div>
                         </Show>
                         <ThumbnailPieces game=game()/>

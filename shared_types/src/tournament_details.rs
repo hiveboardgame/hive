@@ -11,6 +11,7 @@ pub struct TournamentDetails {
     pub tiebreaker: Vec<Option<String>>,
     pub invitees: Vec<Option<Uuid>>,
     pub seats: i32,
+    pub min_seats: i32,
     pub rounds: i32,
     pub joinable: bool,
     pub invite_only: bool,
@@ -22,4 +23,5 @@ pub struct TournamentDetails {
     pub band_lower: Option<i32>,
     pub start_at: Option<DateTime<Utc>>,
     pub series: Option<Uuid>,
+    pub round_duration: Option<i32>,
 }

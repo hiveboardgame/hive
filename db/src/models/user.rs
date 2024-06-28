@@ -3,7 +3,8 @@ use crate::{
     db_error::DbError,
     models::{Game, GameUser, NewRating},
     schema::{
-        games::{self, current_player_id, finished},
+        games::{self, current_player_id, finished, game_status, tournament_id},
+        games_users::game_id,
         ratings::{self, rating},
         users::{
             self,
@@ -17,8 +18,9 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use diesel::{
-    dsl::exists, query_dsl::BelongingToDsl, select, ExpressionMethods, Identifiable, Insertable,
-    PgTextExpressionMethods, QueryDsl, Queryable, Selectable, SelectableHelper,
+    dsl::exists, query_dsl::BelongingToDsl, select, BoolExpressionMethods, ExpressionMethods,
+    Identifiable, Insertable, PgTextExpressionMethods, QueryDsl, Queryable, Selectable,
+    SelectableHelper,
 };
 use diesel_async::RunQueryDsl;
 use lazy_static::lazy_static;
@@ -226,18 +228,19 @@ impl User {
             .select(Game::as_select())
             .filter(current_player_id.eq(self.id))
             .filter(finished.eq(false))
+            .filter(
+                tournament_id
+                    .is_not_null()
+                    .and(game_status.ne("NotStarted"))
+                    .or(tournament_id.is_null()),
+            )
             .get_results(conn)
             .await?)
     }
 
     pub async fn get_urgent_nanoids(&self, conn: &mut DbConn<'_>) -> Result<Vec<GameId>, DbError> {
-        // TODO: This is where unstarted tournament games should be filtered out, for loading all games
-        Ok(GameUser::belonging_to(self)
-            .inner_join(games::table)
-            .select(Game::as_select())
-            .filter(current_player_id.eq(self.id))
-            .filter(finished.eq(false))
-            .get_results(conn)
+        Ok(self
+            .get_games_with_notifications(conn)
             .await?
             .into_iter()
             .map(|game| GameId(game.nanoid))
