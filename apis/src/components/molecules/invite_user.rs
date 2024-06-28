@@ -36,7 +36,7 @@ pub fn InviteUser(tournament: TournamentResponse) -> impl IntoView {
         search_results
     };
     view! {
-        <div class="flex flex-col m-2 w-fit">
+        <div class="flex flex-col justify-center items-center m-2 w-fit">
             <input
                 class="p-1 w-64"
                 type="text"
@@ -45,7 +45,7 @@ pub fn InviteUser(tournament: TournamentResponse) -> impl IntoView {
                 prop:value=pattern
                 attr:maxlength="20"
             />
-            <div class="overflow-y-auto h-96">
+            <div class="overflow-y-auto max-h-96">
                 <For each=users key=move |(_, user)| user.uid let:user>
                     <UserRow
                         actions=vec![UserAction::Invite(tournament.tournament_id.clone())]

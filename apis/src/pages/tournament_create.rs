@@ -46,7 +46,7 @@ impl TournamentTournamentSignals {
             joinable: RwSignal::new(true),
             invite_only: RwSignal::new(false),
             // TODO make this into a type
-            mode: RwSignal::new(String::from("RR")),
+            mode: RwSignal::new(String::from("Double Round Robin")),
             time_mode: RwSignal::new(TimeMode::RealTime),
             time_base: store_value(Some(60)),
             time_increment: store_value(Some(0)),
@@ -173,6 +173,66 @@ pub fn TournamentCreate() -> impl IntoView {
     };
     let on_change: Callback<Event, ()> =
         Callback::from(update_from_input_parsed(time_signals.time_control));
+
+    //let unused = move || {
+    //    view! {
+    //    <div class="flex flex-col">
+    //        <div class="flex">
+    //            <input
+    //                on:change=move |_| organizer_start.update(|b| *b = !*b)
+    //                type="checkbox"
+    //                class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+    //                prop:checked=organizer_start
+    //            />
+    //            <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+    //                Manual start
+    //            </label>
+    //        </div>
+    //        <Show when=move || !organizer_start()>
+    //            <label for="start-time">Choose a start time:</label>
+    //            <input
+    //                type="datetime-local"
+    //                id="start-time"
+    //                name="start-time"
+    //                attr:min=move || Local::now().format("%Y-%m-%dT%H:%M").to_string()
+    //                attr:max=move || {
+    //                    (Local::now() + Duration::weeks(12))
+    //                        .format("%Y-%m-%dT%H:%M")
+    //                        .to_string()
+    //                }
+    //
+    //    //                value=(Local::now() + Duration::days(1))
+    //    //                    .format("%Y-%m-%dT%H:%M")
+    //    //                    .to_string()
+    //    //                on:input=move |evt| {
+    //    //                    if let Ok(date) = NaiveDateTime::parse_from_str(
+    //    //                        &event_target_value(&evt),
+    //    //                        "%Y-%m-%dT%H:%M",
+    //    //                    ) {
+    //    //                        tournament
+    //    //                            .start_at
+    //    //                            .update(|v| {
+    //    //                                *v = DateTime::<Utc>::from_naive_utc_and_offset(date, Utc);
+    //    //                            })
+    //    //                    } else {
+    //                        organizer_start.set(true)
+    //                    }
+    //                }
+    //            />
+    //
+    //        </Show>
+    //        <div class="p-1">
+    //            Number of rounds:
+    //            <InputSlider
+    //                signal_to_update=tournament.rounds
+    //                name="Rounds"
+    //                min=1
+    //                max=12
+    //                step=1
+    //            /> {tournament.rounds}
+    //        </div>
+    //    </div>}
+    //};
     view! {
         <div class="flex justify-center items-center pt-10">
             <div class="container flex flex-col justify-between p-2 md:flex-row md:flex-wrap">
@@ -215,17 +275,6 @@ pub fn TournamentCreate() -> impl IntoView {
                         /> {tournament.seats}
                     </div>
 
-                    <div class="p-1">
-                        Number of rounds:
-                        <InputSlider
-                            signal_to_update=tournament.rounds
-                            name="Rounds"
-                            min=1
-                            max=12
-                            step=1
-                        /> {tournament.rounds}
-                    </div>
-
                     <div>
                         Mode:
                         <select
@@ -233,8 +282,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             name="Tournament Mode"
                             on:change=update_from_input(tournament.mode)
                         >
-                            <SelectOption value=tournament.mode is="Round Robin"/>
-                            <SelectOption value=tournament.mode is="Swiss"/>
+                            <SelectOption value=tournament.mode is="Double Round Robin"/>
 
                         </select>
                     </div>
@@ -249,52 +297,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             Invite Only
                         </label>
                     </div>
-                    <div class="flex flex-col">
-                        <div class="flex">
-                            <input
-                                on:change=move |_| organizer_start.update(|b| *b = !*b)
-                                type="checkbox"
-                                class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                prop:checked=organizer_start
-                            />
-                            <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                                Manual start
-                            </label>
-                        </div>
-                        <Show when=move || !organizer_start()>
-                            <label for="start-time">Choose a start time:</label>
-                            <input
-                                type="datetime-local"
-                                id="start-time"
-                                name="start-time"
-                                attr:min=move || Local::now().format("%Y-%m-%dT%H:%M").to_string()
-                                attr:max=move || {
-                                    (Local::now() + Duration::weeks(12))
-                                        .format("%Y-%m-%dT%H:%M")
-                                        .to_string()
-                                }
 
-                                value=(Local::now() + Duration::days(1))
-                                    .format("%Y-%m-%dT%H:%M")
-                                    .to_string()
-                                on:input=move |evt| {
-                                    if let Ok(date) = NaiveDateTime::parse_from_str(
-                                        &event_target_value(&evt),
-                                        "%Y-%m-%dT%H:%M",
-                                    ) {
-                                        tournament
-                                            .start_at
-                                            .update(|v| {
-                                                *v = DateTime::<Utc>::from_naive_utc_and_offset(date, Utc);
-                                            })
-                                    } else {
-                                        organizer_start.set(true)
-                                    }
-                                }
-                            />
-
-                        </Show>
-                    </div>
                 </div>
                 <div class="md:pl-2 basis-1/2">
                     <TimeSelect title=" Match settings:" time_signals on_change>

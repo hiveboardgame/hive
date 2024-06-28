@@ -98,7 +98,10 @@ impl Standings {
             result: result.clone(),
         });
         match result {
-            TournamentGameResult::Unknown | TournamentGameResult::DoubeForfeit => {}
+            TournamentGameResult::Unknown | TournamentGameResult::DoubeForfeit => {
+                self.players_scores.entry(white).or_default();
+                self.players_scores.entry(black).or_default();
+            }
             TournamentGameResult::Draw => {
                 *self.players_scores.entry(white).or_default() += 0.5;
                 *self.players_scores.entry(black).or_default() += 0.5;
