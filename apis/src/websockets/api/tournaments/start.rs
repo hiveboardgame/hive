@@ -30,16 +30,27 @@ impl StartHandler {
         let mut messages = Vec::new();
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
         println!("Found tournament");
-        let (tournament, games) = conn
+        let (tournament, games, deleted_invitations) = conn
             .transaction::<_, DbError, _>(move |tc| {
                 async move { tournament.start_by_organizer(&self.user_id, tc).await }.scope_boxed()
             })
             .await?;
         let tournament_response = TournamentResponse::from_model(&tournament, &mut conn).await?;
+
+        for uuid in deleted_invitations {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::User(uuid),
+                message: ServerMessage::Tournament(TournamentUpdate::Uninvited(
+                    tournament_response.clone(),
+                )),
+            });
+        }
+
         messages.push(InternalServerMessage {
             destination: MessageDestination::Global,
             message: ServerMessage::Tournament(TournamentUpdate::Started(tournament_response)),
         });
+
         for game in games {
             let game_response = GameResponse::from_model(&game, &mut conn).await?;
 

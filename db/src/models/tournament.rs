@@ -419,16 +419,13 @@ impl Tournament {
             .await?)
     }
 
-    pub async fn automatic_start(conn: &mut DbConn<'_>) -> Result<Vec<String>, DbError> {
-        let mut messages = Vec::new();
+    pub async fn automatic_start(
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<(Tournament, Vec<Game>, Vec<Uuid>)>, DbError> {
+        let mut started_tournaments = Vec::new();
         for tournament in Tournament::unstarted(conn).await? {
-            let (tournament, games) = tournament.start(conn).await?;
-            messages.push(format!(
-                "Tournament {} with {} new games",
-                tournament.name,
-                games.len()
-            ));
+            started_tournaments.push(tournament.start(conn).await?);
         }
-        Ok(messages)
+        Ok(started_tournaments)
     }
 }

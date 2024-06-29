@@ -52,7 +52,7 @@ async fn main() -> std::io::Result<()> {
     let websocket_server = Data::new(Lobby::new(pool.clone()).start());
     let tournament_game_start = Data::new(TournamentGameStart::new());
 
-    jobs::tournament_start::run(pool.clone());
+    jobs::tournament_start::run(pool.clone(), Data::clone(&websocket_server));
 
     println!("listening on http://{}", &addr);
 

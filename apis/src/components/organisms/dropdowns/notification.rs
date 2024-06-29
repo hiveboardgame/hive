@@ -1,3 +1,4 @@
+use crate::components::molecules::tournament_started_row::TournamentStartedRow;
 use crate::components::molecules::{
     challenge_row::ChallengeRow, hamburger::Hamburger,
     tournament_invitation_row::TournamentInvitationRow,
@@ -26,7 +27,7 @@ pub fn NotificationDropdown() -> impl IntoView {
     });
     let each_tournament = move || {
         notifications_context()
-            .tournaments
+            .tournament_invitations
             .get()
             .iter()
             .map(move |id| {
@@ -80,6 +81,26 @@ pub fn NotificationDropdown() -> impl IntoView {
                     <div on:click=onclick_close>
                         <TournamentInvitationRow tournament=RwSignal::new(tournament.clone())/>
 
+                    </div>
+                </For>
+
+                <For
+                    each=move || notifications_context().tournament_started.get()
+                    key=|c| { c.clone() }
+                    let:tournament_id
+                >
+                    <div on:click=onclick_close>
+                        <TournamentStartedRow
+                            tournament=store_value(
+                            tournaments
+                                .signal
+                                .get_untracked()
+                                .tournaments
+                                .get(&tournament_id)
+                                .expect("Tournament exists")
+                                .clone(),
+                            )
+                        />
                     </div>
                 </For>
             </Show>
