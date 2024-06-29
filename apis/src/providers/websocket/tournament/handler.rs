@@ -1,8 +1,12 @@
 use crate::{
     common::TournamentUpdate,
-    providers::{tournaments::TournamentStateSignal, NotificationContext},
+    providers::{
+        navigation_controller::NavigationControllerSignal, tournaments::TournamentStateSignal,
+        NotificationContext,
+    },
 };
 use leptos::*;
+use leptos_router::use_navigate;
 use shared_types::ApisId;
 
 pub fn handle_tournament(tournament: TournamentUpdate) {
@@ -38,6 +42,15 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
         }
         TournamentUpdate::Deleted(nanoid) => {
             let mut tournaments_signal = expect_context::<TournamentStateSignal>();
+            let mut notifications = expect_context::<NotificationContext>();
+            let navi = expect_context::<NavigationControllerSignal>();
+            notifications.remove(&ApisId::Tournament(nanoid.clone()));
+            if let Some(torunament_id) = navi.tournament_signal.get().tournament_id {
+                if torunament_id == nanoid {
+                    let navigate = use_navigate();
+                    navigate("/", Default::default());
+                }
+            }
             tournaments_signal.remove(nanoid);
         }
         TournamentUpdate::Started(tournament) => {

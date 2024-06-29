@@ -6,11 +6,12 @@ use crate::providers::{
     navigation_controller::NavigationControllerSignal, tournaments::TournamentStateSignal,
     ApiRequests, AuthContext,
 };
+use chrono::Local;
 use leptos::*;
 use leptos_router::use_navigate;
-use shared_types::{TimeInfo, TournamentStatus};
+use shared_types::{GameSpeed, TimeInfo, TournamentStatus};
 
-const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
+const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
 #[component]
 pub fn Tournament() -> impl IntoView {
@@ -48,13 +49,7 @@ pub fn Tournament() -> impl IntoView {
             false
         }
     };
-    let join_leave_text = move || {
-        if user_joined() {
-            "Leave"
-        } else {
-            "Join"
-        }
-    };
+
     let delete = move |_| {
         if let Some(tournament_id) = tournament_id() {
             if user_is_organizer() {
@@ -75,15 +70,17 @@ pub fn Tournament() -> impl IntoView {
             }
         }
     };
-    let leave_or_join = move |_| {
+    let leave = move |_| {
         if let Some(tournament_id) = tournament_id() {
-            let action = if user_joined() {
-                TournamentAction::Leave(tournament_id)
-            } else {
-                TournamentAction::Join(tournament_id)
-            };
             let api = ApiRequests::new();
-            api.tournament(action);
+            api.tournament(TournamentAction::Leave(tournament_id));
+        }
+    };
+
+    let join = move |_| {
+        if let Some(tournament_id) = tournament_id() {
+            let api = ApiRequests::new();
+            api.tournament(TournamentAction::Join(tournament_id));
         }
     };
 
@@ -91,27 +88,85 @@ pub fn Tournament() -> impl IntoView {
         current_tournament().and_then(|tournament| {
             let time_info = TimeInfo{mode:tournament.time_mode.clone() ,base: tournament.time_base, increment: tournament.time_increment};
             let tournament = store_value(tournament);
+            let join_disabled = move || {
+                let tournament= tournament();
+                if tournament.seats <= tournament.players.len() as i32 {
+                    return true;
+                }
+                if let Some(account) = account() {
+                    let user = account.user;
+                    let game_speed =
+                    GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
+                    let rating = user.rating_for_speed(&game_speed) as i32;
+                    match (tournament.band_lower, tournament.band_upper) {
+                        (None, None) => false,
+                        (None, Some(upper)) => rating >= upper,
+                        (Some(lower), None) => rating <= lower,
+                        (Some(lower), Some(upper)) => rating <= lower || rating >= upper,
+                    }
+                } else {true}
+
+            };
+            let user_kick = move || {
+                if user_is_organizer() {
+                    vec![UserAction::Kick(Box::new(tournament()))]
+                } else {
+                    vec![]
+                }
+            };
+            let user_uninvite = move || {
+                if user_is_organizer() {
+                    vec![UserAction::Uninvite(tournament().tournament_id)]
+                } else {
+                    vec![]
+                }
+            };
+            let starts = move || {
+                let tournament = tournament();
+                if matches!(tournament.status, TournamentStatus::NotStarted) {
+                    match tournament.start_at {
+                        None => "Start up to organizer".to_string(),
+                        Some(time) => time
+                            .with_timezone(&Local)
+                            .format("Starts: %d/%m/%Y %H:%M")
+                            .to_string(),
+                    }
+                } else {
+                    tournament.status.pretty_string()
+                }
+            };
             view! {
                 <h1 class="place-self-center p-2 text-3xl font-bold">{tournament().name}</h1>
-                <div class="overflow-y-auto w-60 md:w-[720px] max-h-96">
+                <div class="overflow-y-auto w-60 md:w-[720px] max-h-96 flex justify-center">
                     {tournament().description}
                 </div>
                 <div>
                     <p class="font-bold">Tournament details:</p>
                     <div class="flex gap-1">"Time control: " <TimeRow time_info/></div>
-                    <div>"Seats: " {number_of_players} / {tournament().seats}</div>
+                    <div>"Players: " {number_of_players} / {tournament().seats}</div>
+                    <div>{starts}</div>
                 </div>
                 <Show when=move || { tournament().status == TournamentStatus::NotStarted }>
                     <div class="flex gap-1 justify-center items-center pb-2">
-                        <button class=BUTTON_STYLE on:click=leave_or_join>
-                            {join_leave_text}
-                        </button>
+                        <Show
+                            when=user_joined
+                            fallback=move || {
+                                view! {
+                                    <button prop:disabled=join_disabled class=BUTTON_STYLE on:click=join>
+                                        Join
+                                    </button>
+                                }
+                            }
+                        >
+
+                            <button class=BUTTON_STYLE on:click=leave>
+                                Leave
+                            </button>
+                        </Show>
                         <Show when=user_is_organizer>
                             <button class=BUTTON_STYLE on:click=delete>
                                 {"Delete"}
                             </button>
-                        </Show>
-                        <Show when=user_is_organizer>
                             <button class=BUTTON_STYLE on:click=start>
                                 {"Start"}
                             </button>
@@ -149,7 +204,7 @@ pub fn Tournament() -> impl IntoView {
                                             let:user
                                         >
                                             <UserRow
-                                                actions=vec![UserAction::Kick(Box::new(tournament()))]
+                                                actions=user_kick()
                                                 user=store_value(user.1)
                                             />
                                         </For>
@@ -164,10 +219,7 @@ pub fn Tournament() -> impl IntoView {
                                             let:user
                                         >
                                             <UserRow
-                                                actions=vec![
-                                                    UserAction::Uninvite(tournament().tournament_id.clone()),
-                                                ]
-
+                                                actions=user_uninvite()
                                                 user=store_value(user)
                                             />
                                         </For>

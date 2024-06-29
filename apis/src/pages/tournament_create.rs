@@ -216,7 +216,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             prop:value=tournament.name
                             placeholder="At least a 4 character name"
                             on:input=update_from_input(tournament.name)
-                            attr:maxlength="128"
+                            attr:maxlength="50"
                         />
                     </div>
 
