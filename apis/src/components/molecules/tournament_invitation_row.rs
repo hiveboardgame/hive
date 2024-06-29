@@ -7,9 +7,10 @@ use leptos_icons::*;
 use shared_types::TimeInfo;
 
 #[component]
-pub fn TournamentInvitationRow(tournament: StoredValue<TournamentResponse>) -> impl IntoView {
+pub fn TournamentInvitationRow(tournament: RwSignal<TournamentResponse>) -> impl IntoView {
     let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let seats_taken = format!("{}/{}", tournament().players.len(), tournament().seats);
+    let seats_full = move || tournament().players.len() as i32 >= tournament().seats;
 
     let decline = move |_| {
         let api = ApiRequests::new();
@@ -50,7 +51,8 @@ pub fn TournamentInvitationRow(tournament: StoredValue<TournamentResponse>) -> i
                 <button
                     title="Accept Invitation"
                     on:click=accept
-                    class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                    prop:disabled=seats_full
+                    class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
                     <Icon icon=icondata::AiCheckOutlined class="w-6 h-6"/>
                 </button>

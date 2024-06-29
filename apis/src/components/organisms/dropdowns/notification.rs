@@ -5,6 +5,7 @@ use crate::components::molecules::{
 use crate::providers::challenges::ChallengeStateSignal;
 use crate::providers::tournaments::TournamentStateSignal;
 use crate::providers::NotificationContext;
+use crate::responses::TournamentResponse;
 use leptos::*;
 use leptos_icons::*;
 
@@ -23,6 +24,22 @@ pub fn NotificationDropdown() -> impl IntoView {
             "w-4 h-4"
         }
     });
+    let each_tournament = move || {
+        notifications_context()
+            .tournaments
+            .get()
+            .iter()
+            .map(move |id| {
+                tournaments
+                    .signal
+                    .get()
+                    .tournaments
+                    .get(id)
+                    .expect("Tournament exists")
+                    .clone()
+            })
+            .collect::<Vec<TournamentResponse>>()
+    };
     view! {
         <Hamburger
             hamburger_show=hamburger_show
@@ -59,21 +76,9 @@ pub fn NotificationDropdown() -> impl IntoView {
                     </div>
                 </For>
 
-                <For
-                    each=move || notifications_context().tournaments.get()
-                    key=|t| { t.clone() }
-                    let:tournament_id
-                >
+                <For each=each_tournament key=|t| { (t.id, t.seats) } let:tournament>
                     <div on:click=onclick_close>
-                        <TournamentInvitationRow tournament=store_value(
-                            tournaments
-                                .signal
-                                .get_untracked()
-                                .tournaments
-                                .get(&tournament_id)
-                                .expect("Tournament exists")
-                                .clone(),
-                        )/>
+                        <TournamentInvitationRow tournament=RwSignal::new(tournament.clone())/>
 
                     </div>
                 </For>
