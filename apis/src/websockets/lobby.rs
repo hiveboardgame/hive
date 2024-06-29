@@ -138,7 +138,7 @@ impl Handler<Connect> for Lobby {
                         let cam = ClientActorMessage {
                             destination: MessageDestination::User(user_id),
                             serialized,
-                            from: user_id,
+                            from: Some(user_id),
                         };
                         address.do_send(cam);
                     }
@@ -200,7 +200,7 @@ impl Handler<Connect> for Lobby {
                             let cam = ClientActorMessage {
                                 destination: MessageDestination::User(user_id),
                                 serialized,
-                                from: user_id,
+                                from: Some(user_id),
                             };
                             address.do_send(cam);
                         }
@@ -222,7 +222,7 @@ impl Handler<Connect> for Lobby {
                                 let cam = ClientActorMessage {
                                     destination: MessageDestination::User(user_id),
                                     serialized,
-                                    from: user_id,
+                                    from: Some(user_id),
                                 };
                                 address.do_send(cam);
                             }
@@ -283,7 +283,7 @@ impl Handler<Connect> for Lobby {
                 let cam = ClientActorMessage {
                     destination: MessageDestination::User(user_id),
                     serialized,
-                    from: user_id,
+                    from: Some(user_id),
                 };
                 address.do_send(cam);
             }
@@ -303,10 +303,12 @@ impl Handler<ClientActorMessage> for Lobby {
             }
             MessageDestination::Global => {
                 // Make sure the user is in the game:
-                self.games_users
-                    .entry(self.id.clone())
-                    .or_default()
-                    .insert(cam.from);
+                if let Some(from) = cam.from {
+                    self.games_users
+                        .entry(self.id.clone())
+                        .or_default()
+                        .insert(from);
+                }
                 // Send the message to everyone
                 self.games_users
                     .get(&self.id)
@@ -316,10 +318,12 @@ impl Handler<ClientActorMessage> for Lobby {
             }
             MessageDestination::Game(game_id) => {
                 // Make sure the user is in the game:
-                self.games_users
-                    .entry(game_id.clone())
-                    .or_default()
-                    .insert(cam.from);
+                if let Some(from) = cam.from {
+                    self.games_users
+                        .entry(game_id.clone())
+                        .or_default()
+                        .insert(from);
+                }
                 // Send the message to everyone
                 self.games_users
                     .get(&game_id)
@@ -329,10 +333,12 @@ impl Handler<ClientActorMessage> for Lobby {
             }
             MessageDestination::GameSpectators(game_id, white_id, black_id) => {
                 // Make sure the user is in the game:
-                self.games_users
-                    .entry(game_id.clone())
-                    .or_default()
-                    .insert(cam.from);
+                if let Some(from) = cam.from {
+                    self.games_users
+                        .entry(game_id.clone())
+                        .or_default()
+                        .insert(from);
+                }
                 // Send the message to everyone except white_id and black_id
                 self.games_users
                     .get(&game_id)

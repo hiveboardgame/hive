@@ -29,12 +29,12 @@ pub struct Disconnect {
 #[rtype(result = "()")]
 pub struct ClientActorMessage {
     pub destination: MessageDestination,
-    pub from: Uuid,
+    pub from: Option<Uuid>,
     pub serialized: String, // the serialized message
 }
 
 impl ClientActorMessage {
-    pub fn new(from: Uuid, destination: MessageDestination, serialized: &str) -> Self {
+    pub fn new(from: Option<Uuid>, destination: MessageDestination, serialized: &str) -> Self {
         Self {
             from,
             destination,

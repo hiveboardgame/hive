@@ -4,7 +4,6 @@ use crate::{
     responses::ChallengeResponse,
 };
 use leptos::*;
-use shared_types::ApisId;
 
 fn filter_challenges(challenges: &mut Vec<ChallengeResponse>) {
     let auth_context = expect_context::<AuthContext>();
@@ -34,7 +33,7 @@ fn filter_challenges(challenges: &mut Vec<ChallengeResponse>) {
 
 pub fn handle_challenge(challenge: ChallengeUpdate) {
     let mut challenges = expect_context::<ChallengeStateSignal>();
-    let mut notifications = expect_context::<NotificationContext>();
+    let notifications = expect_context::<NotificationContext>();
     let auth_context = expect_context::<AuthContext>();
     let account = move || match untrack(auth_context.user) {
         Some(Ok(Some(account))) => Some(account),
@@ -47,8 +46,9 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
                 for challenge in &new_challanges {
                     if let Some(ref opponent) = challenge.opponent {
                         if opponent.uid == account.user.uid {
-                            notifications
-                                .add(vec![ApisId::Challenge(challenge.challenge_id.clone())])
+                            notifications.challenges.update(|challenges| {
+                                challenges.insert(challenge.challenge_id.clone());
+                            })
                         }
                     }
                 }
@@ -59,7 +59,9 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
             let mut challenges = expect_context::<ChallengeStateSignal>();
             batch(move || {
                 challenges.remove(challenge_id.clone());
-                notifications.remove(&ApisId::Challenge(challenge_id));
+                notifications.challenges.update(|challenges| {
+                    challenges.remove(&challenge_id);
+                })
             });
         }
         ChallengeUpdate::Created(challenge) | ChallengeUpdate::Direct(challenge) => {
@@ -67,8 +69,9 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
                 if let Some(account) = account() {
                     if let Some(ref opponent) = challenge.opponent {
                         if opponent.uid == account.user.uid {
-                            notifications
-                                .add(vec![ApisId::Challenge(challenge.challenge_id.clone())])
+                            notifications.challenges.update(|challenges| {
+                                challenges.insert(challenge.challenge_id.clone());
+                            })
                         }
                     }
                 }

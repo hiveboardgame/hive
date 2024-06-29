@@ -164,7 +164,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                 let cam = ClientActorMessage {
                                     destination: message.destination,
                                     serialized,
-                                    from: user_id,
+                                    from: Some(user_id),
                                 };
                                 lobby.do_send(cam);
                             }
@@ -190,7 +190,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                             let cam = ClientActorMessage {
                                 destination: MessageDestination::User(user_id),
                                 serialized,
-                                from: user_id,
+                                from: Some(user_id),
                             };
                             lobby.do_send(cam);
                         }
