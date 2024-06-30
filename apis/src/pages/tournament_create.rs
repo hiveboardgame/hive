@@ -240,14 +240,14 @@ pub fn TournamentCreate() -> impl IntoView {
                             min=2
                             max=tournament.seats
                             step=1
-                        />{tournament.min_seats}
+                        /> {tournament.min_seats}
                     </div>
 
                     <div class="p-1">
                         Max number of players:
                         <InputSlider
                             signal_to_update=tournament.seats
-                            name="Seats"
+                            name="Min Seats"
                             min=tournament.min_seats
                             max=16
                             step=1
@@ -295,17 +295,16 @@ pub fn TournamentCreate() -> impl IntoView {
                                 id="start-time"
                                 name="start-time"
                                 attr:min=move || {
-                                    (Local::now() + Duration::minutes(10))
-                                        .format("%Y-%m-%dT%H:%M")
-                                        .to_string()
+                                    (Local::now()).format("%Y-%m-%dT%H:%M").to_string()
                                 }
+
                                 attr:max=move || {
                                     (Local::now() + Duration::weeks(12))
                                         .format("%Y-%m-%dT%H:%M")
                                         .to_string()
                                 }
 
-                                value=(Local::now() + Duration::days(1))
+                                value=(Local::now() + Duration::minutes(1))
                                     .format("%Y-%m-%dT%H:%M")
                                     .to_string()
                                 on:input=move |evt| {
@@ -313,11 +312,18 @@ pub fn TournamentCreate() -> impl IntoView {
                                         &event_target_value(&evt),
                                         "%Y-%m-%dT%H:%M",
                                     ) {
-                                        tournament
-                                            .start_at
-                                            .update(|v| {
-                                                *v = DateTime::<Utc>::from_naive_utc_and_offset(date, Utc);
-                                            })
+                                        let dt = Local::now();
+                                        let offset = dt.offset();
+                                        if let chrono::LocalResult::Single(local) = NaiveDateTime::and_local_timezone(
+                                            &date,
+                                            *offset,
+                                        ) {
+                                            tournament
+                                                .start_at
+                                                .update(|v| {
+                                                    *v = local.to_utc();
+                                                })
+                                        }
                                     } else {
                                         organizer_start.set(true)
                                     }
@@ -377,7 +383,8 @@ pub fn TournamentCreate() -> impl IntoView {
                                         step=1
                                     />
                                 </label>
-                                {tournament.round_duration} " Days"
+                                {tournament.round_duration}
+                                " Days"
                             </Show>
                         </Show>
                     </div>
