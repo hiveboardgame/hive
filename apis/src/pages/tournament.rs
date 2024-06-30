@@ -88,6 +88,7 @@ pub fn Tournament() -> impl IntoView {
         current_tournament().and_then(|tournament| {
             let time_info = TimeInfo{mode:tournament.time_mode.clone() ,base: tournament.time_base, increment: tournament.time_increment};
             let tournament = store_value(tournament);
+            let start_disabled = move || {let tournament =tournament(); tournament.min_seats > tournament.players.len() as i32} ;
             let join_disabled = move || {
                 let tournament= tournament();
                 if tournament.seats <= tournament.players.len() as i32 {
@@ -132,9 +133,17 @@ pub fn Tournament() -> impl IntoView {
                             .to_string(),
                     }
                 } else {
-                    tournament.status.pretty_string()
+                let pretty = tournament.status.pretty_string();
+                if let Some(started_at) = tournament.started_at {
+                        let start = started_at.with_timezone(&Local)
+                        .format("started: %d/%m/%Y %H:%M")
+                        .to_string();
+                        format! ("{pretty}, {start}")
+                    } else {pretty}
+                   
                 }
             };
+            let not_started = move || tournament().status == TournamentStatus::NotStarted;
             view! {
                 <h1 class="place-self-center p-2 text-3xl font-bold">{tournament().name}</h1>
                 <div class="overflow-y-auto w-60 md:w-[720px] max-h-96 flex justify-center">
@@ -144,15 +153,22 @@ pub fn Tournament() -> impl IntoView {
                     <p class="font-bold">Tournament details:</p>
                     <div class="flex gap-1">"Time control: " <TimeRow time_info/></div>
                     <div>"Players: " {number_of_players} / {tournament().seats}</div>
+                    <Show when=not_started>
+                        <div>"Minimum players: " {tournament().min_seats}</div>
+                    </Show>
                     <div>{starts}</div>
                 </div>
-                <Show when=move || { tournament().status == TournamentStatus::NotStarted }>
+                <Show when=not_started>
                     <div class="flex gap-1 justify-center items-center pb-2">
                         <Show
                             when=user_joined
                             fallback=move || {
                                 view! {
-                                    <button prop:disabled=join_disabled class=BUTTON_STYLE on:click=join>
+                                    <button
+                                        prop:disabled=join_disabled
+                                        class=BUTTON_STYLE
+                                        on:click=join
+                                    >
                                         Join
                                     </button>
                                 }
@@ -167,7 +183,7 @@ pub fn Tournament() -> impl IntoView {
                             <button class=BUTTON_STYLE on:click=delete>
                                 {"Delete"}
                             </button>
-                            <button class=BUTTON_STYLE on:click=start>
+                            <button prop:disabled=start_disabled class=BUTTON_STYLE on:click=start>
                                 {"Start"}
                             </button>
                         </Show>
@@ -203,10 +219,7 @@ pub fn Tournament() -> impl IntoView {
                                             key=|(id, _)| (*id)
                                             let:user
                                         >
-                                            <UserRow
-                                                actions=user_kick()
-                                                user=store_value(user.1)
-                                            />
+                                            <UserRow actions=user_kick() user=store_value(user.1)/>
                                         </For>
                                     </Show>
                                 </div>
@@ -218,10 +231,7 @@ pub fn Tournament() -> impl IntoView {
                                             key=|users| (users.uid)
                                             let:user
                                         >
-                                            <UserRow
-                                                actions=user_uninvite()
-                                                user=store_value(user)
-                                            />
+                                            <UserRow actions=user_uninvite() user=store_value(user)/>
                                         </For>
                                     </Show>
                                     <Show when=user_is_organizer>
