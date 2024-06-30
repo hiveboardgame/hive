@@ -26,6 +26,7 @@ pub struct TournamentResponse {
     pub organizers: Vec<UserResponse>,
     pub games: Vec<GameResponse>,
     pub seats: i32,
+    pub min_seats: i32,
     pub rounds: i32,
     pub joinable: bool,
     pub invite_only: bool,
@@ -37,6 +38,8 @@ pub struct TournamentResponse {
     pub band_lower: Option<i32>,
     pub status: TournamentStatus,
     pub start_at: Option<DateTime<Utc>>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub round_duration: Option<i32>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -119,6 +122,7 @@ impl TournamentResponse {
                 .collect(),
             invitees,
             seats: tournament.seats,
+            min_seats: tournament.min_seats,
             rounds: tournament.rounds,
             joinable: tournament.joinable,
             invite_only: tournament.invite_only,
@@ -130,6 +134,8 @@ impl TournamentResponse {
             band_lower: tournament.band_lower,
             status: TournamentStatus::from_str(&tournament.status)?,
             start_at: tournament.start_at,
+            started_at: tournament.started_at,
+            round_duration: tournament.round_duration,
             created_at: tournament.created_at,
             updated_at: tournament.updated_at,
         }))

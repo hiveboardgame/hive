@@ -22,6 +22,6 @@ pub struct TournamentDetails {
     pub band_upper: Option<i32>,
     pub band_lower: Option<i32>,
     pub start_at: Option<DateTime<Utc>>,
-    pub series: Option<Uuid>,
     pub round_duration: Option<i32>,
+    pub series: Option<Uuid>,
 }

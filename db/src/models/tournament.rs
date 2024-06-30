@@ -7,7 +7,7 @@ use crate::{
     schema::{
         games::{self, tournament_id as tournament_id_column},
         tournaments::{
-            self, nanoid as nanoid_field, series as series_column, start_at,
+            self, nanoid as nanoid_field, series as series_column, start_at, started_at,
             status as status_column, updated_at,
         },
         tournaments_organizers, users,
@@ -32,6 +32,7 @@ pub struct NewTournament {
     pub scoring: String,
     pub tiebreaker: Vec<Option<String>>,
     pub seats: i32,
+    pub min_seats: i32,
     pub rounds: i32,
     pub joinable: bool,
     pub invite_only: bool,
@@ -42,6 +43,8 @@ pub struct NewTournament {
     pub band_upper: Option<i32>,
     pub band_lower: Option<i32>,
     pub start_at: Option<DateTime<Utc>>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub round_duration: Option<i32>,
     pub status: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -66,6 +69,7 @@ impl NewTournament {
             scoring: details.scoring,
             tiebreaker: details.tiebreaker,
             seats: details.seats,
+            min_seats: details.min_seats,
             rounds: details.rounds,
             joinable: details.joinable,
             invite_only: details.invite_only,
@@ -76,6 +80,8 @@ impl NewTournament {
             band_upper: details.band_upper,
             band_lower: details.band_lower,
             start_at: details.start_at,
+            started_at: None,
+            round_duration: details.round_duration,
             status: TournamentStatus::NotStarted.to_string(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
@@ -97,6 +103,7 @@ pub struct Tournament {
     pub scoring: String,
     pub tiebreaker: Vec<Option<String>>,
     pub seats: i32,
+    pub min_seats: i32,
     pub rounds: i32,
     pub joinable: bool,
     pub invite_only: bool,
@@ -107,6 +114,8 @@ pub struct Tournament {
     pub band_upper: Option<i32>,
     pub band_lower: Option<i32>,
     pub start_at: Option<DateTime<Utc>>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub round_duration: Option<i32>,
     pub status: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -141,6 +150,13 @@ impl Tournament {
         Ok(())
     }
 
+    async fn ensure_not_full(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+        if self.number_of_players(conn).await? == self.seats as i64 {
+            return Err(DbError::TournamentFull);
+        }
+        Ok(())
+    }
+
     fn ensure_not_started(&self) -> Result<(), DbError> {
         if self.status != TournamentStatus::NotStarted.to_string() {
             return Err(DbError::InvalidInput {
@@ -161,6 +177,10 @@ impl Tournament {
             return Ok(());
         }
         Err(DbError::Unauthorized)
+    }
+
+    async fn has_enough_players(&self, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
+        Ok(self.number_of_players(conn).await? >= self.min_seats as i64)
     }
 
     pub async fn create_invitation(
@@ -224,6 +244,7 @@ impl Tournament {
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
         self.ensure_not_started()?;
+        self.ensure_not_full(conn).await?;
         if let Ok(invitation) = TournamentInvitation::find_by_ids(&self.id, user_id, conn).await {
             invitation.delete(conn).await?;
             let tournament_user = TournamentUser::new(self.id, *user_id);
@@ -256,8 +277,9 @@ impl Tournament {
 
     pub async fn join(&self, user_id: &Uuid, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
         self.ensure_not_started()?;
+        self.ensure_not_full(conn).await?;
         let players = self.players(conn).await?;
-        if players.len() as i32 == self.seats {
+        if players.len() == self.seats as usize {
             return Ok(self.clone());
         }
         if players.iter().any(|player| player.id == *user_id) {
@@ -325,6 +347,14 @@ impl Tournament {
             .await?)
     }
 
+    pub async fn number_of_players(&self, conn: &mut DbConn<'_>) -> Result<i64, DbError> {
+        Ok(TournamentUser::belonging_to(self)
+            .inner_join(users::table)
+            .count()
+            .get_result(conn)
+            .await?)
+    }
+
     pub async fn organizers(&self, conn: &mut DbConn<'_>) -> Result<Vec<User>, DbError> {
         Ok(TournamentOrganizer::belonging_to(self)
             .inner_join(users::table)
@@ -354,6 +384,9 @@ impl Tournament {
         conn: &mut DbConn<'_>,
     ) -> Result<(Tournament, Vec<Game>, Vec<Uuid>), DbError> {
         self.ensure_not_started()?;
+        if !self.has_enough_players(conn).await? {
+            return Err(DbError::NotEnoughPlayers);
+        }
         // Make sure all the conditions have been met
         // and then call different starts for different tournament types
         let mut deleted_invitees = Vec::new();
@@ -362,6 +395,7 @@ impl Tournament {
             .set((
                 updated_at.eq(Utc::now()),
                 status_column.eq(TournamentStatus::InProgress.to_string()),
+                started_at.eq(Utc::now()),
             ))
             .get_result(conn)
             .await?;
@@ -412,11 +446,18 @@ impl Tournament {
     }
 
     pub async fn unstarted(conn: &mut DbConn<'_>) -> Result<Vec<Self>, DbError> {
-        Ok(tournaments::table
+        let potential_tournaments: Vec<Tournament> = tournaments::table
             .filter(status_column.eq(TournamentStatus::NotStarted.to_string()))
             .filter(start_at.le(Utc::now()))
             .get_results(conn)
-            .await?)
+            .await?;
+        let mut tournaments = Vec::new();
+        for tournament in potential_tournaments {
+            if tournament.has_enough_players(conn).await? {
+                tournaments.push(tournament);
+            }
+        }
+        Ok(tournaments)
     }
 
     pub async fn automatic_start(
