@@ -3,6 +3,10 @@ use thiserror::Error;
 
 #[derive(Error, Debug, Serialize, Deserialize)]
 pub enum DbError {
+    #[error("Tournament does not have enough players")]
+    NotEnoughPlayers,
+    #[error("Tournament is full")]
+    TournamentFull,
     #[error("Internal database error")]
     InternalError,
     #[error("Invalid input")]

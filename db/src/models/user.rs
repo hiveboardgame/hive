@@ -4,7 +4,6 @@ use crate::{
     models::{Game, GameUser, NewRating},
     schema::{
         games::{self, current_player_id, finished, game_status, tournament_id},
-        games_users::game_id,
         ratings::{self, rating},
         users::{
             self,

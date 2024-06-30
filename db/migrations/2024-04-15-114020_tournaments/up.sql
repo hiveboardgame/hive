@@ -6,6 +6,7 @@ create table tournaments (
   scoring text not null, -- per match or per game scoring
   tiebreaker text[] not null default '{}', -- list of tiebreakers
   seats int not null, -- maximum number of players
+  min_seats int not null, -- minimum number of players
   rounds int not null, -- Number of RR games, total number of SWISS games
   joinable bool not null default true, -- this means the tournament has started and people cannot join it anymore
   invite_only bool not null default false, -- can players join the tournament without an invite?
@@ -18,7 +19,9 @@ create table tournaments (
   -- either when does the tournament start for tournaments with a start date
   -- or when did it start for tournaments that start when enough players signed up
   -- TODO: @leex start_mode text not null,
-  start_at timestamp with time zone, 
+  start_at timestamp with time zone, -- when will the tournaments start, for automated tournaments
+  started_at timestamp with time zone,  -- when did the tournaments start
+  round_duration int, -- how long does a round run for in days
   status text not null,
   created_at timestamp with time zone not null, -- when was it created
   updated_at timestamp with time zone not null -- when was the last update made to the model

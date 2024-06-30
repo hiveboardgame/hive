@@ -1,5 +1,5 @@
 use crate::common::{
-    GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult, TournamentUpdate
+    GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult, TournamentUpdate,
 };
 use crate::responses::{GameResponse, TournamentResponse};
 use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
