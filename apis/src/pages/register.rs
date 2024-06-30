@@ -1,11 +1,13 @@
 use crate::functions;
 use crate::functions::users::get::UsernameTaken;
-use crate::{components::organisms::header::Redirect, providers::AuthContext};
+use crate::{
+    components::{organisms::header::Redirect, update_from_event::update_from_input},
+    providers::AuthContext,
+};
 use lazy_static::lazy_static;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::*;
 use leptos_router::ActionForm;
-use leptos_use::use_debounce_fn_with_arg;
 use regex::Regex;
 use std::time::Duration;
 use web_sys::Event;
@@ -35,10 +37,6 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let pw_confirm = RwSignal::new(String::new());
     let has_invalid_char = RwSignal::new(false);
     let is_invalid_email = RwSignal::new(false);
-    let throttled_input = move |signal_to_update| {
-        use_debounce_fn_with_arg(update_from_input(signal_to_update), 350.0)
-    };
-
     let pw_invalid = move || {
         let pw = pw();
         !(7 < pw.len() && pw == pw_confirm())
@@ -123,9 +121,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <label class="mb-2">
                     <p class="font-bold">Email</p>
                     <input
-                        on:input=move |evt| {
-                            throttled_input(email)(evt);
-                        }
+                        on:input=debounce(Duration::from_millis(350), update_from_input(email))
 
                         on:change=move |evt| {
                             if invalid_email(&event_target_value(&evt)) {
@@ -153,9 +149,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <label>
                     <p class="font-bold">Password</p>
                     <input
-                        on:input=move |evt| {
-                            throttled_input(pw)(evt);
-                        }
+                        on:input=debounce(Duration::from_millis(350), update_from_input(pw))
 
                         class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="password"
@@ -171,10 +165,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <label>
                     <p class="font-bold">Confirm Password</p>
                     <input
-                        on:input=move |evt| {
-                            throttled_input(pw_confirm)(evt);
-                        }
-
+                        on:input=debounce(Duration::from_millis(350), update_from_input(pw_confirm))
                         class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="password_confirmation"
                         type="password"
@@ -228,10 +219,6 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             </p>
         </div>
     }
-}
-
-fn update_from_input(signal_to_update: RwSignal<String>) -> impl Fn(web_sys::Event) + Clone {
-    move |evt: web_sys::Event| signal_to_update.update(|v| *v = event_target_value(&evt))
 }
 
 fn valid_username_char(c: char) -> bool {

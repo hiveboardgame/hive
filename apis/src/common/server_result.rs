@@ -1,10 +1,10 @@
 use super::game_reaction::GameReaction;
-use crate::responses::{ChallengeResponse, GameResponse, UserResponse};
+use crate::responses::{ChallengeResponse, GameResponse, TournamentResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use shared_types::GameId;
 use shared_types::{ChallengeId, ChatMessageContainer};
+use shared_types::{GameId, TournamentId};
 use std::fmt;
 use uuid::Uuid;
 
@@ -45,9 +45,24 @@ pub enum ServerMessage {
     Challenge(ChallengeUpdate),
     UserSearch(Vec<UserResponse>),
     UserStatus(UserUpdate),
+    Tournament(TournamentUpdate),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
     Error(String),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TournamentUpdate {
+    Started(Box<TournamentResponse>),
+    Created(Box<TournamentResponse>),
+    Deleted(TournamentId),
+    Modified(Box<TournamentResponse>),
+    Joined(Box<TournamentResponse>),
+    Left(Box<TournamentResponse>),
+    Tournaments(Vec<Box<TournamentResponse>>),
+    Invited(Box<TournamentResponse>),
+    Declined(Box<TournamentResponse>),
+    Uninvited(Box<TournamentResponse>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

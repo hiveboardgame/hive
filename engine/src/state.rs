@@ -184,10 +184,10 @@ impl State {
     }
 
     fn next_turn(&mut self) {
+        self.turn += 1;
         if self.turn == 1 {
             self.game_status = GameStatus::InProgress;
         }
-        self.turn += 1;
         match self.board.game_result() {
             GameResult::Winner(color) => {
                 self.game_status = GameStatus::Finished(GameResult::Winner(color));

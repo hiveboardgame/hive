@@ -35,7 +35,7 @@ impl GamesSignal {
         let auth_context = expect_context::<AuthContext>();
         if let Some(Ok(Some(user))) = untrack(auth_context.user) {
             self.own.update(|s| {
-                if let Some(game_id) = navigation_controller.signal.get_untracked().game_id {
+                if let Some(game_id) = navigation_controller.game_signal.get_untracked().game_id {
                     if let Some(game) = s.untimed.get(&game_id) {
                         if game.current_player_id == user.id {
                             if let Some(gp) = s

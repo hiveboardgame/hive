@@ -13,7 +13,7 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
     let games = expect_context::<GamesSignal>();
     let next_games = move || {
         let game_id = navigation_controller
-            .signal
+            .game_signal
             .get()
             .game_id
             .unwrap_or_default();

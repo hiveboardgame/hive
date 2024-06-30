@@ -19,6 +19,8 @@ use crate::{
         rules::Rules,
         strategy::Strategy,
         top_players::TopPlayers,
+        tournament::Tournament,
+        tournament_create::TournamentCreate,
         tournaments::Tournaments,
         tutorial::Tutorial,
     },
@@ -26,8 +28,10 @@ use crate::{
         challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state,
         games::provide_games, navigation_controller::provide_navigation_controller,
         online_users::provide_users, provide_alerts, provide_auth, provide_color_scheme,
-        provide_config, provide_ping, refocus::provide_refocus, timer::provide_timer,
-        user_search::provide_user_search, websocket::provide_websocket,
+        provide_config, provide_notifications, provide_ping, refocus::provide_refocus,
+        timer::provide_timer, tournament_ready::provide_tournament_ready,
+        tournaments::provide_tournaments, user_search::provide_user_search,
+        websocket::provide_websocket,
     },
 };
 use leptos::*;
@@ -54,6 +58,9 @@ pub fn App() -> impl IntoView {
     provide_refocus();
     provide_chat();
     provide_user_search();
+    provide_tournaments();
+    provide_notifications();
+    provide_tournament_ready();
 
     view! {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
@@ -102,6 +109,8 @@ pub fn App() -> impl IntoView {
                     <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
                     <Route path="/analysis" view=|| view! { <Analysis/> }/>
                     <Route path="/config" view=|| view! { <Config/> }/>
+                    <Route path="/tournament/:nanoid" view=|| view! { <Tournament/> }/>
+                    <Route path="/tournaments/create" view=|| view! { <TournamentCreate/> }/>
                     <Route path="/tournaments" view=|| view! { <Tournaments/> }/>
                     <Route path="/donate" view=|| view! { <Donate/> }/>
                     <Route path="/faq" view=|| view! { <Faq/> }/>

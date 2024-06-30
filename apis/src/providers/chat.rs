@@ -44,7 +44,7 @@ impl Chat {
     pub fn has_messages(&self) -> bool {
         let navi = expect_context::<NavigationControllerSignal>();
 
-        if let Some(game_id) = navi.signal.get().game_id {
+        if let Some(game_id) = navi.game_signal.get().game_id {
             self.games_public_new_messages
                 .get()
                 .get(&game_id)
@@ -62,7 +62,7 @@ impl Chat {
     pub fn seen_messages(&self) {
         let navi = expect_context::<NavigationControllerSignal>();
         batch(move || {
-            if let Some(game_id) = navi.signal.get_untracked().game_id {
+            if let Some(game_id) = navi.game_signal.get_untracked().game_id {
                 self.games_public_new_messages.update(|m| {
                     m.entry(game_id.clone())
                         .and_modify(|b| *b = false)

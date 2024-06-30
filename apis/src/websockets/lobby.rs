@@ -1,3 +1,4 @@
+use crate::{common::TournamentUpdate, responses::TournamentResponse};
 use crate::{
     common::{ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
     responses::{ChallengeResponse, GameResponse, UserResponse},
@@ -8,7 +9,7 @@ use actix::AsyncContext;
 use actix::WrapFuture;
 use db_lib::{
     get_conn,
-    models::{Challenge, User},
+    models::{Challenge, TournamentInvitation, User},
     DbPool,
 };
 use diesel_async::scoped_futures::ScopedFutureExt;
@@ -137,13 +138,14 @@ impl Handler<Connect> for Lobby {
                         let cam = ClientActorMessage {
                             destination: MessageDestination::User(user_id),
                             serialized,
-                            from: user_id,
+                            from: Some(user_id),
                         };
                         address.do_send(cam);
                     }
                 }
+
                 let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
-                    if let Ok(user_response) = UserResponse::from_user(&user, &mut conn).await {
+                    if let Ok(user_response) = UserResponse::from_model(&user, &mut conn).await {
                         let message =
                             ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
                                 status: UserStatus::Online,
@@ -160,10 +162,6 @@ impl Handler<Connect> for Lobby {
                                     for socket in sockets {
                                         socket.do_send(WsMessage(serialized.clone()));
                                     }
-                                } else if let Ok(user) = User::find_by_uuid(id, &mut conn).await {
-                                    println!("Game_users has stale user: {}", user.username);
-                                } else {
-                                    println!("Game_users has stale anoymous user");
                                 }
                             }
                         }
@@ -202,11 +200,35 @@ impl Handler<Connect> for Lobby {
                             let cam = ClientActorMessage {
                                 destination: MessageDestination::User(user_id),
                                 serialized,
-                                from: user_id,
+                                from: Some(user_id),
                             };
                             address.do_send(cam);
                         }
                     }
+                    // send tournament invitations
+                    if let Ok(invitations) =
+                        TournamentInvitation::find_by_user(&user.id, &mut conn).await
+                    {
+                        for invitation in invitations {
+                            if let Ok(response) =
+                                TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn)
+                                    .await
+                            {
+                                let message = ServerResult::Ok(Box::new(
+                                    ServerMessage::Tournament(TournamentUpdate::Invited(response)),
+                                ));
+                                let serialized = serde_json::to_string(&message)
+                                    .expect("Failed to serialize a server message");
+                                let cam = ClientActorMessage {
+                                    destination: MessageDestination::User(user_id),
+                                    serialized,
+                                    from: Some(user_id),
+                                };
+                                address.do_send(cam);
+                            }
+                        }
+                    }
+
                     // Send challenges on join
                     let mut responses = Vec::new();
                     if let Ok(challenges) =
@@ -261,12 +283,11 @@ impl Handler<Connect> for Lobby {
                 let cam = ClientActorMessage {
                     destination: MessageDestination::User(user_id),
                     serialized,
-                    from: user_id,
+                    from: Some(user_id),
                 };
                 address.do_send(cam);
             }
         };
-
         let actor_future = future.into_actor(self);
         ctx.wait(actor_future);
     }
@@ -282,10 +303,12 @@ impl Handler<ClientActorMessage> for Lobby {
             }
             MessageDestination::Global => {
                 // Make sure the user is in the game:
-                self.games_users
-                    .entry(self.id.clone())
-                    .or_default()
-                    .insert(cam.from);
+                if let Some(from) = cam.from {
+                    self.games_users
+                        .entry(self.id.clone())
+                        .or_default()
+                        .insert(from);
+                }
                 // Send the message to everyone
                 self.games_users
                     .get(&self.id)
@@ -295,10 +318,12 @@ impl Handler<ClientActorMessage> for Lobby {
             }
             MessageDestination::Game(game_id) => {
                 // Make sure the user is in the game:
-                self.games_users
-                    .entry(game_id.clone())
-                    .or_default()
-                    .insert(cam.from);
+                if let Some(from) = cam.from {
+                    self.games_users
+                        .entry(game_id.clone())
+                        .or_default()
+                        .insert(from);
+                }
                 // Send the message to everyone
                 self.games_users
                     .get(&game_id)
@@ -308,10 +333,12 @@ impl Handler<ClientActorMessage> for Lobby {
             }
             MessageDestination::GameSpectators(game_id, white_id, black_id) => {
                 // Make sure the user is in the game:
-                self.games_users
-                    .entry(game_id.clone())
-                    .or_default()
-                    .insert(cam.from);
+                if let Some(from) = cam.from {
+                    self.games_users
+                        .entry(game_id.clone())
+                        .or_default()
+                        .insert(from);
+                }
                 // Send the message to everyone except white_id and black_id
                 self.games_users
                     .get(&game_id)

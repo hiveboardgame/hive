@@ -13,7 +13,7 @@ use leptos::*;
 use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::use_window;
-use shared_types::ChallengeVisibility;
+use shared_types::{ChallengeVisibility, TimeInfo};
 
 #[component]
 pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
@@ -128,6 +128,12 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
         }
     };
 
+    let time_info = TimeInfo {
+        mode: time_mode,
+        base: challenge().time_base,
+        increment: challenge().time_increment,
+    };
+
     view! {
         <tr class="items-center text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
             <td class=td_class>
@@ -147,9 +153,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             <td class=td_class>
                 <div class="flex justify-center items-center">
                     <TimeRow
-                        time_mode=time_mode
-                        time_base=challenge().time_base
-                        increment=challenge().time_increment
+                        time_info
                         extend_tw_classes="break-words max-w-[40px] sm:max-w-fit sm:whitespace-nowrap"
                     />
                 </div>

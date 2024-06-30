@@ -61,7 +61,7 @@ impl JoinHandler {
             destination: MessageDestination::Direct(self.received_from.clone()),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),
-                game: GameResponse::new_from_model(&self.game, &mut conn).await?,
+                game: GameResponse::from_model(&self.game, &mut conn).await?,
                 game_action: GameReaction::Join,
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),

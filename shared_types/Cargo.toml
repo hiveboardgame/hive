@@ -11,3 +11,4 @@ serde = { workspace = true, features = ["derive"] }
 uuid = { workspace = true }
 chrono = { workspace = true }
 hive = { path = "../engine" }
+anyhow = { workspace = true }
