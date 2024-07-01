@@ -1,6 +1,7 @@
 use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
 use crate::common::{PieceType, SvgPos};
-use crate::pages::{analysis::InAnalysis, play::CurrentConfirm};
+use crate::components::organisms::analysis::AnalysisSignal;
+use crate::pages::play::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
 use hive_lib::{Bug, Piece, Position};
@@ -64,10 +65,12 @@ pub fn Piece(
 
     let mut game_state = expect_context::<GameStateSignal>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
-    let in_analysis = use_context::<InAnalysis>().unwrap_or(InAnalysis(RwSignal::new(false)));
+    let analysis = use_context::<AnalysisSignal>()
+        .unwrap_or(AnalysisSignal(RwSignal::new(None)))
+        .0;
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
-        let in_analysis = in_analysis.0.get_untracked();
+        let in_analysis = analysis.get_untracked().is_some();
         if in_analysis || game_state.is_move_allowed() {
             match piece_type {
                 PieceType::Board => {

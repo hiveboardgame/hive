@@ -1,12 +1,17 @@
 use crate::common::{Hex, HexStack, HexType, PieceType};
 
-use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
+use crate::components::molecules::analysis_and_download::AnalysisAndDownload;
+use crate::components::molecules::control_buttons::ControlButtons;
+use crate::components::{
+    atoms::{svgs::Svgs, undo_button::UndoButton},
+    molecules::hex_stack::HexStack,
+};
 use crate::providers::game_state::{GameStateSignal, View};
+use crate::providers::AuthContext;
 use hive_lib::History;
 use hive_lib::{Bug, BugStack, Color, GameStatus, Piece, Position, State};
 use leptos::*;
 use std::str::FromStr;
-
 fn piece_active(state: &State, viewing: &View, piece: &Piece, is_last_turn: bool) -> bool {
     //viewing history
     if viewing == &View::History && !is_last_turn {
@@ -151,5 +156,34 @@ pub fn Reserve(
             <Svgs/>
             {pieces_view}
         </svg>
+    }
+}
+
+#[component]
+pub fn ReserveContent(player_color: Memo<Color>) -> impl IntoView {
+    let game_state = expect_context::<GameStateSignal>();
+    let top_color = Signal::derive(move || player_color().opposite_color());
+    let bottom_color = Signal::derive(player_color);
+    let auth_context = expect_context::<AuthContext>();
+    let user = move || match (auth_context.user)() {
+        Some(Ok(Some(user))) => Some(user),
+        _ => None,
+    };
+    let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
+    let show_buttons = move || {
+        user().map_or(false, |user| {
+            let (white_id, black_id) = white_and_black();
+            Some(user.id) == black_id || Some(user.id) == white_id
+        })
+    };
+    view! {
+        <Reserve color=top_color alignment=Alignment::DoubleRow/>
+        <div class="flex flex-row-reverse justify-center items-center">
+            <AnalysisAndDownload/>
+            <Show when=show_buttons fallback=move || view! { <UndoButton/> }>
+                <ControlButtons/>
+            </Show>
+        </div>
+        <Reserve color=bottom_color alignment=Alignment::DoubleRow/>
     }
 }

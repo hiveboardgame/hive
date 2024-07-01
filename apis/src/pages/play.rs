@@ -59,10 +59,13 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             Some(user.id) == black_id || Some(user.id) == white_id
         })
     };
-    let player_is_black = create_memo(move |_| {
-        user().map_or(false, |user| {
+    let player_color = create_memo(move |_| {
+        user().map_or(Color::White, |user| {
             let black_id = white_and_black().1;
-            Some(user.id) == black_id
+            match Some(user.id) == black_id {
+                true => Color::Black,
+                false => Color::White,
+            }
         })
     });
     let parent_container_style = move || {
@@ -78,14 +81,8 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             game_state.view_game();
         }
     });
-    let bottom_color = move || {
-        if player_is_black() {
-            Color::Black
-        } else {
-            Color::White
-        }
-    };
-    let top_color = move || bottom_color().opposite_color();
+    let bottom_color = player_color;
+    let top_color = move || player_color().opposite_color();
     let controls_signal = expect_context::<ControlsSignal>();
     let show_controls =
         Signal::derive(move || !controls_signal.hidden.get() || game_state.is_finished()());
@@ -105,7 +102,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         <Board/>
                         <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full">
                             <DisplayTimer placement=Placement::Top vertical=false/>
-                            <SideboardTabs player_is_black=player_is_black/>
+                            <SideboardTabs player_color/>
                             <DisplayTimer placement=Placement::Bottom vertical=false/>
                         </div>
                     }

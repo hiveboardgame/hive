@@ -121,6 +121,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                         }
                     }
                 }}
+
             </button>
             <Show when=move || !vertical>
                 <div class=classes>

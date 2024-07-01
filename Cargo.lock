@@ -418,6 +418,8 @@ dependencies = [
  "actix-web-actors",
  "anyhow",
  "argon2",
+ "base64 0.22.1",
+ "bincode",
  "cfg-if",
  "chrono",
  "console_error_panic_hook",
@@ -449,6 +451,7 @@ dependencies = [
  "simple_logger",
  "thiserror",
  "tokio",
+ "tree-ds",
  "uuid",
  "wasm-bindgen",
  "web-sys",
@@ -574,6 +577,15 @@ dependencies = [
  "futures-util",
  "parking_lot",
  "tokio",
+]
+
+[[package]]
+name = "bincode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -1897,14 +1909,18 @@ checksum = "d4345964bb142484797b161f473a503a434de77149dd8c7427788c6e13379388"
 
 [[package]]
 name = "lazy_static"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
+dependencies = [
+ "spin",
+]
 
 [[package]]
 name = "leptix_primitives"
-version = "0.1.0"
-source = "git+https://github.com/leptix/leptix.git#867728677f7372767938f71df901655f2ba5f872"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abb1c55c1e0403f008c8f82362e4e247034552d64cf641f51d12a2c46d391bf7"
 dependencies = [
  "derive_more",
  "itertools",
@@ -2864,6 +2880,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sequential_gen"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da850bb1f2deffd0d19c1a1fcf445cb747aa401517c96eff7c6d965de792175d"
+dependencies = [
+ "lazy_static",
+]
+
+[[package]]
 name = "serde"
 version = "1.0.202"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3131,6 +3156,12 @@ dependencies = [
  "libc",
  "windows-sys 0.52.0",
 ]
+
+[[package]]
+name = "spin"
+version = "0.9.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
 name = "stringprep"
@@ -3443,6 +3474,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c06d3da6113f116aaee68e4d601191614c9053067f9ab7f6edbcb161237daa54"
 dependencies = [
  "once_cell",
+]
+
+[[package]]
+name = "tree-ds"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba6a67f3e9bee38b6a34b29a98abf5fc5b13aea6a7db36753d260735af7633a8"
+dependencies = [
+ "lazy_static",
+ "sequential_gen",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

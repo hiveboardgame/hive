@@ -1,6 +1,7 @@
 use crate::common::MoveConfirm;
 use crate::common::SvgPos;
-use crate::pages::{analysis::InAnalysis, play::CurrentConfirm};
+use crate::components::organisms::analysis::AnalysisSignal;
+use crate::pages::play::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::Position;
 use leptos::*;
@@ -14,18 +15,30 @@ pub fn Target(
     let center = move || SvgPos::center_for_level(position, level());
     let transform = move || format!("translate({},{})", center().0, center().1);
     let mut game_state = expect_context::<GameStateSignal>();
-    let in_analysis = use_context::<InAnalysis>().unwrap_or(InAnalysis(RwSignal::new(false)));
+    let analysis = use_context::<AnalysisSignal>()
+        .unwrap_or(AnalysisSignal(RwSignal::new(None)))
+        .0;
     let current_confirm = expect_context::<CurrentConfirm>().0;
-
     // Select the target position and make a move if it's the correct mode
     let onclick = move |_| {
-        let in_analysis = in_analysis.0.get_untracked();
+        let in_analysis = analysis.get().is_some();
         if in_analysis || game_state.is_move_allowed() {
             batch(move || {
                 game_state.set_target(position);
                 if current_confirm() == MoveConfirm::Single || in_analysis {
                     game_state.move_active();
                 }
+                analysis.update(|analysis| {
+                    if let Some(analysis) = analysis {
+                        let moves = game_state.signal.get_untracked().state.history.moves;
+                        let last_move = moves.last().unwrap().clone();
+                        if last_move.0 == "pass" {
+                            //if move is pass, add prev move
+                            analysis.add_node(moves[moves.len() - 2].clone());
+                        }
+                        analysis.add_node(last_move);
+                    }
+                });
             });
         }
     };
