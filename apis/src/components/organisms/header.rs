@@ -1,4 +1,4 @@
-use crate::components::atoms::next_game_button::NextGameButton;
+use crate::components::atoms::{next_game_button::NextGameButton, logo::Logo};
 use crate::components::molecules::chat_and_controls::ChatAndControls;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle,
@@ -20,11 +20,11 @@ pub fn Header() -> impl IntoView {
         <header class="w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none">
             <Transition fallback=|| {
                 view! {
-                    <div class="flex gap-1 items-center lg:ml-10">
+                    <div class="flex gap-1 items-center lg:ml-1">
                         <MobileDropdown/>
 
                         <a class="hidden m-2 md:block" href="/">
-                            Home
+                            <Logo tw_class="w-14 lg:w-20"/>
                         </a>
                         <div class="hidden lg:flex lg:items-center lg:gap-1">
                             <CommunityDropdown/>
@@ -65,11 +65,11 @@ pub fn Header() -> impl IntoView {
                         _ => None,
                     };
                     view! {
-                        <div class="flex gap-1 items-center lg:ml-10">
+                        <div class="flex gap-1 items-center lg:ml-1">
                             <MobileDropdown/>
 
                             <a class="hidden m-2 md:block" href="/">
-                                Home
+                                <Logo tw_class="w-14 lg:w-20"/>
                             </a>
                             <div class="hidden lg:flex lg:items-center lg:gap-1">
                                 <CommunityDropdown/>

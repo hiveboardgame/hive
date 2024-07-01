@@ -10,7 +10,7 @@ pub fn OG() -> impl IntoView {
         <meta property="og:type" content="website"/>
         <meta property="og:title" content="The best free, adless Hive server"/>
         <meta property="og:description" content=content/>
-        <meta property="og:image" content="https://hivegame.com/assets/android-chrome-512x512.png"/>
+        <meta property="og:image" content="https://hivegame.com/assets/stacked_3D.png"/>
 
         <meta name="twitter:card" content="summary_large_image"/>
         <meta property="twitter:domain" content="hivegame.com"/>
