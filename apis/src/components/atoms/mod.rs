@@ -6,6 +6,7 @@ pub mod gc_button;
 pub mod hex;
 pub mod history_button;
 pub mod last_move;
+pub mod logo;
 pub mod next_game_button;
 pub mod og;
 pub mod piece;
