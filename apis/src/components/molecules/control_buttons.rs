@@ -7,6 +7,7 @@ use crate::{
 };
 use hive_lib::{ColorChoice, GameControl};
 use leptos::*;
+use leptos_router::use_navigate;
 use shared_types::{ChallengeDetails, ChallengeVisibility};
 
 #[component]
@@ -35,6 +36,24 @@ pub fn ControlButtons() -> impl IntoView {
             .as_ref()
             .map_or(false, |gr| gr.tournament.is_none())
     });
+    let navigate_to_tournament = move |_| {
+        let navigate = use_navigate();
+        navigate(
+            &format!(
+                "/tournament/{}",
+                game_state
+                    .signal
+                    .get()
+                    .game_response
+                    .as_ref()
+                    .map_or(String::new(), |gr| gr
+                        .tournament
+                        .as_ref()
+                        .map_or(String::new(), |t| t.tournament_id.to_string()))
+            ),
+            Default::default(),
+        );
+    };
     let pending_draw = move || match pending() {
         Some(GameControl::DrawOffer(gc_color)) => gc_color.opposite_color() == color(),
 
@@ -255,26 +274,37 @@ pub fn ControlButtons() -> impl IntoView {
                     }
                 }
             >
+                <Show when=not_tournament
+                    fallback=move||{view! {
+                    <button
+                        class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 transform grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                        on:click=navigate_to_tournament
+                    >
+                        View tournament
+                    </button>
 
-                <button
-                    class=move || {
-                        format!(
-                            "h-7 m-1 grow {} transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded disabled:opacity-25 disabled:cursor-not-allowed flex-shrink-0",
-                            rematch_button_color(),
-                        )
-                    }
+                    }}
+                >
+                    <button
+                        class=move || {
+                            format!(
+                                "h-7 m-1 grow {} transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded disabled:opacity-25 disabled:cursor-not-allowed flex-shrink-0",
+                                rematch_button_color(),
+                            )
+                        }
 
-                    prop:disabled=sent_challenge
-                    on:click=rematch
-                >
-                    {rematch_text}
-                </button>
-                <button
-                    class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 transform grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
-                    on:click=new_opponent
-                >
-                    New Game
-                </button>
+                        prop:disabled=sent_challenge
+                        on:click=rematch
+                    >
+                        {rematch_text}
+                    </button>
+                    <button
+                        class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 transform grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                        on:click=new_opponent
+                    >
+                        New Game
+                    </button>
+                </Show>
             </Show>
         </div>
     }
