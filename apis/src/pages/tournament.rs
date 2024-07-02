@@ -91,7 +91,7 @@ pub fn Tournament() -> impl IntoView {
             let start_disabled = move || {let tournament =tournament(); tournament.min_seats > tournament.players.len() as i32} ;
             let join_disabled = move || {
                 let tournament= tournament();
-                if tournament.seats <= tournament.players.len() as i32 {
+                if tournament.invite_only || tournament.seats <= tournament.players.len() as i32 {
                     return true;
                 }
                 if let Some(account) = account() {
