@@ -140,7 +140,6 @@ pub fn Tournament() -> impl IntoView {
                         .to_string();
                         format! ("{pretty}, {start}")
                     } else {pretty}
-                   
                 }
             };
             let not_started = move || tournament().status == TournamentStatus::NotStarted;

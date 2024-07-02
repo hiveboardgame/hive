@@ -90,8 +90,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                     let:tournament_id
                 >
                     <div on:click=onclick_close>
-                        <TournamentStartedRow
-                            tournament=store_value(
+                        <TournamentStartedRow tournament=store_value(
                             tournaments
                                 .signal
                                 .get_untracked()
@@ -99,8 +98,8 @@ pub fn NotificationDropdown() -> impl IntoView {
                                 .get(&tournament_id)
                                 .expect("Tournament exists")
                                 .clone(),
-                            )
-                        />
+                        )/>
+
                     </div>
                 </For>
             </Show>
