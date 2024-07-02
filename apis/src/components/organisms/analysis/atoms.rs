@@ -1,60 +1,25 @@
-use super::{History, TreeNode};
+use super::TreeNode;
+use crate::components::organisms::analysis::{AnalysisSignal, ToggleStates};
 use crate::components::organisms::reserve::Alignment;
 use crate::components::organisms::reserve::Reserve;
-use crate::{
-    components::organisms::analysis::{AnalysisSignal, ToggleStates},
-    providers::game_state::GameStateSignal,
-};
 use hive_lib::Color;
-use leptix_primitives::components::{
-    collapsible::{CollapsibleContent, CollapsibleRoot, CollapsibleTrigger},
-    tabs::{TabsContent, TabsList, TabsRoot, TabsTrigger},
+use leptix_primitives::components::collapsible::{
+    CollapsibleContent, CollapsibleRoot, CollapsibleTrigger,
 };
 use leptos::*;
 use leptos_icons::Icon;
 use tree_ds::prelude::Node;
-#[component]
-pub fn SideboardTabs(
-    player_color: Memo<Color>,
-    #[prop(optional)] extend_tw_classes: &'static str,
-) -> impl IntoView {
-    let button_class = move || {
-        "transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal data-[state=active]:dark:bg-button-twilight data-[state=active]:bg-slate-400".to_string()
-    };
-    view! {
-        <TabsRoot
-            default_value="Game"
-            attr:class=format!(
-                "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-1 {extend_tw_classes}",
-            )
-        >
-
-            <TabsList>
-                <div class="z-10 border-b-2 border-black dark:border-white flex justify-between [&>*]:grow sticky top-0 bg-inherit">
-                    <TabsTrigger value="Game" attr:class=button_class>
-                        "Game"
-                    </TabsTrigger>
-                    <TabsTrigger value="History" attr:class=button_class>
-                        "History"
-                    </TabsTrigger>
-                </div>
-            </TabsList>
-            <TabsContent value="Game" attr:class="flex flex-col h-full">
-                <ReserveContent player_color/>
-            </TabsContent>
-            <TabsContent
-                value="History"
-                attr:class="overflow-auto gap-1 mb-8 w-full h-full max-h-full h-fit"
-            >
-                <History/>
-            </TabsContent>
-        </TabsRoot>
-    }
-}
 
 #[component]
 pub fn UndoButton() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
+    let is_disabled = move || {
+        analysis.get().map_or(true, |analysis| {
+            analysis
+                .current_node
+                .map_or(true, |n| n.get_parent_id().is_none())
+        })
+    };
     let undo = move |_| {
         analysis.update(|a| {
             if let Some(a) = a {
@@ -78,10 +43,11 @@ pub fn UndoButton() -> impl IntoView {
 
     view! {
         <button
-            class="flex justify-center items-center rounded-sm transition-transform duration-300 transform aspect-square hover:bg-pillbug-teal active:scale-95"
+            class="flex justify-center place-items-center m-1 h-7 rounded-md border-2 border-cyan-500 drop-shadow-lg transition-transform duration-300 transform hover:bg-pillbug-teal active:scale-95 dark:border-button-twilight disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             on:click=undo
+            prop:disabled=is_disabled
         >
-            <Icon icon=icondata::BiUndoRegular class="w-6 h-6 lg:h-8 lg:w-8"/>
+            <Icon icon=icondata::BiUndoRegular class="w-6 h-6"/>
         </button>
     }
 }
@@ -109,7 +75,7 @@ pub enum HistoryNavigation {
 #[component]
 pub fn HistoryButton(
     action: HistoryNavigation,
-    #[prop(optional)] post_action: Option<Callback<()>>,
+    post_action: Option<Callback<()>>,
     #[prop(optional)] node_ref: Option<NodeRef<html::Button>>,
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
@@ -121,10 +87,11 @@ pub fn HistoryButton(
     };
 
     let is_disabled = move || {
-        let analysis = analysis.get().unwrap();
-        analysis.current_node.map_or(true, |n| match cloned_action {
-            HistoryNavigation::Next => n.get_children_ids().is_empty(),
-            HistoryNavigation::Previous => n.get_parent_id().is_none(),
+        analysis.get().map_or(true, |analysis| {
+            analysis.current_node.map_or(true, |n| match cloned_action {
+                HistoryNavigation::Next => n.get_children_ids().is_empty(),
+                HistoryNavigation::Previous => n.get_parent_id().is_none(),
+            })
         })
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {

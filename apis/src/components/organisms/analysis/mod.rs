@@ -4,7 +4,6 @@ mod save_and_load;
 mod tree;
 pub use atoms::HistoryButton;
 pub use atoms::HistoryNavigation;
-pub use atoms::SideboardTabs;
 pub use atoms::UndoButton;
 pub use history::History;
 pub use save_and_load::{DownloadTree, LoadTree};

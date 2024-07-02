@@ -19,4 +19,3 @@ pub mod svgs;
 pub mod target;
 pub mod title;
 pub mod toggle_controls;
-pub mod undo_button;
