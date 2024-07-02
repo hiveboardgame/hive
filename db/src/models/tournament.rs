@@ -150,6 +150,13 @@ impl Tournament {
         Ok(())
     }
 
+    fn ensure_not_inivte_only(&self) -> Result<(), DbError> {
+        if self.invite_only {
+            return Err(DbError::TournamentFull);
+        }
+        Ok(())
+    }
+
     async fn ensure_not_full(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
         if self.number_of_players(conn).await? == self.seats as i64 {
             return Err(DbError::TournamentFull);
@@ -278,6 +285,7 @@ impl Tournament {
     pub async fn join(&self, user_id: &Uuid, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
         self.ensure_not_started()?;
         self.ensure_not_full(conn).await?;
+        self.ensure_not_inivte_only()?;
         let players = self.players(conn).await?;
         if players.len() == self.seats as usize {
             return Ok(self.clone());
