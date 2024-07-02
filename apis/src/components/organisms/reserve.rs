@@ -2,10 +2,7 @@ use crate::common::{Hex, HexStack, HexType, PieceType};
 
 use crate::components::molecules::analysis_and_download::AnalysisAndDownload;
 use crate::components::molecules::control_buttons::ControlButtons;
-use crate::components::{
-    atoms::{svgs::Svgs, undo_button::UndoButton},
-    molecules::hex_stack::HexStack,
-};
+use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
 use crate::providers::game_state::{GameStateSignal, View};
 use crate::providers::AuthContext;
 use hive_lib::History;
@@ -49,12 +46,19 @@ pub fn Reserve(
     #[prop(into)] color: MaybeSignal<Color>,
     alignment: Alignment,
     #[prop(optional)] extend_tw_classes: &'static str,
+    #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
 
     let (viewbox_str, viewbox_styles) = match alignment {
         Alignment::SingleRow => ("-40 -55 450 100", "inline max-h-[inherit] h-full w-fit"),
-        Alignment::DoubleRow => ("-32 -55 250 180", "p-1"),
+        Alignment::DoubleRow => {
+            if let Some(viewbox_str) = viewbox_str {
+                (viewbox_str, "")
+            } else {
+                ("-32 -55 250 180", "p-1")
+            }
+        }
     };
     // For some reason getting a slice of the whole state is a problem and leads to wasm oob errors, because of that the other slices are less useful
     let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
@@ -180,7 +184,7 @@ pub fn ReserveContent(player_color: Memo<Color>) -> impl IntoView {
         <Reserve color=top_color alignment=Alignment::DoubleRow/>
         <div class="flex flex-row-reverse justify-center items-center">
             <AnalysisAndDownload/>
-            <Show when=show_buttons fallback=move || view! { <UndoButton/> }>
+            <Show when=show_buttons>
                 <ControlButtons/>
             </Show>
         </div>

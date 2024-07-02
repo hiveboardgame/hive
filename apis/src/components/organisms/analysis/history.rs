@@ -4,7 +4,7 @@ use crate::components::organisms::analysis::atoms::{
     CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation,
 };
 use crate::components::organisms::{
-    analysis::{AnalysisSignal, DownloadTree, LoadTree},
+    analysis::{AnalysisSignal, DownloadTree, LoadTree, UndoButton},
     reserve::{Alignment, Reserve},
 };
 use hive_lib::Color;
@@ -13,7 +13,7 @@ use leptos_use::{use_event_listener, use_window};
 use tree_ds::prelude::*;
 
 #[component]
-pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
     let prev_button = create_node_ref::<html::Button>();
     let next_button = create_node_ref::<html::Button>();
@@ -25,24 +25,31 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             .query_selector(".bg-orange-twilight")
             .ok()?
     });
-    _ = use_event_listener(document().body(), keydown, move |evt| {
-        if evt.key() == "ArrowLeft" {
-            evt.prevent_default();
-            if let Some(prev) = prev_button.get_untracked() {
-                prev.click()
+    create_effect(move |_| {
+        _ = use_event_listener(document().body(), keydown, move |evt| {
+            if evt.key() == "ArrowLeft" {
+                evt.prevent_default();
+                if let Some(prev) = prev_button.get_untracked() {
+                    prev.click()
+                }
+            } else if evt.key() == "ArrowRight" {
+                evt.prevent_default();
+                if let Some(next) = next_button.get_untracked() {
+                    next.click()
+                }
             }
-        } else if evt.key() == "ArrowRight" {
-            evt.prevent_default();
-            if let Some(next) = next_button.get_untracked() {
-                next.click()
+        });
+    });
+
+    let focus = if mobile {
+        None
+    } else {
+        Some(Callback::new(move |()| {
+            if let Some(elem) = active.get_untracked() {
+                elem.scroll_into_view_with_bool(false);
             }
-        }
-    });
-    let focus = Callback::new(move |()| {
-        if let Some(elem) = active.get_untracked() {
-            elem.scroll_into_view_with_bool(false);
-        }
-    });
+        }))
+    };
     let walk_tree = move || {
         let tree = analysis.get().unwrap().tree;
         let root = tree.get_root_node()?;
@@ -105,26 +112,35 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         }
         Some(content)
     };
+    let viewbox_str = "-32 -40 250 120";
     view! {
-        <div class="flex gap-1 min-h-0 [&>*]:grow">
-            <HistoryButton
-                node_ref=prev_button
-                action=HistoryNavigation::Previous
-                post_action=focus
-            />
-            <HistoryButton node_ref=next_button action=HistoryNavigation::Next/>
+        <div class="flex flex-col w-full h-full">
+            <div class="flex gap-1 min-h-0 [&>*]:grow">
+                <HistoryButton
+                    node_ref=prev_button
+                    action=HistoryNavigation::Previous
+                    post_action=focus
+                />
+                <HistoryButton
+                    node_ref=next_button
+                    action=HistoryNavigation::Next
+                    post_action=focus
+                />
+                <UndoButton/>
+            </div>
+            <Show when=move || !mobile>
+            <div class="flex flex-col p-4">
+                <Reserve alignment=Alignment::DoubleRow color=Color::White viewbox_str/>
+                <Reserve alignment=Alignment::DoubleRow color=Color::Black viewbox_str/>
+            </div>
+            </Show>
+            <div class="flex justify-between w-full">
+                <Show when=move || walk_tree().is_some()>
+                    <DownloadTree tree=analysis.get().unwrap()/>
+                </Show>
+                <LoadTree/>
+            </div>
+            <div class="overflow-y-auto p-1">{walk_tree}</div>
         </div>
-        <div class="flex p-2">
-            <Reserve alignment=Alignment::DoubleRow color=Color::White/>
-            <Reserve alignment=Alignment::DoubleRow color=Color::Black/>
-        </div>
-        <Show
-            when=move || walk_tree().is_some()
-
-            fallback=move || view! { <LoadTree/> }
-        >
-            <DownloadTree tree=analysis.get().unwrap()/>
-            {walk_tree}
-        </Show>
     }
 }
