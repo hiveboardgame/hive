@@ -90,12 +90,17 @@ pub fn Tournament() -> impl IntoView {
             let tournament = store_value(tournament);
             let start_disabled = move || {let tournament =tournament(); tournament.min_seats > tournament.players.len() as i32} ;
             let join_disabled = move || {
-                let tournament= tournament();
-                if tournament.invite_only || tournament.seats <= tournament.players.len() as i32 {
+                let tournament = tournament();
+                if tournament.seats <= tournament.players.len() as i32 {
                     return true;
                 }
                 if let Some(account) = account() {
                     let user = account.user;
+                    if tournament.invite_only {
+                        if tournament.invitees.iter().any(|invitee| invitee.uid == user.uid ) { return false; }
+                        if tournament.organizers.iter().any(|organizer| organizer.uid == user.uid ) { return false; }
+                        return true;
+                    } 
                     let game_speed =
                     GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
                     let rating = user.rating_for_speed(&game_speed) as i32;

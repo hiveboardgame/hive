@@ -35,9 +35,15 @@ impl JoinHandler {
             })
             .await?;
         let response = TournamentResponse::from_model(&tournament, &mut conn).await?;
-        Ok(vec![InternalServerMessage {
-            destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Modified(response)),
-        }])
+        Ok(vec![
+            InternalServerMessage {
+                destination: MessageDestination::User(self.user_id),
+                message: ServerMessage::Tournament(TournamentUpdate::Joined(response.clone())),
+            },
+            InternalServerMessage {
+                destination: MessageDestination::Global,
+                message: ServerMessage::Tournament(TournamentUpdate::Modified(response)),
+            },
+        ])
     }
 }
