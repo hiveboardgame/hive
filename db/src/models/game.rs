@@ -14,12 +14,32 @@ use diesel::{prelude::*, Identifiable, Insertable, Queryable};
 use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeId, Conclusion, GameId, GameSpeed, TimeMode, TournamentGameResult};
+use shared_types::{
+    ChallengeId, Conclusion, GameId, GameSpeed, GameStart, TimeMode, TournamentGameResult,
+};
 use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
 
 pub static NANOS_IN_SECOND: u64 = 1000000000_u64;
+
+struct TimeInfo {
+    white_time_left: Option<i64>,
+    black_time_left: Option<i64>,
+    timed_out: bool,
+    new_game_status: GameStatus,
+}
+
+impl TimeInfo {
+    pub fn new() -> Self {
+        Self {
+            white_time_left: None,
+            black_time_left: None,
+            timed_out: false,
+            new_game_status: GameStatus::NotStarted,
+        }
+    }
+}
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = games)]
@@ -53,28 +73,40 @@ pub struct NewGame {
     pub conclusion: String,
     pub tournament_id: Option<Uuid>,
     pub tournament_game_result: String,
+    pub game_start: String,
 }
 
 impl NewGame {
     pub fn new_from_tournament(white: Uuid, black: Uuid, tournament: &Tournament) -> Self {
-        let time_left = match TimeMode::from_str(&tournament.time_mode).unwrap() {
-            TimeMode::Untimed => unreachable!("Tournaments cannot be untimed"),
-            TimeMode::RealTime => tournament
-                .time_base
-                .map(|base| (base as u64 * NANOS_IN_SECOND) as i64),
-            TimeMode::Correspondence => match (tournament.time_base, tournament.time_increment) {
-                (Some(base), None) => Some((base as u64 * NANOS_IN_SECOND) as i64),
-                (None, Some(inc)) => Some((inc as u64 * NANOS_IN_SECOND) as i64),
-                _ => unreachable!(),
-            },
-        };
+        let (time_left, start, status, interaction) =
+            match TimeMode::from_str(&tournament.time_mode).unwrap() {
+                TimeMode::Untimed => unreachable!("Tournaments cannot be untimed"),
+                TimeMode::RealTime => (
+                    tournament
+                        .time_base
+                        .map(|base| (base as u64 * NANOS_IN_SECOND) as i64),
+                    GameStart::Ready.to_string(),
+                    GameStatus::NotStarted.to_string(),
+                    None,
+                ),
+                TimeMode::Correspondence => (
+                    match (tournament.time_base, tournament.time_increment) {
+                        (Some(base), None) => Some((base as u64 * NANOS_IN_SECOND) as i64),
+                        (None, Some(inc)) => Some((inc as u64 * NANOS_IN_SECOND) as i64),
+                        _ => unreachable!(),
+                    },
+                    GameStart::Immediate.to_string(),
+                    GameStatus::InProgress.to_string(),
+                    Some(Utc::now()),
+                ),
+            };
 
         Self {
             nanoid: nanoid!(12),
             current_player_id: white,
             black_id: black,
             finished: false,
-            game_status: "NotStarted".to_owned(),
+            game_status: status,
             game_type: GameType::MLP.to_string(),
             history: String::new(),
             game_control_history: String::new(),
@@ -91,7 +123,7 @@ impl NewGame {
             time_mode: tournament.time_mode.to_owned(),
             time_base: tournament.time_base,
             time_increment: tournament.time_increment,
-            last_interaction: None,
+            last_interaction: interaction,
             black_time_left: time_left,
             white_time_left: time_left,
             speed: GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment)
@@ -100,6 +132,7 @@ impl NewGame {
             conclusion: Conclusion::Unknown.to_string(),
             tournament_id: Some(tournament.id),
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
+            game_start: start,
         }
     }
 
@@ -147,6 +180,7 @@ impl NewGame {
             conclusion: Conclusion::Unknown.to_string(),
             tournament_id: None,
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
+            game_start: GameStart::Moves.to_string(),
         }
     }
 }
@@ -187,6 +221,7 @@ pub struct Game {
     pub conclusion: String,
     pub tournament_id: Option<Uuid>,
     pub tournament_game_result: String,
+    game_start: String,
 }
 
 impl Game {
@@ -376,6 +411,74 @@ impl Game {
         Ok((white_time, black_time))
     }
 
+    fn get_time_info(&self) -> Result<TimeInfo, DbError> {
+        match TimeMode::from_str(&self.time_mode)? {
+            TimeMode::Untimed => Ok(TimeInfo::new()),
+            TimeMode::RealTime => self.get_realtime_time_info(),
+            TimeMode::Correspondence => self.get_correspondence_time_info(),
+        }
+    }
+
+    fn get_realtime_time_info(&self) -> Result<TimeInfo, DbError> {
+        let mut time_info = TimeInfo::new();
+        if self.turn < 2 && self.game_start == GameStart::Moves.to_string() {
+            time_info.white_time_left = self.white_time_left;
+            time_info.black_time_left = self.black_time_left;
+        } else {
+            (time_info.white_time_left, time_info.black_time_left) =
+                self.calculate_time_left_add_increment()?;
+            if self.turn % 2 == 0 {
+                if time_info.white_time_left == Some(0) {
+                    time_info.timed_out = true;
+                    time_info.new_game_status =
+                        GameStatus::Finished(GameResult::Winner(Color::Black));
+                }
+            } else if time_info.black_time_left == Some(0) {
+                time_info.timed_out = true;
+                time_info.new_game_status = GameStatus::Finished(GameResult::Winner(Color::White));
+            }
+        }
+        Ok(time_info)
+    }
+
+    fn get_correspondence_time_info(&self) -> Result<TimeInfo, DbError> {
+        let mut time_info = TimeInfo::new();
+        if self.turn < 2 && self.game_start == GameStart::Moves.to_string() {
+            time_info.white_time_left = self.white_time_left;
+            time_info.black_time_left = self.black_time_left;
+        } else {
+            (time_info.white_time_left, time_info.black_time_left) =
+                self.calculate_time_left_add_increment()?;
+            if self.turn % 2 == 0 {
+                if time_info.white_time_left == Some(0) {
+                    time_info.timed_out = true;
+                    time_info.new_game_status =
+                        GameStatus::Finished(GameResult::Winner(Color::Black));
+                } else {
+                    match (self.time_increment, self.time_base) {
+                        (Some(inc), None) => {
+                            time_info.white_time_left = Some((inc as u64 * NANOS_IN_SECOND) as i64);
+                        }
+                        (None, Some(_)) => {}
+                        _ => unreachable!(),
+                    }
+                }
+            } else if time_info.black_time_left == Some(0) {
+                time_info.timed_out = true;
+                time_info.new_game_status = GameStatus::Finished(GameResult::Winner(Color::White));
+            } else {
+                match (self.time_increment, self.time_base) {
+                    (Some(inc), None) => {
+                        time_info.black_time_left = Some((inc as u64 * NANOS_IN_SECOND) as i64);
+                    }
+                    (None, Some(_)) => {}
+                    _ => unreachable!(),
+                }
+            }
+        }
+        Ok(time_info)
+    }
+
     pub async fn update_gamestate(
         &self,
         state: &State,
@@ -402,14 +505,10 @@ impl Game {
             game_control_string = format!("{}. {gc};", self.turn);
         }
 
-        let mut interaction = None;
-        let mut black_time = None;
-        let mut white_time = None;
-        let mut timed_out = false;
         let mut new_conclusion = Conclusion::Unknown;
-        let mut new_game_status = state.game_status.clone();
+        let time_info = self.get_time_info()?;
 
-        match new_game_status {
+        match time_info.new_game_status {
             GameStatus::Finished(GameResult::Draw) => new_conclusion = Conclusion::Board,
             GameStatus::Finished(GameResult::Winner(_)) => new_conclusion = Conclusion::Board,
             _ => {}
@@ -418,69 +517,12 @@ impl Game {
             new_conclusion = Conclusion::Repetition;
         }
 
-        match TimeMode::from_str(&self.time_mode)? {
-            TimeMode::Untimed => {}
-            TimeMode::RealTime => {
-                if self.turn < 2 && self.tournament_id.is_none() {
-                    white_time = self.white_time_left;
-                    black_time = self.black_time_left;
-                } else {
-                    (white_time, black_time) = self.calculate_time_left_add_increment()?;
-                    if self.turn % 2 == 0 {
-                        if white_time == Some(0) {
-                            timed_out = true;
-                            new_game_status =
-                                GameStatus::Finished(GameResult::Winner(Color::Black));
-                        }
-                    } else if black_time == Some(0) {
-                        timed_out = true;
-                        new_game_status = GameStatus::Finished(GameResult::Winner(Color::White));
-                    }
-                }
-                interaction = Some(Utc::now());
-            }
-            TimeMode::Correspondence => {
-                if self.turn < 2 && self.tournament_id.is_none() {
-                    white_time = self.white_time_left;
-                    black_time = self.black_time_left;
-                } else {
-                    (white_time, black_time) = self.calculate_time_left()?;
-                    if self.turn % 2 == 0 {
-                        if white_time == Some(0) {
-                            timed_out = true;
-                            new_game_status =
-                                GameStatus::Finished(GameResult::Winner(Color::Black));
-                        } else {
-                            match (self.time_increment, self.time_base) {
-                                (Some(inc), None) => {
-                                    white_time = Some((inc as u64 * NANOS_IN_SECOND) as i64);
-                                }
-                                (None, Some(_)) => {}
-                                _ => unreachable!(),
-                            }
-                        }
-                    } else if black_time == Some(0) {
-                        timed_out = true;
-                        new_game_status = GameStatus::Finished(GameResult::Winner(Color::White));
-                    } else {
-                        match (self.time_increment, self.time_base) {
-                            (Some(inc), None) => {
-                                black_time = Some((inc as u64 * NANOS_IN_SECOND) as i64);
-                            }
-                            (None, Some(_)) => {}
-                            _ => unreachable!(),
-                        }
-                    }
-                }
-                interaction = Some(Utc::now());
-            }
-        }
         let next_player = if state.turn % 2 == 0 {
             self.white_id
         } else {
             self.black_id
         };
-        if let GameStatus::Finished(game_result) = new_game_status.clone() {
+        if let GameStatus::Finished(game_result) = time_info.new_game_status.clone() {
             if let GameResult::Unknown = game_result {
                 panic!("GameResult is unknown but the game is over");
             };
@@ -494,12 +536,12 @@ impl Game {
                 conn,
             )
             .await?;
-            let new_turn = if timed_out {
+            let new_turn = if time_info.timed_out {
                 self.turn
             } else {
                 state.turn as i32
             };
-            if timed_out {
+            if time_info.timed_out {
                 new_conclusion = Conclusion::Timeout;
                 new_history.clone_from(&self.history);
             }
@@ -510,16 +552,16 @@ impl Game {
                     turn.eq(new_turn),
                     finished.eq(true),
                     tournament_game_result.eq(tgr.to_string()),
-                    game_status.eq(new_game_status.to_string()),
+                    game_status.eq(time_info.new_game_status.to_string()),
                     game_control_history.eq(game_control_history.concat(game_control_string)),
                     white_rating.eq(w_rating),
                     black_rating.eq(b_rating),
                     white_rating_change.eq(w_change),
                     black_rating_change.eq(b_change),
                     updated_at.eq(Utc::now()),
-                    white_time_left.eq(white_time),
-                    black_time_left.eq(black_time),
-                    last_interaction.eq(interaction),
+                    white_time_left.eq(time_info.white_time_left),
+                    black_time_left.eq(time_info.black_time_left),
+                    last_interaction.eq(Utc::now()),
                     conclusion.eq(new_conclusion.to_string()),
                 ))
                 .get_result(conn)
@@ -531,12 +573,12 @@ impl Game {
                     history.eq(new_history),
                     current_player_id.eq(next_player),
                     turn.eq(state.turn as i32),
-                    game_status.eq(new_game_status.to_string()),
+                    game_status.eq(time_info.new_game_status.to_string()),
                     game_control_history.eq(game_control_history.concat(game_control_string)),
                     updated_at.eq(Utc::now()),
-                    white_time_left.eq(white_time),
-                    black_time_left.eq(black_time),
-                    last_interaction.eq(interaction),
+                    white_time_left.eq(time_info.white_time_left),
+                    black_time_left.eq(time_info.black_time_left),
+                    last_interaction.eq(Utc::now()),
                 ))
                 .get_result(conn)
                 .await?;
