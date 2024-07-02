@@ -1,13 +1,7 @@
+use crate::components::organisms::reserve::ReserveContent;
 use crate::{
-    components::{
-        molecules::{analysis_and_download::AnalysisAndDownload, control_buttons::ControlButtons},
-        organisms::{
-            chat::ChatWindow,
-            history::History,
-            reserve::{Alignment, Reserve},
-        },
-    },
-    providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
+    components::organisms::{chat::ChatWindow, history::History},
+    providers::{chat::Chat, game_state::GameStateSignal},
 };
 use hive_lib::Color;
 use leptix_primitives::components::tabs::{TabsContent, TabsList, TabsRoot, TabsTrigger};
@@ -64,33 +58,10 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
 
 #[component]
 pub fn SideboardTabs(
-    player_is_black: Memo<bool>,
+    player_color: Memo<Color>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
     let tab = RwSignal::new(TabView::Reserve);
-    let auth_context = expect_context::<AuthContext>();
-    let user = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user),
-        _ => None,
-    };
-    let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
-
-    let show_buttons = move || {
-        user().map_or(false, |user| {
-            let (white_id, black_id) = white_and_black();
-            Some(user.id) == black_id || Some(user.id) == white_id
-        })
-    };
-
-    let top_color = Signal::derive(move || {
-        if player_is_black() {
-            Color::White
-        } else {
-            Color::Black
-        }
-    });
-    let bottom_color = Signal::derive(move || top_color().opposite_color());
     view! {
         <TabsRoot
             default_value="Game"
@@ -107,14 +78,7 @@ pub fn SideboardTabs(
                 </div>
             </TabsList>
             <TabsContent value="Game" attr:class="flex flex-col h-full">
-                <Reserve color=top_color alignment=Alignment::DoubleRow/>
-                <div class="flex flex-row-reverse justify-center items-center">
-                    <AnalysisAndDownload/>
-                    <Show when=show_buttons>
-                        <ControlButtons/>
-                    </Show>
-                </div>
-                <Reserve color=bottom_color alignment=Alignment::DoubleRow/>
+                <ReserveContent player_color/>
             </TabsContent>
             <TabsContent value="History" attr:class="h-full">
                 <History/>

@@ -87,6 +87,14 @@ pub fn MobileDropdown() -> impl IntoView {
                 <a
                     class=COMMON_LINK_STYLE
                     on:click=onclick_close
+                    href="/analysis"
+                    target="_blank"
+                >
+                    Analysis
+                </a>
+                <a
+                    class=COMMON_LINK_STYLE
+                    on:click=onclick_close
                     href="https://hivegame.com/download/rules.pdf"
                     target="_blank"
                 >
@@ -122,6 +130,14 @@ pub fn LearnDropdown() -> impl IntoView {
             dropdown_style=DROPDOWN_MENU_STYLE
             content="Learn"
         >
+            <a
+                class=COMMON_LINK_STYLE
+                on:click=onclick_close
+                href="/analysis"
+                target="_blank"
+            >
+                Analysis
+            </a>
             <a
                 class=COMMON_LINK_STYLE
                 on:click=onclick_close
