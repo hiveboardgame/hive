@@ -9,12 +9,10 @@ pub enum PieceType {
     // piece in history view
     History,
     // not your turn
+    #[default]
     Inactive,
     // a not yet moved piece on the board
     Move,
-    // uninteractive
-    #[default]
-    Nope,
     // piece in reserve
     Reserve,
     // a not yet spawned piece on a spawn point
@@ -28,7 +26,6 @@ impl fmt::Display for PieceType {
             PieceType::Covered => "covered",
             PieceType::Inactive => "inactive",
             PieceType::History => "history",
-            PieceType::Nope => "nope",
             PieceType::Reserve => "reserve",
             PieceType::Spawn => "spawn",
             PieceType::Move => "move",
