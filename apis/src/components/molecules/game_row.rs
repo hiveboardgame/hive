@@ -87,15 +87,26 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     };
 
     view! {
-        <article class="flex relative px-2 py-4 mx-2 w-full h-72 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+        <article class="flex relative px-2 py-4 mx-2 w-full h-72 duration-300
+                        dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light
+                        even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="mx-2 w-60 h-60">
                 <ThumbnailPieces game=game()/>
             </div>
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">
                 <div class="flex flex-col justify-between">
-                    <div class="flex gap-1">{rated_string} <TimeRow time_info/></div>
+                    <div class="flex gap-1">{rated_string}
+                        <TimeRow time_info/>
+                        <Show when=move || game().tournament.is_some()>
+                            played in 
+                            <a
+                                href={format!("/tournament/{}", game().tournament.unwrap().tournament_id)}
+                            >
+                                {game().tournament.unwrap().name}
+                            </a>
+                        </Show>
+                    </div>
                     <div>{ago}</div>
-
                 </div>
                 <div class="flex gap-1 justify-center items-center w-full">
                     <div class="mr-2">

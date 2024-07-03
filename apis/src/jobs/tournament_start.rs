@@ -17,7 +17,6 @@ pub fn run(pool: DbPool, lobby: Data<Addr<Lobby>>) {
         let mut interval = actix_rt::time::interval(Duration::from_secs(60));
         loop {
             interval.tick().await;
-            println!("Checking for tournaments to be started...");
             if let Ok(mut conn) = get_conn(&pool).await {
                 let lobby = lobby.clone();
                 let _ = conn
