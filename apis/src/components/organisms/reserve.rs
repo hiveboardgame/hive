@@ -104,16 +104,11 @@ pub fn Reserve(
                 };
                 let bs = BugStack::new();
                 let mut hs = HexStack::new(&bs, position);
-                let stack_height = piece_strings.len() - 1;
                 for (i, piece_str) in piece_strings.iter().rev().enumerate() {
                     let piece = Piece::from_str(piece_str).expect("Parsed piece");
                     let piece_type =
                         if piece_active(&game_state.state, &board_view, &piece, last_turn()) {
-                            if i == stack_height {
-                                PieceType::Reserve
-                            } else {
-                                PieceType::Nope
-                            }
+                            PieceType::Reserve
                         } else {
                             PieceType::Inactive
                         };

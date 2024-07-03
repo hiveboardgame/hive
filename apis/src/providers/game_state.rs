@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::common::MoveInfo;
 use crate::providers::api_requests::ApiRequests;
 use crate::responses::GameResponse;
@@ -380,8 +382,18 @@ impl GameState {
             .board
             .spawnable_positions(self.state.turn_color)
             .collect::<Vec<Position>>();
-        self.move_info.active = Some(piece);
-        self.move_info.reserve_position = Some(position);
+        let reserve = self
+            .state
+            .board
+            .reserve(self.state.turn_color, self.state.game_type);
+        if let Some(pieces) = reserve.get(&piece.bug()) {
+            if let Some(piece) = pieces.first() {
+                if let Ok(piece) = Piece::from_str(piece) {
+                    self.move_info.active = Some(piece);
+                    self.move_info.reserve_position = Some(position);
+                }
+            }
+        }
     }
 
     pub fn show_history_turn(&mut self, turn: usize) {
