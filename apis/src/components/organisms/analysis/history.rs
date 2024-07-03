@@ -103,13 +103,16 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                     {content}
                 }
             };
-            branches.insert(node_id, content.clone());
             /* We are start of a new branch so clear the content
             to process either the next sibling or tho parent */
             if parent_deg > 1 {
+                //save the branch only when its the start
+                branches.insert(node_id, content.clone());
                 content = Fragment::new(vec![]);
             }
         }
+        //all branches are processed
+        debug_assert!(branches.is_empty());
         Some(content)
     };
     let viewbox_str = "-32 -40 250 120";
