@@ -3,7 +3,7 @@ use crate::{
     components::{
         layouts::base_layout::OrientationSignal,
         organisms::{
-            analysis::{AnalysisSignal, AnalysisTree, History, ToggleStates, UndoButton},
+            analysis::{AnalysisSignal, AnalysisTree, History, ToggleStates},
             board::Board,
             reserve::{Alignment, Reserve},
         },
@@ -28,7 +28,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         if is_tall() {
             "flex flex-col h-full"
         } else {
-            "max-h-[100dvh] min-h-[100dvh] grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 pr-1"
+            "max-h-[100dvh] min-h-[100dvh] grid grid-cols-10  grid-rows-6 pr-1"
         }
     };
     let bottom_color = Color::Black;
@@ -37,7 +37,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     view! {
         <div class=move || {
             format!(
-                "pt-10 bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
+                "pt-12 bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
                 parent_container_style(),
             )
         }>
@@ -63,7 +63,6 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
                             <Reserve alignment=Alignment::SingleRow color=bottom_color/>
-                            <UndoButton/>
                         </div>
                     </div>
                 </div>

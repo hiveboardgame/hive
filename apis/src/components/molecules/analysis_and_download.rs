@@ -2,6 +2,7 @@ use crate::components::atoms::download_pgn::DownloadPgn;
 use crate::providers::game_state::GameStateSignal;
 use leptos::*;
 use leptos_icons::*;
+use shared_types::GameSpeed;
 
 #[component]
 pub fn AnalysisAndDownload() -> impl IntoView {
@@ -10,10 +11,16 @@ pub fn AnalysisAndDownload() -> impl IntoView {
         let mut game_state = expect_context::<GameStateSignal>();
         game_state.do_analysis();
     };
+    let correspondence = create_read_slice(game_state.signal, |gs| {
+        gs.game_response.as_ref().map_or(false, |gr| {
+            gr.speed == GameSpeed::Correspondence || gr.speed == GameSpeed::Untimed
+        })
+    });
+    let is_finished = game_state.is_finished();
 
     view! {
-        <Show when=game_state.is_finished()>
-            <div class="flex justify-center items-center mt-1">
+        <Show when=move || is_finished() || correspondence()>
+            <div class="flex justify-center items-center place-self-start">
                 <a
                     href="/analysis"
                     class="justify-self-end place-self-center m-1 text-white rounded duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
