@@ -101,6 +101,10 @@ pub fn App() -> impl IntoView {
                             path="finished"
                             view=|| view! { <DisplayGames tab_view=ProfileGamesView::Finished/> }
                         />
+                        <Route
+                            path="unstarted"
+                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Unstarted/> }
+                        />
                     </Route>
                     <Route path="/register" view=|| view! { <Register/> }/>
                     <Route path="/top_players" view=|| view! { <TopPlayers/> }/>
