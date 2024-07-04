@@ -8,12 +8,12 @@ use crate::{
 
 use leptos::*;
 use leptos_router::use_navigate;
-use shared_types::TimeMode;
+use shared_types::{GameStart, TimeMode};
 
 pub fn handle_new_game(game_response: GameResponse) {
     let mut games = expect_context::<GamesSignal>();
-    games.own_games_add(game_response.to_owned());
-    let should_navigate = if game_response.tournament.is_none() {
+    let should_navigate = if game_response.game_start != GameStart::Ready {
+        games.own_games_add(game_response.to_owned());
         match game_response.time_mode {
             TimeMode::RealTime => true,
             TimeMode::Correspondence | TimeMode::Untimed => {

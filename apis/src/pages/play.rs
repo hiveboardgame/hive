@@ -19,6 +19,7 @@ use crate::{
 };
 use hive_lib::{Color, GameStatus, Position};
 use leptos::*;
+use shared_types::GameStart;
 
 #[derive(Clone)]
 pub struct TargetStack(pub RwSignal<Option<Position>>);
@@ -96,7 +97,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         Signal::derive(move || !controls_signal.hidden.get() || game_state.is_finished()());
     let show_board = create_read_slice(game_state.signal, |gs| {
         !gs.game_response.as_ref().map_or(false, |gr| {
-            gr.tournament.is_some() && matches!(gr.game_status, GameStatus::NotStarted)
+            gr.game_start == GameStart::Ready && matches!(gr.game_status, GameStatus::NotStarted)
         })
     });
 

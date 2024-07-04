@@ -21,24 +21,18 @@ lazy_static! {
 pub fn LiveTimer(side: Color) -> impl IntoView {
     let timer_signal = expect_context::<TimerSignal>();
     let game_state = expect_context::<GameStateSignal>();
-    let tournament_game_in_progress = move || {
-        game_state.signal.get().game_response.map_or(false, |gr| {
-            gr.tournament.is_some() && gr.game_status == GameStatus::InProgress
-        })
-    };
+    let in_progress = create_read_slice(game_state.signal, |gs| {
+        gs.game_response
+            .as_ref()
+            .map_or(false, |gr| gr.game_status == GameStatus::InProgress)
+    });
     let timer = timer_signal.signal.get_untracked();
     let color_time = move |color: Color| {
-        let (left, not_user_turn) = match color {
-            Color::White => (timer.white_time_left.unwrap(), timer.turn % 2 == 1),
-            Color::Black => (timer.black_time_left.unwrap(), timer.turn % 2 == 0),
+        let (left, user_turn) = match color {
+            Color::White => (timer.white_time_left.unwrap(), timer.turn % 2 == 0),
+            Color::Black => (timer.black_time_left.unwrap(), timer.turn % 2 == 1),
         };
-        if (timer.turn < 2 && !tournament_game_in_progress())
-            || left == Duration::from_millis(0)
-            || not_user_turn
-            || timer.finished
-        {
-            left
-        } else {
+        if in_progress() && user_turn {
             let left = chrono::Duration::from_std(left).unwrap();
             let then = timer.last_interaction.unwrap();
             let future = then.checked_add_signed(left).unwrap();
@@ -48,6 +42,8 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
             } else {
                 future.signed_duration_since(now).to_std().unwrap()
             }
+        } else {
+            left
         }
     };
 
@@ -86,7 +82,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
     // WARN: Might lead to problems, if we get  re-render loops, this could be the cause.
     create_isomorphic_effect(move |_| {
         let timer = timer_signal.signal.get();
-        if timer.turn > 1 || tournament_game_in_progress() {
+        if in_progress() {
             if (side == Color::White) == (timer.turn % 2 == 0) && !timer.finished {
                 resume();
             } else if is_active() {
