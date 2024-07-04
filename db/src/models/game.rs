@@ -31,12 +31,12 @@ struct TimeInfo {
 }
 
 impl TimeInfo {
-    pub fn new() -> Self {
+    pub fn new(status: GameStatus) -> Self {
         Self {
             white_time_left: None,
             black_time_left: None,
             timed_out: false,
-            new_game_status: GameStatus::NotStarted,
+            new_game_status: status,
         }
     }
 }
@@ -221,7 +221,7 @@ pub struct Game {
     pub conclusion: String,
     pub tournament_id: Option<Uuid>,
     pub tournament_game_result: String,
-    game_start: String,
+    pub game_start: String,
 }
 
 impl Game {
@@ -402,6 +402,12 @@ impl Game {
 
     fn calculate_time_left_add_increment(&self) -> Result<(Option<i64>, Option<i64>), DbError> {
         let (mut white_time, mut black_time) = self.calculate_time_left()?;
+        if let (Some(w), Some(b)) = (white_time, black_time) {
+            if w == 0 || b == 0 {
+                return Ok((white_time, black_time));
+            }
+        }
+
         let increment = self.time_increment_duration()?.as_nanos() as i64;
         if self.turn % 2 == 0 {
             white_time = white_time.map(|time| time + increment);
@@ -411,16 +417,16 @@ impl Game {
         Ok((white_time, black_time))
     }
 
-    fn get_time_info(&self) -> Result<TimeInfo, DbError> {
+    fn get_time_info(&self, status: GameStatus) -> Result<TimeInfo, DbError> {
         match TimeMode::from_str(&self.time_mode)? {
-            TimeMode::Untimed => Ok(TimeInfo::new()),
-            TimeMode::RealTime => self.get_realtime_time_info(),
-            TimeMode::Correspondence => self.get_correspondence_time_info(),
+            TimeMode::Untimed => Ok(TimeInfo::new(status)),
+            TimeMode::RealTime => self.get_realtime_time_info(status),
+            TimeMode::Correspondence => self.get_correspondence_time_info(status),
         }
     }
 
-    fn get_realtime_time_info(&self) -> Result<TimeInfo, DbError> {
-        let mut time_info = TimeInfo::new();
+    fn get_realtime_time_info(&self, status: GameStatus) -> Result<TimeInfo, DbError> {
+        let mut time_info = TimeInfo::new(status);
         if self.turn < 2 && self.game_start == GameStart::Moves.to_string() {
             time_info.white_time_left = self.white_time_left;
             time_info.black_time_left = self.black_time_left;
@@ -441,14 +447,13 @@ impl Game {
         Ok(time_info)
     }
 
-    fn get_correspondence_time_info(&self) -> Result<TimeInfo, DbError> {
-        let mut time_info = TimeInfo::new();
+    fn get_correspondence_time_info(&self, status: GameStatus) -> Result<TimeInfo, DbError> {
+        let mut time_info = TimeInfo::new(status);
         if self.turn < 2 && self.game_start == GameStart::Moves.to_string() {
             time_info.white_time_left = self.white_time_left;
             time_info.black_time_left = self.black_time_left;
         } else {
-            (time_info.white_time_left, time_info.black_time_left) =
-                self.calculate_time_left_add_increment()?;
+            (time_info.white_time_left, time_info.black_time_left) = self.calculate_time_left()?;
             if self.turn % 2 == 0 {
                 if time_info.white_time_left == Some(0) {
                     time_info.timed_out = true;
@@ -506,7 +511,7 @@ impl Game {
         }
 
         let mut new_conclusion = Conclusion::Unknown;
-        let time_info = self.get_time_info()?;
+        let time_info = self.get_time_info(state.game_status.clone())?;
 
         match time_info.new_game_status {
             GameStatus::Finished(GameResult::Draw) => new_conclusion = Conclusion::Board,
@@ -561,7 +566,7 @@ impl Game {
                     updated_at.eq(Utc::now()),
                     white_time_left.eq(time_info.white_time_left),
                     black_time_left.eq(time_info.black_time_left),
-                    last_interaction.eq(Utc::now()),
+                    last_interaction.eq(Some(Utc::now())),
                     conclusion.eq(new_conclusion.to_string()),
                 ))
                 .get_result(conn)
@@ -578,7 +583,7 @@ impl Game {
                     updated_at.eq(Utc::now()),
                     white_time_left.eq(time_info.white_time_left),
                     black_time_left.eq(time_info.black_time_left),
-                    last_interaction.eq(Utc::now()),
+                    last_interaction.eq(Some(Utc::now())),
                 ))
                 .get_result(conn)
                 .await?;
