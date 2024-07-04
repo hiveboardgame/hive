@@ -15,14 +15,21 @@ use chrono::Utc;
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos::*;
 use leptos_icons::*;
-use shared_types::TimeInfo;
+use shared_types::{GameStart, TimeInfo};
 
 #[component]
 pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     let rated_string = if game().rated { " RATED" } else { " CASUAL" };
 
     let result_string = match game().game_status {
-        GameStatus::NotStarted | GameStatus::InProgress => "Playing now".to_string(),
+        GameStatus::NotStarted => {
+            if game().game_start == GameStart::Ready {
+                "The game will start once both players agree on a time".to_string()
+            } else {
+                "Not started".to_string()
+            }
+        }
+        GameStatus::InProgress => "Playing now".to_string(),
         GameStatus::Finished(res) => match res {
             GameResult::Winner(c) => GameResult::Winner(c).to_string(),
             GameResult::Draw => GameResult::Draw.to_string(),
@@ -40,7 +47,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
         } else {
             (
                 Utc::now().signed_duration_since(game().created_at),
-                "Started",
+                "Created",
             )
         };
         if time.num_weeks() > 1 {
@@ -87,9 +94,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     };
 
     view! {
-        <article class="flex relative px-2 py-4 mx-2 w-full h-72 duration-300
-                        dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light
-                        even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+        <article class="flex relative px-2 py-4 mx-2 w-full h-72 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="mx-2 w-60 h-60">
                 <ThumbnailPieces game=game()/>
             </div>
@@ -98,8 +103,9 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     <div class="flex gap-1">{rated_string}
                         <TimeRow time_info/>
                         <Show when=move || game().tournament.is_some()>
-                            played in 
+                            played in
                             <a
+                                class="z-20 text-blue-500 hover:underline"
                                 href={format!("/tournament/{}", game().tournament.unwrap().tournament_id)}
                             >
                                 {game().tournament.unwrap().name}

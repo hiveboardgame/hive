@@ -10,12 +10,13 @@ pub fn DisplayGames(tab_view: ProfileGamesView) -> impl IntoView {
     let games = match tab_view {
         ProfileGamesView::Finished => all_games.finished,
         ProfileGamesView::Playing => all_games.playing,
+        ProfileGamesView::Unstarted => all_games.unstarted,
     };
     let is_active = expect_context::<RwSignal<ProfileGamesView>>();
     let elem = create_node_ref::<html::Div>();
     elem.on_load(move |_| is_active.update(|v| *v = tab_view));
     view! {
-        <div ref=elem class="w-full flex flex-col items-center">
+        <div ref=elem class="flex flex-col items-center w-full">
             <For
                 each=games
 
