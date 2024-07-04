@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{Conclusion, GameId, GameSpeed, TimeMode};
+use shared_types::{Conclusion, GameId, GameSpeed, GameStart, TimeMode};
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
@@ -59,6 +59,7 @@ pub struct GameResponse {
     pub hashes: Vec<u64>,
     pub conclusion: Conclusion,
     pub repetitions: Vec<usize>,
+    pub game_start: GameStart,
 }
 
 impl PartialEq for GameResponse {
@@ -232,6 +233,7 @@ impl GameResponse {
             updated_at: game.updated_at,
             conclusion: Conclusion::from_str(&game.conclusion)?,
             repetitions: state.repeating_moves.clone(),
+            game_start: GameStart::from_str(&game.game_start)?,
         })
     }
 
