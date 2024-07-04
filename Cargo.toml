@@ -55,7 +55,7 @@ cookie = "0.18"
 skillratings = "0.26"
 chrono = { version = "0.4", features = ["serde"] }
 leptix_primitives = { version = "0.2.0" }
-tree-ds = {version = "0.1.4", features = ["serde", "auto_id"] }
+tree-ds = {version = "0.1.4", features = ["serde"] }
 bincode = { version = "1.3.3"}
 base64 = { version = "0.22.1"}
 # Defines a size-optimized profile for the WASM bundle in release mode
