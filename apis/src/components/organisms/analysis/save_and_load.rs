@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose, Engine as _};
 use core::str;
 use hive_lib::History;
 use leptos::*;
@@ -44,7 +45,7 @@ pub fn DownloadTree(tree: AnalysisTree) -> impl IntoView {
 
 fn blob_and_filename(tree: AnalysisTree) -> (Blob, String) {
     let tree = bincode::serialize(&tree).unwrap();
-    let tree = String::from_utf8(tree).unwrap();
+    let tree = general_purpose::STANDARD.encode(tree);
     let file = Array::from(&JsValue::from(tree));
     let date = chrono::offset::Local::now()
         .format("%d-%b-%Y_%H:%M:%S")
@@ -67,51 +68,52 @@ pub fn LoadTree() -> impl IntoView {
             .expect("div to be loaded")
             .on_mount(move |_| loaded.set(true));
     });
+    let maybe_update_tree = move |maybe_tree: Option<AnalysisTree>| {
+        if let Some(tree) = maybe_tree {
+            analysis.update(|a| {
+                if let Some(a) = a {
+                    a.reset();
+                    a.tree = tree.tree;
+                    if let Some(current_node) = tree.current_node {
+                        a.update_node(current_node.get_node_id());
+                    }
+                }
+            });
+            Some(())
+        } else {
+            None
+        }
+    };
     view! {
         <div ref=div_ref class="m-1 w-1/3 h-7">
             <Show when=loaded>
+
                 {
                     let from_hat = Closure::new(move |string: JsValue| {
-                        let bytes = string.as_string().unwrap().as_bytes().to_vec();
-                        if let Ok(tree) = bincode::deserialize::<AnalysisTree>(&bytes) {
-                            analysis
-                                .update(|a| {
-                                    if let Some(a) = a {
-                                        a.reset();
-                                        a.tree = tree.tree;
-                                        if let Some(current_node) = tree.current_node {
-                                            a.update_node(current_node.get_node_id());
-                                        }
-                                    }
-                                });
-                        } else {
-                            logging::log!("Couldn't open analysis file");
+                        let res = string
+                            .as_string()
+                            .and_then(|string| general_purpose::STANDARD.decode(string).ok())
+                            .and_then(|bytes| {
+                                maybe_update_tree(bincode::deserialize::<AnalysisTree>(&bytes).ok())
+                            });
+                        if res.is_none() {
+                            logging::log!("Couldn't open file");
                         }
                     });
                     let from_pgn = Closure::new(move |string: JsValue| {
-                        let string = string.as_string().unwrap();
-                        let history = History::from_pgn_str(string);
-                        if let Ok(history) = history {
-                            let state = hive_lib::State::new_from_history(&history)
-                                .expect("Couldn't create game state");
-                            let mut new_gs = GameState::new();
-                            new_gs.state = state;
-                            let new_gs_signal = GameStateSignal::new();
-                            new_gs_signal.signal.update_untracked(|gs| *gs = new_gs);
-                            if let Some(tree) = AnalysisTree::from_state(new_gs_signal) {
-                                analysis
-                                    .update(|a| {
-                                        if let Some(a) = a {
-                                            a.reset();
-                                            a.tree = tree.tree;
-                                            if let Some(current_node) = tree.current_node {
-                                                a.update_node(current_node.get_node_id());
-                                            }
-                                        }
-                                    });
-                            } else {
-                                logging::log!("Couldn't open pgn file");
-                            }
+                        let res = string
+                            .as_string()
+                            .and_then(|string| { History::from_pgn_str(string).ok() })
+                            .and_then(|history| hive_lib::State::new_from_history(&history).ok())
+                            .and_then(|state| {
+                                let mut new_gs = GameState::new();
+                                new_gs.state = state;
+                                let new_gs_signal = GameStateSignal::new();
+                                new_gs_signal.signal.update_untracked(|gs| *gs = new_gs);
+                                maybe_update_tree(AnalysisTree::from_state(new_gs_signal))
+                            });
+                        if res.is_none() {
+                            logging::log!("Couldn't open file");
                         }
                     });
                     view! {
@@ -121,37 +123,35 @@ pub fn LoadTree() -> impl IntoView {
                         >
                             "Load"
                             <input
-                            ref=input_ref
-                            on:input=move |_| {
-                                let file = input_ref
-                                    .get_untracked()
-                                    .unwrap()
-                                    .files()
-                                    .unwrap()
-                                    .get(0)
-                                    .unwrap();
-                                let filename = file.name();
-                                let ext = Path::new(&filename).extension().unwrap();
-                                ext.to_str()
-                                    .map_or_else(
-                                        || logging::log!("Couldn't open file"),
-                                        |ext| match ext {
-                                            "hat" => {
+                                ref=input_ref
+                                on:input=move |_| {
+                                    let file = input_ref
+                                        .get_untracked()
+                                        .unwrap()
+                                        .files()
+                                        .unwrap()
+                                        .get(0)
+                                        .unwrap();
+                                    Path::new(&file.name())
+                                        .extension()
+                                        .map_or_else(
+                                            || logging::log!("Couldn't open file"),
+                                            |ext| {
+                                            if ext == "hat" {
                                                 let _ = file.text().then(&from_hat);
-                                            }
-                                            "pgn" => {
+                                            } else if ext == "pgn" {
                                                 let _ = file.text().then(&from_pgn);
+                                            } else {
+                                                logging::log!("Couldn't open file");
                                             }
-                                            _ => logging::log!("Couldn't open file"),
-                                        },
-                                    );
-                            }
+                                        });
+                                }
 
-                            type="file"
-                            id="load-analysis"
-                            class="hidden"
-                            accept=".hat,.pgn"
-                        />
+                                type="file"
+                                id="load-analysis"
+                                class="hidden"
+                                accept=".hat,.pgn"
+                            />
                         </label>
                     }
                 }
