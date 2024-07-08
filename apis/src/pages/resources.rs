@@ -1,6 +1,5 @@
-use leptos::*;
-
 use crate::components::molecules::banner::Banner;
+use leptos::*;
 
 #[component]
 pub fn Resources() -> impl IntoView {
