@@ -69,7 +69,7 @@ impl TurnHandler {
         });
         let response = GameResponse::from_model(&game, &mut conn).await?;
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Game(game.nanoid.clone()),
+            destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: GameId(game.nanoid.to_owned()),
                 game: response.clone(),

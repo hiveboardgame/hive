@@ -1,7 +1,10 @@
 use crate::common::{TournamentAction, UserAction};
 use crate::components::molecules::score_row::ScoreRow;
-use crate::components::molecules::{
-    game_previews::GamePreviews, invite_user::InviteUser, time_row::TimeRow, user_row::UserRow,
+use crate::components::{
+    molecules::{
+        game_previews::GamePreviews, invite_user::InviteUser, time_row::TimeRow, user_row::UserRow,
+    },
+    organisms::chat::ChatWindow,
 };
 use crate::providers::{
     navigation_controller::NavigationControllerSignal, tournaments::TournamentStateSignal,
@@ -151,9 +154,15 @@ pub fn Tournament() -> impl IntoView {
             };
             let not_started = move || tournament().status == TournamentStatus::NotStarted;
             view! {
-                <h1 class="place-self-center p-2 text-3xl font-bold">{tournament().name}</h1>
+                <div class="flex justify-center p-2 w-full">
+                    <h1 class="w-full max-w-full text-3xl font-bold text-center whitespace-normal break-words">
+                        {tournament().name}
+                    </h1>
+                </div>
                 <div class="overflow-y-auto w-60 md:w-[720px] max-h-96 flex justify-center">
-                    {tournament().description}
+                    <div class="w-full whitespace-normal break-words">
+                        {tournament().description}
+                    </div>
                 </div>
                 <div>
                     <p class="font-bold">Tournament details:</p>
@@ -251,7 +260,7 @@ pub fn Tournament() -> impl IntoView {
 
                         <div class="flex flex-col items-center w-full">
                             <p class="font-bold">Standings</p>
-                            <div class="flex p-1 items-center justify-between h-10 w-64 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
+                            <div class="flex justify-between items-center p-1 w-64 h-10 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
                                 <div class="flex justify-between mr-2 w-full">
                                     <div class="flex items-center">Position</div>
 
@@ -323,6 +332,9 @@ pub fn Tournament() -> impl IntoView {
                             </div>
                         </div>
                     </Show>
+                    <div class="m-2 w-full h-72 whitespace-normal break-words bg-odd-light dark:bg-odd-dark">
+                        <ChatWindow destination=shared_types::SimpleDestination::Tournament/>
+                    </div>
                 </div>
             }
             .into()
@@ -330,7 +342,7 @@ pub fn Tournament() -> impl IntoView {
     };
     view! {
         <div class="flex flex-col justify-center items-center pt-20 w-full">
-            <div class="container flex flex-col items-center">{display_tournament}</div>
+            <div class="container flex flex-col items-center w-full">{display_tournament}</div>
         </div>
     }
 }

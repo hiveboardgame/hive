@@ -82,10 +82,16 @@ impl RequestHandler {
                 ChatHandler::new(message_container, self.chat_storage.clone()).handle()
             }
             ClientRequest::Tournament(tournament_action) => {
-                TournamentHandler::new(tournament_action, &self.username, self.user_id, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
+                TournamentHandler::new(
+                    tournament_action,
+                    &self.username,
+                    self.user_id,
+                    self.chat_storage.clone(),
+                    &self.pool,
+                )
+                .await?
+                .handle()
+                .await?
             }
             ClientRequest::Ping(sent) => PingHandler::new(self.user_id, sent).handle(),
             ClientRequest::Game {

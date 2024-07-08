@@ -36,7 +36,7 @@ impl Display for GameId {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub struct TournamentId(pub String);
 
 impl Display for TournamentId {

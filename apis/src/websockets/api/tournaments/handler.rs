@@ -5,7 +5,10 @@ use super::{
     invitation_decline::InvitationDecline, invitation_retract::InvitationRetract,
     join::JoinHandler, kick::KickHandler, leave::LeaveHandler, start::StartHandler,
 };
-use crate::{common::TournamentAction, websockets::internal_server_message::InternalServerMessage};
+use crate::{
+    common::TournamentAction,
+    websockets::{chat::Chats, internal_server_message::InternalServerMessage},
+};
 use anyhow::Result;
 use db_lib::DbPool;
 use uuid::Uuid;
@@ -15,6 +18,7 @@ pub struct TournamentHandler {
     pub pool: DbPool,
     pub user_id: Uuid,
     pub username: String,
+    pub chat_storage: actix_web::web::Data<Chats>,
 }
 
 impl TournamentHandler {
@@ -22,6 +26,7 @@ impl TournamentHandler {
         action: TournamentAction,
         username: &str,
         user_id: Uuid,
+        chat_storage: actix_web::web::Data<Chats>,
         pool: &DbPool,
     ) -> Result<Self> {
         Ok(Self {
@@ -29,6 +34,7 @@ impl TournamentHandler {
             action,
             user_id,
             username: username.to_owned(),
+            chat_storage,
         })
     }
 
@@ -47,10 +53,15 @@ impl TournamentHandler {
                     .await?
             }
             TournamentAction::Get(tournament_id) => {
-                GetHandler::new(tournament_id, self.user_id, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
+                GetHandler::new(
+                    tournament_id,
+                    self.user_id,
+                    self.chat_storage.clone(),
+                    &self.pool,
+                )
+                .await?
+                .handle()
+                .await?
             }
             TournamentAction::GetAll => {
                 GetAllHandler::new(self.user_id, &self.pool)

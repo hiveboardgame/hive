@@ -60,7 +60,7 @@ impl AbandonHandler {
                 .expect("User who aborted game to be player");
             let game_control = GameControl::Resign(color);
             messages.push(InternalServerMessage {
-                destination: MessageDestination::Game(game.nanoid.clone()),
+                destination: MessageDestination::Game(GameId(game.nanoid.clone())),
                 message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                     game_id: GameId(game.nanoid.to_owned()),
                     game: game_response.clone(),

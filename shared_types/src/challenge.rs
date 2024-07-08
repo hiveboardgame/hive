@@ -1,8 +1,7 @@
-use std::{fmt, str::FromStr};
-
 use crate::TimeMode;
 use hive_lib::{ColorChoice, GameType};
 use serde::{Deserialize, Serialize};
+use std::{fmt, str::FromStr};
 use thiserror::Error;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChallengeVisibility {

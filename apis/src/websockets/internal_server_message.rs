@@ -1,5 +1,6 @@
 use super::messages::WsMessage;
 use crate::common::ServerMessage;
+use shared_types::{GameId, TournamentId};
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -12,8 +13,8 @@ pub struct InternalServerMessage {
 pub enum MessageDestination {
     Direct(actix::Recipient<WsMessage>), // to non logged in user
     User(Uuid),                          // to a user
-    Game(String),                        // to everyone in the game
-    GameSpectators(String, Uuid, Uuid), // to everyone in game excluding players, nanoid, white_id, black_id
+    Game(GameId),                        // to everyone in the game
+    GameSpectators(GameId, Uuid, Uuid), // to everyone in game excluding players, nanoid, white_id, black_id
     Global,                             // to everyone online
-    Tournament(String),                 // to everyone that joined the tournament
+    Tournament(TournamentId),           // to everyone that joined the tournament
 }
