@@ -1,7 +1,7 @@
 use super::{GameResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared_types::{Standings, TimeMode, TournamentId, TournamentStatus};
+use shared_types::{Standings, Tiebreaker, TimeMode, TournamentId, TournamentStatus};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -20,7 +20,7 @@ pub struct TournamentResponse {
     pub name: String,
     pub description: String,
     pub scoring: String,
-    pub tiebreaker: Vec<String>,
+    pub tiebreakers: Vec<Tiebreaker>,
     pub invitees: Vec<UserResponse>,
     pub players: HashMap<Uuid, UserResponse>,
     pub organizers: Vec<UserResponse>,
@@ -100,10 +100,13 @@ impl TournamentResponse {
             standings.add_result(
                 game.white_id,
                 game.black_id,
+                game.white_rating.unwrap_or(0.0),
+                game.black_rating.unwrap_or(0.0),
                 TournamentGameResult::from_str(&game.tournament_game_result)?,
             );
             game_responses.push(GameResponse::from_model(&game, conn).await?);
         }
+        standings.enforce_tiebreakers();
         Ok(Box::new(Self {
             id: tournament.id,
             tournament_id: TournamentId(tournament.nanoid.clone()),
@@ -114,12 +117,10 @@ impl TournamentResponse {
             players,
             organizers,
             games: game_responses,
-            tiebreaker: tournament
+            tiebreakers: tournament
                 .tiebreaker
                 .clone()
-                .into_iter()
-                .flatten()
-                .collect(),
+                .into_iter().flatten().flat_map(|t| Tiebreaker::from_str(&t).ok()).collect(),
             invitees,
             seats: tournament.seats,
             min_seats: tournament.min_seats,

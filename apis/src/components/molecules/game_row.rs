@@ -100,14 +100,20 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
             </div>
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">
                 <div class="flex flex-col justify-between">
-                    <div class="flex gap-1">{rated_string}
-                        <TimeRow time_info/>
-                        <Show when=move || game().tournament.is_some()>
+                    <div class="flex gap-1">
+                        {rated_string} <TimeRow time_info/>
+                        <Show when=move || {
+                            game().tournament.is_some()
+                        }>
                             played in
                             <a
                                 class="z-20 text-blue-500 hover:underline"
-                                href={format!("/tournament/{}", game().tournament.unwrap().tournament_id)}
+                                href=format!(
+                                    "/tournament/{}",
+                                    game().tournament.unwrap().tournament_id,
+                                )
                             >
+
                                 {game().tournament.unwrap().name}
                             </a>
                         </Show>

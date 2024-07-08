@@ -12,3 +12,4 @@ uuid = { workspace = true }
 chrono = { workspace = true }
 hive = { path = "../engine" }
 anyhow = { workspace = true }
+itertools = { workspace = true }
