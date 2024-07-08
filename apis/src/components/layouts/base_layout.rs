@@ -152,7 +152,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         };
 
         if ws_ready() == ConnectionReadyState::Open {
-            navi.update_game_id(game_id, tournament_id);
+            navi.update_ids(game_id, tournament_id);
         };
     });
 

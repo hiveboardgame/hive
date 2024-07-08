@@ -3,7 +3,7 @@ use super::{
     navigation_controller::NavigationControllerSignal, AlertType, AlertsContext,
 };
 use leptos::*;
-use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId};
+use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId, TournamentId};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -15,8 +15,8 @@ pub struct Chat {
     pub games_private_new_messages: RwSignal<HashMap<GameId, bool>>,
     pub games_public_messages: RwSignal<HashMap<GameId, Vec<ChatMessage>>>, // game_id -> Messages
     pub games_public_new_messages: RwSignal<HashMap<GameId, bool>>,
-    pub tournament_lobby_messages: RwSignal<HashMap<String, Vec<ChatMessage>>>, // tournament_id -> Messages
-    pub tournament_lobby_new_messages: RwSignal<HashMap<String, bool>>,
+    pub tournament_lobby_messages: RwSignal<HashMap<TournamentId, Vec<ChatMessage>>>, // tournament_id -> Messages
+    pub tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
     pub typed_message: RwSignal<String>,
 }
 

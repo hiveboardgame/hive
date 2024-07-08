@@ -26,7 +26,7 @@ impl NavigationControllerSignal {
         }
     }
 
-    pub fn update_game_id(&mut self, game_id: Option<GameId>, tournament_id: Option<TournamentId>) {
+    pub fn update_ids(&mut self, game_id: Option<GameId>, tournament_id: Option<TournamentId>) {
         batch(move || {
             self.game_signal
                 .update(|s| game_id.clone_into(&mut s.game_id));
@@ -42,7 +42,9 @@ impl NavigationControllerSignal {
             }
             if let Some(tournament_id) = tournament_id {
                 let api = ApiRequests::new();
-                api.tournament(TournamentAction::Get(tournament_id))
+                let chat = expect_context::<Chat>();
+                api.tournament(TournamentAction::Get(tournament_id));
+                chat.typed_message.update(|s| s.clear());
             }
         });
     }
