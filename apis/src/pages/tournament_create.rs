@@ -9,7 +9,7 @@ use chrono::{DateTime, Duration, Local, NaiveDateTime, Utc};
 use leptos::ev::Event;
 use leptos::*;
 use leptos_router::use_navigate;
-use shared_types::{CorrespondenceMode, TimeMode, TournamentDetails};
+use shared_types::{CorrespondenceMode, Tiebreaker, TimeMode, TournamentDetails};
 use uuid::Uuid;
 
 const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -19,7 +19,7 @@ pub struct TournamentTournamentSignals {
     pub name: RwSignal<String>,
     pub description: RwSignal<String>,
     pub scoring: RwSignal<String>,
-    pub tiebreaker: RwSignal<Vec<Option<String>>>,
+    pub tiebreakers: RwSignal<Vec<Option<Tiebreaker>>>,
     pub seats: RwSignal<i32>,
     pub min_seats: RwSignal<i32>,
     pub rounds: RwSignal<i32>,
@@ -42,7 +42,11 @@ impl TournamentTournamentSignals {
             name: RwSignal::new(String::new()),
             description: RwSignal::new(String::new()),
             scoring: RwSignal::new(String::from("Match")),
-            tiebreaker: RwSignal::new(vec![Some(String::from("Buchholz"))]),
+            tiebreakers: RwSignal::new(vec![
+                Some(Tiebreaker::RawPoints),
+                Some(Tiebreaker::HeadToHead),
+                Some(Tiebreaker::WinsAsBlack),
+            ]),
             seats: RwSignal::new(4),
             min_seats: RwSignal::new(4),
             rounds: RwSignal::new(2),
@@ -151,7 +155,7 @@ pub fn TournamentCreate() -> impl IntoView {
             name: tournament.name.get_untracked(),
             description: tournament.description.get_untracked(),
             scoring: tournament.scoring.get_untracked(),
-            tiebreaker: tournament.tiebreaker.get_untracked(),
+            tiebreakers: tournament.tiebreakers.get_untracked(),
             invitees: vec![],
             seats: tournament.seats.get_untracked(),
             min_seats: tournament.min_seats.get_untracked(),

@@ -97,14 +97,17 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         .and_then(|games| games.ok())
                         .unwrap_or(Vec::new());
                     let mut unstarted = Vec::new();
-                    ongoing_games.retain(|gr| {
-                        if gr.game_start == GameStart::Ready && gr.game_status == GameStatus::NotStarted {
-                            unstarted.push(gr.clone());
-                            false
-                        } else {
-                            true
-                        }
-                    });
+                    ongoing_games
+                        .retain(|gr| {
+                            if gr.game_start == GameStart::Ready
+                                && gr.game_status == GameStatus::NotStarted
+                            {
+                                unstarted.push(gr.clone());
+                                false
+                            } else {
+                                true
+                            }
+                        });
                     finished.update(move |v| v.extend(current_finished_games));
                     still_more_games.set(more_games);
                     let playing = RwSignal::from(ongoing_games);
@@ -124,32 +127,32 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                 view! {
                                     <DisplayProfile user=store_value(user)/>
                                     <div class="flex gap-1 ml-3">
-                                        <Show when= move || !unstarted().is_empty()>
-                                        <A
-                                            href="unstarted"
-                                            class=move || active(ProfileGamesView::Unstarted)
-                                            on:click=move |_| finished.update(|v| v.clear())
-                                        >
-                                            "Unstarted Tournament Games"
-                                        </A>
+                                        <Show when=move || !unstarted().is_empty()>
+                                            <A
+                                                href="unstarted"
+                                                class=move || active(ProfileGamesView::Unstarted)
+                                                on:click=move |_| finished.update(|v| v.clear())
+                                            >
+                                                "Unstarted Tournament Games"
+                                            </A>
                                         </Show>
-                                        <Show when= move || !playing().is_empty()>
-                                        <A
-                                            href="playing"
-                                            class=move || active(ProfileGamesView::Playing)
-                                            on:click=move |_| finished.update(|v| v.clear())
-                                        >
-                                            "Playing "
-                                        </A>
+                                        <Show when=move || !playing().is_empty()>
+                                            <A
+                                                href="playing"
+                                                class=move || active(ProfileGamesView::Playing)
+                                                on:click=move |_| finished.update(|v| v.clear())
+                                            >
+                                                "Playing "
+                                            </A>
                                         </Show>
-                                        <Show when= move || !finished().is_empty()>
-                                        <A
-                                            href="finished"
-                                            class=move || active(ProfileGamesView::Finished)
-                                            on:click=move |_| finished.update(|v| v.clear())
-                                        >
-                                            "Finished Games "
-                                        </A>
+                                        <Show when=move || !finished().is_empty()>
+                                            <A
+                                                href="finished"
+                                                class=move || active(ProfileGamesView::Finished)
+                                                on:click=move |_| finished.update(|v| v.clear())
+                                            >
+                                                "Finished Games "
+                                            </A>
                                         </Show>
                                     </div>
                                     {stored_children()()}

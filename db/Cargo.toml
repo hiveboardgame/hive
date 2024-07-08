@@ -31,4 +31,4 @@ chrono = { workspace = true }
 shared_types = { path = "../shared_types/" }
 lazy_static = { workspace = true }
 regex = { workspace = true }
-itertools = "0.13.0"
+itertools = { workspace = true }

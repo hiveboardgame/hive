@@ -17,6 +17,7 @@ pub mod live_timer;
 pub mod modal;
 pub mod ping;
 pub mod rating_and_change;
+pub mod score_row;
 pub mod simple_hex_stack;
 pub mod thumbnail_pieces;
 pub mod time_row;

@@ -3070,6 +3070,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "hive",
+ "itertools 0.13.0",
  "serde",
  "thiserror",
  "uuid",

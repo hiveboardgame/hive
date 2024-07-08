@@ -60,14 +60,24 @@ impl NewTournament {
             });
         }
 
-        // TOOD: @leex add some validations
+        // TOOD: @leex add some more validations
+        if details.tiebreakers.is_empty() {
+            return Err(DbError::InvalidTournamentDetails {
+                info: String::from("No tiebreaker set"),
+            });
+        }
 
         Ok(Self {
             nanoid: nanoid!(11),
             name: details.name,
             description: details.description,
             scoring: details.scoring,
-            tiebreaker: details.tiebreaker,
+            tiebreaker: details
+                .tiebreakers
+                .iter()
+                .flatten()
+                .map(|t| Some(t.to_string()))
+                .collect(),
             seats: details.seats,
             min_seats: details.min_seats,
             rounds: details.rounds,

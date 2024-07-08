@@ -1,4 +1,4 @@
-use crate::TimeMode;
+use crate::{Tiebreaker, TimeMode};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -8,7 +8,7 @@ pub struct TournamentDetails {
     pub name: String,
     pub description: String,
     pub scoring: String,
-    pub tiebreaker: Vec<Option<String>>,
+    pub tiebreakers: Vec<Option<Tiebreaker>>,
     pub invitees: Vec<Option<Uuid>>,
     pub seats: i32,
     pub min_seats: i32,

@@ -1,4 +1,5 @@
 use crate::common::{TournamentAction, UserAction};
+use crate::components::molecules::score_row::ScoreRow;
 use crate::components::molecules::{
     game_previews::GamePreviews, invite_user::InviteUser, time_row::TimeRow, user_row::UserRow,
 };
@@ -10,6 +11,7 @@ use chrono::Local;
 use leptos::*;
 use leptos_router::use_navigate;
 use shared_types::{GameSpeed, TimeInfo, TournamentStatus};
+use uuid::Uuid;
 
 const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
@@ -100,7 +102,7 @@ pub fn Tournament() -> impl IntoView {
                         if tournament.invitees.iter().any(|invitee| invitee.uid == user.uid ) { return false; }
                         if tournament.organizers.iter().any(|organizer| organizer.uid == user.uid ) { return false; }
                         return true;
-                    } 
+                    }
                     let game_speed =
                     GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
                     let rating = user.rating_for_speed(&game_speed) as i32;
@@ -249,23 +251,68 @@ pub fn Tournament() -> impl IntoView {
 
                         <div class="flex flex-col items-center w-full">
                             <p class="font-bold">Standings</p>
-                            <For
-                                each=move || { tournament().standings.into_iter() }
+                            <div class="flex p-1 items-center justify-between h-10 w-64 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
+                                <div class="flex justify-between mr-2 w-full">
+                                    <div class="flex items-center">Position</div>
 
-                                key=|(id, _)| (*id)
-                                let:score
+                                    <div class="flex items-center">Player</div>
+
+                                    {tournament()
+                                        .tiebreakers
+                                        .iter()
+                                        .map(|tiebreaker| {
+                                            view! {
+                                                <div class="flex items-center">
+                                                    {tiebreaker.pretty_str().to_owned()}
+                                                </div>
+                                            }
+                                        })
+                                        .collect_view()}
+                                </div>
+                            </div>
+                            <For
+                                each=move || { tournament().standings.results().into_iter() }
+                                key=|players_at_position| {
+                                    players_at_position
+                                        .iter()
+                                        .map(|(uuid, _, _)| *uuid)
+                                        .collect::<Vec<Uuid>>()
+                                }
+
+                                let:players_at_position
                             >
 
                                 {
-                                    let user = store_value(
-                                        tournament()
-                                            .players
-                                            .get(&score.0)
-                                            .expect("User in tournament")
-                                            .clone(),
-                                    );
+                                    let players_at_position = store_value(players_at_position);
                                     view! {
-                                        <UserRow actions=vec![] user end_str=score.1.to_string()/>
+                                        <For
+                                            each=players_at_position
+
+                                            key=|(uuid, _position, _hash)| (*uuid)
+                                            let:player
+                                        >
+
+                                            {
+                                                let (uuid, position, hash) = player;
+                                                let uuid = store_value(uuid);
+                                                let user = store_value(
+                                                    tournament()
+                                                        .players
+                                                        .get(&uuid())
+                                                        .expect("User in tournament")
+                                                        .clone(),
+                                                );
+                                                view! {
+                                                    <ScoreRow
+                                                        user=user
+                                                        standing=position
+                                                        tiebreakers=tournament().tiebreakers
+                                                        scores=hash
+                                                    />
+                                                }
+                                            }
+
+                                        </For>
                                     }
                                 }
 

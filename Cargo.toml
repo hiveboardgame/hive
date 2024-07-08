@@ -55,6 +55,7 @@ cookie = "0.18"
 skillratings = "0.26"
 chrono = { version = "0.4", features = ["serde"] }
 leptix_primitives = {git ="https://github.com/leptix/leptix.git" }
+itertools = "0.13.0"
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]
 inherits = "release"
