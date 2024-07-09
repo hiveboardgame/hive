@@ -7,14 +7,14 @@ use crate::{
     schema::{
         games::{self, tournament_id as tournament_id_column},
         tournaments::{
-            self, nanoid as nanoid_field, series as series_column, started_at, starts_at,
+            self, nanoid as nanoid_field, series as series_column, started_at, starts_at, ends_at,
             status as status_column, updated_at,
         },
         tournaments_organizers, users,
     },
     DbConn,
 };
-use chrono::prelude::*;
+use chrono::{prelude::*, TimeDelta};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use itertools::Itertools;
@@ -66,6 +66,30 @@ impl NewTournament {
         if details.tiebreakers.is_empty() {
             return Err(DbError::InvalidTournamentDetails {
                 info: String::from("No tiebreaker set"),
+            });
+        }
+
+        if details.time_mode == TimeMode::Correspondence && details.round_duration.is_some() {
+            return Err(DbError::InvalidTournamentDetails {
+                info: String::from("Cannot set round duration on correspondence tournaments"),
+            });
+        }
+
+        if details.seats < details.min_seats {
+            return Err(DbError::InvalidTournamentDetails {
+                info: String::from("Seats is less than minimun number of seats")
+            });
+        }
+
+        if details.rounds < 1 {
+            return Err(DbError::InvalidTournamentDetails {
+                info: String::from("Number of rounds needs to be >= 1"),
+            });
+        }
+
+        if details.rounds > 16 {
+            return Err(DbError::InvalidTournamentDetails {
+                info: String::from("Number of rounds needs to <= 16"),
             });
         }
 
@@ -428,6 +452,12 @@ impl Tournament {
         if !self.has_enough_players(conn).await? {
             return Err(DbError::NotEnoughPlayers);
         }
+        let ends = if let Some(days) = self.round_duration {
+            let days = TimeDelta::days(days as i64);
+            Some(Utc::now() + days)
+        } else {
+            None
+        };
         // Make sure all the conditions have been met
         // and then call different starts for different tournament types
         let mut deleted_invitees = Vec::new();
@@ -437,6 +467,7 @@ impl Tournament {
                 updated_at.eq(Utc::now()),
                 status_column.eq(TournamentStatus::InProgress.to_string()),
                 started_at.eq(Utc::now()),
+                ends_at.eq(ends),
             ))
             .get_result(conn)
             .await?;

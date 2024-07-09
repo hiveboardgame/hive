@@ -1,4 +1,6 @@
 mod certainty;
+mod pretty_string;
+mod tournament_mode;
 mod challenge;
 mod chat_message;
 mod conclusion;
@@ -15,6 +17,8 @@ mod time_mode;
 mod tournament_details;
 mod tournament_game_result;
 mod tournament_status;
+pub use pretty_string::PrettyString;
+pub use tournament_mode::TournamentMode;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
 pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
 pub use chat_message::{ChatDestination, ChatMessage, ChatMessageContainer, SimpleDestination};

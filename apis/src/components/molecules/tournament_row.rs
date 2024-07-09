@@ -3,6 +3,7 @@ use crate::responses::TournamentResponse;
 use chrono::Local;
 use leptos::*;
 use shared_types::{TimeInfo, TournamentStatus};
+use shared_types::PrettyString;
 
 #[component]
 pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {

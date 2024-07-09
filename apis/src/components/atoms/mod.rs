@@ -16,6 +16,7 @@ pub mod piece;
 pub mod profile_link;
 pub mod rating;
 pub mod select_options;
+// pub mod typed_select_option;
 pub mod simple_hex;
 pub mod simple_piece;
 pub mod status_indicator;

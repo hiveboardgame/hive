@@ -1,3 +1,4 @@
+use crate::PrettyString;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
@@ -7,6 +8,15 @@ use thiserror::Error;
 pub enum ScoringMode {
     Game,
     Match,
+}
+
+impl PrettyString for ScoringMode {
+    fn pretty_string(&self) -> String {
+        match self {
+            ScoringMode::Game => String::from("Game"),
+            ScoringMode::Match => String::from("Match"),
+        }
+    }
 }
 
 impl fmt::Display for ScoringMode {

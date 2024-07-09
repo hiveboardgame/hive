@@ -11,8 +11,10 @@ use leptos::*;
 use leptos_router::use_navigate;
 use shared_types::{
     CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
+    TournamentMode,
 };
 use uuid::Uuid;
+use shared_types::PrettyString;
 
 const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
@@ -27,7 +29,7 @@ pub struct TournamentSignals {
     pub rounds: RwSignal<i32>,
     pub joinable: RwSignal<bool>,
     pub invite_only: RwSignal<bool>,
-    pub mode: RwSignal<String>,
+    pub mode: RwSignal<TournamentMode>,
     pub time_mode: RwSignal<TimeMode>,
     pub time_base: StoredValue<Option<i32>>,
     pub time_increment: StoredValue<Option<i32>>,
@@ -55,8 +57,7 @@ impl TournamentSignals {
             rounds: RwSignal::new(1),
             joinable: RwSignal::new(true),
             invite_only: RwSignal::new(false),
-            // TODO make this into a type
-            mode: RwSignal::new(String::from("Double Round Robin")),
+            mode: RwSignal::new(TournamentMode::DoubleRoundRobin),
             time_mode: RwSignal::new(TimeMode::RealTime),
             time_base: store_value(Some(60)),
             time_increment: store_value(Some(0)),
@@ -166,7 +167,7 @@ pub fn TournamentCreate() -> impl IntoView {
             rounds: tournament.rounds.get_untracked(),
             joinable: tournament.joinable.get_untracked(),
             invite_only: tournament.invite_only.get_untracked(),
-            mode: tournament.mode.get_untracked(),
+            mode: tournament.mode.get_untracked().to_string(),
             time_mode: tournament.time_mode.get_untracked(),
             time_base: tournament.time_base.get_value(),
             time_increment: tournament.time_increment.get_value(),
@@ -282,9 +283,9 @@ pub fn TournamentCreate() -> impl IntoView {
                         <select
                             class="bg-odd-light dark:bg-gray-700"
                             name="Tournament Mode"
-                            on:change=update_from_input(tournament.mode)
+                            on:change=update_from_input_parsed(tournament.mode)
                         >
-                            <SelectOption value=tournament.mode is="Double Round Robin"/>
+                            <SelectOption value=tournament.mode is="DoubleRoundRobin" text=TournamentMode::DoubleRoundRobin.pretty_string()/>
 
                         </select>
                     </div>
@@ -295,7 +296,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             name="Scoring Mode"
                             on:change=update_from_input_parsed(tournament.scoring)
                         >
-                            <SelectOption value=tournament.mode is="Game"/>
+                            <SelectOption value=tournament.mode is="Game" text=ScoringMode::Game.pretty_string()/>
 
                         </select>
                     </div>

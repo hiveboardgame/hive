@@ -1,3 +1,4 @@
+use crate::PrettyString;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
@@ -10,8 +11,8 @@ pub enum TournamentStatus {
     Finished,
 }
 
-impl TournamentStatus {
-    pub fn pretty_string(&self) -> String {
+impl PrettyString for TournamentStatus {
+    fn pretty_string(&self) -> String {
         match self {
             Self::NotStarted => String::from("Not started"),
             Self::InProgress => String::from("Ongoing"),

@@ -9,7 +9,7 @@ create table tournaments (
   min_seats int not null, -- minimum number of players
   rounds int not null, -- Number of RR games, total number of SWISS games
   joinable bool not null default true, -- this means the tournament has started and people cannot join it anymore
-  invite_only bool not null default false, -- can players join the tournament without an invite?
+  invite_only bool not null default false, -- can players join the tournament without an invite
   mode text not null, -- RR, SWISS, ...
   time_mode text not null, -- either 'Timed' or 'Correspondence',
   time_base int, -- seconds
