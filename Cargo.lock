@@ -418,8 +418,7 @@ dependencies = [
  "actix-web-actors",
  "anyhow",
  "argon2",
- "base64 0.22.1",
- "bincode",
+ "bimap",
  "cfg-if",
  "chrono",
  "console_error_panic_hook",
@@ -580,10 +579,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "bincode"
-version = "1.3.3"
+name = "bimap"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+checksum = "230c5f1ca6a325a32553f8640d31ac9b49f2411e901e427570154868b46da4f7"
 dependencies = [
  "serde",
 ]
@@ -2888,11 +2887,12 @@ dependencies = [
 
 [[package]]
 name = "sequential_gen"
-version = "0.1.0"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da850bb1f2deffd0d19c1a1fcf445cb747aa401517c96eff7c6d965de792175d"
+checksum = "3d630b1418311e028ceb45e1e567845501a9d9c770a258b80d2edc025ffad17c"
 dependencies = [
  "lazy_static",
+ "uuid",
 ]
 
 [[package]]
@@ -3481,9 +3481,9 @@ dependencies = [
 
 [[package]]
 name = "tree-ds"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba6a67f3e9bee38b6a34b29a98abf5fc5b13aea6a7db36753d260735af7633a8"
+checksum = "ba93bd6a2167eae091428ff34bbef09edd870f941ff736afdb02e05585e258bd"
 dependencies = [
  "lazy_static",
  "sequential_gen",
@@ -3588,9 +3588,9 @@ checksum = "86bd8d4e895da8537e5315b8254664e6b769c4ff3db18321b297a1e7004392e3"
 
 [[package]]
 name = "uuid"
-version = "1.8.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a183cf7feeba97b4dd1c0d46788634f6221d87fa961b305bed08c851829efcc0"
+checksum = "81dfa00651efa65069b0b6b651f4aaa31ba9e3c3ce0137aaad053604ee7e0314"
 dependencies = [
  "getrandom",
  "serde",
