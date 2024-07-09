@@ -7,7 +7,7 @@ use crate::{
     schema::{
         games::{self, tournament_id as tournament_id_column},
         tournaments::{
-            self, nanoid as nanoid_field, series as series_column, starts_at, started_at,
+            self, nanoid as nanoid_field, series as series_column, started_at, starts_at,
             status as status_column, updated_at,
         },
         tournaments_organizers, users,
@@ -73,7 +73,7 @@ impl NewTournament {
             nanoid: nanoid!(11),
             name: details.name,
             description: details.description,
-            scoring: details.scoring,
+            scoring: details.scoring.to_string(),
             tiebreaker: details
                 .tiebreakers
                 .iter()
@@ -93,7 +93,7 @@ impl NewTournament {
             band_lower: details.band_lower,
             start_mode: details.start_mode.to_string(),
             starts_at: details.starts_at,
-            ends_at: details.ends_at,
+            ends_at: None,
             started_at: None,
             round_duration: details.round_duration,
             status: TournamentStatus::NotStarted.to_string(),

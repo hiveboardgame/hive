@@ -9,16 +9,18 @@ use chrono::{DateTime, Duration, Local, NaiveDateTime, Utc};
 use leptos::ev::Event;
 use leptos::*;
 use leptos_router::use_navigate;
-use shared_types::{CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails};
+use shared_types::{
+    CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
+};
 use uuid::Uuid;
 
 const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
 #[derive(Debug, Clone, Copy)]
-pub struct TournamentTournamentSignals {
+pub struct TournamentSignals {
     pub name: RwSignal<String>,
     pub description: RwSignal<String>,
-    pub scoring: RwSignal<String>,
+    pub scoring: RwSignal<ScoringMode>,
     pub tiebreakers: RwSignal<Vec<Option<Tiebreaker>>>,
     pub seats: RwSignal<i32>,
     pub min_seats: RwSignal<i32>,
@@ -32,18 +34,17 @@ pub struct TournamentTournamentSignals {
     pub band_upper: RwSignal<Option<i32>>,
     pub band_lower: RwSignal<Option<i32>>,
     pub series: RwSignal<Option<Uuid>>,
-    pub start_mode: RwSignal<String>,
+    pub start_mode: RwSignal<StartMode>,
     pub starts_at: RwSignal<DateTime<Utc>>,
-    pub ends_at: RwSignal<DateTime<Utc>>,
     pub round_duration: RwSignal<i32>,
 }
 
-impl TournamentTournamentSignals {
+impl TournamentSignals {
     pub fn new() -> Self {
         Self {
             name: RwSignal::new(String::new()),
             description: RwSignal::new(String::new()),
-            scoring: RwSignal::new(String::from(ScoringMode::Game.to_string())),
+            scoring: RwSignal::new(ScoringMode::Game),
             tiebreakers: RwSignal::new(vec![
                 Some(Tiebreaker::RawPoints),
                 Some(Tiebreaker::HeadToHead),
@@ -51,7 +52,7 @@ impl TournamentTournamentSignals {
             ]),
             seats: RwSignal::new(4),
             min_seats: RwSignal::new(4),
-            rounds: RwSignal::new(2),
+            rounds: RwSignal::new(1),
             joinable: RwSignal::new(true),
             invite_only: RwSignal::new(false),
             // TODO make this into a type
@@ -61,16 +62,15 @@ impl TournamentTournamentSignals {
             time_increment: store_value(Some(0)),
             band_upper: RwSignal::new(None),
             band_lower: RwSignal::new(None),
-            start_mode: RwSignal::new(String::from(StartMode::Manual.to_string())),
+            start_mode: RwSignal::new(StartMode::Manual),
             series: RwSignal::new(None),
             starts_at: RwSignal::new(Utc::now()),
-            ends_at: RwSignal::new(Utc::now()),
             round_duration: RwSignal::new(7),
         }
     }
 }
 
-impl Default for TournamentTournamentSignals {
+impl Default for TournamentSignals {
     fn default() -> Self {
         Self::new()
     }
@@ -78,7 +78,7 @@ impl Default for TournamentTournamentSignals {
 
 #[component]
 pub fn TournamentCreate() -> impl IntoView {
-    let tournament = TournamentTournamentSignals::default();
+    let tournament = TournamentSignals::default();
     let time_signals = TimeSignals::default();
     let min_rating = RwSignal::new(500);
     let max_rating = RwSignal::new(2500);
@@ -173,8 +173,11 @@ pub fn TournamentCreate() -> impl IntoView {
             band_upper: tournament.band_upper.get_untracked(),
             band_lower: tournament.band_lower.get_untracked(),
             series: tournament.series.get_untracked(),
-            start_mode: StartMode::Manual,
-            ends_at: Some(Utc::now()),
+            start_mode: if organizer_start.get_untracked() {
+                StartMode::Manual
+            } else {
+                StartMode::Date
+            },
             starts_at: if organizer_start.get_untracked() {
                 None
             } else {
@@ -197,6 +200,16 @@ pub fn TournamentCreate() -> impl IntoView {
     let on_change: Callback<Event, ()> =
         Callback::from(update_from_input_parsed(time_signals.time_control));
 
+    let tournament_length = move || {
+        if fixed_round_duration() {
+            format!(
+                "Maximum tournament duration {} days",
+                tournament.rounds.get() * tournament.round_duration.get()
+            )
+        } else {
+            String::from("Tournament length not automatically enforced")
+        }
+    };
     //let unused = move || {
     //    view! {
 
@@ -275,6 +288,17 @@ pub fn TournamentCreate() -> impl IntoView {
 
                         </select>
                     </div>
+                    <div>
+                        Scoring:
+                        <select
+                            class="bg-odd-light dark:bg-gray-700"
+                            name="Scoring Mode"
+                            on:change=update_from_input_parsed(tournament.scoring)
+                        >
+                            <SelectOption value=tournament.mode is="Game"/>
+
+                        </select>
+                    </div>
                     <div class="flex">
                         <input
                             on:change=move |_| tournament.invite_only.update(|b| *b = !*b)
@@ -342,6 +366,33 @@ pub fn TournamentCreate() -> impl IntoView {
 
                         </Show>
                     </div>
+                    <div class="flex gap-1">
+                        <Show when=move || time_signals.time_control.get() == TimeMode::RealTime>
+                            <input
+                                on:change=move |_| fixed_round_duration.update(|b| *b = !*b)
+                                type="checkbox"
+                                class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                                prop:checked=fixed_round_duration
+                            />
+                            <label class="text-sm font-medium text-gray-900 dark:text-gray-300">
+                                Fixed round duration
+                            </label>
+                            <Show when=fixed_round_duration>
+                                <label class="flex items-center">
+                                    <InputSlider
+                                        signal_to_update=tournament.round_duration
+                                        name="Round duration in days"
+                                        min=1
+                                        max=90
+                                        step=1
+                                    />
+                                </label>
+                                {tournament.round_duration}
+                                " Days"
+                            </Show>
+                        </Show>
+                    </div>
+                    <div>{tournament_length}</div>
 
                 </div>
                 <div class="md:pl-2 basis-1/2">
@@ -371,32 +422,6 @@ pub fn TournamentCreate() -> impl IntoView {
                                 />
                             </label>
                         </div>
-                    </div>
-                    <div class="flex gap-1 p-1">
-                        <Show when=move || time_signals.time_control.get() == TimeMode::RealTime>
-                            <input
-                                on:change=move |_| fixed_round_duration.update(|b| *b = !*b)
-                                type="checkbox"
-                                class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                prop:checked=fixed_round_duration
-                            />
-                            <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                                Fixed round duration
-                            </label>
-                            <Show when=fixed_round_duration>
-                                <label class="flex items-center">
-                                    <InputSlider
-                                        signal_to_update=tournament.round_duration
-                                        name="Round duration in days"
-                                        min=1
-                                        max=90
-                                        step=1
-                                    />
-                                </label>
-                                {tournament.round_duration}
-                                " Days"
-                            </Show>
-                        </Show>
                     </div>
                 </div>
                 <div>
