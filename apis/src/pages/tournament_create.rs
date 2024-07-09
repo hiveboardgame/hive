@@ -126,6 +126,7 @@ pub fn TournamentCreate() -> impl IntoView {
                     .update_value(|v| *v = Some(time_signals.sec_per_move.get_untracked()));
             }
             TimeMode::Correspondence => {
+                fixed_round_duration.set(false);
                 match time_signals.corr_mode.get_untracked() {
                     CorrespondenceMode::DaysPerMove => {
                         tournament.time_increment.update_value(|v| {
