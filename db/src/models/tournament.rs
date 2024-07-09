@@ -7,7 +7,7 @@ use crate::{
     schema::{
         games::{self, tournament_id as tournament_id_column},
         tournaments::{
-            self, nanoid as nanoid_field, series as series_column, start_at, started_at,
+            self, nanoid as nanoid_field, series as series_column, starts_at, started_at,
             status as status_column, updated_at,
         },
         tournaments_organizers, users,
@@ -42,7 +42,9 @@ pub struct NewTournament {
     pub time_increment: Option<i32>,
     pub band_upper: Option<i32>,
     pub band_lower: Option<i32>,
-    pub start_at: Option<DateTime<Utc>>,
+    pub start_mode: String,
+    pub starts_at: Option<DateTime<Utc>>,
+    pub ends_at: Option<DateTime<Utc>>,
     pub started_at: Option<DateTime<Utc>>,
     pub round_duration: Option<i32>,
     pub status: String,
@@ -89,7 +91,9 @@ impl NewTournament {
             time_increment: details.time_increment,
             band_upper: details.band_upper,
             band_lower: details.band_lower,
-            start_at: details.start_at,
+            start_mode: details.start_mode.to_string(),
+            starts_at: details.starts_at,
+            ends_at: details.ends_at,
             started_at: None,
             round_duration: details.round_duration,
             status: TournamentStatus::NotStarted.to_string(),
@@ -123,7 +127,9 @@ pub struct Tournament {
     pub time_increment: Option<i32>,
     pub band_upper: Option<i32>,
     pub band_lower: Option<i32>,
-    pub start_at: Option<DateTime<Utc>>,
+    pub start_mode: String,
+    pub starts_at: Option<DateTime<Utc>>,
+    pub ends_at: Option<DateTime<Utc>>,
     pub started_at: Option<DateTime<Utc>>,
     pub round_duration: Option<i32>,
     pub status: String,
@@ -483,7 +489,7 @@ impl Tournament {
     pub async fn unstarted(conn: &mut DbConn<'_>) -> Result<Vec<Self>, DbError> {
         let potential_tournaments: Vec<Tournament> = tournaments::table
             .filter(status_column.eq(TournamentStatus::NotStarted.to_string()))
-            .filter(start_at.le(Utc::now()))
+            .filter(starts_at.le(Utc::now()))
             .get_results(conn)
             .await?;
         let mut tournaments = Vec::new();

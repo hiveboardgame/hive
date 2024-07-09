@@ -8,7 +8,7 @@ use shared_types::{TimeInfo, TournamentStatus};
 pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
     let starts = move || {
         if matches!(tournament.status, TournamentStatus::NotStarted) {
-            match tournament.start_at {
+            match tournament.starts_at {
                 None => "Start up to organizer".to_string(),
                 Some(time) => time
                     .with_timezone(&Local)

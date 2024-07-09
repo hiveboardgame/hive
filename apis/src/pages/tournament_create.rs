@@ -9,7 +9,7 @@ use chrono::{DateTime, Duration, Local, NaiveDateTime, Utc};
 use leptos::ev::Event;
 use leptos::*;
 use leptos_router::use_navigate;
-use shared_types::{CorrespondenceMode, Tiebreaker, TimeMode, TournamentDetails};
+use shared_types::{CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails};
 use uuid::Uuid;
 
 const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -32,7 +32,9 @@ pub struct TournamentTournamentSignals {
     pub band_upper: RwSignal<Option<i32>>,
     pub band_lower: RwSignal<Option<i32>>,
     pub series: RwSignal<Option<Uuid>>,
-    pub start_at: RwSignal<DateTime<Utc>>,
+    pub start_mode: RwSignal<String>,
+    pub starts_at: RwSignal<DateTime<Utc>>,
+    pub ends_at: RwSignal<DateTime<Utc>>,
     pub round_duration: RwSignal<i32>,
 }
 
@@ -41,7 +43,7 @@ impl TournamentTournamentSignals {
         Self {
             name: RwSignal::new(String::new()),
             description: RwSignal::new(String::new()),
-            scoring: RwSignal::new(String::from("Match")),
+            scoring: RwSignal::new(String::from(ScoringMode::Game.to_string())),
             tiebreakers: RwSignal::new(vec![
                 Some(Tiebreaker::RawPoints),
                 Some(Tiebreaker::HeadToHead),
@@ -59,8 +61,10 @@ impl TournamentTournamentSignals {
             time_increment: store_value(Some(0)),
             band_upper: RwSignal::new(None),
             band_lower: RwSignal::new(None),
+            start_mode: RwSignal::new(String::from(StartMode::Manual.to_string())),
             series: RwSignal::new(None),
-            start_at: RwSignal::new(Utc::now()),
+            starts_at: RwSignal::new(Utc::now()),
+            ends_at: RwSignal::new(Utc::now()),
             round_duration: RwSignal::new(7),
         }
     }
@@ -169,10 +173,12 @@ pub fn TournamentCreate() -> impl IntoView {
             band_upper: tournament.band_upper.get_untracked(),
             band_lower: tournament.band_lower.get_untracked(),
             series: tournament.series.get_untracked(),
-            start_at: if organizer_start.get_untracked() {
+            start_mode: StartMode::Manual,
+            ends_at: Some(Utc::now()),
+            starts_at: if organizer_start.get_untracked() {
                 None
             } else {
-                Some(tournament.start_at.get_untracked())
+                Some(tournament.starts_at.get_untracked())
             },
             round_duration: if fixed_round_duration.get_untracked() {
                 Some(tournament.round_duration.get_untracked())
@@ -323,7 +329,7 @@ pub fn TournamentCreate() -> impl IntoView {
                                             *offset,
                                         ) {
                                             tournament
-                                                .start_at
+                                                .starts_at
                                                 .update(|v| {
                                                     *v = local.to_utc();
                                                 })

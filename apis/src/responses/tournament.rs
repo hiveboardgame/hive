@@ -1,7 +1,9 @@
 use super::{GameResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared_types::{Standings, Tiebreaker, TimeMode, TournamentId, TournamentStatus};
+use shared_types::{
+    ScoringMode, Standings, StartMode, Tiebreaker, TimeMode, TournamentId, TournamentStatus,
+};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -19,7 +21,7 @@ pub struct TournamentResponse {
     pub standings: Standings,
     pub name: String,
     pub description: String,
-    pub scoring: String,
+    pub scoring: ScoringMode,
     pub tiebreakers: Vec<Tiebreaker>,
     pub invitees: Vec<UserResponse>,
     pub players: HashMap<Uuid, UserResponse>,
@@ -37,7 +39,9 @@ pub struct TournamentResponse {
     pub band_upper: Option<i32>,
     pub band_lower: Option<i32>,
     pub status: TournamentStatus,
-    pub start_at: Option<DateTime<Utc>>,
+    pub start_mode: StartMode,
+    pub starts_at: Option<DateTime<Utc>>,
+    pub ends_at: Option<DateTime<Utc>>,
     pub started_at: Option<DateTime<Utc>>,
     pub round_duration: Option<i32>,
     pub created_at: DateTime<Utc>,
@@ -113,7 +117,7 @@ impl TournamentResponse {
             name: tournament.name.clone(),
             description: tournament.description.clone(),
             standings,
-            scoring: tournament.scoring.clone(), // TODO: make a type for this
+            scoring: ScoringMode::from_str(&tournament.scoring)?,
             players,
             organizers,
             games: game_responses,
@@ -134,7 +138,9 @@ impl TournamentResponse {
             band_upper: tournament.band_upper,
             band_lower: tournament.band_lower,
             status: TournamentStatus::from_str(&tournament.status)?,
-            start_at: tournament.start_at,
+            start_mode: StartMode::from_str(&tournament.start_mode)?,
+            starts_at: tournament.starts_at,
+            ends_at: tournament.ends_at,
             started_at: tournament.started_at,
             round_duration: tournament.round_duration,
             created_at: tournament.created_at,

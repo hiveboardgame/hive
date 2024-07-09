@@ -18,8 +18,11 @@ create table tournaments (
   band_lower int, -- min elo
   -- either when does the tournament start for tournaments with a start date
   -- or when did it start for tournaments that start when enough players signed up
-  -- TODO: @leex start_mode text not null,
-  start_at timestamp with time zone, -- when will the tournaments start, for automated tournaments
+  start_mode text not null,
+  starts_at timestamp with time zone, -- when will the tournaments start, for automated tournaments
+  ends_at timestamp with time zone, -- when will the tournaments end, for
+  -- manual tournaments it's just to show a date to the user and for automated
+  -- tournaments this will be used to end the tournament at.
   started_at timestamp with time zone,  -- when did the tournaments start
   round_duration int, -- how long does a round run for in days
   status text not null,

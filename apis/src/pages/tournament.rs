@@ -135,7 +135,7 @@ pub fn Tournament() -> impl IntoView {
             let starts = move || {
                 let tournament = tournament();
                 if matches!(tournament.status, TournamentStatus::NotStarted) {
-                    match tournament.start_at {
+                    match tournament.starts_at {
                         None => "Start up to organizer".to_string(),
                         Some(time) => time
                             .with_timezone(&Local)
