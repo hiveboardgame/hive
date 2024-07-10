@@ -137,14 +137,15 @@ pub fn LoadTree() -> impl IntoView {
                                         .map_or_else(
                                             || logging::log!("Couldn't open file"),
                                             |ext| {
-                                            if ext == "hat" {
-                                                let _ = file.text().then(&from_hat);
-                                            } else if ext == "pgn" {
-                                                let _ = file.text().then(&from_pgn);
-                                            } else {
-                                                logging::log!("Couldn't open file");
-                                            }
-                                        });
+                                                if ext == "hat" {
+                                                    let _ = file.text().then(&from_hat);
+                                                } else if ext == "pgn" {
+                                                    let _ = file.text().then(&from_pgn);
+                                                } else {
+                                                    logging::log!("Couldn't open file");
+                                                }
+                                            },
+                                        );
                                 }
 
                                 type="file"

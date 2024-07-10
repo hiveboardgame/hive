@@ -30,11 +30,14 @@ impl AnalysisTree {
         let mut tree = Tree::new(Some("analysis"));
         let mut previous = None;
         for (i, (piece, position)) in gs.state.history.moves.iter().enumerate() {
-            let new_node = Node::new(i as i32,Some(TreeNode {
-                turn: i + 1,
-                piece: piece.to_string(),
-                position: position.to_string(),
-            }));
+            let new_node = Node::new(
+                i as i32,
+                Some(TreeNode {
+                    turn: i + 1,
+                    piece: piece.to_string(),
+                    position: position.to_string(),
+                }),
+            );
             let new_id = new_node.get_node_id();
             tree.add_node(new_node, previous.as_ref()).ok()?;
             previous = Some(new_id);
@@ -86,11 +89,14 @@ impl AnalysisTree {
             .as_ref()
             .map_or(1, |n| 1 + n.get_value().unwrap().turn);
         let new_id = self.tree.get_nodes().len() as i32;
-        let new_node = Node::new(new_id, Some(TreeNode {
-            turn,
-            piece,
-            position,
-        }));
+        let new_node = Node::new(
+            new_id,
+            Some(TreeNode {
+                turn,
+                piece,
+                position,
+            }),
+        );
         let parent_id = self.current_node.as_ref().map(|n| n.get_node_id());
 
         self.tree.add_node(new_node, parent_id.as_ref()).unwrap();

@@ -46,6 +46,8 @@ pub enum GameError {
     GameIsOver { username: String, game: String },
     #[error("{username} can't play on {game}. It's not their game.")]
     NotPlayer { username: String, game: String },
+    #[error("Cannot abort tournament game")]
+    TournamentAbort,
 }
 
 impl GameError {

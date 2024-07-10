@@ -132,10 +132,10 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 <UndoButton/>
             </div>
             <Show when=move || !mobile>
-            <div class="flex flex-col p-4">
-                <Reserve alignment=Alignment::DoubleRow color=Color::White viewbox_str/>
-                <Reserve alignment=Alignment::DoubleRow color=Color::Black viewbox_str/>
-            </div>
+                <div class="flex flex-col p-4">
+                    <Reserve alignment=Alignment::DoubleRow color=Color::White viewbox_str/>
+                    <Reserve alignment=Alignment::DoubleRow color=Color::Black viewbox_str/>
+                </div>
             </Show>
             <div class="flex justify-between w-full">
                 <Show when=move || walk_tree().is_some()>

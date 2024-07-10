@@ -57,10 +57,10 @@ impl GameControlHandler {
                 async move { self.match_control(tc).await }.scope_boxed()
             })
             .await?;
-        let game_response = GameResponse::new_from_model(&game, &mut conn).await?;
+        let game_response = GameResponse::from_model(&game, &mut conn).await?;
 
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Game(self.game.nanoid.clone()),
+            destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),
                 game: game_response.clone(),
@@ -75,7 +75,7 @@ impl GameControlHandler {
                 let games = current_user.get_games_with_notifications(&mut conn).await?;
                 let mut game_responses = Vec::new();
                 for game in games {
-                    game_responses.push(GameResponse::new_from_model(&game, &mut conn).await?);
+                    game_responses.push(GameResponse::from_model(&game, &mut conn).await?);
                 }
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(game.current_player_id),
@@ -144,6 +144,9 @@ impl GameControlHandler {
     }
 
     async fn handle_abort(&self, conn: &mut DbConn<'_>) -> Result<()> {
+        if self.game.tournament_id.is_some() {
+            Err(GameError::TournamentAbort)?
+        }
         Ok(self.game.delete(conn).await?)
     }
 

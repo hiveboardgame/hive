@@ -6,12 +6,15 @@ use actix_web_actors::ws;
 use db_lib::{get_conn, models::User, DbPool};
 use uuid::Uuid;
 
+use super::tournament_game_start::TournamentGameStart;
+
 #[get("/ws/")]
 pub async fn start_connection(
     req: HttpRequest,
     stream: Payload,
     srv: Data<Addr<Lobby>>,
     chat_storage: Data<Chats>,
+    game_start: Data<TournamentGameStart>,
     pool: Data<DbPool>,
     identity: Option<Identity>,
 ) -> Result<HttpResponse, Error> {
@@ -28,6 +31,7 @@ pub async fn start_connection(
                                 Some(user.admin),
                                 srv.get_ref().clone(),
                                 chat_storage.clone(),
+                                game_start.clone(),
                                 pool.get_ref().clone(),
                             );
                             let resp = ws::start(ws, &req, stream)?;
@@ -47,6 +51,7 @@ pub async fn start_connection(
         None,
         srv.get_ref().clone(),
         chat_storage.clone(),
+        game_start.clone(),
         pool.get_ref().clone(),
     );
 

@@ -1,6 +1,6 @@
 use crate::{
     common::ChallengeUpdate,
-    providers::{auth_context::AuthContext, challenges::ChallengeStateSignal},
+    providers::{auth_context::AuthContext, challenges::ChallengeStateSignal, NotificationContext},
     responses::ChallengeResponse,
 };
 use leptos::*;
@@ -32,21 +32,53 @@ fn filter_challenges(challenges: &mut Vec<ChallengeResponse>) {
 }
 
 pub fn handle_challenge(challenge: ChallengeUpdate) {
+    let mut challenges = expect_context::<ChallengeStateSignal>();
+    let notifications = expect_context::<NotificationContext>();
+    let auth_context = expect_context::<AuthContext>();
+    let account = move || match untrack(auth_context.user) {
+        Some(Ok(Some(account))) => Some(account),
+        _ => None,
+    };
     match challenge {
         ChallengeUpdate::Challenges(mut new_challanges) => {
-            let mut challenges = expect_context::<ChallengeStateSignal>();
             filter_challenges(&mut new_challanges);
+            if let Some(account) = account() {
+                for challenge in &new_challanges {
+                    if let Some(ref opponent) = challenge.opponent {
+                        if opponent.uid == account.user.uid {
+                            notifications.challenges.update(|challenges| {
+                                challenges.insert(challenge.challenge_id.clone());
+                            })
+                        }
+                    }
+                }
+            }
             challenges.add(new_challanges);
         }
-        ChallengeUpdate::Removed(challenger_id) => {
+        ChallengeUpdate::Removed(challenge_id) => {
             let mut challenges = expect_context::<ChallengeStateSignal>();
-            challenges.remove(challenger_id);
+            batch(move || {
+                challenges.remove(challenge_id.clone());
+                notifications.challenges.update(|challenges| {
+                    challenges.remove(&challenge_id);
+                })
+            });
         }
         ChallengeUpdate::Created(challenge) | ChallengeUpdate::Direct(challenge) => {
-            let mut challenges = expect_context::<ChallengeStateSignal>();
-            let mut new_challenges = vec![challenge];
-            filter_challenges(&mut new_challenges);
-            challenges.add(new_challenges);
+            batch(move || {
+                if let Some(account) = account() {
+                    if let Some(ref opponent) = challenge.opponent {
+                        if opponent.uid == account.user.uid {
+                            notifications.challenges.update(|challenges| {
+                                challenges.insert(challenge.challenge_id.clone());
+                            })
+                        }
+                    }
+                }
+                let mut new_challenges = vec![challenge];
+                filter_challenges(&mut new_challenges);
+                challenges.add(new_challenges);
+            });
         }
     }
 }

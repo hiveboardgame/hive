@@ -15,14 +15,21 @@ use chrono::Utc;
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos::*;
 use leptos_icons::*;
-use shared_types::Conclusion;
+use shared_types::{GameStart, PrettyString, TimeInfo};
 
 #[component]
 pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     let rated_string = if game().rated { " RATED" } else { " CASUAL" };
 
     let result_string = match game().game_status {
-        GameStatus::NotStarted | GameStatus::InProgress => "Playing now".to_string(),
+        GameStatus::NotStarted => {
+            if game().game_start == GameStart::Ready {
+                "The game will start once both players agree on a time".to_string()
+            } else {
+                "Not started".to_string()
+            }
+        }
+        GameStatus::InProgress => "Playing now".to_string(),
         GameStatus::Finished(res) => match res {
             GameResult::Winner(c) => GameResult::Winner(c).to_string(),
             GameResult::Draw => GameResult::Draw.to_string(),
@@ -40,7 +47,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
         } else {
             (
                 Utc::now().signed_duration_since(game().created_at),
-                "Started",
+                "Created",
             )
         };
         if time.num_weeks() > 1 {
@@ -78,15 +85,13 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
             })
             .collect::<String>(),
     };
-    let conclusion = move || match game().conclusion {
-        Conclusion::Board => String::from(" Finished on board"),
-        Conclusion::Draw => String::from(" Draw agreed"),
-        Conclusion::Resigned => String::from(" Resigned"),
-        Conclusion::Timeout => String::from(" Timeout"),
-        Conclusion::Repetition => String::from(" 3 move repetition"),
-        Conclusion::Unknown => String::new(),
-    };
+    let conclusion = move || game().conclusion.pretty_string();
     let ratings = store_value(RatingChangeInfo::from_game_response(&game()));
+    let time_info = TimeInfo {
+        mode: game().time_mode.clone(),
+        base: game().time_base,
+        increment: game().time_increment,
+    };
 
     view! {
         <article class="flex relative px-2 py-4 mx-2 w-full h-72 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
@@ -96,15 +101,24 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">
                 <div class="flex flex-col justify-between">
                     <div class="flex gap-1">
-                        {rated_string}
-                        <TimeRow
-                            time_mode=game().time_mode
-                            time_base=game().time_base
-                            increment=game().time_increment
-                        />
+                        {rated_string} <TimeRow time_info/>
+                        <Show when=move || {
+                            game().tournament.is_some()
+                        }>
+                            played in
+                            <a
+                                class="z-20 text-blue-500 hover:underline"
+                                href=format!(
+                                    "/tournament/{}",
+                                    game().tournament.unwrap().tournament_id,
+                                )
+                            >
+
+                                {game().tournament.unwrap().name}
+                            </a>
+                        </Show>
                     </div>
                     <div>{ago}</div>
-
                 </div>
                 <div class="flex gap-1 justify-center items-center w-full">
                     <div class="mr-2">

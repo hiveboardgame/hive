@@ -11,6 +11,19 @@ pub enum Conclusion {
     Repetition,
 }
 
+impl PrettyString for Conclusion {
+    fn pretty_string(&self) -> String {
+        match self {
+            Conclusion::Board => String::from("Finished on board"),
+            Conclusion::Draw => String::from("Draw agreed"),
+            Conclusion::Resigned => String::from("Resigned"),
+            Conclusion::Timeout => String::from("Timeout"),
+            Conclusion::Repetition => String::from("3 move repetition"),
+            Conclusion::Unknown => String::from("Unknown"),
+        }
+    }
+}
+
 impl fmt::Display for Conclusion {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let time = match self {
@@ -26,6 +39,8 @@ impl fmt::Display for Conclusion {
 }
 
 use thiserror::Error;
+
+use crate::PrettyString;
 #[derive(Error, Debug, Clone, Serialize, Deserialize)]
 pub enum ConclusionError {
     #[error("{found} is not a valid Conclusion")]
