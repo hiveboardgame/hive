@@ -1,7 +1,9 @@
 use crate::{
+    common::UserAction,
     components::atoms::{
-        direct_challenge_button::DirectChallengeButton, profile_link::ProfileLink, rating::Rating,
-        status_indicator::StatusIndicator,
+        direct_challenge_button::DirectChallengeButton, invite_button::InviteButton,
+        kick_button::KickButton, profile_link::ProfileLink, rating::Rating,
+        status_indicator::StatusIndicator, uninvite_button::UninviteButton,
     },
     responses::UserResponse,
 };
@@ -11,6 +13,8 @@ use shared_types::GameSpeed;
 #[component]
 pub fn UserRow(
     user: StoredValue<UserResponse>,
+    actions: Vec<UserAction>,
+    #[prop(optional)] end_str: String,
     #[prop(optional)] game_speed: Option<StoredValue<GameSpeed>>,
     #[prop(optional)] on_profile: bool,
 ) -> impl IntoView {
@@ -46,8 +50,31 @@ pub fn UserRow(
             }
         }
     };
+
+    let display_actions = move || {
+        let mut views = vec![];
+        for action in actions {
+            match action {
+                UserAction::Challenge => {
+                    views.push(view! { <DirectChallengeButton user=user/> });
+                }
+                UserAction::Invite(tournament_id) => {
+                    views.push(view! { <InviteButton user=user tournament_id=tournament_id/> });
+                }
+                UserAction::Uninvite(tournament_id) => {
+                    views.push(view! { <UninviteButton user=user tournament_id=tournament_id/> });
+                }
+                UserAction::Kick(tournament) => {
+                    views.push(view! { <KickButton user=user tournament=*tournament/> });
+                }
+                _ => {}
+            };
+        }
+        views.collect_view()
+    };
+
     view! {
-        <div class=format!("flex p-1 items-center justify-between h-10 {color}")>
+        <div class=format!("flex p-1 items-center justify-between h-10 w-64 {color}")>
             <div class="flex justify-between mr-2 w-48">
                 <div class="flex items-center">
                     <StatusIndicator username=user().username/>
@@ -58,7 +85,8 @@ pub fn UserRow(
                 </Show>
 
             </div>
-            <DirectChallengeButton user=user/>
+            {display_actions()}
+            {end_str}
         </div>
     }
 }

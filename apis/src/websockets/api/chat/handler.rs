@@ -27,10 +27,15 @@ impl ChatHandler {
     pub fn handle(&self) -> Vec<InternalServerMessage> {
         let mut messages = Vec::new();
         match &self.container.destination {
-            ChatDestination::TournamentLobby(tournament) => messages.push(InternalServerMessage {
-                destination: MessageDestination::Tournament(tournament.clone()),
-                message: ServerMessage::Chat(vec![self.container.to_owned()]),
-            }),
+            ChatDestination::TournamentLobby(tournament_id) => {
+                let mut tournament_lobby = self.chat_storage.tournament.write().unwrap();
+                let entry = tournament_lobby.entry(tournament_id.clone()).or_default();
+                entry.push(self.container.clone());
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::Tournament(tournament_id.clone()),
+                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                })
+            }
             ChatDestination::GamePlayers(game_id, white_id, black_id) => {
                 let mut games_private = self.chat_storage.games_private.write().unwrap();
                 let entry = games_private.entry(game_id.clone()).or_default();
@@ -50,7 +55,7 @@ impl ChatHandler {
                 entry.push(self.container.clone());
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::GameSpectators(
-                        game.to_string(),
+                        game.clone(),
                         *white_id,
                         *black_id,
                     ),

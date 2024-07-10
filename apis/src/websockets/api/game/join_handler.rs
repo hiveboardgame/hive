@@ -48,12 +48,12 @@ impl JoinHandler {
         let mut messages = Vec::new();
         if let Ok(user) = UserResponse::from_uuid(&self.user_id, &mut conn).await {
             messages.push(InternalServerMessage {
-                destination: MessageDestination::Game(self.game.nanoid.clone()),
+                destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
                 message: ServerMessage::Join(user),
             });
         } else {
             messages.push(InternalServerMessage {
-                destination: MessageDestination::Game(self.game.nanoid.clone()),
+                destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
                 message: ServerMessage::Join(UserResponse::for_anon(self.user_id)),
             });
         }
@@ -61,18 +61,18 @@ impl JoinHandler {
             destination: MessageDestination::Direct(self.received_from.clone()),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),
-                game: GameResponse::new_from_model(&self.game, &mut conn).await?,
+                game: GameResponse::from_model(&self.game, &mut conn).await?,
                 game_action: GameReaction::Join,
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
             }))),
         });
-        let games = if self.user_id == self.game.white_id || self.user_id == self.game.black_id {
+        let chat = if self.user_id == self.game.white_id || self.user_id == self.game.black_id {
             self.chat_storage.games_private.read().unwrap()
         } else {
             self.chat_storage.games_public.read().unwrap()
         };
-        if let Some(messages_to_push) = games.get(&GameId(self.game.nanoid.clone())) {
+        if let Some(messages_to_push) = chat.get(&GameId(self.game.nanoid.clone())) {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::User(self.user_id),
                 message: ServerMessage::Chat(messages_to_push.clone()),

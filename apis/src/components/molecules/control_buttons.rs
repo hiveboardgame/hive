@@ -7,6 +7,7 @@ use crate::{
 };
 use hive_lib::{ColorChoice, GameControl};
 use leptos::*;
+use leptos_router::use_navigate;
 use shared_types::{ChallengeDetails, ChallengeVisibility};
 
 #[component]
@@ -30,7 +31,29 @@ pub fn ControlButtons() -> impl IntoView {
         }
     };
     let pending = create_read_slice(game_state.signal, |gs| gs.game_control_pending.clone());
-
+    let not_tournament = create_read_slice(game_state.signal, |gs| {
+        gs.game_response
+            .as_ref()
+            .map_or(false, |gr| gr.tournament.is_none())
+    });
+    let navigate_to_tournament = move |_| {
+        let navigate = use_navigate();
+        navigate(
+            &format!(
+                "/tournament/{}",
+                game_state
+                    .signal
+                    .get()
+                    .game_response
+                    .as_ref()
+                    .map_or(String::new(), |gr| gr
+                        .tournament
+                        .as_ref()
+                        .map_or(String::new(), |t| t.tournament_id.to_string()))
+            ),
+            Default::default(),
+        );
+    };
     let pending_draw = move || match pending() {
         Some(GameControl::DrawOffer(gc_color)) => gc_color.opposite_color() == color(),
 
@@ -176,43 +199,45 @@ pub fn ControlButtons() -> impl IntoView {
                     view! {
                         <div class="flex flex-col w-full">
                             <div class="flex justify-around items-center grow shrink">
-                                <div class="relative">
-                                    <ConfirmButton
-                                        game_control=store_value(GameControl::Abort(color()))
-                                        user_id=user_id()
-                                        hidden=memo_for_hidden_class(move || {
-                                            (game_state.signal)().state.turn > 1
-                                        })
-                                    />
+                                <Show when=not_tournament>
+                                    <div class="relative">
+                                        <ConfirmButton
+                                            game_control=store_value(GameControl::Abort(color()))
+                                            user_id=user_id()
+                                            hidden=memo_for_hidden_class(move || {
+                                                (game_state.signal)().state.turn > 1
+                                            })
+                                        />
 
-                                    <ConfirmButton
-                                        game_control=store_value(
-                                            GameControl::TakebackRequest(color()),
-                                        )
+                                        <ConfirmButton
+                                            game_control=store_value(
+                                                GameControl::TakebackRequest(color()),
+                                            )
 
-                                        user_id=user_id()
-                                        hidden=memo_for_hidden_class(move || {
-                                            pending_takeback() || (game_state.signal)().state.turn < 2
-                                        })
-                                    />
+                                            user_id=user_id()
+                                            hidden=memo_for_hidden_class(move || {
+                                                pending_takeback() || (game_state.signal)().state.turn < 2
+                                            })
+                                        />
 
-                                    <AcceptDenyGc
-                                        game_control=store_value(
-                                            GameControl::TakebackAccept(color()),
-                                        )
+                                        <AcceptDenyGc
+                                            game_control=store_value(
+                                                GameControl::TakebackAccept(color()),
+                                            )
 
-                                        user_id=user_id()
-                                        hidden=memo_for_hidden_class(move || !pending_takeback())
-                                    />
-                                    <AcceptDenyGc
-                                        game_control=store_value(
-                                            GameControl::TakebackReject(color()),
-                                        )
+                                            user_id=user_id()
+                                            hidden=memo_for_hidden_class(move || !pending_takeback())
+                                        />
+                                        <AcceptDenyGc
+                                            game_control=store_value(
+                                                GameControl::TakebackReject(color()),
+                                            )
 
-                                        user_id=user_id()
-                                        hidden=memo_for_hidden_class(move || !pending_takeback())
-                                    />
-                                </div>
+                                            user_id=user_id()
+                                            hidden=memo_for_hidden_class(move || !pending_takeback())
+                                        />
+                                    </div>
+                                </Show>
                                 <div class="relative">
                                     <ConfirmButton
                                         game_control=store_value(GameControl::DrawOffer(color()))
@@ -250,25 +275,40 @@ pub fn ControlButtons() -> impl IntoView {
                 }
             >
 
-                <button
-                    class=move || {
-                        format!(
-                            "h-7 m-1 grow {} transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded disabled:opacity-25 disabled:cursor-not-allowed flex-shrink-0",
-                            rematch_button_color(),
-                        )
+                <Show
+                    when=not_tournament
+                    fallback=move || {
+                        view! {
+                            <button
+                                class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 transform grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                                on:click=navigate_to_tournament
+                            >
+                                View tournament
+                            </button>
+                        }
                     }
+                >
 
-                    prop:disabled=sent_challenge
-                    on:click=rematch
-                >
-                    {rematch_text}
-                </button>
-                <button
-                    class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 transform grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
-                    on:click=new_opponent
-                >
-                    New Game
-                </button>
+                    <button
+                        class=move || {
+                            format!(
+                                "h-7 m-1 grow {} transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded disabled:opacity-25 disabled:cursor-not-allowed flex-shrink-0",
+                                rematch_button_color(),
+                            )
+                        }
+
+                        prop:disabled=sent_challenge
+                        on:click=rematch
+                    >
+                        {rematch_text}
+                    </button>
+                    <button
+                        class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 transform grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                        on:click=new_opponent
+                    >
+                        New Game
+                    </button>
+                </Show>
             </Show>
         </div>
     }

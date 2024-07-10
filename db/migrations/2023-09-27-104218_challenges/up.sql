@@ -1,6 +1,6 @@
 create table challenges (
   id uuid default gen_random_uuid() primary key not null,
-  nanoid text not null,
+  nanoid text unique not null,
   challenger_id uuid references users(id) not null,
   game_type text not null,
   rated boolean not null,

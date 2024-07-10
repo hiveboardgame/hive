@@ -31,3 +31,4 @@ chrono = { workspace = true }
 shared_types = { path = "../shared_types/" }
 lazy_static = { workspace = true }
 regex = { workspace = true }
+itertools = { workspace = true }
