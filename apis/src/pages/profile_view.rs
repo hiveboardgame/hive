@@ -5,9 +5,11 @@ use crate::{
     },
     responses::GameResponse,
 };
+use hive_lib::GameStatus;
 use leptos::{ev::scroll, *};
 use leptos_router::*;
 use leptos_use::{use_document, use_event_listener, use_throttle_fn, use_window};
+use shared_types::GameStart;
 
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
@@ -16,12 +18,14 @@ struct UsernameParams {
 
 #[derive(Clone, PartialEq)]
 pub enum ProfileGamesView {
+    Unstarted,
     Playing,
     Finished,
 }
 
 #[derive(Debug, Clone)]
 pub struct AllUserGames {
+    pub unstarted: RwSignal<Vec<GameResponse>>,
     pub playing: RwSignal<Vec<GameResponse>>,
     pub finished: RwSignal<Vec<GameResponse>>,
 }
@@ -89,16 +93,33 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                     let (current_finished_games, more_games) = finished_games()
                         .and_then(|games| games.ok())
                         .unwrap_or((Vec::new(), false));
-                    let ongoing_games = ongoing_games()
+                    let mut ongoing_games = ongoing_games()
                         .and_then(|games| games.ok())
                         .unwrap_or(Vec::new());
+                    let mut unstarted = Vec::new();
+                    ongoing_games
+                        .retain(|gr| {
+                            if gr.game_start == GameStart::Ready
+                                && gr.game_status == GameStatus::NotStarted
+                            {
+                                unstarted.push(gr.clone());
+                                false
+                            } else {
+                                true
+                            }
+                        });
                     finished.update(move |v| v.extend(current_finished_games));
                     still_more_games.set(more_games);
                     let playing = RwSignal::from(ongoing_games);
+                    let unstarted = RwSignal::from(unstarted);
                     last_id.update(move |v| { *v = finished().last().map(|gr| gr.uuid) });
                     last_timestamp
                         .update(move |v| { *v = finished().last().map(|gr| gr.updated_at) });
-                    provide_context(AllUserGames { finished, playing });
+                    provide_context(AllUserGames {
+                        unstarted,
+                        finished,
+                        playing,
+                    });
                     user()
                         .map(|data| match data {
                             Err(_) => view! { <pre>"Page not found"</pre> }.into_view(),
@@ -106,20 +127,33 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                 view! {
                                     <DisplayProfile user=store_value(user)/>
                                     <div class="flex gap-1 ml-3">
-                                        <A
-                                            href="playing"
-                                            class=move || active(ProfileGamesView::Playing)
-                                            on:click=move |_| finished.update(|v| v.clear())
-                                        >
-                                            "Playing "
-                                        </A>
-                                        <A
-                                            href="finished"
-                                            class=move || active(ProfileGamesView::Finished)
-                                            on:click=move |_| finished.update(|v| v.clear())
-                                        >
-                                            "Finished Games "
-                                        </A>
+                                        <Show when=move || !unstarted().is_empty()>
+                                            <A
+                                                href="unstarted"
+                                                class=move || active(ProfileGamesView::Unstarted)
+                                                on:click=move |_| finished.update(|v| v.clear())
+                                            >
+                                                "Unstarted Tournament Games"
+                                            </A>
+                                        </Show>
+                                        <Show when=move || !playing().is_empty()>
+                                            <A
+                                                href="playing"
+                                                class=move || active(ProfileGamesView::Playing)
+                                                on:click=move |_| finished.update(|v| v.clear())
+                                            >
+                                                "Playing "
+                                            </A>
+                                        </Show>
+                                        <Show when=move || !finished().is_empty()>
+                                            <A
+                                                href="finished"
+                                                class=move || active(ProfileGamesView::Finished)
+                                                on:click=move |_| finished.update(|v| v.clear())
+                                            >
+                                                "Finished Games "
+                                            </A>
+                                        </Show>
                                     </div>
                                     {stored_children()()}
                                     <Show when=finished_games.loading()>

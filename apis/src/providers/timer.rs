@@ -57,7 +57,7 @@ impl Timer {
     pub fn new() -> Self {
         Self {
             game_id: GameId(String::new()),
-            finished: true,
+            finished: false,
             turn: 0,
             white_time_left: None,
             black_time_left: None,

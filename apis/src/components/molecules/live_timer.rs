@@ -1,7 +1,8 @@
+use crate::providers::game_state::GameStateSignal;
 use crate::providers::timer::TimerSignal;
 use crate::providers::ApiRequests;
 use chrono::prelude::*;
-use hive_lib::Color;
+use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;
 use leptos::*;
 use leptos_router::RouterContext;
@@ -19,53 +20,34 @@ lazy_static! {
 #[component]
 pub fn LiveTimer(side: Color) -> impl IntoView {
     let timer_signal = expect_context::<TimerSignal>();
-    let timer = timer_signal.signal.get_untracked();
-    let white_time = move || {
-        let left = timer.white_time_left.unwrap();
-        if timer.turn < 2
-            || left == Duration::from_millis(0)
-            || timer.turn % 2 == 1
-            || timer.finished
-        {
-            left
-        } else {
-            let left = chrono::Duration::from_std(left).unwrap();
-            let then = timer.last_interaction.unwrap();
-            let future = then.checked_add_signed(left).unwrap();
-            let now = Utc::now();
-            if now > future {
-                Duration::from_millis(0)
-            } else {
-                future.signed_duration_since(now).to_std().unwrap()
-            }
-        }
-    };
-    let black_time = move || {
-        let left = timer.black_time_left.unwrap();
-        if timer.turn < 2
-            || left == Duration::from_millis(0)
-            || timer.turn % 2 == 0
-            || timer.finished
-        {
-            left
-        } else {
-            let left = chrono::Duration::from_std(left).unwrap();
-            let then = timer.last_interaction.unwrap();
-            let future = then.checked_add_signed(left).unwrap();
-            let now = Utc::now();
-            if now > future {
-                Duration::from_millis(0)
-            } else {
-                future.signed_duration_since(now).to_std().unwrap()
-            }
-        }
-    };
-    let time_left = create_rw_signal({
-        match side {
-            Color::Black => black_time(),
-            Color::White => white_time(),
-        }
+    let game_state = expect_context::<GameStateSignal>();
+    let in_progress = create_read_slice(game_state.signal, |gs| {
+        gs.game_response
+            .as_ref()
+            .map_or(false, |gr| gr.game_status == GameStatus::InProgress)
     });
+    let timer = timer_signal.signal.get_untracked();
+    let color_time = move |color: Color| {
+        let (left, user_turn) = match color {
+            Color::White => (timer.white_time_left.unwrap(), timer.turn % 2 == 0),
+            Color::Black => (timer.black_time_left.unwrap(), timer.turn % 2 == 1),
+        };
+        if in_progress() && user_turn {
+            let left = chrono::Duration::from_std(left).unwrap();
+            let then = timer.last_interaction.unwrap();
+            let future = then.checked_add_signed(left).unwrap();
+            let now = Utc::now();
+            if now > future {
+                Duration::from_millis(0)
+            } else {
+                future.signed_duration_since(now).to_std().unwrap()
+            }
+        } else {
+            left
+        }
+    };
+
+    let time_left = create_rw_signal(color_time(side));
     let time_is_red = Memo::new(move |_| {
         if time_left() == Duration::from_secs(0) {
             String::from("bg-ladybug-red")
@@ -86,10 +68,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
                 time_left.update(|t| {
                     if ticks.get_untracked() > 10 {
                         ticks.update(|t| *t = 0);
-                        *t = match side {
-                            Color::Black => black_time(),
-                            Color::White => white_time(),
-                        };
+                        *t = color_time(side)
                     } else {
                         *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
                     }
@@ -103,7 +82,7 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
     // WARN: Might lead to problems, if we get  re-render loops, this could be the cause.
     create_isomorphic_effect(move |_| {
         let timer = timer_signal.signal.get();
-        if timer.turn > 1 {
+        if in_progress() {
             if (side == Color::White) == (timer.turn % 2 == 0) && !timer.finished {
                 resume();
             } else if is_active() {

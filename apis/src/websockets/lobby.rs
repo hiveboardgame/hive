@@ -1,3 +1,4 @@
+use crate::{common::TournamentUpdate, responses::TournamentResponse};
 use crate::{
     common::{ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
     responses::{ChallengeResponse, GameResponse, UserResponse},
@@ -6,13 +7,15 @@ use crate::{
 use actix::prelude::{Actor, Context, Handler, Recipient};
 use actix::AsyncContext;
 use actix::WrapFuture;
+use db_lib::models::Tournament;
 use db_lib::{
     get_conn,
-    models::{Challenge, User},
+    models::{Challenge, TournamentInvitation, User},
     DbPool,
 };
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
+use shared_types::GameId;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -22,7 +25,7 @@ use super::internal_server_message::MessageDestination;
 pub struct Lobby {
     id: String,
     sessions: HashMap<Uuid, Vec<Recipient<WsMessage>>>, // user_id to (socket_)id
-    games_users: HashMap<String, HashSet<Uuid>>,        // game_id to set of users
+    games_users: HashMap<GameId, HashSet<Uuid>>,        // game_id to set of users
     users_games: HashMap<Uuid, HashSet<String>>,        // user_id to set of games
     pool: DbPool,
 }
@@ -71,12 +74,13 @@ impl Handler<Disconnect> for Lobby {
         if !self.sessions.contains_key(&msg.user_id) {
             if let Some(games) = self.users_games.remove(&msg.user_id) {
                 for game in games.iter() {
-                    if let Some(game_users) = self.games_users.get_mut(game) {
+                    let game_id = GameId(game.to_string());
+                    if let Some(game_users) = self.games_users.get_mut(&game_id) {
                         if game_users.len() > 1 {
                             game_users.remove(&msg.user_id);
                         } else {
                             //only one in the game, remove it entirely
-                            self.games_users.remove(game);
+                            self.games_users.remove(&game_id);
                         }
                     }
                 }
@@ -88,10 +92,11 @@ impl Handler<Disconnect> for Lobby {
             })));
             let serialized =
                 serde_json::to_string(&message).expect("Failed to serialize a server message");
-            if let Some(lobby) = self.games_users.get_mut(&self.id) {
+            let game_id = GameId(self.id.clone());
+            if let Some(lobby) = self.games_users.get_mut(&game_id) {
                 lobby.remove(&msg.user_id);
             }
-            if let Some(lobby) = self.games_users.get(&self.id) {
+            if let Some(lobby) = self.games_users.get(&game_id) {
                 lobby
                     .iter()
                     .for_each(|user_id| self.send_message(&serialized, user_id));
@@ -106,7 +111,7 @@ impl Handler<Connect> for Lobby {
     fn handle(&mut self, msg: Connect, ctx: &mut Context<Self>) -> Self::Result {
         let user_id = msg.user_id;
         self.games_users
-            .entry(msg.game_id.clone())
+            .entry(GameId(msg.game_id.clone()))
             .or_default()
             .insert(msg.user_id);
         self.users_games
@@ -137,13 +142,14 @@ impl Handler<Connect> for Lobby {
                         let cam = ClientActorMessage {
                             destination: MessageDestination::User(user_id),
                             serialized,
-                            from: user_id,
+                            from: Some(user_id),
                         };
                         address.do_send(cam);
                     }
                 }
+
                 let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
-                    if let Ok(user_response) = UserResponse::from_user(&user, &mut conn).await {
+                    if let Ok(user_response) = UserResponse::from_model(&user, &mut conn).await {
                         let message =
                             ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
                                 status: UserStatus::Online,
@@ -154,16 +160,12 @@ impl Handler<Connect> for Lobby {
                             .expect("Failed to serialize a server message");
                         // TODO: one needs to be a game::join to everyone in the game, the other one just to the
                         // lobby that the user came online
-                        if let Some(user_ids) = games_users.get(&msg.game_id) {
+                        if let Some(user_ids) = games_users.get(&GameId(msg.game_id)) {
                             for id in user_ids {
                                 if let Some(sockets) = sessions.get(id) {
                                     for socket in sockets {
                                         socket.do_send(WsMessage(serialized.clone()));
                                     }
-                                } else if let Ok(user) = User::find_by_uuid(id, &mut conn).await {
-                                    println!("Game_users has stale user: {}", user.username);
-                                } else {
-                                    println!("Game_users has stale anoymous user");
                                 }
                             }
                         }
@@ -202,11 +204,35 @@ impl Handler<Connect> for Lobby {
                             let cam = ClientActorMessage {
                                 destination: MessageDestination::User(user_id),
                                 serialized,
-                                from: user_id,
+                                from: Some(user_id),
                             };
                             address.do_send(cam);
                         }
                     }
+                    // send tournament invitations
+                    if let Ok(invitations) =
+                        TournamentInvitation::find_by_user(&user.id, &mut conn).await
+                    {
+                        for invitation in invitations {
+                            if let Ok(response) =
+                                TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn)
+                                    .await
+                            {
+                                let message = ServerResult::Ok(Box::new(
+                                    ServerMessage::Tournament(TournamentUpdate::Invited(response)),
+                                ));
+                                let serialized = serde_json::to_string(&message)
+                                    .expect("Failed to serialize a server message");
+                                let cam = ClientActorMessage {
+                                    destination: MessageDestination::User(user_id),
+                                    serialized,
+                                    from: Some(user_id),
+                                };
+                                address.do_send(cam);
+                            }
+                        }
+                    }
+
                     // Send challenges on join
                     let mut responses = Vec::new();
                     if let Ok(challenges) =
@@ -261,12 +287,11 @@ impl Handler<Connect> for Lobby {
                 let cam = ClientActorMessage {
                     destination: MessageDestination::User(user_id),
                     serialized,
-                    from: user_id,
+                    from: Some(user_id),
                 };
                 address.do_send(cam);
             }
         };
-
         let actor_future = future.into_actor(self);
         ctx.wait(actor_future);
     }
@@ -275,30 +300,34 @@ impl Handler<Connect> for Lobby {
 impl Handler<ClientActorMessage> for Lobby {
     type Result = ();
 
-    fn handle(&mut self, cam: ClientActorMessage, _ctx: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, cam: ClientActorMessage, ctx: &mut Context<Self>) -> Self::Result {
         match cam.destination {
             MessageDestination::Direct(socket) => {
                 socket.do_send(WsMessage(cam.serialized));
             }
             MessageDestination::Global => {
                 // Make sure the user is in the game:
-                self.games_users
-                    .entry(self.id.clone())
-                    .or_default()
-                    .insert(cam.from);
+                if let Some(from) = cam.from {
+                    self.games_users
+                        .entry(GameId(self.id.clone()))
+                        .or_default()
+                        .insert(from);
+                }
                 // Send the message to everyone
                 self.games_users
-                    .get(&self.id)
+                    .get(&GameId(self.id.clone()))
                     .expect("Game to exists")
                     .iter()
                     .for_each(|client| self.send_message(&cam.serialized, client));
             }
             MessageDestination::Game(game_id) => {
                 // Make sure the user is in the game:
-                self.games_users
-                    .entry(game_id.clone())
-                    .or_default()
-                    .insert(cam.from);
+                if let Some(from) = cam.from {
+                    self.games_users
+                        .entry(game_id.clone())
+                        .or_default()
+                        .insert(from);
+                }
                 // Send the message to everyone
                 self.games_users
                     .get(&game_id)
@@ -308,10 +337,12 @@ impl Handler<ClientActorMessage> for Lobby {
             }
             MessageDestination::GameSpectators(game_id, white_id, black_id) => {
                 // Make sure the user is in the game:
-                self.games_users
-                    .entry(game_id.clone())
-                    .or_default()
-                    .insert(cam.from);
+                if let Some(from) = cam.from {
+                    self.games_users
+                        .entry(game_id.clone())
+                        .or_default()
+                        .insert(from);
+                }
                 // Send the message to everyone except white_id and black_id
                 self.games_users
                     .get(&game_id)
@@ -326,7 +357,40 @@ impl Handler<ClientActorMessage> for Lobby {
             MessageDestination::User(user_id) => {
                 self.send_message(&cam.serialized, &user_id);
             }
-            MessageDestination::Tournament(_tournament) => todo!(),
+            MessageDestination::Tournament(tournament) => {
+                let pool = self.pool.clone();
+                let sessions = self.sessions.clone();
+                let future = async move {
+                    if let Ok(mut conn) = get_conn(&pool).await {
+                        if let Ok(tournament) =
+                            Tournament::from_nanoid(&tournament.to_string(), &mut conn).await
+                        {
+                            let mut user_ids = HashSet::new();
+                            if let Ok(players) = tournament.players(&mut conn).await {
+                                for player in players {
+                                    user_ids.insert(player.id);
+                                }
+                            }
+                            if let Ok(organizers) = tournament.organizers(&mut conn).await {
+                                for org in organizers {
+                                    user_ids.insert(org.id);
+                                }
+                            }
+                            for user_id in user_ids.clone() {
+                                if let Some(sockets) = sessions.get(&user_id) {
+                                    for socket in sockets {
+                                        socket.do_send(WsMessage(cam.serialized.clone()));
+                                    }
+                                } else {
+                                    println!("Couldn't find socket for {}", user_id);
+                                }
+                            }
+                        };
+                    }
+                };
+                let actor_future = future.into_actor(self);
+                ctx.wait(actor_future);
+            }
         }
     }
 }

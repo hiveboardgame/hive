@@ -1,6 +1,5 @@
 use crate::{common::TileRotation, providers::Config};
 use leptos::*;
-
 use leptos_router::ActionForm;
 
 #[component]

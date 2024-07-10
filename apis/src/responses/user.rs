@@ -88,15 +88,15 @@ use anyhow::Result;
 impl UserResponse {
     pub async fn from_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
         let user = User::find_by_uuid(id, conn).await?;
-        Self::from_user(&user, conn).await
+        Self::from_model(&user, conn).await
     }
 
     pub async fn from_username(username: &str, conn: &mut DbConn<'_>) -> Result<Self> {
         let user = User::find_by_username(username, conn).await?;
-        Self::from_user(&user, conn).await
+        Self::from_model(&user, conn).await
     }
 
-    pub async fn from_user(user: &User, conn: &mut DbConn<'_>) -> Result<Self> {
+    pub async fn from_model(user: &User, conn: &mut DbConn<'_>) -> Result<Self> {
         let mut ratings = HashMap::new();
         for game_speed in GameSpeed::all_rated().into_iter() {
             let rating = RatingResponse::from_user(user, &game_speed, conn).await?;

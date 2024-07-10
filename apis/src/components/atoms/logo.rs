@@ -13,13 +13,5 @@ pub fn Logo(tw_class: &'static str) -> impl IntoView {
         }
     };
 
-    view! {
-       <img
-           width="100%"
-           height="100%"
-           src=logo
-           alt="Home"
-           class=tw_class
-       />
-    }
+    view! { <img width="100%" height="100%" src=logo alt="Home" class=tw_class/> }
 }

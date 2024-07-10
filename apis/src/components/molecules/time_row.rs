@@ -1,21 +1,21 @@
 use crate::components::atoms::rating::icon_for_speed;
 use leptos::*;
 use leptos_icons::*;
-use shared_types::{GameSpeed, TimeMode};
+use shared_types::{GameSpeed, TimeInfo, TimeMode};
 
 #[component]
 pub fn TimeRow(
-    time_mode: TimeMode,
-    time_base: Option<i32>,
-    increment: Option<i32>,
+    time_info: TimeInfo,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let time_mode = store_value(time_mode);
+    let time_mode = store_value(time_info.mode);
     let icon = move || {
         let speed = match time_mode() {
             TimeMode::Untimed => GameSpeed::Untimed,
             TimeMode::Correspondence => GameSpeed::Correspondence,
-            TimeMode::RealTime => GameSpeed::from_base_increment(time_base, increment),
+            TimeMode::RealTime => {
+                GameSpeed::from_base_increment(time_info.base, time_info.increment)
+            }
         };
         view! { <Icon icon=icon_for_speed(&speed) class="w-4 h-4"/> }
     };
@@ -23,16 +23,19 @@ pub fn TimeRow(
         TimeMode::Untimed => "No time limit".to_owned(),
         TimeMode::RealTime => format!(
             "{}m + {}s",
-            time_base.expect("Time exists") / 60,
-            increment.expect("Increment exists"),
+            time_info.base.expect("Time exists") / 60,
+            time_info.increment.expect("Increment exists"),
         ),
 
-        TimeMode::Correspondence if time_base.is_some() => {
-            format!("{} days/side", time_base.expect("Time exists") / 86400)
+        TimeMode::Correspondence if time_info.base.is_some() => {
+            format!("{} days/side", time_info.base.expect("Time exists") / 86400)
         }
 
-        TimeMode::Correspondence if increment.is_some() => {
-            format!("{} days/move ", increment.expect("Time exists") / 86400)
+        TimeMode::Correspondence if time_info.increment.is_some() => {
+            format!(
+                "{} days/move ",
+                time_info.increment.expect("Time exists") / 86400
+            )
         }
 
         _ => unreachable!(),

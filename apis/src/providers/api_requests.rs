@@ -1,14 +1,14 @@
 use super::challenges::ChallengeStateSignal;
 use super::games::GamesSignal;
 use super::AuthContext;
-use crate::common::ChallengeAction;
+use crate::common::{ChallengeAction, TournamentAction};
 use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
 use crate::responses::create_challenge_handler;
 use chrono::Utc;
 use hive_lib::{GameControl, Turn};
 use leptos::*;
-use shared_types::{ChallengeId, ChatMessageContainer, GameId};
+use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResult, TournamentId};
 #[derive(Clone)]
 pub struct ApiRequests {
     websocket: WebsocketContext,
@@ -53,8 +53,40 @@ impl ApiRequests {
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }
 
+    pub fn tournament_game_start(&self, game_id: GameId) {
+        let msg = ClientRequest::Game {
+            game_id,
+            action: GameAction::Start,
+        };
+        self.websocket
+            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    }
+
+    pub fn tournament_abandon(&self, tournament_id: TournamentId) {
+        let msg = ClientRequest::Tournament(TournamentAction::Abandon(tournament_id));
+        self.websocket
+            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    }
+
+    pub fn tournament_adjudicate_game_result(
+        &self,
+        game_id: GameId,
+        new_result: TournamentGameResult,
+    ) {
+        let msg =
+            ClientRequest::Tournament(TournamentAction::AdjudicateResult(game_id, new_result));
+        self.websocket
+            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    }
+
     pub fn chat(&self, message: &ChatMessageContainer) {
         let msg = ClientRequest::Chat(message.to_owned());
+        self.websocket
+            .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
+    }
+
+    pub fn tournament(&self, action: TournamentAction) {
+        let msg = ClientRequest::Tournament(action.to_owned());
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }

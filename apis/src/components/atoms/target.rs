@@ -30,13 +30,16 @@ pub fn Target(
                 }
                 analysis.update(|analysis| {
                     if let Some(analysis) = analysis {
-                        let moves = game_state.signal.get_untracked().state.history.moves;
-                        let last_move = moves.last().unwrap().clone();
-                        if last_move.0 == "pass" {
+                        let state = game_state.signal.get_untracked().state;
+                        let moves = state.history.moves;
+                        let hashes = state.hashes;
+                        let last_index = moves.len() - 1;
+                        if moves[last_index].0 == "pass" {
                             //if move is pass, add prev move
-                            analysis.add_node(moves[moves.len() - 2].clone());
+                            analysis
+                                .add_node(moves[last_index - 1].clone(), hashes[last_index - 1]);
                         }
-                        analysis.add_node(last_move);
+                        analysis.add_node(moves[last_index].clone(), hashes[last_index]);
                     }
                 });
             });

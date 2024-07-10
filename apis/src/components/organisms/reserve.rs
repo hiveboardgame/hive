@@ -1,5 +1,4 @@
 use crate::common::{Hex, HexStack, HexType, PieceType};
-
 use crate::components::molecules::analysis_and_download::AnalysisAndDownload;
 use crate::components::molecules::control_buttons::ControlButtons;
 use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
@@ -9,13 +8,22 @@ use hive_lib::History;
 use hive_lib::{Bug, BugStack, Color, GameStatus, Piece, Position, State};
 use leptos::*;
 use std::str::FromStr;
-fn piece_active(state: &State, viewing: &View, piece: &Piece, is_last_turn: bool) -> bool {
+
+fn piece_active(
+    game_status: GameStatus,
+    state: &State,
+    viewing: &View,
+    piece: &Piece,
+    tournament: bool,
+    is_last_turn: bool,
+    analysis: bool,
+) -> bool {
     //viewing history
     if viewing == &View::History && !is_last_turn {
         return false;
     }
-    // game is over
-    if let GameStatus::Finished(_) = state.game_status {
+    // tournament game not started
+    if tournament && matches!(game_status, GameStatus::NotStarted) {
         return false;
     }
     // #TODO make this come from global state
@@ -32,6 +40,10 @@ fn piece_active(state: &State, viewing: &View, piece: &Piece, is_last_turn: bool
     if state.board.queen_required(state.turn, state.turn_color) && piece.bug() != Bug::Queen {
         return false;
     };
+    // game is over and not in analysis
+    if matches!(game_status, GameStatus::Finished(_)) {
+        return analysis;
+    }
     true
 }
 
@@ -45,6 +57,7 @@ pub enum Alignment {
 pub fn Reserve(
     #[prop(into)] color: MaybeSignal<Color>,
     alignment: Alignment,
+    analysis: bool,
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
@@ -71,6 +84,14 @@ pub fn Reserve(
         let move_info = move_info();
         let history_turn = history_turn();
         let game_state = game_state.signal.get();
+        let tournament = game_state
+            .game_response
+            .as_ref()
+            .map_or(false, |gr| gr.tournament.is_some());
+        let status = game_state
+            .game_response
+            .as_ref()
+            .map_or(GameStatus::NotStarted, |g| g.game_status.clone());
         let reserve = match board_view {
             View::Game => game_state
                 .state
@@ -106,12 +127,19 @@ pub fn Reserve(
                 let mut hs = HexStack::new(&bs, position);
                 for (i, piece_str) in piece_strings.iter().rev().enumerate() {
                     let piece = Piece::from_str(piece_str).expect("Parsed piece");
-                    let piece_type =
-                        if piece_active(&game_state.state, &board_view, &piece, last_turn()) {
-                            PieceType::Reserve
-                        } else {
-                            PieceType::Inactive
-                        };
+                    let piece_type = if piece_active(
+                        status.clone(),
+                        &game_state.state,
+                        &board_view,
+                        &piece,
+                        tournament,
+                        last_turn(),
+                        analysis,
+                    ) {
+                        PieceType::Reserve
+                    } else {
+                        PieceType::Inactive
+                    };
                     hs.hexes.push(Hex {
                         kind: HexType::Tile(piece, piece_type),
                         position,
@@ -176,13 +204,13 @@ pub fn ReserveContent(player_color: Memo<Color>) -> impl IntoView {
         })
     };
     view! {
-        <Reserve color=top_color alignment=Alignment::DoubleRow/>
+        <Reserve color=top_color alignment=Alignment::DoubleRow analysis=false/>
         <div class="flex flex-row-reverse justify-center items-center">
             <AnalysisAndDownload/>
             <Show when=show_buttons>
                 <ControlButtons/>
             </Show>
         </div>
-        <Reserve color=bottom_color alignment=Alignment::DoubleRow/>
+        <Reserve color=bottom_color alignment=Alignment::DoubleRow analysis=false/>
     }
 }

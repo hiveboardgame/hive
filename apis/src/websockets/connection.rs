@@ -1,3 +1,4 @@
+use super::tournament_game_start::TournamentGameStart;
 use super::{api::handler::RequestHandler, internal_server_message::MessageDestination};
 use crate::common::{ClientRequest, ExternalServerError, ServerResult};
 use crate::websockets::{
@@ -25,6 +26,7 @@ pub struct WsConnection {
     authed: bool,
     admin: bool,
     chat_storage: actix_web::web::Data<Chats>,
+    game_start: actix_web::web::Data<TournamentGameStart>,
     lobby_addr: Addr<Lobby>,
     hb: Instant, // websocket heartbeat
     pool: DbPool,
@@ -72,6 +74,7 @@ impl WsConnection {
         admin: Option<bool>,
         lobby: Addr<Lobby>,
         chat_storage: actix_web::web::Data<Chats>,
+        game_start: actix_web::web::Data<TournamentGameStart>,
         pool: DbPool,
     ) -> WsConnection {
         let id = user_uid.unwrap_or(Uuid::new_v4());
@@ -81,6 +84,7 @@ impl WsConnection {
             user_uid: id,
             username: name,
             admin,
+            game_start,
             authed: user_uid.is_some(),
             chat_storage,
             hb: Instant::now(),
@@ -137,11 +141,18 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                     admin: self.admin,
                 };
                 let chat_storage = self.chat_storage.clone();
+                let game_start = self.game_start.clone();
                 let addr = ctx.address().recipient();
 
                 let future = async move {
-                    let handler =
-                        RequestHandler::new(request.clone(), chat_storage, addr, user, pool);
+                    let handler = RequestHandler::new(
+                        request.clone(),
+                        chat_storage,
+                        game_start,
+                        addr,
+                        user,
+                        pool,
+                    );
                     let handler_result = handler.handle().await;
                     match handler_result {
                         Ok(messages) => {
@@ -153,7 +164,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                 let cam = ClientActorMessage {
                                     destination: message.destination,
                                     serialized,
-                                    from: user_id,
+                                    from: Some(user_id),
                                 };
                                 lobby.do_send(cam);
                             }
@@ -179,7 +190,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                             let cam = ClientActorMessage {
                                 destination: MessageDestination::User(user_id),
                                 serialized,
-                                from: user_id,
+                                from: Some(user_id),
                             };
                             lobby.do_send(cam);
                         }
