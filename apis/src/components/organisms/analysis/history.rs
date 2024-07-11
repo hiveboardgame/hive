@@ -147,8 +147,8 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
             </div>
             <Show when=move || !mobile>
                 <div class="flex flex-col p-4">
-                    <Reserve alignment=Alignment::DoubleRow color=Color::White viewbox_str/>
-                    <Reserve alignment=Alignment::DoubleRow color=Color::Black viewbox_str/>
+                    <Reserve alignment=Alignment::DoubleRow color=Color::White viewbox_str analysis=true/>
+                    <Reserve alignment=Alignment::DoubleRow color=Color::Black viewbox_str analysis=true/>
                 </div>
             </Show>
             <div class="flex justify-between w-full">

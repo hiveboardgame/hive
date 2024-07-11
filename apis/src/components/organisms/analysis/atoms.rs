@@ -1,9 +1,6 @@
 use super::TreeNode;
 use crate::components::organisms::analysis::{AnalysisSignal, ToggleStates};
-use crate::components::organisms::reserve::Alignment;
-use crate::components::organisms::reserve::Reserve;
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::Color;
 use leptix_primitives::components::collapsible::{
     CollapsibleContent, CollapsibleRoot, CollapsibleTrigger,
 };
@@ -55,19 +52,6 @@ pub fn UndoButton() -> impl IntoView {
         >
             <Icon icon=icondata::BiUndoRegular class="w-6 h-6"/>
         </button>
-    }
-}
-
-#[component]
-pub fn ReserveContent(player_color: Memo<Color>) -> impl IntoView {
-    let top_color = Signal::derive(move || player_color().opposite_color());
-    let bottom_color = Signal::derive(player_color);
-    view! {
-        <Reserve color=top_color alignment=Alignment::DoubleRow/>
-        <div class="flex flex-row-reverse justify-center items-center">
-            <UndoButton/>
-        </div>
-        <Reserve color=bottom_color alignment=Alignment::DoubleRow/>
     }
 }
 
