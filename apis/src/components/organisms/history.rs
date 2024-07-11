@@ -176,8 +176,8 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 />
             </div>
             <div class="flex p-2">
-                <Reserve alignment=Alignment::DoubleRow color=Color::White/>
-                <Reserve alignment=Alignment::DoubleRow color=Color::Black/>
+                <Reserve alignment=Alignment::DoubleRow color=Color::White analysis=false/>
+                <Reserve alignment=Alignment::DoubleRow color=Color::Black analysis=false/>
             </div>
             <div ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
                 <For each=history_moves key=|history_move| (history_move.0) let:history_move>

@@ -16,13 +16,10 @@ fn piece_active(
     piece: &Piece,
     tournament: bool,
     is_last_turn: bool,
+    analysis: bool,
 ) -> bool {
     //viewing history
     if viewing == &View::History && !is_last_turn {
-        return false;
-    }
-    // game is over
-    if let GameStatus::Finished(_) = game_status {
         return false;
     }
     // tournament game not started
@@ -43,6 +40,10 @@ fn piece_active(
     if state.board.queen_required(state.turn, state.turn_color) && piece.bug() != Bug::Queen {
         return false;
     };
+    // game is over and not in analysis
+    if matches!(game_status, GameStatus::Finished(_)) {
+        return analysis;
+    }
     true
 }
 
@@ -56,6 +57,7 @@ pub enum Alignment {
 pub fn Reserve(
     #[prop(into)] color: MaybeSignal<Color>,
     alignment: Alignment,
+    analysis: bool,
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
@@ -132,6 +134,7 @@ pub fn Reserve(
                         &piece,
                         tournament,
                         last_turn(),
+                        analysis,
                     ) {
                         PieceType::Reserve
                     } else {
@@ -201,13 +204,13 @@ pub fn ReserveContent(player_color: Memo<Color>) -> impl IntoView {
         })
     };
     view! {
-        <Reserve color=top_color alignment=Alignment::DoubleRow/>
+        <Reserve color=top_color alignment=Alignment::DoubleRow analysis=false/>
         <div class="flex flex-row-reverse justify-center items-center">
             <AnalysisAndDownload/>
             <Show when=show_buttons>
                 <ControlButtons/>
             </Show>
         </div>
-        <Reserve color=bottom_color alignment=Alignment::DoubleRow/>
+        <Reserve color=bottom_color alignment=Alignment::DoubleRow analysis=false/>
     }
 }

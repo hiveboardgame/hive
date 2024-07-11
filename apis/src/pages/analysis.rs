@@ -58,13 +58,13 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <div class="flex flex-col h-[85dvh]">
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
-                            <Reserve alignment=Alignment::SingleRow color=top_color/>
+                            <Reserve alignment=Alignment::SingleRow color=top_color analysis=true/>
                         </div>
                     </div>
                     <Board overwrite_tw_classes="flex grow min-h-0"/>
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
-                            <Reserve alignment=Alignment::SingleRow color=bottom_color/>
+                            <Reserve alignment=Alignment::SingleRow color=bottom_color analysis=true/>
                         </div>
                     </div>
                 </div>
