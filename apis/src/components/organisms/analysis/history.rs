@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::components::organisms::analysis::atoms::{
     CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation,
 };
@@ -10,11 +8,27 @@ use crate::components::organisms::{
 use hive_lib::Color;
 use leptos::{ev::keydown, *};
 use leptos_use::{use_event_listener, use_window};
+use std::collections::HashMap;
 use tree_ds::prelude::*;
 
 #[component]
 pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
+    let current_node = create_read_slice(analysis, |a| {
+        a.as_ref().and_then(|a| a.current_node.clone())
+    });
+    let current_path = create_memo(move |_| {
+        let mut current_path = vec![];
+        if let Some(current_node) = current_node.get() {
+            let current_id = current_node.get_node_id();
+            current_path.push(current_id);
+            let analysis = analysis.get_untracked().unwrap();
+            if let Ok(a) = analysis.tree.get_ancestor_ids(&current_id) {
+                current_path.extend(a);
+            }
+        };
+        current_path
+    });
     let prev_button = create_node_ref::<html::Button>();
     let next_button = create_node_ref::<html::Button>();
     let window = use_window();
@@ -55,7 +69,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         let root = tree.get_root_node()?;
         //Post order traversal ensures all children are processed before their parents
         let node_order = tree
-            .traverse(TraversalStrategy::PostOrder, &root.get_node_id())
+            .traverse(&root.get_node_id(), TraversalStrategy::PostOrder)
             .ok()?;
         let mut content = Fragment::new(vec![]);
         let mut branches = HashMap::<i32, Fragment>::new();
@@ -79,7 +93,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                         .collect::<Vec<_>>(),
                 );
                 view! {
-                    <CollapsibleMove node>{inner}</CollapsibleMove>
+                    <CollapsibleMove current_path node>{inner}</CollapsibleMove>
                     {branches.remove(&children_ids[0])}
                 }
             } else if parent_deg > 2 && not_first_sibling && children_ids.len() == 1 {
@@ -92,14 +106,14 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 let static_cont = store_value(content);
                 view! {
                     <>
-                        <CollapsibleMove node>{static_cont}</CollapsibleMove>
+                        <CollapsibleMove current_path node>{static_cont}</CollapsibleMove>
                     </>
                 }
             } else {
                 /* All other nodes are placed at the same level as the parent
                 in a regular HistoryMove node */
                 view! {
-                    <HistoryMove node/>
+                    <HistoryMove current_path node/>
                     {content}
                 }
             };

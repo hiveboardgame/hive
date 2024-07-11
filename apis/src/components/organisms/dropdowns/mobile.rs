@@ -42,6 +42,13 @@ pub fn MobileDropdown() -> impl IntoView {
                 >
                     Rules
                 </a>
+                <a
+                    class=COMMON_LINK_STYLE
+                    on:click=onclick_close
+                    href="https://hivegame.com/analysis"
+                >
+                    Rules
+                </a>
                 Tournament:
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments">
                     View Tournaments

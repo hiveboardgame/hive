@@ -2,6 +2,7 @@ use super::TreeNode;
 use crate::components::organisms::analysis::{AnalysisSignal, ToggleStates};
 use crate::components::organisms::reserve::Alignment;
 use crate::components::organisms::reserve::Reserve;
+use crate::providers::game_state::GameStateSignal;
 use hive_lib::Color;
 use leptix_primitives::components::collapsible::{
     CollapsibleContent, CollapsibleRoot, CollapsibleTrigger,
@@ -27,6 +28,11 @@ pub fn UndoButton() -> impl IntoView {
                     let new_current = node.get_parent_id();
                     if let Some(new_current) = new_current {
                         a.update_node(new_current);
+                        if let Ok(tree) = a.tree.get_subtree(&node.get_node_id(), None) {
+                            tree.get_nodes().iter().for_each(|n| {
+                                a.hashes.remove_by_right(&n.get_node_id());
+                            });
+                        };
                         a.tree
                             .remove_node(
                                 &node.get_node_id(),
@@ -127,19 +133,14 @@ pub fn HistoryButton(
 }
 
 #[component]
-pub fn HistoryMove(node: Node<i32, TreeNode>) -> impl IntoView {
+pub fn HistoryMove(node: Node<i32, TreeNode>, current_path: Memo<Vec<i32>>) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
     let value = node.get_value().unwrap();
     let node_id = node.get_node_id();
     let class = move || {
         let mut class =
             "w-full transition-transform duration-300 transform hover:bg-pillbug-teal active:scale-95";
-        if analysis
-            .get()
-            .unwrap()
-            .current_node
-            .map_or(false, |n| n.get_node_id() == node_id)
-        {
+        if current_path.get().first() == Some(&node_id) {
             class = "w-full transition-transform duration-300 transform hover:bg-pillbug-teal bg-orange-twilight active:scale-95"
         }
         class
@@ -151,15 +152,29 @@ pub fn HistoryMove(node: Node<i32, TreeNode>) -> impl IntoView {
             }
         });
     };
+    let history_index = value.turn - 1;
+    let game_state = expect_context::<GameStateSignal>();
+    let repetitions = create_read_slice(game_state.signal, |gs| gs.state.repeating_moves.clone());
+    let rep = move || {
+        if repetitions.get().contains(&history_index) && current_path.get().contains(&node_id) {
+            String::from(" ↺")
+        } else {
+            String::new()
+        }
+    };
     view! {
         <div class=class on:click=onclick>
-            {format!("{}. {} {}", value.turn, value.piece, value.position)}
+            {move || format!("{}. {} {} {}", value.turn, value.piece, value.position, rep())}
         </div>
     }
 }
 
 #[component]
-pub fn CollapsibleMove(node: Node<i32, TreeNode>, children: ChildrenFn) -> impl IntoView {
+pub fn CollapsibleMove(
+    node: Node<i32, TreeNode>,
+    current_path: Memo<Vec<i32>>,
+    children: ChildrenFn,
+) -> impl IntoView {
     let closed_toggles = expect_context::<ToggleStates>().0;
     let node_id = node.get_node_id();
     let is_open = !closed_toggles.get().contains(&node_id);
@@ -200,7 +215,7 @@ pub fn CollapsibleMove(node: Node<i32, TreeNode>, children: ChildrenFn) -> impl 
                         </svg>
                     </button>
                 </CollapsibleTrigger>
-                <HistoryMove node=node.clone()/>
+                <HistoryMove  current_path node=node.clone()/>
             </div>
             <CollapsibleContent children=children.clone() attr:class="nested-content"/>
         </CollapsibleRoot>

@@ -1,10 +1,10 @@
 use crate::providers::game_state::{GameState, GameStateSignal};
+use bimap::BiMap;
 use hive_lib::{GameType, History, State};
 use leptos::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, vec};
 use tree_ds::prelude::{Node, Tree};
-
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct TreeNode {
     pub turn: usize,
@@ -22,12 +22,14 @@ pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
 pub struct AnalysisTree {
     pub current_node: Option<Node<i32, TreeNode>>,
     pub tree: Tree<i32, TreeNode>,
+    pub hashes: BiMap<u64, i32>,
 }
 
 impl AnalysisTree {
     pub fn from_state(game_state: GameStateSignal) -> Option<Self> {
         let gs = game_state.signal.get_untracked();
         let mut tree = Tree::new(Some("analysis"));
+        let mut hashes = BiMap::new();
         let mut previous = None;
         for (i, (piece, position)) in gs.state.history.moves.iter().enumerate() {
             let new_node = Node::new(
@@ -39,11 +41,17 @@ impl AnalysisTree {
                 }),
             );
             let new_id = new_node.get_node_id();
+            let hash = gs.state.history.hashes[i];
             tree.add_node(new_node, previous.as_ref()).ok()?;
+            hashes.insert(hash, new_id);
             previous = Some(new_id);
         }
         let current_node = previous.and_then(|p| tree.get_node_by_id(&p));
-        Some(Self { current_node, tree })
+        Some(Self {
+            current_node,
+            tree,
+            hashes,
+        })
     }
 
     pub fn update_node(&mut self, node_id: i32) -> Option<()> {
@@ -82,13 +90,31 @@ impl AnalysisTree {
         Some(())
     }
 
-    pub fn add_node(&mut self, last_move: (String, String)) {
+    pub fn add_node(&mut self, last_move: (String, String), hash: u64) {
         let (piece, position) = last_move;
         let turn = self
             .current_node
             .as_ref()
             .map_or(1, |n| 1 + n.get_value().unwrap().turn);
-        let new_id = self.tree.get_nodes().len() as i32;
+        let valid_trasposition = self
+            .hashes
+            .get_by_left(&hash)
+            .and_then(|node_id| self.tree.get_node_by_id(node_id))
+            .and_then(|node| {
+                //Turns must match if we will update the node
+                if node.get_value().unwrap().turn == turn {
+                    self.update_node(node.get_node_id())
+                } else {
+                    None
+                }
+            });
+        if valid_trasposition.is_some() {
+            return;
+        }
+        let mut new_id = self.tree.get_nodes().len() as i32;
+        while self.tree.get_node_by_id(&new_id).is_some() {
+            new_id += 1;
+        }
         let new_node = Node::new(
             new_id,
             Some(TreeNode {
@@ -100,6 +126,7 @@ impl AnalysisTree {
         let parent_id = self.current_node.as_ref().map(|n| n.get_node_id());
 
         self.tree.add_node(new_node, parent_id.as_ref()).unwrap();
+        self.hashes.insert(hash, new_id);
         self.current_node = self.tree.get_node_by_id(&new_id);
     }
 

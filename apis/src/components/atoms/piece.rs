@@ -4,7 +4,7 @@ use crate::components::organisms::analysis::AnalysisSignal;
 use crate::pages::play::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
-use hive_lib::{Bug, Piece, Position};
+use hive_lib::{Bug, GameStatus, Piece, Position};
 use leptos::*;
 use web_sys::MouseEvent;
 
@@ -71,7 +71,12 @@ pub fn Piece(
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
         let in_analysis = analysis.get_untracked().is_some();
-        if in_analysis || game_state.is_move_allowed() {
+        let is_finished = matches!(
+            game_state.signal.get_untracked().state.game_status,
+            GameStatus::Finished(_)
+        );
+
+        if (in_analysis && !is_finished) || game_state.is_move_allowed() {
             match piece_type {
                 PieceType::Board => {
                     game_state.show_moves(piece, position);
