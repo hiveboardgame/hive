@@ -23,6 +23,13 @@ pub fn LearnDropdown() -> impl IntoView {
             >
                 Rules
             </a>
+            <a
+                class=COMMON_LINK_STYLE
+                on:click=onclick_close
+                href="https://hivegame.com/analysis"
+            >
+                Analysis
+            </a>
         </Hamburger>
     }
 }
