@@ -428,6 +428,9 @@ impl Game {
     fn get_realtime_time_info(&self, status: GameStatus) -> Result<TimeInfo, DbError> {
         let mut time_info = TimeInfo::new(status);
         if self.turn < 2 && self.game_start == GameStart::Moves.to_string() {
+            if self.turn == 0 {
+                time_info.new_game_status = GameStatus::NotStarted;
+            };
             time_info.white_time_left = self.white_time_left;
             time_info.black_time_left = self.black_time_left;
         } else {
