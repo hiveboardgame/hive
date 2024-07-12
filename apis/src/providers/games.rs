@@ -1,6 +1,7 @@
 use super::auth_context::AuthContext;
 use super::navigation_controller::NavigationControllerSignal;
 use crate::responses::GameResponse;
+use crate::responses::HeartbeatResponse;
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameControl};
 use leptos::*;
@@ -28,6 +29,19 @@ impl GamesSignal {
             own: create_rw_signal(OwnGames::new()),
             live: create_rw_signal(LiveGames::new()),
         }
+    }
+
+    pub fn update_heartbeat(&mut self, hb: HeartbeatResponse) {
+        self.own.update(|games| {
+            if let Some(game) = games.realtime.get_mut(&hb.game_id) {
+                game.black_time_left = Some(hb.black_time_left);
+                game.white_time_left = Some(hb.white_time_left);
+            }
+            if let Some(game) = games.correspondence.get_mut(&hb.game_id) {
+                game.black_time_left = Some(hb.black_time_left);
+                game.white_time_left = Some(hb.white_time_left);
+            }
+        });
     }
 
     pub fn visit(&mut self, time_mode: TimeMode) -> Option<GameId> {

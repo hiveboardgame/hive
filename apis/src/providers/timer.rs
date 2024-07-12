@@ -1,11 +1,10 @@
+use crate::responses::{GameResponse, HeartbeatResponse};
 use chrono::DateTime;
 use chrono::Utc;
 use leptos::*;
 use shared_types::GameId;
 use shared_types::TimeMode;
 use std::time::Duration;
-
-use crate::responses::GameResponse;
 
 #[derive(Clone, Debug, Copy)]
 pub struct TimerSignal {
@@ -22,6 +21,15 @@ impl TimerSignal {
     pub fn new() -> Self {
         Self {
             signal: create_rw_signal(Timer::new()),
+        }
+    }
+
+    pub fn update_from_hb(&self, hb: HeartbeatResponse) {
+        if hb.game_id == self.signal.get_untracked().game_id {
+            self.signal.update(|timer| {
+                timer.white_time_left = Some(hb.white_time_left);
+                timer.black_time_left = Some(hb.black_time_left);
+            });
         }
     }
 
