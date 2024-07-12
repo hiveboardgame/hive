@@ -7,7 +7,7 @@ use std::{
     default::Default,
 };
 use uuid::Uuid;
-
+pub type PlayerScores = HashMap<Tiebreaker, f32>;
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Pairing {
     white_uuid: Uuid,
@@ -28,11 +28,10 @@ impl Pairing {
         None
     }
 }
-
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Standings {
     pub players: HashSet<Uuid>,
-    pub players_scores: HashMap<Uuid, HashMap<Tiebreaker, f32>>,
+    pub players_scores: HashMap<Uuid, PlayerScores>,
     pub pairings: HashMap<Uuid, Vec<Pairing>>,
     pub tiebreakers: Vec<Tiebreaker>,
     pub players_standings: Vec<Vec<Uuid>>,
@@ -316,7 +315,7 @@ impl Standings {
         self.pairings.entry(black_uuid).or_default().push(pairing);
     }
 
-    pub fn results(&self) -> Vec<Vec<(Uuid, String, HashMap<Tiebreaker, f32>)>> {
+    pub fn results(&self) -> Vec<Vec<(Uuid, String, PlayerScores)>> {
         let mut position = 0;
         self.players_standings
             .iter()
