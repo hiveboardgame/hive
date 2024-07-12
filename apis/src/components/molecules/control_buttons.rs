@@ -192,7 +192,7 @@ pub fn ControlButtons() -> impl IntoView {
     };
 
     view! {
-        <div class="flex justify-around items-center mt-1 w-full grow shrink">
+        <div class="flex justify-around items-center w-full grow shrink">
             <Show
                 when=game_state.is_finished()
                 fallback=move || {

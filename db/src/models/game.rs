@@ -280,6 +280,32 @@ impl Game {
         Ok((game, deleted))
     }
 
+    pub fn get_heartbeat(&self) -> Result<(GameId, Duration, Duration), DbError> {
+        let (white, black) = self.get_time_left()?;
+        Ok((GameId(self.nanoid.clone()), white, black))
+    }
+
+    pub fn get_time_left(&self) -> Result<(Duration, Duration), DbError> {
+        let white = self.white_time_left_duration()?;
+        let black = self.black_time_left_duration()?;
+        if let Some(last) = self.last_interaction {
+            if let Ok(time_passed) = Utc::now().signed_duration_since(last).to_std() {
+                if self.turn % 2 == 0 {
+                    if white < time_passed {
+                        return Ok((Duration::from_secs(0), black));
+                    }
+                    return Ok((white - time_passed, black));
+                } else {
+                    if black < time_passed {
+                        return Ok((white, Duration::from_secs(0)));
+                    }
+                    return Ok((white, black - time_passed));
+                };
+            }
+        }
+        Ok((white, black))
+    }
+
     pub async fn check_time(&self, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
         if self.time_mode == "Unlimited" || self.finished {
             return Ok(self.clone());

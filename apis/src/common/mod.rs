@@ -8,7 +8,6 @@ mod hex_stack;
 mod move_info;
 mod piece_type;
 mod rating_change_info;
-mod server_message;
 mod server_result;
 mod svg_pos;
 mod time_signals;

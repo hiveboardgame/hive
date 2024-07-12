@@ -1,5 +1,5 @@
 use super::game_reaction::GameReaction;
-use crate::responses::{ChallengeResponse, GameResponse, TournamentResponse, UserResponse};
+use crate::responses::{ChallengeResponse, GameResponse, HeartbeatResponse, TournamentResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -70,6 +70,7 @@ pub enum GameUpdate {
     Reaction(GameActionResponse),
     Urgent(Vec<GameResponse>),
     Tv(GameResponse),
+    Heartbeat(HeartbeatResponse),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

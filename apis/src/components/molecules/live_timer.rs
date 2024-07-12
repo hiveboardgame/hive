@@ -1,17 +1,13 @@
-use crate::providers::game_state::GameStateSignal;
-use crate::providers::timer::TimerSignal;
-use crate::providers::ApiRequests;
-use chrono::prelude::*;
+use crate::providers::{game_state::GameStateSignal, timer::TimerSignal, ApiRequests};
 use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;
 use leptos::*;
 use leptos_router::RouterContext;
-use leptos_use::utils::Pausable;
-use leptos_use::{use_interval_fn_with_options, UseIntervalFnOptions};
+use leptos_use::{use_interval_fn_with_options, utils::Pausable, UseIntervalFnOptions};
 use regex::Regex;
 use shared_types::GameId;
-
 use std::time::Duration;
+
 lazy_static! {
     static ref NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
@@ -27,27 +23,12 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
             .map_or(false, |gr| gr.game_status == GameStatus::InProgress)
     });
     let timer = timer_signal.signal.get_untracked();
-    let color_time = move |color: Color| {
-        let (left, user_turn) = match color {
-            Color::White => (timer.white_time_left.unwrap(), timer.turn % 2 == 0),
-            Color::Black => (timer.black_time_left.unwrap(), timer.turn % 2 == 1),
-        };
-        if in_progress() && user_turn {
-            let left = chrono::Duration::from_std(left).unwrap();
-            let then = timer.last_interaction.unwrap();
-            let future = then.checked_add_signed(left).unwrap();
-            let now = Utc::now();
-            if now > future {
-                Duration::from_millis(0)
-            } else {
-                future.signed_duration_since(now).to_std().unwrap()
-            }
-        } else {
-            left
-        }
+    let time_for_color = move |color: Color| match color {
+        Color::White => timer.white_time_left.unwrap(),
+        Color::Black => timer.black_time_left.unwrap(),
     };
 
-    let time_left = create_rw_signal(color_time(side));
+    let time_left = create_rw_signal(time_for_color(side));
     let time_is_red = Memo::new(move |_| {
         if time_left() == Duration::from_secs(0) {
             String::from("bg-ladybug-red")
@@ -55,7 +36,6 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
             String::new()
         }
     });
-    let ticks = create_rw_signal(0);
     let tick_rate = Duration::from_millis(100);
     let Pausable {
         pause,
@@ -64,14 +44,8 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
     } = use_interval_fn_with_options(
         move || {
             batch(move || {
-                ticks.update(|t| *t += 1);
                 time_left.update(|t| {
-                    if ticks.get_untracked() > 10 {
-                        ticks.update(|t| *t = 0);
-                        *t = color_time(side)
-                    } else {
-                        *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
-                    }
+                    *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
                 })
             })
         },

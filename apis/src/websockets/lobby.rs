@@ -1,25 +1,29 @@
-use crate::{common::TournamentUpdate, responses::TournamentResponse};
+use super::internal_server_message::MessageDestination;
+use super::messages::GameHB;
 use crate::{
-    common::{ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, UserStatus, UserUpdate},
-    responses::{ChallengeResponse, GameResponse, UserResponse},
+    common::{
+        ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, TournamentUpdate, UserStatus,
+        UserUpdate,
+    },
+    responses::{
+        ChallengeResponse, GameResponse, HeartbeatResponse, TournamentResponse, UserResponse,
+    },
     websockets::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
 };
-use actix::prelude::{Actor, Context, Handler, Recipient};
-use actix::AsyncContext;
-use actix::WrapFuture;
-use db_lib::models::Tournament;
+use actix::{
+    prelude::{Actor, Context, Handler, Recipient},
+    AsyncContext, WrapFuture,
+};
 use db_lib::{
     get_conn,
-    models::{Challenge, TournamentInvitation, User},
+    models::{Challenge, Game, Tournament, TournamentInvitation, User},
     DbPool,
 };
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
-use shared_types::GameId;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use hive_lib::GameStatus;
+use shared_types::{GameId, TimeMode};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
-
-use super::internal_server_message::MessageDestination;
 
 #[derive(Debug)]
 pub struct Lobby {
@@ -48,15 +52,57 @@ impl Lobby {
             for socket in sockets {
                 socket.do_send(WsMessage(message.to_owned()));
             }
-        } else {
-            // TODO: It's this one
-            println!("Couldn't find socket for {}", id_to);
         }
     }
 }
 
 impl Actor for Lobby {
     type Context = Context<Self>;
+}
+
+impl Handler<GameHB> for Lobby {
+    type Result = ();
+
+    fn handle(&mut self, _msg: GameHB, ctx: &mut Context<Self>) {
+        for (game_id, user_ids) in self.games_users.clone() {
+            if game_id.0.as_str() == "lobby" {
+                continue;
+            }
+            let pool = self.pool.clone();
+            let sessions = self.sessions.clone();
+            let future = async move {
+                if let Ok(mut conn) = get_conn(&pool).await {
+                    if let Ok(game) = Game::find_by_game_id(&game_id, &mut conn).await {
+                        if game.game_status == GameStatus::InProgress.to_string()
+                            && game.time_mode != TimeMode::Untimed.to_string()
+                        {
+                            if let Ok((id, white, black)) = game.get_heartbeat() {
+                                let hb = HeartbeatResponse {
+                                    game_id: id,
+                                    white_time_left: white,
+                                    black_time_left: black,
+                                };
+                                let message = ServerResult::Ok(Box::new(ServerMessage::Game(
+                                    Box::new(GameUpdate::Heartbeat(hb)),
+                                )));
+                                let serialized = serde_json::to_string(&message)
+                                    .expect("Failed to serialize a server message");
+                                for user_id in user_ids {
+                                    if let Some(sockets) = sessions.get(&user_id) {
+                                        for socket in sockets {
+                                            socket.do_send(WsMessage(serialized.clone()));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            let actor_future = future.into_actor(self);
+            ctx.wait(actor_future);
+        }
+    }
 }
 
 impl Handler<Disconnect> for Lobby {
