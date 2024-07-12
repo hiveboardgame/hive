@@ -36,3 +36,4 @@ pub use tournament_details::TournamentDetails;
 pub use tournament_game_result::TournamentGameResult;
 pub use tournament_mode::TournamentMode;
 pub use tournament_status::TournamentStatus;
+pub use standings::PlayerScores;

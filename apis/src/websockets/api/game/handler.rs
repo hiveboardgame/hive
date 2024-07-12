@@ -32,13 +32,13 @@ impl GameActionHandler {
     pub async fn new(
         game_id: &GameId,
         game_action: GameAction,
-        username: &str,
-        user_id: Uuid,
+        user_details: (&str, Uuid),
         received_from: actix::Recipient<WsMessage>,
         chat_storage: actix_web::web::Data<Chats>,
         game_start: actix_web::web::Data<TournamentGameStart>,
         pool: &DbPool,
     ) -> Result<Self> {
+        let (username, user_id) = user_details;
         let mut connection = get_conn(pool).await?;
 
         let game = connection

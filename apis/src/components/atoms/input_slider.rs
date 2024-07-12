@@ -1,8 +1,5 @@
-use crate::components::update_from_event::update_from_input_parsed;
-use leptos::leptos_dom::helpers::debounce;
+use leptix_primitives::components::slider::{SliderRange, SliderRoot, SliderThumb, SliderTrack};
 use leptos::*;
-use std::time::Duration;
-
 #[component]
 pub fn InputSlider(
     signal_to_update: RwSignal<i32>,
@@ -11,17 +8,25 @@ pub fn InputSlider(
     #[prop(into)] max: MaybeSignal<i32>,
     step: i32,
 ) -> impl IntoView {
+    let min = Signal::derive(move || min() as f64);
+    let max = Signal::derive(move || max() as f64);
+    let step: f64 = step as f64;
+    let on_value_change = Callback::from(move |val: Vec<f64>| {
+        signal_to_update.set(val[0] as i32);
+    });
     view! {
-        <input
-            on:input=debounce(Duration::from_millis(50), update_from_input_parsed(signal_to_update))
-
-            type="range"
-            name=name
-            min=min
-            max=max
-            prop:value=signal_to_update
-            step=step
-            class="p-1 h-4 rounded-full appearance-none accent-gray-500 dark:accent-gray-400 bg-odd-light dark:bg-gray-700"
-        />
+        <SliderRoot min max step on_value_change
+            attr:class="flex relative items-center w-fit min-w-[150px] h-5 select-none touch-none"
+            attr:name=name
+        >
+            <SliderTrack attr:class="bg-white relative grow rounded-full h-[3px]">
+                <SliderRange attr:class="absolute h-full rounded-full bg-orange-twilight">
+                    {().into_view()}
+                </SliderRange>
+            </SliderTrack>
+            <SliderThumb attr:class="bg-button-dawn dark:bg-button-twilight block w-5 h-5 shadow-lg rounded-[10px] hover:bg-pillbug-teal">
+                {().into_view()}
+            </SliderThumb>
+        </SliderRoot>
     }
 }
