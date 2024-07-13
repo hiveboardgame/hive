@@ -10,6 +10,7 @@ pub fn handle_timeout(gar: GameActionResponse) {
     games.live_games_remove(game_id);
     if let Some(current_game_id) = game_state.signal.get_untracked().game_id {
         if current_game_id == *game_id {
+            game_state.reset();
             game_state.set_game_response(gar.game.clone());
         }
     }
