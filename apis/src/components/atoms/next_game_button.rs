@@ -1,7 +1,4 @@
-use crate::providers::{
-    game_state::GameStateSignal, games::GamesSignal,
-    navigation_controller::NavigationControllerSignal,
-};
+use crate::providers::{games::GamesSignal, navigation_controller::NavigationControllerSignal};
 use leptos::*;
 use leptos_icons::Icon;
 use shared_types::TimeMode;
@@ -41,8 +38,6 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
     let onclick = move |_| {
         let mut games = expect_context::<GamesSignal>();
         if let Some(game) = games.visit(time_mode()) {
-            let mut game_state = expect_context::<GameStateSignal>();
-            game_state.full_reset();
             navigate(&format!("/game/{}", game), Default::default());
         } else {
             navigate("/", Default::default());

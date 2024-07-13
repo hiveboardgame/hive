@@ -31,7 +31,6 @@ impl GameStateSignal {
         }
     }
 
-    // TODO: fix this
     pub fn full_reset(&mut self) {
         let state = State::new(GameType::MLP, false);
         self.signal.update(|s| {
@@ -266,6 +265,21 @@ impl GameState {
     // TODO get the state from URL/game_id via a call
     pub fn new() -> Self {
         let state = State::new(GameType::MLP, false);
+        Self {
+            game_id: None,
+            state,
+            black_id: None,
+            white_id: None,
+            move_info: MoveInfo::new(),
+            history_turn: None,
+            view: View::Game,
+            game_control_pending: None,
+            game_response: None,
+        }
+    }
+
+    pub fn new_with_game_type(game_type: GameType) -> Self {
+        let state = State::new(game_type, false);
         Self {
             game_id: None,
             state,

@@ -5,7 +5,7 @@ use crate::{
     components::atoms::game_type::GameType,
     components::atoms::profile_link::ProfileLink,
     functions::hostname::hostname_and_port,
-    providers::{game_state::GameStateSignal, AuthContext, ColorScheme},
+    providers::{AuthContext, ColorScheme},
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
@@ -203,8 +203,6 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                             on:click=move |_| {
                                 match (auth_context.user)() {
                                     Some(Ok(Some(_))) => {
-                                        let mut game_state = expect_context::<GameStateSignal>();
-                                        game_state.full_reset();
                                         ApiRequests::new()
                                             .challenge_accept(challenge().challenge_id);
                                     }
