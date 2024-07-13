@@ -23,6 +23,7 @@ pub struct AnalysisTree {
     pub current_node: Option<Node<i32, TreeNode>>,
     pub tree: Tree<i32, TreeNode>,
     pub hashes: BiMap<u64, i32>,
+    pub game_type: GameType,
 }
 
 impl AnalysisTree {
@@ -51,6 +52,7 @@ impl AnalysisTree {
             current_node,
             tree,
             hashes,
+            game_type: gs.state.game_type,
         })
     }
 
@@ -70,7 +72,7 @@ impl AnalysisTree {
             .collect::<Vec<_>>();
         let state = State::new_from_history(&History {
             moves,
-            game_type: GameType::MLP,
+            game_type: self.game_type,
             ..History::new()
         })
         .ok()?;
@@ -135,7 +137,7 @@ impl AnalysisTree {
         self.tree = Tree::new(Some("analysis"));
         let game_state = expect_context::<GameStateSignal>();
         game_state.signal.update(|gs| {
-            *gs = GameState::new();
+            *gs = GameState::new_with_game_type(self.game_type);
         });
     }
 }

@@ -1,4 +1,4 @@
-use super::handler::reset_game_state;
+use super::handler::reset_game_state_for_takeback;
 use crate::{
     common::GameActionResponse,
     providers::{
@@ -65,19 +65,13 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
                 if gar.game.game_id == game_id {
                     let timer = expect_context::<TimerSignal>();
                     timer.update_from(&gar.game);
-                    reset_game_state(&gar.game);
+                    reset_game_state_for_takeback(&gar.game);
                 }
             }
         }
-        _ => {
+        GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
             games.own_games_add(gar.game.to_owned());
-            if let Some(game_id) = navigation_controller.game_signal.get_untracked().game_id {
-                if gar.game.game_id == game_id {
-                    let timer = expect_context::<TimerSignal>();
-                    timer.update_from(&gar.game);
-                    reset_game_state(&gar.game);
-                }
-            }
         }
+        GameControl::DrawReject(_) | GameControl::TakebackReject(_) => {}
     }
 }
