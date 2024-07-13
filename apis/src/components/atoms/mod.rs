@@ -26,3 +26,5 @@ pub mod target;
 pub mod title;
 pub mod toggle_controls;
 pub mod uninvite_button;
+pub mod progress_bar;
+pub mod simple_switch;

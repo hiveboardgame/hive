@@ -4,7 +4,7 @@ use chrono::Local;
 use leptos::*;
 use shared_types::PrettyString;
 use shared_types::{TimeInfo, TournamentStatus};
-
+use crate::components::atoms::progress_bar::ProgressBar;
 #[component]
 pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
     let starts = move || {
@@ -40,8 +40,10 @@ pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
         base: tournament.time_base,
         increment: tournament.time_increment,
     };
+    let total_games = tournament.games.len();
+    let finished_games = Signal::derive(move || tournament.games.iter().filter(|g| g.finished).count());
     view! {
-        <article class="flex relative flex-col justify-between items-center px-2 py-4 mx-2 w-5/6 h-32 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+        <article class="flex relative flex-col justify-between items-center px-2 py-4 mx-2 w-5/6 duration-300 h-33 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="flex justify-center w-full font-bold break-words">{tournament.name}</div>
             <div class="flex flex-row justify-between w-full">
                 <div class="flex flex-col">
@@ -59,6 +61,7 @@ pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
                     <div>{starts}</div>
                 </div>
             </div>
+            <ProgressBar current=finished_games total=total_games/>
             <a
                 class="absolute top-0 left-0 z-10 w-full h-full"
                 href=format!("/tournament/{}", tournament.tournament_id.0)
