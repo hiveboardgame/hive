@@ -16,7 +16,7 @@ lazy_static! {
 #[component]
 pub fn LiveTimer(side: Color) -> impl IntoView {
     let timer_signal = expect_context::<TimerSignal>();
-    let game_state = expect_context::<GameStateSignal>();
+    let mut game_state = expect_context::<GameStateSignal>();
     let in_progress = create_read_slice(game_state.signal, |gs| {
         gs.game_response
             .as_ref()
@@ -46,6 +46,9 @@ pub fn LiveTimer(side: Color) -> impl IntoView {
             batch(move || {
                 time_left.update(|t| {
                     *t = t.checked_sub(tick_rate).unwrap_or(Duration::from_millis(0));
+                    if t.as_nanos() == 0 {
+                        game_state.reset();
+                    };
                 })
             })
         },
