@@ -4,7 +4,9 @@ use crate::common::{TimeSignals, TournamentAction};
 use crate::components::organisms::time_select::TimeSelect;
 use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
 use crate::{
-    components::atoms::{input_slider::InputSlider, select_options::SelectOption, simple_switch::SimpleSwitch},
+    components::atoms::{
+        input_slider::InputSlider, select_options::SelectOption, simple_switch::SimpleSwitch,
+    },
     providers::{ApiRequests, AuthContext},
 };
 use chrono::{DateTime, Duration, Local, NaiveDateTime, Utc};
@@ -197,13 +199,11 @@ pub fn TournamentCreate() -> impl IntoView {
             navigate("/tournaments", Default::default());
         }
     };
-    let on_value_change: Callback<String, ()> =
-
-        Callback::from( move |string: String| {
-            if let Ok(new_value) = TimeMode::from_str(&string) {
-                time_signals.time_control.update(|v| *v = new_value);
-            };
-        });
+    let on_value_change: Callback<String, ()> = Callback::from(move |string: String| {
+        if let Ok(new_value) = TimeMode::from_str(&string) {
+            time_signals.time_control.update(|v| *v = new_value);
+        };
+    });
     let allowed_values = vec![TimeMode::RealTime, TimeMode::Correspondence];
     let tournament_length = move || {
         if fixed_round_duration() {
@@ -371,7 +371,7 @@ pub fn TournamentCreate() -> impl IntoView {
                     </div>
                     <div class="flex gap-1 mb-2">
                         <Show when=move || time_signals.time_control.get() == TimeMode::RealTime>
-                        <SimpleSwitch checked=fixed_round_duration/>
+                            <SimpleSwitch checked=fixed_round_duration/>
                             <label class="text-sm font-medium text-gray-900 dark:text-gray-300">
                                 Fixed round duration
                             </label>
@@ -394,7 +394,12 @@ pub fn TournamentCreate() -> impl IntoView {
 
                 </div>
                 <div class="md:pl-2 basis-1/2">
-                    <TimeSelect title=" Match settings:" time_signals on_value_change allowed_values/>
+                    <TimeSelect
+                        title=" Match settings:"
+                        time_signals
+                        on_value_change
+                        allowed_values
+                    />
                     <div class="flex">{rating_string}</div>
                     <div class="flex">
                         <div class="flex gap-1 mx-1">

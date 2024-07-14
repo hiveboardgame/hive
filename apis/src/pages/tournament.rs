@@ -1,11 +1,11 @@
 use crate::common::{TournamentAction, UserAction};
 use crate::components::molecules::score_row::ScoreRow;
 use crate::components::{
+    atoms::progress_bar::ProgressBar,
     molecules::{
         game_previews::GamePreviews, invite_user::InviteUser, time_row::TimeRow, user_row::UserRow,
     },
     organisms::chat::ChatWindow,
-    atoms::progress_bar::ProgressBar,
 };
 use crate::providers::{
     navigation_controller::NavigationControllerSignal, tournaments::TournamentStateSignal,
@@ -17,6 +17,7 @@ use leptos_router::use_navigate;
 use shared_types::PrettyString;
 use shared_types::{GameSpeed, TimeInfo, TournamentStatus};
 use uuid::Uuid;
+
 const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
 #[component]
@@ -168,14 +169,25 @@ pub fn Tournament() -> impl IntoView {
                     </div>
                 </div>
                 <div class="mb-2">
-                    <div class="flex gap-1"><span class="font-bold">"Time control: "</span> <TimeRow time_info/></div>
-                    <div><span class="font-bold">"Players: "</span> {number_of_players} / {tournament().seats}</div>
+                    <div class="flex gap-1">
+                        <span class="font-bold">"Time control: "</span>
+                        <TimeRow time_info/>
+                    </div>
+                    <div>
+                        <span class="font-bold">"Players: "</span>
+                        {number_of_players}
+                        /
+                        {tournament().seats}
+                    </div>
                     <Show when=not_started>
-                        <div><span class="font-bold">"Minimum players: "</span> {tournament().min_seats}</div>
+                        <div>
+                            <span class="font-bold">"Minimum players: "</span>
+                            {tournament().min_seats}
+                        </div>
                     </Show>
                     <div class="font-bold">{starts}</div>
-                //Progress bar
-                <ProgressBar current=finished_games total=total_games/>
+                    // Progress bar
+                    <ProgressBar current=finished_games total=total_games/>
                 </div>
                 <Show when=not_started>
                     <div class="flex gap-1 justify-center items-center pb-2">
@@ -328,6 +340,7 @@ pub fn Tournament() -> impl IntoView {
                                         </For>
                                     }
                                 }
+
                             </For>
                             <span class="font-bold text-md">Tournament Games:</span>
                             <div class="flex flex-wrap justify-center items-center">

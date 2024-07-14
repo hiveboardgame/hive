@@ -2,19 +2,17 @@ use crate::common::TimeSignals;
 use crate::{
     common::ChallengeAction,
     components::{
-        atoms::{
-            create_challenge_button::CreateChallengeButton, input_slider::InputSlider,
-        },
+        atoms::{create_challenge_button::CreateChallengeButton, input_slider::InputSlider},
         organisms::time_select::TimeSelect,
     },
     providers::{ApiRequests, AuthContext},
 };
 use hive_lib::{ColorChoice, GameType};
+use leptix_primitives::radio_group::{RadioGroupItem, RadioGroupRoot};
 use leptos::*;
 use shared_types::{
     ChallengeDetails, ChallengeVisibility, CorrespondenceMode, GameSpeed, TimeMode,
 };
-use leptix_primitives::radio_group::{RadioGroupItem, RadioGroupRoot};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
@@ -52,7 +50,7 @@ pub fn ChallengeCreate(
     let (rated_value, set_rated_value) = create_signal("Rated".to_string());
     let band_upper = RwSignal::new(550_i32);
     let band_lower = RwSignal::new(-550_i32);
-    let game_type = move ||params.game_type.get();
+    let game_type = move || params.game_type.get();
     let time_control = move || params.time_mode.get();
     let time_signals = TimeSignals::default();
     let create_challenge = Callback::new(move |color_choice| {
@@ -159,7 +157,7 @@ pub fn ChallengeCreate(
         api.challenge(challenge_action);
         close(());
     });
-    
+
     let rating_string = move || {
         format!(
             "{}/+{}",
@@ -191,21 +189,24 @@ pub fn ChallengeCreate(
             time_signals.time_control.update(|v| *v = new_value);
         };
     });
-    let allowed_values = vec![TimeMode::RealTime, TimeMode::Correspondence, TimeMode::Untimed];
-    let radio_style = 
-    "flex items-center my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded data-[state=checked]:bg-button-dawn dark:data-[state=checked]:bg-button-twilight data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700 data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700";
+    let allowed_values = vec![
+        TimeMode::RealTime,
+        TimeMode::Correspondence,
+        TimeMode::Untimed,
+    ];
+    let radio_style = "flex items-center my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded data-[state=checked]:bg-button-dawn dark:data-[state=checked]:bg-button-twilight data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700 data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700";
     view! {
         <div class="flex flex-col items-center w-72 xs:m-2 xs:w-80 sm:w-96">
             <Show when=move || opponent().is_some()>
                 <div class="block">"Opponent: " {opponent()}</div>
             </Show>
             <div class="flex flex-col items-center">
-            <TimeSelect
-                title=" Create a game:"
-                time_signals
-                on_value_change=time_change
-                allowed_values
-            />
+                <TimeSelect
+                    title=" Create a game:"
+                    time_signals
+                    on_value_change=time_change
+                    allowed_values
+                />
             </div>
             <RadioGroupRoot
                 required=true

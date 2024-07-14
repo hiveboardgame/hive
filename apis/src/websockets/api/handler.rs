@@ -105,7 +105,7 @@ impl RequestHandler {
                 GameActionHandler::new(
                     &game_id,
                     game_action,
-                    (&self.username,self.user_id),
+                    (&self.username, self.user_id),
                     self.received_from.clone(),
                     self.chat_storage.clone(),
                     self.game_start.clone(),

@@ -2,12 +2,11 @@ use crate::{
     common::TimeSignals,
     components::atoms::{input_slider::InputSlider, rating::icon_for_speed},
 };
-use leptix_primitives::components::radio_group::{
-    RadioGroupItem, RadioGroupRoot,
-};
+use leptix_primitives::components::radio_group::{RadioGroupItem, RadioGroupRoot};
 use leptos::*;
 use leptos_icons::*;
 use shared_types::{GameSpeed, TimeMode};
+
 #[component]
 pub fn TimeSelect(
     title: &'static str,
@@ -28,8 +27,7 @@ pub fn TimeSelect(
         };
         view! { <Icon width="50" height="50" class="p-2" icon=icon_for_speed(&speed)/> }
     };
-    let radio_style = 
-    "flex items-center my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded data-[state=checked]:bg-button-dawn dark:data-[state=checked]:bg-button-twilight data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700 data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700";
+    let radio_style = "flex items-center my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded data-[state=checked]:bg-button-dawn dark:data-[state=checked]:bg-button-twilight data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700 data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700";
     let allow_realtime = allowed_values.contains(&TimeMode::RealTime);
     let allow_correspondence = allowed_values.contains(&TimeMode::Correspondence);
     let allow_untimed = allowed_values.contains(&TimeMode::Untimed);
