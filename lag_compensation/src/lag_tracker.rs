@@ -1,4 +1,3 @@
-use crate::clock_config::ClockConfig;
 use crate::decaying_stats::DecayingStats;
 use crate::stats::Stats;
 
@@ -21,11 +20,11 @@ impl LagTracker {
 
         Self {
             quota_gain,
-            quota: quota_gain * 3.0_f64,
-            quota_max: quota_gain * 7.0_f64,
+            quota: quota_gain * 3.0,
+            quota_max: quota_gain * 7.0,
             lag_estimator: DecayingStats::empty(),
-            uncomp_stats: Stats::new(),
-            lag_stats: Stats::new(),
+            uncomp_stats: Stats::default(),
+            lag_stats: Stats::default(),
             comp_est_sq_err: 0.0,
             comp_est_overs: 0.0,
             comp_estimate: None,
@@ -33,7 +32,8 @@ impl LagTracker {
     }
 
     fn quota_base_inc(base: usize, inc: usize) -> f64 {
-        100.0_f64.min(((base as f64 + inc as f64 * 40.0_f64) * 2.0 / 5.0 + 15.0_f64) / 1000.0_f64)
+        let game_time = base as f64 + inc as f64 * 40.0;
+        ((game_time / 2.5 + 15.0) / 1000.0).min(100.0)
     }
 
     pub fn on_move(&mut self, lag: f64) -> f64 {
@@ -53,10 +53,13 @@ impl LagTracker {
         comp
     }
 
-    pub fn record_lag(&mut self, lag: f64) -> &Self {
-        let e = self.lag_estimator.record(lag);
-        self.comp_estimate = Some((e.mean - 0.8 * e.deviation).min(0.0).min(self.quota_max));
-        self
+    pub fn record_lag(&mut self, lag: f64) {
+        self.lag_estimator.record(lag);
+        self.comp_estimate = Some(
+            (self.lag_estimator.mean - 0.8 * self.lag_estimator.deviation)
+                .min(0.0)
+                .min(self.quota_max),
+        );
     }
 
     pub fn moves(&self) -> usize {
@@ -99,16 +102,11 @@ impl LagTracker {
         self.uncomp_stats.total
     }
 
-    pub fn with_frame_lag(&mut self, frame_lag: f64, clock: ClockConfig) -> &Self {
+    pub fn with_frame_lag(&mut self, frame_lag: f64, base: usize, inc: usize) -> &Self {
         let estimated_cpu_lag = 4.0;
-        let max_quota_gain_for_clock = LagTracker::max_quota_gain_for(clock);
+        let max_quota_gain_for_clock = LagTracker::quota_base_inc(base, inc);
         let quota_gain = max_quota_gain_for_clock.min(frame_lag + estimated_cpu_lag);
         self.quota_gain = quota_gain;
         self
-    }
-
-    fn max_quota_gain_for(clock: ClockConfig) -> f64 {
-        let estimate_total_seconds = clock.estimate_total_seconds;
-        100.0_f64.min(estimate_total_seconds / 2.5 + 15.0)
     }
 }

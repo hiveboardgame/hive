@@ -6,13 +6,10 @@ pub struct DecayingStats {
 }
 
 impl DecayingStats {
-    pub fn record(&self, value: f64) -> Self {
+    pub fn record(&mut self, value: f64) {
         let delta = self.mean - value;
-        DecayingStats {
-            mean: value + self.decay * delta,
-            deviation: self.decay * self.deviation + (1.0 - self.decay) * delta.abs(),
-            decay: self.decay,
-        }
+        self.mean = value + self.decay * delta;
+        self.deviation = self.decay * self.deviation + (1.0 - self.decay) * delta.abs();
     }
 
     pub fn empty() -> Self {
