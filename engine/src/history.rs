@@ -107,7 +107,13 @@ impl History {
         if let Some(mov) = self.moves.get(turn) {
             return mov.0 == "pass";
         }
+        false
+    }
 
+    pub fn last_move_is_pass(&self) -> bool {
+        if let Some(mov) = self.moves.last() {
+            return mov.0 == "pass";
+        }
         false
     }
 

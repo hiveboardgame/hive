@@ -15,7 +15,7 @@ fn initial_prefers_confirm(game_speed: GameSpeed) -> MoveConfirm {
     } else if cookie.contains(&format!("{game_speed}_confirm_mode=Single")) {
         return MoveConfirm::Single;
     }
-    return MoveConfirm::Double;
+    MoveConfirm::Double
 }
 
 #[cfg(feature = "ssr")]

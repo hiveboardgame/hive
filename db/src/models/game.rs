@@ -23,6 +23,7 @@ use uuid::Uuid;
 
 pub static NANOS_IN_SECOND: u64 = 1000000000_u64;
 
+#[derive(Debug)]
 struct TimeInfo {
     white_time_left: Option<i64>,
     black_time_left: Option<i64>,
@@ -74,6 +75,7 @@ pub struct NewGame {
     pub tournament_id: Option<Uuid>,
     pub tournament_game_result: String,
     pub game_start: String,
+    pub move_times: Vec<Option<i64>>,
 }
 
 impl NewGame {
@@ -128,11 +130,12 @@ impl NewGame {
             white_time_left: time_left,
             speed: GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment)
                 .to_string(),
-            hashes: Vec::new(),
+            hashes: vec![],
             conclusion: Conclusion::Unknown.to_string(),
             tournament_id: Some(tournament.id),
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: start,
+            move_times: vec![],
         }
     }
 
@@ -176,11 +179,12 @@ impl NewGame {
             white_time_left: time_left,
             speed: GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment)
                 .to_string(),
-            hashes: Vec::new(),
+            hashes: vec![],
             conclusion: Conclusion::Unknown.to_string(),
             tournament_id: None,
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
+            move_times: vec![],
         }
     }
 }
@@ -222,13 +226,14 @@ pub struct Game {
     pub tournament_id: Option<Uuid>,
     pub tournament_game_result: String,
     pub game_start: String,
+    pub move_times: Vec<Option<i64>>,
 }
 
 impl Game {
     pub fn hashes(&self) -> Vec<u64> {
         // WARN: @leex reimplement this
         //self.hashes.iter().map(|i| *i as u64).collect::<Vec<u64>>()
-        Vec::new()
+        vec![]
     }
 
     pub async fn create(new_game: NewGame, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
@@ -255,7 +260,7 @@ impl Game {
             .filter(nanoid_field.eq(game.nanoid.clone()))
             .first(conn)
             .await?;
-        let mut deleted = Vec::new();
+        let mut deleted = vec![];
         if let Ok(TimeMode::RealTime) = TimeMode::from_str(&challenge.time_mode) {
             let challenges: Vec<Challenge> = challenges::table
                 .filter(
@@ -453,7 +458,10 @@ impl Game {
 
     fn get_realtime_time_info(&self, status: GameStatus) -> Result<TimeInfo, DbError> {
         let mut time_info = TimeInfo::new(status);
-        if self.turn < 2 && self.game_start == GameStart::Moves.to_string() {
+        if self.turn < 2
+            && self.game_start == GameStart::Moves.to_string()
+            && self.game_status == GameStatus::NotStarted.to_string()
+        {
             if self.turn == 0 {
                 time_info.new_game_status = GameStatus::NotStarted;
             };
@@ -540,7 +548,7 @@ impl Game {
         }
 
         let mut new_conclusion = Conclusion::Unknown;
-        let time_info = self.get_time_info(state.game_status.clone())?;
+        let mut time_info = self.get_time_info(state.game_status.clone())?;
 
         match time_info.new_game_status {
             GameStatus::Finished(GameResult::Draw) => new_conclusion = Conclusion::Board,
@@ -556,6 +564,30 @@ impl Game {
         } else {
             self.black_id
         };
+
+        let mut new_move_times = self.move_times.clone();
+
+        if self.time_mode != TimeMode::Untimed.to_string() {
+            if state.history.last_move_is_pass() {
+                if state.turn % 2 == 0 {
+                    time_info.black_time_left = time_info.black_time_left.map(|t| {
+                        t + (self.time_increment.unwrap_or(0) as u64 * NANOS_IN_SECOND) as i64
+                    });
+                    new_move_times.push(time_info.black_time_left);
+                } else {
+                    time_info.white_time_left = time_info.white_time_left.map(|t| {
+                        t + (self.time_increment.unwrap_or(0) as u64 * NANOS_IN_SECOND) as i64
+                    });
+                    new_move_times.push(time_info.white_time_left);
+                }
+            }
+            if state.turn % 2 == 0 {
+                new_move_times.push(time_info.black_time_left);
+            } else {
+                new_move_times.push(time_info.white_time_left);
+            }
+        }
+
         if let GameStatus::Finished(game_result) = time_info.new_game_status.clone() {
             if let GameResult::Unknown = game_result {
                 panic!("GameResult is unknown but the game is over");
@@ -570,15 +602,18 @@ impl Game {
                 conn,
             )
             .await?;
+
             let new_turn = if time_info.timed_out {
                 self.turn
             } else {
                 state.turn as i32
             };
+
             if time_info.timed_out {
                 new_conclusion = Conclusion::Timeout;
                 new_history.clone_from(&self.history);
             }
+
             let game = diesel::update(games::table.find(self.id))
                 .set((
                     history.eq(new_history),
@@ -596,6 +631,7 @@ impl Game {
                     white_time_left.eq(time_info.white_time_left),
                     black_time_left.eq(time_info.black_time_left),
                     last_interaction.eq(Some(Utc::now())),
+                    move_times.eq(new_move_times),
                     conclusion.eq(new_conclusion.to_string()),
                 ))
                 .get_result(conn)
@@ -612,6 +648,7 @@ impl Game {
                     updated_at.eq(Utc::now()),
                     white_time_left.eq(time_info.white_time_left),
                     black_time_left.eq(time_info.black_time_left),
+                    move_times.eq(new_move_times),
                     last_interaction.eq(Some(Utc::now())),
                 ))
                 .get_result(conn)
@@ -670,27 +707,66 @@ impl Game {
             .await?)
     }
 
-    // TODO: get rid of new_game_status and compute it here
     pub async fn accept_takeback(
         &self,
         game_control: &GameControl,
         conn: &mut DbConn<'_>,
     ) -> Result<Game, DbError> {
         let game_control_string = format!("{}. {game_control};", self.turn);
-
         let mut moves = self.history.split_terminator(';').collect::<Vec<_>>();
-        let mut popped = 1;
-        if let Some(a_move) = moves.pop() {
+        let mut white_time = self.white_time_left;
+        let mut black_time = self.black_time_left;
+        let mut new_move_times = self.move_times.clone();
+        let mut popped = 0;
+
+        if let (Some(Some(time)), Some(a_move)) = (new_move_times.pop(), moves.pop()) {
+            popped += 1;
+            if new_move_times.len() % 2 == 0 {
+                if self.turn - popped > 2 {
+                    white_time = Some(
+                        time - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64,
+                    );
+                } else {
+                    white_time = Some(time);
+                }
+            } else if self.turn - popped > 2 {
+                black_time =
+                    Some(time - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64);
+            } else {
+                white_time = Some(time);
+            }
             if a_move.trim() == "pass" {
+                new_move_times.pop();
                 moves.pop();
                 popped += 1;
+                if new_move_times.len() % 2 == 0 {
+                    if self.turn - popped > 2 {
+                        white_time = Some(
+                            time - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64,
+                        );
+                    } else {
+                        white_time = Some(time);
+                    }
+                } else if self.turn - popped > 2 {
+                    black_time = Some(
+                        time - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64,
+                    );
+                } else {
+                    white_time = Some(time);
+                }
             }
+        }
+        if popped == 0 {
+            return Err(DbError::InvalidInput {
+                info: String::from("Takeback failed, no moves to pop"),
+                error: String::from("Popped = 0"),
+            });
         }
         let mut new_history = moves.join(";");
         if !new_history.is_empty() {
             new_history.push(';');
         };
-        // TODO: now we have error problems here... get rid of the expects
+
         let his = History::new_from_str(&new_history).map_err(|e| DbError::InvalidInput {
             info: String::from("Could not recover History from history string."),
             error: e.to_string(),
@@ -705,6 +781,7 @@ impl Game {
         } else {
             self.black_id
         };
+
         Ok(diesel::update(games::table.find(self.id))
             .set((
                 current_player_id.eq(next_player),
@@ -714,6 +791,9 @@ impl Game {
                 game_control_history.eq(game_control_history.concat(game_control_string)),
                 updated_at.eq(Utc::now()),
                 last_interaction.eq(Utc::now()),
+                move_times.eq(new_move_times),
+                white_time_left.eq(white_time),
+                black_time_left.eq(black_time),
             ))
             .get_result(conn)
             .await?)
