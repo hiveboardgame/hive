@@ -1,6 +1,7 @@
 use crate::common::{TournamentAction, UserAction};
 use crate::components::molecules::score_row::ScoreRow;
 use crate::components::{
+    atoms::progress_bar::ProgressBar,
     molecules::{
         game_previews::GamePreviews, invite_user::InviteUser, time_row::TimeRow, user_row::UserRow,
     },
@@ -153,6 +154,8 @@ pub fn Tournament() -> impl IntoView {
                     } else {pretty}
                 }
             };
+            let total_games = tournament().games.len();
+            let finished_games = Signal::derive(move || tournament().games.iter().filter(|g| g.finished).count());
             let not_started = move || tournament().status == TournamentStatus::NotStarted;
             view! {
                 <div class="flex justify-center p-2 w-full">
@@ -165,14 +168,26 @@ pub fn Tournament() -> impl IntoView {
                         {tournament().description}
                     </div>
                 </div>
-                <div>
-                    <p class="font-bold">Tournament details:</p>
-                    <div class="flex gap-1">"Time control: " <TimeRow time_info/></div>
-                    <div>"Players: " {number_of_players} / {tournament().seats}</div>
+                <div class="mb-2">
+                    <div class="flex gap-1">
+                        <span class="font-bold">"Time control: "</span>
+                        <TimeRow time_info/>
+                    </div>
+                    <div>
+                        <span class="font-bold">"Players: "</span>
+                        {number_of_players}
+                        /
+                        {tournament().seats}
+                    </div>
                     <Show when=not_started>
-                        <div>"Minimum players: " {tournament().min_seats}</div>
+                        <div>
+                            <span class="font-bold">"Minimum players: "</span>
+                            {tournament().min_seats}
+                        </div>
                     </Show>
-                    <div>{starts}</div>
+                    <div class="font-bold">{starts}</div>
+                    // Progress bar
+                    <ProgressBar current=finished_games total=total_games/>
                 </div>
                 <Show when=not_started>
                     <div class="flex gap-1 justify-center items-center pb-2">
@@ -207,7 +222,7 @@ pub fn Tournament() -> impl IntoView {
                 </Show>
                 <div class="flex flex-col flex-wrap place-content-center md:flex-row">
                     <div class="flex flex-col">
-                        <div class="flex flex-col items-center">
+                        <div class="flex flex-col items-center mb-2">
                             <p class="font-bold">Organizers</p>
                             <For
                                 each=move || { tournament().organizers }
@@ -262,7 +277,7 @@ pub fn Tournament() -> impl IntoView {
                         <div class="flex flex-col items-center w-full">
                             <p class="font-bold">Standings</p>
                             <div class="flex justify-between items-center p-1 w-64 h-10 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
-                                <div class="flex justify-between mr-2 w-full">
+                                <div class="flex justify-between mr-2 mb-2 w-full">
                                     <div class="flex items-center">Position</div>
 
                                     <div class="flex items-center">Player</div>
@@ -327,7 +342,7 @@ pub fn Tournament() -> impl IntoView {
                                 }
 
                             </For>
-                            Tournament Games:
+                            <span class="font-bold text-md">Tournament Games:</span>
                             <div class="flex flex-wrap justify-center items-center">
                                 <GamePreviews games=Callback::new(move |_| (tournament().games))/>
                             </div>

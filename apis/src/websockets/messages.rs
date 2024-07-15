@@ -27,7 +27,7 @@ pub struct Disconnect {
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
-pub struct GameHB { }
+pub struct GameHB {}
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]

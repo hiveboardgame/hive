@@ -139,7 +139,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         </Show>
 
                         <div class="flex justify-between ml-1 h-full max-h-16">
-                            <Reserve alignment=Alignment::SingleRow color=top_color() analysis=false/>
+                            <Reserve
+                                alignment=Alignment::SingleRow
+                                color=top_color()
+                                analysis=false
+                            />
                             <DisplayTimer vertical=true placement=Placement::Top/>
                         </div>
                         <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1 bg-inherit">
@@ -174,7 +178,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             />
                         </div>
                         <div class="flex justify-between mb-2 ml-1 h-full max-h-16">
-                            <Reserve alignment=Alignment::SingleRow color=player_color() analysis=false/>
+                            <Reserve
+                                alignment=Alignment::SingleRow
+                                color=player_color()
+                                analysis=false
+                            />
                             <DisplayTimer vertical=true placement=Placement::Bottom/>
                         </div>
                         <Show when=show_controls>

@@ -199,7 +199,7 @@ pub fn CollapsibleMove(
                         </svg>
                     </button>
                 </CollapsibleTrigger>
-                <HistoryMove  current_path node=node.clone()/>
+                <HistoryMove current_path node=node.clone()/>
             </div>
             <CollapsibleContent children=children.clone() attr:class="nested-content"/>
         </CollapsibleRoot>

@@ -42,11 +42,7 @@ pub fn MobileDropdown() -> impl IntoView {
                 >
                     Rules
                 </a>
-                <a
-                    class=COMMON_LINK_STYLE
-                    on:click=onclick_close
-                    href="/analysis"
-                >
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="/analysis">
                     Analysis
                 </a>
                 Tournament:

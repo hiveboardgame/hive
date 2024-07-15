@@ -44,7 +44,8 @@ mod tests {
 
     #[test]
     fn tests_game_status() {
-        for ts in [TournamentMode::DoubleRoundRobin].into_iter() {
+        {
+            let ts = TournamentMode::DoubleRoundRobin;
             assert_eq!(
                 ts.clone(),
                 TournamentMode::from_str(&format!("{ts}")).unwrap()

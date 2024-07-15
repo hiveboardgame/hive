@@ -1,5 +1,7 @@
 use super::game_reaction::GameReaction;
-use crate::responses::{ChallengeResponse, GameResponse, HeartbeatResponse, TournamentResponse, UserResponse};
+use crate::responses::{
+    ChallengeResponse, GameResponse, HeartbeatResponse, TournamentResponse, UserResponse,
+};
 use chrono::{DateTime, Utc};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};

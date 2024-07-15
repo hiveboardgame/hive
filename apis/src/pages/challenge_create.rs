@@ -2,16 +2,13 @@ use crate::common::TimeSignals;
 use crate::{
     common::ChallengeAction,
     components::{
-        atoms::{
-            create_challenge_button::CreateChallengeButton, input_slider::InputSlider,
-            select_options::SelectOption,
-        },
+        atoms::{create_challenge_button::CreateChallengeButton, input_slider::InputSlider},
         organisms::time_select::TimeSelect,
     },
     providers::{ApiRequests, AuthContext},
 };
 use hive_lib::{ColorChoice, GameType};
-use leptos::ev::Event;
+use leptix_primitives::radio_group::{RadioGroupItem, RadioGroupRoot};
 use leptos::*;
 use shared_types::{
     ChallengeDetails, ChallengeVisibility, CorrespondenceMode, GameSpeed, TimeMode,
@@ -50,22 +47,11 @@ pub fn ChallengeCreate(
         band_upper: RwSignal::new(None),
         band_lower: RwSignal::new(None),
     };
-    let is_rated = move |b| {
-        params.rated.update(|v| *v = b);
-        if b {
-            params.game_type.update(|v| *v = GameType::MLP)
-        };
-    };
-    let has_expansions = move |game_type| {
-        params.game_type.update(|v| *v = game_type);
-        if game_type == GameType::Base {
-            params.rated.update(|v| *v = false)
-        };
-    };
-    let challenge_visibility = move |visibility| params.visibility.update(|v| *v = visibility);
+    let (rated_value, set_rated_value) = create_signal("Rated".to_string());
     let band_upper = RwSignal::new(550_i32);
     let band_lower = RwSignal::new(-550_i32);
-
+    let game_type = move || params.game_type.get();
+    let time_control = move || params.time_mode.get();
     let time_signals = TimeSignals::default();
     let create_challenge = Callback::new(move |color_choice| {
         params.color_choice.update_untracked(|p| *p = color_choice);
@@ -79,7 +65,7 @@ pub fn ChallengeCreate(
         params
             .time_mode
             .update_untracked(|v| *v = time_signals.time_control.get_untracked());
-        match (params.time_mode)() {
+        match time_control() {
             TimeMode::Untimed => {
                 params.time_base.update_value(|v| *v = None);
                 params.time_increment.update_value(|v| *v = None);
@@ -172,24 +158,6 @@ pub fn ChallengeCreate(
         close(());
     });
 
-    let buttons_style =
-        "my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded";
-    let disable_rated = move || {
-        if (params.game_type)() == GameType::Base
-            || time_signals.time_control.get() == TimeMode::Untimed
-        {
-            return true;
-        }
-        false
-    };
-
-    let active_color = move |b| {
-        if b {
-            "bg-button-dawn dark:bg-button-twilight"
-        } else {
-            "bg-odd-light dark:bg-gray-700"
-        }
-    };
     let rating_string = move || {
         format!(
             "{}/+{}",
@@ -206,8 +174,8 @@ pub fn ChallengeCreate(
         )
     };
 
-    let on_change: Callback<Event, ()> = Callback::from(move |ev: Event| {
-        if let Ok(new_value) = TimeMode::from_str(&event_target_value(&ev)) {
+    let time_change = Callback::from(move |s: String| {
+        if let Ok(new_value) = TimeMode::from_str(&s) {
             params
                 .visibility
                 .update(|v| *v = ChallengeVisibility::Public);
@@ -221,98 +189,108 @@ pub fn ChallengeCreate(
             time_signals.time_control.update(|v| *v = new_value);
         };
     });
-
+    let allowed_values = vec![
+        TimeMode::RealTime,
+        TimeMode::Correspondence,
+        TimeMode::Untimed,
+    ];
+    let radio_style = "flex items-center my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded data-[state=checked]:bg-button-dawn dark:data-[state=checked]:bg-button-twilight data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700 data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700";
     view! {
         <div class="flex flex-col items-center w-72 xs:m-2 xs:w-80 sm:w-96">
-            <div class=move || {
-                opponent().map_or("hidden", |_| "block")
-            }>"Opponent: " {opponent()}</div>
-            <TimeSelect title=" Create a game:" time_signals on_change>
-                <SelectOption value=time_signals.time_control is="Real Time"/>
-                <SelectOption value=time_signals.time_control is="Correspondence"/>
-                <SelectOption value=time_signals.time_control is="Untimed"/>
-            </TimeSelect>
-            <div class="flex justify-center">
-                <button
-                    prop:disabled=disable_rated
-                    class=move || {
-                        format!(
-                            "disabled:opacity-25 disabled:cursor-not-allowed {buttons_style} {}",
-                            active_color((params.rated)()),
-                        )
-                    }
-
-                    on:click=move |_| is_rated(true)
-                >
-                    Rated
-                </button>
-                <button
-                    class=move || { format!("{buttons_style} {}", active_color(!(params.rated)())) }
-                    on:click=move |_| is_rated(false)
-                >
-                    Casual
-                </button>
+            <Show when=move || opponent().is_some()>
+                <div class="block">"Opponent: " {opponent()}</div>
+            </Show>
+            <div class="flex flex-col items-center">
+                <TimeSelect
+                    title=" Create a game:"
+                    time_signals
+                    on_value_change=time_change
+                    allowed_values
+                />
             </div>
-            <div class="flex justify-center">
-                <button
-                    class=move || {
-                        format!(
-                            "{buttons_style} {}",
-                            active_color((params.game_type)() == GameType::MLP),
-                        )
+            <RadioGroupRoot
+                required=true
+                attr:class="flex justify-center"
+                value=rated_value
+                default_value="Rated"
+                on_value_change=move |v| {
+                    let is_rated = v == "Rated";
+                    params.rated.update(|v| *v = is_rated);
+                    if is_rated {
+                        params.game_type.update(|v| *v = GameType::MLP);
                     }
+                    set_rated_value(v)
+                }
+            >
 
-                    on:click=move |_| has_expansions(GameType::MLP)
+                <RadioGroupItem
+                    value="Rated"
+                    attr:disabled=Signal::derive(move || {
+                        if game_type() == GameType::Base || time_control() == TimeMode::Untimed {
+                            set_rated_value("Casual".to_string());
+                            return true;
+                        }
+                        false
+                    })
+
+                    attr:class=format!(
+                        "disabled:opacity-25 disabled:cursor-not-allowed {radio_style}",
+                    )
                 >
-                    PLM
-                </button>
-                <button
-                    class=move || {
-                        format!(
-                            "{buttons_style} {}",
-                            active_color((params.game_type)() == GameType::Base),
-                        )
+
+                    "Rated"
+                </RadioGroupItem>
+                <RadioGroupItem value="Casual" attr:class=radio_style>
+                    "Casual"
+                </RadioGroupItem>
+            </RadioGroupRoot>
+
+            <RadioGroupRoot
+                required=true
+                attr:class="flex justify-center"
+                default_value="MLP"
+                on_value_change=move |v| {
+                    let game_type = if v == "MLP" { GameType::MLP } else { GameType::Base };
+                    params.game_type.update(|v| *v = game_type);
+                    if game_type == GameType::Base {
+                        params.rated.update(|v| *v = false)
                     }
+                }
+            >
 
-                    on:click=move |_| has_expansions(GameType::Base)
-                >
-                    Base
-                </button>
-            </div>
-            <div class=move || {
-                format!("{} justify-center", opponent().map_or("flex", |_| "hidden"))
-            }>
-                <button
-                    class=move || {
-                        format!(
-                            "{buttons_style} {}",
-                            active_color((params.visibility)() == ChallengeVisibility::Public),
-                        )
+                <RadioGroupItem value="MLP" attr:class=radio_style>
+                    "MLP"
+                </RadioGroupItem>
+                <RadioGroupItem value="Base" attr:class=radio_style>
+                    "Base"
+                </RadioGroupItem>
+            </RadioGroupRoot>
+
+            <Show when=move || opponent().is_none()>
+                <RadioGroupRoot
+                    required=true
+                    attr:class="flex justify-center"
+                    default_value="Public"
+                    on_value_change=move |value| {
+                        params
+                            .visibility
+                            .update(|v| {
+                                *v = if value == "Public" {
+                                    ChallengeVisibility::Public
+                                } else {
+                                    ChallengeVisibility::Private
+                                };
+                            })
                     }
-
-                    on:click=move |_| challenge_visibility(ChallengeVisibility::Public)
                 >
-                    Public
-                </button>
-                <button
-                    class=move || {
-                        format!(
-                            "{buttons_style} {}",
-                            active_color((params.visibility)() == ChallengeVisibility::Private),
-                        )
-                    }
 
-                    on:click=move |_| challenge_visibility(ChallengeVisibility::Private)
-                >
-                    Private
-                </button>
-            </div>
-            <div class=move || {
-                format!(
-                    "{} flex-col items-center",
-                    if opponent().is_some() { "hidden" } else { "flex" },
-                )
-            }>
+                    <RadioGroupItem value="Public" attr:class=radio_style>
+                        "Public"
+                    </RadioGroupItem>
+                    <RadioGroupItem value="Private" attr:class=radio_style>
+                        "Private"
+                    </RadioGroupItem>
+                </RadioGroupRoot>
                 <p class="flex justify-center">Rating range</p>
                 <div class="flex justify-center w-24">{rating_string}</div>
                 <div class="flex">
@@ -337,7 +315,7 @@ pub fn ChallengeCreate(
                         </label>
                     </div>
                 </div>
-            </div>
+            </Show>
             <div class="flex justify-center items-baseline">
                 <CreateChallengeButton
                     color_choice=store_value(ColorChoice::White)

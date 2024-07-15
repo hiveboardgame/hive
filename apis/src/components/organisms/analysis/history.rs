@@ -93,7 +93,9 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                         .collect::<Vec<_>>(),
                 );
                 view! {
-                    <CollapsibleMove current_path node>{inner}</CollapsibleMove>
+                    <CollapsibleMove current_path node>
+                        {inner}
+                    </CollapsibleMove>
                     {branches.remove(&children_ids[0])}
                 }
             } else if parent_deg > 2 && not_first_sibling && children_ids.len() == 1 {
@@ -106,7 +108,9 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 let static_cont = store_value(content);
                 view! {
                     <>
-                        <CollapsibleMove current_path node>{static_cont}</CollapsibleMove>
+                        <CollapsibleMove current_path node>
+                            {static_cont}
+                        </CollapsibleMove>
                     </>
                 }
             } else {
@@ -147,8 +151,18 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
             </div>
             <Show when=move || !mobile>
                 <div class="flex flex-col p-4">
-                    <Reserve alignment=Alignment::DoubleRow color=Color::White viewbox_str analysis=true/>
-                    <Reserve alignment=Alignment::DoubleRow color=Color::Black viewbox_str analysis=true/>
+                    <Reserve
+                        alignment=Alignment::DoubleRow
+                        color=Color::White
+                        viewbox_str
+                        analysis=true
+                    />
+                    <Reserve
+                        alignment=Alignment::DoubleRow
+                        color=Color::Black
+                        viewbox_str
+                        analysis=true
+                    />
                 </div>
             </Show>
             <div class="flex justify-between w-full">

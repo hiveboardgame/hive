@@ -1,5 +1,6 @@
 use leptix_primitives::components::slider::{SliderRange, SliderRoot, SliderThumb, SliderTrack};
 use leptos::*;
+
 #[component]
 pub fn InputSlider(
     signal_to_update: RwSignal<i32>,
@@ -11,11 +12,17 @@ pub fn InputSlider(
     let min = Signal::derive(move || min() as f64);
     let max = Signal::derive(move || max() as f64);
     let step: f64 = step as f64;
+    let default_value = vec![signal_to_update.get() as f64];
     let on_value_change = Callback::from(move |val: Vec<f64>| {
         signal_to_update.set(val[0] as i32);
     });
     view! {
-        <SliderRoot min max step on_value_change
+        <SliderRoot
+            min
+            max
+            step
+            on_value_change
+            default_value
             attr:class="flex relative items-center w-fit min-w-[150px] h-5 select-none touch-none"
             attr:name=name
         >

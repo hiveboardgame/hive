@@ -1,12 +1,15 @@
+use std::str::FromStr;
+
 use crate::common::{TimeSignals, TournamentAction};
 use crate::components::organisms::time_select::TimeSelect;
 use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
 use crate::{
-    components::atoms::{input_slider::InputSlider, select_options::SelectOption},
+    components::atoms::{
+        input_slider::InputSlider, select_options::SelectOption, simple_switch::SimpleSwitch,
+    },
     providers::{ApiRequests, AuthContext},
 };
 use chrono::{DateTime, Duration, Local, NaiveDateTime, Utc};
-use leptos::ev::Event;
 use leptos::*;
 use leptos_router::use_navigate;
 use shared_types::PrettyString;
@@ -196,9 +199,12 @@ pub fn TournamentCreate() -> impl IntoView {
             navigate("/tournaments", Default::default());
         }
     };
-    let on_change: Callback<Event, ()> =
-        Callback::from(update_from_input_parsed(time_signals.time_control));
-
+    let on_value_change: Callback<String, ()> = Callback::from(move |string: String| {
+        if let Ok(new_value) = TimeMode::from_str(&string) {
+            time_signals.time_control.update(|v| *v = new_value);
+        };
+    });
+    let allowed_values = vec![TimeMode::RealTime, TimeMode::Correspondence];
     let tournament_length = move || {
         if fixed_round_duration() {
             format!(
@@ -306,25 +312,15 @@ pub fn TournamentCreate() -> impl IntoView {
 
                         </select>
                     </div>
-                    <div class="flex">
-                        <input
-                            on:change=move |_| tournament.invite_only.update(|b| *b = !*b)
-                            type="checkbox"
-                            class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                            prop:checked=tournament.invite_only
-                        />
+                    <div class="flex mb-2">
+                        <SimpleSwitch checked=tournament.invite_only/>
                         <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
                             Invite Only
                         </label>
                     </div>
-                    <div class="flex flex-col">
+                    <div class="flex flex-col mb-2">
                         <div class="flex">
-                            <input
-                                on:change=move |_| organizer_start.update(|b| *b = !*b)
-                                type="checkbox"
-                                class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                prop:checked=organizer_start
-                            />
+                            <SimpleSwitch checked=organizer_start/>
                             <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
                                 Manual start
                             </label>
@@ -373,14 +369,9 @@ pub fn TournamentCreate() -> impl IntoView {
 
                         </Show>
                     </div>
-                    <div class="flex gap-1">
+                    <div class="flex gap-1 mb-2">
                         <Show when=move || time_signals.time_control.get() == TimeMode::RealTime>
-                            <input
-                                on:change=move |_| fixed_round_duration.update(|b| *b = !*b)
-                                type="checkbox"
-                                class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                prop:checked=fixed_round_duration
-                            />
+                            <SimpleSwitch checked=fixed_round_duration/>
                             <label class="text-sm font-medium text-gray-900 dark:text-gray-300">
                                 Fixed round duration
                             </label>
@@ -402,32 +393,36 @@ pub fn TournamentCreate() -> impl IntoView {
                     <div>{tournament_length}</div>
 
                 </div>
-                <div class="md:pl-2 basis-1/2">
-                    <TimeSelect title=" Match settings:" time_signals on_change>
-                        <SelectOption value=time_signals.time_control is="Real Time"/>
-                        <SelectOption value=time_signals.time_control is="Correspondence"/>
-                    </TimeSelect>
-                    <div class="flex">{rating_string}</div>
-                    <div class="flex">
-                        <div class="flex gap-1 mx-1">
-                            <label class="flex items-center">
-                                <InputSlider
-                                    signal_to_update=min_rating
-                                    name="Min rating"
-                                    min=400
-                                    max=Signal::derive(move || { max_rating() - 100 })
-                                    step=100
-                                />
-                            </label>
-                            <label class="flex items-center">
-                                <InputSlider
-                                    signal_to_update=max_rating
-                                    name="Max rating"
-                                    min=Signal::derive(move || { min_rating() + 100 })
-                                    max=2600
-                                    step=100
-                                />
-                            </label>
+                <div class="basis-1/2">
+                    <div class="flex flex-col items-center">
+                        <TimeSelect
+                            title=" Match settings:"
+                            time_signals
+                            on_value_change
+                            allowed_values
+                        />
+                        <div class="flex">{rating_string}</div>
+                        <div class="flex">
+                            <div class="flex gap-1 my-1">
+                                <label class="flex items-center">
+                                    <InputSlider
+                                        signal_to_update=min_rating
+                                        name="Min rating"
+                                        min=400
+                                        max=Signal::derive(move || { max_rating() - 100 })
+                                        step=100
+                                    />
+                                </label>
+                                <label class="flex items-center">
+                                    <InputSlider
+                                        signal_to_update=max_rating
+                                        name="Max rating"
+                                        min=Signal::derive(move || { min_rating() + 100 })
+                                        max=2600
+                                        step=100
+                                    />
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>

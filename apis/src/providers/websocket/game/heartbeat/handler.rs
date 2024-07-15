@@ -1,4 +1,7 @@
-use crate::{providers::{games::GamesSignal, timer::TimerSignal}, responses::HeartbeatResponse};
+use crate::{
+    providers::{games::GamesSignal, timer::TimerSignal},
+    responses::HeartbeatResponse,
+};
 use leptos::*;
 
 pub fn handle_heartbeat(hb: HeartbeatResponse) {
