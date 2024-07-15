@@ -39,7 +39,7 @@ pub fn TimeSelect(
                 </div>
                 <RadioGroupRoot
                     required=true
-                    attr:class="flex flex-row gap-2 p-2"
+                    attr:class="flex flex-row gap-2 justify-center p-2"
                     default_value="Real Time"
                     on_value_change
                 >
@@ -93,7 +93,7 @@ pub fn TimeSelect(
             </div>
         </Show>
         <Show when=move || time_control() == TimeMode::Correspondence>
-            <div class="flex flex-col justify-center w-full">
+            <div class="flex flex-col justify-center items-center w-full">
                 <RadioGroupRoot
                     required=true
                     attr:class="flex flex-row gap-2 p-2"

@@ -393,34 +393,36 @@ pub fn TournamentCreate() -> impl IntoView {
                     <div>{tournament_length}</div>
 
                 </div>
-                <div class="md:pl-2 basis-1/2">
-                    <TimeSelect
-                        title=" Match settings:"
-                        time_signals
-                        on_value_change
-                        allowed_values
-                    />
-                    <div class="flex">{rating_string}</div>
-                    <div class="flex">
-                        <div class="flex gap-1 mx-1">
-                            <label class="flex items-center">
-                                <InputSlider
-                                    signal_to_update=min_rating
-                                    name="Min rating"
-                                    min=400
-                                    max=Signal::derive(move || { max_rating() - 100 })
-                                    step=100
-                                />
-                            </label>
-                            <label class="flex items-center">
-                                <InputSlider
-                                    signal_to_update=max_rating
-                                    name="Max rating"
-                                    min=Signal::derive(move || { min_rating() + 100 })
-                                    max=2600
-                                    step=100
-                                />
-                            </label>
+                <div class="basis-1/2">
+                    <div class="flex flex-col items-center">
+                        <TimeSelect
+                            title=" Match settings:"
+                            time_signals
+                            on_value_change
+                            allowed_values
+                        />
+                        <div class="flex">{rating_string}</div>
+                        <div class="flex">
+                            <div class="flex gap-1 my-1">
+                                <label class="flex items-center">
+                                    <InputSlider
+                                        signal_to_update=min_rating
+                                        name="Min rating"
+                                        min=400
+                                        max=Signal::derive(move || { max_rating() - 100 })
+                                        step=100
+                                    />
+                                </label>
+                                <label class="flex items-center">
+                                    <InputSlider
+                                        signal_to_update=max_rating
+                                        name="Max rating"
+                                        min=Signal::derive(move || { min_rating() + 100 })
+                                        max=2600
+                                        step=100
+                                    />
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
