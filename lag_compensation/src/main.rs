@@ -14,13 +14,45 @@ fn main() {
         println!("Quota gain is: {}", lt.quota_gain);
         println!("Default quota is: {}", lt.quota);
         println!("Max quota is: {}", lt.quota_max);
-        for _i in 0..35 {
+        for _i in 0..15 {
             let num = rng.gen_range(30..60);
+            lt.record_lag(num as f64 / 1000.0);
             println!(
-                "Ping: {}ms Comp: {} Quota: {}",
+                "Ping: {}ms Comp: {} Quota: {} Estimator: {:?}",
                 num,
                 lt.on_move(num as f64 / 1000.0),
-                lt.quota
+                lt.quota,
+                lt.lag_estimator,
+            );
+        }
+        lt.record_lag(500_f64 / 1000.0);
+        println!(
+            "Ping: {}ms Comp: {} Quota: {} Estimator: {:?}",
+            500,
+            lt.on_move(500_f64 / 1000.0),
+            lt.quota,
+            lt.lag_estimator,
+        );
+        for _i in 0..5 {
+            let num = rng.gen_range(100..151);
+            lt.record_lag(num as f64 / 1000.0);
+            println!(
+                "Ping: {}ms Comp: {} Quota: {} Estimator: {:?}",
+                num,
+                lt.on_move(num as f64 / 1000.0),
+                lt.quota,
+                lt.lag_estimator,
+            );
+        }
+        for _i in 0..10 {
+            let num = rng.gen_range(30..60);
+            lt.record_lag(num as f64 / 1000.0);
+            println!(
+                "Ping: {}ms Comp: {} Quota: {} Estimator: {:?}",
+                num,
+                lt.on_move(num as f64 / 1000.0),
+                lt.quota,
+                lt.lag_estimator,
             );
         }
     }
