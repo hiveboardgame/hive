@@ -3,11 +3,12 @@ use crate::components::organisms::time_select::TimeSelect;
 use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
 use crate::{
     components::atoms::{
-        input_slider::InputSlider, select_options::SelectOption, simple_switch::SimpleSwitch,
+        date_time_picker::DateTimePicker, input_slider::InputSlider, select_options::SelectOption,
+        simple_switch::SimpleSwitch,
     },
     providers::{ApiRequests, AuthContext},
 };
-use chrono::{DateTime, Duration, Local, NaiveDateTime, Utc};
+use chrono::{DateTime, Duration, Local, Utc};
 use leptos::*;
 use leptos_router::use_navigate;
 use shared_types::PrettyString;
@@ -326,47 +327,20 @@ pub fn TournamentCreate() -> impl IntoView {
                             </label>
                         </div>
                         <Show when=move || !organizer_start()>
-                            <label for="start-time">Choose a start time:</label>
-                            <input
-                                type="datetime-local"
-                                id="start-time"
-                                name="start-time"
-                                attr:min=move || {
-                                    (Local::now()).format("%Y-%m-%dT%H:%M").to_string()
-                                }
+                            <DateTimePicker
+                                text="Choose a start time:"
+                                min=Local::now()
+                                max=Local::now() + Duration::weeks(12)
+                                success_callback=Callback::from(move |local| {
+                                    tournament
+                                        .starts_at
+                                        .update(|v| {
+                                            *v = local;
+                                        })
+                                })
 
-                                attr:max=move || {
-                                    (Local::now() + Duration::weeks(12))
-                                        .format("%Y-%m-%dT%H:%M")
-                                        .to_string()
-                                }
-
-                                value=(Local::now() + Duration::minutes(1))
-                                    .format("%Y-%m-%dT%H:%M")
-                                    .to_string()
-                                on:input=move |evt| {
-                                    if let Ok(date) = NaiveDateTime::parse_from_str(
-                                        &event_target_value(&evt),
-                                        "%Y-%m-%dT%H:%M",
-                                    ) {
-                                        let dt = Local::now();
-                                        let offset = dt.offset();
-                                        if let chrono::LocalResult::Single(local) = NaiveDateTime::and_local_timezone(
-                                            &date,
-                                            *offset,
-                                        ) {
-                                            tournament
-                                                .starts_at
-                                                .update(|v| {
-                                                    *v = local.to_utc();
-                                                })
-                                        }
-                                    } else {
-                                        organizer_start.set(true)
-                                    }
-                                }
+                                failure_callback=Callback::from(move |_| organizer_start.set(true))
                             />
-
                         </Show>
                     </div>
                     <div class="flex gap-1 mb-2">

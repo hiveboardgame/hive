@@ -13,6 +13,7 @@ mod notifications;
 pub mod online_users;
 mod ping;
 pub mod refocus;
+pub mod schedules;
 mod sounds;
 pub mod timer;
 pub mod tournament_ready;

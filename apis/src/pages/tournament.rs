@@ -1,21 +1,26 @@
-use crate::common::{TournamentAction, UserAction};
+use crate::common::{ScheduleAction, TournamentAction};
 use crate::components::molecules::score_row::ScoreRow;
 use crate::components::{
-    atoms::progress_bar::ProgressBar,
+    atoms::{profile_link::ProfileLink, progress_bar::ProgressBar},
     molecules::{
-        game_previews::GamePreviews, invite_user::InviteUser, time_row::TimeRow, user_row::UserRow,
+        game_previews::GamePreviews, myschedules::MySchedules, time_row::TimeRow, user_row::UserRow,
     },
     organisms::chat::ChatWindow,
+    organisms::tournament_admin::TournamentAdminControls,
 };
 use crate::providers::{
-    navigation_controller::NavigationControllerSignal, tournaments::TournamentStateSignal,
-    ApiRequests, AuthContext,
+    navigation_controller::NavigationControllerSignal, schedules::SchedulesContext,
+    tournaments::TournamentStateSignal, ApiRequests, AuthContext,
 };
+use crate::responses::{GameResponse, ScheduleResponse};
 use chrono::Local;
+use chrono::{Duration, Utc};
+use hive_lib::GameStatus;
 use leptos::*;
 use leptos_router::use_navigate;
 use shared_types::PrettyString;
 use shared_types::{GameSpeed, TimeInfo, TournamentStatus};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -25,6 +30,9 @@ pub fn Tournament() -> impl IntoView {
     let navi = expect_context::<NavigationControllerSignal>();
     let tournaments = expect_context::<TournamentStateSignal>();
     let tournament_id = move || navi.tournament_signal.get().tournament_id;
+
+    let schedules_signal = expect_context::<SchedulesContext>();
+    let tournament_schedules = move || schedules_signal.tournament.get();
     let current_tournament = move || {
         tournament_id().and_then(|tournament_id| {
             tournaments
@@ -40,6 +48,17 @@ pub fn Tournament() -> impl IntoView {
         Some(Ok(Some(account))) => Some(account),
         _ => None,
     };
+    create_effect(move |_| {
+        let api = ApiRequests::new();
+        api.schedule_action(ScheduleAction::TournamentPublic(
+            tournament_id().unwrap_or_default(),
+        ));
+        if account().is_some() {
+            api.schedule_action(ScheduleAction::TournamentOwn(
+                tournament_id().unwrap_or_default(),
+            ));
+        }
+    });
     let number_of_players = move || current_tournament().map_or(0, |t| t.players.len());
     let user_joined = move || {
         if let Some(account) = account() {
@@ -56,6 +75,16 @@ pub fn Tournament() -> impl IntoView {
             false
         }
     };
+
+    let games_hashmap = create_memo(move |_| {
+        let mut games_hashmap = HashMap::new();
+        if let Some(tournament) = current_tournament() {
+            for game in tournament.games {
+                games_hashmap.insert(game.uuid, game);
+            }
+        }
+        games_hashmap
+    });
 
     let delete = move |_| {
         if let Some(tournament_id) = tournament_id() {
@@ -120,20 +149,6 @@ pub fn Tournament() -> impl IntoView {
                 } else {true}
 
             };
-            let user_kick = move || {
-                if user_is_organizer() {
-                    vec![UserAction::Kick(Box::new(tournament()))]
-                } else {
-                    vec![]
-                }
-            };
-            let user_uninvite = move || {
-                if user_is_organizer() {
-                    vec![UserAction::Uninvite(tournament().tournament_id)]
-                } else {
-                    vec![]
-                }
-            };
             let starts = move || {
                 let tournament = tournament();
                 if matches!(tournament.status, TournamentStatus::NotStarted) {
@@ -157,6 +172,15 @@ pub fn Tournament() -> impl IntoView {
             let total_games = tournament().games.len();
             let finished_games = Signal::derive(move || tournament().games.iter().filter(|g| g.finished).count());
             let not_started = move || tournament().status == TournamentStatus::NotStarted;
+            let game_previews = Callback::new(
+                move |_| games_hashmap.get().iter().filter_map(|(_, g)|
+                match g.game_status {
+                    GameStatus::NotStarted => None,
+                    _ => Some(g.clone())
+                })
+                .collect()
+        );
+        let user_id = move || account().map(|a| a.user.uid);
             view! {
                 <div class="flex justify-center p-2 w-full">
                     <h1 class="w-full max-w-full text-3xl font-bold text-center whitespace-normal break-words">
@@ -186,7 +210,6 @@ pub fn Tournament() -> impl IntoView {
                         </div>
                     </Show>
                     <div class="font-bold">{starts}</div>
-                    // Progress bar
                     <ProgressBar current=finished_games total=total_games/>
                 </div>
                 <Show when=not_started>
@@ -237,39 +260,15 @@ pub fn Tournament() -> impl IntoView {
                         </div>
 
                     </div>
+
                     <Show
                         when=move || tournament().status != TournamentStatus::NotStarted
                         fallback=move || {
                             view! {
-                                <div class="flex flex-col items-center px-1 w-72">
-                                    <Show when=move || !tournament().players.is_empty()>
-                                        <p class="font-bold">Players</p>
-                                        <For
-                                            each=move || { tournament().players }
-
-                                            key=|(id, _)| (*id)
-                                            let:user
-                                        >
-                                            <UserRow actions=user_kick() user=store_value(user.1)/>
-                                        </For>
-                                    </Show>
-                                </div>
-                                <div class="flex flex-col items-center px-1 w-72">
-                                    <Show when=move || !tournament().invitees.is_empty()>
-                                        <p class="font-bold">Invitees</p>
-                                        <For
-                                            each=move || { tournament().invitees }
-                                            key=|users| (users.uid)
-                                            let:user
-                                        >
-                                            <UserRow actions=user_uninvite() user=store_value(user)/>
-                                        </For>
-                                    </Show>
-                                    <Show when=user_is_organizer>
-                                        <p class="font-bold">Invite players</p>
-                                        <InviteUser tournament=tournament()/>
-                                    </Show>
-                                </div>
+                                <TournamentAdminControls
+                                    user_is_organizer=user_is_organizer()
+                                    tournament
+                                />
                             }
                         }
                     >
@@ -342,12 +341,90 @@ pub fn Tournament() -> impl IntoView {
                                 }
 
                             </For>
-                            <span class="font-bold text-md">Tournament Games:</span>
-                            <div class="flex flex-wrap justify-center items-center">
-                                <GamePreviews games=Callback::new(move |_| (tournament().games))/>
-                            </div>
+                            <Show when=user_joined>
+                                <MySchedules games_hashmap user_id=user_id().unwrap_or_default()/>
+                            </Show>
+                            <span class="font-bold text-md">Pending Games:</span>
+                            <For
+                                each=move || {
+                                    let mut schedules: Vec<ScheduleResponse> = tournament_schedules();
+                                    schedules.sort_by(|a, b| b.start_t.cmp(&a.start_t));
+                                    let mut ret: Vec<(ScheduleResponse, GameResponse)> = Vec::new();
+                                    schedules
+                                        .iter()
+                                        .for_each(|schedule| {
+                                            if let Some(game) = games_hashmap().get(&schedule.game_id) {
+                                                let schedule = schedule.clone();
+                                                if (schedule.start_t + Duration::hours(1)) > Utc::now() {
+                                                    ret.push((schedule, game.to_owned()));
+                                                }
+                                            }
+                                        });
+                                    ret
+                                }
+
+                                key=|(schedule, _): &(ScheduleResponse, GameResponse)| (
+                                    schedule.start_t,
+                                    schedule.agreed,
+                                )
+
+                                let:tuple
+                            >
+
+                                {
+                                    let (schedule, game) = tuple;
+                                    let date_str = if schedule.agreed {
+                                        format!(
+                                            "Scheduled at {}",
+                                            schedule
+                                                .start_t
+                                                .with_timezone(&Local)
+                                                .format("%Y-%m-%d %H:%M"),
+                                        )
+                                    } else {
+                                        "Not scheduled".to_owned()
+                                    };
+                                    view! {
+                                        <div class="flex justify-center items-center p-3 w-full h-10 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
+                                            <div class="flex flex-col items-center h-fit">
+                                                <div class="flex items-center">
+                                                    <div class="flex">
+                                                        <ProfileLink
+                                                            patreon=game.white_player.patreon
+                                                            username=game.white_player.username.clone()
+                                                            extend_tw_classes="truncate max-w-[120px]"
+                                                        />
+                                                        {format!("({})", game.white_rating())}
+                                                    </div>
+                                                    vs.
+                                                    <div class="flex">
+                                                        <ProfileLink
+                                                            patreon=game.black_player.patreon
+                                                            username=game.black_player.username.clone()
+                                                            extend_tw_classes="truncate max-w-[120px]"
+                                                        />
+                                                        {format!("({})", game.black_rating())}
+                                                    </div>
+                                                </div>
+                                                <div class="flex">{date_str}</div>
+                                            </div>
+                                            <a
+                                                class=BUTTON_STYLE
+                                                href=format!("/game/{}", &game.game_id)
+                                            >
+                                                "Join Game"
+                                            </a>
+                                        </div>
+                                    }
+                                }
+
+                            </For>
                         </div>
                     </Show>
+                    <div class="flex font-bold text-md">Finished or ongoing games:</div>
+                    <div class="flex flex-wrap justify-center items-center">
+                        <GamePreviews games=game_previews/>
+                    </div>
                     <div class="m-2 w-full h-72 whitespace-normal break-words bg-odd-light dark:bg-odd-dark">
                         <ChatWindow destination=shared_types::SimpleDestination::Tournament/>
                     </div>

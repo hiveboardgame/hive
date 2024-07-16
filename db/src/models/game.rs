@@ -1049,6 +1049,38 @@ impl Game {
             .await?)
     }
 
+    pub async fn get_ongoing_ids_for_tournament(
+        tournament_id_: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Uuid>, DbError> {
+        Ok(games::table
+            .filter(
+                games::tournament_id
+                    .eq(tournament_id_)
+                    .and(games::finished.eq(false)),
+            )
+            .select(games::id)
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn get_ongoing_ids_for_tournament_by_user(
+        tournament_id_: Uuid,
+        user_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Uuid>, DbError> {
+        Ok(games::table
+            .filter(
+                games::tournament_id.eq(tournament_id_).and(
+                    games::finished
+                        .eq(false)
+                        .and(games::white_id.eq(user_id).or(games::black_id.eq(user_id))),
+                ),
+            )
+            .select(games::id)
+            .get_results(conn)
+            .await?)
+    }
     pub async fn get_x_finished_games_for_username(
         username: &str,
         conn: &mut DbConn<'_>,

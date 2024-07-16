@@ -8,6 +8,7 @@ mod hex_stack;
 mod move_info;
 mod piece_type;
 mod rating_change_info;
+mod schedule_action;
 mod server_result;
 mod svg_pos;
 mod time_signals;
@@ -23,9 +24,10 @@ pub use hex_stack::HexStack;
 pub use move_info::MoveInfo;
 pub use piece_type::PieceType;
 pub use rating_change_info::RatingChangeInfo;
+pub use schedule_action::ScheduleAction;
 pub use server_result::{
     ChallengeUpdate, CommonMessage, ExternalServerError, GameActionResponse, GameUpdate,
-    ServerMessage, ServerResult, TournamentUpdate, UserStatus, UserUpdate,
+    ScheduleUpdate, ServerMessage, ServerResult, TournamentUpdate, UserStatus, UserUpdate,
 };
 pub use svg_pos::SvgPos;
 pub use time_signals::TimeSignals;

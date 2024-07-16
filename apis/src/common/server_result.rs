@@ -1,12 +1,14 @@
 use super::game_reaction::GameReaction;
 use super::ClientRequest;
 use crate::responses::{
-    ChallengeResponse, GameResponse, HeartbeatResponse, TournamentResponse, UserResponse,
+    ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse, TournamentResponse,
+    UserResponse,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use shared_types::{ChallengeId, ChatMessageContainer};
 use shared_types::{GameId, TournamentId};
+use std::collections::HashMap;
 use std::fmt;
 use uuid::Uuid;
 
@@ -53,6 +55,7 @@ pub enum ServerMessage {
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
     Error(String),
+    Schedule(ScheduleUpdate),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,4 +109,13 @@ pub enum UserStatus {
     Online,
     Offline,
     Away,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ScheduleUpdate {
+    Proposed(ScheduleResponse),
+    Accepted(ScheduleResponse),
+    Deleted(ScheduleResponse),
+    TournamentSchedules(Vec<ScheduleResponse>),
+    OwnTournamentSchedules(HashMap<Uuid, Vec<ScheduleResponse>>),
 }
