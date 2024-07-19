@@ -113,6 +113,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                             TimeMode::Correspondence | TimeMode::RealTime
                         )
                     }
+
                     fallback=|| {
                         view! {
                             <Icon
@@ -122,6 +123,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                         }
                     }
                 >
+
                     <LiveTimer side/>
                 </Show>
             </button>

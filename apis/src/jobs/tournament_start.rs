@@ -3,8 +3,8 @@ use crate::common::{
 };
 use crate::responses::{GameResponse, TournamentResponse};
 use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
-use crate::websockets::lobby::Lobby;
 use crate::websockets::messages::ClientActorMessage;
+use crate::websockets::ws_server::WsServer;
 use actix::Addr;
 use actix_web::web::Data;
 use db_lib::{get_conn, models::Tournament, DbPool};
@@ -12,13 +12,13 @@ use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use std::time::Duration;
 
-pub fn run(pool: DbPool, lobby: Data<Addr<Lobby>>) {
+pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
     actix_rt::spawn(async move {
         let mut interval = actix_rt::time::interval(Duration::from_secs(60));
         loop {
             interval.tick().await;
             if let Ok(mut conn) = get_conn(&pool).await {
-                let lobby = lobby.clone();
+                let ws_server = ws_server.clone();
                 let _ = conn
                     .transaction::<_, anyhow::Error, _>(move |tc| {
                         async move {
@@ -90,7 +90,7 @@ pub fn run(pool: DbPool, lobby: Data<Addr<Lobby>>) {
                                         serialized,
                                         from: None,
                                     };
-                                    lobby.do_send(cam);
+                                    ws_server.do_send(cam);
                                 }
                             }
                             Ok(())

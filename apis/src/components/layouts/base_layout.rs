@@ -1,13 +1,11 @@
-use crate::components::atoms::og::OG;
-use crate::components::atoms::title::Title;
+use crate::components::atoms::{og::OG, title::Title};
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
-use crate::providers::game_state::GameStateSignal;
-use crate::providers::navigation_controller::NavigationControllerSignal;
-use crate::providers::refocus::RefocusSignal;
-use crate::providers::websocket::WebsocketContext;
-use crate::providers::PingSignal;
-use crate::providers::{load_audio_buffer, ApiRequests, AuthContext, ColorScheme, SoundsSignal};
+use crate::providers::{
+    game_state::GameStateSignal, load_audio_buffer,
+    navigation_controller::NavigationControllerSignal, refocus::RefocusSignal,
+    websocket::WebsocketContext, AuthContext, ColorScheme, PingContext, SoundsSignal,
+};
 use cfg_if::cfg_if;
 use chrono::Utc;
 use hive_lib::GameControl;
@@ -61,7 +59,7 @@ pub struct OrientationSignal {
 pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let color_scheme = expect_context::<ColorScheme>();
     let sounds_signal = expect_context::<SoundsSignal>();
-    let ping = expect_context::<PingSignal>();
+    let ping = expect_context::<PingContext>();
     let ws = expect_context::<WebsocketContext>();
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
@@ -175,9 +173,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         move || {
             batch({
                 let ws = ws.clone();
-                let api = ApiRequests::new();
                 move || {
-                    api.ping();
                     counter.update(|c| *c += 1);
                     match ws_ready() {
                         ConnectionReadyState::Closed => {
@@ -195,7 +191,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                         _ => {}
                     }
                     if Utc::now()
-                        .signed_duration_since(ping.signal.get_untracked().last_update)
+                        .signed_duration_since(ping.last_updated.get_untracked())
                         .num_seconds()
                         >= 5
                         && retry_at.get() == counter.get()

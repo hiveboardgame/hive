@@ -2,7 +2,6 @@ use super::game_reaction::GameReaction;
 use crate::responses::{
     ChallengeResponse, GameResponse, HeartbeatResponse, TournamentResponse, UserResponse,
 };
-use chrono::{DateTime, Utc};
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use shared_types::{ChallengeId, ChatMessageContainer};
@@ -37,10 +36,7 @@ impl fmt::Display for ExternalServerError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
-    Pong {
-        ping_sent: DateTime<Utc>,
-        pong_sent: DateTime<Utc>,
-    },
+    Ping { nonce: u64, value: f64 },
     ConnectionUpdated(Uuid, String),
     Chat(Vec<ChatMessageContainer>),
     Game(Box<GameUpdate>),

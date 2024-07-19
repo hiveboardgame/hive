@@ -1,9 +1,8 @@
-use crate::providers::ping::PingSignal;
-use chrono::{DateTime, Utc};
-
+use crate::providers::{ping::PingContext, ApiRequests};
 use leptos::*;
 
-pub fn handle_ping(ping_sent: DateTime<Utc>) {
-    let mut ping = expect_context::<PingSignal>();
-    ping.update_ping(ping_sent);
+pub fn handle_ping(nonce: u64, value: f64) {
+    let mut ping = expect_context::<PingContext>();
+    ping.update_ping(value);
+    ApiRequests::new().pong(nonce);
 }

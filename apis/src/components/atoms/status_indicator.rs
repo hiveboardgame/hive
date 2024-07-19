@@ -1,7 +1,7 @@
 use crate::{
     common::UserStatus,
     providers::{
-        online_users::OnlineUsersSignal, websocket::WebsocketContext, AuthContext, PingSignal,
+        online_users::OnlineUsersSignal, websocket::WebsocketContext, AuthContext, PingContext,
     },
 };
 use chrono::Utc;
@@ -12,7 +12,7 @@ use leptos_use::core::ConnectionReadyState;
 #[component]
 pub fn StatusIndicator(username: String) -> impl IntoView {
     let websocket = expect_context::<WebsocketContext>();
-    let ping = expect_context::<PingSignal>();
+    let ping = expect_context::<PingContext>();
     let auth_context = expect_context::<AuthContext>();
     let online_users = expect_context::<OnlineUsersSignal>();
     let username = store_value(username);
@@ -22,7 +22,7 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     };
     let user_has_ws = move || {
         Utc::now()
-            .signed_duration_since(ping.signal.get().last_update)
+            .signed_duration_since(ping.last_updated.get_untracked())
             .num_seconds()
             < 5
             && matches!(websocket.ready_state.get(), ConnectionReadyState::Open)

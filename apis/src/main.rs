@@ -1,23 +1,26 @@
 pub mod common;
 pub mod functions;
 pub mod jobs;
+pub mod ping;
 pub mod responses;
 pub mod websockets;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
 use actix_web::middleware::Compress;
+use ping::pings::Pings;
+use std::sync::{Arc, RwLock};
 use websockets::tournament_game_start::TournamentGameStart;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websockets::{chat::Chats, lobby::Lobby,start_connection};
+    use crate::websockets::{chat::Chats, start_connection, ws_server::WsServer};
     use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-    use actix_web::{cookie::Key, App, HttpServer, web::Data,};
+    use actix_web::{cookie::Key, web::Data, App, HttpServer};
     use apis::app::App;
     use db_lib::{config::DbConfig, get_pool};
     use diesel::pg::PgConnection;
@@ -38,7 +41,8 @@ async fn main() -> std::io::Result<()> {
     let database_url = &config.database_url;
     let mut conn = PgConnection::establish(database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
-    conn.run_pending_migrations(MIGRATIONS).expect("Ran migrations");
+    conn.run_pending_migrations(MIGRATIONS)
+        .expect("Ran migrations");
 
     let hash: [u8; 64] = Sha512::digest(&config.session_secret)
         .as_slice()
@@ -49,11 +53,13 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Failed to get pool");
     let chat_history = Data::new(Chats::new());
-    let websocket_server = Data::new(Lobby::new(pool.clone()).start());
+    let pings = Data::new(Arc::new(RwLock::new(Pings::new())));
+    let websocket_server = Data::new(WsServer::new(pings.clone(), pool.clone()).start());
     let tournament_game_start = Data::new(TournamentGameStart::new());
 
     jobs::tournament_start::run(pool.clone(), Data::clone(&websocket_server));
     jobs::heartbeat::run(Data::clone(&websocket_server));
+    jobs::ping::run(Data::clone(&websocket_server));
 
     println!("listening on http://{}", &addr);
 
@@ -66,6 +72,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::clone(&chat_history))
             .app_data(Data::clone(&websocket_server))
             .app_data(Data::clone(&tournament_game_start))
+            .app_data(Data::clone(&pings))
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             // serve other assets from the `assets` directory
@@ -87,12 +94,10 @@ async fn main() -> std::io::Result<()> {
             // SessionMiddleware so SessionMiddleware needs to be present
             .wrap(
                 SessionMiddleware::builder(CookieSessionStore::default(), cookie_key.clone())
-                    .session_lifecycle(
-                        PersistentSession::default().session_ttl(Duration::weeks(1))
-                    )
-                    .build()
+                    .session_lifecycle(PersistentSession::default().session_ttl(Duration::weeks(1)))
+                    .build(),
             )
-        .wrap(Compress::default())
+            .wrap(Compress::default())
     })
     .bind(&addr)?
     .run()

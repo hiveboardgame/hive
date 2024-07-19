@@ -31,6 +31,10 @@ pub struct GameHB {}
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
+pub struct Ping {}
+
+#[derive(Message, Debug)]
+#[rtype(result = "()")]
 pub struct ClientActorMessage {
     pub destination: MessageDestination,
     pub from: Option<Uuid>,
