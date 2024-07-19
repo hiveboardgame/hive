@@ -1,10 +1,11 @@
 use super::tournament_game_start::TournamentGameStart;
 use super::{api::handler::RequestHandler, internal_server_message::MessageDestination};
 use crate::common::{ClientRequest, ExternalServerError, ServerResult};
+use crate::ping::pings::Pings;
 use crate::websockets::{
     chat::Chats,
-    lobby::Lobby,
     messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
+    ws_server::WsServer,
 };
 use actix::{
     fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
@@ -14,6 +15,7 @@ use actix_web_actors::ws::{self, Message::Text};
 use anyhow::Result;
 use db_lib::DbPool;
 use shared_types::SimpleUser;
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
@@ -27,8 +29,9 @@ pub struct WsConnection {
     admin: bool,
     chat_storage: actix_web::web::Data<Chats>,
     game_start: actix_web::web::Data<TournamentGameStart>,
-    lobby_addr: Addr<Lobby>,
-    hb: Instant, // websocket heartbeat
+    pings: actix_web::web::Data<Arc<RwLock<Pings>>>,
+    wss_addr: Addr<WsServer>,
+    hb: Instant,
     pool: DbPool,
 }
 
@@ -38,7 +41,7 @@ impl Actor for WsConnection {
     fn started(&mut self, ctx: &mut Self::Context) {
         self.hb(ctx);
         let addr = ctx.address();
-        self.lobby_addr
+        self.wss_addr
             .send(Connect {
                 addr: addr.recipient(),
                 game_id: String::from("lobby"), // self.game_id
@@ -57,7 +60,7 @@ impl Actor for WsConnection {
     }
 
     fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
-        self.lobby_addr.do_send(Disconnect {
+        self.wss_addr.do_send(Disconnect {
             user_id: self.user_uid,
             game_id: String::from("lobby"),
             addr: ctx.address().recipient(),
@@ -72,9 +75,10 @@ impl WsConnection {
         user_uid: Option<Uuid>,
         username: Option<String>,
         admin: Option<bool>,
-        lobby: Addr<Lobby>,
+        lobby: Addr<WsServer>,
         chat_storage: actix_web::web::Data<Chats>,
         game_start: actix_web::web::Data<TournamentGameStart>,
+        pings: actix_web::web::Data<Arc<RwLock<Pings>>>,
         pool: DbPool,
     ) -> WsConnection {
         let id = user_uid.unwrap_or(Uuid::new_v4());
@@ -85,10 +89,11 @@ impl WsConnection {
             username: name,
             admin,
             game_start,
+            pings,
             authed: user_uid.is_some(),
             chat_storage,
             hb: Instant::now(),
-            lobby_addr: lobby,
+            wss_addr: lobby,
             pool,
         }
     }
@@ -116,7 +121,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 self.hb = Instant::now();
             }
             Ok(ws::Message::Binary(bin)) => {
-                println!("Got bin message is {:?}", bin);
+                println!("Got bin message, we don't do these here...");
                 ctx.binary(bin)
             }
             Ok(ws::Message::Close(reason)) => {
@@ -131,7 +136,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 let request: ClientRequest =
                     serde_json::from_str(s.as_ref()).expect("ClientMessage from string worked");
                 let pool = self.pool.clone();
-                let lobby = self.lobby_addr.clone();
+                let lobby = self.wss_addr.clone();
                 let user_id = self.user_uid;
                 let username = self.username.clone();
                 let user = SimpleUser {
@@ -141,6 +146,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                     admin: self.admin,
                 };
                 let chat_storage = self.chat_storage.clone();
+                let pings = self.pings.clone();
                 let game_start = self.game_start.clone();
                 let addr = ctx.address().recipient();
 
@@ -149,6 +155,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                         request.clone(),
                         chat_storage,
                         game_start,
+                        pings,
                         addr,
                         user,
                         pool,

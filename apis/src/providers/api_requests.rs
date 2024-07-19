@@ -5,7 +5,6 @@ use crate::common::{ChallengeAction, TournamentAction};
 use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
 use crate::responses::create_challenge_handler;
-use chrono::Utc;
 use hive_lib::{GameControl, Turn};
 use leptos::*;
 use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResult, TournamentId};
@@ -38,8 +37,8 @@ impl ApiRequests {
         games.own_games_remove(&game_id);
     }
 
-    pub fn ping(&self) {
-        let msg = ClientRequest::Ping(Utc::now());
+    pub fn pong(&self, nonce: u64) {
+        let msg = ClientRequest::Pong(nonce);
         self.websocket
             .send(&serde_json::to_string(&msg).expect("Serde_json::to_string failed"));
     }

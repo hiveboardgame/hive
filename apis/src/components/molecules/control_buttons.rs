@@ -5,7 +5,7 @@ use crate::{
         challenges::ChallengeStateSignal, game_state::GameStateSignal, ApiRequests, AuthContext,
     },
 };
-use hive_lib::{ColorChoice, GameControl, GameStatus};
+use hive_lib::{ColorChoice, GameControl};
 use leptos::*;
 use leptos_router::use_navigate;
 use shared_types::{ChallengeDetails, ChallengeVisibility};

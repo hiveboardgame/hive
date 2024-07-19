@@ -2,8 +2,9 @@ use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
 use super::search::handler::UserSearchHandler;
 use crate::common::{ClientRequest, GameAction};
+use crate::ping::pings::Pings;
 use crate::websockets::api::challenges::handler::ChallengeHandler;
-use crate::websockets::api::ping::handler::PingHandler;
+use crate::websockets::api::pong::handler::PongHandler;
 use crate::websockets::api::tournaments::handler::TournamentHandler;
 use crate::websockets::api::user_status::handler::UserStatusHandler;
 use crate::websockets::auth_error::AuthError;
@@ -14,6 +15,7 @@ use crate::websockets::tournament_game_start::TournamentGameStart;
 use anyhow::Result;
 use db_lib::DbPool;
 use shared_types::{ChatDestination, SimpleUser};
+use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 pub struct RequestHandler {
@@ -26,6 +28,7 @@ pub struct RequestHandler {
     username: String,
     authed: bool,
     admin: bool,
+    pings: actix_web::web::Data<Arc<RwLock<Pings>>>,
 }
 
 impl RequestHandler {
@@ -33,6 +36,7 @@ impl RequestHandler {
         command: ClientRequest,
         chat_storage: actix_web::web::Data<Chats>,
         game_start: actix_web::web::Data<TournamentGameStart>,
+        pings: actix_web::web::Data<Arc<RwLock<Pings>>>,
         sender_addr: actix::Recipient<WsMessage>,
         user: SimpleUser,
         pool: DbPool,
@@ -47,6 +51,7 @@ impl RequestHandler {
             username: user.username,
             authed: user.authed,
             admin: user.admin,
+            pings,
         }
     }
 
@@ -93,7 +98,10 @@ impl RequestHandler {
                 .handle()
                 .await?
             }
-            ClientRequest::Ping(sent) => PingHandler::new(self.user_id, sent).handle(),
+            ClientRequest::Pong(nonce) => {
+                PongHandler::new(self.user_id, nonce, self.pings.clone()).handle();
+                vec![]
+            }
             ClientRequest::Game {
                 action: game_action,
                 game_id,

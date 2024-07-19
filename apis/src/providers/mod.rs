@@ -24,5 +24,5 @@ pub use auth_context::{provide_auth, AuthContext};
 pub use color_scheme::{provide_color_scheme, ColorScheme};
 pub use config::{provide_config, Config};
 pub use notifications::{provide_notifications, NotificationContext};
-pub use ping::{provide_ping, PingSignal};
+pub use ping::{provide_ping, PingContext};
 pub use sounds::{load_audio_buffer, provide_sounds, SoundType, SoundsSignal};

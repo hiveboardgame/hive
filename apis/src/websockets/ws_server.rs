@@ -1,5 +1,6 @@
-use super::internal_server_message::MessageDestination;
 use super::messages::GameHB;
+use super::{internal_server_message::MessageDestination, messages::Ping};
+use crate::ping::pings::Pings;
 use crate::{
     common::{
         ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, TournamentUpdate, UserStatus,
@@ -14,6 +15,7 @@ use actix::{
     prelude::{Actor, Context, Handler, Recipient},
     AsyncContext, WrapFuture,
 };
+use actix_web::web::Data;
 use db_lib::{
     get_conn,
     models::{Challenge, Game, Tournament, TournamentInvitation, User},
@@ -21,32 +23,37 @@ use db_lib::{
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::GameStatus;
+use rand::Rng;
 use shared_types::{GameId, TimeMode};
 use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 #[derive(Debug)]
-pub struct Lobby {
+pub struct WsServer {
     id: String,
     sessions: HashMap<Uuid, Vec<Recipient<WsMessage>>>, // user_id to (socket_)id
     games_users: HashMap<GameId, HashSet<Uuid>>,        // game_id to set of users
     users_games: HashMap<Uuid, HashSet<String>>,        // user_id to set of games
+    pings: Data<Arc<RwLock<Pings>>>,
     pool: DbPool,
 }
 
-impl Lobby {
-    pub fn new(pool: DbPool) -> Lobby {
-        Lobby {
+impl WsServer {
+    pub fn new(pings: Data<Arc<RwLock<Pings>>>, pool: DbPool) -> WsServer {
+        WsServer {
+            // TODO: work on replacing the id here...
             id: String::from("lobby"),
             sessions: HashMap::new(),
             games_users: HashMap::new(),
             users_games: HashMap::new(),
+            pings,
             pool,
         }
     }
 }
 
-impl Lobby {
+impl WsServer {
     fn send_message(&self, message: &str, id_to: &Uuid) {
         if let Some(sockets) = self.sessions.get(id_to) {
             for socket in sockets {
@@ -56,11 +63,31 @@ impl Lobby {
     }
 }
 
-impl Actor for Lobby {
+impl Actor for WsServer {
     type Context = Context<Self>;
 }
 
-impl Handler<GameHB> for Lobby {
+impl Handler<Ping> for WsServer {
+    type Result = ();
+
+    fn handle(&mut self, _msg: Ping, _ctx: &mut Context<Self>) {
+        let mut rng = rand::thread_rng();
+        for user_id in self.sessions.keys() {
+            let nonce = rng.gen_range(0..=u64::MAX);
+            let mut pings = self.pings.write().unwrap();
+            pings.set_nonce(*user_id, nonce);
+            let message = ServerResult::Ok(Box::new(ServerMessage::Ping {
+                nonce,
+                value: pings.value(*user_id),
+            }));
+            let serialized =
+                serde_json::to_string(&message).expect("Failed to serialize a server message");
+            self.send_message(&serialized, user_id);
+        }
+    }
+}
+
+impl Handler<GameHB> for WsServer {
     type Result = ();
 
     fn handle(&mut self, _msg: GameHB, ctx: &mut Context<Self>) {
@@ -105,7 +132,7 @@ impl Handler<GameHB> for Lobby {
     }
 }
 
-impl Handler<Disconnect> for Lobby {
+impl Handler<Disconnect> for WsServer {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
@@ -139,11 +166,11 @@ impl Handler<Disconnect> for Lobby {
             let serialized =
                 serde_json::to_string(&message).expect("Failed to serialize a server message");
             let game_id = GameId(self.id.clone());
-            if let Some(lobby) = self.games_users.get_mut(&game_id) {
-                lobby.remove(&msg.user_id);
+            if let Some(ws_server) = self.games_users.get_mut(&game_id) {
+                ws_server.remove(&msg.user_id);
             }
-            if let Some(lobby) = self.games_users.get(&game_id) {
-                lobby
+            if let Some(ws_server) = self.games_users.get(&game_id) {
+                ws_server
                     .iter()
                     .for_each(|user_id| self.send_message(&serialized, user_id));
             }
@@ -151,7 +178,7 @@ impl Handler<Disconnect> for Lobby {
     }
 }
 
-impl Handler<Connect> for Lobby {
+impl Handler<Connect> for WsServer {
     type Result = ();
 
     fn handle(&mut self, msg: Connect, ctx: &mut Context<Self>) -> Self::Result {
@@ -205,7 +232,7 @@ impl Handler<Connect> for Lobby {
                         let serialized = serde_json::to_string(&message)
                             .expect("Failed to serialize a server message");
                         // TODO: one needs to be a game::join to everyone in the game, the other one just to the
-                        // lobby that the user came online
+                        // ws_server that the user came online
                         if let Some(user_ids) = games_users.get(&GameId(msg.game_id)) {
                             for id in user_ids {
                                 if let Some(sockets) = sessions.get(id) {
@@ -343,7 +370,7 @@ impl Handler<Connect> for Lobby {
     }
 }
 
-impl Handler<ClientActorMessage> for Lobby {
+impl Handler<ClientActorMessage> for WsServer {
     type Result = ();
 
     fn handle(&mut self, cam: ClientActorMessage, ctx: &mut Context<Self>) -> Self::Result {
