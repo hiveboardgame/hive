@@ -60,6 +60,7 @@ pub struct GameResponse {
     pub conclusion: Conclusion,
     pub repetitions: Vec<usize>,
     pub game_start: GameStart,
+    pub game_speed: GameSpeed,
 }
 
 impl PartialEq for GameResponse {
@@ -234,6 +235,7 @@ impl GameResponse {
             conclusion: Conclusion::from_str(&game.conclusion)?,
             repetitions: state.repeating_moves.clone(),
             game_start: GameStart::from_str(&game.game_start)?,
+            game_speed: GameSpeed::from_base_increment(game.time_base, game.time_increment)
         })
     }
 

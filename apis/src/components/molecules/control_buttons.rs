@@ -5,7 +5,7 @@ use crate::{
         challenges::ChallengeStateSignal, game_state::GameStateSignal, ApiRequests, AuthContext,
     },
 };
-use hive_lib::{ColorChoice, GameControl};
+use hive_lib::{ColorChoice, GameControl, GameStatus};
 use leptos::*;
 use leptos_router::use_navigate;
 use shared_types::{ChallengeDetails, ChallengeVisibility};
@@ -14,21 +14,19 @@ use shared_types::{ChallengeDetails, ChallengeVisibility};
 pub fn ControlButtons() -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
-    let user = move || match untrack(auth_context.user) {
-        Some(Ok(Some(user))) => Some(user),
-        _ => None,
+    let user_id = move || {
+        untrack(auth_context.user)
+            .and_then(|result| result.ok())
+            .and_then(|account| account.map(|user| user.id))
+            .expect("Control buttons show only for logged in players")
     };
 
-    let user_id = move || user().expect("User to be present in control buttons").id;
-
     let color = move || {
-        if let Some(user) = user() {
-            game_state
-                .user_color(user.id)
-                .expect("User is either white or black")
-        } else {
-            unreachable!()
-        }
+        game_state
+            .signal
+            .get_untracked()
+            .user_color(user_id())
+            .expect("Control buttons show only for logged in players")
     };
     let pending = create_read_slice(game_state.signal, |gs| gs.game_control_pending.clone());
     let not_tournament = create_read_slice(game_state.signal, |gs| {
@@ -120,19 +118,15 @@ pub fn ControlButtons() -> impl IntoView {
 
     let sent_challenge = move || {
         if let Some(challenge) = rematch_present() {
-            if let Some(user) = user() {
-                return challenge.challenger.uid == user.id;
-            }
+            return challenge.challenger.uid == user_id();
         }
         false
     };
 
     let rematch_button_color = move || {
         if let Some(challenge) = rematch_present() {
-            if let Some(user) = user() {
-                if challenge.challenger.uid != user.id {
-                    return "bg-grasshopper-green hover:bg-green-500";
-                }
+            if challenge.challenger.uid != user_id() {
+                return "bg-grasshopper-green hover:bg-green-500";
             }
         }
         "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -140,14 +134,10 @@ pub fn ControlButtons() -> impl IntoView {
 
     let rematch_text = move || {
         if let Some(challenge) = rematch_present() {
-            if let Some(user) = user() {
-                if challenge.challenger.uid == user.id {
-                    "Sent"
-                } else {
-                    "Accept"
-                }
+            if challenge.challenger.uid == user_id() {
+                "Sent"
             } else {
-                "Not logged in"
+                "Accept"
             }
         } else {
             "Rematch"

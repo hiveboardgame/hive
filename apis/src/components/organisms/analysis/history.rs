@@ -107,12 +107,11 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 */
                 let static_cont = store_value(content);
                 view! {
-                    <>
-                        <CollapsibleMove current_path node>
-                            {static_cont}
-                        </CollapsibleMove>
-                    </>
+                    <CollapsibleMove current_path node>
+                        {static_cont}
+                    </CollapsibleMove>
                 }
+                .into()
             } else {
                 /* All other nodes are placed at the same level as the parent
                 in a regular HistoryMove node */
