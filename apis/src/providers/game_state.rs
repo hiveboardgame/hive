@@ -55,18 +55,24 @@ impl GameStateSignal {
     }
 
     // No longer access the whole signal when getting user_color
-    pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
-        let ids = create_read_slice(self.signal, |gamestate| {
-            (gamestate.white_id, gamestate.black_id)
-        });
-        let (white_id, black_id) = ids();
-        if Some(user_id) == black_id {
-            return Some(Color::Black);
-        }
-        if Some(user_id) == white_id {
-            return Some(Color::White);
-        }
-        None
+    pub fn user_color_as_signal(
+        &self,
+        user_id: MaybeSignal<Option<Uuid>>,
+    ) -> Signal<Option<Color>> {
+        create_read_slice(self.signal, move |gamestate| {
+            match (gamestate.white_id, gamestate.black_id) {
+                (Some(w), Some(b)) => {
+                    if user_id() == Some(b) {
+                        Some(Color::Black)
+                    } else if user_id() == Some(w) {
+                        return Some(Color::White);
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            }
+        })
     }
 
     pub fn undo_move(&mut self) {

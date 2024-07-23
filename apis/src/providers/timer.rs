@@ -9,6 +9,7 @@ use std::time::Duration;
 #[derive(Clone, Debug, Copy)]
 pub struct TimerSignal {
     pub signal: RwSignal<Timer>,
+    pub low_time: LowTimeWarning,
 }
 
 impl Default for TimerSignal {
@@ -19,8 +20,10 @@ impl Default for TimerSignal {
 
 impl TimerSignal {
     pub fn new() -> Self {
+        let signal = RwSignal::new(Timer::new());
         Self {
-            signal: create_rw_signal(Timer::new()),
+            signal,
+            low_time: LowTimeWarning::new(signal),
         }
     }
 
@@ -45,6 +48,7 @@ impl TimerSignal {
                 .map(|inc| Duration::from_secs(inc as u64));
             timer.time_mode = game.time_mode.clone();
             timer.last_interaction = game.last_interaction;
+            timer.time_base = game.time_base.map(|base| Duration::from_secs(base as u64));
         });
     }
 }
@@ -56,6 +60,7 @@ pub struct Timer {
     pub turn: usize,
     pub white_time_left: Option<Duration>,
     pub black_time_left: Option<Duration>,
+    pub time_base: Option<Duration>,
     pub time_increment: Option<Duration>,
     pub time_mode: TimeMode,
     pub last_interaction: Option<DateTime<Utc>>,
@@ -69,6 +74,7 @@ impl Timer {
             turn: 0,
             white_time_left: None,
             black_time_left: None,
+            time_base: None,
             time_increment: None,
             time_mode: TimeMode::Untimed,
             last_interaction: None,
@@ -79,6 +85,42 @@ impl Timer {
 impl Default for Timer {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[derive(Clone, Debug, Copy)]
+pub struct LowTimeWarning {
+    pub issued: RwSignal<bool>,
+    pub refresh_at: Signal<Option<Duration>>,
+    pub trigger_at: Signal<Option<Duration>>,
+}
+
+impl LowTimeWarning {
+    pub fn new(timer: RwSignal<Timer>) -> Self {
+        let trigger_at = Signal::derive(move || {
+            let timer = timer.get();
+            if timer.time_mode == TimeMode::RealTime {
+                timer.time_base.map(|base| {
+                    base / 10 + timer.time_increment.unwrap_or(Duration::from_secs(0)) * 2
+                })
+            } else {
+                None
+            }
+        });
+
+        let refresh_at = Signal::derive(move || {
+            let timer = timer.get();
+            if let (Some(trigger_at), Some(time_increment)) = (trigger_at(), timer.time_increment) {
+                Some(trigger_at + time_increment * 2)
+            } else {
+                None
+            }
+        });
+        Self {
+            issued: RwSignal::new(false),
+            refresh_at,
+            trigger_at,
+        }
     }
 }
 

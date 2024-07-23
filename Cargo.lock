@@ -453,6 +453,7 @@ dependencies = [
  "tree-ds",
  "uuid",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 

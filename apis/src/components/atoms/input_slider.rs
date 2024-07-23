@@ -12,7 +12,7 @@ pub fn InputSlider(
     let min = Signal::derive(move || min() as f64);
     let max = Signal::derive(move || max() as f64);
     let step: f64 = step as f64;
-    let default_value = vec![signal_to_update.get() as f64];
+    let default_value = vec![signal_to_update.get_untracked() as f64];
     let on_value_change = Callback::from(move |val: Vec<f64>| {
         signal_to_update.set(val[0] as i32);
     });

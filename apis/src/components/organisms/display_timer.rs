@@ -27,12 +27,12 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     let black_id = create_read_slice(game_state.signal, |gs| gs.black_id);
     let player_is_black =
         create_memo(move |_| user().map_or(false, |user| Some(user.id) == black_id()));
-    let side = move || match (player_is_black(), placement) {
+    let side = Signal::derive(move || match (player_is_black(), placement) {
         (true, Placement::Top) => Color::White,
         (true, Placement::Bottom) => Color::Black,
         (false, Placement::Top) => Color::Black,
         (false, Placement::Bottom) => Color::White,
-    };
+    });
     let bg_color = move || match side() {
         Color::White => "bg-hive-white",
         Color::Black => "bg-hive-black",
@@ -106,22 +106,24 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     view! {
         <div class=outer_container_style>
             <button on:click=onclick class=button_class>
-                {move || {
-                    match timer.signal.get().time_mode {
-                        TimeMode::Untimed => {
-                            view! {
-                                <Icon
-                                    icon=icondata::BiInfiniteRegular
-                                    class="w-full h-full bg-inherit"
-                                />
-                            }
-                        }
-                        TimeMode::Correspondence | TimeMode::RealTime => {
-                            view! { <LiveTimer side=side()/> }
+                <Show
+                    when=move || {
+                        matches!(
+                            timer.signal.get().time_mode,
+                            TimeMode::Correspondence | TimeMode::RealTime
+                        )
+                    }
+                    fallback=|| {
+                        view! {
+                            <Icon
+                                icon=icondata::BiInfiniteRegular
+                                class="w-full h-full bg-inherit"
+                            />
                         }
                     }
-                }}
-
+                >
+                    <LiveTimer side/>
+                </Show>
             </button>
             <Show when=move || !vertical>
                 <div class=classes>

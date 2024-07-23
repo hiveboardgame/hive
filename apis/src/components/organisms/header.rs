@@ -6,6 +6,7 @@ use crate::components::organisms::{
         community::CommunityDropdown, learn::LearnDropdown, mobile::MobileDropdown,
         notification::NotificationDropdown, tournament::TournamentDropdown, user::UserDropdown,
     },
+    sound_toggle::SoundToggle,
 };
 use crate::providers::AuthContext;
 use leptos::*;
@@ -51,6 +52,7 @@ pub fn Header() -> impl IntoView {
                     </div>
                     <div class="flex items-center lg:mr-10">
                         <ChatAndControls/>
+                        <SoundToggle/>
                         <DarkModeToggle extend_tw_classes="max-h-6 sm:max-h-7"/>
                         <a
                             class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
@@ -102,6 +104,7 @@ pub fn Header() -> impl IntoView {
                                 view! {
                                     <div class="flex items-center lg:mr-10">
                                         <ChatAndControls/>
+                                        <SoundToggle/>
                                         <DarkModeToggle extend_tw_classes="max-h-6 sm:max-h-7"/>
                                         <a
                                             class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
@@ -123,6 +126,7 @@ pub fn Header() -> impl IntoView {
                             </div>
                             <div class="flex items-center lg:mr-10">
                                 <ChatAndControls/>
+                                <SoundToggle/>
                                 <NotificationDropdown/>
                                 <UserDropdown username=user().expect("User is some").username/>
                             </div>
