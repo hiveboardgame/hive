@@ -1,6 +1,7 @@
 use super::tournament_game_start::TournamentGameStart;
-use super::{api::handler::RequestHandler, internal_server_message::MessageDestination};
+use super::{api::request_handler::RequestHandler, internal_server_message::MessageDestination};
 use crate::common::{ClientRequest, ExternalServerError, ServerResult};
+use crate::lag_tracking::lags::Lags;
 use crate::ping::pings::Pings;
 use crate::websockets::{
     chat::Chats,
@@ -15,7 +16,6 @@ use actix_web_actors::ws::{self, Message::Text};
 use anyhow::Result;
 use db_lib::DbPool;
 use shared_types::SimpleUser;
-use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
@@ -29,7 +29,8 @@ pub struct WsConnection {
     admin: bool,
     chat_storage: actix_web::web::Data<Chats>,
     game_start: actix_web::web::Data<TournamentGameStart>,
-    pings: actix_web::web::Data<Arc<RwLock<Pings>>>,
+    pings: actix_web::web::Data<Pings>,
+    lags: actix_web::web::Data<Lags>,
     wss_addr: Addr<WsServer>,
     hb: Instant,
     pool: DbPool,
@@ -78,7 +79,8 @@ impl WsConnection {
         lobby: Addr<WsServer>,
         chat_storage: actix_web::web::Data<Chats>,
         game_start: actix_web::web::Data<TournamentGameStart>,
-        pings: actix_web::web::Data<Arc<RwLock<Pings>>>,
+        pings: actix_web::web::Data<Pings>,
+        lags: actix_web::web::Data<Lags>,
         pool: DbPool,
     ) -> WsConnection {
         let id = user_uid.unwrap_or(Uuid::new_v4());
@@ -90,6 +92,7 @@ impl WsConnection {
             admin,
             game_start,
             pings,
+            lags,
             authed: user_uid.is_some(),
             chat_storage,
             hb: Instant::now(),
@@ -147,6 +150,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 };
                 let chat_storage = self.chat_storage.clone();
                 let pings = self.pings.clone();
+                let lags = self.lags.clone();
                 let game_start = self.game_start.clone();
                 let addr = ctx.address().recipient();
 
@@ -156,6 +160,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                         chat_storage,
                         game_start,
                         pings,
+                        lags,
                         addr,
                         user,
                         pool,

@@ -2,6 +2,7 @@ use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
 use super::search::handler::UserSearchHandler;
 use crate::common::{ClientRequest, GameAction};
+use crate::lag_tracking::lags::Lags;
 use crate::ping::pings::Pings;
 use crate::websockets::api::challenges::handler::ChallengeHandler;
 use crate::websockets::api::pong::handler::PongHandler;
@@ -15,20 +16,20 @@ use crate::websockets::tournament_game_start::TournamentGameStart;
 use anyhow::Result;
 use db_lib::DbPool;
 use shared_types::{ChatDestination, SimpleUser};
-use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 pub struct RequestHandler {
     command: ClientRequest,
     chat_storage: actix_web::web::Data<Chats>,
     game_start: actix_web::web::Data<TournamentGameStart>,
+    lags: actix_web::web::Data<Lags>,
+    pings: actix_web::web::Data<Pings>,
     received_from: actix::Recipient<WsMessage>, // This is the socket the message was received over
     pool: DbPool,
     user_id: Uuid,
     username: String,
     authed: bool,
     admin: bool,
-    pings: actix_web::web::Data<Arc<RwLock<Pings>>>,
 }
 
 impl RequestHandler {
@@ -36,7 +37,8 @@ impl RequestHandler {
         command: ClientRequest,
         chat_storage: actix_web::web::Data<Chats>,
         game_start: actix_web::web::Data<TournamentGameStart>,
-        pings: actix_web::web::Data<Arc<RwLock<Pings>>>,
+        pings: actix_web::web::Data<Pings>,
+        lags: actix_web::web::Data<Lags>,
         sender_addr: actix::Recipient<WsMessage>,
         user: SimpleUser,
         pool: DbPool,
@@ -46,12 +48,13 @@ impl RequestHandler {
             command,
             chat_storage,
             game_start,
+            pings,
+            lags,
             pool,
             user_id: user.user_id,
             username: user.username,
             authed: user.authed,
             admin: user.admin,
-            pings,
         }
     }
 
@@ -117,6 +120,8 @@ impl RequestHandler {
                     self.received_from.clone(),
                     self.chat_storage.clone(),
                     self.game_start.clone(),
+                    self.pings.clone(),
+                    self.lags.clone(),
                     &self.pool,
                 )
                 .await?

@@ -431,32 +431,35 @@ impl Game {
         Ok((white_time, black_time))
     }
 
-    fn calculate_time_left_add_increment(&self) -> Result<(Option<i64>, Option<i64>), DbError> {
+    fn calculate_time_left_add_increment(
+        &self,
+        comp: f64,
+    ) -> Result<(Option<i64>, Option<i64>), DbError> {
         let (mut white_time, mut black_time) = self.calculate_time_left()?;
         if let (Some(w), Some(b)) = (white_time, black_time) {
             if w == 0 || b == 0 {
                 return Ok((white_time, black_time));
             }
         }
-
+        let comp = (comp * 1_000_000_000.0) as i64;
         let increment = self.time_increment_duration()?.as_nanos() as i64;
         if self.turn % 2 == 0 {
-            white_time = white_time.map(|time| time + increment);
+            white_time = white_time.map(|time| time + increment + comp);
         } else {
-            black_time = black_time.map(|time| time + increment);
+            black_time = black_time.map(|time| time + increment + comp);
         };
         Ok((white_time, black_time))
     }
 
-    fn get_time_info(&self, status: GameStatus) -> Result<TimeInfo, DbError> {
+    fn get_time_info(&self, status: GameStatus, comp: f64) -> Result<TimeInfo, DbError> {
         match TimeMode::from_str(&self.time_mode)? {
             TimeMode::Untimed => Ok(TimeInfo::new(status)),
-            TimeMode::RealTime => self.get_realtime_time_info(status),
+            TimeMode::RealTime => self.get_realtime_time_info(status, comp),
             TimeMode::Correspondence => self.get_correspondence_time_info(status),
         }
     }
 
-    fn get_realtime_time_info(&self, status: GameStatus) -> Result<TimeInfo, DbError> {
+    fn get_realtime_time_info(&self, status: GameStatus, comp: f64) -> Result<TimeInfo, DbError> {
         let mut time_info = TimeInfo::new(status);
         if self.turn < 2
             && self.game_start == GameStart::Moves.to_string()
@@ -469,7 +472,7 @@ impl Game {
             time_info.black_time_left = self.black_time_left;
         } else {
             (time_info.white_time_left, time_info.black_time_left) =
-                self.calculate_time_left_add_increment()?;
+                self.calculate_time_left_add_increment(comp)?;
             if self.turn % 2 == 0 {
                 if time_info.white_time_left == Some(0) {
                     time_info.timed_out = true;
@@ -524,6 +527,7 @@ impl Game {
     pub async fn update_gamestate(
         &self,
         state: &State,
+        comp: f64,
         conn: &mut DbConn<'_>,
     ) -> Result<Game, DbError> {
         let mut new_history = state
@@ -548,7 +552,7 @@ impl Game {
         }
 
         let mut new_conclusion = Conclusion::Unknown;
-        let mut time_info = self.get_time_info(state.game_status.clone())?;
+        let mut time_info = self.get_time_info(state.game_status.clone(), comp)?;
 
         match time_info.new_game_status {
             GameStatus::Finished(GameResult::Draw) => new_conclusion = Conclusion::Board,

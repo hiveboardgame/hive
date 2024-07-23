@@ -3,6 +3,8 @@ use super::{
     control_handler::GameControlHandler, join_handler::JoinHandler,
     timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
 };
+use crate::lag_tracking::lags::Lags;
+use crate::ping::pings::Pings;
 use crate::websockets::internal_server_message::InternalServerMessage;
 use crate::websockets::messages::WsMessage;
 use crate::websockets::tournament_game_start::TournamentGameStart;
@@ -25,6 +27,8 @@ pub struct GameActionHandler {
     received_from: actix::Recipient<WsMessage>,
     chat_storage: actix_web::web::Data<Chats>,
     game_start: actix_web::web::Data<TournamentGameStart>,
+    pings: actix_web::web::Data<Pings>,
+    lags: actix_web::web::Data<Lags>,
     username: String,
 }
 
@@ -36,6 +40,8 @@ impl GameActionHandler {
         received_from: actix::Recipient<WsMessage>,
         chat_storage: actix_web::web::Data<Chats>,
         game_start: actix_web::web::Data<TournamentGameStart>,
+        pings: actix_web::web::Data<Pings>,
+        lags: actix_web::web::Data<Lags>,
         pool: &DbPool,
     ) -> Result<Self> {
         let (username, user_id) = user_details;
@@ -57,6 +63,8 @@ impl GameActionHandler {
             chat_storage,
             game_start,
             user_id,
+            pings,
+            lags,
         })
     }
 
@@ -70,9 +78,17 @@ impl GameActionHandler {
             GameAction::Turn(turn) => {
                 self.ensure_not_finished()?;
                 self.ensure_user_is_player()?;
-                TurnHandler::new(turn, &self.game, &self.username, self.user_id, &self.pool)
-                    .handle()
-                    .await?
+                TurnHandler::new(
+                    turn,
+                    &self.game,
+                    &self.username,
+                    self.user_id,
+                    self.pings.clone(),
+                    self.lags.clone(),
+                    &self.pool,
+                )
+                .handle()
+                .await?
             }
             GameAction::Control(control) => {
                 self.ensure_not_finished()?;

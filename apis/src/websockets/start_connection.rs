@@ -1,5 +1,6 @@
 use super::tournament_game_start::TournamentGameStart;
 use crate::{
+    lag_tracking::lags::Lags,
     ping::pings::Pings,
     websockets::{chat::Chats, ws_connection::WsConnection, ws_server::WsServer},
 };
@@ -8,7 +9,6 @@ use actix_identity::Identity;
 use actix_web::{get, web::Data, web::Payload, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use db_lib::{get_conn, models::User, DbPool};
-use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 #[get("/ws/")]
@@ -18,7 +18,8 @@ pub async fn start_connection(
     srv: Data<Addr<WsServer>>,
     chat_storage: Data<Chats>,
     game_start: Data<TournamentGameStart>,
-    pings: Data<Arc<RwLock<Pings>>>,
+    pings: Data<Pings>,
+    lags: Data<Lags>,
     pool: Data<DbPool>,
     identity: Option<Identity>,
 ) -> Result<HttpResponse, Error> {
@@ -37,6 +38,7 @@ pub async fn start_connection(
                                 chat_storage.clone(),
                                 game_start.clone(),
                                 pings.clone(),
+                                lags.clone(),
                                 pool.get_ref().clone(),
                             );
                             let resp = ws::start(ws, &req, stream)?;
@@ -62,6 +64,7 @@ pub async fn start_connection(
         chat_storage.clone(),
         game_start.clone(),
         pings.clone(),
+        lags.clone(),
         pool.get_ref().clone(),
     );
 

@@ -1,7 +1,7 @@
 use crate::{
-    common::{
-        GameReaction, {GameActionResponse, GameUpdate, ServerMessage},
-    },
+    common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
+    lag_tracking::lags::Lags,
+    ping::pings::Pings,
     responses::GameResponse,
     websockets::internal_server_message::{InternalServerMessage, MessageDestination},
 };
@@ -23,16 +23,28 @@ pub struct TurnHandler {
     user_id: Uuid,
     username: String,
     game: Game,
+    pings: actix_web::web::Data<Pings>,
+    lags: actix_web::web::Data<Lags>,
 }
 
 impl TurnHandler {
-    pub fn new(turn: Turn, game: &Game, username: &str, user_id: Uuid, pool: &DbPool) -> Self {
+    pub fn new(
+        turn: Turn,
+        game: &Game,
+        username: &str,
+        user_id: Uuid,
+        pings: actix_web::web::Data<Pings>,
+        lags: actix_web::web::Data<Lags>,
+        pool: &DbPool,
+    ) -> Self {
         Self {
             game: game.to_owned(),
             user_id,
             username: username.to_owned(),
             pool: pool.clone(),
             turn,
+            pings,
+            lags,
         }
     }
 
@@ -50,9 +62,26 @@ impl TurnHandler {
         let mut state = State::new_from_str(&self.game.history, &self.game.game_type)?;
         state.play_turn_from_position(piece, position)?;
 
+        let comp = if self.game.time_mode == TimeMode::RealTime.to_string() {
+            let ping = self.pings.value(self.user_id);
+            let base = self.game.time_base.unwrap_or(0) as usize;
+            let inc = self.game.time_increment.unwrap_or(0) as usize;
+            self.lags
+                .track_lag(
+                    self.user_id,
+                    GameId(self.game.nanoid.clone()),
+                    ping,
+                    base,
+                    inc,
+                )
+                .unwrap_or(0.0)
+        } else {
+            0.0
+        };
+
         let game = conn
             .transaction::<_, anyhow::Error, _>(move |tc| {
-                async move { Ok(self.game.update_gamestate(&state, tc).await?) }.scope_boxed()
+                async move { Ok(self.game.update_gamestate(&state, comp, tc).await?) }.scope_boxed()
             })
             .await?;
 

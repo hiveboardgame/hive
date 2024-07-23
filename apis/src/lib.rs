@@ -2,6 +2,7 @@ pub mod app;
 pub mod common;
 pub mod components;
 pub mod functions;
+pub mod lag_tracking;
 pub mod pages;
 pub mod ping;
 pub mod providers;
