@@ -1,10 +1,10 @@
 use super::stats::PingStats;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::RwLock};
 use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct Pings {
-    pub pings: HashMap<Uuid, PingStats>,
+    pub pings: RwLock<HashMap<Uuid, PingStats>>,
 }
 
 impl Default for Pings {
@@ -16,22 +16,25 @@ impl Default for Pings {
 impl Pings {
     pub fn new() -> Self {
         Self {
-            pings: HashMap::new(),
+            pings: HashMap::new().into(),
         }
     }
 
-    pub fn set_nonce(&mut self, user_id: Uuid, nonce: u64) {
-        let ping_stats = self.pings.entry(user_id).or_default();
+    pub fn set_nonce(&self, user_id: Uuid, nonce: u64) {
+        let mut binding = self.pings.write().unwrap();
+        let ping_stats = binding.entry(user_id).or_default();
         ping_stats.set_nonce(nonce);
     }
 
-    pub fn update(&mut self, user_id: Uuid, nonce: u64) -> f64 {
-        let ping_stats = self.pings.entry(user_id).or_default();
+    pub fn update(&self, user_id: Uuid, nonce: u64) -> f64 {
+        let mut binding = self.pings.write().unwrap();
+        let ping_stats = binding.entry(user_id).or_default();
         ping_stats.update(nonce)
     }
 
     pub fn value(&self, user_id: Uuid) -> f64 {
-        if let Some(ping_stats) = self.pings.get(&user_id) {
+        let binding = self.pings.read().unwrap();
+        if let Some(ping_stats) = binding.get(&user_id) {
             return ping_stats.value();
         }
         0.0

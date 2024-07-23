@@ -26,7 +26,6 @@ use hive_lib::GameStatus;
 use rand::Rng;
 use shared_types::{GameId, TimeMode};
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -35,12 +34,12 @@ pub struct WsServer {
     sessions: HashMap<Uuid, Vec<Recipient<WsMessage>>>, // user_id to (socket_)id
     games_users: HashMap<GameId, HashSet<Uuid>>,        // game_id to set of users
     users_games: HashMap<Uuid, HashSet<String>>,        // user_id to set of games
-    pings: Data<Arc<RwLock<Pings>>>,
+    pings: Data<Pings>,
     pool: DbPool,
 }
 
 impl WsServer {
-    pub fn new(pings: Data<Arc<RwLock<Pings>>>, pool: DbPool) -> WsServer {
+    pub fn new(pings: Data<Pings>, pool: DbPool) -> WsServer {
         WsServer {
             // TODO: work on replacing the id here...
             id: String::from("lobby"),
@@ -74,11 +73,10 @@ impl Handler<Ping> for WsServer {
         let mut rng = rand::thread_rng();
         for user_id in self.sessions.keys() {
             let nonce = rng.gen_range(0..=u64::MAX);
-            let mut pings = self.pings.write().unwrap();
-            pings.set_nonce(*user_id, nonce);
+            self.pings.set_nonce(*user_id, nonce);
             let message = ServerResult::Ok(Box::new(ServerMessage::Ping {
                 nonce,
-                value: pings.value(*user_id),
+                value: self.pings.value(*user_id),
             }));
             let serialized =
                 serde_json::to_string(&message).expect("Failed to serialize a server message");

@@ -1,16 +1,15 @@
 use crate::ping::pings::Pings;
 use actix_web::web::Data;
-use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 pub struct PongHandler {
     user_id: Uuid,
     nonce: u64,
-    pings: Data<Arc<RwLock<Pings>>>,
+    pings: Data<Pings>,
 }
 
 impl PongHandler {
-    pub fn new(user_id: Uuid, nonce: u64, pings: Data<Arc<RwLock<Pings>>>) -> Self {
+    pub fn new(user_id: Uuid, nonce: u64, pings: Data<Pings>) -> Self {
         Self {
             user_id,
             nonce,
@@ -18,7 +17,7 @@ impl PongHandler {
         }
     }
 
-    pub fn handle(&mut self) {
-        self.pings.write().unwrap().update(self.user_id, self.nonce);
+    pub fn handle(&self) {
+        self.pings.update(self.user_id, self.nonce);
     }
 }
