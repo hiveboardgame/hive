@@ -136,81 +136,81 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             }
             Ok(ws::Message::Nop) => (),
             Ok(Text(s)) => {
-                let request: ClientRequest =
-                    serde_json::from_str(s.as_ref()).expect("ClientMessage from string worked");
-                let pool = self.pool.clone();
-                let lobby = self.wss_addr.clone();
-                let user_id = self.user_uid;
-                let username = self.username.clone();
-                let user = SimpleUser {
-                    user_id,
-                    username: username.clone(),
-                    authed: self.authed,
-                    admin: self.admin,
-                };
-                let chat_storage = self.chat_storage.clone();
-                let pings = self.pings.clone();
-                let lags = self.lags.clone();
-                let game_start = self.game_start.clone();
-                let addr = ctx.address().recipient();
+                if let Ok(request) = serde_json::from_str::<ClientRequest>(s.as_ref()) {
+                    let pool = self.pool.clone();
+                    let lobby = self.wss_addr.clone();
+                    let user_id = self.user_uid;
+                    let username = self.username.clone();
+                    let user = SimpleUser {
+                        user_id,
+                        username: username.clone(),
+                        authed: self.authed,
+                        admin: self.admin,
+                    };
+                    let chat_storage = self.chat_storage.clone();
+                    let pings = self.pings.clone();
+                    let lags = self.lags.clone();
+                    let game_start = self.game_start.clone();
+                    let addr = ctx.address().recipient();
 
-                let future = async move {
-                    let handler = RequestHandler::new(
-                        request.clone(),
-                        chat_storage,
-                        game_start,
-                        pings,
-                        lags,
-                        addr,
-                        user,
-                        pool,
-                    );
-                    let handler_result = handler.handle().await;
-                    match handler_result {
-                        Ok(messages) => {
-                            for message in messages {
-                                let serialized = serde_json::to_string(&ServerResult::Ok(
-                                    Box::new(message.message),
-                                ))
-                                .expect("Failed to serialize a server message");
+                    let future = async move {
+                        let handler = RequestHandler::new(
+                            request.clone(),
+                            chat_storage,
+                            game_start,
+                            pings,
+                            lags,
+                            addr,
+                            user,
+                            pool,
+                        );
+                        let handler_result = handler.handle().await;
+                        match handler_result {
+                            Ok(messages) => {
+                                for message in messages {
+                                    let serialized = serde_json::to_string(&ServerResult::Ok(
+                                        Box::new(message.message),
+                                    ))
+                                    .expect("Failed to serialize a server message");
+                                    let cam = ClientActorMessage {
+                                        destination: message.destination,
+                                        serialized,
+                                        from: Some(user_id),
+                                    };
+                                    lobby.do_send(cam);
+                                }
+                            }
+                            Err(err) => {
+                                // TODO: @leex the error here needs to be nicer
+                                println!(
+                                    "---------------------------------------\n
+                                                ERROR\n
+                                Request:\n  {request:?}\n
+                                Error:\n  {err:?}\n
+                                User:\n  {username} {user_id}\n
+                                ---------------------------------------",
+                                );
+                                let message = ServerResult::Err(ExternalServerError {
+                                    user_id,
+                                    field: "foo".to_string(),
+                                    reason: format!("{err}"),
+                                    status_code: http::StatusCode::NOT_IMPLEMENTED,
+                                });
+                                let serialized = serde_json::to_string(&message)
+                                    .expect("Failed to serialize a server message");
                                 let cam = ClientActorMessage {
-                                    destination: message.destination,
+                                    destination: MessageDestination::User(user_id),
                                     serialized,
                                     from: Some(user_id),
                                 };
                                 lobby.do_send(cam);
                             }
                         }
-                        Err(err) => {
-                            // TODO: @leex the error here needs to be nicer
-                            println!(
-                                "---------------------------------------\n
-                                                ERROR\n
-                                Request:\n  {request:?}\n
-                                Error:\n  {err:?}\n
-                                User:\n  {username} {user_id}\n
-                                ---------------------------------------",
-                            );
-                            let message = ServerResult::Err(ExternalServerError {
-                                user_id,
-                                field: "foo".to_string(),
-                                reason: format!("{err}"),
-                                status_code: http::StatusCode::NOT_IMPLEMENTED,
-                            });
-                            let serialized = serde_json::to_string(&message)
-                                .expect("Failed to serialize a server message");
-                            let cam = ClientActorMessage {
-                                destination: MessageDestination::User(user_id),
-                                serialized,
-                                from: Some(user_id),
-                            };
-                            lobby.do_send(cam);
-                        }
-                    }
-                };
+                    };
 
-                let actor_future = future.into_actor(self);
-                ctx.wait(actor_future);
+                    let actor_future = future.into_actor(self);
+                    ctx.wait(actor_future);
+                }
             }
             Err(e) => {
                 println!("Got error in WS parsing");
