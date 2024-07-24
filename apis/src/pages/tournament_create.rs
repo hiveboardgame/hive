@@ -112,7 +112,7 @@ pub fn TournamentCreate() -> impl IntoView {
         };
         tournament
             .time_mode
-            .update_untracked(|v| *v = time_signals.time_control.get_untracked());
+            .update_untracked(|v| *v = time_signals.time_mode.get_untracked());
         match (tournament.time_mode)() {
             TimeMode::Untimed => {
                 tournament.time_base.update_value(|v| *v = None);
@@ -201,7 +201,7 @@ pub fn TournamentCreate() -> impl IntoView {
     };
     let on_value_change: Callback<String, ()> = Callback::from(move |string: String| {
         if let Ok(new_value) = TimeMode::from_str(&string) {
-            time_signals.time_control.update(|v| *v = new_value);
+            time_signals.time_mode.update(|v| *v = new_value);
         };
     });
     let allowed_values = vec![TimeMode::RealTime, TimeMode::Correspondence];
@@ -370,7 +370,7 @@ pub fn TournamentCreate() -> impl IntoView {
                         </Show>
                     </div>
                     <div class="flex gap-1 mb-2">
-                        <Show when=move || time_signals.time_control.get() == TimeMode::RealTime>
+                        <Show when=move || time_signals.time_mode.get() == TimeMode::RealTime>
                             <SimpleSwitch checked=fixed_round_duration/>
                             <label class="text-sm font-medium text-gray-900 dark:text-gray-300">
                                 Fixed round duration
