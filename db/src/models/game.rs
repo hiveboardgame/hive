@@ -433,6 +433,7 @@ impl Game {
 
     fn calculate_time_left_add_increment(
         &self,
+        shutout: bool,
         comp: f64,
     ) -> Result<(Option<i64>, Option<i64>), DbError> {
         let (mut white_time, mut black_time) = self.calculate_time_left()?;
@@ -448,6 +449,14 @@ impl Game {
         } else {
             black_time = black_time.map(|time| time + increment + comp);
         };
+        if shutout {
+            if self.turn % 2 == 0 {
+                black_time = black_time.map(|time| time + increment);
+            } else {
+                white_time = white_time.map(|time| time + increment);
+            };
+        };
+
         Ok((white_time, black_time))
     }
 
@@ -472,7 +481,7 @@ impl Game {
             time_info.black_time_left = self.black_time_left;
         } else {
             (time_info.white_time_left, time_info.black_time_left) =
-                self.calculate_time_left_add_increment(comp)?;
+                self.calculate_time_left_add_increment(state.history.last_move_is_pass(), comp)?;
             if self.turn % 2 == 0 {
                 if time_info.white_time_left == Some(0) {
                     time_info.timed_out = true;
@@ -503,6 +512,10 @@ impl Game {
                     match (self.time_increment, self.time_base) {
                         (Some(inc), None) => {
                             time_info.white_time_left = Some((inc as u64 * NANOS_IN_SECOND) as i64);
+                            if state.history.last_move_is_pass() {
+                                time_info.black_time_left =
+                                    Some((inc as u64 * NANOS_IN_SECOND) as i64);
+                            }
                         }
                         (None, Some(_)) => {}
                         _ => unreachable!(),
@@ -515,6 +528,9 @@ impl Game {
                 match (self.time_increment, self.time_base) {
                     (Some(inc), None) => {
                         time_info.black_time_left = Some((inc as u64 * NANOS_IN_SECOND) as i64);
+                        if state.history.last_move_is_pass() {
+                            time_info.white_time_left = Some((inc as u64 * NANOS_IN_SECOND) as i64);
+                        }
                     }
                     (None, Some(_)) => {}
                     _ => unreachable!(),
@@ -524,12 +540,43 @@ impl Game {
         Ok(time_info)
     }
 
+    fn get_move_times(&self, time_info: &TimeInfo, state: &State) -> Vec<Option<i64>> {
+        let mut new_move_times = self.move_times.clone();
+        if self.time_mode != TimeMode::Untimed.to_string() {
+            if !state.history.last_move_is_pass() {
+                // Not a shutout so we just add the players time
+                if state.turn % 2 == 0 {
+                    new_move_times.push(time_info.black_time_left);
+                } else {
+                    new_move_times.push(time_info.white_time_left);
+                }
+            } else {
+                // A shutout has happened, so state.turn was incremented twice so the "previous/not
+                // shutout" player's time has to be added first. Note that we need to do it the
+                // other way round than in if it's not a shutout
+                if state.turn % 2 == 0 {
+                    new_move_times.push(time_info.white_time_left);
+                } else {
+                    new_move_times.push(time_info.black_time_left);
+                }
+                // Now the shutout player's time can be added
+                if state.turn % 2 == 0 {
+                    new_move_times.push(time_info.black_time_left);
+                } else {
+                    new_move_times.push(time_info.white_time_left);
+                }
+            }
+        }
+        new_move_times
+    }
+
     pub async fn update_gamestate(
         &self,
         state: &State,
         comp: f64,
         conn: &mut DbConn<'_>,
     ) -> Result<Game, DbError> {
+        let time_info = self.get_time_info(state, comp)?;
         let mut new_history = state
             .history
             .moves
@@ -537,6 +584,7 @@ impl Game {
             .map(|(piece, destination)| format!("{piece} {destination};"))
             .collect::<Vec<String>>()
             .join("");
+
         let mut game_control_string = String::new();
         if self.has_unanswered_game_control() {
             let gc = match self.last_game_control() {
@@ -552,8 +600,6 @@ impl Game {
         }
 
         let mut new_conclusion = Conclusion::Unknown;
-        let mut time_info = self.get_time_info(state, comp)?;
-
         match time_info.new_game_status {
             GameStatus::Finished(GameResult::Draw) => new_conclusion = Conclusion::Board,
             GameStatus::Finished(GameResult::Winner(_)) => new_conclusion = Conclusion::Board,
@@ -569,46 +615,7 @@ impl Game {
             self.black_id
         };
 
-        let mut new_move_times = self.move_times.clone();
-
-        if self.time_mode != TimeMode::Untimed.to_string() {
-            println!("Turn is: {}", state.turn);
-            if !state.history.last_move_is_pass() {
-                // Not a shutout so we just add the players time
-                if state.turn % 2 == 0 {
-                    println!("Adding black time");
-                    new_move_times.push(time_info.black_time_left);
-                } else {
-                    println!("Adding white time");
-                    new_move_times.push(time_info.white_time_left);
-                }
-            } else {
-                // A shutout has happened, so state.turn was incremented twice so the "previous/not
-                // shutout" player's time has to be added first. Note that we need to do it the
-                // other way round than in if it's not a shutout
-                if state.turn % 2 == 0 {
-                    println!("Adding white time");
-                    new_move_times.push(time_info.white_time_left);
-                } else {
-                    println!("Adding black time");
-                    new_move_times.push(time_info.black_time_left);
-                }
-                // Now the shutout player's time can be added, with increment
-                if state.turn % 2 == 0 {
-                    time_info.black_time_left = time_info.black_time_left.map(|t| {
-                        t + (self.time_increment.unwrap_or(0) as u64 * NANOS_IN_SECOND) as i64
-                    });
-                    println!("Adding black time -- shutout");
-                    new_move_times.push(time_info.black_time_left);
-                } else {
-                    time_info.white_time_left = time_info.white_time_left.map(|t| {
-                        t + (self.time_increment.unwrap_or(0) as u64 * NANOS_IN_SECOND) as i64
-                    });
-                    println!("Adding white time -- shutout");
-                    new_move_times.push(time_info.white_time_left);
-                }
-            }
-        }
+        let new_move_times = self.get_move_times(&time_info, state);
 
         if let GameStatus::Finished(game_result) = time_info.new_game_status.clone() {
             if let GameResult::Unknown = game_result {
