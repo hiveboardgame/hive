@@ -2,13 +2,15 @@ use crate::common::TimeSignals;
 use crate::{
     common::ChallengeAction,
     components::{
-        atoms::{create_challenge_button::CreateChallengeButton, input_slider::InputSlider},
+        atoms::{
+            create_challenge_button::CreateChallengeButton, input_slider::InputSlider,
+            simple_switch::SimpleSwitch,
+        },
         organisms::time_select::TimeSelect,
     },
     providers::{ApiRequests, AuthContext},
 };
 use hive_lib::{ColorChoice, GameType};
-use leptix_primitives::radio_group::{RadioGroupItem, RadioGroupRoot};
 use leptos::*;
 use shared_types::{
     ChallengeDetails, ChallengeVisibility, CorrespondenceMode, GameSpeed, TimeMode,
@@ -18,11 +20,10 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Copy)]
 pub struct ChallengeParams {
     pub rated: RwSignal<bool>,
-    pub game_type: RwSignal<GameType>,
-    pub visibility: RwSignal<ChallengeVisibility>,
+    pub with_expansions: RwSignal<bool>,
+    pub is_public: RwSignal<bool>,
     pub opponent: RwSignal<Option<String>>,
     pub color_choice: RwSignal<ColorChoice>,
-    pub time_mode: RwSignal<TimeMode>,
     pub time_base: StoredValue<Option<i32>>,
     pub time_increment: StoredValue<Option<i32>>,
     pub band_upper: RwSignal<Option<i32>>,
@@ -37,21 +38,17 @@ pub fn ChallengeCreate(
     let opponent = store_value(opponent);
     let params = ChallengeParams {
         rated: RwSignal::new(true),
-        game_type: RwSignal::new(GameType::MLP),
-        visibility: RwSignal::new(ChallengeVisibility::Public),
+        with_expansions: RwSignal::new(true),
+        is_public: RwSignal::new(true),
         opponent: RwSignal::new(opponent()),
         color_choice: RwSignal::new(ColorChoice::Random),
-        time_mode: RwSignal::new(TimeMode::RealTime),
         time_base: store_value(None),
         time_increment: store_value(None),
         band_upper: RwSignal::new(None),
         band_lower: RwSignal::new(None),
     };
-    let (rated_value, set_rated_value) = create_signal("Rated".to_string());
     let band_upper = RwSignal::new(550_i32);
     let band_lower = RwSignal::new(-550_i32);
-    let game_type = move || params.game_type.get();
-    let time_control = move || params.time_mode.get();
     let time_signals = TimeSignals::default();
     let create_challenge = Callback::new(move |color_choice| {
         params.color_choice.update_untracked(|p| *p = color_choice);
@@ -62,10 +59,7 @@ pub fn ChallengeCreate(
         params
             .band_lower
             .update_untracked(|v| *v = Some(band_lower.get_untracked()));
-        params
-            .time_mode
-            .update_untracked(|v| *v = time_signals.time_control.get_untracked());
-        match time_control() {
+        match time_signals.time_mode.get() {
             TimeMode::Untimed => {
                 params.time_base.update_value(|v| *v = None);
                 params.time_increment.update_value(|v| *v = None);
@@ -139,15 +133,23 @@ pub fn ChallengeCreate(
         };
         let details = ChallengeDetails {
             rated: params.rated.get_untracked(),
-            game_type: params.game_type.get_untracked(),
+            game_type: if params.with_expansions.get_untracked() {
+                GameType::MLP
+            } else {
+                GameType::Base
+            },
             visibility: if opponent().is_none() {
-                params.visibility.get_untracked()
+                if params.is_public.get_untracked() {
+                    ChallengeVisibility::Public
+                } else {
+                    ChallengeVisibility::Private
+                }
             } else {
                 ChallengeVisibility::Direct
             },
             opponent: params.opponent.get_untracked(),
             color_choice: params.color_choice.get_untracked(),
-            time_mode: params.time_mode.get_untracked(),
+            time_mode: time_signals.time_mode.get_untracked(),
             time_base: (params.time_base)(),
             time_increment: (params.time_increment)(),
             band_upper: upper_rating(),
@@ -176,17 +178,11 @@ pub fn ChallengeCreate(
 
     let time_change = Callback::from(move |s: String| {
         if let Ok(new_value) = TimeMode::from_str(&s) {
-            params
-                .visibility
-                .update(|v| *v = ChallengeVisibility::Public);
-            params.game_type.update(|v| *v = GameType::MLP);
             time_signals.corr_days.update_untracked(|v| *v = 2);
             if new_value == TimeMode::Untimed {
                 params.rated.set(false);
-            } else {
-                params.rated.set(true);
             }
-            time_signals.time_control.update(|v| *v = new_value);
+            time_signals.time_mode.update(|v| *v = new_value);
         };
     });
     let allowed_values = vec![
@@ -194,7 +190,19 @@ pub fn ChallengeCreate(
         TimeMode::Correspondence,
         TimeMode::Untimed,
     ];
-    let radio_style = "flex items-center my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded data-[state=checked]:bg-button-dawn dark:data-[state=checked]:bg-button-twilight data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700 data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700";
+    let make_unrated = Callback::new(move |()| {
+        if !params.with_expansions.get() {
+            params.rated.set(false)
+        }
+    });
+    let add_expansions = Callback::new(move |()| {
+        if params.rated.get() {
+            params.with_expansions.set(true)
+        }
+    });
+    let untimed_no_rated =
+        Signal::derive(move || time_signals.time_mode.get() == TimeMode::Untimed);
+
     view! {
         <div class="flex flex-col items-center w-72 xs:m-2 xs:w-80 sm:w-96">
             <Show when=move || opponent().is_some()>
@@ -208,89 +216,17 @@ pub fn ChallengeCreate(
                     allowed_values
                 />
             </div>
-            <RadioGroupRoot
-                required=true
-                attr:class="flex justify-center"
-                value=rated_value
-                default_value="Rated"
-                on_value_change=move |v| {
-                    let is_rated = v == "Rated";
-                    params.rated.update(|v| *v = is_rated);
-                    if is_rated {
-                        params.game_type.update(|v| *v = GameType::MLP);
-                    }
-                    set_rated_value(v)
-                }
-            >
-
-                <RadioGroupItem
-                    value="Rated"
-                    attr:disabled=Signal::derive(move || {
-                        if game_type() == GameType::Base || time_control() == TimeMode::Untimed {
-                            set_rated_value("Casual".to_string());
-                            return true;
-                        }
-                        false
-                    })
-
-                    attr:class=format!(
-                        "disabled:opacity-25 disabled:cursor-not-allowed {radio_style}",
-                    )
-                >
-
-                    "Rated"
-                </RadioGroupItem>
-                <RadioGroupItem value="Casual" attr:class=radio_style>
-                    "Casual"
-                </RadioGroupItem>
-            </RadioGroupRoot>
-
-            <RadioGroupRoot
-                required=true
-                attr:class="flex justify-center"
-                default_value="MLP"
-                on_value_change=move |v| {
-                    let game_type = if v == "MLP" { GameType::MLP } else { GameType::Base };
-                    params.game_type.update(|v| *v = game_type);
-                    if game_type == GameType::Base {
-                        params.rated.update(|v| *v = false)
-                    }
-                }
-            >
-
-                <RadioGroupItem value="MLP" attr:class=radio_style>
-                    "MLP"
-                </RadioGroupItem>
-                <RadioGroupItem value="Base" attr:class=radio_style>
-                    "Base"
-                </RadioGroupItem>
-            </RadioGroupRoot>
+            <div class="flex gap-1 p-1">
+                Casual <SimpleSwitch checked=params.rated optional_action=add_expansions disabled=untimed_no_rated/> Rated
+            </div>
+            <div class="flex gap-1 p-1">
+                Base <SimpleSwitch checked=params.with_expansions optional_action=make_unrated/> MLP
+            </div>
 
             <Show when=move || opponent().is_none()>
-                <RadioGroupRoot
-                    required=true
-                    attr:class="flex justify-center"
-                    default_value="Public"
-                    on_value_change=move |value| {
-                        params
-                            .visibility
-                            .update(|v| {
-                                *v = if value == "Public" {
-                                    ChallengeVisibility::Public
-                                } else {
-                                    ChallengeVisibility::Private
-                                };
-                            })
-                    }
-                >
-
-                    <RadioGroupItem value="Public" attr:class=radio_style>
-                        "Public"
-                    </RadioGroupItem>
-                    <RadioGroupItem value="Private" attr:class=radio_style>
-                        "Private"
-                    </RadioGroupItem>
-                </RadioGroupRoot>
+                <div class="flex gap-1 p-1">
+                    Private <SimpleSwitch checked=params.is_public/> Public
+                </div>
                 <p class="flex justify-center">Rating range</p>
                 <div class="flex justify-center w-24">{rating_string}</div>
                 <div class="flex">

@@ -292,7 +292,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         <Body/>
         <main class=move || {
             format!(
-                "w-full min-h-screen text-xs bg-light dark:bg-gray-950 sm:text-sm touch-manipulations {}",
+                "w-full min-h-screen text-xs bg-light dark:bg-gray-950 sm:text-sm touch-manipulation {}",
                 is_hidden(),
             )
         }>

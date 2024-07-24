@@ -3,7 +3,7 @@ use shared_types::{CorrespondenceMode, TimeMode};
 
 #[derive(Debug, Copy, Clone)]
 pub struct TimeSignals {
-    pub time_control: RwSignal<TimeMode>,
+    pub time_mode: RwSignal<TimeMode>,
     pub corr_mode: RwSignal<CorrespondenceMode>,
     pub corr_days: RwSignal<i32>,
     pub step_sec: RwSignal<i32>,
@@ -20,7 +20,7 @@ impl Default for TimeSignals {
 
 impl TimeSignals {
     pub fn new() -> Self {
-        let time_control = RwSignal::new(TimeMode::RealTime);
+        let time_mode = RwSignal::new(TimeMode::RealTime);
         let corr_mode = RwSignal::new(CorrespondenceMode::DaysPerMove);
         let corr_days = RwSignal::new(2_i32);
         let step_min = RwSignal::new(10_i32);
@@ -46,7 +46,7 @@ impl TimeSignals {
             }
         });
         Self {
-            time_control,
+            time_mode,
             corr_mode,
             corr_days,
             step_sec,
