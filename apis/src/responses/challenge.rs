@@ -4,7 +4,6 @@ use chrono::prelude::*;
 use hive_lib::{ColorChoice, GameType};
 use serde::{Deserialize, Serialize};
 use shared_types::{ChallengeDetails, ChallengeId, ChallengeVisibility, GameSpeed, TimeMode};
-use std::collections::hash_map::Values;
 use std::str;
 use std::str::FromStr;
 use uuid::Uuid;
@@ -77,8 +76,13 @@ impl ChallengeResponse {
 }
 }
 
-fn is_compatible(challenge: &ChallengeResponse, user: &str, details: &ChallengeDetails) -> bool {
-    details.game_type == GameType::from_str(&challenge.game_type).unwrap()
+fn is_compatible(
+    challenge: &ChallengeResponse,
+    details: &ChallengeDetails,
+    challenger_name: &str,
+) -> bool {
+    challenge.opponent.is_none()
+        && details.game_type == GameType::from_str(&challenge.game_type).unwrap()
         && details.rated == challenge.rated
         && details.time_mode == challenge.time_mode
         && details.time_base == challenge.time_base
@@ -88,16 +92,23 @@ fn is_compatible(challenge: &ChallengeResponse, user: &str, details: &ChallengeD
             ColorChoice::White => challenge.color_choice == ColorChoice::Black,
             ColorChoice::Black => challenge.color_choice == ColorChoice::White,
         }
-        && if let Some(opponent) = &details.opponent {
-            opponent == &challenge.challenger.username
-        } else if let Some(opponent) = &challenge.opponent {
-            opponent.username == user
-        } else {
-            challenge.challenger.username != user
+        && challenge.challenger.username != challenger_name
+        && match (details.band_lower, details.band_upper) {
+            (None, None) => true,
+            (Some(lower), None) => lower as u64 <= challenge.challenger_rating,
+            (None, Some(upper)) => upper as u64 >= challenge.challenger_rating,
+            (Some(lower), Some(upper)) => {
+                lower as u64 <= challenge.challenger_rating
+                    && upper as u64 >= challenge.challenger_rating
+            }
         }
 }
 
-fn has_same_details(challenge: &ChallengeResponse, user: &str, details: &ChallengeDetails) -> bool {
+fn has_same_details(
+    challenge: &ChallengeResponse,
+    details: &ChallengeDetails,
+    challenger_name: &str,
+) -> bool {
     let challenge_opponent = challenge
         .opponent
         .as_ref()
@@ -112,19 +123,25 @@ fn has_same_details(challenge: &ChallengeResponse, user: &str, details: &Challen
         && details.time_increment == challenge.time_increment
         && details.color_choice == challenge.color_choice
         && challenge_opponent == details.opponent.as_deref()
-        && challenge.challenger.username == user
+        && challenge.challenger.username == challenger_name
 }
 
+//TODO: Move this code that only gets used in the frontend
 pub fn create_challenge_handler(
-    user: String,
+    challenger_name: String,
     details: ChallengeDetails,
-    mut challenges: Values<ChallengeId, ChallengeResponse>,
+    challenges: Vec<ChallengeResponse>,
 ) -> Option<ChallengeAction> {
     if details.time_mode == TimeMode::RealTime
-        && challenges.any(|c| has_same_details(c, &user, &details))
+        && challenges
+            .iter()
+            .any(|c| has_same_details(c, &details, &challenger_name))
     {
         None
-    } else if let Some(challenge) = challenges.find(|c| is_compatible(c, &user, &details)) {
+    } else if let Some(challenge) = &challenges
+        .iter()
+        .find(|c| is_compatible(c, &details, &challenger_name))
+    {
         Some(ChallengeAction::Accept(challenge.challenge_id.clone()))
     } else {
         Some(ChallengeAction::Create(details))

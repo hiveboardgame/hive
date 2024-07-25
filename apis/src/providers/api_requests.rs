@@ -117,8 +117,13 @@ impl ApiRequests {
                     _ => None,
                 };
                 if let Some(account) = account {
-                    let challenges = expect_context::<ChallengeStateSignal>().signal.get();
-                    let challenges = challenges.challenges.values();
+                    let challenges = expect_context::<ChallengeStateSignal>()
+                        .signal
+                        .get_untracked();
+                    let challenges = challenges
+                        .challenges
+                        .into_values()
+                        .collect();
                     create_challenge_handler(account.user.username, details, challenges)
                 } else {
                     None
