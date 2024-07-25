@@ -300,7 +300,7 @@ impl GameState {
     }
 
     // Still needed because send_game_control uses it, maybe this should be moved out of the gamestate?
-    pub fn user_color(&self, user_id: Uuid) -> Option<Color> {
+    fn user_color(&self, user_id: Uuid) -> Option<Color> {
         if Some(user_id) == self.black_id {
             return Some(Color::Black);
         }
@@ -327,7 +327,7 @@ impl GameState {
     pub fn send_game_control(&mut self, game_control: GameControl, user_id: Uuid) {
         if let Some(color) = self.user_color(user_id) {
             if color != game_control.color() {
-                log!("This is a bug, you should only send GCs of your own color");
+                log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
             } else if let Some(ref game_id) = self.game_id {
                 ApiRequests::new().game_control(game_id.to_owned(), game_control);
             } else {

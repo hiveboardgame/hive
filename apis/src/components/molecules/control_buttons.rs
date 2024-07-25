@@ -21,13 +21,12 @@ pub fn ControlButtons() -> impl IntoView {
             .expect("Control buttons show only for logged in players")
     };
 
-    let color = move || {
+    let color = Signal::derive(move || {
         game_state
-            .signal
-            .get_untracked()
-            .user_color(user_id())
-            .expect("Control buttons show only for logged in players")
-    };
+            .user_color_as_signal(Some(user_id()).into())
+            .get()
+            .expect("User_id is one of the players in this game")
+    });
     let pending = create_read_slice(game_state.signal, |gs| gs.game_control_pending.clone());
     let not_tournament = create_read_slice(game_state.signal, |gs| {
         gs.game_response
