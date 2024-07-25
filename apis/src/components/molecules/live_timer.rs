@@ -123,6 +123,8 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
             } else {
                 pause();
             }
+        } else {
+            pause();
         }
     });
 
