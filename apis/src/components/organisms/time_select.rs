@@ -5,7 +5,7 @@ use crate::{
 use leptix_primitives::components::radio_group::{RadioGroupItem, RadioGroupRoot};
 use leptos::*;
 use leptos_icons::*;
-use shared_types::{GameSpeed, TimeMode};
+use shared_types::{CorrespondenceMode, GameSpeed, TimeMode};
 
 #[component]
 pub fn TimeSelect(
@@ -98,8 +98,16 @@ pub fn TimeSelect(
                     required=true
                     attr:class="flex flex-row gap-2 p-2"
                     default_value="dpm"
-                    on_value_change=move |v| corresp_selected.set(v)
+                    on_value_change=move |v| {
+                        if v == "dpm" {
+                            time_signals.corr_mode.set(CorrespondenceMode::DaysPerMove)
+                        } else if v == "tte" {
+                            time_signals.corr_mode.set(CorrespondenceMode::TotalTimeEach)
+                        }
+                        corresp_selected.set(v);
+                    }
                 >
+
                     <RadioGroupItem value="dpm" attr:class=radio_style>
                         "Per move"
                     </RadioGroupItem>

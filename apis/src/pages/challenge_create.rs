@@ -217,7 +217,12 @@ pub fn ChallengeCreate(
                 />
             </div>
             <div class="flex gap-1 p-1">
-                Casual <SimpleSwitch checked=params.rated optional_action=add_expansions disabled=untimed_no_rated/> Rated
+                Casual
+                <SimpleSwitch
+                    checked=params.rated
+                    optional_action=add_expansions
+                    disabled=untimed_no_rated
+                /> Rated
             </div>
             <div class="flex gap-1 p-1">
                 Base <SimpleSwitch checked=params.with_expansions optional_action=make_unrated/> MLP
