@@ -499,6 +499,9 @@ impl Game {
     fn get_correspondence_time_info(&self, state: &State) -> Result<TimeInfo, DbError> {
         let mut time_info = TimeInfo::new(state.game_status.clone());
         if self.turn < 2 && self.game_start == GameStart::Moves.to_string() {
+            if self.turn == 0 {
+                time_info.new_game_status = GameStatus::NotStarted;
+            };
             time_info.white_time_left = self.white_time_left;
             time_info.black_time_left = self.black_time_left;
         } else {
@@ -736,6 +739,99 @@ impl Game {
             .await?)
     }
 
+    fn get_takeback_time_correspondence(&self, popped: i32) -> (Option<i64>, Option<i64>) {
+        // For TotalTimeEach increment: None, base: Some
+        if self.time_increment.is_none() {
+            return self.get_takeback_time_realtime(popped);
+        }
+
+        // For DaysPerMove increment: Some and base: None
+        let mut black_time = self.black_time_left;
+        let mut white_time = self.white_time_left;
+
+        if self.turn % 2 == 0 {
+            black_time = self
+                .time_increment
+                .map(|t| t as i64 * NANOS_IN_SECOND as i64);
+        } else {
+            white_time = self
+                .time_increment
+                .map(|t| t as i64 * NANOS_IN_SECOND as i64);
+        }
+
+        if popped == 2 {
+            if self.turn % 2 == 0 {
+                white_time = self
+                    .time_increment
+                    .map(|t| t as i64 * NANOS_IN_SECOND as i64);
+            } else {
+                black_time = self
+                    .time_increment
+                    .map(|t| t as i64 * NANOS_IN_SECOND as i64);
+            }
+        }
+
+        (white_time, black_time)
+    }
+
+    fn get_takeback_time_realtime(&self, popped: i32) -> (Option<i64>, Option<i64>) {
+        let past_turn = self.turn - popped;
+        let mut times = self.move_times.clone();
+        let mut black_time = self.black_time_left;
+        let mut white_time = self.white_time_left;
+
+        if self.turn % 2 == 0 {
+            black_time = times.pop().unwrap_or(Some(0));
+        } else {
+            white_time = times.pop().unwrap_or(Some(0));
+        }
+
+        if popped == 2 {
+            if self.turn % 2 == 0 {
+                white_time = times.pop().unwrap_or(Some(0));
+            } else {
+                black_time = times.pop().unwrap_or(Some(0));
+            }
+        }
+
+        if past_turn > 1 {
+            if self.turn % 2 == 0 {
+                black_time = Some(
+                    black_time.unwrap_or(0)
+                        - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64,
+                );
+            } else {
+                white_time = Some(
+                    white_time.unwrap_or(0)
+                        - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64,
+                );
+            }
+            if popped == 2 {
+                if self.turn % 2 == 0 {
+                    white_time = Some(
+                        white_time.unwrap_or(0)
+                            - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64,
+                    );
+                } else {
+                    black_time = Some(
+                        black_time.unwrap_or(0)
+                            - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64,
+                    );
+                }
+            }
+        }
+
+        (white_time, black_time)
+    }
+
+    fn get_takeback_time(&self, popped: i32) -> Result<(Option<i64>, Option<i64>), DbError> {
+        match TimeMode::from_str(&self.time_mode)? {
+            TimeMode::Untimed => Ok((None, None)),
+            TimeMode::Correspondence => Ok(self.get_takeback_time_correspondence(popped)),
+            TimeMode::RealTime => Ok(self.get_takeback_time_realtime(popped)),
+        }
+    }
+
     pub async fn accept_takeback(
         &self,
         game_control: &GameControl,
@@ -743,54 +839,27 @@ impl Game {
     ) -> Result<Game, DbError> {
         let game_control_string = format!("{}. {game_control};", self.turn);
         let mut moves = self.history.split_terminator(';').collect::<Vec<_>>();
-        let mut white_time = self.white_time_left;
-        let mut black_time = self.black_time_left;
+        let mut popped = 0_i32;
         let mut new_move_times = self.move_times.clone();
-        let mut popped = 0;
 
-        if let (Some(Some(time)), Some(a_move)) = (new_move_times.pop(), moves.pop()) {
+        if let Some(a_move) = moves.pop() {
+            new_move_times.pop();
             popped += 1;
-            if new_move_times.len() % 2 == 0 {
-                if self.turn - popped > 2 {
-                    white_time = Some(
-                        time - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64,
-                    );
-                } else {
-                    white_time = Some(time);
-                }
-            } else if self.turn - popped > 2 {
-                black_time =
-                    Some(time - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64);
-            } else {
-                white_time = Some(time);
-            }
             if a_move.trim() == "pass" {
-                new_move_times.pop();
                 moves.pop();
+                new_move_times.pop();
                 popped += 1;
-                if new_move_times.len() % 2 == 0 {
-                    if self.turn - popped > 2 {
-                        white_time = Some(
-                            time - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64,
-                        );
-                    } else {
-                        white_time = Some(time);
-                    }
-                } else if self.turn - popped > 2 {
-                    black_time = Some(
-                        time - self.time_increment.unwrap_or(0) as i64 * NANOS_IN_SECOND as i64,
-                    );
-                } else {
-                    white_time = Some(time);
-                }
             }
         }
+
         if popped == 0 {
             return Err(DbError::InvalidInput {
                 info: String::from("Takeback failed, no moves to pop"),
                 error: String::from("Popped = 0"),
             });
         }
+
+        let (white_time, black_time) = self.get_takeback_time(popped)?;
         let mut new_history = moves.join(";");
         if !new_history.is_empty() {
             new_history.push(';');
