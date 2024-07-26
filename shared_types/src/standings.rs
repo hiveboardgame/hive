@@ -43,7 +43,7 @@ impl Standings {
             players: HashSet::new(),
             players_scores: HashMap::new(),
             pairings: HashMap::new(),
-            tiebreakers: vec![Tiebreaker::RawPoints],
+            tiebreakers: vec![],
             players_standings: Vec::new(),
         }
     }

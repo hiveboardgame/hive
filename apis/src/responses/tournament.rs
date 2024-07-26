@@ -99,6 +99,9 @@ impl TournamentResponse {
         let games = tournament.games(conn).await?;
         let mut game_responses = Vec::new();
         let mut standings = Standings::new();
+        for tiebreaker in tournament.tiebreaker.iter().flatten() {
+            standings.add_tiebreaker(Tiebreaker::from_str(tiebreaker)?)
+        }
         for game in games {
             standings.add_result(
                 game.white_id,
