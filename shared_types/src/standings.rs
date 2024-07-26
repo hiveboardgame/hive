@@ -137,19 +137,21 @@ impl Standings {
         let mut h2h: HashMap<Uuid, f32> = HashMap::new();
         for players in self.players_standings.clone() {
             if players.len() > 1 {
-                let combinations: Vec<Vec<Uuid>> = players.into_iter().combinations(2).collect();
+                let combinations: Vec<Vec<Uuid>> =
+                    players.clone().into_iter().combinations(2).collect();
                 for combination in &combinations {
                     let (one, two) = (combination[0], combination[1]);
                     let (result_one, result_two) = self.head_to_head_pair(one, two);
                     *h2h.entry(one).or_default() += result_one;
                     *h2h.entry(two).or_default() += result_two;
                 }
-            } else if let Some(player) = players.first() {
+            }
+            for player in &players {
                 self.players_scores
                     .entry(*player)
                     .or_default()
                     .entry(Tiebreaker::HeadToHead)
-                    .or_insert(0.0);
+                    .or_insert(*h2h.get(player).unwrap_or(&0.0));
             }
         }
     }
@@ -474,6 +476,141 @@ mod tests {
                 .get(&Tiebreaker::SonnebornBerger)
                 .unwrap(),
             2.25
+        );
+    }
+
+    #[test]
+    fn tests_head2head() {
+        let mut s = Standings::new();
+        s.add_tiebreaker(Tiebreaker::HeadToHead);
+        let one = Uuid::new_v4();
+        let one_elo = 100.0;
+        let two = Uuid::new_v4();
+        let two_elo = 200.0;
+        s.add_result(
+            one,
+            two,
+            one_elo,
+            two_elo,
+            TournamentGameResult::Winner(Color::White),
+        );
+        s.add_result(
+            two,
+            one,
+            two_elo,
+            one_elo,
+            TournamentGameResult::Winner(Color::White),
+        );
+        assert_eq!(0, s.players_standings.len());
+        s.enforce_tiebreakers();
+        assert_eq!(
+            *s.players_scores
+                .get(&one)
+                .unwrap()
+                .get(&Tiebreaker::HeadToHead)
+                .unwrap(),
+            1.0
+        );
+        assert_eq!(
+            *s.players_scores
+                .get(&two)
+                .unwrap()
+                .get(&Tiebreaker::HeadToHead)
+                .unwrap(),
+            1.0
+        );
+    }
+
+    #[test]
+    fn tests_all_tiebreakers() {
+        let mut s = Standings::new();
+        s.add_tiebreaker(Tiebreaker::RawPoints);
+        s.add_tiebreaker(Tiebreaker::HeadToHead);
+        s.add_tiebreaker(Tiebreaker::WinsAsBlack);
+        s.add_tiebreaker(Tiebreaker::SonnebornBerger);
+        let one = Uuid::new_v4();
+        let one_elo = 100.0;
+        let two = Uuid::new_v4();
+        let two_elo = 200.0;
+        s.add_result(
+            one,
+            two,
+            one_elo,
+            two_elo,
+            TournamentGameResult::Winner(Color::Black),
+        );
+        s.add_result(
+            two,
+            one,
+            two_elo,
+            one_elo,
+            TournamentGameResult::Winner(Color::Black),
+        );
+        assert_eq!(0, s.players_standings.len());
+        s.enforce_tiebreakers();
+        assert_eq!(
+            *s.players_scores
+                .get(&one)
+                .unwrap()
+                .get(&Tiebreaker::RawPoints)
+                .unwrap(),
+            1.0
+        );
+        assert_eq!(
+            *s.players_scores
+                .get(&two)
+                .unwrap()
+                .get(&Tiebreaker::RawPoints)
+                .unwrap(),
+            1.0
+        );
+        assert_eq!(
+            *s.players_scores
+                .get(&one)
+                .unwrap()
+                .get(&Tiebreaker::HeadToHead)
+                .unwrap(),
+            1.0
+        );
+        assert_eq!(
+            *s.players_scores
+                .get(&two)
+                .unwrap()
+                .get(&Tiebreaker::HeadToHead)
+                .unwrap(),
+            1.0
+        );
+        assert_eq!(
+            *s.players_scores
+                .get(&one)
+                .unwrap()
+                .get(&Tiebreaker::WinsAsBlack)
+                .unwrap(),
+            1.0
+        );
+        assert_eq!(
+            *s.players_scores
+                .get(&two)
+                .unwrap()
+                .get(&Tiebreaker::WinsAsBlack)
+                .unwrap(),
+            1.0
+        );
+        assert_eq!(
+            *s.players_scores
+                .get(&one)
+                .unwrap()
+                .get(&Tiebreaker::SonnebornBerger)
+                .unwrap(),
+            1.0
+        );
+        assert_eq!(
+            *s.players_scores
+                .get(&two)
+                .unwrap()
+                .get(&Tiebreaker::SonnebornBerger)
+                .unwrap(),
+            1.0
         );
     }
 }

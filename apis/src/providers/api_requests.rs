@@ -120,10 +120,7 @@ impl ApiRequests {
                     let challenges = expect_context::<ChallengeStateSignal>()
                         .signal
                         .get_untracked();
-                    let challenges = challenges
-                        .challenges
-                        .into_values()
-                        .collect();
+                    let challenges = challenges.challenges.into_values().collect();
                     create_challenge_handler(account.user.username, details, challenges)
                 } else {
                     None
