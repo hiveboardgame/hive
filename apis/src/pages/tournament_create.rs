@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use crate::common::{TimeSignals, TournamentAction};
 use crate::components::organisms::time_select::TimeSelect;
 use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
@@ -17,6 +15,7 @@ use shared_types::{
     CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
     TournamentMode,
 };
+use std::str::FromStr;
 use uuid::Uuid;
 
 const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -53,6 +52,7 @@ impl TournamentSignals {
                 Some(Tiebreaker::RawPoints),
                 Some(Tiebreaker::HeadToHead),
                 Some(Tiebreaker::WinsAsBlack),
+                Some(Tiebreaker::SonnebornBerger),
             ]),
             seats: RwSignal::new(4),
             min_seats: RwSignal::new(4),
