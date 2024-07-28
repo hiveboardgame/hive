@@ -47,6 +47,7 @@ impl GameStateSignal {
 
     pub fn do_analysis(&mut self) {
         self.signal.update(|s| {
+            s.view = View::Game;
             s.game_id = None;
             s.state.game_status = GameStatus::InProgress;
             s.black_id = None;
