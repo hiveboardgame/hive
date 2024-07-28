@@ -48,12 +48,14 @@ impl AnalysisTree {
             previous = Some(new_id);
         }
         let current_node = previous.and_then(|p| tree.get_node_by_id(&p));
-        Some(Self {
+        let mut tree = Self {
             current_node,
             tree,
             hashes,
             game_type: gs.state.game_type,
-        })
+        };
+        tree.update_node(gs.history_turn.unwrap_or(0)as i32);
+        Some(tree)
     }
 
     pub fn update_node(&mut self, node_id: i32) -> Option<()> {
