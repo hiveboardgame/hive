@@ -64,7 +64,7 @@ pub fn GamePreviews(
 
             {
                 let time_info = store_value(TimeInfo {
-                    mode: game.time_mode.clone(),
+                    mode: game.time_mode,
                     base: game.time_base,
                     increment: game.time_increment,
                 });
@@ -81,7 +81,7 @@ pub fn GamePreviews(
                         <Show when=move || show_time>
                             <div class="flex items-center">
                                 {if game().rated { "RATED " } else { "CASUAL " }}
-                                <TimeRow time_info=time_info()/>
+                                <TimeRow time_info=time_info().into()/>
                             </div>
                         </Show>
                         <Show when=needs_start>

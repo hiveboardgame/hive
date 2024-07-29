@@ -46,7 +46,7 @@ impl TimerSignal {
             timer.time_increment = game
                 .time_increment
                 .map(|inc| Duration::from_secs(inc as u64));
-            timer.time_mode = game.time_mode.clone();
+            timer.time_mode = game.time_mode;
             timer.last_interaction = game.last_interaction;
             timer.time_base = game.time_base.map(|base| Duration::from_secs(base as u64));
         });

@@ -88,7 +88,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     let conclusion = move || game().conclusion.pretty_string();
     let ratings = store_value(RatingChangeInfo::from_game_response(&game()));
     let time_info = TimeInfo {
-        mode: game().time_mode.clone(),
+        mode: game().time_mode,
         base: game().time_base,
         increment: game().time_increment,
     };
@@ -101,7 +101,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">
                 <div class="flex flex-col justify-between">
                     <div class="flex gap-1">
-                        {rated_string} <TimeRow time_info/>
+                        {rated_string} <TimeRow time_info=time_info.into()/>
                         <Show when=move || {
                             game().tournament.is_some()
                         }>
