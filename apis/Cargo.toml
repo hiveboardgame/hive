@@ -17,6 +17,7 @@ actix = { workspace = true, optional = true }
 argon2 = { workspace = true, optional = true }
 cfg-if = { workspace = true }
 chrono = { workspace = true }
+codee ={ workspace = true }
 console_error_panic_hook = { workspace = true }
 cookie = { workspace = true }
 db = { path = "../db", optional = true  }

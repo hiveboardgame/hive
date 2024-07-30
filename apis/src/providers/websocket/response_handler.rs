@@ -9,7 +9,7 @@ use super::{
     user_search::handle::handle_user_search, user_status::handle::handle_user_status,
 };
 
-pub fn handle_response(m: String) {
+pub fn handle_response(m: &String) {
     batch(move || match serde_json::from_str::<ServerResult>(&m) {
         Ok(result) => match result {
             ServerResult::Ok(message) => match *message {
