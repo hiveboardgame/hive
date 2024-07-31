@@ -27,8 +27,8 @@ use crate::{
     providers::{
         challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state,
         games::provide_games, navigation_controller::provide_navigation_controller,
-        online_users::provide_users, provide_alerts, provide_auth, provide_color_scheme,
-        provide_config, provide_notifications, provide_ping, provide_sounds,
+        online_users::provide_users, provide_alerts, provide_auth, provide_challenge_params,
+        provide_color_scheme, provide_config, provide_notifications, provide_ping, provide_sounds,
         refocus::provide_refocus, timer::provide_timer, tournament_ready::provide_tournament_ready,
         tournaments::provide_tournaments, user_search::provide_user_search,
         websocket::provide_websocket,
@@ -54,6 +54,7 @@ pub fn App() -> impl IntoView {
     let url = "/ws/";
     provide_websocket(url);
     provide_auth();
+    provide_challenge_params();
     provide_alerts();
     provide_refocus();
     provide_chat();
