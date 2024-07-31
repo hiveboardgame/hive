@@ -8,7 +8,8 @@ pub fn TileDotsToggle() -> impl IntoView {
         <p class="m-1 text-black dark:text-white">Show dots:</p>
         <div class="flex">
             <TileDotsButton tile_dots=TileDots::No/>
-            <TileDotsButton tile_dots=TileDots::Yes/>
+            <TileDotsButton tile_dots=TileDots::Angled/>
+            <TileDotsButton tile_dots=TileDots::Vertical/>
         </div>
     }
 }

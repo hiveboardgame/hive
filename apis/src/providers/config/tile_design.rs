@@ -11,6 +11,9 @@ fn initial_tile_design() -> TileDesign {
     if cookie.contains("tile_design=Flat") {
         return TileDesign::Flat;
     }
+    if cookie.contains("tile_design=ThreeD") {
+        return TileDesign::ThreeD;
+    }
     TileDesign::Official
 }
 

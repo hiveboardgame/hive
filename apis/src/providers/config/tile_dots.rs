@@ -8,10 +8,13 @@ fn initial_tile_dots() -> TileDots {
 
     let doc = document().unchecked_into::<web_sys::HtmlDocument>();
     let cookie = doc.cookie().unwrap_or_default();
-    if cookie.contains("tile_dots=No") {
-        return TileDots::No;
+    if cookie.contains("tile_dots=Angled") {
+        return TileDots::Angled;
     }
-    TileDots::Yes
+    if cookie.contains("tile_dots=Vertical") {
+        return TileDots::Vertical;
+    }
+    TileDots::No
 }
 
 #[cfg(feature = "ssr")]
@@ -29,7 +32,7 @@ fn initial_tile_dots() -> TileDots {
             }
         }
     };
-    TileDots::Yes
+    TileDots::Angled
 }
 
 #[derive(Clone)]

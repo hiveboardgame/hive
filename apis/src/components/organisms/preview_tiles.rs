@@ -1,7 +1,4 @@
-use crate::{
-    common::HexStack,
-    components::{atoms::svgs::Svgs, molecules::simple_hex_stack::SimpleHexStack},
-};
+use crate::{common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
 use hive_lib::{GameType, Position, State};
 use leptos::*;
 
@@ -35,11 +32,10 @@ pub fn PreviewTiles() -> impl IntoView {
     view! {
         <div class="flex relative flex-col items-center mx-1 my-2 w-72 h-36 rounded sm:h-40 sm:w-80 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
             <svg
-                viewBox="1224 730 225 100"
+                viewBox="1159 695 225 100"
                 class="w-full h-full touch-none"
                 xmlns="http://www.w3.org/2000/svg"
             >
-                <Svgs/>
                 <g>{pieces}</g>
             </svg>
         </div>

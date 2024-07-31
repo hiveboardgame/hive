@@ -10,6 +10,7 @@ pub fn TileDesignToggle() -> impl IntoView {
         <div class="flex">
             <TileDesignButton tile_design=TileDesign::Official/>
             <TileDesignButton tile_design=TileDesign::Flat/>
+            <TileDesignButton tile_design=TileDesign::ThreeD/>
         </div>
     }
 }

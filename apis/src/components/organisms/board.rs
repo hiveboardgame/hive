@@ -1,10 +1,9 @@
 use crate::common::SvgPos;
+use crate::common::TileDesign;
 use crate::providers::game_state::{GameStateSignal, View};
+use crate::providers::Config;
 use crate::{
-    components::{
-        atoms::svgs::Svgs,
-        molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
-    },
+    components::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
     pages::play::TargetStack,
 };
 use hive_lib::GameStatus;
@@ -113,11 +112,16 @@ pub fn Board(
             .center_coordinates()
     };
 
+    let straight = {
+        let config = expect_context::<Config>();
+        (config.tile_design.preferred_tile_design)() == TileDesign::ThreeD
+    };
+
     let update_once = create_effect(move |_| {
         if game_state.loaded.get() {
             let div = div_ref.get_untracked().expect("it exists");
             let rect = div.get_bounding_client_rect();
-            let svg_pos = SvgPos::center_for_level(current_center(), 0);
+            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight);
             viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                 viewbox_controls.x = 0.0;
                 viewbox_controls.y = 0.0;
@@ -134,10 +138,15 @@ pub fn Board(
         }
     });
 
+    let straight = {
+        let config = expect_context::<Config>();
+        (config.tile_design.preferred_tile_design)() == TileDesign::ThreeD
+    };
+
     //This handles board resizes
     let throttled_resize = use_throttle_fn_with_arg(
         move |rect: DomRectReadOnly| {
-            let svg_pos = SvgPos::center_for_level(current_center(), 0);
+            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight);
             let svg = viewbox_ref.get_untracked().expect("It exists");
             // if user has zoomed, keep their scale when resizing board
             let (current_x_scale, current_y_scale) = if has_zoomed.get_untracked() {
@@ -342,8 +351,6 @@ pub fn Board(
                 xmlns="http://www.w3.org/2000/svg"
                 on:click=move |_| { game_state.reset() }
             >
-
-                <Svgs/>
                 <g transform=transform ref=g_ref>
                     <Show
                         when=move || { View::History == board_view() && !last_turn() }
