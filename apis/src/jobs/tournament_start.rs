@@ -1,5 +1,6 @@
 use crate::common::{
-    GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult, TournamentUpdate,
+    CommonMessage, GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult,
+    TournamentUpdate,
 };
 use crate::responses::{GameResponse, TournamentResponse};
 use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
@@ -83,12 +84,11 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                     }
                                 }
                                 for message in messages {
-                                    let serialized = serde_json::to_string(&ServerResult::Ok(
+                                    let serialized = CommonMessage::Server(ServerResult::Ok(
                                         Box::new(message.message),
-                                    ))
-                                    .expect("Failed to serialize a server message");
+                                    ));
                                     let serialized = MsgpackSerdeCodec::encode(&serialized)
-                                    .expect("Failed to serialize a server message");
+                                        .expect("Failed to serialize a server message");
                                     let cam = ClientActorMessage {
                                         destination: message.destination,
                                         serialized,

@@ -1,6 +1,6 @@
 use super::tournament_game_start::TournamentGameStart;
 use super::{api::request_handler::RequestHandler, internal_server_message::MessageDestination};
-use crate::common::{ClientRequest, ExternalServerError, ServerResult};
+use crate::common::{CommonMessage, ExternalServerError, ServerResult};
 use crate::lag_tracking::lags::Lags;
 use crate::ping::pings::Pings;
 use crate::websockets::{
@@ -14,11 +14,11 @@ use actix::{
 };
 use actix_web_actors::ws::{self};
 use anyhow::Result;
+use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 use db_lib::DbPool;
 use shared_types::SimpleUser;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
-use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -137,9 +137,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             }
             Ok(ws::Message::Nop) => (),
             Ok(ws::Message::Binary(s)) => {
-                let request: Result<String,_> = MsgpackSerdeCodec::decode(&s);
-                let request = serde_json::from_str::<ClientRequest>(request.unwrap().as_ref());
-                    if let Ok(request) = request {
+                let request: Result<CommonMessage, _> = MsgpackSerdeCodec::decode(&s);
+                if let Ok(CommonMessage::Client(request)) = request {
                     let pool = self.pool.clone();
                     let lobby = self.wss_addr.clone();
                     let user_id = self.user_uid;
@@ -171,12 +170,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                         match handler_result {
                             Ok(messages) => {
                                 for message in messages {
-                                    let serialized = serde_json::to_string(&ServerResult::Ok(
+                                    let serialized = CommonMessage::Server(ServerResult::Ok(
                                         Box::new(message.message),
-                                    ))
-                                    .expect("Failed to serialize a server message");
+                                    ));
                                     let serialized = MsgpackSerdeCodec::encode(&serialized)
-                                    .expect("Failed to serialize a server message");
+                                        .expect("Failed to serialize a server message");
                                     let cam = ClientActorMessage {
                                         destination: message.destination,
                                         serialized,
@@ -201,10 +199,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                     reason: format!("{err}"),
                                     status_code: http::StatusCode::NOT_IMPLEMENTED,
                                 });
-                                let serialized = serde_json::to_string(&message)
-                                    .expect("Failed to serialize a server message");
+                                let serialized = CommonMessage::Server(message);
                                 let serialized = MsgpackSerdeCodec::encode(&serialized)
-                                .expect("Failed to serialize a server message");
+                                    .expect("Failed to serialize a server message");
                                 let cam = ClientActorMessage {
                                     destination: MessageDestination::User(user_id),
                                     serialized,
