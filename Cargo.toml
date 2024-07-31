@@ -10,7 +10,7 @@ opt-level = 'z'
 
 [workspace.dependencies]
 leptos = { version = "0.6" , features = ["nightly"] }
-leptos-use = { version = "0.10" }
+leptos-use = { version = "0.11" }
 leptos_meta =  { version = "0.6" , features = ["nightly"] }
 leptos_router =  { version = "0.6" , features = ["nightly"] }
 leptos_actix =  { version = "0.6" }
@@ -32,6 +32,7 @@ serde_json = { version = "1" }
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
+codee = { version = "0.1.2", features = ["msgpack_serde"] }
 regex = "1.10"
 http = "1.1.0"
 log = "0.4.22"
@@ -56,7 +57,7 @@ cookie = "0.18"
 skillratings = "0.27"
 chrono = { version = "0.4", features = ["serde"] }
 itertools = "0.13.0"
-leptix_primitives = { version = "0.2.0" }
+leptix_primitives = { version = "0.2" }
 tree-ds = {version = "0.1.5", features = ["serde", "compact_serde"] }
 bimap = {version = "0.6.3", features = ["serde"] }
 # Defines a size-optimized profile for the WASM bundle in release mode

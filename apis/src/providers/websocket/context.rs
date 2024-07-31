@@ -1,15 +1,13 @@
+use super::response_handler::handle_response;
+use crate::common::{ClientRequest, CommonMessage};
 use crate::functions::hostname::hostname_and_port;
-
+use codee::binary::MsgpackSerdeCodec;
 use lazy_static::lazy_static;
 use leptos::*;
-
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::*;
 use regex::Regex;
-
 use std::rc::Rc;
-
-use super::response_handler::handle_response;
 
 lazy_static! {
     static ref NANOID: Regex =
@@ -18,8 +16,8 @@ lazy_static! {
 
 #[derive(Clone)]
 pub struct WebsocketContext {
-    pub message: Signal<Option<String>>,
-    send: Rc<dyn Fn(&str)>,
+    pub message: Signal<Option<CommonMessage>>,
+    send: Rc<dyn Fn(&CommonMessage)>,
     pub ready_state: Signal<ConnectionReadyState>,
     open: Rc<dyn Fn()>,
     close: Rc<dyn Fn()>,
@@ -27,8 +25,8 @@ pub struct WebsocketContext {
 
 impl WebsocketContext {
     pub fn new(
-        message: Signal<Option<String>>,
-        send: Rc<dyn Fn(&str)>,
+        message: Signal<Option<CommonMessage>>,
+        send: Rc<dyn Fn(&CommonMessage)>,
         ready_state: Signal<ConnectionReadyState>,
         open: Rc<dyn Fn()>,
         close: Rc<dyn Fn()>,
@@ -43,8 +41,9 @@ impl WebsocketContext {
     }
 
     #[inline(always)]
-    pub fn send(&self, message: &str) {
-        (self.send)(message)
+    pub fn send(&self, message: &ClientRequest) {
+        let message = CommonMessage::Client(message.clone());
+        (self.send)(&message)
     }
 
     #[inline(always)]
@@ -60,7 +59,7 @@ impl WebsocketContext {
     }
 }
 
-fn on_message_callback(m: String) {
+fn on_message_callback(m: &CommonMessage) {
     handle_response(m);
 }
 
@@ -81,14 +80,14 @@ fn fix_wss(url: &str) -> String {
 pub fn provide_websocket(url: &str) {
     let url = fix_wss(url);
     //log!("Establishing new websocket connection");
-    let UseWebsocketReturn {
+    let UseWebSocketReturn {
         message,
         send,
         ready_state,
         open,
         close,
         ..
-    } = use_websocket_with_options(
+    } = use_websocket_with_options::<CommonMessage, MsgpackSerdeCodec>(
         &url,
         UseWebSocketOptions::default()
             .on_message(on_message_callback)

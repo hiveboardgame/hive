@@ -5,7 +5,7 @@ use super::internal_server_message::MessageDestination;
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
-pub struct WsMessage(pub String);
+pub struct WsMessage(pub Vec<u8>);
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
@@ -38,11 +38,11 @@ pub struct Ping {}
 pub struct ClientActorMessage {
     pub destination: MessageDestination,
     pub from: Option<Uuid>,
-    pub serialized: String, // the serialized message
+    pub serialized: Vec<u8>, // the serialized message
 }
 
 impl ClientActorMessage {
-    pub fn new(from: Option<Uuid>, destination: MessageDestination, serialized: &str) -> Self {
+    pub fn new(from: Option<Uuid>, destination: MessageDestination, serialized: &Vec<u8>) -> Self {
         Self {
             from,
             destination,

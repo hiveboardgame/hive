@@ -1,4 +1,4 @@
-use crate::common::{ServerMessage::*, ServerResult};
+use crate::common::{CommonMessage, ServerMessage::*, ServerResult};
 
 use leptos::logging::log;
 use leptos::*;
@@ -9,10 +9,10 @@ use super::{
     user_search::handle::handle_user_search, user_status::handle::handle_user_status,
 };
 
-pub fn handle_response(m: String) {
-    batch(move || match serde_json::from_str::<ServerResult>(&m) {
-        Ok(result) => match result {
-            ServerResult::Ok(message) => match *message {
+pub fn handle_response(m: &CommonMessage) {
+    batch(move || match m {
+        CommonMessage::Server(result) => match result {
+            ServerResult::Ok(message) => match *message.clone() {
                 Ping { value, nonce } => handle_ping(nonce, value),
                 UserStatus(user_update) => handle_user_status(user_update),
                 Game(game_update) => handle_game(*game_update),
@@ -26,6 +26,8 @@ pub fn handle_response(m: String) {
             },
             ServerResult::Err(e) => log!("Got error from server: {e}"),
         },
-        Err(e) => log!("Can't parse: {m}, error is: {e}"),
+        CommonMessage::Client(request) => {
+            log!("Got a client request: {request:?}")
+        }
     });
 }

@@ -1,4 +1,5 @@
 use super::game_reaction::GameReaction;
+use super::ClientRequest;
 use crate::responses::{
     ChallengeResponse, GameResponse, HeartbeatResponse, TournamentResponse, UserResponse,
 };
@@ -15,6 +16,11 @@ pub enum ServerResult {
     Err(ExternalServerError),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CommonMessage {
+    Server(ServerResult),
+    Client(ClientRequest),
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExternalServerError {
     pub user_id: Uuid,
