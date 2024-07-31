@@ -14,16 +14,20 @@ impl SvgPos {
         }
     }
 
-    pub fn center_for_level(position: Position, level: usize) -> (f32, f32) {
+    pub fn center_for_level(position: Position, level: usize, straight: bool) -> (f32, f32) {
         let position = Self {
             pos: ((position.q + position.r / 2) as f32, position.r as f32),
-            size: 31.5,
+            size: 30.0,
         };
-        position.center_with_offset(SvgPos::center_offset(level))
+        position.center_with_offset(SvgPos::center_offset(level, straight))
     }
 
-    pub fn center_offset(i: usize) -> (f32, f32) {
-        (-2.5 * i as f32, -3.5 * i as f32)
+    pub fn center_offset(i: usize, straight: bool) -> (f32, f32) {
+        if straight {
+            (0.0, -6.0 * i as f32)
+        } else {
+            (-2.5 * i as f32, -3.5 * i as f32)
+        }
     }
 
     pub fn center(&self) -> (f32, f32) {

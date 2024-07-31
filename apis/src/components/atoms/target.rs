@@ -1,8 +1,10 @@
 use crate::common::MoveConfirm;
 use crate::common::SvgPos;
+use crate::common::TileDesign;
 use crate::components::organisms::analysis::AnalysisSignal;
 use crate::pages::play::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
+use crate::providers::Config;
 use hive_lib::Position;
 use leptos::*;
 
@@ -12,7 +14,9 @@ pub fn Target(
     #[prop(into)] level: MaybeSignal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let center = move || SvgPos::center_for_level(position, level());
+    let config = expect_context::<Config>();
+    let straight = move || (config.tile_design.preferred_tile_design)() == TileDesign::ThreeD;
+    let center = move || SvgPos::center_for_level(position, level(), straight());
     let transform = move || format!("translate({},{})", center().0, center().1);
     let mut game_state = expect_context::<GameStateSignal>();
     let analysis = use_context::<AnalysisSignal>()
@@ -50,7 +54,7 @@ pub fn Target(
         <g on:click=onclick class=extend_tw_classes>
             <g id="Target" transform=transform>
                 <use_
-                    href="#target"
+                    href="/assets/tiles/common/all.svg#target"
                     transform="scale(0.56, 0.56) translate(-46.608, -52.083)"
                 ></use_>
             </g>

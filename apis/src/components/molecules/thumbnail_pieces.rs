@@ -1,5 +1,6 @@
 use crate::common::SvgPos;
-use crate::components::atoms::svgs::Svgs;
+use crate::common::TileDesign;
+use crate::providers::Config;
 use crate::responses::GameResponse;
 use crate::{common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
 use hive_lib::Position;
@@ -21,10 +22,14 @@ pub fn ThumbnailPieces(game: GameResponse) -> impl IntoView {
         }
         pieces
     };
+
+    let config = expect_context::<Config>();
+    let straight = move || (config.tile_design.preferred_tile_design)() == TileDesign::ThreeD;
+
     let (width, height) = (400.0_f32, 510.0_f32);
     // TODO: because Thumbnail pieces is used in two places, this leads to weirdness in the TV
     let transform = move || {
-        let svg_pos = SvgPos::center_for_level(state().board.center_coordinates(), 0);
+        let svg_pos = SvgPos::center_for_level(state().board.center_coordinates(), 0, straight());
         let x_transform = -(svg_pos.0 - (width / 2.0));
         let y_transform = -(svg_pos.1 - (height / 2.0));
         format!("translate({},{})", x_transform, y_transform)
@@ -36,7 +41,6 @@ pub fn ThumbnailPieces(game: GameResponse) -> impl IntoView {
             class="w-full h-full touch-none"
             xmlns="http://www.w3.org/2000/svg"
         >
-            <Svgs/>
             <g transform=transform>
                 {move || {
                     thumbnail_pieces()

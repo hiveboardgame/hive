@@ -1,7 +1,7 @@
 use crate::common::{Hex, HexStack, HexType, PieceType};
 use crate::components::molecules::analysis_and_download::AnalysisAndDownload;
 use crate::components::molecules::control_buttons::ControlButtons;
-use crate::components::{atoms::svgs::Svgs, molecules::hex_stack::HexStack};
+use crate::components::molecules::hex_stack::HexStack;
 use crate::providers::game_state::{GameStateSignal, View};
 use crate::providers::AuthContext;
 use hive_lib::History;
@@ -180,7 +180,6 @@ pub fn Reserve(
             viewBox=viewbox_str
             xmlns="http://www.w3.org/2000/svg"
         >
-            <Svgs/>
             {pieces_view}
         </svg>
     }

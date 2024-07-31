@@ -67,6 +67,7 @@ pub enum TileDesign {
     #[default]
     Official,
     Flat,
+    ThreeD,
 }
 
 impl fmt::Display for TileDesign {
@@ -74,6 +75,7 @@ impl fmt::Display for TileDesign {
         let name = match self {
             TileDesign::Official => "Official",
             TileDesign::Flat => "Flat",
+            TileDesign::ThreeD => "ThreeD",
         };
         write!(f, "{}", name)
     }
@@ -86,6 +88,7 @@ impl FromStr for TileDesign {
         match s {
             "Official" => Ok(TileDesign::Official),
             "Flat" => Ok(TileDesign::Flat),
+            "ThreeD" => Ok(TileDesign::ThreeD),
             _ => Err(()),
         }
     }
@@ -94,14 +97,16 @@ impl FromStr for TileDesign {
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 pub enum TileDots {
     #[default]
-    Yes,
+    Vertical,
+    Angled,
     No,
 }
 
 impl fmt::Display for TileDots {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let name = match self {
-            TileDots::Yes => "Yes",
+            TileDots::Vertical => "Vertical",
+            TileDots::Angled => "Angled",
             TileDots::No => "No",
         };
         write!(f, "{}", name)
@@ -113,7 +118,8 @@ impl FromStr for TileDots {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Yes" => Ok(TileDots::Yes),
+            "Angled" => Ok(TileDots::Angled),
+            "Vertical" => Ok(TileDots::Vertical),
             "No" => Ok(TileDots::No),
             _ => Err(()),
         }
