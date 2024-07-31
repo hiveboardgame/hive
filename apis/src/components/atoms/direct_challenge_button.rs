@@ -8,15 +8,8 @@ use leptos_icons::*;
 #[component]
 pub fn DirectChallengeButton(user: StoredValue<UserResponse>) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let open = create_rw_signal(false);
-    let dialog_el = create_node_ref::<Dialog>();
-    let close_modal = Callback::new(move |()| {
-        dialog_el
-            .get_untracked()
-            .expect("dialog to have been created")
-            .close();
-    });
-
+    let open = RwSignal::new(false);
+    let dialog_el = NodeRef::<Dialog>::new();
     let logged_in_and_not_user = move || {
         if let Some(Ok(Some(current_user))) = (auth_context.user)() {
             current_user.id != user().uid
@@ -27,7 +20,7 @@ pub fn DirectChallengeButton(user: StoredValue<UserResponse>) -> impl IntoView {
 
     view! {
         <Modal open=open dialog_el=dialog_el>
-            <ChallengeCreate close=close_modal opponent=user().username/>
+            <ChallengeCreate open opponent=user().username/>
         </Modal>
         <Show when=logged_in_and_not_user>
             <button

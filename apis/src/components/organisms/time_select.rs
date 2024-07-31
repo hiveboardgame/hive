@@ -6,6 +6,7 @@ use leptix_primitives::components::radio_group::{RadioGroupItem, RadioGroupRoot}
 use leptos::*;
 use leptos_icons::*;
 use shared_types::{CorrespondenceMode, GameSpeed, TimeMode};
+use std::str::FromStr;
 
 #[component]
 pub fn TimeSelect(
@@ -15,7 +16,6 @@ pub fn TimeSelect(
     allowed_values: Vec<TimeMode>,
 ) -> impl IntoView {
     let time_mode = move || time_signals.time_mode.get();
-    let corresp_selected = RwSignal::new("dpm".to_string());
     let gamespeed_icon = move || {
         let speed = match time_mode() {
             TimeMode::Untimed => GameSpeed::Untimed,
@@ -40,7 +40,10 @@ pub fn TimeSelect(
             <RadioGroupRoot
                 required=true
                 attr:class="flex flex-row gap-2 justify-center"
-                default_value="Real Time"
+                default_value=MaybeProp::derive(move || Some(
+                    time_signals.time_mode.get().to_string(),
+                ))
+
                 on_value_change
             >
                 <Show when=move || allow_realtime>
@@ -97,21 +100,21 @@ pub fn TimeSelect(
                 <RadioGroupRoot
                     required=true
                     attr:class="flex flex-row gap-2 p-2"
-                    default_value="dpm"
-                    on_value_change=move |v| {
-                        if v == "dpm" {
-                            time_signals.corr_mode.set(CorrespondenceMode::DaysPerMove)
-                        } else if v == "tte" {
-                            time_signals.corr_mode.set(CorrespondenceMode::TotalTimeEach)
+                    default_value=MaybeProp::derive(move || Some(
+                        time_signals.corr_mode.get().to_string(),
+                    ))
+
+                    on_value_change=move |v: String| {
+                        if let Ok(new_value) = CorrespondenceMode::from_str(&v) {
+                            time_signals.corr_mode.update(|v| *v = new_value)
                         }
-                        corresp_selected.set(v);
                     }
                 >
 
-                    <RadioGroupItem value="dpm" attr:class=radio_style>
-                        "Per move"
+                    <RadioGroupItem value="Days per move" attr:class=radio_style>
+                        "Days per move"
                     </RadioGroupItem>
-                    <RadioGroupItem value="tte" attr:class=radio_style>
+                    <RadioGroupItem value="Total time each" attr:class=radio_style>
                         "Total time each"
                     </RadioGroupItem>
                 </RadioGroupRoot>

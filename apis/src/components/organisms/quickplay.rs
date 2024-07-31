@@ -73,18 +73,12 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
 }
 #[component]
 pub fn QuickPlay() -> impl IntoView {
-    let open = create_rw_signal(false);
-    let dialog_el = create_node_ref::<Dialog>();
-    let close_modal = Callback::new(move |()| {
-        dialog_el
-            .get_untracked()
-            .expect("dialog to have been created")
-            .close();
-    });
+    let open = RwSignal::new(false);
+    let dialog_el = NodeRef::<Dialog>::new();
     view! {
         <div class="flex flex-col items-center m-2 grow">
-            <Modal open=open dialog_el=dialog_el>
-                <ChallengeCreate close=close_modal/>
+            <Modal open dialog_el=dialog_el>
+                <ChallengeCreate open/>
             </Modal>
             <span class="flex justify-center mb-4 text-xl font-bold">Quick Play</span>
             <div class="grid grid-cols-2 gap-2 place-items-center w-full sm:gap-4 sm:grid-cols-3">

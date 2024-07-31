@@ -1,4 +1,4 @@
-use crate::common::TimeSignals;
+use crate::providers::{AuthContext, ChallengeParams};
 use crate::{
     common::ChallengeAction,
     components::{
@@ -8,125 +8,77 @@ use crate::{
         },
         organisms::time_select::TimeSelect,
     },
-    providers::{ApiRequests, AuthContext},
+    providers::ApiRequests,
 };
 use hive_lib::{ColorChoice, GameType};
 use leptos::*;
-use shared_types::{
-    ChallengeDetails, ChallengeVisibility, CorrespondenceMode, GameSpeed, TimeMode,
-};
+use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
 use std::str::FromStr;
-
-#[derive(Debug, Clone, Copy)]
-pub struct ChallengeParams {
-    pub rated: RwSignal<bool>,
-    pub with_expansions: RwSignal<bool>,
-    pub is_public: RwSignal<bool>,
-    pub opponent: RwSignal<Option<String>>,
-    pub color_choice: RwSignal<ColorChoice>,
-    pub time_base: StoredValue<Option<i32>>,
-    pub time_increment: StoredValue<Option<i32>>,
-    pub band_upper: RwSignal<Option<i32>>,
-    pub band_lower: RwSignal<Option<i32>>,
-}
 
 #[component]
 pub fn ChallengeCreate(
-    close: Callback<()>,
+    open: RwSignal<bool>,
     #[prop(optional)] opponent: Option<String>,
 ) -> impl IntoView {
+    view! {
+        <Show when=open>
+            <ChallengeCreateInner opponent=opponent.clone() open/>
+        </Show>
+    }
+}
+
+#[component]
+fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl IntoView {
+    let params = expect_context::<ChallengeParams>();
     let opponent = store_value(opponent);
-    let params = ChallengeParams {
-        rated: RwSignal::new(true),
-        with_expansions: RwSignal::new(true),
-        is_public: RwSignal::new(true),
-        opponent: RwSignal::new(opponent()),
-        color_choice: RwSignal::new(ColorChoice::Random),
-        time_base: store_value(None),
-        time_increment: store_value(None),
-        band_upper: RwSignal::new(None),
-        band_lower: RwSignal::new(None),
-    };
-    let band_upper = RwSignal::new(550_i32);
-    let band_lower = RwSignal::new(-550_i32);
-    let time_signals = TimeSignals::default();
+    let time_signals = params.time_signals;
+    create_effect(move |_| {
+        let opponent = opponent();
+        if opponent.is_some() {
+            params.opponent.update(|o| *o = opponent);
+        }
+    });
     let create_challenge = Callback::new(move |color_choice| {
-        params.color_choice.update_untracked(|p| *p = color_choice);
         let api = ApiRequests::new();
-        params
-            .band_upper
-            .update_untracked(|v| *v = Some(band_upper.get_untracked()));
-        params
-            .band_lower
-            .update_untracked(|v| *v = Some(band_lower.get_untracked()));
-        match time_signals.time_mode.get() {
-            TimeMode::Untimed => {
-                params.time_base.update_value(|v| *v = None);
-                params.time_increment.update_value(|v| *v = None);
-            }
-            TimeMode::RealTime => {
-                params
-                    .time_base
-                    .update_value(|v| *v = Some(time_signals.total_seconds.get_untracked()));
-                params
-                    .time_increment
-                    .update_value(|v| *v = Some(time_signals.sec_per_move.get_untracked()));
-            }
-            TimeMode::Correspondence => {
-                match time_signals.corr_mode.get_untracked() {
-                    CorrespondenceMode::DaysPerMove => {
-                        params.time_increment.update_value(|v| {
-                            *v = Some(time_signals.corr_days.get_untracked() * 86400)
-                        });
-                        params.time_base.update_value(|v| *v = None);
-                    }
-                    CorrespondenceMode::TotalTimeEach => {
-                        params.time_increment.update_value(|v| *v = None);
-                        params.time_base.update_value(|v| {
-                            *v = Some(time_signals.corr_days.get_untracked() * 86400)
-                        });
-                    }
-                };
-            }
-        };
         let auth_context = expect_context::<AuthContext>();
         let account = move || match (auth_context.user)() {
             Some(Ok(Some(account))) => Some(account),
             _ => None,
         };
+
         let upper_rating = move || {
-            if let (Some(band_upper), Some(account)) =
-                (params.band_upper.get_untracked(), account())
-            {
-                if band_upper > 500 || opponent().is_some() {
+            if let Some(account) = account() {
+                let upper_slider = params.upper_slider.get();
+                if upper_slider > 500 || opponent().is_some() {
                     return None;
                 };
                 // TODO: Make rating update in realtime, currently it becomes stale
                 let rating = account
                     .user
                     .rating_for_speed(&GameSpeed::from_base_increment(
-                        (params.time_base)(),
-                        (params.time_increment)(),
+                        params.time_base.get(),
+                        params.time_increment.get(),
                     ));
-                Some((rating as i32).saturating_add(band_upper))
+                Some((rating as i32).saturating_add(upper_slider))
             } else {
                 None
             }
         };
+
         let lower_rating = move || {
-            if let (Some(band_lower), Some(account)) =
-                (params.band_lower.get_untracked(), account())
-            {
-                if band_lower < -500 || opponent().is_some() {
+            if let Some(account) = account() {
+                let lower_slider = params.lower_slider.get();
+                if lower_slider < -500 || opponent().is_some() {
                     return None;
                 };
+                // TODO: Make rating update in realtime, currently it becomes stale
                 let rating = account
                     .user
                     .rating_for_speed(&GameSpeed::from_base_increment(
-                        (params.time_base)(),
-                        (params.time_increment)(),
+                        params.time_base.get(),
+                        params.time_increment.get(),
                     ));
-                Some((rating as i32).saturating_add(band_lower))
+                Some((rating as i32).saturating_add(lower_slider))
             } else {
                 None
             }
@@ -147,8 +99,8 @@ pub fn ChallengeCreate(
             } else {
                 ChallengeVisibility::Direct
             },
-            opponent: params.opponent.get_untracked(),
-            color_choice: params.color_choice.get_untracked(),
+            opponent: opponent(),
+            color_choice,
             time_mode: time_signals.time_mode.get_untracked(),
             time_base: (params.time_base)(),
             time_increment: (params.time_increment)(),
@@ -157,28 +109,30 @@ pub fn ChallengeCreate(
         };
         let challenge_action = ChallengeAction::Create(details);
         api.challenge(challenge_action);
-        close(());
+        open.set(false);
     });
 
     let rating_string = move || {
+        let lower = params.lower_slider.get();
+        let upper = params.upper_slider.get();
         format!(
             "{}/+{}",
-            if band_lower() < -500 {
+            if lower < -500 {
                 "-∞".to_owned()
             } else {
-                band_lower.get().to_string()
+                lower.to_string()
             },
-            if band_upper() > 500 {
+            if upper > 500 {
                 "∞".to_owned()
             } else {
-                band_upper().to_string()
+                upper.to_string()
             }
         )
     };
 
     let time_change = Callback::from(move |s: String| {
         if let Ok(new_value) = TimeMode::from_str(&s) {
-            time_signals.corr_days.update_untracked(|v| *v = 2);
+            time_signals.corr_days.update(|v| *v = 2);
             if new_value == TimeMode::Untimed {
                 params.rated.set(false);
             }
@@ -238,7 +192,7 @@ pub fn ChallengeCreate(
                     <div class="flex gap-1 mx-1">
                         <label class="flex items-center">
                             <InputSlider
-                                signal_to_update=band_lower
+                                signal_to_update=params.lower_slider
                                 name="above"
                                 min=-550
                                 max=0
@@ -247,7 +201,7 @@ pub fn ChallengeCreate(
                         </label>
                         <label class="flex items-center">
                             <InputSlider
-                                signal_to_update=band_upper
+                                signal_to_update=params.upper_slider
                                 name="below"
                                 min=0
                                 max=550

@@ -1,6 +1,7 @@
 mod alerts;
 mod api_requests;
 mod auth_context;
+mod challenge_params;
 pub mod challenges;
 pub mod chat;
 mod color_scheme;
@@ -21,6 +22,7 @@ pub mod websocket;
 pub use alerts::{provide_alerts, AlertType, AlertsContext};
 pub use api_requests::ApiRequests;
 pub use auth_context::{provide_auth, AuthContext};
+pub use challenge_params::{provide_challenge_params, ChallengeParams};
 pub use color_scheme::{provide_color_scheme, ColorScheme};
 pub use config::{provide_config, Config};
 pub use notifications::{provide_notifications, NotificationContext};

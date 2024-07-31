@@ -3,7 +3,7 @@ use wasm_bindgen::JsCast;
 
 #[component]
 pub fn Modal(
-    #[prop(into)] open: Signal<bool>,
+    open: RwSignal<bool>,
     children: Children,
     dialog_el: NodeRef<Dialog>,
 ) -> impl IntoView {
@@ -21,6 +21,7 @@ pub fn Modal(
                 .expect("Event target")
                 .unchecked_into::<web_sys::HtmlDialogElement>()
                 .close();
+            open.set(false);
         }
     };
 
@@ -40,14 +41,14 @@ pub fn Modal(
         <dialog
             ref=dialog_el
             open=open.get_untracked()
-            class="shadow-xl drop-shadow-xl rounded-lg backdrop:backdrop-blur bg-stone-300 dark:bg-gray-600 dark:border-gray-500 border "
+            class="rounded-lg border shadow-xl drop-shadow-xl backdrop:backdrop-blur bg-stone-300 dark:bg-gray-600 dark:border-gray-500"
             // clicking on ::backdrop should dismiss modal
             on:click=on_click
         >
             <header class="flex justify-end">
                 <form class="m-2" method="dialog">
                     <button
-                        class="hover:bg-ladybug-red duration-300 active:scale-95 rounded-full w-5 h-5 flex items-center justify-center"
+                        class="flex justify-center items-center w-5 h-5 rounded-full duration-300 hover:bg-ladybug-red active:scale-95"
                         aria-label="Close"
                     >
                         x

@@ -33,6 +33,7 @@ pub fn CreateChallengeButton(
     view! {
         <button
             title=color_choice().to_string()
+            formmethod="dialog"
             class=format!(
                 "m-1 h-[4.5rem] w-16 bg-odd-light dark:bg-gray-700 my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded",
             )
