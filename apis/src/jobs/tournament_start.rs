@@ -7,6 +7,8 @@ use crate::websockets::messages::ClientActorMessage;
 use crate::websockets::ws_server::WsServer;
 use actix::Addr;
 use actix_web::web::Data;
+use codee::binary::MsgpackSerdeCodec;
+use codee::Encoder;
 use db_lib::{get_conn, models::Tournament, DbPool};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
@@ -84,6 +86,8 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                     let serialized = serde_json::to_string(&ServerResult::Ok(
                                         Box::new(message.message),
                                     ))
+                                    .expect("Failed to serialize a server message");
+                                    let serialized = MsgpackSerdeCodec::encode(&serialized)
                                     .expect("Failed to serialize a server message");
                                     let cam = ClientActorMessage {
                                         destination: message.destination,

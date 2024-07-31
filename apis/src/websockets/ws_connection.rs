@@ -12,12 +12,13 @@ use actix::{
     fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
     Running, StreamHandler, WrapFuture,
 };
-use actix_web_actors::ws::{self, Message::Text};
+use actix_web_actors::ws::{self};
 use anyhow::Result;
 use db_lib::DbPool;
 use shared_types::SimpleUser;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
+use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -123,9 +124,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             Ok(ws::Message::Pong(_)) => {
                 self.hb = Instant::now();
             }
-            Ok(ws::Message::Binary(bin)) => {
-                println!("Got bin message, we don't do these here...");
-                ctx.binary(bin)
+            Ok(ws::Message::Text(bin)) => {
+                println!("Got text message, we don't do these here...");
+                ctx.text(bin)
             }
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
@@ -135,8 +136,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 ctx.stop();
             }
             Ok(ws::Message::Nop) => (),
-            Ok(Text(s)) => {
-                if let Ok(request) = serde_json::from_str::<ClientRequest>(s.as_ref()) {
+            Ok(ws::Message::Binary(s)) => {
+                let request: Result<String,_> = MsgpackSerdeCodec::decode(&s);
+                let request = serde_json::from_str::<ClientRequest>(request.unwrap().as_ref());
+                    if let Ok(request) = request {
                     let pool = self.pool.clone();
                     let lobby = self.wss_addr.clone();
                     let user_id = self.user_uid;
@@ -172,6 +175,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                         Box::new(message.message),
                                     ))
                                     .expect("Failed to serialize a server message");
+                                    let serialized = MsgpackSerdeCodec::encode(&serialized)
+                                    .expect("Failed to serialize a server message");
                                     let cam = ClientActorMessage {
                                         destination: message.destination,
                                         serialized,
@@ -198,6 +203,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                 });
                                 let serialized = serde_json::to_string(&message)
                                     .expect("Failed to serialize a server message");
+                                let serialized = MsgpackSerdeCodec::encode(&serialized)
+                                .expect("Failed to serialize a server message");
                                 let cam = ClientActorMessage {
                                     destination: MessageDestination::User(user_id),
                                     serialized,
@@ -224,6 +231,6 @@ impl Handler<WsMessage> for WsConnection {
     type Result = ();
 
     fn handle(&mut self, msg: WsMessage, ctx: &mut Self::Context) {
-        ctx.text(msg.0);
+        ctx.binary(msg.0);
     }
 }

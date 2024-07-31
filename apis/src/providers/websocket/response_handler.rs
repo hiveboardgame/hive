@@ -10,7 +10,7 @@ use super::{
 };
 
 pub fn handle_response(m: &String) {
-    batch(move || match serde_json::from_str::<ServerResult>(&m) {
+    batch(move || match serde_json::from_str::<ServerResult>(m) {
         Ok(result) => match result {
             ServerResult::Ok(message) => match *message {
                 Ping { value, nonce } => handle_ping(nonce, value),

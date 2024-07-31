@@ -16,6 +16,8 @@ use actix::{
     AsyncContext, WrapFuture,
 };
 use actix_web::web::Data;
+use codee::binary::MsgpackSerdeCodec;
+use codee::Encoder;
 use db_lib::{
     get_conn,
     models::{Challenge, Game, Tournament, TournamentInvitation, User},
@@ -53,7 +55,7 @@ impl WsServer {
 }
 
 impl WsServer {
-    fn send_message(&self, message: &str, id_to: &Uuid) {
+    fn send_message(&self, message: &Vec<u8>, id_to: &Uuid) {
         if let Some(sockets) = self.sessions.get(id_to) {
             for socket in sockets {
                 socket.do_send(WsMessage(message.to_owned()));
@@ -80,6 +82,8 @@ impl Handler<Ping> for WsServer {
             }));
             let serialized =
                 serde_json::to_string(&message).expect("Failed to serialize a server message");
+            let serialized = MsgpackSerdeCodec::encode(&serialized)
+            .expect("Failed to serialize a server message");
             self.send_message(&serialized, user_id);
         }
     }
@@ -112,6 +116,8 @@ impl Handler<GameHB> for WsServer {
                                 )));
                                 let serialized = serde_json::to_string(&message)
                                     .expect("Failed to serialize a server message");
+                                let serialized = MsgpackSerdeCodec::encode(&serialized)
+                                .expect("Failed to serialize a server message");
                                 for user_id in user_ids {
                                     if let Some(sockets) = sessions.get(&user_id) {
                                         for socket in sockets {
@@ -163,6 +169,8 @@ impl Handler<Disconnect> for WsServer {
             })));
             let serialized =
                 serde_json::to_string(&message).expect("Failed to serialize a server message");
+            let serialized = MsgpackSerdeCodec::encode(&serialized)
+            .expect("Failed to serialize a server message");
             let game_id = GameId(self.id.clone());
             if let Some(ws_server) = self.games_users.get_mut(&game_id) {
                 ws_server.remove(&msg.user_id);
@@ -210,6 +218,8 @@ impl Handler<Connect> for WsServer {
                             })));
                         let serialized = serde_json::to_string(&message)
                             .expect("Failed to serialize a server message");
+                        let serialized = MsgpackSerdeCodec::encode(&serialized)
+                        .expect("Failed to serialize a server message");
                         let cam = ClientActorMessage {
                             destination: MessageDestination::User(user_id),
                             serialized,
@@ -229,6 +239,8 @@ impl Handler<Connect> for WsServer {
                             })));
                         let serialized = serde_json::to_string(&message)
                             .expect("Failed to serialize a server message");
+                        let serialized = MsgpackSerdeCodec::encode(&serialized)
+                        .expect("Failed to serialize a server message");
                         // TODO: one needs to be a game::join to everyone in the game, the other one just to the
                         // ws_server that the user came online
                         if let Some(user_ids) = games_users.get(&GameId(msg.game_id)) {
@@ -272,6 +284,8 @@ impl Handler<Connect> for WsServer {
                             )));
                             let serialized = serde_json::to_string(&message)
                                 .expect("Failed to serialize a server message");
+                            let serialized = MsgpackSerdeCodec::encode(&serialized)
+                            .expect("Failed to serialize a server message");
                             let cam = ClientActorMessage {
                                 destination: MessageDestination::User(user_id),
                                 serialized,
@@ -294,6 +308,8 @@ impl Handler<Connect> for WsServer {
                                 ));
                                 let serialized = serde_json::to_string(&message)
                                     .expect("Failed to serialize a server message");
+                                let serialized = MsgpackSerdeCodec::encode(&serialized)
+                                .expect("Failed to serialize a server message");
                                 let cam = ClientActorMessage {
                                     destination: MessageDestination::User(user_id),
                                     serialized,
@@ -338,7 +354,8 @@ impl Handler<Connect> for WsServer {
                     let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
                         ChallengeUpdate::Challenges(responses),
                     )));
-                    serde_json::to_string(&message).expect("Failed to serialize a server message")
+                    let message =serde_json::to_string(&message).expect("Failed to serialize a server message");
+                    MsgpackSerdeCodec::encode(&message).expect("Failed to serialize a server message")
                 } else {
                     let mut responses = Vec::new();
                     if let Ok(challenges) = Challenge::get_public(&mut conn).await {
@@ -353,7 +370,8 @@ impl Handler<Connect> for WsServer {
                     let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
                         ChallengeUpdate::Challenges(responses),
                     )));
-                    serde_json::to_string(&message).expect("Failed to serialize a server message")
+                    let message =serde_json::to_string(&message).expect("Failed to serialize a server message");
+                    MsgpackSerdeCodec::encode(&message).expect("Failed to serialize a server message")
                 };
                 let cam = ClientActorMessage {
                     destination: MessageDestination::User(user_id),

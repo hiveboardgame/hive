@@ -1,12 +1,12 @@
 use super::response_handler::handle_response;
 use crate::functions::hostname::hostname_and_port;
-use codee::string::FromToStringCodec;
 use lazy_static::lazy_static;
 use leptos::*;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::*;
 use regex::Regex;
 use std::rc::Rc;
+use codee::binary::MsgpackSerdeCodec;
 
 lazy_static! {
     static ref NANOID: Regex =
@@ -85,7 +85,7 @@ pub fn provide_websocket(url: &str) {
         open,
         close,
         ..
-    } = use_websocket_with_options::<String, FromToStringCodec>(
+    } = use_websocket_with_options::<String, MsgpackSerdeCodec>(
         &url,
         UseWebSocketOptions::default()
             .on_message(on_message_callback)
