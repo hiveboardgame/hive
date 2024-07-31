@@ -32,7 +32,7 @@ serde_json = { version = "1" }
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
-codee = "0.1.2"
+codee = { version = "0.1.2", features = ["msgpack_serde"] }
 regex = "1.10"
 http = "1.1.0"
 log = "0.4.22"

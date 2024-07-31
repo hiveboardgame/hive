@@ -1,6 +1,6 @@
 use super::tournament_game_start::TournamentGameStart;
 use super::{api::request_handler::RequestHandler, internal_server_message::MessageDestination};
-use crate::common::{ClientRequest, ExternalServerError, ServerResult};
+use crate::common::{CommonMessage, ExternalServerError, ServerResult};
 use crate::lag_tracking::lags::Lags;
 use crate::ping::pings::Pings;
 use crate::websockets::{
@@ -12,8 +12,9 @@ use actix::{
     fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
     Running, StreamHandler, WrapFuture,
 };
-use actix_web_actors::ws::{self, Message::Text};
+use actix_web_actors::ws::{self};
 use anyhow::Result;
+use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 use db_lib::DbPool;
 use shared_types::SimpleUser;
 use std::time::{Duration, Instant};
@@ -123,9 +124,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             Ok(ws::Message::Pong(_)) => {
                 self.hb = Instant::now();
             }
-            Ok(ws::Message::Binary(bin)) => {
-                println!("Got bin message, we don't do these here...");
-                ctx.binary(bin)
+            Ok(ws::Message::Text(bin)) => {
+                println!("Got text message, we don't do these here...");
+                ctx.text(bin)
             }
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
@@ -135,8 +136,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                 ctx.stop();
             }
             Ok(ws::Message::Nop) => (),
-            Ok(Text(s)) => {
-                if let Ok(request) = serde_json::from_str::<ClientRequest>(s.as_ref()) {
+            Ok(ws::Message::Binary(s)) => {
+                let request: Result<CommonMessage, _> = MsgpackSerdeCodec::decode(&s);
+                if let Ok(CommonMessage::Client(request)) = request {
                     let pool = self.pool.clone();
                     let lobby = self.wss_addr.clone();
                     let user_id = self.user_uid;
@@ -168,10 +170,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                         match handler_result {
                             Ok(messages) => {
                                 for message in messages {
-                                    let serialized = serde_json::to_string(&ServerResult::Ok(
+                                    let serialized = CommonMessage::Server(ServerResult::Ok(
                                         Box::new(message.message),
-                                    ))
-                                    .expect("Failed to serialize a server message");
+                                    ));
+                                    let serialized = MsgpackSerdeCodec::encode(&serialized)
+                                        .expect("Failed to serialize a server message");
                                     let cam = ClientActorMessage {
                                         destination: message.destination,
                                         serialized,
@@ -196,7 +199,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                     reason: format!("{err}"),
                                     status_code: http::StatusCode::NOT_IMPLEMENTED,
                                 });
-                                let serialized = serde_json::to_string(&message)
+                                let serialized = CommonMessage::Server(message);
+                                let serialized = MsgpackSerdeCodec::encode(&serialized)
                                     .expect("Failed to serialize a server message");
                                 let cam = ClientActorMessage {
                                     destination: MessageDestination::User(user_id),
@@ -224,6 +228,6 @@ impl Handler<WsMessage> for WsConnection {
     type Result = ();
 
     fn handle(&mut self, msg: WsMessage, ctx: &mut Self::Context) {
-        ctx.text(msg.0);
+        ctx.binary(msg.0);
     }
 }

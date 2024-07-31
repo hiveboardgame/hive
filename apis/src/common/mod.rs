@@ -24,8 +24,8 @@ pub use move_info::MoveInfo;
 pub use piece_type::PieceType;
 pub use rating_change_info::RatingChangeInfo;
 pub use server_result::{
-    ChallengeUpdate, ExternalServerError, GameActionResponse, GameUpdate, ServerMessage,
-    ServerResult, TournamentUpdate, UserStatus, UserUpdate,
+    ChallengeUpdate, CommonMessage, ExternalServerError, GameActionResponse, GameUpdate,
+    ServerMessage, ServerResult, TournamentUpdate, UserStatus, UserUpdate,
 };
 pub use svg_pos::SvgPos;
 pub use time_signals::TimeSignals;
