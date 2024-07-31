@@ -173,14 +173,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                     let serialized = CommonMessage::Server(ServerResult::Ok(
                                         Box::new(message.message),
                                     ));
-                                    let serialized = MsgpackSerdeCodec::encode(&serialized)
-                                        .expect("Failed to serialize a server message");
-                                    let cam = ClientActorMessage {
-                                        destination: message.destination,
-                                        serialized,
-                                        from: Some(user_id),
+                                    if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+                                        let cam = ClientActorMessage {
+                                            destination: message.destination,
+                                            serialized,
+                                            from: Some(user_id),
+                                        };
+                                        lobby.do_send(cam);
                                     };
-                                    lobby.do_send(cam);
                                 }
                             }
                             Err(err) => {
@@ -200,14 +200,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                     status_code: http::StatusCode::NOT_IMPLEMENTED,
                                 });
                                 let serialized = CommonMessage::Server(message);
-                                let serialized = MsgpackSerdeCodec::encode(&serialized)
-                                    .expect("Failed to serialize a server message");
-                                let cam = ClientActorMessage {
-                                    destination: MessageDestination::User(user_id),
-                                    serialized,
-                                    from: Some(user_id),
+                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+                                    let cam = ClientActorMessage {
+                                        destination: MessageDestination::User(user_id),
+                                        serialized,
+                                        from: Some(user_id),
+                                    };
+                                    lobby.do_send(cam);
                                 };
-                                lobby.do_send(cam);
                             }
                         }
                     };

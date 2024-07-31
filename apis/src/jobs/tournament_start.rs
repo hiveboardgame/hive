@@ -87,14 +87,14 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                     let serialized = CommonMessage::Server(ServerResult::Ok(
                                         Box::new(message.message),
                                     ));
-                                    let serialized = MsgpackSerdeCodec::encode(&serialized)
-                                        .expect("Failed to serialize a server message");
-                                    let cam = ClientActorMessage {
-                                        destination: message.destination,
-                                        serialized,
-                                        from: None,
+                                    if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+                                        let cam = ClientActorMessage {
+                                            destination: message.destination,
+                                            serialized,
+                                            from: None,
+                                        };
+                                        ws_server.do_send(cam);
                                     };
-                                    ws_server.do_send(cam);
                                 }
                             }
                             Ok(())
