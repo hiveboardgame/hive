@@ -1,7 +1,8 @@
+use std::collections::HashMap;
+
 use crate::{
     common::ScheduleUpdate::{self, *},
     providers::schedules::SchedulesContext,
-    responses::ScheduleResponse,
 };
 use leptos::{expect_context, SignalSet, SignalUpdate};
 
@@ -10,39 +11,47 @@ pub fn handle_schedule(schedule_update: ScheduleUpdate) {
 
     match schedule_update {
         Accepted(response) => {
-            ctx.tournament.update(|v: &mut Vec<ScheduleResponse>| {
-                v.iter_mut().for_each(|k| {
-                    if k.game_id == response.game_id {
-                        k.start_t = response.start_t;
-                        k.agreed = true;
+            ctx.tournament.update(|h| {
+                if let Some(schedules) = h.get_mut(&response.game_id) {
+                    for (_, schedule) in schedules.iter_mut() {
+                        schedule.agreed = false;
                     }
-                });
+                    schedules.insert(response.id, response.clone());
+                } else {
+                    let mut new_schedules = HashMap::new();
+                    new_schedules.insert(response.id, response.clone());
+                    h.insert(response.game_id.clone(), new_schedules);
+                }
             });
-            ctx.own.update(|v| {
-                if let Some(v) = v.get_mut(&response.game_id) {
-                    v.iter_mut().for_each(|s| s.agreed = response.id == s.id)
+            ctx.own.update(|h| {
+                if let Some(schedules) = h.get_mut(&response.game_id) {
+                    for (_, schedule) in schedules.iter_mut() {
+                        schedule.agreed = false;
+                    }
+                    schedules.insert(response.id, response);
                 }
             });
         }
         Proposed(response) => {
-            ctx.own.update(|v| {
-                if let Some(schedules) = v.get_mut(&response.game_id) {
-                    schedules.retain(|s| s.id != response.id);
-                    schedules.push(response);
+            ctx.own.update(|h| {
+                if let Some(schedules) = h.get_mut(&response.game_id) {
+                    schedules.insert(response.id, response);
+                } else {
+                    let mut new_schedules = HashMap::new();
+                    new_schedules.insert(response.id, response.clone());
+                    h.insert(response.game_id, new_schedules);
                 }
             });
         }
         Deleted(response) => {
-            ctx.tournament.update(|v: &mut Vec<ScheduleResponse>| {
-                v.iter_mut().for_each(|k| {
-                    if k.game_id == response.game_id {
-                        k.agreed = false;
-                    }
-                });
+            ctx.tournament.update(|h| {
+                if let Some(schedules) = h.get_mut(&response.game_id) {
+                    schedules.remove(&response.id);
+                }
             });
-            ctx.own.update(|v| {
-                if let Some(s) = v.get_mut(&response.game_id) {
-                    s.retain(|s| s.id != response.id)
+            ctx.own.update(|h| {
+                if let Some(schedules) = h.get_mut(&response.game_id) {
+                    schedules.remove(&response.id);
                 }
             });
         }

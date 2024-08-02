@@ -6,8 +6,9 @@ use leptos::*;
 #[component]
 pub fn TournamentAdminControls(
     user_is_organizer: bool,
-    tournament: StoredValue<TournamentResponse>,
+    tournament: TournamentResponse,
 ) -> impl IntoView {
+    let tournament = store_value(tournament);
     let user_kick = move || {
         if user_is_organizer {
             vec![UserAction::Kick(Box::new(tournament()))]

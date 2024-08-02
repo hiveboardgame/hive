@@ -116,6 +116,6 @@ pub enum ScheduleUpdate {
     Proposed(ScheduleResponse),
     Accepted(ScheduleResponse),
     Deleted(ScheduleResponse),
-    TournamentSchedules(Vec<ScheduleResponse>),
-    OwnTournamentSchedules(HashMap<Uuid, Vec<ScheduleResponse>>),
+    TournamentSchedules(HashMap<GameId, HashMap<Uuid, ScheduleResponse>>),
+    OwnTournamentSchedules(HashMap<GameId, HashMap<Uuid, ScheduleResponse>>),
 }

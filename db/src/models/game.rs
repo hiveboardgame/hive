@@ -1052,14 +1052,14 @@ impl Game {
     pub async fn get_ongoing_ids_for_tournament(
         tournament_id_: Uuid,
         conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Uuid>, DbError> {
+    ) -> Result<Vec<String>, DbError> {
         Ok(games::table
             .filter(
                 games::tournament_id
                     .eq(tournament_id_)
                     .and(games::finished.eq(false)),
             )
-            .select(games::id)
+            .select(games::nanoid)
             .get_results(conn)
             .await?)
     }
@@ -1068,7 +1068,7 @@ impl Game {
         tournament_id_: Uuid,
         user_id: Uuid,
         conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Uuid>, DbError> {
+    ) -> Result<Vec<String>, DbError> {
         Ok(games::table
             .filter(
                 games::tournament_id.eq(tournament_id_).and(
@@ -1077,7 +1077,7 @@ impl Game {
                         .and(games::white_id.eq(user_id).or(games::black_id.eq(user_id))),
                 ),
             )
-            .select(games::id)
+            .select(games::nanoid)
             .get_results(conn)
             .await?)
     }

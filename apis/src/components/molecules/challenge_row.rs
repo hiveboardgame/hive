@@ -153,7 +153,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             <td class=td_class>
                 <div class="flex justify-center items-center">
                     <TimeRow
-                        time_info
+                        time_info=time_info.into()
                         extend_tw_classes="break-words max-w-[40px] sm:max-w-fit sm:whitespace-nowrap"
                     />
                 </div>

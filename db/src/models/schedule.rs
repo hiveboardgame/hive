@@ -1,7 +1,7 @@
 use super::Game;
-use crate::db_error::DbError;
 use crate::schema::schedules;
 use crate::DbConn;
+use crate::{db_error::DbError, schema::games};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -13,6 +13,7 @@ use uuid::Uuid;
 #[diesel(table_name = schedules)]
 pub struct NewSchedule {
     game_id: Uuid,
+    tournament_id: Uuid,
     proposer_id: Uuid,
     start_t: DateTime<Utc>,
     opponent_id: Uuid,
@@ -30,6 +31,12 @@ impl NewSchedule {
         if !game.user_is_player(user_id) {
             return Err(DbError::Unauthorized);
         }
+        if game.tournament_id.is_none() {
+            return Err(DbError::InvalidInput {
+                info: String::from("NewSchedule::new failed"),
+                error: String::from("Tournament id was None"),
+            });
+        }
         let opponent_id = if game.white_id == user_id {
             game.black_id
         } else {
@@ -37,6 +44,7 @@ impl NewSchedule {
         };
         Ok(Self {
             game_id: game.id,
+            tournament_id: game.tournament_id.expect("Game has tournament_id"),
             proposer_id: user_id,
             start_t,
             opponent_id,
@@ -53,6 +61,7 @@ impl NewSchedule {
 pub struct Schedule {
     pub id: Uuid,
     pub game_id: Uuid,
+    pub tournament_id: Uuid,
     pub proposer_id: Uuid,
     pub opponent_id: Uuid,
     pub start_t: DateTime<Utc>,
@@ -61,7 +70,7 @@ pub struct Schedule {
 
 impl Schedule {
     pub async fn accept(&mut self, user_id: Uuid, conn: &mut DbConn<'_>) -> Result<usize, DbError> {
-        if !self.is_player(user_id) || self.is_proposer(user_id) {
+        if self.opponent_id != user_id {
             return Err(DbError::Unauthorized);
         }
         //unset all schedules for this game
@@ -83,7 +92,7 @@ impl Schedule {
         user_id: Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
-        if schedule.proposer_id != user_id && schedule.opponent_id != user_id {
+        if schedule.proposer_id != user_id || schedule.opponent_id == user_id {
             return Err(DbError::Unauthorized);
         }
         Ok(schedule
@@ -116,20 +125,16 @@ impl Schedule {
         Ok(schedules::table.find(id).get_result(conn).await?)
     }
 
-    pub async fn all_from_game_id(game_id: Uuid, conn: &mut DbConn<'_>) -> Vec<Self> {
-        let res = schedules::table
-            .filter(schedules::game_id.eq(game_id))
+    pub async fn all_from_nanoid(
+        game_id: String,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Self>, DbError> {
+        Ok(schedules::table
+            .inner_join(games::table)
+            .filter(games::nanoid.eq(game_id))
+            .select(schedules::all_columns)
             .get_results(conn)
-            .await;
-        if let Ok(game_schedules) = res {
-            game_schedules
-        } else {
-            vec![]
-        }
-    }
-
-    fn is_proposer(&self, user_id: Uuid) -> bool {
-        self.proposer_id == user_id
+            .await?)
     }
 
     fn is_player(&self, user_id: Uuid) -> bool {

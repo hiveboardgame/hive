@@ -7,7 +7,7 @@ pub fn DateTimePicker(
     min: DateTime<Local>,
     max: DateTime<Local>,
     success_callback: Callback<DateTime<Utc>>,
-    failure_callback: Callback<()>,
+    #[prop(optional)] failure_callback: Option<Callback<()>>,
 ) -> impl IntoView {
     view! {
         <label>{text}</label>
@@ -15,6 +15,7 @@ pub fn DateTimePicker(
             type="datetime-local"
             id="start-time"
             name="start-time"
+            class="p-1 rounded-md"
             attr:min=move || { min.format("%Y-%m-%dT%H:%M").to_string() }
 
             attr:max=move || { max.format("%Y-%m-%dT%H:%M").to_string() }
@@ -34,7 +35,7 @@ pub fn DateTimePicker(
                         let utc = local.to_utc();
                         success_callback(utc);
                     }
-                } else {
+                } else if let Some(failure_callback) = failure_callback {
                     failure_callback(());
                 }
             }
