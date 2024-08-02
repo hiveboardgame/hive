@@ -1,16 +1,33 @@
 use crate::{common::TileDesign, providers::Config};
+use lazy_static::lazy_static;
 use leptos::*;
-
 use leptos_router::ActionForm;
+use leptos_use::use_window;
+
+lazy_static! {
+    pub static ref NOT_APPLE: bool =
+        if let Some(Ok(user_agent)) = use_window().navigator().map(|n| n.user_agent()) {
+            !(user_agent.contains("Safari")
+                || user_agent.contains("iPhone")
+                || user_agent.contains("iPad")
+                || user_agent.contains("iPod"))
+        } else {
+            true
+        };
+}
 
 #[component]
 pub fn TileDesignToggle() -> impl IntoView {
+    let good_software = RwSignal::new(false);
+    create_effect(move |_| good_software.update(|b| *b = *NOT_APPLE));
     view! {
         <p class="m-1 text-black dark:text-white">Piece style:</p>
         <div class="flex">
             <TileDesignButton tile_design=TileDesign::Official/>
             <TileDesignButton tile_design=TileDesign::Flat/>
-            <TileDesignButton tile_design=TileDesign::ThreeD/>
+            <Show when=good_software>
+                <TileDesignButton tile_design=TileDesign::ThreeD/>
+            </Show>
         </div>
     }
 }
