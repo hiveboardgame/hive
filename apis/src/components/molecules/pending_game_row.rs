@@ -35,7 +35,10 @@ pub fn PendingGameRow(schedule: Option<DateTime<Utc>>, game: GameResponse) -> im
                         {format!("({})", game.black_rating())}
                     </div>
                 </div>
-                <div class=format!("flex {}", if schedule.is_some() {"font-bold"} else {""})>{date_str}</div>
+                <div class=format!(
+                    "flex {}",
+                    if schedule.is_some() { "font-bold" } else { "" },
+                )>{date_str}</div>
             </div>
             <a
                 class="flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"

@@ -4,7 +4,7 @@ use crate::components::molecules::{
     tournament_invitation_row::TournamentInvitationNotification,
 };
 use crate::providers::challenges::ChallengeStateSignal;
-use crate::providers::tournaments::TournamentStateSignal;
+use crate::providers::tournaments::TournamentStateContext;
 use crate::providers::NotificationContext;
 use crate::responses::TournamentResponse;
 use leptos::*;
@@ -16,7 +16,7 @@ pub fn NotificationDropdown() -> impl IntoView {
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
     let notifications_context = store_value(expect_context::<NotificationContext>());
     let challenges = expect_context::<ChallengeStateSignal>();
-    let tournaments = expect_context::<TournamentStateSignal>();
+    let tournaments = expect_context::<TournamentStateContext>();
     let has_notifications = move || !notifications_context().is_empty();
     let icon_style = TextProp::from(move || {
         if has_notifications() {
@@ -32,7 +32,7 @@ pub fn NotificationDropdown() -> impl IntoView {
             .iter()
             .map(move |id| {
                 tournaments
-                    .signal
+                    .full
                     .get()
                     .tournaments
                     .get(id)
@@ -94,7 +94,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                     <div on:click=onclick_close>
                         <TournamentStartedNotification tournament=store_value(
                             tournaments
-                                .signal
+                                .full
                                 .get_untracked()
                                 .tournaments
                                 .get(&tournament_id)

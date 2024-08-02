@@ -32,4 +32,5 @@ pub use server_result::{
 pub use svg_pos::SvgPos;
 pub use time_signals::TimeSignals;
 pub use tournament_action::TournamentAction;
+pub use tournament_action::TournamentResponseDepth;
 pub use user_action::UserAction;

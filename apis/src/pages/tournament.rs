@@ -11,7 +11,7 @@ use crate::components::{
 };
 use crate::providers::{
     navigation_controller::NavigationControllerSignal, schedules::SchedulesContext,
-    tournaments::TournamentStateSignal, ApiRequests, AuthContext,
+    tournaments::TournamentStateContext, ApiRequests, AuthContext,
 };
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::{DateTime, Duration, Local, Utc};
@@ -27,12 +27,12 @@ const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 fon
 #[component]
 pub fn Tournament() -> impl IntoView {
     let navi = expect_context::<NavigationControllerSignal>();
-    let tournaments = expect_context::<TournamentStateSignal>();
+    let tournaments = expect_context::<TournamentStateContext>();
     let tournament_id = move || navi.tournament_signal.get().tournament_id;
     let current_tournament = move || {
         tournament_id().and_then(|tournament_id| {
             tournaments
-                .signal
+                .full
                 .get()
                 .tournaments
                 .get(&tournament_id)
