@@ -1,11 +1,11 @@
-use html::Div;
-use leptos::*;
+use super::profile_view::ProfileGamesView;
 use crate::{
-    functions::users::get::get_finished_games_in_batches, pages::profile_view::ProfileGamesContext,
     components::molecules::game_row::GameRow,
     components::organisms::display_profile::DisplayProfile,
+    functions::users::get::get_finished_games_in_batches, pages::profile_view::ProfileGamesContext,
 };
-use super::profile_view::ProfileGamesView;
+use html::Div;
+use leptos::*;
 use leptos_router::A;
 use leptos_use::{use_infinite_scroll_with_options, UseInfiniteScrollOptions};
 

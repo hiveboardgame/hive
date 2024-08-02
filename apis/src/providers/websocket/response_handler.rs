@@ -5,8 +5,9 @@ use leptos::*;
 
 use super::{
     challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
-    ping::handle::handle_ping, tournament::handler::handle_tournament,
-    user_search::handle::handle_user_search, user_status::handle::handle_user_status,
+    ping::handle::handle_ping, schedule::handler::handle_schedule,
+    tournament::handler::handle_tournament, user_search::handle::handle_user_search,
+    user_status::handle::handle_user_status,
 };
 
 pub fn handle_response(m: &CommonMessage) {
@@ -20,6 +21,7 @@ pub fn handle_response(m: &CommonMessage) {
                 Chat(message) => handle_chat(message),
                 UserSearch(results) => handle_user_search(results),
                 Tournament(tournament_update) => handle_tournament(tournament_update),
+                Schedule(schedule_update) => handle_schedule(schedule_update),
                 todo => {
                     log!("Got {todo:?} which is currently still unimplemented");
                 }

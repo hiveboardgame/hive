@@ -37,7 +37,7 @@ pub fn TournamentInvitationNotification(tournament: RwSignal<TournamentResponse>
                     <div>{tournament().name}</div>
                 </div>
                 <div class=div_class>
-                    <TimeRow time_info/>
+                    <TimeRow time_info=time_info.into()/>
                 </div>
                 <div class=div_class>
                     <div>Players: {seats_taken}</div>

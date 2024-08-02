@@ -1,7 +1,7 @@
 use super::challenges::ChallengeStateSignal;
 use super::games::GamesSignal;
 use super::AuthContext;
-use crate::common::{ChallengeAction, TournamentAction};
+use crate::common::{ChallengeAction, ScheduleAction, TournamentAction};
 use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
 use crate::responses::create_challenge_handler;
@@ -144,5 +144,10 @@ impl ApiRequests {
             let msg = ClientRequest::UserSearch(pattern);
             self.websocket.send(&msg);
         }
+    }
+
+    pub fn schedule_action(&self, action: ScheduleAction) {
+        let msg = ClientRequest::Schedule(action);
+        self.websocket.send(&msg);
     }
 }

@@ -1,5 +1,6 @@
 use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
+use super::schedules::ScheduleHandler;
 use super::search::handler::UserSearchHandler;
 use crate::common::{ClientRequest, GameAction};
 use crate::lag_tracking::lags::Lags;
@@ -136,6 +137,16 @@ impl RequestHandler {
                     .await?
             }
             ClientRequest::Away => UserStatusHandler::new().await?.handle().await?,
+            ClientRequest::Schedule(action) => {
+                match action {
+                    crate::common::ScheduleAction::TournamentPublic(_) => {}
+                    _ => self.ensure_auth()?,
+                }
+                ScheduleHandler::new(self.user_id, action, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
         };
         Ok(messages)
     }

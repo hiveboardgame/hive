@@ -4,7 +4,7 @@ use std::fmt;
 use std::str::FromStr;
 use std::time::Duration;
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum TimeMode {
     Untimed,
     Correspondence,
