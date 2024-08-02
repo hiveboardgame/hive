@@ -13,6 +13,7 @@ use db_lib::{
     DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
+use shared_types::GameId;
 use std::{collections::HashMap, vec};
 use uuid::Uuid;
 
@@ -40,7 +41,7 @@ impl ScheduleHandler {
                         Accept(id) => {
                             let mut schedule = Schedule::from_id(id, tc).await?;
                             schedule.accept(self.user_id, tc).await?;
-                            let schedule = ScheduleResponse::from_model(schedule);
+                            let schedule = ScheduleResponse::from_model(schedule, tc).await?;
                             (
                                 ScheduleUpdate::Accepted(schedule),
                                 vec![MessageDestination::Global],
@@ -49,7 +50,7 @@ impl ScheduleHandler {
                         Cancel(id) => {
                             let mut schedule = Schedule::from_id(id, tc).await?;
                             schedule.cancel(self.user_id, tc).await?;
-                            let schedule = ScheduleResponse::from_model(schedule);
+                            let schedule = ScheduleResponse::from_model(schedule, tc).await?;
                             (
                                 ScheduleUpdate::Deleted(schedule),
                                 vec![MessageDestination::Global],
@@ -60,7 +61,7 @@ impl ScheduleHandler {
                                 NewSchedule::new(self.user_id, &game_id, date, tc).await?;
                             let schedule = Schedule::create(schedule, self.user_id, tc).await?;
                             let opponent_id = schedule.opponent_id;
-                            let schedule = ScheduleResponse::from_model(schedule);
+                            let schedule = ScheduleResponse::from_model(schedule, tc).await?;
                             let destinations = vec![
                                 MessageDestination::User(self.user_id),
                                 MessageDestination::User(opponent_id),
@@ -72,15 +73,20 @@ impl ScheduleHandler {
                             let game_ids =
                                 Game::get_ongoing_ids_for_tournament(tournament.id, tc).await?;
 
-                            let mut schedules = Vec::new();
+                            let mut all_schedules = HashMap::new();
                             for id in game_ids {
-                                schedules.push(Schedule::get_first_agreed(id, tc).await.map_or(
-                                    ScheduleResponse::ids_only(id, self.user_id),
-                                    ScheduleResponse::from_model,
-                                ));
+                                let game_schedules =
+                                    Schedule::all_from_nanoid(id.clone(), tc).await?;
+                                let mut game_schedules_map = HashMap::new();
+                                for schedule in game_schedules {
+                                    let response =
+                                        ScheduleResponse::from_model(schedule, tc).await?;
+                                    game_schedules_map.insert(response.id, response);
+                                }
+                                all_schedules.insert(GameId(id), game_schedules_map);
                             }
                             (
-                                ScheduleUpdate::TournamentSchedules(schedules),
+                                ScheduleUpdate::OwnTournamentSchedules(all_schedules),
                                 vec![MessageDestination::User(self.user_id)],
                             )
                         }
@@ -92,19 +98,20 @@ impl ScheduleHandler {
                                 tc,
                             )
                             .await?;
-                            let mut schedules = HashMap::new();
+                            let mut all_schedules = HashMap::new();
                             for id in game_ids {
-                                schedules.insert(
-                                    id,
-                                    Schedule::all_from_game_id(id, tc)
-                                        .await
-                                        .iter()
-                                        .map(|s| ScheduleResponse::from_model(s.clone()))
-                                        .collect::<Vec<_>>(),
-                                );
+                                let game_schedules =
+                                    Schedule::all_from_nanoid(id.clone(), tc).await?;
+                                let mut game_schedules_map = HashMap::new();
+                                for schedule in game_schedules {
+                                    let response =
+                                        ScheduleResponse::from_model(schedule, tc).await?;
+                                    game_schedules_map.insert(response.id, response);
+                                }
+                                all_schedules.insert(GameId(id), game_schedules_map);
                             }
                             (
-                                ScheduleUpdate::OwnTournamentSchedules(schedules),
+                                ScheduleUpdate::OwnTournamentSchedules(all_schedules),
                                 vec![MessageDestination::User(self.user_id)],
                             )
                         }

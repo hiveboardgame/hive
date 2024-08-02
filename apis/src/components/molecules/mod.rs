@@ -16,6 +16,7 @@ pub mod invite_user;
 pub mod live_timer;
 pub mod modal;
 pub mod myschedules;
+pub mod pending_game_row;
 pub mod ping;
 pub mod rating_and_change;
 pub mod rl_banner;

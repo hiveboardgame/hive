@@ -21,17 +21,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    schedules (id) {
-        id -> Uuid,
-        game_id -> Uuid,
-        proposer_id -> Uuid,
-        opponent_id -> Uuid,
-        start_t -> Timestamptz,
-        agreed -> Bool,
-    }
-}
-
-diesel::table! {
     games (id) {
         id -> Uuid,
         nanoid -> Text,
@@ -89,6 +78,18 @@ diesel::table! {
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         speed -> Text,
+    }
+}
+
+diesel::table! {
+    schedules (id) {
+        id -> Uuid,
+        game_id -> Uuid,
+        tournament_id -> Uuid,
+        proposer_id -> Uuid,
+        opponent_id -> Uuid,
+        start_t -> Timestamptz,
+        agreed -> Bool,
     }
 }
 
@@ -176,11 +177,11 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(schedules -> games (game_id));
-diesel::joinable!(schedules -> users (proposer_id));
 diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
+diesel::joinable!(schedules -> games (game_id));
+diesel::joinable!(schedules -> tournaments (tournament_id));
 diesel::joinable!(tournament_series_organizers -> tournament_series (tournament_series_id));
 diesel::joinable!(tournament_series_organizers -> users (organizer_id));
 diesel::joinable!(tournaments -> tournament_series (series));
@@ -193,10 +194,10 @@ diesel::joinable!(tournaments_users -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     challenges,
-    schedules,
     games,
     games_users,
     ratings,
+    schedules,
     tournament_series,
     tournament_series_organizers,
     tournaments,

@@ -22,28 +22,31 @@ pub fn ScoreRow(
             />
         }
     };
+    let td_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
 
     view! {
-        <div class="flex justify-between items-center p-1 w-64 h-10 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
-            <div class="flex justify-between mr-2 w-full">
-                <div class="flex items-center w-6">{standing}</div>
-
+        <tr class="h-6 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
+            <td class=td_class>
+                <div class="flex justify-center items-center">{standing}</div>
+            </td>
+            <td class=td_class>
                 <div class="flex items-center">
                     <StatusIndicator username=user().username/>
                     {profile_link()}
                 </div>
-
-                {tiebreakers
-                    .iter()
-                    .map(|tiebreaker| {
-                        view! {
-                            <div class="flex items-center">
+            </td>
+            {tiebreakers
+                .iter()
+                .map(|tiebreaker| {
+                    view! {
+                        <td class=td_class>
+                            <div class="flex justify-center items-center">
                                 {*scores.get(tiebreaker).unwrap_or(&0.0)}
                             </div>
-                        }
-                    })
-                    .collect_view()}
-            </div>
-        </div>
+                        </td>
+                    }
+                })
+                .collect_view()}
+        </tr>
     }
 }

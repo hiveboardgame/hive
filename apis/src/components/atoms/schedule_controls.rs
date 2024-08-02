@@ -31,8 +31,11 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
         api.schedule_action(ScheduleAction::Accept(id));
     });
     view! {
-        <div class="flex justify-center px-2">
-            <div class="flex items-center">{formated_game_date(start_date)}</div>
+        <div class="flex justify-between p-2">
+            <div class=format!(
+                "flex items-center {}",
+                if agreed { "font-bold" } else { "" },
+            )>{formated_game_date(start_date)}</div>
             <Show when=move || !agreed && proposer_id != player_id>
                 <button
                     on:click=move |_| accept(id)
@@ -50,7 +53,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
 
                 class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
-                {(if proposer_id == player_id { "Cancel" } else { "Reject" }).to_string()}
+                {(if proposer_id == player_id || agreed { "Cancel" } else { "Reject" }).to_string()}
             </button>
         </div>
     }
@@ -64,7 +67,7 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
         api.schedule_action(ScheduleAction::Propose(date, game_id.clone()));
     });
     view! {
-        <div class="flex justify-center px-2">
+        <div class="flex justify-between p-2">
             <DateTimePicker
                 text=""
                 min=Local::now() + Duration::minutes(10)
@@ -72,8 +75,6 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
                 success_callback=Callback::from(move |utc| {
                     selected_time.set(utc);
                 })
-
-                failure_callback=Callback::from(|_| { logging::log!("Failure to set date") })
             />
 
             <button
