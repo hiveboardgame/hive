@@ -1,13 +1,13 @@
 use crate::components::atoms::progress_bar::ProgressBar;
 use crate::components::molecules::time_row::TimeRow;
-use crate::responses::TournamentResponse;
+use crate::responses::TournamentAbstractResponse;
 use chrono::Local;
 use leptos::*;
 use shared_types::PrettyString;
 use shared_types::{TimeInfo, TournamentStatus};
 
 #[component]
-pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
+pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
     let starts = move || {
         if matches!(tournament.status, TournamentStatus::NotStarted) {
             match tournament.starts_at {
@@ -35,15 +35,14 @@ pub fn TournamentRow(tournament: TournamentResponse) -> impl IntoView {
         format!("Elo: {lower}-{upper}")
     };
 
-    let seats_taken = format!("{}/{} players", tournament.players.len(), tournament.seats);
+    let seats_taken = format!("{}/{} players", tournament.players, tournament.seats);
     let time_info = TimeInfo {
         mode: tournament.time_mode,
         base: tournament.time_base,
         increment: tournament.time_increment,
     };
-    let total_games = tournament.games.len();
-    let finished_games =
-        Signal::derive(move || tournament.games.iter().filter(|g| g.finished).count());
+    let total_games = tournament.games_total;
+    let finished_games = Signal::derive(move || tournament.games_played);
     view! {
         <article class="flex relative flex-col justify-between items-center px-2 py-4 mx-2 w-5/6 duration-300 h-33 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="flex justify-center w-full font-bold break-words">{tournament.name}</div>

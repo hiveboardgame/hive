@@ -1,8 +1,8 @@
 use super::game_reaction::GameReaction;
 use super::ClientRequest;
 use crate::responses::{
-    ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse, TournamentResponse,
-    UserResponse,
+    ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse,
+    TournamentAbstractResponse, TournamentResponse, UserResponse,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -23,6 +23,7 @@ pub enum CommonMessage {
     Server(ServerResult),
     Client(ClientRequest),
 }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExternalServerError {
     pub user_id: Uuid,
@@ -67,6 +68,7 @@ pub enum TournamentUpdate {
     Joined(Box<TournamentResponse>),
     Left(Box<TournamentResponse>),
     Tournaments(Vec<Box<TournamentResponse>>),
+    AbstractTournaments(Vec<TournamentAbstractResponse>),
     Invited(Box<TournamentResponse>),
     Declined(Box<TournamentResponse>),
     Uninvited(Box<TournamentResponse>),

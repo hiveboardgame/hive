@@ -1,7 +1,7 @@
 use crate::{
     common::TournamentUpdate,
     providers::{
-        navigation_controller::NavigationControllerSignal, tournaments::TournamentStateSignal,
+        navigation_controller::NavigationControllerSignal, tournaments::TournamentStateContext,
         NotificationContext,
     },
 };
@@ -13,8 +13,8 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
         TournamentUpdate::Left(tournament)
         | TournamentUpdate::Created(tournament)
         | TournamentUpdate::Modified(tournament) => {
-            let mut tournaments_signal = expect_context::<TournamentStateSignal>();
-            tournaments_signal.add(vec![*tournament]);
+            let mut tournaments_signal = expect_context::<TournamentStateContext>();
+            tournaments_signal.add_full(vec![*tournament]);
         }
         TournamentUpdate::Declined(tournament) => {
             let notifications = expect_context::<NotificationContext>();
@@ -29,8 +29,8 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
             });
         }
         TournamentUpdate::Invited(tournament) => {
-            let mut tournaments_signal = expect_context::<TournamentStateSignal>();
-            tournaments_signal.add(vec![*tournament.clone()]);
+            let mut tournaments_signal = expect_context::<TournamentStateContext>();
+            tournaments_signal.add_full(vec![*tournament.clone()]);
             let notifications = expect_context::<NotificationContext>();
             notifications.tournament_invitations.update(|invitations| {
                 invitations.insert(tournament.tournament_id.clone());
@@ -43,12 +43,16 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
             });
         }
         TournamentUpdate::Tournaments(tournaments) => {
-            let mut tournaments_signal = expect_context::<TournamentStateSignal>();
+            let mut tournaments_signal = expect_context::<TournamentStateContext>();
             let t = tournaments.into_iter().map(|t| *t).collect();
-            tournaments_signal.add(t);
+            tournaments_signal.add_full(t);
+        }
+        TournamentUpdate::AbstractTournaments(tournaments) => {
+            let mut tournaments_signal = expect_context::<TournamentStateContext>();
+            tournaments_signal.add_abstract(tournaments);
         }
         TournamentUpdate::Deleted(t_id) => {
-            let mut tournaments_signal = expect_context::<TournamentStateSignal>();
+            let mut tournaments_signal = expect_context::<TournamentStateContext>();
             let notifications = expect_context::<NotificationContext>();
             let navi = expect_context::<NavigationControllerSignal>();
             notifications.tournament_invitations.update(|t| {
@@ -63,8 +67,8 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
             tournaments_signal.remove(t_id);
         }
         TournamentUpdate::Started(tournament) => {
-            let mut tournaments_signal = expect_context::<TournamentStateSignal>();
-            tournaments_signal.add(vec![*tournament.clone()]);
+            let mut tournaments_signal = expect_context::<TournamentStateContext>();
+            tournaments_signal.add_full(vec![*tournament.clone()]);
             let notifications = expect_context::<NotificationContext>();
             notifications.tournament_invitations.update(|invitations| {
                 invitations.remove(&tournament.tournament_id);

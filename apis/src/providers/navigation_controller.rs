@@ -1,10 +1,9 @@
-use leptos::*;
-use shared_types::{GameId, TournamentId};
-
 use crate::{
-    common::TournamentAction,
+    common::{TournamentAction, TournamentResponseDepth::Full},
     providers::{api_requests::ApiRequests, chat::Chat, game_state::GameStateSignal},
 };
+use leptos::*;
+use shared_types::{GameId, TournamentId};
 
 #[derive(Clone, Debug, Copy)]
 pub struct NavigationControllerSignal {
@@ -43,7 +42,7 @@ impl NavigationControllerSignal {
             if let Some(tournament_id) = tournament_id {
                 let api = ApiRequests::new();
                 let chat = expect_context::<Chat>();
-                api.tournament(TournamentAction::Get(tournament_id));
+                api.tournament(TournamentAction::Get(tournament_id, Full));
                 chat.typed_message.update(|s| s.clear());
             }
         });

@@ -3,14 +3,20 @@ use shared_types::{GameId, TournamentDetails, TournamentGameResult, TournamentId
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TournamentResponseDepth {
+    Full,
+    Abstract,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TournamentAction {
     Abandon(TournamentId),
     // TODO: AddToSeries(TournamentId),
     AdjudicateResult(GameId, TournamentGameResult),
     Create(Box<TournamentDetails>),
     Delete(TournamentId),
-    Get(TournamentId),
-    GetAll,
+    Get(TournamentId, TournamentResponseDepth),
+    GetAll(TournamentResponseDepth),
     InvitationAccept(TournamentId),
     InvitationCreate(TournamentId, Uuid),
     InvitationDecline(TournamentId),

@@ -151,8 +151,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     </div>
                 </div>
                 <div class="flex gap-1 justify-center items-center w-full">
-                    {result_string}
-                    <Show when=is_finished>
+                    {result_string} <Show when=is_finished>
                         <div>{conclusion}</div>
                     </Show>
                 </div>

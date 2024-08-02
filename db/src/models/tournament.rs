@@ -412,6 +412,26 @@ impl Tournament {
             .await?)
     }
 
+    pub async fn number_of_games(&self, conn: &mut DbConn<'_>) -> Result<i64, DbError> {
+        Ok(games::table
+            .filter(games::tournament_id.eq(self.id))
+            .count()
+            .get_result(conn)
+            .await?)
+    }
+
+    pub async fn number_of_finished_games(&self, conn: &mut DbConn<'_>) -> Result<i64, DbError> {
+        Ok(games::table
+            .filter(
+                games::tournament_id
+                    .eq(self.id)
+                    .and(games::finished.eq(true)),
+            )
+            .count()
+            .get_result(conn)
+            .await?)
+    }
+
     pub async fn organizers(&self, conn: &mut DbConn<'_>) -> Result<Vec<User>, DbError> {
         Ok(TournamentOrganizer::belonging_to(self)
             .inner_join(users::table)

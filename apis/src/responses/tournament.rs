@@ -12,6 +12,23 @@ pub struct TournamentAbstractResponse {
     pub id: Uuid,
     pub tournament_id: TournamentId,
     pub name: String,
+    pub games_total: usize,
+    pub games_played: usize,
+    pub players: usize,
+    pub seats: i32,
+    pub invite_only: bool,
+    pub mode: String,
+    pub time_mode: TimeMode,
+    pub time_base: Option<i32>,
+    pub time_increment: Option<i32>,
+    pub band_upper: Option<i32>,
+    pub band_lower: Option<i32>,
+    pub status: TournamentStatus,
+    pub start_mode: StartMode,
+    pub starts_at: Option<DateTime<Utc>>,
+    pub ends_at: Option<DateTime<Utc>>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -56,14 +73,31 @@ use std::str::FromStr;
 impl TournamentAbstractResponse {
     pub async fn from_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
         let tournament = Tournament::from_uuid(id, conn).await?;
-        Self::from_model(&tournament)
+        Self::from_model(&tournament, conn).await
     }
 
-    pub fn from_model(tournament: &Tournament) -> Result<Self> {
+    pub async fn from_model(tournament: &Tournament, conn: &mut DbConn<'_>) -> Result<Self> {
         Ok(Self {
             id: tournament.id,
             tournament_id: TournamentId(tournament.nanoid.clone()),
             name: tournament.name.clone(),
+            games_total: tournament.number_of_games(conn).await? as usize,
+            games_played: tournament.number_of_finished_games(conn).await? as usize,
+            players: tournament.number_of_players(conn).await? as usize,
+            seats: tournament.seats,
+            invite_only: tournament.invite_only,
+            mode: tournament.mode.clone(),
+            time_mode: TimeMode::from_str(&tournament.time_mode)?,
+            time_base: tournament.time_base,
+            time_increment: tournament.time_increment,
+            band_upper: tournament.band_upper,
+            band_lower: tournament.band_lower,
+            status: TournamentStatus::from_str(&tournament.status)?,
+            start_mode: StartMode::from_str(&tournament.start_mode)?,
+            starts_at: tournament.starts_at,
+            ends_at: tournament.ends_at,
+            started_at: tournament.started_at,
+            updated_at: tournament.updated_at,
         })
     }
 }
