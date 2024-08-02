@@ -7,11 +7,11 @@ use leptos::*;
 use shared_types::GameSpeed;
 
 #[component]
-pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
+pub fn DisplayProfile(user: UserResponse) -> impl IntoView {
     let ratings = GameSpeed::all_rated_games()
         .iter()
         .map(|speed| {
-            if let Some(rating) = user().ratings.get(speed) {
+            if let Some(rating) = user.ratings.get(speed) {
                 view! {
                     <div class="p-2 border border-dark dark:border-white">
                         <RatingWithIcon rating=store_value(rating.clone())/>
@@ -32,7 +32,11 @@ pub fn DisplayProfile(user: StoredValue<UserResponse>) -> impl IntoView {
         <div class="m-1">
             <div class="flex flex-col items-start ml-3">
                 <div class="max-w-fit">
-                    <UserRow actions=vec![UserAction::Challenge] user=user on_profile=true/>
+                    <UserRow
+                        actions=vec![UserAction::Challenge]
+                        user=store_value(user.clone())
+                        on_profile=true
+                    />
                 </div>
                 <div class="flex flex-wrap gap-1">{ratings}</div>
             </div>

@@ -52,7 +52,7 @@ impl TournamentHandler {
                     .handle()
                     .await?
             }
-            TournamentAction::Get(tournament_id, depth) => {
+            TournamentAction::Get(tournament_id, _depth) => {
                 GetHandler::new(
                     tournament_id,
                     self.user_id,

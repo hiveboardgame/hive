@@ -8,6 +8,7 @@ mod color_scheme;
 pub mod config;
 pub mod game_state;
 pub mod games;
+pub mod games_search;
 pub mod navigation_controller;
 mod notifications;
 pub mod online_users;

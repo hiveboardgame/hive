@@ -1,7 +1,9 @@
 use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
+use super::games_search::GamesSearchHandler;
 use super::schedules::ScheduleHandler;
 use super::search::handler::UserSearchHandler;
+use super::user_profile::UserProfileHandler;
 use crate::common::{ClientRequest, GameAction};
 use crate::lag_tracking::lags::Lags;
 use crate::ping::pings::Pings;
@@ -143,6 +145,18 @@ impl RequestHandler {
                     _ => self.ensure_auth()?,
                 }
                 ScheduleHandler::new(self.user_id, action, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            ClientRequest::GamesSearch(options) => {
+                GamesSearchHandler::new(self.user_id, options, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            ClientRequest::UserProfile(username) => {
+                UserProfileHandler::new(self.user_id, username, &self.pool)
                     .await?
                     .handle()
                     .await?
