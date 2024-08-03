@@ -5,7 +5,7 @@ use crate::{
     pages::{
         account::Account, admin::Admin, analysis::Analysis, challenge_view::ChallengeView,
         config::Config, donate::Donate, faq::Faq, home::Home, login::Login, play::Play,
-        profile_view::ProfileView, puzzles::Puzzles, register::Register, resources::Resources,
+        profile_view::{ProfileView, DisplayGames}, puzzles::Puzzles, register::Register, resources::Resources,
         rules::Rules, strategy::Strategy, top_players::TopPlayers, tournament::Tournament,
         tournament_create::TournamentCreate, tournaments::Tournaments, tutorial::Tutorial,
     },
@@ -69,25 +69,28 @@ pub fn App() -> impl IntoView {
                     <Route
                         path="/@/:username"
                         view=|| {
-                            view! { <Outlet/> }
+                            view! { <ProfileView>
+                                        <Outlet/>
+                                        </ProfileView> 
+                                    }
                         }
                     >
 
                         <Route
                             path=""
-                            view=|| view! { <ProfileView tab_view=ProfileGamesView::Playing/> }
+                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Playing/> }
                         />
                         <Route
                             path="playing"
-                            view=|| view! { <ProfileView tab_view=ProfileGamesView::Playing/> }
+                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Playing/> }
                         />
                         <Route
                             path="finished"
-                            view=|| view! { <ProfileView tab_view=ProfileGamesView::Finished/> }
+                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Finished/> }
                         />
                         <Route
                             path="unstarted"
-                            view=|| view! { <ProfileView tab_view=ProfileGamesView::Unstarted/> }
+                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Unstarted/> }
                         />
                     </Route>
                     <Route path="/register" view=|| view! { <Register/> }/>

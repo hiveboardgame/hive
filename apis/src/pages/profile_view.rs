@@ -35,7 +35,7 @@ pub struct ProfileGamesContext {
 }
 
 #[component]
-pub fn ProfileView(tab_view: ProfileGamesView) -> impl IntoView {
+pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let params = use_params::<UsernameParams>();
     let ws = expect_context::<WebsocketContext>();
     let ctx = expect_context::<ProfileGamesContext>();
@@ -82,18 +82,23 @@ pub fn ProfileView(tab_view: ProfileGamesView) -> impl IntoView {
             });
         }
     });
-    let games = match tab_view {
-        ProfileGamesView::Finished => ctx.finished,
-        ProfileGamesView::Playing => ctx.playing,
-        ProfileGamesView::Unstarted => ctx.unstarted,
-    };
-    let active = move |view: ProfileGamesView| {
-        let button_style = String::from("hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded");
-        if tab_view == view {
-            button_style + " bg-pillbug-teal"
-        } else {
-            button_style + " bg-button-dawn dark:bg-button-twilight"
-        }
+    view! {
+        <div class="flex flex-col pt-12 bg-light dark:bg-gray-950">
+            <Show when=move || ctx.user.get().is_some()>
+                <div class="flex flex-col w-full">
+                    <DisplayProfile user=ctx.user.get().unwrap()/>
+                    {children()}
+                </div>
+            </Show>
+        </div>
+    }
+}
+
+#[component]
+pub fn DisplayGames(tab_view: ProfileGamesView) -> impl IntoView {
+    let ctx = expect_context::<ProfileGamesContext>();
+    let username = move || {
+        ctx.user.get().map_or(String::new(), |user| user.username)
     };
     let el = create_node_ref::<html::Div>();
     let _ = use_infinite_scroll_with_options(
@@ -113,44 +118,51 @@ pub fn ProfileView(tab_view: ProfileGamesView) -> impl IntoView {
         },
         UseInfiniteScrollOptions::default().distance(10.0),
     );
+    let active = move |view: ProfileGamesView| {
+        let button_style = String::from("hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded");
+        if tab_view == view {
+            button_style + " bg-pillbug-teal"
+        } else {
+            button_style + " bg-button-dawn dark:bg-button-twilight"
+        }
+    };
+
+    let games = match tab_view {
+        ProfileGamesView::Finished => ctx.finished,
+        ProfileGamesView::Playing => ctx.playing,
+        ProfileGamesView::Unstarted => ctx.unstarted,
+    };
     view! {
-        <div class="flex flex-col pt-12 bg-light dark:bg-gray-950">
-            <Show when=move || ctx.user.get().is_some()>
-                <div class="flex flex-col w-full">
-                    <DisplayProfile user=ctx.user.get().unwrap()/>
-                    <div class="flex gap-1 ml-3">
-                        <Show when=move || !ctx.unstarted.get().is_empty()>
-                            <A
-                                href=format!("/@/{}/unstarted", username())
-                                class=move || active(ProfileGamesView::Unstarted)
-                            >
-                                "Unstarted Tournament Games"
-                            </A>
-                        </Show>
-                        <Show when=move || !ctx.playing.get().is_empty()>
-                            <A
-                                href=format!("/@/{}/playing", username())
-                                class=move || active(ProfileGamesView::Playing)
-                            >
-                                "Playing "
-                            </A>
-                        </Show>
-                        <Show when=move || !ctx.finished.get().is_empty()>
-                            <A
-                                href=format!("/@/{}/finished", username())
-                                class=move || active(ProfileGamesView::Finished)
-                            >
-                                "Finished Games "
-                            </A>
-                        </Show>
-                    </div>
-                    <div node_ref=el class="flex flex-col overflow-x-hidden items-center h-[72vh]">
-                        <For each=games key=|game| (game.uuid) let:game>
-                            <GameRow game=store_value(game)/>
-                        </For>
-                    </div>
-                </div>
-            </Show>
-        </div>
+        <div class="flex gap-1 ml-3">
+        <Show when=move || !ctx.unstarted.get().is_empty()>
+            <A
+                href=format!("/@/{}/unstarted", username())
+                class=move || active(ProfileGamesView::Unstarted)
+            >
+                "Unstarted Tournament Games"
+            </A>
+        </Show>
+        <Show when=move || !ctx.playing.get().is_empty()>
+            <A
+                href=format!("/@/{}/playing", username())
+                class=move || active(ProfileGamesView::Playing)
+            >
+                "Playing "
+            </A>
+        </Show>
+        <Show when=move || !ctx.finished.get().is_empty()>
+            <A
+                href=format!("/@/{}/finished", username())
+                class=move || active(ProfileGamesView::Finished)
+            >
+                "Finished Games "
+            </A>
+        </Show>
+    </div>
+    <div node_ref=el class="flex flex-col overflow-x-hidden items-center h-[72vh]">
+        <For each=games key=|game| (game.uuid) let:game>
+            <GameRow game=store_value(game)/>
+        </For>
+    </div>
     }
 }
