@@ -35,8 +35,7 @@ pub fn ChallengeView() -> impl IntoView {
             .as_ref()
             .expect("window to exist in challenge_view")
             .navigator()
-            .clipboard()
-            .expect("to have clipboard permission");
+            .clipboard();
         let _ = clipboard.write_text(&challenge_address());
         let class_list = button_ref
             .get_untracked()

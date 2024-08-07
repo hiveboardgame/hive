@@ -1,11 +1,8 @@
-use crate::components::{
-    atoms::history_button::{HistoryButton, HistoryNavigation},
-    organisms::reserve::{Alignment, Reserve},
-};
-use crate::providers::game_state::GameStateSignal;
-use hive_lib::{Color, GameStatus};
-use leptos::{ev::keydown, *};
-use leptos_use::{use_event_listener, use_window};
+use crate::components::molecules::history_controls::HistoryControls;
+use crate::providers::game_state::{self, GameStateSignal};
+use hive_lib::GameStatus;
+use leptos::*;
+use leptos_icons::*;
 use shared_types::Conclusion;
 
 #[component]
@@ -16,7 +13,7 @@ pub fn HistoryMove(
     repetition: bool,
     parent_div: NodeRef<html::Div>,
 ) -> impl IntoView {
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateSignal>();
     let div_ref = create_node_ref::<html::Div>();
     div_ref.on_load(move |_| {
         let _ = div_ref
@@ -54,7 +51,7 @@ pub fn HistoryMove(
 
 #[component]
 pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let mut game_state = expect_context::<game_state::GameStateSignal>();
     let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
     let repetitions = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().map(|gr| gr.repetitions.clone())
@@ -90,43 +87,6 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         }
     });
 
-    let window = use_window();
-    let active = Signal::derive(move || {
-        if window.is_some() {
-            window
-                .as_ref()
-                .expect("window to exist")
-                .document()
-                .expect("window to have a document")
-                .query_selector(".bg-orange-twilight")
-                .expect("to have an Element")
-        } else {
-            None
-        }
-    });
-
-    let focus = Callback::new(move |()| {
-        if let Some(elem) = active.get_untracked() {
-            elem.scroll_into_view_with_bool(false);
-        }
-    });
-    let go_to_end = Callback::new(move |()| {
-        let parent = parent.get_untracked().expect("div to be loaded");
-        parent.set_scroll_top(parent.scroll_height());
-    });
-
-    let if_last_go_to_end = Callback::new(move |()| {
-        focus(());
-        let gamestate = game_state.signal.get_untracked();
-        {
-            if let Some(turn) = gamestate.history_turn {
-                if turn == gamestate.state.turn - 1 {
-                    go_to_end(());
-                }
-            }
-        }
-    });
-
     let is_repetition = move |turn: usize| {
         if let Some(repetitions) = repetitions() {
             repetitions.contains(&turn)
@@ -134,51 +94,13 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             false
         }
     };
-    let prev_button = create_node_ref::<html::Button>();
-    let next_button = create_node_ref::<html::Button>();
-    _ = use_event_listener(document().body(), keydown, move |evt| {
-        if evt.key() == "ArrowLeft" {
-            evt.prevent_default();
-            if let Some(prev) = prev_button.get_untracked() {
-                prev.click()
-            };
-        } else if evt.key() == "ArrowRight" {
-            evt.prevent_default();
-            if let Some(next) = next_button.get_untracked() {
-                next.click()
-            };
-        }
-    });
+    let analysis_setup = move |_| {
+        game_state.do_analysis();
+    };
     view! {
         <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
-            <div class="flex gap-1 min-h-0 [&>*]:grow">
-                <HistoryButton
 
-                    action=HistoryNavigation::First
-                    post_action=focus
-                />
-
-                <HistoryButton
-                    node_ref=prev_button
-                    action=HistoryNavigation::Previous
-                    post_action=focus
-                />
-                <HistoryButton
-                    node_ref=next_button
-                    action=HistoryNavigation::Next
-                    post_action=if_last_go_to_end
-                />
-
-                <HistoryButton
-
-                    action=HistoryNavigation::Last
-                    post_action=go_to_end
-                />
-            </div>
-            <div class="flex p-2">
-                <Reserve alignment=Alignment::DoubleRow color=Color::White analysis=false/>
-                <Reserve alignment=Alignment::DoubleRow color=Color::Black analysis=false/>
-            </div>
+            <HistoryControls parent=parent.into()/>
             <div ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
                 <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
@@ -194,6 +116,16 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 <Show when=game_state.is_finished()>
                     <div class="col-span-4 text-center">{game_result}</div>
                     <div class="col-span-4 text-center">{conclusion}</div>
+                    <a
+                        href="/analysis"
+                        class="col-span-4 w-full text-white rounded duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+                        on:click=analysis_setup
+                    >
+                        <div class="flex gap-1 justify-center items-center">
+                            <Icon icon=icondata::TbMicroscope class="py-1 w-7 h-7"/>
+                            "Analyze here"
+                        </div>
+                    </a>
                 </Show>
             </div>
         </div>

@@ -10,6 +10,7 @@ pub mod game_previews;
 pub mod game_row;
 pub mod hamburger;
 pub mod hex_stack;
+pub mod history_controls;
 pub mod history_pieces;
 pub mod hover_ratings;
 pub mod invite_user;

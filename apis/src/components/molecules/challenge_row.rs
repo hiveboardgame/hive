@@ -52,8 +52,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             .as_ref()
             .expect("window to exist")
             .navigator()
-            .clipboard()
-            .expect("to have clipboard permission");
+            .clipboard();
         let _ = clipboard.write_text(&challenge_address());
         let class_list = button_ref
             .get_untracked()

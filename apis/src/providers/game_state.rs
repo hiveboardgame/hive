@@ -165,7 +165,7 @@ impl GameStateSignal {
         self.signal.update(|s| s.set_target(position))
     }
 
-    pub fn show_history_turn(&mut self, turn: usize) {
+    pub fn show_history_turn(&self, turn: usize) {
         self.signal.update(|s| s.show_history_turn(turn))
     }
 
@@ -423,9 +423,6 @@ impl GameState {
 
     pub fn view_history(&mut self) {
         self.view = View::History;
-        if self.state.turn > 0 {
-            self.history_turn = Some(self.state.turn - 1);
-        }
     }
 
     //TODO: is this still useful for play and analysis where gamestate is untracked for the callback?
@@ -438,6 +435,9 @@ impl GameState {
 
     pub fn view_game(&mut self) {
         self.view = View::Game;
+        if self.state.turn > 0 {
+            self.history_turn = Some(self.state.turn - 1);
+        }
     }
 
     pub fn next_history_turn(&mut self) {
