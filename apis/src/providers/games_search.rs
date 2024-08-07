@@ -1,3 +1,5 @@
+use std::vec;
+
 use crate::pages::profile_view::ProfileGamesContext;
 use leptos::{provide_context, RwSignal};
 
@@ -6,9 +8,9 @@ pub fn provide_profile_games() {
         unstarted: RwSignal::new(Vec::new()),
         playing: RwSignal::new(Vec::new()),
         finished: RwSignal::new(Vec::new()),
-        finished_last_timestamp: RwSignal::new(None),
-        finished_last_id: RwSignal::new(None),
+        finished_batch: RwSignal::new(None),
         more_finished: RwSignal::new(true),
         user: RwSignal::new(None),
+        speeds: RwSignal::new(vec![]),
     });
 }

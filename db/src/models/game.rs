@@ -11,7 +11,7 @@ use crate::{
 };
 use ::nanoid::nanoid;
 use chrono::{DateTime, Utc};
-use diesel::{prelude::*, ExpressionMethods, Identifiable, Insertable, Queryable};
+use diesel::{prelude::*, ExpressionMethods, Insertable};
 use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
@@ -1080,16 +1080,21 @@ impl Game {
         if let Some(is_finished) = options.is_finished {
             query = query.filter(games::finished.eq(is_finished));
         }
-        if let Some(username) = options.username.as_ref() {
-            query = query.filter(users::normalized_username.eq(username.to_lowercase()));
-        };
+        //Allow multiple usernames
+        let usernames: Vec<_> = options.usernames.iter().map(|s| s.to_lowercase()).collect();
+        query = query.filter(users::normalized_username.eq_any(usernames));
+
+        //filter selected speeds
+        let speeds: Vec<_> = options.speeds.iter().map(|s| s.to_string()).collect();
+        query = query.filter(games::speed.eq_any(speeds));
+
         query = query.order_by((games::updated_at.desc(), games::id.desc()));
-        if let (Some(last_updated_at), Some(last_id)) = (options.last_timestamp, options.last_id) {
+        if let Some(batch) = &options.current_batch {
             query = query.filter(diesel::BoolExpressionMethods::or(
-                games::updated_at.lt(last_updated_at),
+                games::updated_at.lt(batch.timestamp),
                 diesel::BoolExpressionMethods::and(
-                    games::updated_at.eq(last_updated_at),
-                    games::id.ne(last_id),
+                    games::updated_at.eq(batch.timestamp),
+                    games::id.ne(batch.id),
                 ),
             ));
         }

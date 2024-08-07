@@ -3,11 +3,27 @@ use crate::providers::provide_profile_games;
 use crate::{
     components::layouts::base_layout::BaseLayout,
     pages::{
-        account::Account, admin::Admin, analysis::Analysis, challenge_view::ChallengeView,
-        config::Config, donate::Donate, faq::Faq, home::Home, login::Login, play::Play,
-        profile_view::{ProfileView, DisplayGames}, puzzles::Puzzles, register::Register, resources::Resources,
-        rules::Rules, strategy::Strategy, top_players::TopPlayers, tournament::Tournament,
-        tournament_create::TournamentCreate, tournaments::Tournaments, tutorial::Tutorial,
+        account::Account,
+        admin::Admin,
+        analysis::Analysis,
+        challenge_view::ChallengeView,
+        config::Config,
+        donate::Donate,
+        faq::Faq,
+        home::Home,
+        login::Login,
+        play::Play,
+        profile_view::{DisplayGames, ProfileView},
+        puzzles::Puzzles,
+        register::Register,
+        resources::Resources,
+        rules::Rules,
+        strategy::Strategy,
+        top_players::TopPlayers,
+        tournament::Tournament,
+        tournament_create::TournamentCreate,
+        tournaments::Tournaments,
+        tutorial::Tutorial,
     },
     providers::{
         challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state,
@@ -69,10 +85,11 @@ pub fn App() -> impl IntoView {
                     <Route
                         path="/@/:username"
                         view=|| {
-                            view! { <ProfileView>
-                                        <Outlet/>
-                                        </ProfileView> 
-                                    }
+                            view! {
+                                <ProfileView>
+                                    <Outlet/>
+                                </ProfileView>
+                            }
                         }
                     >
 

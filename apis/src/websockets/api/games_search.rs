@@ -5,7 +5,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Game, DbPool};
-use shared_types::GamesQueryOptions;
+use shared_types::{BatchInfo, GamesQueryOptions};
 use uuid::Uuid;
 
 pub struct GamesSearchHandler {
@@ -32,10 +32,13 @@ impl GamesSearchHandler {
             let game_response = GameResponse::from_model(game, &mut conn).await?;
             game_responses.push(game_response);
         }
+        let batch = games.last().map(|game| BatchInfo {
+            id: game.id,
+            timestamp: game.updated_at,
+        });
         let response = GamesSearchResponse {
             results: game_responses,
-            last_id: games.last().map(|game| game.id),
-            last_timestamp: games.last().map(|game| game.updated_at),
+            batch,
             ctx_to_update: self.options.ctx_to_update,
             more_rows: options.batch_size.map_or(false, |b| b == games.len()),
         };
