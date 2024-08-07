@@ -627,6 +627,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "boardstate"
+version = "0.1.0"
+dependencies = [
+ "rmp-serde",
+ "serde",
+]
+
+[[package]]
 name = "brotli"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

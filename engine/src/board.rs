@@ -12,7 +12,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{self, Write};
 
-pub const BOARD_SIZE: i32 = 32;
+pub const BOARD_SIZE: u8 = 16;
 lazy_static! {
     static ref BLACK_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::Black, 0);
     static ref WHITE_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::White, 0);

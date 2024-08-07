@@ -12,8 +12,15 @@ use crate::{
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord, Deserialize, Serialize)]
 pub struct Position {
-    pub q: i32,
-    pub r: i32,
+    pub q: u8,
+    pub r: u8,
+    pub l: u8,
+}
+
+impl Position {
+    pub fn new(q: u8, r: u8, l: u8) -> Self {
+        Self { q, r, l }
+    }
 }
 
 #[derive(Debug)]

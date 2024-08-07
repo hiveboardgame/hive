@@ -1,5 +1,5 @@
 [workspace]
-members = ["apis", "engine", "db", "shared_types"]
+members = ["apis", "engine", "db", "shared_types", "boardstate"]
 resolver = "2"
 
 # need to be applied only to wasm build
