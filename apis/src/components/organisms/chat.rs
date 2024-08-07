@@ -1,3 +1,4 @@
+use crate::components::molecules::history_controls::HistoryControls;
 use crate::{
     components::update_from_event::update_from_input,
     providers::{
@@ -166,6 +167,7 @@ pub fn ChatWindow(
     };
     view! {
         <div id="ignoreChat" class="flex flex-col w-full min-w-full max-w-full h-full min-h-full">
+            <HistoryControls/>
             <div ref=div class="overflow-y-auto w-full min-w-full max-w-full h-full">
                 <For each=messages key=|message| message.timestamp let:message>
                     <Message message=message/>
