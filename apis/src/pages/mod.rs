@@ -4,7 +4,6 @@ pub mod analysis;
 pub mod challenge_create;
 pub mod challenge_view;
 pub mod config;
-pub mod display_games;
 pub mod donate;
 pub mod faq;
 pub mod home;

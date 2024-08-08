@@ -7,7 +7,11 @@ use crate::providers::websocket::WebsocketContext;
 use crate::responses::create_challenge_handler;
 use hive_lib::{GameControl, Turn};
 use leptos::*;
-use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResult, TournamentId};
+use shared_types::{
+    ChallengeId, ChatMessageContainer, GameId, GamesQueryOptions, TournamentGameResult,
+    TournamentId,
+};
+
 #[derive(Clone)]
 pub struct ApiRequests {
     websocket: WebsocketContext,
@@ -148,6 +152,15 @@ impl ApiRequests {
 
     pub fn schedule_action(&self, action: ScheduleAction) {
         let msg = ClientRequest::Schedule(action);
+        self.websocket.send(&msg);
+    }
+
+    pub fn games_search(&self, options: GamesQueryOptions) {
+        let msg = ClientRequest::GamesSearch(options);
+        self.websocket.send(&msg);
+    }
+    pub fn user_profile(&self, username: String) {
+        let msg = ClientRequest::UserProfile(username);
         self.websocket.send(&msg);
     }
 }

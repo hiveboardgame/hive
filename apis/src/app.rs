@@ -1,12 +1,28 @@
 use crate::pages::profile_view::ProfileGamesView;
+use crate::providers::provide_profile_games;
 use crate::{
     components::layouts::base_layout::BaseLayout,
     pages::{
-        account::Account, admin::Admin, analysis::Analysis, challenge_view::ChallengeView,
-        config::Config, display_games::DisplayGames, donate::Donate, faq::Faq, home::Home,
-        login::Login, play::Play, profile_view::ProfileView, puzzles::Puzzles, register::Register,
-        resources::Resources, rules::Rules, strategy::Strategy, top_players::TopPlayers,
-        tournament::Tournament, tournament_create::TournamentCreate, tournaments::Tournaments,
+        account::Account,
+        admin::Admin,
+        analysis::Analysis,
+        challenge_view::ChallengeView,
+        config::Config,
+        donate::Donate,
+        faq::Faq,
+        home::Home,
+        login::Login,
+        play::Play,
+        profile_view::{DisplayGames, ProfileView},
+        puzzles::Puzzles,
+        register::Register,
+        resources::Resources,
+        rules::Rules,
+        strategy::Strategy,
+        top_players::TopPlayers,
+        tournament::Tournament,
+        tournament_create::TournamentCreate,
+        tournaments::Tournaments,
         tutorial::Tutorial,
     },
     providers::{
@@ -49,7 +65,7 @@ pub fn App() -> impl IntoView {
     provide_tournament_ready();
     provide_schedules();
     provide_sounds();
-
+    provide_profile_games();
     view! {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
         <Router trailing_slash=TrailingSlash::Redirect>

@@ -4,18 +4,20 @@ use crate::{
     schema::{
         challenges::{self, nanoid as nanoid_field},
         games::{self, dsl::*, tournament_game_result},
-        games_users, users,
+        games_users,
+        users::{self},
     },
     DbConn,
 };
 use ::nanoid::nanoid;
 use chrono::{DateTime, Utc};
-use diesel::{prelude::*, Identifiable, Insertable, Queryable};
+use diesel::{prelude::*, ExpressionMethods, Insertable};
 use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    ChallengeId, Conclusion, GameId, GameSpeed, GameStart, TimeMode, TournamentGameResult,
+    ChallengeId, Conclusion, GameId, GameSpeed, GameStart, GamesQueryOptions, TimeMode,
+    TournamentGameResult,
 };
 use std::str::FromStr;
 use std::time::Duration;
@@ -1034,21 +1036,6 @@ impl Game {
         Ok(())
     }
 
-    pub async fn get_ongoing_games_for_username(
-        username: &str,
-        conn: &mut DbConn<'_>,
-    ) -> Result<Vec<Game>, DbError> {
-        Ok(users::table
-            .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
-            .inner_join(games::table.on(games_users::game_id.eq(games::id)))
-            .filter(users::normalized_username.eq(username.to_lowercase()))
-            .filter(games::finished.eq(false))
-            .order(games::updated_at.desc())
-            .select(games::all_columns)
-            .get_results(conn)
-            .await?)
-    }
-
     pub async fn get_ongoing_ids_for_tournament(
         tournament_id_: Uuid,
         conn: &mut DbConn<'_>,
@@ -1081,38 +1068,41 @@ impl Game {
             .get_results(conn)
             .await?)
     }
-    pub async fn get_x_finished_games_for_username(
-        username: &str,
+
+    pub async fn get_rows_from_options(
+        options: &GamesQueryOptions,
         conn: &mut DbConn<'_>,
-        last_updated_at: Option<DateTime<Utc>>,
-        last_game_id: Option<Uuid>,
-        amount: i64,
     ) -> Result<Vec<Game>, DbError> {
         let mut query = users::table
             .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
             .inner_join(games::table.on(games_users::game_id.eq(games::id)))
-            .filter(users::normalized_username.eq(username.to_lowercase()))
-            .filter(games::finished.eq(true))
-            .order((games::updated_at.desc(), games::id.desc()))
             .into_boxed();
+        if let Some(is_finished) = options.is_finished {
+            query = query.filter(games::finished.eq(is_finished));
+        }
+        //Allow multiple usernames
+        let usernames: Vec<_> = options.usernames.iter().map(|s| s.to_lowercase()).collect();
+        query = query.filter(users::normalized_username.eq_any(usernames));
 
-        if let (Some(last_updated_at), Some(last_id)) = (last_updated_at, last_game_id) {
+        //filter selected speeds
+        let speeds: Vec<_> = options.speeds.iter().map(|s| s.to_string()).collect();
+        query = query.filter(games::speed.eq_any(speeds));
+
+        query = query.order_by((games::updated_at.desc(), games::id.desc()));
+        if let Some(batch) = &options.current_batch {
             query = query.filter(diesel::BoolExpressionMethods::or(
-                games::updated_at.lt(last_updated_at),
+                games::updated_at.lt(batch.timestamp),
                 diesel::BoolExpressionMethods::and(
-                    games::updated_at.eq(last_updated_at),
-                    games::id.ne(last_id),
+                    games::updated_at.eq(batch.timestamp),
+                    games::id.ne(batch.id),
                 ),
-            ))
-        };
-
-        Ok(query
-            .limit(amount)
-            .select(games::all_columns)
-            .get_results(conn)
-            .await?)
+            ));
+        }
+        if let Some(batch_size) = options.batch_size {
+            query = query.limit(batch_size as i64);
+        }
+        Ok(query.select(games::all_columns).get_results(conn).await?)
     }
-
     pub async fn adjudicate_tournament_result(
         &self,
         user_id: &Uuid,
