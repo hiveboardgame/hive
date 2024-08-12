@@ -2,7 +2,7 @@ use crate::common::MoveConfirm;
 use crate::common::SvgPos;
 use crate::common::TileDesign;
 use crate::components::organisms::analysis::AnalysisSignal;
-use crate::pages::play::CurrentConfirm;
+use crate::pages::game::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
 use hive_lib::Position;

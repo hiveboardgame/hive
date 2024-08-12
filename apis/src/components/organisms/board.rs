@@ -4,7 +4,7 @@ use crate::providers::game_state::{GameStateSignal, View};
 use crate::providers::Config;
 use crate::{
     components::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
-    pages::play::TargetStack,
+    pages::game::TargetStack,
 };
 use hive_lib::GameStatus;
 use leptos::ev::{

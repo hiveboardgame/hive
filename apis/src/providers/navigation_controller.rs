@@ -25,8 +25,14 @@ impl NavigationControllerSignal {
         }
     }
 
-    pub fn update_ids(&mut self, game_id: Option<GameId>, tournament_id: Option<TournamentId>) {
+    pub fn update_ids(
+        &mut self,
+        game_id: Option<GameId>,
+        tournament_id: Option<TournamentId>,
+        move_number: Option<usize>,
+    ) {
         batch(move || {
+            self.game_signal.update(|s| s.move_number = move_number);
             self.game_signal
                 .update(|s| game_id.clone_into(&mut s.game_id));
             self.tournament_signal
@@ -38,6 +44,9 @@ impl NavigationControllerSignal {
                 game_state.set_game_id(game_id.to_owned());
                 api.join(game_id);
                 chat.typed_message.update(|s| s.clear());
+                if let Some(turn) = move_number {
+                    game_state.set_history_turn(Some(turn));
+                }
             }
             if let Some(tournament_id) = tournament_id {
                 let api = ApiRequests::new();
@@ -71,11 +80,15 @@ impl Default for TournamentNavigationControllerState {
 #[derive(Clone, Debug)]
 pub struct GameNavigationControllerState {
     pub game_id: Option<GameId>,
+    pub move_number: Option<usize>,
 }
 
 impl GameNavigationControllerState {
     pub fn new() -> Self {
-        Self { game_id: None }
+        Self {
+            game_id: None,
+            move_number: None,
+        }
     }
 }
 

@@ -100,7 +100,9 @@ pub fn Reserve(
             View::History => {
                 let mut history = History::new();
                 if let Some(turn) = history_turn {
-                    history.moves = game_state.state.history.moves[0..=turn].into();
+                    if game_state.state.history.moves.len() >= turn {
+                        history.moves = game_state.state.history.moves[0..=turn].into();
+                    }
                 }
                 let history_state =
                     State::new_from_history(&history).expect("Got state from history");

@@ -4,7 +4,7 @@ use crate::{
     pages::{
         account::Account, admin::Admin, analysis::Analysis, challenge_view::ChallengeView,
         config::Config, display_games::DisplayGames, donate::Donate, faq::Faq, home::Home,
-        login::Login, play::Play, profile_view::ProfileView, puzzles::Puzzles, register::Register,
+        login::Login, game::Game, profile_view::ProfileView, puzzles::Puzzles, register::Register,
         resources::Resources, rules::Rules, strategy::Strategy, top_players::TopPlayers,
         tournament::Tournament, tournament_create::TournamentCreate, tournaments::Tournaments,
         tutorial::Tutorial,
@@ -114,7 +114,7 @@ pub fn App() -> impl IntoView {
                     <Route
                         path="/game/:nanoid"
                         ssr=SsrMode::PartiallyBlocked
-                        view=|| view! { <Play/> }
+                        view=|| view! { <Game/> }
                     />
                     <Route path="/admin" view=|| view! { <Admin/> }/>
                 </Route>

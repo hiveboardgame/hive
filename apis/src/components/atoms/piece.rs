@@ -1,7 +1,7 @@
 use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
 use crate::common::{PieceType, SvgPos};
 use crate::components::organisms::analysis::AnalysisSignal;
-use crate::pages::play::CurrentConfirm;
+use crate::pages::game::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
 use hive_lib::{Bug, GameStatus, Piece, Position};

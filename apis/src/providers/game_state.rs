@@ -1,5 +1,4 @@
-use std::str::FromStr;
-
+use super::auth_context::AuthContext;
 use crate::common::MoveInfo;
 use crate::providers::api_requests::ApiRequests;
 use crate::responses::GameResponse;
@@ -7,9 +6,8 @@ use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State,
 use leptos::logging::log;
 use leptos::*;
 use shared_types::{GameId, GameSpeed};
+use std::str::FromStr;
 use uuid::Uuid;
-
-use super::auth_context::AuthContext;
 
 #[derive(Clone, Debug, Copy)]
 pub struct GameStateSignal {
@@ -132,6 +130,11 @@ impl GameStateSignal {
 
     pub fn set_game_id(&mut self, game_id: GameId) {
         self.signal.update_untracked(|s| s.game_id = Some(game_id))
+    }
+
+    pub fn set_history_turn(&mut self, turn: Option<usize>) {
+        self.signal.update(|s| s.history_turn = turn);
+        self.signal.update(|s| s.view = View::History);
     }
 
     pub fn play_turn(&mut self, piece: Piece, position: Position) {
@@ -438,6 +441,11 @@ impl GameState {
 
     pub fn view_game(&mut self) {
         self.view = View::Game;
+    }
+
+    pub fn set_history_turn(&mut self, turn: Option<usize>) {
+        self.view = View::History;
+        self.history_turn = turn;
     }
 
     pub fn next_history_turn(&mut self) {

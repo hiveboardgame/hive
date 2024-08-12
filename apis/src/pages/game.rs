@@ -28,7 +28,7 @@ pub struct TargetStack(pub RwSignal<Option<Position>>);
 pub struct CurrentConfirm(pub Memo<MoveConfirm>);
 
 #[component]
-pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+pub fn Game(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
     let orientation_signal = expect_context::<OrientationSignal>();
     let game_state = expect_context::<GameStateSignal>();

@@ -8,7 +8,7 @@ use crate::{
             reserve::{Alignment, Reserve},
         },
     },
-    pages::play::{CurrentConfirm, TargetStack},
+    pages::game::{CurrentConfirm, TargetStack},
     providers::game_state::GameStateSignal,
 };
 use hive_lib::Color;

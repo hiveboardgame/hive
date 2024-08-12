@@ -1,6 +1,6 @@
 use crate::common::HexType;
 use crate::common::PieceType;
-use crate::pages::play::TargetStack;
+use crate::pages::game::TargetStack;
 use crate::{
     common::{ActiveState, HexStack},
     components::atoms::hex::Hex,

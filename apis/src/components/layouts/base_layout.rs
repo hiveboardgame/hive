@@ -36,6 +36,11 @@ lazy_static! {
 }
 
 lazy_static! {
+    static ref MOVE_NUMBER: Regex =
+        Regex::new(r"#(?<move_number>[0-9]{1,3})").expect("This regex should compile");
+}
+
+lazy_static! {
     static ref TOURNAMENT_NANOID: Regex =
         Regex::new(r"/tournament/(?<nanoid>.*)").expect("This regex should compile");
 }
@@ -134,6 +139,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         let location = use_location();
         let mut navi = expect_context::<NavigationControllerSignal>();
         let pathname = (location.pathname)();
+        let hash = (location.hash)();
 
         let game_id = if let Some(caps) = GAME_NANOID.captures(&pathname) {
             caps.name("nanoid").map(|m| GameId(m.as_str().to_string()))
@@ -147,8 +153,18 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             None
         };
 
+        let mut move_number = None::<usize>;
+        if let Some(caps) = MOVE_NUMBER.captures(&hash) {
+            if let Some(Ok(number)) = caps
+                .name("move_number")
+                .map(|m| m.as_str().parse::<usize>())
+            {
+                move_number = Some(number);
+            }
+        }
+
         if ws_ready() == ConnectionReadyState::Open {
-            navi.update_ids(game_id, tournament_id);
+            navi.update_ids(game_id, tournament_id, move_number);
         };
     });
 
@@ -178,7 +194,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                     match ws_ready() {
                         ConnectionReadyState::Closed => {
                             if retry_at.get() == counter.get() {
-                                //log!("Reconnecting due to ReadyState");
                                 ws.open();
                                 counter.update(|c| *c = 0);
                                 retry_at.update(|r| *r *= 2);
@@ -196,7 +211,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                         >= 5
                         && retry_at.get() == counter.get()
                     {
-                        //log!("Reconnecting due to ping duration");
                         ws.open();
                         counter.update(|c| *c = 0);
                         retry_at.update(|r| *r *= 2);

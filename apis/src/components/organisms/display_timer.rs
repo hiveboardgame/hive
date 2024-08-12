@@ -1,7 +1,7 @@
 use crate::{
     common::MoveConfirm,
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
-    pages::play::CurrentConfirm,
+    pages::game::CurrentConfirm,
     providers::{game_state::GameStateSignal, timer::TimerSignal, AuthContext},
 };
 use hive_lib::Color;

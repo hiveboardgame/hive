@@ -1,7 +1,7 @@
 use crate::{
     common::{Direction, Hex, HexType, PieceType},
     components::atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
-    pages::play::TargetStack,
+    pages::game::TargetStack,
     providers::game_state::GameStateSignal,
 };
 use leptos::*;
