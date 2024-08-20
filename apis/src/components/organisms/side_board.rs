@@ -1,12 +1,15 @@
-use crate::components::organisms::reserve::ReserveContent;
 use crate::{
-    components::organisms::{chat::ChatWindow, history::History},
+    components::{
+        molecules::history_controls::HistoryControls,
+        organisms::{chat::ChatWindow, history::History, reserve::ReserveContent},
+    },
     providers::{chat::Chat, game_state::GameStateSignal},
 };
 use hive_lib::Color;
 use leptix_primitives::components::tabs::{TabsContent, TabsList, TabsRoot, TabsTrigger};
 use leptos::*;
 use shared_types::SimpleDestination;
+
 #[derive(Clone, PartialEq, Copy)]
 enum TabView {
     Reserve,
@@ -83,7 +86,8 @@ pub fn SideboardTabs(
             <TabsContent value="History" attr:class="h-full">
                 <History/>
             </TabsContent>
-            <TabsContent value="Chat" attr:class="h-[95%]">
+            <TabsContent value="Chat" attr:class="h-[68%]">
+                <HistoryControls/>
                 <ChatWindow destination=SimpleDestination::Game/>
             </TabsContent>
         </TabsRoot>
