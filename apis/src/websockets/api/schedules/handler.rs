@@ -86,7 +86,7 @@ impl ScheduleHandler {
                                 all_schedules.insert(GameId(id), game_schedules_map);
                             }
                             (
-                                ScheduleUpdate::OwnTournamentSchedules(all_schedules),
+                                ScheduleUpdate::TournamentSchedules(all_schedules),
                                 vec![MessageDestination::User(self.user_id)],
                             )
                         }
