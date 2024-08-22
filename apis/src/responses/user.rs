@@ -27,12 +27,11 @@ impl UserResponse {
     pub fn rating_for_speed(&self, game_speed: &GameSpeed) -> u64 {
         match game_speed {
             GameSpeed::Blitz => self.blitz(),
-            GameSpeed::Correspondence => self.correspondence(),
+            GameSpeed::Correspondence | GameSpeed::Untimed => self.correspondence(),
             GameSpeed::Bullet => self.bullet(),
             GameSpeed::Rapid => self.rapid(),
             GameSpeed::Classic => self.classic(),
             GameSpeed::Puzzle => self.puzzle(),
-            GameSpeed::Untimed => 0,
         }
     }
 

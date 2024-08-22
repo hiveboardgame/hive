@@ -3,98 +3,129 @@ use crate::{
     components::molecules::{
         rating_and_change::RatingAndChange, thumbnail_pieces::ThumbnailPieces, time_row::TimeRow,
     },
-    responses::GameResponse,
+    responses::{GameResponse, UserResponse},
 };
 use hive_lib::{Color, GameStatus};
 use leptos::*;
-use shared_types::{GameSpeed, PrettyString, TimeInfo};
+use shared_types::{Conclusion, GameSpeed, PrettyString, TimeInfo};
 
 #[component]
 pub fn GamePreviews(
     games: Callback<(), Vec<GameResponse>>,
     #[prop(optional)] show_time: bool,
 ) -> impl IntoView {
-    let usernames_with_rating = move |game: GameResponse| {
-        let ratings = store_value(RatingChangeInfo::from_game_response(&game));
-
-        if game.finished {
-            let game_result = match game.game_status {
-                GameStatus::Finished(ref result) => result.to_string(),
-                _ => "".to_string(),
-            };
-
-            view! {
-                <div class="flex gap-1">
-                    {game.white_player.username}
-                    <RatingAndChange ratings=ratings() side=Color::White/> vs
-                    {game.black_player.username}
-                    <RatingAndChange ratings=ratings() side=Color::Black/>
-                </div>
-                <div class="flex gap-1">
-                    <div>{game_result}</div>
-                    {game.conclusion.pretty_string()}
-                </div>
-            }
-            .into_view()
-        } else {
-            view! {
+    let unfinished_ratings_view = move |wp: StoredValue<UserResponse>,
+                                        bp: StoredValue<UserResponse>,
+                                        base: Option<i32>,
+                                        inc: Option<i32>| {
+        let white = wp();
+        let black = bp();
+        view! {
+            <div class="flex flex-wrap gap-1 justify-center p-1 text-center">
                 {format!(
                     "{} {} vs {} {}",
-                    game.white_player.username,
-                    game
-                        .white_player
+                    white.username,
+                    white
                         .ratings
-                        .get(&GameSpeed::from_base_increment(game.time_base, game.time_increment))
+                        .get(&GameSpeed::from_base_increment(base, inc))
                         .expect("White has a rating")
                         .rating,
-                    game.black_player.username,
-                    game
-                        .black_player
+                    black.username,
+                    black
                         .ratings
-                        .get(&GameSpeed::from_base_increment(game.time_base, game.time_increment))
+                        .get(&GameSpeed::from_base_increment(base, inc))
                         .expect("Black has a rating")
                         .rating,
                 )}
-            }
-            .into_view()
+
+            </div>
         }
     };
+    let finished_ratings_view =
+        move |w_username: StoredValue<String>,
+              b_username: StoredValue<String>,
+              gs: StoredValue<GameStatus>,
+              ratings: StoredValue<RatingChangeInfo>,
+              conclusion: StoredValue<Conclusion>| {
+            let game_result = match gs() {
+                GameStatus::Finished(ref result) => result.to_string(),
+                _ => "".to_string(),
+            };
+            view! {
+                <div class="flex flex-wrap gap-1 justify-center p-1 w-full text-center">
+                    <div class="flex flex-grow gap-1 items-center w-auto min-w-0 whitespace-nowrap max-w-[fit-content]">
+                        <p>{w_username}</p>
+                        <RatingAndChange ratings side=Color::White/>
+                    </div>
+                    <div class="w-auto text-center">vs</div>
+                    <div class="flex flex-grow gap-1 items-center w-auto min-w-0 whitespace-nowrap max-w-[fit-content]">
+                        <p>{b_username}</p>
+                        <RatingAndChange ratings side=Color::Black/>
+                    </div>
+
+                </div>
+                <div class="flex gap-1">
+                    <div>{game_result.to_string()}</div>
+                    {conclusion().pretty_string()}
+                </div>
+            }
+        };
     view! {
         <div class="flex flex-row flex-wrap">
             <For each=move || games(()) key=|g| (g.game_id.clone(), g.turn) let:game>
 
                 {
-                    let time_info = store_value(TimeInfo {
+                    let base = game.time_base;
+                    let inc = game.time_increment;
+                    let finished = move || game.finished;
+                    let rated = game.rated;
+                    let game_id = game.game_id.clone();
+                    let time_info = StoredValue::new(TimeInfo {
                         mode: game.time_mode,
-                        base: game.time_base,
-                        increment: game.time_increment,
+                        base,
+                        increment: inc,
                     });
-                    let game = store_value(game);
-                    let needs_start = move || {
-                        let game = game();
-                        game.tournament.is_some()
-                            && matches!(game.game_status, GameStatus::NotStarted)
-                    };
+                    let ratings = StoredValue::new(RatingChangeInfo::from_game_response(&game));
+                    let gs = StoredValue::new(game.game_status.clone());
+                    let conclusion = StoredValue::new(game.conclusion.clone());
+                    let w_username = StoredValue::new(game.white_player.username.clone());
+                    let b_username = StoredValue::new(game.black_player.username.clone());
+                    let white_player = StoredValue::new(game.white_player.clone());
+                    let black_player = StoredValue::new(game.black_player.clone());
+                    let game = StoredValue::new(game);
                     view! {
                         <div class="flex relative flex-col items-center m-2 w-60 h-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
-                            <div class="flex flex-col items-center">
-                                {usernames_with_rating(game())}
+                            <div class="flex flex-col items-center w-full">
+                                <Show
+                                    when=finished
+                                    fallback=move || unfinished_ratings_view(
+                                        white_player,
+                                        black_player,
+                                        base,
+                                        inc,
+                                    )
+                                >
+
+                                    {finished_ratings_view(
+                                        w_username,
+                                        b_username,
+                                        gs,
+                                        ratings,
+                                        conclusion,
+                                    )}
+
+                                </Show>
                             </div>
                             <Show when=move || show_time>
                                 <div class="flex items-center">
-                                    {if game().rated { "RATED " } else { "CASUAL " }}
+                                    {if rated { "RATED " } else { "CASUAL " }}
                                     <TimeRow time_info=time_info().into()/>
                                 </div>
                             </Show>
-                            <Show when=needs_start>
-                                <div class="flex p-2">
-                                    "The game will start once both players agree on a time"
-                                </div>
-                            </Show>
-                            <ThumbnailPieces game=game()/>
+                            <ThumbnailPieces game/>
                             <a
                                 class="absolute top-0 left-0 z-10 w-full h-full"
-                                href=format!("/game/{}", game().game_id)
+                                href=format!("/game/{}", game_id)
                             ></a>
                         </div>
                     }
