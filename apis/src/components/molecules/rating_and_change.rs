@@ -7,9 +7,10 @@ use std::cmp::Ordering;
 #[component]
 pub fn RatingAndChange(
     #[prop(optional)] extend_tw_classes: &'static str,
-    ratings: RatingChangeInfo,
+    ratings: StoredValue<RatingChangeInfo>,
     side: Color,
 ) -> impl IntoView {
+    let ratings = ratings();
     let (rating_change, rating) = match side {
         Color::White => (ratings.white_rating_change, ratings.white_rating),
 
@@ -42,10 +43,11 @@ pub fn RatingAndChangeDynamic(
         {move || {
             ratings()
                 .map(|ratings| {
+                    let ratings = StoredValue::new(ratings);
                     view! {
                         <RatingAndChange
                             extend_tw_classes=extend_tw_classes
-                            ratings=ratings
+                            ratings
                             side=side
                         />
                     }
