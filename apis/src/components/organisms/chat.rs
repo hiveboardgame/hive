@@ -34,9 +34,8 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 }
 
 #[component]
-pub fn ChatInput(destination: ChatDestination) -> impl IntoView {
+pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
     let chat = expect_context::<Chat>();
-    let destination = store_value(destination);
     let send = move || {
         batch(move || {
             let message = chat.typed_message.get();
@@ -92,28 +91,28 @@ pub fn ChatWindow(
     let white_id = move || {
         game_state
             .signal
-            .get_untracked()
+            .get()
             .white_id
             .expect("Game has white player")
     };
     let black_id = move || {
         game_state
             .signal
-            .get_untracked()
+            .get()
             .black_id
             .expect("Game has black player")
     };
 
     let navi = expect_context::<NavigationControllerSignal>();
-    let game_id = store_value(navi.game_signal.get_untracked().game_id.unwrap_or_default());
-    let tournament_id = store_value(
+    let game_id = Signal::derive(move || navi.game_signal.get().game_id.unwrap_or_default());
+    let tournament_id = Signal::derive(move || {
         navi.tournament_signal
-            .get_untracked()
+            .get()
             .tournament_id
-            .unwrap_or_default(),
-    );
-    let correspondant_id = store_value(correspondant_id.map_or(Uuid::new_v4(), |id| id));
-    let correspondant_username = store_value(correspondant_username);
+            .unwrap_or_default()
+    });
+    let correspondant_id = Signal::derive(move || correspondant_id.map_or(Uuid::new_v4(), |id| id));
+    let correspondant_username = Signal::derive(move || correspondant_username.clone());
     let div = create_node_ref::<html::Div>();
     let _ = use_mutation_observer_with_options(
         div,
@@ -128,9 +127,9 @@ pub fn ChatWindow(
             .attributes(true),
     );
 
-    let actual_destination = move || match destination {
+    let actual_destination = Signal::derive(move || match destination {
         SimpleDestination::Game => {
-            if game_state.signal.get_untracked().uid_is_player(uid) {
+            if game_state.signal.get().uid_is_player(uid) {
                 ChatDestination::GamePlayers(game_id(), white_id(), black_id())
             } else {
                 ChatDestination::GameSpectators(game_id(), white_id(), black_id())
@@ -141,8 +140,7 @@ pub fn ChatWindow(
         }
         SimpleDestination::Global => ChatDestination::Global,
         SimpleDestination::Tournament => ChatDestination::TournamentLobby(tournament_id()),
-    };
-    let cloned_fn = actual_destination.clone();
+    });
     let messages = move || match actual_destination() {
         ChatDestination::TournamentLobby(tournament) => (chat.tournament_lobby_messages)()
             .get(&tournament)
@@ -171,7 +169,7 @@ pub fn ChatWindow(
                     <Message message=message/>
                 </For>
             </div>
-            <ChatInput destination=cloned_fn()/>
+            <ChatInput destination=actual_destination/>
         </div>
     }
 }
