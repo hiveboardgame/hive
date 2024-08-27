@@ -1,14 +1,13 @@
-use crate::common::{CommonMessage, ServerMessage::*, ServerResult};
-
-use leptos::logging::log;
-use leptos::*;
-
 use super::{
     challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
-    ping::handle::handle_ping, schedule::handler::handle_schedule,
+    games_search::handle::handle_games_search, ping::handle::handle_ping,
+    player_profile::handle::handle_player_profile, schedule::handler::handle_schedule,
     tournament::handler::handle_tournament, user_search::handle::handle_user_search,
     user_status::handle::handle_user_status,
 };
+use crate::common::{CommonMessage, ServerMessage::*, ServerResult};
+use leptos::logging::log;
+use leptos::*;
 
 pub fn handle_response(m: &CommonMessage) {
     batch(move || match m {
@@ -21,6 +20,8 @@ pub fn handle_response(m: &CommonMessage) {
                 Chat(message) => handle_chat(message),
                 UserSearch(results) => handle_user_search(results),
                 Tournament(tournament_update) => handle_tournament(tournament_update),
+                GamesSearch(results) => handle_games_search(results),
+                PlayerProfile(results) => handle_player_profile(results),
                 Schedule(schedule_update) => handle_schedule(schedule_update),
                 todo => {
                     log!("Got {todo:?} which is currently still unimplemented");

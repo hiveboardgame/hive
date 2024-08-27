@@ -1,10 +1,9 @@
 use crate::functions::config::sound::ToggleSound;
 use leptos::*;
-use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
 use rand::Rng;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{js_sys::ArrayBuffer, AudioBuffer, AudioBufferSourceNode, AudioContext, Response};
+use web_sys::{js_sys::ArrayBuffer, AudioBuffer, AudioContext, Response};
 
 #[cfg(not(feature = "ssr"))]
 fn initial_prefers_sound() -> bool {
@@ -54,27 +53,20 @@ impl SoundsSignal {
         };
         if let Some(context) = self.context.get() {
             let (signal, offset, duration) = match kind {
-                SoundType::Turn => (self.turn, rand::thread_rng().gen_range(0..20) as f64, 500.0),
-                SoundType::NewGame => (self.new, 0.0, 0.0),
-                SoundType::LowTime => (self.low, 0.0, 0.0),
+                SoundType::Turn => (self.turn, rand::thread_rng().gen_range(0..20) as f64, 1.0),
+                SoundType::NewGame => (self.new, 0.0, 3.0),
+                SoundType::LowTime => (self.low, 0.0, 2.0),
             };
-            let UseTimeoutFnReturn { start, .. } = use_timeout_fn(
-                move |sound: AudioBufferSourceNode| {
-                    let _ = sound.stop();
-                },
-                duration,
-            );
             if let Some(buffer) = signal.get_untracked() {
                 let source = context.create_buffer_source().unwrap();
                 source.set_buffer(Some(&buffer));
                 source.set_loop(false);
-                source.start_with_when(offset).unwrap();
+                source
+                    .start_with_when_and_grain_offset_and_grain_duration(0.0, offset, duration)
+                    .unwrap();
                 source
                     .connect_with_audio_node(&context.destination())
                     .unwrap();
-                if kind == SoundType::Turn {
-                    start(source);
-                }
             }
         }
     }

@@ -4,6 +4,7 @@ mod chat_message;
 mod conclusion;
 mod game_speed;
 mod game_start;
+mod games_query_options;
 mod newtypes;
 mod pretty_string;
 mod scoring_mode;
@@ -23,6 +24,7 @@ pub use chat_message::{ChatDestination, ChatMessage, ChatMessageContainer, Simpl
 pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
+pub use games_query_options::{BatchInfo, GamesContextToUpdate, GamesQueryOptions, ResultType};
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use pretty_string::PrettyString;
 pub use scoring_mode::ScoringMode;

@@ -1,22 +1,45 @@
-use crate::pages::profile_view::ProfileGamesView;
 use crate::{
     components::layouts::base_layout::BaseLayout,
     pages::{
-        account::Account, admin::Admin, analysis::Analysis, challenge_view::ChallengeView,
-        config::Config, display_games::DisplayGames, donate::Donate, faq::Faq, home::Home,
-        login::Login, play::Play, profile_view::ProfileView, puzzles::Puzzles, register::Register,
-        resources::Resources, rules::Rules, strategy::Strategy, top_players::TopPlayers,
-        tournament::Tournament, tournament_create::TournamentCreate, tournaments::Tournaments,
+        account::Account,
+        admin::Admin,
+        analysis::Analysis,
+        challenge_view::ChallengeView,
+        config::Config,
+        donate::Donate,
+        faq::Faq,
+        home::Home,
+        login::Login,
+        play::Play,
+        profile_view::{DisplayGames, ProfileView},
+        puzzles::Puzzles,
+        register::Register,
+        resources::Resources,
+        rules::Rules,
+        strategy::Strategy,
+        top_players::TopPlayers,
+        tournament::Tournament,
+        tournament_create::TournamentCreate,
+        tournaments::Tournaments,
         tutorial::Tutorial,
     },
     providers::{
-        challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state,
-        games::provide_games, navigation_controller::provide_navigation_controller,
-        online_users::provide_users, provide_alerts, provide_auth, provide_challenge_params,
-        provide_color_scheme, provide_config, provide_notifications, provide_ping, provide_sounds,
-        refocus::provide_refocus, schedules::provide_schedules, timer::provide_timer,
-        tournament_ready::provide_tournament_ready, tournaments::provide_tournaments,
-        user_search::provide_user_search, websocket::provide_websocket,
+        challenges::provide_challenges,
+        chat::provide_chat,
+        game_state::provide_game_state,
+        games::provide_games,
+        games_search::{provide_profile_games, ProfileGamesView},
+        navigation_controller::provide_navigation_controller,
+        online_users::provide_users,
+        provide_alerts, provide_auth, provide_challenge_params, provide_color_scheme,
+        provide_config, provide_notifications, provide_ping, provide_sounds,
+        refocus::provide_refocus,
+        schedules::provide_schedules,
+        timer::provide_timer,
+        tournament_ready::provide_tournament_ready,
+        tournaments::provide_tournaments,
+        user_search::provide_user_search,
+        websocket::provide_websocket,
     },
 };
 use leptos::*;
@@ -49,7 +72,7 @@ pub fn App() -> impl IntoView {
     provide_tournament_ready();
     provide_schedules();
     provide_sounds();
-
+    provide_profile_games();
     view! {
         <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
         <Router trailing_slash=TrailingSlash::Redirect>

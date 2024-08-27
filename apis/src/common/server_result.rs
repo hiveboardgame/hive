@@ -1,7 +1,7 @@
 use super::game_reaction::GameReaction;
 use super::ClientRequest;
 use crate::responses::{
-    ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse,
+    ChallengeResponse, GameResponse, GamesSearchResponse, HeartbeatResponse, ScheduleResponse,
     TournamentAbstractResponse, TournamentResponse, UserResponse,
 };
 use http::StatusCode;
@@ -49,10 +49,12 @@ pub enum ServerMessage {
     ConnectionUpdated(Uuid, String),
     Chat(Vec<ChatMessageContainer>),
     Game(Box<GameUpdate>),
+    GamesSearch(GamesSearchResponse),
     Challenge(ChallengeUpdate),
     UserSearch(Vec<UserResponse>),
     UserStatus(UserUpdate),
     Tournament(TournamentUpdate),
+    PlayerProfile(UserResponse),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
     Error(String),
