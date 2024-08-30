@@ -30,7 +30,7 @@ pub fn DisplayProfile(user: UserResponse) -> impl IntoView {
 
     view! {
         <div class="m-1">
-            <div class="flex flex-col items-start ml-3">
+            <div class="flex flex-col items-start">
                 <div class="max-w-fit">
                     <UserRow
                         actions=vec![UserAction::Challenge]

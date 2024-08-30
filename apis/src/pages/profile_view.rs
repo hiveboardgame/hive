@@ -1,7 +1,7 @@
 use crate::{
     components::{molecules::game_row::GameRow, organisms::display_profile::DisplayProfile},
     providers::{
-        games_search::{ProfileControls, ProfileGamesContext, ProfileGamesView},
+        games_search::{ProfileControls, ProfileGamesContext},
         websocket::WebsocketContext,
         ApiRequests,
     },
@@ -12,12 +12,18 @@ use leptix_primitives::{
     toggle_group::{ToggleGroupItem, ToggleGroupKind, ToggleGroupMultiple, ToggleGroupRoot},
 };
 use leptos::*;
+use leptos_dom::helpers::TimeoutHandle;
 use leptos_router::*;
 use leptos_use::{
     core::ConnectionReadyState, use_infinite_scroll_with_options, UseInfiniteScrollOptions,
 };
-use shared_types::{GameSpeed, GamesContextToUpdate, GamesQueryOptions, ResultType};
-use std::str::FromStr;
+use shared_types::{GameProgress, GameSpeed, GamesContextToUpdate, GamesQueryOptions, ResultType};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+    str::FromStr,
+    time::Duration,
+};
 
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
@@ -30,12 +36,50 @@ fn first_batch(user: String, c: ProfileControls) {
     api.games_search(GamesQueryOptions {
         players: vec![(user, c.color, c.result)],
         speeds: c.speeds,
-        finished: Some(c.tab_view == ProfileGamesView::Finished),
         ctx_to_update: GamesContextToUpdate::Profile,
-        unstarted: c.tab_view == ProfileGamesView::Unstarted,
         current_batch: None,
         batch_size: Some(3),
+        game_progress: c.tab_view,
     });
+}
+
+// Based on leptos_dom::helpers::debounce https://docs.rs/leptos_dom/latest/src/leptos_dom/helpers.rs.html#288-339
+// which returns an FnMut that is not compatible with the Callback that leptix_primitives RadioGroupRoot expects
+fn debounce_cb<T: 'static + Clone>(
+    delay: Duration,
+    cb: impl Fn(T) + 'static + Clone,
+) -> Callback<T> {
+    let cb = Rc::new(RefCell::new(cb));
+
+    let timer = Rc::new(Cell::new(None::<TimeoutHandle>));
+
+    on_cleanup({
+        let timer = Rc::clone(&timer);
+        move || {
+            if let Some(timer) = timer.take() {
+                timer.clear();
+            }
+        }
+    });
+
+    Callback::new(move |arg: T| {
+        if let Some(timer) = timer.take() {
+            timer.clear();
+        }
+        let handle = set_timeout_with_handle(
+            {
+                let cb = Rc::clone(&cb);
+                let arg = arg.clone();
+                move || {
+                    cb.borrow()(arg);
+                }
+            },
+            delay,
+        );
+        if let Ok(handle) = handle {
+            timer.set(Some(handle));
+        }
+    })
 }
 
 #[component]
@@ -43,152 +87,163 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let ctx = expect_context::<ProfileGamesContext>();
     let params = use_params::<UsernameParams>();
     let ws = expect_context::<WebsocketContext>();
-    let api = ApiRequests::new();
     let controls = ctx.controls;
     create_effect(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
-            params.with(|p| {
-                let _ = p
-                    .as_ref()
-                    .map(|p| p.username.clone())
-                    .map(|u| api.user_profile(u));
-            });
+            batch(move || {
+                let api = ApiRequests::new();
+                params.with(|p| {
+                    let _ = p
+                        .as_ref()
+                        .map(|p| p.username.clone())
+                        .map(|u| api.user_profile(u));
+                });
+                ctx.controls.update(|c| {
+                    c.speeds = vec![
+                        GameSpeed::Bullet,
+                        GameSpeed::Blitz,
+                        GameSpeed::Rapid,
+                        GameSpeed::Classic,
+                        GameSpeed::Correspondence,
+                        GameSpeed::Untimed,
+                    ];
+                });
+            })
         }
     });
     let username = move || ctx.user.get().map_or(String::new(), |user| user.username);
-
-    controls.update(|c| {
-        c.speeds = vec![
-            GameSpeed::Bullet,
-            GameSpeed::Blitz,
-            GameSpeed::Rapid,
-            GameSpeed::Classic,
-            GameSpeed::Correspondence,
-            GameSpeed::Untimed,
-        ];
+    let delay = Duration::from_millis(600);
+    let debouced_first_batch = debounce_cb(delay, move |()| {
+        first_batch(username(), controls());
     });
-    let toggle_classes = "hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded bg-button-dawn dark:bg-button-twilight data-[state=on]:bg-pillbug-teal";
-    let radio_classes = "hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded bg-button-dawn dark:bg-button-twilight data-[state=checked]:bg-pillbug-teal";
+    let toggle_classes = "hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded bg-button-dawn dark:bg-button-twilight data-[state=on]:bg-pillbug-teal";
+    let radio_classes = "hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded bg-button-dawn dark:bg-button-twilight data-[state=checked]:bg-pillbug-teal";
     view! {
-        <div class="flex flex-col pt-12 bg-light dark:bg-gray-950">
+        <div class="flex flex-col pt-12 mx-3 bg-light dark:bg-gray-950">
             <Show when=move || ctx.user.get().is_some()>
-                <div class="flex flex-col w-full">
+                <div class="flex flex-col m-1 w-full">
                     <DisplayProfile user=ctx.user.get().unwrap()/>
-                    <RadioGroupRoot
-                        attr:class="flex gap-1 ml-3"
-                        value=Signal::derive(move || { controls().tab_view.to_string() })
-                    >
+                    <div class="flex flex-col m-1 w-full">
+                        <RadioGroupRoot
+                            attr:class="flex flex-wrap gap-1"
+                            value=Signal::derive(move || { controls().tab_view.to_string() })
+                        >
 
-                        <RadioGroupItem value="Unstarted" attr:class=radio_classes>
-                            <A href="unstarted">"Unstarted Tournament Games"</A>
-                        </RadioGroupItem>
-                        <RadioGroupItem value="Playing" attr:class=radio_classes>
-                            <A href="playing">"Playing"</A>
-                        </RadioGroupItem>
-                        <RadioGroupItem value="Finished" attr:class=radio_classes>
-                            <A href="finished">"Finished Games"</A>
-                        </RadioGroupItem>
-                    </RadioGroupRoot>
-                    <span class="font-bold text-md">Player color:</span>
-                    <RadioGroupRoot
-                        attr:class="flex"
-                        value=Signal::derive(move || {
-                            controls().color.map_or("Both".to_string(), |c| c.to_string())
-                        })
+                            <RadioGroupItem value="Unstarted" attr:class=radio_classes>
+                                <A href="unstarted">"Unstarted Tournament Games"</A>
+                            </RadioGroupItem>
+                            <RadioGroupItem value="Playing" attr:class=radio_classes>
+                                <A href="playing">"Playing"</A>
+                            </RadioGroupItem>
+                            <RadioGroupItem value="Finished" attr:class=radio_classes>
+                                <A href="finished">"Finished Games"</A>
+                            </RadioGroupItem>
+                        </RadioGroupRoot>
+                        <span class="font-bold text-md">Player color:</span>
+                        <RadioGroupRoot
+                            attr:class="flex flex-wrap gap-1"
+                            value=Signal::derive(move || {
+                                controls().color.map_or("Both".to_string(), |c| c.to_string())
+                            })
 
-                        on_value_change=Callback::from(move |v: String| {
-                            controls.update(|c| { c.color = Color::from_str(v.as_str()).ok() });
-                            first_batch(username(), controls());
-                        })
-                    >
-
-                        <RadioGroupItem value="b" attr:class=radio_classes>
-                            "Black"
-                        </RadioGroupItem>
-                        <RadioGroupItem value="w" attr:class=radio_classes>
-                            "White"
-                        </RadioGroupItem>
-                        <RadioGroupItem value="Both" attr:class=radio_classes>
-                            "Both"
-                        </RadioGroupItem>
-                    </RadioGroupRoot>
-                    <span class="font-bold text-md">Game Result:</span>
-                    <RadioGroupRoot
-                        attr:class="flex"
-                        value=Signal::derive(move || {
-                            controls().result.map_or("All".to_string(), |c| c.to_string())
-                        })
-
-                        on_value_change=Callback::from(move |v: String| {
-                            controls
-                                .update(|c| {
-                                    c.result = ResultType::from_str(v.as_str()).ok();
+                            on_value_change=Callback::new(move |v: String| {
+                                controls.update(|c| {
+                                    c.color = Color::from_str(v.as_str()).ok();
                                 });
-                            first_batch(username(), controls());
-                        })
-                    >
+                                debouced_first_batch(());
+                            })
+                        >
 
-                        <RadioGroupItem value="Win" attr:class=radio_classes>
-                            "Win"
-                        </RadioGroupItem>
-                        <RadioGroupItem value="Loss" attr:class=radio_classes>
-                            "Loss"
-                        </RadioGroupItem>
-                        <RadioGroupItem value="Draw" attr:class=radio_classes>
-                            "Draw"
-                        </RadioGroupItem>
-                        <RadioGroupItem value="All" attr:class=radio_classes>
-                            "All"
-                        </RadioGroupItem>
-                    </RadioGroupRoot>
-                    <span class="font-bold text-md">Included speeds:</span>
-                    <ToggleGroupRoot
-                        attr:class="flex"
-                        kind=ToggleGroupKind::Multiple {
-                            value: Signal::derive(move || {
-                                    controls()
-                                        .speeds
-                                        .iter()
-                                        .map(|s| s.to_string())
-                                        .collect::<Vec<_>>()
+                            <RadioGroupItem value="b" attr:class=radio_classes>
+                                "Black"
+                            </RadioGroupItem>
+                            <RadioGroupItem value="w" attr:class=radio_classes>
+                                "White"
+                            </RadioGroupItem>
+                            <RadioGroupItem value="Both" attr:class=radio_classes>
+                                "Both"
+                            </RadioGroupItem>
+                        </RadioGroupRoot>
+                        <Show when=move || controls().tab_view == GameProgress::Finished>
+                            <span class="font-bold text-md">Game Result:</span>
+                            <RadioGroupRoot
+                                attr:class="flex flex-wrap gap-1"
+                                value=Signal::derive(move || {
+                                    controls().result.map_or("All".to_string(), |c| c.to_string())
                                 })
-                                .into(),
-                            default_value: ToggleGroupMultiple::none().into(),
-                            on_value_change: Some(
-                                Callback::from(move |v: Vec<String>| {
+
+                                on_value_change=Callback::new(move |v: String| {
                                     controls
                                         .update(|c| {
-                                            c
-                                                .speeds = v
-                                                .iter()
-                                                .map(|s| GameSpeed::from_str(s).unwrap())
-                                                .collect()
+                                            c.result = ResultType::from_str(v.as_str()).ok();
                                         });
-                                    first_batch(username(), controls());
-                                }),
-                            ),
-                        }
-                    >
+                                        debouced_first_batch(());
+                                })
+                            >
 
-                        <ToggleGroupItem value="Bullet" attr:class=toggle_classes>
-                            "Bullet"
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="Blitz" attr:class=toggle_classes>
-                            "Blitz"
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="Rapid" attr:class=toggle_classes>
-                            "Rapid"
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="Classic" attr:class=toggle_classes>
-                            "Classic"
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="Correspondence" attr:class=toggle_classes>
-                            "Correspondence"
-                        </ToggleGroupItem>
-                        <ToggleGroupItem value="Untimed" attr:class=toggle_classes>
-                            "Untimed"
-                        </ToggleGroupItem>
-                    </ToggleGroupRoot>
+                                <RadioGroupItem value="Win" attr:class=radio_classes>
+                                    "Win"
+                                </RadioGroupItem>
+                                <RadioGroupItem value="Loss" attr:class=radio_classes>
+                                    "Loss"
+                                </RadioGroupItem>
+                                <RadioGroupItem value="Draw" attr:class=radio_classes>
+                                    "Draw"
+                                </RadioGroupItem>
+                                <RadioGroupItem value="All" attr:class=radio_classes>
+                                    "All"
+                                </RadioGroupItem>
+                            </RadioGroupRoot>
+                        </Show>
+                        <span class="font-bold text-md">Included speeds:</span>
+                        <ToggleGroupRoot
+                            attr:class="flex flex-wrap gap-1 mb-1"
+                            kind=ToggleGroupKind::Multiple {
+                                value: Signal::derive(move || {
+                                        controls()
+                                            .speeds
+                                            .iter()
+                                            .map(|s| s.to_string())
+                                            .collect::<Vec<_>>()
+                                    })
+                                    .into(),
+                                default_value: ToggleGroupMultiple::none().into(),
+                                on_value_change: Some(
+                                    Callback::new(move |v: Vec<String>| {
+                                        controls
+                                            .update(|c| {
+                                                c
+                                                    .speeds = v
+                                                    .iter()
+                                                    .map(|s| GameSpeed::from_str(s).unwrap())
+                                                    .collect();
+                                            });
+                                            debouced_first_batch(());
+                                    }),
+                                ),
+                            }
+                        >
+
+                            <ToggleGroupItem value="Bullet" attr:class=toggle_classes>
+                                "Bullet"
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="Blitz" attr:class=toggle_classes>
+                                "Blitz"
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="Rapid" attr:class=toggle_classes>
+                                "Rapid"
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="Classic" attr:class=toggle_classes>
+                                "Classic"
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="Correspondence" attr:class=toggle_classes>
+                                "Correspondence"
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="Untimed" attr:class=toggle_classes>
+                                "Untimed"
+                            </ToggleGroupItem>
+                        </ToggleGroupRoot>
+                    </div>
                     {children()}
                 </div>
             </Show>
@@ -197,7 +252,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
 }
 
 #[component]
-pub fn DisplayGames(tab_view: ProfileGamesView) -> impl IntoView {
+pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     let ctx = expect_context::<ProfileGamesContext>();
     let username = move || ctx.user.get().map_or(String::new(), |user| user.username);
     let user_info = create_read_slice(ctx.controls, move |c| (username(), c.color, c.result));
@@ -208,6 +263,9 @@ pub fn DisplayGames(tab_view: ProfileGamesView) -> impl IntoView {
         if ws.ready_state.get() == ConnectionReadyState::Open {
             ctx.controls.update(|c| {
                 c.tab_view = tab_view;
+                if tab_view != GameProgress::Finished {
+                    c.result = None;
+                };
             });
             first_batch(username(), ctx.controls.get_untracked());
         }
@@ -218,14 +276,14 @@ pub fn DisplayGames(tab_view: ProfileGamesView) -> impl IntoView {
             let api = ApiRequests::new();
 
             if ctx.more_games.get() {
+                let controls = ctx.controls.get();
                 api.games_search(GamesQueryOptions {
                     players: vec![user_info()],
-                    speeds: ctx.controls.get().speeds,
-                    finished: Some(tab_view == ProfileGamesView::Finished),
+                    speeds: controls.speeds,
                     current_batch: ctx.batch_info.get(),
                     batch_size: Some(5),
                     ctx_to_update: GamesContextToUpdate::Profile,
-                    unstarted: tab_view == ProfileGamesView::Unstarted,
+                    game_progress: controls.tab_view,
                 });
             }
         },

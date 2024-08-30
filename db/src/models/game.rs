@@ -16,11 +16,10 @@ use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    ChallengeId, Conclusion, GameId, GameSpeed, GameStart, GamesQueryOptions, ResultType, TimeMode,
-    TournamentGameResult,
+    ChallengeId, Conclusion, GameId, GameProgress, GameSpeed, GameStart, GamesQueryOptions,
+    ResultType, TimeMode, TournamentGameResult,
 };
-use std::time::Duration;
-use std::{collections::HashMap, str::FromStr};
+use std::{str::FromStr, time::Duration};
 use uuid::Uuid;
 
 pub static NANOS_IN_SECOND: u64 = 1000000000_u64;
@@ -1078,116 +1077,89 @@ impl Game {
             .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
             .inner_join(games::table.on(games_users::game_id.eq(games::id)))
             .into_boxed();
-        if let Some(is_finished) = options.finished {
-            query = query.filter(games::finished.eq(is_finished));
+
+        match options.game_progress {
+            GameProgress::Unstarted => {
+                query = query.filter(
+                    games::game_status
+                        .eq("NotStarted")
+                        .and(games::game_start.eq("Ready")),
+                );
+            }
+            GameProgress::Playing => {
+                query = query.filter(
+                    games::game_status.eq("InProgress").or(games::game_status
+                        .eq("NotStarted")
+                        .and(games::game_start.ne("Ready"))),
+                );
+            }
+            GameProgress::Finished => {
+                query = query.filter(games::finished.eq(true));
+            }
+            GameProgress::All => {}
         }
-        if options.unstarted {
-            query = query.filter(
-                games::game_status
-                    .eq("NotStarted")
-                    .and(games::game_start.eq("Ready")),
-            );
-        } else {
-            query = query.filter(
-                games::game_status
-                    .ne("NotStarted")
-                    .or(games::game_start.ne("Ready")),
-            );
-        }
+
+        //Selected speeds
+        let speeds: Vec<_> = options.speeds.iter().map(|s| s.to_string()).collect();
+        query = query.filter(games::speed.eq_any(speeds));
+
         //Multiple usernames. For each choose color and result type
         if !options.players.is_empty() {
             use users::normalized_username as username;
             let is_white = games::white_id.eq(users::id);
             let is_black = games::black_id.eq(users::id);
-            let white_winner = GameStatus::Finished(GameResult::Winner(Color::White)).to_string();
-            let black_winner = GameStatus::Finished(GameResult::Winner(Color::Black)).to_string();
-            let draw = GameStatus::Finished(GameResult::Draw).to_string();
-            let white_won = games::game_status.eq(white_winner);
-            let black_won = games::game_status.eq(black_winner);
-            let is_draw = games::game_status.eq(draw);
-            let mut filter_map: HashMap<(Option<Color>, Option<ResultType>), Vec<String>> =
-                HashMap::new();
+            let white_won = games::game_status
+                .eq(GameStatus::Finished(GameResult::Winner(Color::White)).to_string());
+            let black_won = games::game_status
+                .eq(GameStatus::Finished(GameResult::Winner(Color::Black)).to_string());
+            let is_draw = games::game_status.eq(GameStatus::Finished(GameResult::Draw).to_string());
+
+            let mut query_conditions: Vec<Box<dyn BoxableExpression<_, _, SqlType = _>>> =
+                Vec::new();
+
             for (usern, color, result) in options.players.iter() {
-                let (color, result) = (*color, *result);
-                if let Some(val) = filter_map.get_mut(&(color, result)) {
-                    val.push(usern.to_lowercase());
-                } else {
-                    filter_map.insert((color, result), vec![usern.to_lowercase()]);
+                let user_filter = username.eq(usern.to_lowercase());
+
+                let color_filter: Box<dyn BoxableExpression<_, _, SqlType = _>> = match color {
+                    Some(Color::White) => Box::new(is_white),
+                    Some(Color::Black) => Box::new(is_black),
+                    None => Box::new(is_white.or(is_black)),
+                };
+
+                let result_filter: Option<Box<dyn BoxableExpression<_, _, SqlType = _>>> =
+                    match result {
+                        Some(ResultType::Win) => Some(match color {
+                            Some(Color::White) => Box::new(white_won.clone()),
+                            Some(Color::Black) => Box::new(black_won.clone()),
+                            None => Box::new(white_won.clone().or(black_won.clone())),
+                        }),
+                        Some(ResultType::Loss) => Some(match color {
+                            Some(Color::White) => Box::new(black_won.clone()),
+                            Some(Color::Black) => Box::new(white_won.clone()),
+                            None => Box::new(black_won.clone().or(white_won.clone())),
+                        }),
+                        Some(ResultType::Draw) => Some(Box::new(is_draw.clone())),
+                        None => None,
+                    };
+
+                let combined_filter: Box<dyn BoxableExpression<_, _, SqlType = _>> =
+                    match result_filter {
+                        Some(res) => Box::new(user_filter.and(color_filter.and(res))),
+                        None => Box::new(user_filter.and(color_filter)),
+                    };
+
+                query_conditions.push(combined_filter);
+            }
+
+            if !query_conditions.is_empty() {
+                let combined_filter = query_conditions
+                    .into_iter()
+                    .reduce(|acc, cond| Box::new(acc.or(cond)));
+                if let Some(filter) = combined_filter {
+                    query = query.filter(filter);
                 }
             }
-            let all_both = filter_map.get(&(None, None)).map_or(vec![], |v| v.clone());
-            let all_white = filter_map
-                .get(&(Some(Color::White), None))
-                .map_or(vec![], |v| v.clone());
-            let all_black = filter_map
-                .get(&(Some(Color::Black), None))
-                .map_or(vec![], |v| v.clone());
-            let win_both = filter_map
-                .get(&(None, Some(ResultType::Win)))
-                .map_or(vec![], |v| v.clone());
-            let win_white = filter_map
-                .get(&(Some(Color::White), Some(ResultType::Win)))
-                .map_or(vec![], |v| v.clone());
-            let win_black = filter_map
-                .get(&(Some(Color::Black), Some(ResultType::Win)))
-                .map_or(vec![], |v| v.clone());
-
-            let loss_both = filter_map
-                .get(&(None, Some(ResultType::Loss)))
-                .map_or(vec![], |v| v.clone());
-            let loss_white = filter_map
-                .get(&(Some(Color::White), Some(ResultType::Loss)))
-                .map_or(vec![], |v| v.clone());
-            let loss_black = filter_map
-                .get(&(Some(Color::Black), Some(ResultType::Loss)))
-                .map_or(vec![], |v| v.clone());
-
-            let draw_both = filter_map
-                .get(&(None, Some(ResultType::Draw)))
-                .map_or(vec![], |v| v.clone());
-            let draw_white = filter_map
-                .get(&(Some(Color::White), Some(ResultType::Draw)))
-                .map_or(vec![], |v| v.clone());
-            let draw_black = filter_map
-                .get(&(Some(Color::Black), Some(ResultType::Draw)))
-                .map_or(vec![], |v| v.clone());
-            query = query.filter(
-                username
-                    .eq_any(all_both)
-                    .or(is_white.and(username.eq_any(all_white)))
-                    .or(is_black.and(username.eq_any(all_black)))
-                    .or(BoolExpressionMethods::or(
-                        is_white.and(white_won.clone()),
-                        is_black.and(black_won.clone()),
-                    )
-                    .and(username.eq_any(win_both)))
-                    .or(is_white
-                        .and(white_won.clone())
-                        .and(username.eq_any(win_white)))
-                    .or(is_black
-                        .and(black_won.clone())
-                        .and(username.eq_any(win_black)))
-                    .or(BoolExpressionMethods::or(
-                        is_white.and(black_won.clone()),
-                        is_black.and(white_won.clone()),
-                    )
-                    .and(username.eq_any(loss_both)))
-                    .or(is_white
-                        .and(black_won.clone())
-                        .and(username.eq_any(loss_white)))
-                    .or(is_black
-                        .and(white_won.clone())
-                        .and(username.eq_any(loss_black)))
-                    .or(is_draw.clone().and(username.eq_any(draw_both)))
-                    .or(is_draw
-                        .clone()
-                        .and(is_white.and(username.eq_any(draw_white))))
-                    .or(is_draw.and(is_black.and(username.eq_any(draw_black)))),
-            );
         }
-        //Selected speeds
-        let speeds: Vec<_> = options.speeds.iter().map(|s| s.to_string()).collect();
-        query = query.filter(games::speed.eq_any(speeds));
 
         query = query.order_by((games::updated_at.desc(), games::id.desc()));
 

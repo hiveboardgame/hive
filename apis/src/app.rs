@@ -24,27 +24,20 @@ use crate::{
         tutorial::Tutorial,
     },
     providers::{
-        challenges::provide_challenges,
-        chat::provide_chat,
-        game_state::provide_game_state,
-        games::provide_games,
-        games_search::{provide_profile_games, ProfileGamesView},
-        navigation_controller::provide_navigation_controller,
-        online_users::provide_users,
+        challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state,
+        games::provide_games, games_search::provide_profile_games,
+        navigation_controller::provide_navigation_controller, online_users::provide_users,
         provide_alerts, provide_auth, provide_challenge_params, provide_color_scheme,
         provide_config, provide_notifications, provide_ping, provide_sounds,
-        refocus::provide_refocus,
-        schedules::provide_schedules,
-        timer::provide_timer,
-        tournament_ready::provide_tournament_ready,
-        tournaments::provide_tournaments,
-        user_search::provide_user_search,
-        websocket::provide_websocket,
+        refocus::provide_refocus, schedules::provide_schedules, timer::provide_timer,
+        tournament_ready::provide_tournament_ready, tournaments::provide_tournaments,
+        user_search::provide_user_search, websocket::provide_websocket,
     },
 };
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+use shared_types::GameProgress;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -102,19 +95,19 @@ pub fn App() -> impl IntoView {
 
                         <Route
                             path=""
-                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Playing/> }
+                            view=|| view! { <DisplayGames tab_view=GameProgress::Playing/> }
                         />
                         <Route
                             path="playing"
-                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Playing/> }
+                            view=|| view! { <DisplayGames tab_view=GameProgress::Playing/> }
                         />
                         <Route
                             path="finished"
-                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Finished/> }
+                            view=|| view! { <DisplayGames tab_view=GameProgress::Finished/> }
                         />
                         <Route
                             path="unstarted"
-                            view=|| view! { <DisplayGames tab_view=ProfileGamesView::Unstarted/> }
+                            view=|| view! { <DisplayGames tab_view=GameProgress::Unstarted/> }
                         />
                     </Route>
                     <Route path="/register" view=|| view! { <Register/> }/>
