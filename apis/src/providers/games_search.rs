@@ -1,7 +1,7 @@
 use hive_lib::Color;
 use leptos::{provide_context, RwSignal};
-use shared_types::{BatchInfo, GameSpeed, ResultType};
-use std::{fmt::Display, str::FromStr, vec};
+use shared_types::{BatchInfo, GameProgress, GameSpeed, ResultType};
+use std::vec;
 
 use crate::responses::{GameResponse, UserResponse};
 
@@ -10,7 +10,7 @@ pub struct ProfileControls {
     pub color: Option<Color>,
     pub result: Option<ResultType>,
     pub speeds: Vec<GameSpeed>,
-    pub tab_view: ProfileGamesView,
+    pub tab_view: GameProgress,
 }
 
 #[derive(Debug, Clone)]
@@ -22,34 +22,6 @@ pub struct ProfileGamesContext {
     pub controls: RwSignal<ProfileControls>,
 }
 
-#[derive(Clone, PartialEq, Copy, Debug, Eq, Hash, Default)]
-pub enum ProfileGamesView {
-    Unstarted,
-    #[default]
-    Playing,
-    Finished,
-}
-impl FromStr for ProfileGamesView {
-    type Err = anyhow::Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Unstarted" => Ok(ProfileGamesView::Unstarted),
-            "Playing" => Ok(ProfileGamesView::Playing),
-            "Finished" => Ok(ProfileGamesView::Finished),
-            _ => Err(anyhow::anyhow!("Invalid ProfileGamesView string")),
-        }
-    }
-}
-impl Display for ProfileGamesView {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let view = match self {
-            ProfileGamesView::Unstarted => "Unstarted",
-            ProfileGamesView::Playing => "Playing",
-            ProfileGamesView::Finished => "Finished",
-        };
-        write!(f, "{view}")
-    }
-}
 pub fn provide_profile_games() {
     provide_context(ProfileGamesContext {
         games: RwSignal::new(Vec::new()),
@@ -60,7 +32,7 @@ pub fn provide_profile_games() {
             color: None,
             result: None,
             speeds: vec![],
-            tab_view: ProfileGamesView::Playing,
+            tab_view: GameProgress::Playing,
         }),
     });
 }
