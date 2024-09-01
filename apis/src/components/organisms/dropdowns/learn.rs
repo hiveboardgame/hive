@@ -8,12 +8,14 @@ const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-
 pub fn LearnDropdown() -> impl IntoView {
     let hamburger_show = create_rw_signal(false);
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
+    let name = "Learn";
     view! {
         <Hamburger
             hamburger_show=hamburger_show
             button_style=DROPDOWN_BUTTON_STYLE
             dropdown_style=DROPDOWN_MENU_STYLE
-            content="Learn"
+            content=name
+            id=name
         >
             <a
                 class=COMMON_LINK_STYLE

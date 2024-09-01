@@ -58,7 +58,7 @@ pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
         <input
             ref=my_input
             type="text"
-            class="box-border px-4 py-2 w-full h-auto rounded-lg resize-none bg-odd-light dark:bg-odd-dark focus:outline-none shrink-0"
+            class="box-border px-2 py-4 w-full rounded-lg resize-none bg-odd-light dark:bg-odd-dark focus:outline-none shrink-0"
             prop:value=chat.typed_message
             attr:placeholder=placeholder
             on:input=update_from_input(chat.typed_message)
@@ -163,8 +163,11 @@ pub fn ChatWindow(
         _ => Vec::new(),
     };
     view! {
-        <div id="ignoreChat" class="flex flex-col w-full min-w-full max-w-full h-full min-h-full">
-            <div ref=div class="overflow-y-auto w-full min-w-full max-w-full h-full">
+        <div
+            id="ignoreChat"
+            class="flex flex-col flex-grow justify-between w-full min-w-full max-w-full h-full"
+        >
+            <div ref=div class="overflow-y-auto flex-grow w-full min-w-full h-0">
                 <For each=messages key=|message| message.timestamp let:message>
                     <Message message=message/>
                 </For>

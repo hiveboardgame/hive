@@ -147,9 +147,10 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                             })
 
                             on_value_change=Callback::new(move |v: String| {
-                                controls.update(|c| {
-                                    c.color = Color::from_str(v.as_str()).ok();
-                                });
+                                controls
+                                    .update(|c| {
+                                        c.color = Color::from_str(v.as_str()).ok();
+                                    });
                                 debouced_first_batch(());
                             })
                         >
@@ -177,7 +178,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                         .update(|c| {
                                             c.result = ResultType::from_str(v.as_str()).ok();
                                         });
-                                        debouced_first_batch(());
+                                    debouced_first_batch(());
                                 })
                             >
 
@@ -218,7 +219,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                     .map(|s| GameSpeed::from_str(s).unwrap())
                                                     .collect();
                                             });
-                                            debouced_first_batch(());
+                                        debouced_first_batch(());
                                     }),
                                 ),
                             }

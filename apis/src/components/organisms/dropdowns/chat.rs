@@ -39,6 +39,7 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
 
             dropdown_style=chat_style
             content=view! { <Icon icon=icondata::BiChatRegular class="w-4 h-4"/> }
+            id = "chat"
         >
             <ChatWindow destination=destination()/>
         </Hamburger>
