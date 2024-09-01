@@ -9,9 +9,10 @@ pub fn Hamburger<T: IntoView>(
     #[prop(into)] button_style: MaybeSignal<String>,
     #[prop(optional)] extend_tw_classes: &'static str,
     dropdown_style: &'static str,
+    id: &'static str,
     content: T,
 ) -> impl IntoView {
-    let target = create_node_ref::<Div>();
+    let target = NodeRef::<Div>::new();
     create_effect(move |_| {
         if hamburger_show() {
             let _ = on_click_outside_with_options(
@@ -19,7 +20,11 @@ pub fn Hamburger<T: IntoView>(
                 move |_| {
                     hamburger_show.update(|b| *b = false);
                 },
-                OnClickOutsideOptions::default().ignore(["input", "#ignoreChat"]),
+                OnClickOutsideOptions::default().ignore([
+                    "input",
+                    "#ignoreChat",
+                    &format!("#{id}"),
+                ]),
             );
         }
     });
@@ -29,6 +34,7 @@ pub fn Hamburger<T: IntoView>(
     view! {
         <div ref=target class=format!("inline-block {extend_tw_classes}")>
             <button
+                id=id
                 on:click=move |_| hamburger_show.update(|b| *b = !*b)
 
                 class=button_style

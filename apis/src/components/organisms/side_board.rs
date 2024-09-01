@@ -69,7 +69,7 @@ pub fn SideboardTabs(
         <TabsRoot
             default_value="Game"
             attr:class=format!(
-                "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 {extend_tw_classes}",
+                "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",
             )
         >
 
@@ -86,7 +86,10 @@ pub fn SideboardTabs(
             <TabsContent value="History" attr:class="h-full">
                 <History/>
             </TabsContent>
-            <TabsContent value="Chat" attr:class="h-[68%]">
+            <TabsContent
+                value="Chat"
+                attr:class="flex flex-col flex-grow h-full max-h-full justify-beetween"
+            >
                 <HistoryControls/>
                 <ChatWindow destination=SimpleDestination::Game/>
             </TabsContent>
