@@ -9,6 +9,7 @@ use shared_types::{GameId, TournamentId};
 pub struct NavigationControllerSignal {
     pub game_signal: RwSignal<GameNavigationControllerState>,
     pub tournament_signal: RwSignal<TournamentNavigationControllerState>,
+    pub profile_signal: RwSignal<ProfileNavigationControllerState>,
 }
 
 impl Default for NavigationControllerSignal {
@@ -20,8 +21,9 @@ impl Default for NavigationControllerSignal {
 impl NavigationControllerSignal {
     pub fn new() -> Self {
         Self {
-            game_signal: create_rw_signal(GameNavigationControllerState::new()),
-            tournament_signal: create_rw_signal(TournamentNavigationControllerState::new()),
+            game_signal: RwSignal::new(GameNavigationControllerState::new()),
+            tournament_signal: RwSignal::new(TournamentNavigationControllerState::new()),
+            profile_signal: RwSignal::new(ProfileNavigationControllerState::new()),
         }
     }
 
@@ -80,6 +82,23 @@ impl GameNavigationControllerState {
 }
 
 impl Default for GameNavigationControllerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ProfileNavigationControllerState {
+    pub username: Option<String>,
+}
+
+impl ProfileNavigationControllerState {
+    pub fn new() -> Self {
+        Self { username: None }
+    }
+}
+
+impl Default for ProfileNavigationControllerState {
     fn default() -> Self {
         Self::new()
     }
