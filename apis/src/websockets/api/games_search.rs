@@ -39,7 +39,7 @@ impl GamesSearchHandler {
         let response = GamesSearchResponse {
             results: game_responses,
             batch,
-            ctx_to_update: self.options.ctx_to_update,
+            ctx_to_update: self.options.ctx_to_update.clone(),
             more_rows: options.batch_size.map_or(false, |b| b == games.len()),
             first_batch: options.current_batch.is_none(),
         };

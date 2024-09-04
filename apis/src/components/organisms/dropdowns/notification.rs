@@ -47,7 +47,7 @@ pub fn NotificationDropdown() -> impl IntoView {
             button_style="h-full p-2 transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
             dropdown_style="mr-1 items-center xs:mt-0 mt-1 flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md p-2 right-0"
             content=view! { <Icon icon=icondata::IoNotifications class=icon_style/> }
-            id = "Notifications"
+            id="Notifications"
         >
             <Show
                 when=has_notifications

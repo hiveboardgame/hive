@@ -2,6 +2,7 @@ use crate::{
     components::{molecules::game_row::GameRow, organisms::display_profile::DisplayProfile},
     providers::{
         games_search::{ProfileControls, ProfileGamesContext},
+        navigation_controller::{NavigationControllerSignal, ProfileNavigationControllerState},
         websocket::WebsocketContext,
         ApiRequests,
     },
@@ -34,9 +35,9 @@ fn first_batch(user: String, c: ProfileControls) {
     let api = ApiRequests::new();
 
     api.games_search(GamesQueryOptions {
-        players: vec![(user, c.color, c.result)],
+        players: vec![(user.clone(), c.color, c.result)],
         speeds: c.speeds,
-        ctx_to_update: GamesContextToUpdate::Profile,
+        ctx_to_update: GamesContextToUpdate::Profile(user),
         current_batch: None,
         batch_size: Some(3),
         game_progress: c.tab_view,
@@ -85,18 +86,26 @@ fn debounce_cb<T: 'static + Clone>(
 #[component]
 pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let ctx = expect_context::<ProfileGamesContext>();
+    let navi = expect_context::<NavigationControllerSignal>();
     let params = use_params::<UsernameParams>();
     let ws = expect_context::<WebsocketContext>();
     let controls = ctx.controls;
+    let username = Signal::derive(move || {
+        params.with(|p| {
+            p.as_ref()
+                .ok()
+                .map(|p| p.username.clone())
+                .map_or(String::new(), |user| user)
+        })
+    });
     create_effect(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
+            let api = ApiRequests::new();
             batch(move || {
-                let api = ApiRequests::new();
-                params.with(|p| {
-                    let _ = p
-                        .as_ref()
-                        .map(|p| p.username.clone())
-                        .map(|u| api.user_profile(u));
+                navi.profile_signal.update(|v| {
+                    *v = ProfileNavigationControllerState {
+                        username: Some(username()),
+                    }
                 });
                 ctx.controls.update(|c| {
                     c.speeds = vec![
@@ -108,10 +117,10 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         GameSpeed::Untimed,
                     ];
                 });
-            })
+            });
+            api.user_profile(username.get_untracked());
         }
     });
-    let username = move || ctx.user.get().map_or(String::new(), |user| user.username);
     let delay = Duration::from_millis(600);
     let debouced_first_batch = debounce_cb(delay, move |()| {
         first_batch(username(), controls());
@@ -255,22 +264,27 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
 #[component]
 pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     let ctx = expect_context::<ProfileGamesContext>();
-    let username = move || ctx.user.get().map_or(String::new(), |user| user.username);
-    let user_info = create_read_slice(ctx.controls, move |c| (username(), c.color, c.result));
-    let el = create_node_ref::<html::Div>();
-    let ws = expect_context::<WebsocketContext>();
-
-    create_effect(move |_| {
-        if ws.ready_state.get() == ConnectionReadyState::Open {
-            ctx.controls.update(|c| {
-                c.tab_view = tab_view;
-                if tab_view != GameProgress::Finished {
-                    c.result = None;
-                };
-            });
-            first_batch(username(), ctx.controls.get_untracked());
-        }
+    let params = use_params::<UsernameParams>();
+    let username = Signal::derive(move || {
+        params.with(|p| {
+            p.as_ref()
+                .ok()
+                .map(|p| p.username.clone())
+                .map_or(String::new(), |user| user)
+        })
     });
+    let user_info = create_read_slice(ctx.controls, move |c| (username(), c.color, c.result));
+    let el = NodeRef::<html::Div>::new();
+    el.on_load(move |_| {
+        ctx.controls.update(|c| {
+            c.tab_view = tab_view;
+            if tab_view != GameProgress::Finished {
+                c.result = None;
+            };
+        });
+        first_batch(username(), ctx.controls.get_untracked());
+    });
+
     let _ = use_infinite_scroll_with_options(
         el,
         move |_| async move {
@@ -283,7 +297,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                     speeds: controls.speeds,
                     current_batch: ctx.batch_info.get(),
                     batch_size: Some(5),
-                    ctx_to_update: GamesContextToUpdate::Profile,
+                    ctx_to_update: GamesContextToUpdate::Profile(username()),
                     game_progress: controls.tab_view,
                 });
             }

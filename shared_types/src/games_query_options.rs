@@ -82,7 +82,7 @@ pub struct GamesQueryOptions {
     pub batch_size: Option<usize>,
     pub game_progress: GameProgress,
 }
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum GamesContextToUpdate {
-    Profile,
+    Profile(String),
 }
