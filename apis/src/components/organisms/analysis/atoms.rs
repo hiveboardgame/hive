@@ -12,11 +12,9 @@ use tree_ds::prelude::Node;
 pub fn UndoButton() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
     let is_disabled = move || {
-        analysis.get().map_or(true, |analysis| {
-            analysis
-                .current_node
-                .map_or(true, |n| n.get_parent_id().is_none())
-        })
+        analysis
+            .get()
+            .map_or(true, |analysis| analysis.current_node.is_none())
     };
     let undo = move |_| {
         analysis.update(|a| {
