@@ -87,6 +87,28 @@ server
 format
 ```
 
+
+### Docker Development
+
+Ensure docker is installed on your machine. You can run the following command to start the server and database:
+
+```sh
+docker compose up --build -d
+```
+
+This command downloads and installs the required dependencies. The first time you run this command, it may take a few minutes to complete.
+
+```sh
+# to stop docker compose
+docker compose down
+
+# if you have already built the image, you can save some time by running without the build flag:
+docker compose up -d
+```
+
+This will create a database, apply migrations and run the app on localhost:3000.
+
+
 ## License
 This source code with the exception of the graphics is licensed under the GNU
 Affero General Public License 3 license found in the LICENSE.md file in the
