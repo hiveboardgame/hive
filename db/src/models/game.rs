@@ -1119,33 +1119,35 @@ impl Game {
 
             for (usern, color, result) in options.players.iter() {
                 let user_filter = username.eq(usern.to_lowercase());
-
-                let color_filter: Box<dyn BoxableExpression<_, _, SqlType = _>> = match color {
-                    Some(Color::White) => Box::new(is_white),
-                    Some(Color::Black) => Box::new(is_black),
-                    None => Box::new(is_white.or(is_black)),
-                };
-
                 let result_filter: Option<Box<dyn BoxableExpression<_, _, SqlType = _>>> =
                     match result {
                         Some(ResultType::Win) => Some(match color {
-                            Some(Color::White) => Box::new(white_won.clone()),
-                            Some(Color::Black) => Box::new(black_won.clone()),
-                            None => Box::new(white_won.clone().or(black_won.clone())),
+                            Some(Color::White) => Box::new(white_won.clone().and(is_white)),
+                            Some(Color::Black) => Box::new(black_won.clone().and(is_black)),
+                            None => Box::new((white_won.clone().and(is_white)).or(black_won.clone().and(is_black))),
                         }),
                         Some(ResultType::Loss) => Some(match color {
-                            Some(Color::White) => Box::new(black_won.clone()),
-                            Some(Color::Black) => Box::new(white_won.clone()),
-                            None => Box::new(black_won.clone().or(white_won.clone())),
+                            Some(Color::White) => Box::new(black_won.clone().and(is_white)),
+                            Some(Color::Black) => Box::new(white_won.clone().and(is_black)),
+                            None => Box::new((white_won.clone().and(is_black)).or(black_won.clone().and(is_white))),
                         }),
-                        Some(ResultType::Draw) => Some(Box::new(is_draw.clone())),
-                        None => None,
+                        Some(ResultType::Draw) => Some(match color {
+                            Some(Color::White) => Box::new(is_white.and(is_draw.clone())),
+                            Some(Color::Black) => Box::new(is_black.and(is_draw.clone())),
+                            None => Box::new((is_white.and(is_draw.clone())).or(is_black.and(is_draw.clone()))),
+                        }),
+                        None => match color {
+                            Some(Color::White) => Some(Box::new(is_white)),
+                            Some(Color::Black) => Some(Box::new(is_black)),
+                            None => None,
+                            
+                        }
                     };
 
                 let combined_filter: Box<dyn BoxableExpression<_, _, SqlType = _>> =
                     match result_filter {
-                        Some(res) => Box::new(user_filter.and(color_filter.and(res))),
-                        None => Box::new(user_filter.and(color_filter)),
+                        Some(res) => Box::new(user_filter.and(res)),
+                        None => Box::new(user_filter),
                     };
 
                 query_conditions.push(combined_filter);
