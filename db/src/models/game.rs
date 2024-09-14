@@ -1124,24 +1124,31 @@ impl Game {
                         Some(ResultType::Win) => Some(match color {
                             Some(Color::White) => Box::new(white_won.clone().and(is_white)),
                             Some(Color::Black) => Box::new(black_won.clone().and(is_black)),
-                            None => Box::new((white_won.clone().and(is_white)).or(black_won.clone().and(is_black))),
+                            None => Box::new(
+                                (white_won.clone().and(is_white))
+                                    .or(black_won.clone().and(is_black)),
+                            ),
                         }),
                         Some(ResultType::Loss) => Some(match color {
                             Some(Color::White) => Box::new(black_won.clone().and(is_white)),
                             Some(Color::Black) => Box::new(white_won.clone().and(is_black)),
-                            None => Box::new((white_won.clone().and(is_black)).or(black_won.clone().and(is_white))),
+                            None => Box::new(
+                                (white_won.clone().and(is_black))
+                                    .or(black_won.clone().and(is_white)),
+                            ),
                         }),
                         Some(ResultType::Draw) => Some(match color {
                             Some(Color::White) => Box::new(is_white.and(is_draw.clone())),
                             Some(Color::Black) => Box::new(is_black.and(is_draw.clone())),
-                            None => Box::new((is_white.and(is_draw.clone())).or(is_black.and(is_draw.clone()))),
+                            None => Box::new(
+                                (is_white.and(is_draw.clone())).or(is_black.and(is_draw.clone())),
+                            ),
                         }),
                         None => match color {
                             Some(Color::White) => Some(Box::new(is_white)),
                             Some(Color::Black) => Some(Box::new(is_black)),
                             None => None,
-                            
-                        }
+                        },
                     };
 
                 let combined_filter: Box<dyn BoxableExpression<_, _, SqlType = _>> =
