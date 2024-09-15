@@ -13,18 +13,13 @@ use leptix_primitives::{
     toggle_group::{ToggleGroupItem, ToggleGroupKind, ToggleGroupMultiple, ToggleGroupRoot},
 };
 use leptos::*;
-use leptos_dom::helpers::TimeoutHandle;
 use leptos_router::*;
 use leptos_use::{
-    core::ConnectionReadyState, use_infinite_scroll_with_options, UseInfiniteScrollOptions,
+    core::ConnectionReadyState, signal_debounced, use_infinite_scroll_with_options,
+    UseInfiniteScrollOptions,
 };
 use shared_types::{GameProgress, GameSpeed, GamesContextToUpdate, GamesQueryOptions, ResultType};
-use std::{
-    cell::{Cell, RefCell},
-    rc::Rc,
-    str::FromStr,
-    time::Duration,
-};
+use std::str::FromStr;
 
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
@@ -42,45 +37,6 @@ fn first_batch(user: String, c: ProfileControls) {
         batch_size: Some(3),
         game_progress: c.tab_view,
     });
-}
-
-// Based on leptos_dom::helpers::debounce https://docs.rs/leptos_dom/latest/src/leptos_dom/helpers.rs.html#288-339
-// which returns an FnMut that is not compatible with the Callback that leptix_primitives RadioGroupRoot expects
-fn debounce_cb<T: 'static + Clone>(
-    delay: Duration,
-    cb: impl Fn(T) + 'static + Clone,
-) -> Callback<T> {
-    let cb = Rc::new(RefCell::new(cb));
-
-    let timer = Rc::new(Cell::new(None::<TimeoutHandle>));
-
-    on_cleanup({
-        let timer = Rc::clone(&timer);
-        move || {
-            if let Some(timer) = timer.take() {
-                timer.clear();
-            }
-        }
-    });
-
-    Callback::new(move |arg: T| {
-        if let Some(timer) = timer.take() {
-            timer.clear();
-        }
-        let handle = set_timeout_with_handle(
-            {
-                let cb = Rc::clone(&cb);
-                let arg = arg.clone();
-                move || {
-                    cb.borrow()(arg);
-                }
-            },
-            delay,
-        );
-        if let Ok(handle) = handle {
-            timer.set(Some(handle));
-        }
-    })
 }
 
 #[component]
@@ -121,12 +77,9 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
             api.user_profile(username.get_untracked());
         }
     });
-    let delay = Duration::from_millis(600);
-    let debouced_first_batch = debounce_cb(delay, move |()| {
-        first_batch(username(), controls());
-    });
     let toggle_classes = "hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded bg-button-dawn dark:bg-button-twilight data-[state=on]:bg-pillbug-teal";
     let radio_classes = "hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded bg-button-dawn dark:bg-button-twilight data-[state=checked]:bg-pillbug-teal";
+    let delay = 250.0;
     view! {
         <div class="flex flex-col pt-12 mx-3 bg-light dark:bg-gray-950">
             <Show when=move || ctx.user.get().is_some()>
@@ -135,7 +88,10 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                     <div class="flex flex-col m-1 w-full">
                         <RadioGroupRoot
                             attr:class="flex flex-wrap gap-1"
-                            value=Signal::derive(move || { controls().tab_view.to_string() })
+                            value=signal_debounced(
+                                Signal::derive(move || { controls().tab_view.to_string() }),
+                                delay,
+                            )
                         >
 
                             <RadioGroupItem value="Unstarted" attr:class=radio_classes>
@@ -151,16 +107,19 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         <span class="font-bold text-md">Player color:</span>
                         <RadioGroupRoot
                             attr:class="flex flex-wrap gap-1"
-                            value=Signal::derive(move || {
-                                controls().color.map_or("Both".to_string(), |c| c.to_string())
-                            })
+                            value=signal_debounced(
+                                Signal::derive(move || {
+                                    controls().color.map_or("Both".to_string(), |c| c.to_string())
+                                }),
+                                delay,
+                            )
 
                             on_value_change=Callback::new(move |v: String| {
                                 controls
                                     .update(|c| {
                                         c.color = Color::from_str(v.as_str()).ok();
                                     });
-                                debouced_first_batch(());
+                                first_batch(username(), controls());
                             })
                         >
 
@@ -178,16 +137,21 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                             <span class="font-bold text-md">Game Result:</span>
                             <RadioGroupRoot
                                 attr:class="flex flex-wrap gap-1"
-                                value=Signal::derive(move || {
-                                    controls().result.map_or("All".to_string(), |c| c.to_string())
-                                })
+                                value=signal_debounced(
+                                    Signal::derive(move || {
+                                        controls()
+                                            .result
+                                            .map_or("All".to_string(), |c| c.to_string())
+                                    }),
+                                    delay,
+                                )
 
                                 on_value_change=Callback::new(move |v: String| {
                                     controls
                                         .update(|c| {
                                             c.result = ResultType::from_str(v.as_str()).ok();
                                         });
-                                    debouced_first_batch(());
+                                    first_batch(username(), controls());
                                 })
                             >
 
@@ -209,13 +173,16 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         <ToggleGroupRoot
                             attr:class="flex flex-wrap gap-1 mb-1"
                             kind=ToggleGroupKind::Multiple {
-                                value: Signal::derive(move || {
-                                        controls()
-                                            .speeds
-                                            .iter()
-                                            .map(|s| s.to_string())
-                                            .collect::<Vec<_>>()
-                                    })
+                                value: signal_debounced(
+                                        Signal::derive(move || {
+                                            controls()
+                                                .speeds
+                                                .iter()
+                                                .map(|s| s.to_string())
+                                                .collect::<Vec<_>>()
+                                        }),
+                                        delay,
+                                    )
                                     .into(),
                                 default_value: ToggleGroupMultiple::none().into(),
                                 on_value_change: Some(
@@ -228,7 +195,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                     .map(|s| GameSpeed::from_str(s).unwrap())
                                                     .collect();
                                             });
-                                        debouced_first_batch(());
+                                        first_batch(username(), controls());
                                     }),
                                 ),
                             }
