@@ -87,7 +87,7 @@ pub fn provide_websocket(url: &str) {
         open,
         close,
         ..
-    } = use_websocket_with_options::<CommonMessage, MsgpackSerdeCodec>(
+    } = use_websocket_with_options::<CommonMessage, CommonMessage, MsgpackSerdeCodec>(
         &url,
         UseWebSocketOptions::default()
             .on_message(on_message_callback)

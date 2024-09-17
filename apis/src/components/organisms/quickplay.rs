@@ -80,7 +80,7 @@ pub fn QuickPlay() -> impl IntoView {
             <Modal open dialog_el=dialog_el>
                 <ChallengeCreate open/>
             </Modal>
-            <span class="flex justify-center mb-4 text-xl font-bold">Quick Play</span>
+            <span class="flex justify-center mb-4 text-xl font-bold">Create a game</span>
             <div class="grid grid-cols-2 gap-2 place-items-center w-full sm:gap-4 sm:grid-cols-3">
                 <GridButton time_control=Bullet1p2/>
                 <GridButton time_control=Blitz3p3/>

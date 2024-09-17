@@ -1,4 +1,4 @@
-use crate::components::atoms::{logo::Logo, next_game_button::NextGameButton};
+use crate::components::atoms::next_game_button::NextGameButton;
 use crate::components::molecules::chat_and_controls::ChatAndControls;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle,
@@ -26,16 +26,18 @@ pub fn Header() -> impl IntoView {
                 view! {
                     <div class="flex gap-1 items-center lg:ml-1">
                         <MobileDropdown/>
-
-                        <a class="hidden m-2 md:block" href="/">
-                            <Logo tw_class="w-14 lg:w-20"/>
-                        </a>
-                        <div class="hidden lg:flex lg:items-center lg:gap-1">
+                        <div class="lg:flex lg:items-center lg:gap-1">
+                            <a
+                                class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
+                                href="/"
+                            >
+                                Home
+                            </a>
                             <CommunityDropdown/>
                             <LearnDropdown/>
                             <TournamentDropdown/>
                             <a
-                                class="block p-2 h-full whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
+                                class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
                                 href="https://www.gen42.com/"
                                 rel="external"
                                 target="_blank"
@@ -43,7 +45,7 @@ pub fn Header() -> impl IntoView {
                                 Buy Game
                             </a>
                             <a
-                                class="block p-2 h-full whitespace-nowrap transition-transform duration-300 transform text-orange-twilight hover:text-pillbug-teal active:scale-95"
+                                class="block p-2 h-full font-bold uppercase whitespace-nowrap transition-transform duration-300 transform text-orange-twilight hover:text-pillbug-teal active:scale-95"
                                 href="/donate"
                             >
                                 Donate
@@ -73,17 +75,19 @@ pub fn Header() -> impl IntoView {
                     view! {
                         <div class="flex gap-1 items-center lg:ml-1">
                             <MobileDropdown/>
-
-                            <a class="hidden m-2 md:block" href="/">
-                                <Logo tw_class="w-14 lg:w-20"/>
-                            </a>
                             <div class="hidden lg:flex lg:items-center lg:gap-1">
+                                <a
+                                    class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
+                                    href="/"
+                                >
+                                    Home
+                                </a>
                                 <CommunityDropdown/>
                                 <LearnDropdown/>
                                 <TournamentDropdown/>
 
                                 <a
-                                    class="block p-2 h-full whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
+                                    class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
                                     href="https://www.gen42.com/"
                                     rel="external"
                                     target="_blank"
@@ -91,7 +95,7 @@ pub fn Header() -> impl IntoView {
                                     Buy Game
                                 </a>
                                 <a
-                                    class="block p-2 h-full whitespace-nowrap transition-transform duration-300 transform text-orange-twilight hover:text-pillbug-teal active:scale-95"
+                                    class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform text-orange-twilight hover:text-pillbug-teal active:scale-95"
                                     href="/donate"
                                 >
                                     Donate
