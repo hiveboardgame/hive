@@ -43,7 +43,7 @@ impl Standings {
             players: HashSet::new(),
             players_scores: HashMap::new(),
             pairings: HashMap::new(),
-            tiebreakers: vec![],
+            tiebreakers: vec![Tiebreaker::RawPoints],
             players_standings: Vec::new(),
         }
     }
@@ -52,105 +52,52 @@ impl Standings {
         self.tiebreakers.push(tiebreaker);
     }
 
+    pub fn update_standings(&mut self) {
+        self.players_standings = self.standings_by_tiebreakers(self.tiebreakers.clone());
+    }
+
     pub fn enforce_tiebreakers(&mut self) {
         for tiebreaker in self.tiebreakers.clone() {
             match tiebreaker {
-                Tiebreaker::RawPoints => {
-                    self.raw_points();
-                    self.calculate_raw_standings();
-                }
-                Tiebreaker::SonnebornBerger => {
-                    self.sonneborn_berger();
-                    self.update_standings(Tiebreaker::SonnebornBerger);
-                }
-                Tiebreaker::WinsAsBlack => {
-                    self.wins_as_black();
-                    self.update_standings(Tiebreaker::WinsAsBlack);
-                }
-                Tiebreaker::HeadToHead => {
-                    self.head_to_head();
-                    self.update_standings(Tiebreaker::HeadToHead);
-                }
+                Tiebreaker::RawPoints => self.raw_points(),
+                Tiebreaker::SonnebornBerger => self.sonneborn_berger(),
+                Tiebreaker::WinsAsBlack => self.wins_as_black(),
+                Tiebreaker::HeadToHead => self.head_to_head(),
             }
         }
-    }
-
-    fn calculate_raw_standings(&mut self) {
-        let players = self.players.clone();
-        let mut scores: Vec<(Uuid, f32)> = players
-            .iter()
-            .map(|player| {
-                (
-                    *player,
-                    *self
-                        .players_scores
-                        .get(player)
-                        .unwrap()
-                        .get(&Tiebreaker::RawPoints)
-                        .unwrap_or(&0.0),
-                )
-            })
-            .collect();
-        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-        self.players_standings = scores
-            .into_iter()
-            .chunk_by(|(_, score)| *score)
-            .into_iter()
-            .map(|(_, group)| group.map(|(uuid, _)| uuid).collect::<Vec<Uuid>>())
-            .collect::<Vec<Vec<Uuid>>>();
-    }
-
-    pub fn update_standings(&mut self, tiebreaker: Tiebreaker) {
-        for (i, players) in self.players_standings.clone().iter().enumerate() {
-            if players.len() > 1 {
-                self.players_standings.remove(i);
-                let mut scores: Vec<(Uuid, f32)> = players
-                    .iter()
-                    .map(|player| {
-                        (
-                            *player,
-                            *self
-                                .players_scores
-                                .get(player)
-                                .unwrap()
-                                .get(&tiebreaker)
-                                .unwrap_or(&0.0),
-                        )
-                    })
-                    .collect();
-                scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap().reverse());
-                for players in scores
-                    .into_iter()
-                    .chunk_by(|(_, score)| *score)
-                    .into_iter()
-                    .map(|(_, group)| group.collect::<Vec<(Uuid, f32)>>())
-                    .collect::<Vec<Vec<(Uuid, f32)>>>()
-                {
-                    let uuids = players.into_iter().map(|(uuid, _)| uuid).collect();
-                    self.players_standings.insert(i, uuids);
-                }
-            }
-        }
+        self.update_standings();
     }
 
     pub fn head_to_head(&mut self) {
         let mut h2h: HashMap<Uuid, f32> = HashMap::new();
-        for players in self.players_standings.clone() {
+        let tiebreakers = self
+            .tiebreakers
+            .clone()
+            .into_iter()
+            .unique()
+            .collect::<Vec<_>>();
+        let pos = tiebreakers
+            .iter()
+            .position(|t| *t == Tiebreaker::HeadToHead)
+            .unwrap_or(0);
+
+        let standings = self.standings_by_tiebreakers(tiebreakers[0..pos].to_vec());
+
+        for players in standings.iter() {
             if players.len() > 1 {
-                let combinations: Vec<Vec<Uuid>> =
-                    players.clone().into_iter().combinations(2).collect();
-                for combination in &combinations {
+                for combination in players.clone().into_iter().combinations(2) {
                     let (one, two) = (combination[0], combination[1]);
                     let (result_one, result_two) = self.head_to_head_pair(one, two);
                     *h2h.entry(one).or_default() += result_one;
                     *h2h.entry(two).or_default() += result_two;
                 }
             }
-            for player in &players {
+            for player in players {
                 self.players_scores
                     .entry(*player)
                     .or_default()
                     .entry(Tiebreaker::HeadToHead)
+                    .and_modify(|v| *v = *h2h.get(player).unwrap_or(&0.0))
                     .or_insert(*h2h.get(player).unwrap_or(&0.0));
             }
         }
@@ -163,6 +110,7 @@ impl Standings {
                 .entry(*player)
                 .or_default()
                 .entry(Tiebreaker::SonnebornBerger)
+                .and_modify(|w| *w = wins)
                 .or_insert(wins);
         }
     }
@@ -203,6 +151,7 @@ impl Standings {
                 .entry(*player)
                 .or_default()
                 .entry(Tiebreaker::WinsAsBlack)
+                .and_modify(|w| *w = wins)
                 .or_insert(wins);
         }
     }
@@ -264,6 +213,7 @@ impl Standings {
                 .entry(*player)
                 .or_default()
                 .entry(Tiebreaker::RawPoints)
+                .and_modify(|w| *w = wins)
                 .or_insert(wins);
         }
     }
@@ -291,6 +241,39 @@ impl Standings {
             }
         }
         points
+    }
+
+    fn standings_by_tiebreakers(&self, tiebreakers: Vec<Tiebreaker>) -> Vec<Vec<Uuid>> {
+        let mut scores = self
+            .players
+            .clone()
+            .into_iter()
+            .map(|player| {
+                (
+                    player,
+                    tiebreakers
+                        .iter()
+                        .unique()
+                        .map(|tiebreaker| {
+                            *self
+                                .players_scores
+                                .get(&player)
+                                .unwrap()
+                                .get(tiebreaker)
+                                .unwrap_or(&0.0)
+                        })
+                        .collect::<Vec<f32>>(),
+                )
+            })
+            .collect::<Vec<(Uuid, Vec<f32>)>>();
+
+        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        scores
+            .into_iter()
+            .chunk_by(|(_, score)| score.clone())
+            .into_iter()
+            .map(|(_, group)| group.map(|(uuid, _)| uuid).collect::<Vec<Uuid>>())
+            .collect::<Vec<Vec<Uuid>>>()
     }
 
     pub fn add_result(

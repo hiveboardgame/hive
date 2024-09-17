@@ -3,6 +3,7 @@ use crate::components::organisms::{
     challenges::Challenges, online_users::OnlineUsers, quickplay::QuickPlay, tv::Tv,
 };
 use leptos::*;
+
 #[component]
 pub fn Home() -> impl IntoView {
     view! {
