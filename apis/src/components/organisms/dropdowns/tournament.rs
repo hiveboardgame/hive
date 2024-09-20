@@ -8,7 +8,7 @@ const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-
 pub fn TournamentDropdown() -> impl IntoView {
     let hamburger_show = create_rw_signal(false);
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
-    let name = "Tournament";
+    let name = "Tournaments";
     view! {
         <Hamburger
             hamburger_show=hamburger_show

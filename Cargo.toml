@@ -10,7 +10,7 @@ opt-level = 'z'
 
 [workspace.dependencies]
 leptos = { version = "0.6" , features = ["nightly"] }
-leptos-use = { version = "0.12" }
+leptos-use = { version = "0.13.5" }
 leptos_meta =  { version = "0.6" , features = ["nightly"] }
 leptos_router =  { version = "0.6" , features = ["nightly"] }
 leptos_actix =  { version = "0.6" }
@@ -21,8 +21,8 @@ actix-files = { version = "0.6" }
 actix-web-actors = { version  = "4.3.0" }
 actix = "0.13.5"
 actix-rt = "2.10.0"
-actix-identity = { version = "0.7" }
-actix-session = { version = "0.9", features = ["cookie-session"] }
+actix-identity = { version = "0.8" }
+actix-session = { version = "0.10", features = ["cookie-session"] }
 argon2 = "0.5"
 sha2 = "0.10"
 serde = { version = "1" }
@@ -32,7 +32,7 @@ serde_json = { version = "1" }
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
-codee = { version = "0.1.2", features = ["msgpack_serde"] }
+codee = { version = "0.2", features = ["msgpack_serde"] }
 regex = "1.10"
 http = "1.1.0"
 log = "0.4.22"
