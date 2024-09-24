@@ -45,7 +45,7 @@ pub fn Header() -> impl IntoView {
                                 Buy Game
                             </a>
                             <a
-                                class="block p-2 h-full font-bold uppercase whitespace-nowrap transition-transform duration-300 transform text-orange-twilight hover:text-pillbug-teal active:scale-95"
+                                class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform text-orange-twilight hover:text-pillbug-teal active:scale-95"
                                 href="/donate"
                             >
                                 Donate

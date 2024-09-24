@@ -29,16 +29,26 @@ pub fn Tournaments() -> impl IntoView {
                     value=search
                 />
                 <For
-                    each=move || { tournament.summary.get().tournaments }
+                    each=move || {
+                        let mut v: Vec<_> = tournament
+                            .summary
+                            .get()
+                            .tournaments
+                            .into_iter()
+                            .collect();
+                        v.sort_by(|a, b| b.1.updated_at.cmp(&a.1.updated_at));
+                        v
+                    }
+
                     key=move |(nanoid, tournament)| {
                         (nanoid.to_owned(), tournament.updated_at, search())
                     }
-                    let:tournament
-                    children=move |tournament| {
+
+                    children=move |(_id, tournament)| {
                         if search().is_empty()
-                            || tournament.1.name.to_lowercase().contains(&search().to_lowercase())
+                            || tournament.name.to_lowercase().contains(&search().to_lowercase())
                         {
-                            view! { <TournamentRow tournament=tournament.1/> }
+                            view! { <TournamentRow tournament=tournament.clone()/> }
                         } else {
                             "".into_view()
                         }
