@@ -1,0 +1,62 @@
+{
+    "style_buttons": {
+        "flat": "Pla",
+        "three_d": "3D",
+        "official": "Oficial"
+    },
+    "rotation": "Rotació:",
+    "rotation_buttons": {
+        "no": "No",
+        "yes": "Sí"
+    },
+    "show_dots": "Mostrar els punts:",
+    "dots_buttons": {
+        "vertical": "En vertical",
+        "no": "No",
+        "angled": "En angle"
+    },
+    "game_speed": "Velocitat de la partida:",
+    "color_scheme": "Esquema de color:",
+    "edit_account": {
+        "new_password": "Nova contrassenya",
+        "confirm_password": "Confirmar contrassenya",
+        "save_button": "Guardar",
+        "confirm_password_placeholder": "Nova contassenya (altre cop)",
+        "current_password": "Contrassenya actual"
+    },
+    "preview": "Previsualització:",
+    "create_account": {
+        "username": {
+            "title": "Nom d'usuari",
+            "error": {
+                "taken": "Nom d'usuari ja utilitzat",
+                "invalid": "Caracter invàlid al nom d'usuari"
+            },
+            "description": "Si us plau, tria un nom d'usuari adequat per tothom. Tancarem tots els comptes amb noms d'usuari inapropiats!"
+        },
+        "email": {
+            "title": "Email",
+            "error": {
+                "invalid": "Email invàlid"
+            },
+            "description": "Ens cal la teva adreça d'email per enviar-te un missatge de confirmació a l'hora de crear el teu compte."
+        },
+        "confirm_password": "Confirmar contrassenya",
+        "signup_button": "Registrar-se",
+        "password": "Contrassenya",
+        "existing_account_prompt": "Ja tens un compte? <login_link>Inicia sessió</login_link>",
+        "be_nice_checkbox": "Estic d'acord en ser educat amb els altres jugadors i denuciar abusos a Discord",
+        "registration_error": "El registre ha fallat",
+        "password_requirements": "Almenys 8 caracters",
+        "password_error": "La contrassenya és massa curta o no coincideix"
+    },
+    "login": {
+        "login_button": "Inicia sessió",
+        "no_account_prompt": "No tens un compte? <register_link>Registra't</register_link>",
+        "email": "Email",
+        "password": "Contrassenya",
+        "invalid_login": "Email o contrassenya incorrectes"
+    },
+    "piece_style": "Estil de les peces:",
+    "move_confirm": "Confirmació de moviments:"
+}

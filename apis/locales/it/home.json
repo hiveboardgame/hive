@@ -1,0 +1,39 @@
+{
+    "create_game": "Crea una partita",
+    "search_players": "Cerca giocatori",
+    "online_players_one": "{{count}} Giocatore online",
+    "online_players_other": "{{count}} Giocatori online",
+    "custom_game": {
+        "title": "Crea una partita:",
+        "casual": "Amichevole",
+        "rated": "Con variazione",
+        "public": "Pubblico",
+        "mode": {
+            "real_time": {
+                "title": "Partita a tempo",
+                "minutes_per_side": "Minuti per giocatore: {{count}}",
+                "increment_in_seconds": "Incremento in secondi: {{count}}"
+            },
+            "correspondence": {
+                "title": "Corrispondenza",
+                "days_per_move": "Giorni per mossa",
+                "total_time_each": "Tempo totale per giocatore",
+                "time_other": "{{count}} giorni",
+                "time_one": "{{count}} giorno"
+            },
+            "untimed": "Tempo illimitato"
+        },
+        "rating_range": "intervallo di rating",
+        "private": "Privata"
+    },
+    "challenge_details": {
+        "player": "Giocatore",
+        "time": "Tempo",
+        "rated": {
+            "title": "Con variazione",
+            "yes": "Sì",
+            "no": "No"
+        }
+    },
+    "found_players": "Trovato:"
+}

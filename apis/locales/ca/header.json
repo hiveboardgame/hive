@@ -1,0 +1,31 @@
+{
+    "home": "Inici",
+    "community": {
+        "title": "Comunitat",
+        "resources": "Recursos",
+        "faq": "Preguntes freqüents",
+        "top_players": "Millors jugadors"
+    },
+    "learn": {
+        "title": "Aprendre",
+        "rules": "Regles",
+        "analysis": "Anàlisis",
+        "rules_summary": "Resum de les regles"
+    },
+    "tournaments": {
+        "title": "Torneigs",
+        "create": "Crear torneig",
+        "view": "Veure torneigs"
+    },
+    "buy_game": "Comprar el joc",
+    "donate": "Donar",
+    "login": "Iniciar sessió",
+    "support": "Suport",
+    "user_menu": {
+        "edit_account": "Editar el compte",
+        "logout": "Sortir",
+        "login": "Iniciar sessió",
+        "profile": "Perfil",
+        "config": "Configuració"
+    }
+}

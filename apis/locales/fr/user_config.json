@@ -1,0 +1,62 @@
+{
+    "piece_style": "Style de pièce",
+    "style_buttons": {
+        "official": "Officiel",
+        "flat": "Plat",
+        "three_d": "ThreeD"
+    },
+    "rotation_buttons": {
+        "no": "Non",
+        "yes": "Oui"
+    },
+    "show_dots": "Afficher les points",
+    "dots_buttons": {
+        "no": "Non",
+        "angled": "En angle",
+        "vertical": "Verticalement"
+    },
+    "rotation": "Rotation",
+    "game_speed": "Vitesse du jeu :",
+    "move_confirm": "Confirmation des mouvements :",
+    "color_scheme": "Schéma de couleur :",
+    "preview": "Aperçu :",
+    "edit_account": {
+        "current_password": "Mot de passe actuel",
+        "new_password": "Nouveau mot de passe",
+        "confirm_password": "Confirmer le mot de passe",
+        "save_button": "Enregistrer",
+        "confirm_password_placeholder": "Nouveau mot de passe (encore une fois)"
+    },
+    "create_account": {
+        "username": {
+            "title": "Nom d'utilisateur",
+            "description": "Veuillez sélectionner un nom d'utilisateur adapté aux familles. Les comptes dont le nom d'utilisateur est inapproprié seront fermés !",
+            "error": {
+                "invalid": "Caractère invalide dans le nom d'utilisateur",
+                "taken": "Le nom d'utilisateur est déjà pris"
+            }
+        },
+        "email": {
+            "title": "Adresse e-mail",
+            "error": {
+                "invalid": "Adresse e-mail invalide"
+            },
+            "description": "Nous avons besoin de votre adresse e-mail pour vous envoyer un e-mail de confirmation lorsque vous créez un compte."
+        },
+        "password": "Mot de passe",
+        "confirm_password": "Confirmer le mot de passe",
+        "signup_button": "Inscription",
+        "password_requirements": "Au moins 8 caractères",
+        "password_error": "Le mot de passe est trop court ou ne correspond pas",
+        "be_nice_checkbox": "J'accepte d'être bienveillant envers les autres joueurs et de signaler les abus sur Discord",
+        "registration_error": "Échec de l'inscription",
+        "existing_account_prompt": "Vous avez déjà un compte ? <login_link>Connexion</login_link>"
+    },
+    "login": {
+        "no_account_prompt": "Vous n'avez pas de compte ? <register_link>Inscription</register_link>",
+        "email": "Adresse e-mail",
+        "password": "Mot de passe",
+        "invalid_login": "Adresse e-mail ou mot de passe invalide",
+        "login_button": "Connexion"
+    }
+}

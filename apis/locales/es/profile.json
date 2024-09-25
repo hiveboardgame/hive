@@ -1,0 +1,27 @@
+{
+    "game_buttons": {
+        "unstarted": "Partidas de torneos no iniciadas",
+        "playing": "Jugando",
+        "finished": "Finalizadas"
+    },
+    "color_buttons": {
+        "both": "Ambos",
+        "white": "Blanco",
+        "black": "Negro"
+    },
+    "result_buttons": {
+        "win": "Victorias",
+        "loss": "Derrotas",
+        "draw": "Empates",
+        "all": "Todos"
+    },
+    "stats_box": {
+        "total": "Total: {{count}}",
+        "wins": "Victorias: {{count}}",
+        "losses": "Derrotas: {{count}}",
+        "draws": "Empates: {{count}}"
+    },
+    "player_color": "Color del jugador:",
+    "gamo_result": "Resultado de la partida:",
+    "include_speeds": "Velodidades incluidas:"
+}

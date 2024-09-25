@@ -1,0 +1,38 @@
+{
+    "create_game": "Játék létrehozása",
+    "search_players": "Játékos keresés",
+    "online_players_one": "{{count}} Online játékos",
+    "custom_game": {
+        "title": "Játék létrehozása:",
+        "rated": "Rangsorolt",
+        "public": "Nyílt",
+        "casual": "Kötetlen",
+        "private": "Privát",
+        "rating_range": "Ranglista tartomány",
+        "mode": {
+            "real_time": {
+                "title": "Valós idejű",
+                "minutes_per_side": "Perc felenként: {{count}}",
+                "increment_in_seconds": "Hozzáadás másodpercben: {{count}}"
+            },
+            "correspondence": {
+                "title": "Levelezős",
+                "days_per_move": "Napok lépésenként",
+                "total_time_each": "Idő összesen",
+                "time_one": "{{count}} nap",
+                "time_other": "{{count}} napok"
+            },
+            "untimed": "Időkorlát nélküli"
+        }
+    },
+    "online_players_other": "{{count}} Online játékosok",
+    "challenge_details": {
+        "player": "Játékos",
+        "rated": {
+            "no": "Nem",
+            "title": "Rangsorolt",
+            "yes": "Igen"
+        },
+        "time": "Idő"
+    }
+}

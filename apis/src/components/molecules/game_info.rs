@@ -1,10 +1,12 @@
 use leptos::*;
 use shared_types::{TimeInfo, TournamentId};
 
+use crate::i18n::*;
 use crate::{components::molecules::time_row::TimeRow, providers::game_state::GameStateSignal};
 
 #[component]
 pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateSignal>();
     let game_info = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().map(|gr| {
@@ -31,7 +33,11 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         if let (Some((time_info, rated)), Some((is_tournament, name, nanoid))) =
             (game_info(), tournaemnt_info())
         {
-            let rated = format!("• {}", if rated { "Rated" } else { "Casual" });
+            let rated = if rated {
+                t!(i18n, game.rated).into_view()
+            } else {
+                t!(i18n, game.casual).into_view()
+            };
             let name = store_value(name);
             let name = move || {
                 if let Some(name) = name() {

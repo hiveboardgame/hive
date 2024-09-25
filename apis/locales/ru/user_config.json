@@ -1,0 +1,62 @@
+{
+    "piece_style": "Вид фигур",
+    "rotation_buttons": {
+        "no": "Нет",
+        "yes": "Да"
+    },
+    "show_dots": "Показывать точки",
+    "dots_buttons": {
+        "no": "Нет",
+        "vertical": "Вертикально",
+        "angled": "Под углом"
+    },
+    "game_speed": "Контроль времени:",
+    "move_confirm": "Подтверждение хода:",
+    "create_account": {
+        "username": {
+            "error": {
+                "invalid": "Ник содержит недопустимый символ",
+                "taken": "Этот ник уже кем-то занят"
+            },
+            "title": "Ник",
+            "description": "Пожалуйста, не используйте непристойных слов в нике. Аккаунт с неподобающим ником будет закрыт!"
+        },
+        "email": {
+            "title": "Почта",
+            "error": {
+                "invalid": "Недопустимый почтовый ящик"
+            },
+            "description": "Нам требуется ваша почта, чтобы отправить письмо с подтверждением при создании аккаунта."
+        },
+        "existing_account_prompt": "У вас уже есть аккаунт? <login_link>Войти</login_link>",
+        "password": "Пароль",
+        "confirm_password": "Подтвердите пароль",
+        "be_nice_checkbox": "Соглашаюсь достойно себя вести по отношению к другим игрокам, а о недостойном поведении других сообщать в Дискорде",
+        "signup_button": "Регистрация",
+        "registration_error": "Регистрация не удалась",
+        "password_requirements": "Минимум 8 символов",
+        "password_error": "Пароль слишком короткий или не совпадает"
+    },
+    "login": {
+        "email": "Почта",
+        "password": "Пароль",
+        "login_button": "Войти",
+        "no_account_prompt": "Пока нет аккаунта? <register_link>Зарегистрироваться</register_link>",
+        "invalid_login": "Неверная почта или пароль"
+    },
+    "edit_account": {
+        "confirm_password_placeholder": "Новый пароль (ещё раз)",
+        "save_button": "Сохранить",
+        "current_password": "Текущий пароль",
+        "new_password": "Новый пароль",
+        "confirm_password": "Подтвердить пароль"
+    },
+    "style_buttons": {
+        "official": "Официальный",
+        "three_d": "3D",
+        "flat": "Плоский"
+    },
+    "rotation": "Поворот фигур",
+    "color_scheme": "Цветовая палитра:",
+    "preview": "Пример:"
+}

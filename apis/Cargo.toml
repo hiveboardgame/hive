@@ -33,6 +33,7 @@ leptos_actix = { workspace = true, optional = true }
 leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
 leptos_icons = { workspace = true }
+leptos_i18n = { workspace = true }
 icondata = { workspace = true }
 log = { workspace = true }
 rand = { workspace = true }
@@ -55,8 +56,8 @@ leptix_primitives = {workspace = true}
 tree-ds = {workspace = true}
 bimap = {workspace = true}
 [features]
-csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr"]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate"]
+csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr", "leptos_i18n/csr"]
+hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_i18n/hydrate"]
 ssr = [
   "dep:actix",
   "dep:actix-files",
@@ -75,6 +76,35 @@ ssr = [
   "leptos-use/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",
+  "leptos_i18n/actix",
+]
+
+[package.metadata.leptos-i18n]
+default = "en"
+locales = [
+  "ca", 
+  "cs", 
+  "de",
+  "en", 
+  "es", 
+  "fr",
+  "hu",
+  "it", 
+  "ja", 
+  "nl", 
+  "pt", 
+  "ru", 
+  "sv"
+]
+namespaces = [
+  "header", 
+  "home", 
+  "faq", 
+  "resources", 
+  "profile", 
+  "user_config", 
+  "game", 
+  "donate"
 ]
 
 [package.metadata.leptos]

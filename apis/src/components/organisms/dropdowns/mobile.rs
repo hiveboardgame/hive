@@ -1,5 +1,6 @@
 use crate::components::layouts::base_layout::COMMON_LINK_STYLE;
 use crate::components::molecules::hamburger::Hamburger;
+use crate::i18n::*;
 use leptos::*;
 use leptos_icons::*;
 
@@ -10,7 +11,7 @@ pub fn MobileDropdown() -> impl IntoView {
     let hamburger_show = create_rw_signal(false);
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
     let div_style = "flex flex-col font-bold m-1 dark:text-white";
-
+    let i18n = use_i18n();
     view! {
         <Hamburger
             hamburger_show=hamburger_show
@@ -22,38 +23,41 @@ pub fn MobileDropdown() -> impl IntoView {
 
             <div class=div_style>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/">
-                    Home
+                    {t!(i18n, header.home)}
                 </a>
-                Community:
+                {t!(i18n, header.community.title)}
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/top_players">
-                    Top Players
+                    {t!(i18n, header.community.top_players)}
                 </a>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/resources">
-                    Resources
+                    {t!(i18n, header.community.resources)}
                 </a>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/faq">
-                    FAQ
+                    {t!(i18n, header.community.faq)}
                 </a>
-                Learn:
+                {t!(i18n, header.learn.title)}
                 <a
                     class=COMMON_LINK_STYLE
                     on:click=onclick_close
                     href="https://hivegame.com/download/rules.pdf"
                     target="_blank"
                 >
-                    Rules
+                    {t!(i18n, header.learn.rules)}
+                </a>
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="/rules_summary">
+                    {t!(i18n, header.learn.rules_summary)}
                 </a>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/analysis">
-                    Analysis
+                    {t!(i18n, header.learn.analysis)}
                 </a>
-                Tournament:
+                {t!(i18n, header.tournaments.title)}
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments">
-                    View Tournaments
+                    {t!(i18n, header.tournaments.view)}
                 </a>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments/create">
-                    Create tournament
+                    {t!(i18n, header.tournaments.create)}
                 </a>
-                Support:
+                {t!(i18n, header.support)}
                 <a
                     class=COMMON_LINK_STYLE
                     on:click=onclick_close
@@ -61,10 +65,10 @@ pub fn MobileDropdown() -> impl IntoView {
                     target="_blank"
                     rel="external"
                 >
-                    Buy Game
+                    {t!(i18n, header.buy_game)}
                 </a>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/donate">
-                    Donate
+                    {t!(i18n, header.donate)}
                 </a>
             </div>
 

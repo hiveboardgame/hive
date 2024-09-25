@@ -293,7 +293,10 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="DoubleRoundRobin"
-                                text=TournamentMode::DoubleRoundRobin.pretty_string()
+                                text=TournamentMode::DoubleRoundRobin
+                                    .pretty_string()
+                                    .into_view()
+                                    .into()
                             />
 
                         </select>
@@ -308,7 +311,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="Game"
-                                text=ScoringMode::Game.pretty_string()
+                                text=ScoringMode::Game.pretty_string().into_view().into()
                             />
 
                         </select>
@@ -369,12 +372,7 @@ pub fn TournamentCreate() -> impl IntoView {
                 </div>
                 <div class="basis-1/2">
                     <div class="flex flex-col items-center">
-                        <TimeSelect
-                            title=" Match settings:"
-                            time_signals
-                            on_value_change
-                            allowed_values
-                        />
+                        <TimeSelect is_tournament=true time_signals on_value_change allowed_values/>
                         <div class="flex">{rating_string}</div>
                         <div class="flex">
                             <div class="flex gap-1 my-1">

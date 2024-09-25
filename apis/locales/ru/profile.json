@@ -1,0 +1,27 @@
+{
+    "stats_box": {
+        "wins": "Побед: {{count}}",
+        "total": "Всего: {{count}}",
+        "draws": "Ничьих: {{count}}",
+        "losses": "Поражений: {{count}}"
+    },
+    "gamo_result": "Результат партии:",
+    "include_speeds": "Контроль времени:",
+    "game_buttons": {
+        "unstarted": "Неначатые турнирные игры",
+        "playing": "Активные игры",
+        "finished": "Оконченные игры"
+    },
+    "color_buttons": {
+        "both": "Оба",
+        "black": "Чёрными",
+        "white": "Белыми"
+    },
+    "result_buttons": {
+        "win": "Победа",
+        "loss": "Поражение",
+        "draw": "Ничья",
+        "all": "Все"
+    },
+    "player_color": "Цвет в партии:"
+}

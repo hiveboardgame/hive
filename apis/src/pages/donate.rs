@@ -1,50 +1,53 @@
 use leptos::*;
 
 use crate::components::{layouts::base_layout::COMMON_LINK_STYLE, molecules::banner::Banner};
+use crate::i18n::*;
 
 #[component]
 pub fn Donate() -> impl IntoView {
+    let i18n = use_i18n();
+    let kofi_button = |children: ChildrenFn| {
+        view! {
+            <a href="https://ko-fi.com/hivedevs" class=COMMON_LINK_STYLE>
+                {children}
+            </a>
+        }
+    };
+    let patreon_button = |children: ChildrenFn| {
+        view! {
+            <a href="https://www.patreon.com/HiveDevs" class=COMMON_LINK_STYLE>
+                {children}
+            </a>
+        }
+    };
     view! {
         <div class="pt-20">
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
                 <Banner
-                    title="Free Hive® for everyone, forever!"
-                    text="No ads, no subscriptions; but open-source and passion."
+                    title=t!(i18n, donate.title).into_view()
+                    text=t!(i18n, donate.subtitle).into_view().into()
                 />
-                <p class="text-lg text-center my-4">
-                    We are a community project and we believe everyone should have access to a free, world-class hive platform.
-                    We rely on support from people like you to make it possible. If you enjoy using hivegame, please consider supporting us by donating.
-                </p>
-
-                <div class="flex items-center justify-center my-4">
-                    <a href="https://ko-fi.com/hivedevs" class=COMMON_LINK_STYLE>
-                        Ko-fi
-                    </a>
-                    <a href="https://www.patreon.com/HiveDevs" class=COMMON_LINK_STYLE>
-                        Patreon
-                    </a>
+                <p class="my-4 text-lg text-center">{t!(i18n, donate.about)}</p>
+                <div class="flex justify-center items-center my-4">
+                    {t!(i18n, donate.kofi_button, < kofi_button >)}
+                    {t!(i18n, donate.patreon_button, < patreon_button >)}
                 </div>
 
                 <div class="p-3">
-                    <h3 class="text-lg leading-6 font-medium">Where does the money go?</h3>
-                    <p class="mt-2 text-base">
-                        First of all, the server,
-                        then our developers.
-                    </p>
-                </div>
-
-                <div class="p-3">
-                    <h3 class="text-lg leading-6 font-medium">
-                        Are some features reserved for Patrons?
+                    <h3 class="text-lg font-medium leading-6">
+                        {t!(i18n, donate.where_does_money_go.question)}
                     </h3>
-                    <p class="mt-2 text-base">
-                        "No, because hivegame is entirely free, forever, and for everyone. That's a promise. You do get a 👑 though."
-                    </p>
+                    <p class="mt-2 text-base">{t!(i18n, donate.where_does_money_go.answer)}</p>
                 </div>
 
-                <div class="text-center mt-4">
-                    We are a small team, so your support makes a huge difference!
+                <div class="p-3">
+                    <h3 class="text-lg font-medium leading-6">
+                        {t!(i18n, donate.features_for_patrons.question)}
+                    </h3>
+                    <p class="mt-2 text-base">{t!(i18n, donate.features_for_patrons.answer)}</p>
                 </div>
+
+                <div class="mt-4 text-center">{t!(i18n, donate.small_team_blurb)}</div>
             </div>
         </div>
     }

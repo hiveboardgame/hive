@@ -1,11 +1,13 @@
+use crate::i18n::*;
 use crate::{common::TileRotation, providers::Config};
 use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
 pub fn TileRotationToggle() -> impl IntoView {
+    let i18n = use_i18n();
     view! {
-        <p class="m-1 text-black dark:text-white">Rotation:</p>
+        <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.rotation)}</p>
         <div class="flex">
             <TileRotationButton tile_rotation=TileRotation::No/>
             <TileRotationButton tile_rotation=TileRotation::Yes/>
@@ -15,6 +17,7 @@ pub fn TileRotationToggle() -> impl IntoView {
 
 #[component]
 pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
+    let i18n = use_i18n();
     let tile_rotation = store_value(tile_rotation);
     let config = expect_context::<Config>();
     let is_active = move || {
@@ -24,7 +27,6 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
         }
     };
-
     view! {
         <ActionForm
             action=config.tile_rotation.action
@@ -42,7 +44,12 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
 
                 type="submit"
             >
-                {tile_rotation().to_string()}
+
+                {match tile_rotation() {
+                    TileRotation::No => t!(i18n, user_config.rotation_buttons.no).into_view(),
+                    TileRotation::Yes => t!(i18n, user_config.rotation_buttons.yes).into_view(),
+                }}
+
             </button>
         </ActionForm>
     }
