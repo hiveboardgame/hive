@@ -1,0 +1,31 @@
+{
+    "home": "Home",
+    "community": {
+        "title": "Community",
+        "top_players": "Top Players",
+        "resources": "Resources",
+        "faq": "FAQ"
+    },
+    "learn": {
+        "title": "Learn",
+        "rules": "Rules",
+        "rules_summary": "Rules Summary",
+        "analysis": "Analysis"
+    },
+    "tournaments": {
+        "title": "Tournaments",
+        "create": "Create Tournament",
+        "view": "View Tournaments"
+    },
+    "buy_game": "Buy Game",
+    "donate": "Donate",
+    "support": "Support", 
+    "login": "Login",
+    "user_menu": {
+        "profile": "Profile",
+        "edit_account": "Edit Account",
+        "config": "Config",
+        "logout": "Logout",
+        "login": "Login"
+    }
+}

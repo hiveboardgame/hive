@@ -1,0 +1,52 @@
+{
+    "time_mode": {
+        "real_time": "Tempo real",
+        "correspondence": {
+            "title": "Por correspondência",
+            "days_move_other": "{{count}} dias por jogada",
+            "days_side_one": "{{count}} dia para cada lado",
+            "days_side_other": "{{count}} dias para cada lado",
+            "days_move_one": "{{count}} dia por jogada"
+        },
+        "untimed": "Sem limite de tempo"
+    },
+    "played_in": "Jogado em:",
+    "rated": "Classificado",
+    "casual": "Casual",
+    "created_ago": {
+        "days_one": "Criado há {{count}} dia",
+        "days_other": "Criado há {{count}} dias",
+        "hours_one": "Criado há {{count}} hora",
+        "hours_other": "Criado há {{count}} horas",
+        "minutes_other": "Criado há {{count}} minutos",
+        "less_than_minute": "Criado há menos de um minuto",
+        "weeks_one": "Criado há {{count}} semana",
+        "weeks_other": "Criado há {{count}} semanas",
+        "minutes_one": "Criado há {{count}} minuto"
+    },
+    "finished_ago": {
+        "weeks_one": "Acabou há {{count}} semana",
+        "weeks_other": "Acabou há {{count}} semanas",
+        "days_one": "Acabou há {{count}} dia",
+        "days_other": "Acabou há {{count}} dias",
+        "hours_one": "Acabou há {{count}} hora",
+        "hours_other": "Acabou há {{count}} horas",
+        "minutes_one": "Acabou há {{count}} minuto",
+        "minutes_other": "Acabou há {{count}} minutos",
+        "less_than_minute": "Acabou há menos de um minuto"
+    },
+    "no_moves_played": "Sem jogadas feitas",
+    "start_when": {
+        "both_agree": "O jogo irá começar quando ambos jogadores combinarem uma hora",
+        "both_click": "O jogo irá começar quando ambos jogadores clicarem 'pronto' dentro de 30s de um do outro",
+        "both_ready": "Este jogo do torneio começará quando ambos jogadores estiverem prontos"
+    },
+    "speeds": {
+        "bullet": "Bullet",
+        "blitz": "Blitz",
+        "rapid": "Rapid",
+        "classic": "Clássico",
+        "correspondence": "Correspondência",
+        "untimed": "Sem tempo"
+    }
+}

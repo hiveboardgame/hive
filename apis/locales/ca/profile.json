@@ -1,0 +1,27 @@
+{
+    "game_buttons": {
+        "unstarted": "Partides pendents en tonejos",
+        "finished": "Finalitzades",
+        "playing": "Jugant"
+    },
+    "result_buttons": {
+        "loss": "Derrotes",
+        "all": "Totes",
+        "draw": "Empats",
+        "win": "Victòries"
+    },
+    "stats_box": {
+        "wins": "Victòries: {{count}}",
+        "draws": "Empats: {{count}}",
+        "total": "Total: {{count}}",
+        "losses": "Derrotes: {{count}}"
+    },
+    "player_color": "Color del jugador:",
+    "gamo_result": "Resultat de la partida:",
+    "include_speeds": "Velocitats incloses:",
+    "color_buttons": {
+        "white": "Blanc",
+        "black": "Negre",
+        "both": "Ambdós"
+    }
+}

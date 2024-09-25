@@ -1,323 +1,171 @@
-use crate::components::molecules::banner::Banner;
+use crate::components::{atoms::simple_link::SimpleLink, molecules::banner::Banner};
+use crate::i18n::*;
 use leptos::*;
 
 #[component]
 pub fn Resources() -> impl IntoView {
-    let link_class = "text-blue-500 hover:underline";
+    let i18n = use_i18n();
     let header_class = "text-2xl font-semibold mb-4";
     let list_class = "space-y-2";
+    let tournaments_site =
+        |children| view! { <SimpleLink link="https://www.worldhivetournaments.com/" children/> };
+    let entomology_link =
+        |children| view! { <SimpleLink link="https://entomology.gitlab.io/ " children/> };
+    let explorer_link = |children| view! { <SimpleLink link="https://hive.bot.nu/" children/> };
+    let hexketch_link = |children| view! { <SimpleLink link="https://hextech.net/" children/> };
+    let mzinga_link =
+        |children| view! { <SimpleLink link="https://github.com/jonthysell/Mzinga" children/> };
+    let nokamute_link =
+        |children| view! { <SimpleLink link="https://github.com/edre/nokamute" children/> };
+    let bga_downloader_link =
+        |children| view! { <SimpleLink link="https://github.com/DavidEGx/Hive-bga2bs" children/> };
+    let discord_link =
+        |children| view! { <SimpleLink link="https://discord.gg/djdQZPFa7E" children/> };
+    let reddit_link =
+        |children| view! { <SimpleLink link="https://www.reddit.com/r/hive/" children/> };
+    let facebook_link = |children| {
+        view! { <SimpleLink link="https://www.facebook.com/groups/hivetheboardlessgame" children/> }
+    };
+    let instagram_link = |children: ChildrenFn| {
+        view! { <SimpleLink link="https://www.instagram.com/world_hive_community/" children=children/> }
+    };
+    let hive_champion_link = |children| {
+        view! { <SimpleLink link="https://sites.google.com/site/playhivelikeachampion/home" children/> }
+    };
+    let hive_canon_link = |children| {
+        view! {
+            <SimpleLink
+                link="https://www.lulu.com/de/shop/joe-schultz/the-canon-of-hive/ebook/product-1pgjmv8d.html"
+                children
+            />
+        }
+    };
+    let hive_puzzles_link = |children| {
+        view! { <SimpleLink link="https://gripot.se/hive/HivePuzzles_vol1.pdf" children/> }
+    };
+    let frasco_link = |children| {
+        view! { <SimpleLink link="https://www.youtube.com/@AdAbstraGames" children/> }
+    };
+    let ringersol_link = |children| {
+        view! { <SimpleLink link="https://www.youtube.com/playhivelikeachampion" children/> }
+    };
+    let ordep_cubik_link = |children| {
+        view! { <SimpleLink link="https://www.youtube.com/@OrdepCubik" children/> }
+    };
+    let cavaliers16_link = |children| {
+        view! { <SimpleLink link="https://www.twitch.tv/cavaliers16" children/> }
+    };
+    let gen42_link = |children| {
+        view! { <SimpleLink link="https://www.gen42.com/" children/> }
+    };
+    let facebook_gen42_link = |children| {
+        view! { <SimpleLink link="https://www.facebook.com/HiveGen42Games" children/> }
+    };
+    let instagram_gen42_link = |children| {
+        view! { <SimpleLink link="https://www.instagram.com/gen42games/" children=children/> }
+    };
+    let youtube_gen42_link = |children| {
+        view! { <SimpleLink link="https://www.youtube.com/@Gen42games" children=children/> }
+    };
     view! {
-        <div class="pt-20 px-4">
-            <div class="container mx-auto px-4">
-                <Banner title="Community links"/>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="px-4 pt-20">
+            <div class="container px-4 mx-auto">
+                <Banner title={ t!(i18n, resources.title) }.into_view()/>
+                <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
                     <section>
-                        <h2 class=header_class>Hive news</h2>
+                        <h2 class=header_class>{t!(i18n, resources.hive_news.title)}</h2>
                         <ul class=list_class>
                             <li>
-                                <a
-                                    href="https://www.worldhivetournaments.com/"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    World Hive Tournaments
-                                </a>
-                                <span>
-                                    Upcoming in person and online tournaments, tournament results, startegy articles. The place for the latest hive news.
-                                </span>
+                                {t!(i18n, resources.hive_news.description, < tournaments_site >)}
                             </li>
                         </ul>
                     </section>
 
                     <section>
-                        <h2 class=header_class>Online Tools</h2>
+                        <h2 class=header_class>{t!(i18n, resources.online_tools.title)}</h2>
                         <ul class=list_class>
                             <li>
-                                <a
-                                    href="https://entomology.gitlab.io/"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Entomology
-                                </a>
-                                <span>
-                                    Position editor and game explorer for games played on BGA or Boardspace
-                                </span>
+                                {t!(i18n, resources.online_tools.tools.item1, < entomology_link >)}
                             </li>
                             <li>
-                                <a
-                                    href="https://hive.bot.nu/"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Opening explorer
-                                </a>
-                                <span>Opening search for tournament boardspace games</span>
+                                {t!(i18n, resources.online_tools.tools.item2, < explorer_link >)}
                             </li>
                             <li>
-                                <a
-                                    href="https://qmolt.github.io/hexketch/"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Hextech
-                                </a>
-                                <span>
-                                    Hexketch is a website that allows you to easily generate images of hexagonal tiles on a hexagonal grid
-                                </span>
+                                {t!(i18n, resources.online_tools.tools.item3, < hexketch_link >)}
                             </li>
                         </ul>
                     </section>
 
                     <section>
-                        <h2 class=header_class>Offline Tools</h2>
+                        <h2 class=header_class>{t!(i18n, resources.offline_tools.title)}</h2>
                         <ul class=list_class>
                             <li>
-                                <a
-                                    href="https://github.com/jonthysell/Mzinga"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Mzinga
-                                </a>
-                                <span>
-                                    Mzinga is a collection of open-source software to play Hive, with the primary goal of building a community of developers who create Hive-playing AIs. Works on Windows Mac and Linux
-                                </span>
+                                {t!(i18n, resources.offline_tools.tools.item1, < mzinga_link >)}
                             </li>
                             <li>
-                                <a
-                                    href="https://github.com/edre/nokamute"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Nokamute
-                                </a>
-                                <span>
-                                    Nokamute is a open source hive AI, compatible with Mzinga.
-                                </span>
+                                {t!(i18n, resources.offline_tools.tools.item2, < nokamute_link >)}
                             </li>
                             <li>
-                                <a
-                                    href="https://github.com/DavidEGx/Hive-bga2bs"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    BGA Game Downloader
-                                </a>
-                                <span>Download a Hive archived BGA game in sgf format.</span>
+                                {t!(
+                                    i18n, resources.offline_tools.tools.item3, < bga_downloader_link
+                                    >
+                                )}
+
                             </li>
                         </ul>
                     </section>
 
                     <section>
-                        <h2 class=header_class>Social Media</h2>
+                        <h2 class=header_class>{t!(i18n, resources.social_media.title)}</h2>
                         <ul class=list_class>
                             <li>
-                                <a
-                                    href="https://discord.gg/djdQZPFa7E"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Discord
-                                </a>
-                                <span>Join our community chat</span>
+                                {t!(i18n, resources.social_media.links.item1, < discord_link >)}
+                            </li>
+                            <li>{t!(i18n, resources.social_media.links.item2, < reddit_link >)}</li>
+                            <li>
+                                {t!(i18n, resources.social_media.links.item3, < facebook_link >)}
                             </li>
                             <li>
-                                <a
-                                    href="https://reddit.com/r/hive/"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Hive subreddit
-                                </a>
-                                <span>Share your strategies and experiences</span>
-                            </li>
-                            <li>
-                                <a
-                                    href="https://www.facebook.com/groups/hivetheboardlessgame"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    World Hive Community on Facebook
-                                </a>
-                                <span>Connect with fellow players</span>
-                            </li>
-                            <li>
-                                <a
-                                    href="https://www.instagram.com/world_hive_community/"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Hive Instagram
-                                </a>
-                                <span>Pretty hive photos and memes</span>
+                                {t!(i18n, resources.social_media.links.item4, < instagram_link >)}
                             </li>
                         </ul>
                     </section>
 
                     <section>
-                        <h2 class=header_class>Books</h2>
+                        <h2 class=header_class>{t!(i18n, resources.books.title)}</h2>
                         <ul class=list_class>
-                            <li>
-                                <a
-                                    href="https://sites.google.com/site/playhivelikeachampion/home"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Play Hive Like a Champion
-                                </a>
-                                <span>
-                                    Hive strategy book by Randy Ingersoll the 2011 World Champion.
-                                </span>
-                            </li>
-                            <li>
-                                <a
-                                    href="https://www.lulu.com/de/shop/joe-schultz/the-canon-of-hive/ebook/product-1pgjmv8d.html"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Canon of Hive: Groundwork
-                                </a>
-                                <span>
-                                    First book part of a planned trilogy by multiple times hive world champion Joe Schultz
-                                </span>
-                            </li>
-                            <li>
-                                <a
-                                    href="https://gripot.se/hive/HivePuzzles_vol1.pdf"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Hive Puzzles (free)
-                                </a>
-                                <span>
-                                    Free collection of hive puzzles with solutions for beginners up to advanted
-                                </span>
-                            </li>
+                            <li>{t!(i18n, resources.books.links.item1, < hive_champion_link >)}</li>
+                            <li>{t!(i18n, resources.books.links.item2, < hive_canon_link >)}</li>
+                            <li>{t!(i18n, resources.books.links.item3, < hive_puzzles_link >)}</li>
                         </ul>
                     </section>
 
                     <section>
-                        <h2 class=header_class>Videos</h2>
+                        <h2 class=header_class>{t!(i18n, resources.videos.title)}</h2>
                         <ul class=list_class>
-                            <li>
-                                <a
-                                    href="https://www.youtube.com/@AdAbstraGames"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Frasco
-                                </a>
-                                <span>Hive and other Abstract Strategy Games specialist</span>
-                            </li>
-                            <li>
-                                <a
-                                    href="https://www.youtube.com/playhivelikeachampion"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Play Hive like a champion
-                                </a>
-                                <span>
-                                    Youtube channel of Randy Ingersoll, tournament game reviews and strategy discussions
-                                </span>
-                            </li>
-                            <li>
-                                <a
-                                    href="https://www.youtube.com/@OrdepCubik"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    OrdepCubik
-                                    "🇪🇸"
-                                </a>
-                                <span>
-                                    Game analysis in Spanish by a young up and coming hive master
-                                </span>
-                            </li>
-                            <li>
-                                <a
-                                    href="https://www.twitch.tv/cavaliers16"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Cavaliers16
-                                </a>
-                                <span>Game reviews from one of the strongest hive players</span>
-                            </li>
+                            <li>{t!(i18n, resources.videos.links.item1, < frasco_link >)}</li>
+                            <li>{t!(i18n, resources.videos.links.item2, < ringersol_link >)}</li>
+                            <li>{t!(i18n, resources.videos.links.item3, < ordep_cubik_link >)}</li>
+                            <li>{t!(i18n, resources.videos.links.item4, < cavaliers16_link >)}</li>
                         </ul>
                     </section>
 
                     <section>
-                        <h2 class=header_class>Gen42 - Hive Publisher</h2>
+                        <h2 class=header_class>{t!(i18n, resources.publisher.title)}</h2>
                         <ul class=list_class>
+                            <li>{t!(i18n, resources.publisher.links.item1, < gen42_link >)}</li>
                             <li>
-                                <a
-                                    href="https://www.gen42.com/"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Gen42 - buy a physical game here
-                                </a>
+                                {t!(i18n, resources.publisher.links.item2, < facebook_gen42_link >)}
+                            </li>
+                            <li>{t!(i18n, resources.publisher.links.item3, < facebook_link >)}</li>
+                            <li>
+                                {t!(
+                                    i18n, resources.publisher.links.item4, < instagram_gen42_link >
+                                )}
+
                             </li>
                             <li>
-                                <a
-                                    href="https://www.facebook.com/HiveGen42Games"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Gen42 Hive community - Facebook
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="https://www.facebook.com/Gen42Games"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Gen42 - Facebook
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="https://www.instagram.com/gen42games/"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Gen42 - Instagram
-                                </a>
-                            </li>
-                            <li>
-                                <a
-                                    href="https://www.youtube.com/@Gen42games"
-                                    rel="external"
-                                    target="_blank"
-                                    class=link_class
-                                >
-                                    Gen42 - Youtube
-                                </a>
+                                {t!(i18n, resources.publisher.links.item5, < youtube_gen42_link >)}
                             </li>
                         </ul>
                     </section>

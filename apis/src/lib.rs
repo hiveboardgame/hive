@@ -8,6 +8,8 @@ pub mod ping;
 pub mod providers;
 pub mod responses;
 
+leptos_i18n::load_locales!();
+
 use cfg_if::cfg_if;
 
 cfg_if! {

@@ -1,0 +1,31 @@
+{
+    "home": "Home",
+    "community": {
+        "title": "Community",
+        "top_players": "Top Players",
+        "resources": "Risorse",
+        "faq": "FAQ"
+    },
+    "learn": {
+        "title": "Impara",
+        "rules": "Regole",
+        "analysis": "Analisi",
+        "rules_summary": "Sommario delle Regole"
+    },
+    "tournaments": {
+        "title": "Tornei",
+        "create": "Crea Torneo",
+        "view": "Vedi Tornei"
+    },
+    "buy_game": "Compra Hive®",
+    "donate": "Fai una Donazione",
+    "login": "Accedi",
+    "support": "Supporto",
+    "user_menu": {
+        "profile": "Profilo",
+        "edit_account": "Modifica Profilo",
+        "config": "Configurazioni",
+        "logout": "Esci",
+        "login": "Entra"
+    }
+}
