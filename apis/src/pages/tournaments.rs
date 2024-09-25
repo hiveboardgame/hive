@@ -24,7 +24,7 @@ pub fn Tournaments() -> impl IntoView {
                 <input
                     type="text"
                     class="items-center p-2 mx-2 my-2 w-5/6"
-                    placeholder="Search by tournament name or description"
+                    placeholder="Search tournaments by name"
                     on:input=move |ev| search.set(event_target_value(&ev))
                     value=search
                 />

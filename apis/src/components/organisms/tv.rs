@@ -7,7 +7,7 @@ pub fn Tv() -> impl IntoView {
     let live_games = Callback::new(move |_| (games.live)().live_games.into_values().collect());
 
     view! {
-        <div class="flex flex-col items-center pt-6 lg:w-[780px] md:w-[700px]">
+        <div class="flex flex-col items-center pt-6">
             <div class="flex flex-col flex-wrap gap-1 justify-center items-center w-full md:flex-row">
                 <GamePreviews games=live_games show_time=true/>
             </div>
