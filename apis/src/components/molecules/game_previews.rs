@@ -71,7 +71,7 @@ pub fn GamePreviews(
             }
         };
     view! {
-        <div class="flex flex-row flex-wrap">
+        <div class="flex flex-row flex-wrap justify-center">
             <For each=move || games(()) key=|g| (g.game_id.clone(), g.turn) let:game>
 
                 {

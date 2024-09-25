@@ -19,5 +19,5 @@ pub fn Logo(tw_class: &'static str) -> impl IntoView {
         format!("/assets/{orientation}_flat{theme}.png")
     };
 
-    view! { <img width="100%" height="100%" src=logo alt="Home" class=tw_class/> }
+    view! { <img width="100%" height="100%" src=logo class=tw_class/> }
 }
