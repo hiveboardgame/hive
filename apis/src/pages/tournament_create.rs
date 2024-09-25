@@ -369,12 +369,7 @@ pub fn TournamentCreate() -> impl IntoView {
                 </div>
                 <div class="basis-1/2">
                     <div class="flex flex-col items-center">
-                        <TimeSelect
-                            title=" Match settings:"
-                            time_signals
-                            on_value_change
-                            allowed_values
-                        />
+                        <TimeSelect is_tournament=true time_signals on_value_change allowed_values/>
                         <div class="flex">{rating_string}</div>
                         <div class="flex">
                             <div class="flex gap-1 my-1">

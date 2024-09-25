@@ -1,5 +1,6 @@
 use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::components::molecules::time_row::TimeRow;
+use crate::i18n::*;
 use crate::providers::ApiRequests;
 use crate::{
     components::atoms::game_type::GameType,
@@ -17,6 +18,7 @@ use shared_types::{ChallengeVisibility, TimeInfo};
 
 #[component]
 pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let color_context = expect_context::<ColorScheme>;
     let icon = move || match challenge().color_choice {
@@ -159,7 +161,14 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             </td>
             <td class=td_class>
                 <div class="flex justify-center items-center">
-                    <span class="font-bold">{if challenge().rated { "YES" } else { "NO" }}</span>
+                    <span class="font-bold">
+                        {if challenge().rated {
+                            t!(i18n, home.challenge_details.rated.yes).into_view()
+                        } else {
+                            t!(i18n, home.challenge_details.rated.no).into_view()
+                        }}
+
+                    </span>
                 </div>
             </td>
             <td class=td_class>

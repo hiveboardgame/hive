@@ -2,7 +2,7 @@ use leptos::{html::Img, *};
 
 #[component]
 pub fn Banner(
-    title: &'static str,
+    title: View,
     #[prop(optional)] text: &'static str,
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] logo: Option<HtmlElement<Img>>,
