@@ -1,10 +1,16 @@
 {
     "title": "Preguntas Frecuentes",
     "what_is_hivegame": {
-        "question": "¿Qué es hivegame.com?"
-     },
+        "question": "¿Qué es hivegame.com?",
+        "answer": "hivegame.com es un esfuerzo comunitario para crear una nueva plataforma en línea para jugar Hive® gratis. hivegame.com no tiene publicidad, es de código abierto, fue desarrollado por miembros de la comunidad y cuenta con el apoyo oficial del creador de Hive®, John Yianni."
+    },
     "how_to_help": {
-        "question": "¿Cómo puedo ayudar a este proyecto crecer?"
+        "question": "¿Cómo puedo ayudar a este proyecto crecer?",
+        "answers": {
+            "item1": "Puedes ayudarnos contribuyendo a la <source_link>código fuente.</source_link>",
+            "item2": "Puede apoyarnos con ideas, comentarios y gráficos en <discord_link>Discord</discord_link>",
+            "item3": "Puedes mantener las luces encendidas con una <donate_link>donación.</donate_link> Y una vez que las luces están siempre encendidas, tu donación ayuda a mantener encendidas las luces de los desarrolladores."
+        }
     },
     "how_does_it_operate": {
         "question": "¿Cómo funciona hivegame.com?"
@@ -17,20 +23,14 @@
         "question": "¿Qué es Hive?"
     },
     "how_to_play_with_friends": {
-        "question": "¿Puedo jugar con un amigo?",
-        "answers": {
-        }
+        "question": "¿Puedo jugar con un amigo?"
     },
     "how_to_check_stack": {
-        "question": "¿Cómo puedo ver lo que hay debajo de una pieza?",
-        "answers": {
-        }
+        "question": "¿Cómo puedo ver lo que hay debajo de una pieza?"
     },
     "what_are_cornfirmation_modes": {
         "question": "¿Qué significan los diferentes modos de confirmación?",
-        "description": "Al hacer un movimiento hay 3 modos:",
-        "answers": {
-        }
+        "description": "Al hacer un movimiento hay 3 modos:"
     },
     "can_i_play_base_game": {
         "question": "¿Puedo jugar al juego base sin las expansiónes?"
