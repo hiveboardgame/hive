@@ -4,7 +4,8 @@
         "title": "Herramientas en línea",
         "tools": {
             "item2": "<explorer_link> Abrir el explorador </explorer_link> Abrir la búsqueda de juegos de torneos de boardspace",
-            "item3": "<hexketch_link> Hextech </hexketch_link> Hexketch es una página web que le permite generar fácilmente imágenes de mosaicos hexagonales en una cuadrícula hexagonal"
+            "item3": "<hexketch_link> Hextech </hexketch_link> Hexketch es una página web que le permite generar fácilmente imágenes de mosaicos hexagonales en una cuadrícula hexagonal",
+            "item1": "<entomology_link></entomology_link> Editor de posiciones y explorador de partidas para partidas jugadas en BGA o Boardspace."
         }
     },
     "offline_tools": {
@@ -24,7 +25,8 @@
         "title": "Gen42 - Editor de Hive"
     },
     "hive_news": {
-        "title": "Noticias de Hive"
+        "title": "Noticias de Hive",
+        "description": "<tournaments_site></tournaments_site> torneos presenciales y online, resultados de torneos, artículos de startegy. El lugar para las últimas noticias de Hive."
     },
     "social_media": {
         "title": "Redes sociales",
