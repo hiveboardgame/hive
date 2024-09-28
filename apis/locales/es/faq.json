@@ -21,7 +21,8 @@
         "answer": "¡Haciendo una donación al proyecto!"
     },
     "what_is_hive": {
-        "question": "¿Qué es Hive?"
+        "question": "¿Qué es Hive?",
+        "answer": "Hive es un galardonado juego de estrategia abstracta diseñado por John Yianni en 2000 y publicado por <gen42_link></gen42_link>."
     },
     "how_to_play_with_friends": {
         "question": "¿Puedo jugar con un amigo?",
@@ -34,7 +35,8 @@
     "how_to_check_stack": {
         "question": "¿Cómo puedo ver lo que hay debajo de una pieza?",
         "answers": {
-            "item1": "En el móvil, pulsa prolongadamente sobre el stack para expandirla. Una vez expandida, puedes retirar el dedo, para ver también la pieza más baja."
+            "item1": "En el móvil, pulsa prolongadamente sobre el stack para expandirla. Una vez expandida, puedes retirar el dedo, para ver también la pieza más baja.",
+            "item2": "En ordenador, haz click derecho y permanecerá expandido hasta soltarlo."
         }
     },
     "what_are_cornfirmation_modes": {
