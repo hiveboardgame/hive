@@ -1,3 +1,24 @@
 {
-    "title": "Enlaces de la comunidad"
+    "title": "Enlaces de la comunidad",
+    "online_tools": {
+        "title": "Herramientas en línea",
+        "tools": {
+            "item2": "<explorer_link> Abrir el explorador </explorer_link> Abrir la búsqueda de juegos de torneos de boardspace",
+            "item3": "<hexketch_link> Hextech </hexketch_link> Hexketch es una página web que le permite generar fácilmente imágenes de mosaicos hexagonales en una cuadrícula hexagonal"
+        }
+    },
+    "offline_tools": {
+        "title": "Herramientas sin conexión"
+    },
+    "publisher": {
+        "links": {
+            "item5": "<youtube_gen42_link>Gen42 en Youtube</youtube_gen42_link>",
+            "item4": "<instagram_gen42_link>Gen42 en Instagram</instagram_gen42_link>",
+            "item2": "<facebook_gen42_link>Gen42 en Facebook</facebook_gen42_link>",
+            "item3": "<facebook_link>Comunidad Mundial de Hive en Facebook</facebook_link>"
+        }
+    },
+    "hive_news": {
+        "title": "Noticias de Hive"
+    }
 }
