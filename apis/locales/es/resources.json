@@ -5,15 +5,15 @@
         "tools": {
             "item2": "<explorer_link> Explorar aperturas </explorer_link> Busqueda de aperturas de juegos de torneos de boardspace",
             "item3": "<hexketch_link> Hextech </hexketch_link> Hexketch es una página web que le permite generar fácilmente imágenes de mosaicos hexagonales en una cuadrícula hexagonal",
-            "item1": "<entomology_link></entomology_link> Editor de posiciones y explorador de partidas para partidas jugadas en BGA o Boardspace"
+            "item1": "<entomology_link>Entomology</entomology_link> Editor de posiciones y explorador de partidas para partidas jugadas en BGA o Boardspace"
         }
     },
     "offline_tools": {
         "title": "Herramientas sin conexión",
         "tools": {
             "item3": "<bga_downloader_link> Descargador de juegos BGA </bga_downloader_link> Descarga un juego BGA archivado en Hive en formato sgf.",
-            "item1": "<mzinga_link></mzinga_link> Mzinga es una colección de software de código abierto para jugar a Hive, con el objetivo principal de construir una comunidad de desarrolladores que creen IAs que jueguen a Hive. Funciona en Windows, Mac y Linux",
-            "item2": "<nokamute_link></nokamute_link> Nokamute es una IA de Hive de código abierto, compatible con Mzinga."
+            "item1": "<mzinga_link>Mzinga</mzinga_link> Mzinga es una colección de software de código abierto para jugar a Hive, con el objetivo principal de construir una comunidad de desarrolladores que creen IAs que jueguen a Hive. Funciona en Windows, Mac y Linux",
+            "item2": "<nokamute_link>Nokamute</nokamute_link> Nokamute es una IA de Hive de código abierto, compatible con Mzinga."
         }
     },
     "publisher": {
@@ -28,7 +28,7 @@
     },
     "hive_news": {
         "title": "Noticias de Hive",
-        "description": "<tournaments_site></tournaments_site> torneos presenciales y online, resultados de torneos, artículos de startegy. El lugar para las últimas noticias de Hive."
+        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> torneos presenciales y online, resultados de torneos, artículos de estrategia. El lugar para las últimas noticias de Hive."
     },
     "social_media": {
         "title": "Redes sociales",
@@ -42,18 +42,18 @@
     "books": {
         "title": "Libros",
         "links": {
-            "item2": "<hive_canon_link></hive_canon_link> Primer libro parte de una trilogía planeada por el varias veces campeón del mundo de Hive Joe Schultz",
-            "item1": "<hive_champion_link></hive_champion_link> Libro de estrategia para Hive de Randy Ingersoll el Campeón del Mundo de 2011.",
-            "item3": "<hive_puzzles_link></hive_puzzles_link> Colección gratuita de puzzles para Hive con soluciones para principiantes hasta avanzados"
+            "item2": "<hive_canon_link>Canon of Hive: Groundwork</hive_canon_link> Primer libro parte de una trilogía planeada por el varias veces campeón del mundo de Hive Joe Schultz",
+            "item1": "<hive_champion_link>Play Hive Like a Champion</hive_champion_link> Libro de estrategia para Hive de Randy Ingersoll el Campeón del Mundo de 2011.",
+            "item3": "<hive_puzzles_link>Hive Puzzles</hive_puzzles_link> Colección gratuita de puzzles para Hive con soluciones para principiantes hasta avanzados"
         }
     },
     "videos": {
         "title": "Vídeos",
         "links": {
-            "item3": "<ordep_cubik_link></ordep_cubik_link> 🇪🇸 Análisis del juego en español por un joven y prometedor maestro de Hive",
-            "item4": "<cavaliers16_link></cavaliers16_link> Críticas de juegos de uno de los jugadores más fuertes de Hive",
-            "item1": "<frasco_link></frasco_link> Especialista en Hive y otros juegos abstractos de estrategia",
-            "item2": "<ringersol_link></ringersol_link> Canal de Youtube de Randy Ingersoll, reseñas de partidas de torneos y discusiones de estrategia"
+            "item3": "<ordep_cubik_link>OrdepCubik</ordep_cubik_link> 🇪🇸 Análisis del juego en español por un joven y prometedor maestro de Hive",
+            "item4": "<cavaliers16_link>Cavaliers16</cavaliers16_link> Críticas de juegos de uno de los jugadores más fuertes de Hive",
+            "item1": "<frasco_link>Frasco</frasco_link> Especialista en Hive y otros juegos abstractos de estrategia",
+            "item2": "<ringersol_link>Play Hive like a champion</ringersol_link> Canal de Youtube de Randy Ingersoll, reseñas de partidas de torneos y discusiones de estrategia"
         }
     }
 }
