@@ -1,1 +1,22 @@
-{}
+{
+    "community": {
+        "title": "Közösség",
+        "top_players": "Legjobb Játékosok",
+        "faq": "FAQ (Gyakori kérdések)",
+        "resources": "Források"
+    },
+    "buy_game": "Játék vásárlás",
+    "donate": "Támogatás",
+    "learn": {
+        "rules": "Szabályok",
+        "analysis": "Elemzés",
+        "title": "Tanulás"
+    },
+    "home": "Főoldal",
+    "login": "Bejelentkezés",
+    "tournaments": {
+        "title": "Versenyek",
+        "create": "Verseny létrehozása",
+        "view": "Versenyek böngészése"
+    }
+}
