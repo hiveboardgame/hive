@@ -3,7 +3,7 @@
     "online_tools": {
         "title": "Herramientas en línea",
         "tools": {
-            "item2": "<explorer_link> Explorar aperturas </explorer_link> Busqueda de aperturas de juegos de torneos de boardspace",
+            "item2": "<explorer_link> Abrir el explorador </explorer_link> Abrir la búsqueda de juegos de torneos de boardspace",
             "item3": "<hexketch_link> Hextech </hexketch_link> Hexketch es una página web que le permite generar fácilmente imágenes de mosaicos hexagonales en una cuadrícula hexagonal",
             "item1": "<entomology_link>Entomology</entomology_link> Editor de posiciones y explorador de partidas para partidas jugadas en BGA o Boardspace"
         }
@@ -28,7 +28,7 @@
     },
     "hive_news": {
         "title": "Noticias de Hive",
-        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> torneos presenciales y online, resultados de torneos, artículos de estrategia. El lugar para las últimas noticias de Hive."
+        "description": "<tournaments_site> Torneos mundiales de Hive </tournaments_site> Torneos presenciales y en línea, resultados de torneos, artículos de estrategia. El lugar para conocer las últimas novedades de Hive."
     },
     "social_media": {
         "title": "Redes sociales",
@@ -43,7 +43,7 @@
         "title": "Libros",
         "links": {
             "item2": "<hive_canon_link>Canon of Hive: Groundwork</hive_canon_link> Primer libro parte de una trilogía planeada por el varias veces campeón del mundo de Hive Joe Schultz",
-            "item1": "<hive_champion_link>Play Hive Like a Champion</hive_champion_link> Libro de estrategia para Hive de Randy Ingersoll el Campeón del Mundo de 2011.",
+            "item1": "<hive_champion_link> Juega a Hive como un campeón </hive_champion_link>  Libro de estrategia Hive de Randy Ingersoll, campeón mundial de 2011.",
             "item3": "<hive_puzzles_link>Hive Puzzles</hive_puzzles_link> Colección gratuita de puzzles para Hive con soluciones para principiantes hasta avanzados"
         }
     },
