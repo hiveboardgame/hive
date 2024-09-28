@@ -1,1 +1,38 @@
-{}
+{
+    "create_game": "Создать игру",
+    "search_players": "Поиск игроков",
+    "online_players_one": "Игроков онлайн: {{count}}",
+    "custom_game": {
+        "title": "Создать игру:",
+        "casual": "Без рейтинга",
+        "rated": "Рейтинговая",
+        "private": "По приглашению",
+        "public": "Открыта для всех",
+        "rating_range": "Ограничения по рейтингу",
+        "mode": {
+            "real_time": {
+                "title": "В реальном времени",
+                "increment_in_seconds": "Прибавка времени в секундах: {{count}}",
+                "minutes_per_side": "Минут на игрока: {{count}}"
+            },
+            "correspondence": {
+                "days_per_move": "Дней на ход",
+                "time_one": "{{count}} день",
+                "time_other": "{{count}} дн.",
+                "title": "Пошагово",
+                "total_time_each": "Общее время на игрока"
+            },
+            "untimed": "Не на время"
+        }
+    },
+    "challenge_details": {
+        "player": "Игрок",
+        "time": "Время",
+        "rated": {
+            "title": "Рейтинговая",
+            "no": "Нет",
+            "yes": "Да"
+        }
+    },
+    "online_players_other": "Игроков онлайн: {{count}}"
+}
