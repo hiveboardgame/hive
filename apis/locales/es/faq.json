@@ -1,0 +1,71 @@
+{
+    "title": "Preguntas Frecuentes",
+    "what_is_hivegame": {
+        "question": "¿Qué es hivegame.com?"
+     },
+    "how_to_help": {
+        "question": "¿Cómo puedo ayudar a este proyecto crecer?"
+    },
+    "how_does_it_operate": {
+        "question": "¿Cómo funciona hivegame.com?"
+    },
+    "how_to_get_crown": {
+        "question": "¿Cómo obtengo un 👑 en mi nombre de usuario?",
+        "answer": "¡Haciendo una donación al proyecto!"
+    },
+    "what_is_hive": {
+        "question": "¿Qué es Hive?"
+    },
+    "how_to_play_with_friends": {
+        "question": "¿Puedo jugar con un amigo?",
+        "answers": {
+        }
+    },
+    "how_to_check_stack": {
+        "question": "¿Cómo puedo ver lo que hay debajo de una pieza?",
+        "answers": {
+        }
+    },
+    "what_are_cornfirmation_modes": {
+        "question": "¿Qué significan los diferentes modos de confirmación?",
+        "description": "Al hacer un movimiento hay 3 modos:",
+        "answers": {
+        }
+    },
+    "can_i_play_base_game": {
+        "question": "¿Puedo jugar al juego base sin las expansiónes?"
+    },
+    "what_rating_system": {
+        "question": "¿Qué sistema de puntuación utiliza hivegame.com?"
+    },
+    "how_to_recover_password": {
+        "question": "¿Qué puedo hacer si olvidé mi contraseña?"
+    },
+    "why_basic_chat": {
+        "question": "¿Por qué el chat es tan básico?"
+    },
+    "opponent_is_abusive": {
+        "question": "¿Qué puedo hacer si mi oponente es abusivo o tiene un nombre de usuario ofensivo?"
+    },
+    "where_to_meet_other_players": {
+        "question": "¿Dónde puedo conocer a la comunidad de Hive® ?"
+    },
+    "why_elo_has_questionmark": {
+        "question": "¿Por qué mi elo tiene un “?” junto a él?"
+    },
+    "why_not_in_top_players": {
+        "question": "¿Por qué no estoy en el top de jugadores?"
+    },
+    "how_to_review_games": {
+        "question": "¿Puedo revisar juegos con una herramienta de análisis?"
+    },
+    "where_to_learn_more": {
+        "question": "¿Cómo puedo aprender más sobre el la estrategia de Hive®?"
+    },
+    "can_i_set_up_a_tournament": {
+        "question": "¿Puedo configurar un torneo?"
+    },
+    "can_i_play_with_bots": {
+        "question": "¿Puedo jugar contra un bot?"
+    }
+}

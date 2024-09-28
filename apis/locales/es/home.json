@@ -1,0 +1,40 @@
+{
+    "create_game": "Crear un juego",
+    "search_players": "Buscar jugadores",
+    
+    "online_players_one": "{{ count }} jugador en línea",
+    "online_players_other": "{{ count }} jugadores en línea",
+
+    "custom_game": {
+        "title": "Crear un juego:",
+        "casual": "Casual",
+        "rated": "Puntuado",
+        "private": "Privado",
+        "public": "Publico",
+        "rating_range": "Rango de puntos",
+        "mode": {
+            "real_time": {
+                "title": "Tiempo real",
+                "minutes_per_side": "Minutos por lado: {{ count }}",
+                "increment_in_seconds": "Incremento en seg: {{ count }}"
+            },
+            "correspondence": {
+                "title": "Correspondencia",
+                "days_per_move": "Días por movida",
+                "total_time_each": "Tiempo total por jugador",
+                "time_one": "{{ count }} día",
+                "time_other": "{{ count }} días"
+            },
+            "untimed": "Sin tiempo"
+        }
+    },
+    "challenge_details": {
+        "player": "Jugador",
+        "time": "Tiempo",
+        "rated": {
+            "title": "Puntuado",
+            "yes": "Si",
+            "no": "No"
+        }
+    }
+}

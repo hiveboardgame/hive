@@ -1,0 +1,22 @@
+{
+    "home": "Inicio",
+    "community": {
+        "title": "Comunidad",
+        "top_players": "Top de Jugadores",
+        "resources": "Recursos",
+        "faq": "Preguntas Frecuentes"
+    },
+    "learn": {
+        "title": "Aprender",
+        "rules": "Reglas",
+        "analysis": "Análisis"
+    },
+    "tournaments": {
+        "title": "Torneos",
+        "create": "Crear Torneo",
+        "view": "Ver Torneos"
+    },
+    "buy_game": "Comprar Juego",
+    "donate": "Donar",
+    "login": "Iniciar Sesión"
+}

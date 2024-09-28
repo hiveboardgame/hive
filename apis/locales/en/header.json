@@ -1,0 +1,22 @@
+{
+    "home": "Home",
+    "community": {
+        "title": "Community",
+        "top_players": "Top Players",
+        "resources": "Resources",
+        "faq": "FAQ"
+    },
+    "learn": {
+        "title": "Learn",
+        "rules": "Rules",
+        "analysis": "Analysis"
+    },
+    "tournaments": {
+        "title": "Tournaments",
+        "create": "Create Tournament",
+        "view": "View Tournaments"
+    },
+    "buy_game": "Buy Game",
+    "donate": "Donate",
+    "login": "Login"
+}
