@@ -2,12 +2,12 @@
     "title": "Community Links",
     "hive_news": {
         "title": "Hive News",
-        "description": "<tournaments_site></tournaments_site> in person and online tournaments, tournament results, startegy articles. The place for the latest hive news."
+        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> in person and online tournaments, tournament results, strategy articles. The place for the latest hive news."
     },
     "online_tools": {
         "title": "Online Tools",
         "tools": {
-            "item1": "<entomology_link></entomology_link> Position editor and game explorer for games played on BGA or Boardspace",
+            "item1": "<entomology_link>Entomology</entomology_link> Position editor and game explorer for games played on BGA or Boardspace",
             "item2": "<explorer_link>Opening explorer</explorer_link> Opening search for tournament boardspace games",
             "item3": "<hexketch_link>Hextech</hexketch_link> Hexketch is a website that allows you to easily generate images of hexagonal tiles on a hexagonal grid"
         }
@@ -15,8 +15,8 @@
     "offline_tools": {
         "title": "Offline Tools",
         "tools": {
-            "item1": "<mzinga_link></mzinga_link> Mzinga is a collection of open-source software to play Hive, with the primary goal of building a community of developers who create Hive-playing AIs. Works on Windows Mac and Linux",
-            "item2": "<nokamute_link></nokamute_link> Nokamute is a open source hive AI, compatible with Mzinga.",
+            "item1": "<mzinga_link>Mzinga</mzinga_link> Mzinga is a collection of open-source software to play Hive, with the primary goal of building a community of developers who create Hive-playing AIs. Works on Windows Mac and Linux",
+            "item2": "<nokamute_link>Nokamute</nokamute_link> Nokamute is a open source hive AI, compatible with Mzinga.",
             "item3": "<bga_downloader_link>BGA Game Downloader</bga_downloader_link> Download a Hive archived BGA game in sgf format."
         }
     },
@@ -32,18 +32,18 @@
     "books": {
         "title": "Books",
         "links": {
-            "item1": "<hive_champion_link></hive_champion_link>  Hive strategy book by Randy Ingersoll the 2011 World Champion.",
-            "item2": "<hive_canon_link></hive_canon_link> First book part of a planned trilogy by multiple times hive world champion Joe Schultz",
-            "item3": "<hive_puzzles_link></hive_puzzles_link> Free collection of hive puzzles with solutions for beginners up to advanted"
+            "item1": "<hive_champion_link>Play Hive Like a Champion</hive_champion_link>  Hive strategy book by Randy Ingersoll the 2011 World Champion.",
+            "item2": "<hive_canon_link>Canon of Hive: Groundwork</hive_canon_link> First book part of a planned trilogy by multiple times hive world champion Joe Schultz",
+            "item3": "<hive_puzzles_link>Hive Puzzles</hive_puzzles_link> Free collection of hive puzzles with solutions for beginners up to advanted"
         }
     },
     "videos": {
         "title": "Videos",
         "links": {
-            "item1": "<frasco_link></frasco_link> Hive and other Abstract Strategy Games specialist",
-            "item2": "<ringersol_link></ringersol_link> Youtube channel of Randy Ingersoll, tournament game reviews and strategy discussions",
-            "item3": "<ordep_cubik_link></ordep_cubik_link> 🇪🇸 Game analysis in Spanish by a young up and coming hive master",
-            "item4": "<cavaliers16_link></cavaliers16_link> Game reviews from one of the strongest hive players"
+            "item1": "<frasco_link>Frasco</frasco_link> Hive and other Abstract Strategy Games specialist",
+            "item2": "<ringersol_link>Play Hive like a champion</ringersol_link> Youtube channel of Randy Ingersoll, tournament game reviews and strategy discussions",
+            "item3": "<ordep_cubik_link>OrdepCubik</ordep_cubik_link> 🇪🇸 Game analysis in Spanish by a young up and coming hive master",
+            "item4": "<cavaliers16_link>Cavaliers16</cavaliers16_link> Game reviews from one of the strongest hive players"
         }
     },
     "publisher": {

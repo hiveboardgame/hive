@@ -22,7 +22,7 @@
     },
     "what_is_hive": {
         "question": "What is Hive?",
-        "answer":"Hive is an award-winning abstract strategy game designed by John Yianni in 2000 and published by <gen42_link></gen42_link>."
+        "answer":"Hive is an award-winning abstract strategy game designed by John Yianni in 2000 and published by <gen42_link>Gen42</gen42_link>."
     },
     "how_to_play_with_friends": {
         "question": "Can I set up a game with a friend?",
@@ -54,7 +54,7 @@
     },
     "what_rating_system": {
         "question": "What rating system does hivegame.com use?",
-        "answer": "We use the <glicko2_link></glicko2_link> system. Parameterized like Lichess."
+        "answer": "We use the <glicko2_link>Glicko-2</glicko2_link> system. Parameterized like Lichess."
     },
     "how_to_recover_password": {
         "question": "What can I do if I forgot my password?",
