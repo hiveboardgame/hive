@@ -5,7 +5,11 @@
         "answer": "hivegame.com es un esfuerzo comunitario para crear una nueva plataforma en línea para jugar Hive® gratis. hivegame.com no tiene publicidad, es de código abierto, fue desarrollado por miembros de la comunidad y cuenta con el apoyo oficial del creador de Hive®, John Yianni."
     },
     "how_to_help": {
-        "question": "¿Cómo puedo ayudar a este proyecto crecer?"
+        "question": "¿Cómo puedo ayudar a este proyecto crecer?",
+        "answers": {
+            "item1": "Puedes ayudarnos contribuyendo a la <source_link>código fuente.</source_link>",
+            "item2": "Puede apoyarnos con ideas, comentarios y gráficos en <discord_link>Discord</discord_link>"
+        }
     },
     "how_does_it_operate": {
         "question": "¿Cómo funciona hivegame.com?"
