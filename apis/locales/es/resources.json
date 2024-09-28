@@ -3,7 +3,7 @@
     "online_tools": {
         "title": "Herramientas en línea",
         "tools": {
-            "item2": "<explorer_link> Abrir el explorador </explorer_link> Abrir la búsqueda de juegos de torneos de boardspace",
+            "item2": "<explorer_link> Explorar aperturas </explorer_link> Busqueda de aperturas de juegos de torneos de boardspace",
             "item3": "<hexketch_link> Hextech </hexketch_link> Hexketch es una página web que le permite generar fácilmente imágenes de mosaicos hexagonales en una cuadrícula hexagonal",
             "item1": "<entomology_link></entomology_link> Editor de posiciones y explorador de partidas para partidas jugadas en BGA o Boardspace."
         }
@@ -40,14 +40,14 @@
     "books": {
         "title": "Libros",
         "links": {
-            "item2": "<hive_canon_link></hive_canon_link> Primer libro parte de una trilogía planeada por el varias veces campeón del mundo de Hive Joe Schultz."
+            "item2": "<hive_canon_link></hive_canon_link> Primer libro parte de una trilogía planeada por el varias veces campeón del mundo de Hive Joe Schultz"
         }
     },
     "videos": {
         "title": "Vídeos",
         "links": {
             "item3": "<ordep_cubik_link></ordep_cubik_link> 🇪🇸 Análisis del juego en español por un joven y prometedor maestro de la colmena",
-            "item4": "<cavaliers16_link></cavaliers16_link> Críticas de juegos de uno de los jugadores más fuertes de la colmena."
+            "item4": "<cavaliers16_link></cavaliers16_link> Analisis de juegos de uno de los jugadores más fuertes de Hive"
         }
     }
 }
