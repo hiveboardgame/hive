@@ -13,7 +13,8 @@
         }
     },
     "how_does_it_operate": {
-        "question": "¿Cómo funciona hivegame.com?"
+        "question": "¿Cómo funciona hivegame.com?",
+        "answer": "Es desarrollado por miembros de la comunidad y es 100% basado en donaciones. hivegame.com nunca recopilará datos de usuarios, no mostrará anuncios ni implementará nada que lo distraiga del juego o genere dinero."
     },
     "how_to_get_crown": {
         "question": "¿Cómo obtengo un 👑 en mi nombre de usuario?",
@@ -23,10 +24,18 @@
         "question": "¿Qué es Hive?"
     },
     "how_to_play_with_friends": {
-        "question": "¿Puedo jugar con un amigo?"
+        "question": "¿Puedo jugar con un amigo?",
+        "answers": {
+            "item1": "Sí, puedes crear un juego haciendo clic en el botón \"Crear un juego\" de la página principal, luego selecciona la opción \"Privado\" y luego comparte el enlace con un amigo. Deberá tener/crear una cuenta para jugar.",
+            "item2": "Alternativamente, puedes enviar un desafío directo usando el ícono de \"espadas cruzadas\" al lado de cada usuario, que enviará un desafío directo a ese usuario específico.",
+            "item3": "Por supuesto, también puedes establecer un desafío abierto que pueda ser aceptado por cualquiera dentro de los criterios de rango Elo y simplemente esperar que sea el primero en aceptar tu partida."
+        }
     },
     "how_to_check_stack": {
-        "question": "¿Cómo puedo ver lo que hay debajo de una pieza?"
+        "question": "¿Cómo puedo ver lo que hay debajo de una pieza?",
+        "answers": {
+            "item1": "En el móvil, pulsa prolongadamente sobre el stack para expandirla. Una vez expandida, puedes retirar el dedo, para ver también la pieza más baja."
+        }
     },
     "what_are_cornfirmation_modes": {
         "question": "¿Qué significan los diferentes modos de confirmación?",
