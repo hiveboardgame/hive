@@ -8,7 +8,8 @@
         "question": "¿Cómo puedo ayudar a este proyecto crecer?",
         "answers": {
             "item1": "Puedes ayudarnos contribuyendo a la <source_link>código fuente.</source_link>",
-            "item2": "Puede apoyarnos con ideas, comentarios y gráficos en <discord_link>Discord</discord_link>"
+            "item2": "Puede apoyarnos con ideas, comentarios y gráficos en <discord_link>Discord</discord_link>",
+            "item3": "Puedes mantener las luces encendidas con una <donate_link>donación.</donate_link> Y una vez que las luces están siempre encendidas, tu donación ayuda a mantener encendidas las luces de los desarrolladores."
         }
     },
     "how_does_it_operate": {
