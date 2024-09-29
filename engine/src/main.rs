@@ -1,12 +1,11 @@
+use clap::Parser;
 use hive_lib::{Color, GameError, GameResult, GameStatus, GameType, History, State};
-use std::env;
 
-fn play_game_from_file(file_path: &str) -> Result<State, GameError> {
+fn play_game_from_file(file_path: &str, move_count: bool) -> Result<State, GameError> {
     let history = History::from_filepath(file_path)?;
     let mut state: State = State::new(GameType::default(), false);
     for _ in 0..1 {
-        state = State::new_from_history(&history)?;
-        let _foo = state.board.spawnable_positions(Color::White);
+        state = State::new_from_history(&history, move_count)?;
     }
     if let GameStatus::Finished(GameResult::Winner(winner)) = state.game_status {
         println!("State says {winner} won!");
@@ -45,16 +44,23 @@ fn play_game_from_file(file_path: &str) -> Result<State, GameError> {
     Ok(state)
 }
 
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Name of the pgn file
+    #[arg(short, long)]
+    filename: String,
+
+    /// Count available moves per turn
+    #[arg(short, long, default_value_t = false)]
+    count: bool,
+}
+
 fn main() {
-    let game: Vec<String> = env::args().collect();
-    if let Some(game) = game.get(1) {
-        println!("Playing game: {game}");
-        match play_game_from_file(game) {
-            Ok(_) => {}
-            Err(e) => eprintln!("{e}"),
-        }
-    } else {
-        eprint!("{}", GameError::NoPgnFile);
+    let args = Args::parse();
+    match play_game_from_file(&args.filename, args.count) {
+        Ok(_) => {}
+        Err(e) => eprintln!("{e}"),
     }
 }
 

@@ -53,7 +53,7 @@ impl State {
     pub fn new_from_str(moves: &str, game_type: &str) -> Result<Self, GameError> {
         let game_type = GameType::from_str(game_type)?;
         let history = History::new_from_str(moves)?;
-        let mut state = State::new_from_history(&history)?;
+        let mut state = State::new_from_history(&history, false)?;
         state.game_type = game_type;
         Ok(state)
     }
@@ -71,7 +71,7 @@ impl State {
         }
     }
 
-    pub fn new_from_history(history: &History) -> Result<Self, GameError> {
+    pub fn new_from_history(history: &History, move_count: bool) -> Result<Self, GameError> {
         let mut tournament = true;
         // Did white open with a Queen?
         if let Some((piece_str, _)) = history.moves.first() {
@@ -90,6 +90,18 @@ impl State {
         let mut state = State::new(history.game_type, tournament);
         for (piece, pos) in history.moves.iter() {
             state.play_turn_from_history(piece, pos)?;
+            if move_count {
+                println!(
+                    "{} has {:?} moves available",
+                    state.turn_color,
+                    state
+                        .board
+                        .moves(state.turn_color)
+                        .values()
+                        .map(|vec| vec.len())
+                        .sum::<usize>()
+                );
+            }
         }
         match history.result {
             GameResult::Winner(color) => {
