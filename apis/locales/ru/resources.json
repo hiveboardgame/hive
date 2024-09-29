@@ -1,0 +1,59 @@
+{
+    "title": "Полезные ссылки",
+    "hive_news": {
+        "title": "Новости об Улье",
+        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> — онлайн и оффлайн турниры, результаты турниров, статьи о стратегии. Свежие новости об Улье."
+    },
+    "online_tools": {
+        "title": "Онлайн-ресурсы",
+        "tools": {
+            "item3": "<hexketch_link>Hextech</hexketch_link> — сайт, где вы можете сгенерировать изображения шестиугольников на шестиугольной сетке.",
+            "item1": "<entomology_link>Entomology</entomology_link> — редактор позиций и поисковик игр, сыгранных на BGA и Boardspace.",
+            "item2": "<explorer_link>Opening explorer</explorer_link> — поисковик дебютов турнирных игр на Boardspace"
+        }
+    },
+    "social_media": {
+        "title": "Социальные сети",
+        "links": {
+            "item1": "<discord_link>Discord</discord_link> — чат нашего сообщества.",
+            "item2": "<reddit_link>Hive Subreddit</reddit_link> — делитесь своим опытом и стратегиями.",
+            "item3": "<facebook_link>World Hive Comunity Facebook</facebook_link> — сообщество игроков в Фейсбуке.",
+            "item4": "<instagram_link>Hive instagram</instagram_link> — красивые фотографии и мемы."
+        }
+    },
+    "books": {
+        "title": "Книги",
+        "links": {
+            "item2": "<hive_canon_link>Canon of Hive: Groundwork</hive_canon_link> — первая часть трилогии об Улье от многократного чемпиона мира Джо Шульца (Joe Schultz).",
+            "item3": "<hive_puzzles_link>Hive Puzzles</hive_puzzles_link> — бесплатная подборка задачек с решениями, как для новичков, так и для продвинутых игроков.",
+            "item1": "<hive_champion_link>Play Hive Like a Champion</hive_champion_link> — книга о стратегии в Улье, написанная чемпионом мира 2011 года Ренди Ингерсолом (Randy Ingersoll)."
+        }
+    },
+    "videos": {
+        "title": "Видео",
+        "links": {
+            "item3": "<ordep_cubik_link>OrdepCubik</ordep_cubik_link> — анализ игр на 🇪🇸 испанском языке от молодого и подающего надежды мастера игры.",
+            "item4": "<cavaliers16_link>Cavaliers16</cavaliers16_link> — обзоры от одного из сильнейших игроков.",
+            "item1": "<frasco_link>Frasco</frasco_link> — специалист по игре в Улей и другим абстрактным играм.",
+            "item2": "<ringersol_link>Play Hive like a champion</ringersol_link> Youtube-канал Ренди Ингерсола (Randy Ingersoll), посвященный обзорам турнирных игр и обсуждению стратегии."
+        }
+    },
+    "publisher": {
+        "title": "Gen42 — издатель Улья",
+        "links": {
+            "item1": "<gen42_link>Магазин Gen42</gen42_link>",
+            "item3": "<facebook_link>Сообщество игроков в Улей на Facebook</facebook_link>",
+            "item5": "<youtube_gen42_link>Gen42 на Youtube</youtube_gen42_link>",
+            "item2": "<facebook_gen42_link>Группа Gen42 на Facebook</facebook_gen42_link>",
+            "item4": "<instagram_gen42_link>Gen42 в Instagram</instagram_gen42_link>"
+        }
+    },
+    "offline_tools": {
+        "tools": {
+            "item1": "<mzinga_link>Mzinga</mzinga_link> — коллекция открытого программного обеспечения для игры в Улей. Главная цель — создание сообщества разработчиков, создающих искусственный интеллект для игры. Работает на Windows, Mac и Linux.",
+            "item2": "<nokamute_link>Nokamute</nokamute_link> — бот для игры в Улей с открытым кодом. Совместим с Mzinga.",
+            "item3": "<bga_downloader_link>BGA Game Downloader</bga_downloader_link> инструмент для скачивания игр, сыгранных на BGA, в формате sgf."
+        },
+        "title": "Оффлайн-ресурсы"
+    }
+}

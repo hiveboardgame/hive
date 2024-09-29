@@ -1,14 +1,12 @@
 {
     "create_game": "Crear un juego",
     "search_players": "Buscar jugadores",
-    
     "online_players_one": "{{ count }} jugador en línea",
     "online_players_other": "{{ count }} jugadores en línea",
-
     "custom_game": {
         "title": "Crear un juego:",
         "casual": "Casual",
-        "rated": "Puntuado",
+        "rated": "Clasificado",
         "private": "Privado",
         "public": "Publico",
         "rating_range": "Rango de puntos",
@@ -20,7 +18,7 @@
             },
             "correspondence": {
                 "title": "Correspondencia",
-                "days_per_move": "Días por movida",
+                "days_per_move": "Días por movimiento",
                 "total_time_each": "Tiempo total por jugador",
                 "time_one": "{{ count }} día",
                 "time_other": "{{ count }} días"
@@ -32,8 +30,8 @@
         "player": "Jugador",
         "time": "Tiempo",
         "rated": {
-            "title": "Puntuado",
-            "yes": "Si",
+            "title": "Clasificado",
+            "yes": "Sí",
             "no": "No"
         }
     }

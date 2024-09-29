@@ -2,9 +2,9 @@
     "home": "Inicio",
     "community": {
         "title": "Comunidad",
-        "top_players": "Top de Jugadores",
+        "top_players": "Los mejores jugadores",
         "resources": "Recursos",
-        "faq": "Preguntas Frecuentes"
+        "faq": "Preguntas frecuentes"
     },
     "learn": {
         "title": "Aprender",
@@ -13,10 +13,10 @@
     },
     "tournaments": {
         "title": "Torneos",
-        "create": "Crear Torneo",
-        "view": "Ver Torneos"
+        "create": "Crear torneo",
+        "view": "Ver torneos"
     },
-    "buy_game": "Comprar Juego",
+    "buy_game": "Comprar juego",
     "donate": "Donar",
-    "login": "Iniciar Sesión"
+    "login": "Iniciar sesión"
 }
