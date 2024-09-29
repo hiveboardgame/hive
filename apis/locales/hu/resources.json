@@ -44,7 +44,11 @@
     "publisher": {
         "title": "Gen42 - Hive kiadó",
         "links": {
-            "item1": "<gen42_link>Gen42 - vásárolj fizikai játékot itt.</gen42_link>"
+            "item1": "<gen42_link>Gen42 - vásárolj fizikai játékot itt.</gen42_link>",
+            "item3": "<facebook_link>World Hive Comunity Facebook</facebook_link>",
+            "item4": "<instagram_gen42_link>Gen42 - Instagram</instagram_gen42_link>",
+            "item5": "<youtube_gen42_link>Gen42 - Youtube</youtube_gen42_link>",
+            "item2": "<facebook_gen42_link>Gen42 - Facebook</facebook_gen42_link>"
         }
     },
     "title": "Közösségi Hivatkozások",
