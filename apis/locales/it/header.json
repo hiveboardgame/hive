@@ -1,1 +1,22 @@
-{}
+{
+    "home": "Home",
+    "community": {
+        "title": "Community",
+        "top_players": "Top Players",
+        "resources": "Risorse",
+        "faq": "FAQ"
+    },
+    "learn": {
+        "title": "Impara",
+        "rules": "Regole",
+        "analysis": "Analisi"
+    },
+    "tournaments": {
+        "title": "Tornei",
+        "create": "Crea Torneo",
+        "view": "Tornei"
+    },
+    "buy_game": "Compra Hive®",
+    "donate": "Fai una Donazione",
+    "login": "Accedi"
+}
