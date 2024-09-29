@@ -1,1 +1,55 @@
-{}
+{
+    "online_tools": {
+        "title": "Online Eszközök",
+        "tools": {
+            "item2": "<explorer_link>Opening explorer</explorer_link> Megnyitás alapú játszma kereső a Boardspace-n játszott versenyjátszmák közül",
+            "item3": "<hexketch_link>Hextech</hexketch_link> A Hexketch egy weboldal, amely lehetővé teszi hatszögletű mezők egyszerű képgenerálását egy hatszögletű rácson",
+            "item1": "<entomology_link>Entomology</entomology_link> Pozíciószerkesztő és játékelemző web oldal BGA-n vagy Boardspace-n játszott játékokhoz"
+        }
+    },
+    "offline_tools": {
+        "title": "Offline Eszközök",
+        "tools": {
+            "item1": "<mzinga_link>Mzinga</mzinga_link> Az Mzinga egy nyílt forráskódú szoftvergyűjtemény a Hive játékhoz, amelynek elsődleges célja egy olyan fejlesztői közösség építése, amely egy Hive-játékos mesterséges intelligenciát fejleszt. Működik Windows, Mac és Linux rendszereken",
+            "item2": "<nokamute_link>Nokamute</nokamute_link> A Nokamute egy nyílt forráskódú Hive mesterséges intelligencia, amely kompatibilis az Mzingával.",
+            "item3": "<bga_downloader_link>BGA Játék Letöltő</bga_downloader_link> Hive archivált BGA játék letöltése sgf formátumban."
+        }
+    },
+    "social_media": {
+        "title": "Közösségi média",
+        "links": {
+            "item1": "<discord_link>Discord</discord_link> Csatlakozz a közösségi chathez",
+            "item4": "<instagram_link>Hive instagram</instagram_link> Szép Hive fotók és mémek",
+            "item3": "<facebook_link>World Hive Comunity Facebook</facebook_link> Vedd fel a kapcsolatot más játékosokkal",
+            "item2": "<reddit_link>Hive Subreddit</reddit_link> Oszd meg stratégiáidat és tapasztalataidat"
+        }
+    },
+    "books": {
+        "title": "Könyvek",
+        "links": {
+            "item1": "<hive_champion_link>Play Hive Like a Champion</hive_champion_link> Randy Ingersoll, a 2011-es világbajnok Hive stratégiakönyve.",
+            "item2": "<hive_canon_link>Canon of Hive: Groundwork</hive_canon_link> Az első könyv egy tervezett trilógiából, amelyet a többszörös világbajnok Joe Schultz írt",
+            "item3": "<hive_puzzles_link>Hive Puzzles</hive_puzzles_link> Ingyenes Hive rejtvény-gyűjtemény, megoldásokkal kezdőknek és haladóknak egyaránt."
+        }
+    },
+    "videos": {
+        "title": "Videók",
+        "links": {
+            "item1": "<frasco_link>Frasco</frasco_link> Hive és más absztrakt stratégiai játékok szakértője",
+            "item2": "<ringersol_link>Play Hive like a champion</ringersol_link> Randy Ingersoll YouTube-csatornája, versenyjáték-elemzésekkel és stratégiai egyeztetésekkel",
+            "item3": "<ordep_cubik_link>OrdepCubik 🇪🇸</ordep_cubik_link> Játékelemzés spanyolul, egy fiatal és feltörekvő Hive mester által",
+            "item4": "<cavaliers16_link>Cavaliers16</cavaliers16_link> Játékelemzések az egyik legerősebb Hive játékostól"
+        }
+    },
+    "publisher": {
+        "title": "Gen42 - Hive kiadó",
+        "links": {
+            "item1": "<gen42_link>Gen42 - vásárolj fizikai játékot itt.</gen42_link>"
+        }
+    },
+    "title": "Közösségi Hivatkozások",
+    "hive_news": {
+        "title": "Hive Hírek",
+        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> Személyes és online versenyek, versenyeredmények, stratégiák. Itt megtalálhatod a legfrissebb Hive híreket."
+    }
+}
