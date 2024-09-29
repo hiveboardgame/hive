@@ -1,1 +1,104 @@
-{}
+{
+    "title": "Domande Frequenti",
+    "what_is_hivegame": {
+        "question": "Cos'é hivegame.com?",
+        "answer": "hivegame.com è nato dallo sforzo della comunità dei giocatori dei Hive ed é una nuova piattaforma online per giocare a Hive® gratuitamente. hivegame.com è open source, privo di pubblicità, sviluppato dai membri della comunità e ufficialmente supportato dal creatore di Hive® John Yianni."
+    },
+    "how_to_help": {
+        "question": "Come posso aiutare questo progetto a crescere?",
+        "answers": {
+            "item1": "Puoi aiutare contribuendo al <source_link>codice.</source_link>",
+            "item2": "Puoi supportarci con idee, feedback e aiuto grafica su <discord_link>Discord</discord_link>",
+            "item3": "Puoi aiutare a pagare le bollette del sito con una <donate_link>donazione.</donate_link> E una volta che le bollette son pagate, la tua donazione aiuta a pagare le bollette dei programmatori."
+        }
+    },
+    "how_does_it_operate": {
+        "question": "Come funziona hivegame.com?",
+        "answer": "E' sviluppata dai membri della comunitá, basata su donazioni al 100%. Hivegame.com non raccoglierá mai i dati degli utenti, non mostrerá pubblicitá o implementerá niente che ti possa distrarre dal gioco o che produca profitto."
+    },
+    "how_to_get_crown": {
+        "question": "Come faccio ad avere la 👑 accanto al mio username?",
+        "answer": "Facendo una donazione!"
+    },
+    "what_is_hive": {
+        "question": "Cos'é Hive®?",
+        "answer": "Hive® é un gioco di strategia astratto ideato da John Yianni nel 2000 e pubblicato da <gen42_link>Gen42</gen42_link>."
+    },
+    "how_to_play_with_friends": {
+        "question": "Posso giocare una partita con un amico?",
+        "answers": {
+            "item2": "Altrimenti, puoi mandare una sfida direttamente cliccando sull'icona blu con le spade incrociate accanto al nome utente. In questo modo puoi sfidare un utente specifico.",
+            "item1": "Si, puoi creare una partita cliccando sul tasto 'crea partita' nella finestra principale, seleziona l'opzione 'privata' e poi manda il link ad un amico. Il tuo amico ha bisogno di avere o creare un account per accettare e giocare.",
+            "item3": "Ovviamente, puoi anche creare una sfida aprta che puó essere accettata da chiunque sia nell'intervallo di Elo selezionato e sperare che il tuo amico sia il primo a cliccare."
+        }
+    },
+    "how_to_check_stack": {
+        "question": "Come faccio a vedere cosa c'é sotto una pila di pezzi?",
+        "answers": {
+            "item1": "Su smartphone, tieni premuto su una pila per espandere. Tieni il dito sullo schermo mentre lo muovi di lato per vedere bene tutti i pezzi nella pila.",
+            "item2": "Su desktop, tieni premuto col tasto destro sulla pila e potrai vedere tutti i pezzi nella pila finché rilasci il tasto."
+        }
+    },
+    "what_are_cornfirmation_modes": {
+        "question": "Cosa significano le diverse modalitá per confermare la mossa?",
+        "answers": {
+            "item1": "Doppio click - Modalitá predefinita, il primo clic piazza il pezzo, il secondo clic conferma la mossa.",
+            "item2": "Singolo clic - Modalitá veloce, per non perdere tempo in partite lampo. Attento a non sbagliare perché la mossa é confermata giá con il primo clic.",
+            "item3": "Modalitá orologio - Modalitá piú sicura, se vuoi evitare errori. Il primo clic serve per fare la mossa e il secondo clic di conferma va fatto sull'orologio che indica il tuo tempo."
+        },
+        "description": "Per completare una mossa ci sono 3 modalitá:"
+    },
+    "can_i_play_base_game": {
+        "question": "Posso giocare al gioco base senza espansioni?",
+        "answer": "Sì, ma perché dovresti? A parte gli scherzi, il gioco base é ristretto a partite senza variazione di rating. Hive PLM (con tutte e tre le espansioni: Onisco, Coccinella e Zanzara) é quella ufficialmente usata nei tornei. Ed é anche la variante piú stimolante e divertente!"
+    },
+    "what_rating_system": {
+        "question": "Che sistema di punteggio usa hivegame.com?",
+        "answer": "Usiamo il sistema <glicko2_link>Glicko-2</glicko2_link>. Parametrizzato come su Lichess."
+    },
+    "how_to_recover_password": {
+        "question": "Cosa faccio se dimentico la password?",
+        "answer": "Non abbiamo ancora un sistema automatico di recupero della password, puoi contattarci via Discord a @klautcomputing / @ionoi e chiederci di resettare la password."
+    },
+    "why_basic_chat": {
+        "question": "Perché la chat é cosí semplice?",
+        "answers": {
+            "item1": "Al momento la chat non rimane nel database, quindi quando hivegame.com ha un aggiornamento, i messaggi nella chat vanno persi!",
+            "item3": "A volte la finestra della chat diventa rossa (notifica di messaggio) anche se non ci sono nuovi messaggi.",
+            "item2": "Per ora é possibile usare la chat durante la partita (messaggi privati diretti saranno aggiunti successivamente), gli spettatori non vedono la chat dei giocatori e i giocatori non vedono la chat degli spettatori."
+        },
+        "details": "La chat necessita ancora di lavoro, sappiamo che ha dei problemi, la cosa importante da ricordare quando la usi é:"
+    },
+    "opponent_is_abusive": {
+        "question": "Cosa posso fare se il mio avversario disturba, é offensivo nella chat o ha un nome utente inappropriato?",
+        "answer": "Fai uno screenshot del comportamento e contattaci su Discord a @klautcomputing / @ionoi e ce ne occupiamo noi."
+    },
+    "why_elo_has_questionmark": {
+        "question": "Perché il mio elo ha un \"?\" accanto?",
+        "answer": "Questo succede quando il punteggio é ancora incerto. Va via quando hai giocato abbastanza partite. Quando \"?\" sparisce, il tuo nome puó anche apparire nella classifica dei Top Players (leaderboards)."
+    },
+    "where_to_meet_other_players": {
+        "answer": "Segui i link per is nostri social media <resources_link>qui</resources_link>. La comunitá di Hive® é molto amichevole e troverai sicuramente qualcuno che abita vicino a te per giocare in persona!",
+        "question": "Come faccio ad incontrare altri giocatori della comunitá di Hive® nel resto del mondo?"
+    },
+    "why_not_in_top_players": {
+        "question": "Perché il mio nome utente non é nella classifica dei Top Players?",
+        "answer": "Non hai giocato abbastanza partite perché il tuo punteggio sia accurato. Continua a giocare un po' di partite (meglio se vinci!) e il tuo nome utente prima o poi apparirá."
+    },
+    "how_to_review_games": {
+        "question": "Posso rianalizzare le partite finite con qualche strumento di analisi?",
+        "answer": "Sì, nelle partite finite é mostrata l'icona blu del microscopio. Cliccando potrai caricare la partita in modalità analisi. Questa modalità é ancora in sviluppo, non é molto sofisticata per ora."
+    },
+    "where_to_learn_more": {
+        "question": "Dove posso imparare di piú sulla strategia in Hive®?",
+        "answer": "Abbiamo nei piani di aggiungere un tutorial interattivo per aiutarti a imparare e a capire le idee strategiche di base. In futuro, torna a controllare la sezione<resources_link>risorse</resources_link> per trovare libri, video e Discord!"
+    },
+    "can_i_set_up_a_tournament": {
+        "answer": "Per ora puoi creare solo tornei Round-robin (all'italiana). Tornei svizzeri verranno aggiunti presto.",
+        "question": "Posso creare un torneo?"
+    },
+    "can_i_play_with_bots": {
+        "question": "Posso giocare contro un bot?",
+        "answer": "Non ancora, but potrebbe esserci presto (contattaci se vuoi aiutarci ad aggiungere un bot sul sito)."
+    }
+}
