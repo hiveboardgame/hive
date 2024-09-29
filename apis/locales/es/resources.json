@@ -3,7 +3,7 @@
     "online_tools": {
         "title": "Herramientas en línea",
         "tools": {
-            "item2": "<explorer_link> Abrir el explorador </explorer_link> Abrir la búsqueda de juegos de torneos de boardspace",
+            "item2": "<explorer_link>Explorador de aperturas</explorer_link> Búsqueda de aperturas en juegos de torneos en Boardspace",
             "item3": "<hexketch_link> Hextech </hexketch_link> Hexketch es una página web que le permite generar fácilmente imágenes de mosaicos hexagonales en una cuadrícula hexagonal",
             "item1": "<entomology_link>Entomology</entomology_link> Editor de posiciones y explorador de partidas para partidas jugadas en BGA o Boardspace"
         }
