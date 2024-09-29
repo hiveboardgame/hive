@@ -7,7 +7,7 @@
     "how_to_help": {
         "question": "¿Cómo puedo ayudar a este proyecto crecer?",
         "answers": {
-            "item1": "Puedes ayudarnos contribuyendo a la <source_link>código fuente.</source_link>",
+            "item1": "Puedes ayudarnos contribuyendo al <source_link>código fuente.</source_link>",
             "item2": "Puede apoyarnos con ideas, comentarios y gráficos en <discord_link>Discord</discord_link>",
             "item3": "Puedes mantener las luces encendidas con una <donate_link>donación.</donate_link> Y una vez que las luces están siempre encendidas, tu donación ayuda a mantener encendidas las luces de los desarrolladores."
         }
@@ -22,7 +22,7 @@
     },
     "what_is_hive": {
         "question": "¿Qué es Hive?",
-        "answer": "Hive es un galardonado juego de estrategia abstracta diseñado por John Yianni en 2000 y publicado por <gen42_link></gen42_link>."
+        "answer": "Hive es un galardonado juego de estrategia abstracta diseñado por John Yianni en 2000 y publicado por <gen42_link>Gen42</gen42_link>."
     },
     "how_to_play_with_friends": {
         "question": "¿Puedo jugar con un amigo?",
@@ -54,7 +54,7 @@
     },
     "what_rating_system": {
         "question": "¿Qué sistema de puntuación utiliza hivegame.com?",
-        "answer": "Utilizamos el sistema <glicko2_link></glicko2_link>. Parametrizado como Lichess."
+        "answer": "Utilizamos el sistema <glicko2_link>Glicko-2</glicko2_link>. Parametrizado como Lichess."
     },
     "how_to_recover_password": {
         "question": "¿Qué puedo hacer si olvidé mi contraseña?",
