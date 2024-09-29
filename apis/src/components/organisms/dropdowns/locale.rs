@@ -9,10 +9,14 @@ const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-
 lazy_static! {
     static ref ALL_LOCALES: Vec<Locale> = {
         let locales = vec![
-            Locale::en,
-            Locale::es,
-            //Locale::it
-
+            Locale::en, 
+            Locale::es, 
+            Locale::ca, 
+            Locale::cs, 
+            Locale::hu, 
+            Locale::it, 
+            Locale::pt,
+            Locale::ru,
         ];
         locales
     };
