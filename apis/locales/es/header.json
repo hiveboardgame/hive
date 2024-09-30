@@ -9,7 +9,8 @@
     "learn": {
         "title": "Aprender",
         "rules": "Reglas",
-        "analysis": "Análisis"
+        "analysis": "Análisis",
+        "rules_summary": "Resumen de reglas"
     },
     "tournaments": {
         "title": "Torneos",
@@ -18,5 +19,13 @@
     },
     "buy_game": "Comprar juego",
     "donate": "Donar",
-    "login": "Iniciar sesión"
+    "login": "Iniciar sesión",
+    "support": "Soporte",
+    "user_menu": {
+        "profile": "Perfil",
+        "edit_account": "Editar cuenta",
+        "config": "Configuración",
+        "logout": "Cerrar sesión",
+        "login": "Iniciar sesión"
+    }
 }
