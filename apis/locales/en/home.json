@@ -1,7 +1,7 @@
 {
     "create_game": "Create a game",
     "search_players": "Search players",
-
+    "found_players": "Found:",
     "online_players_one": "{{count}} Online player",
     "online_players_other": "{{count}} Online players",
 

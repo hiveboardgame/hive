@@ -1,11 +1,12 @@
+use crate::i18n::*;
 use crate::{common::TileDots, providers::Config};
 use leptos::*;
 use leptos_router::ActionForm;
-
 #[component]
 pub fn TileDotsToggle() -> impl IntoView {
+    let i18n = use_i18n();
     view! {
-        <p class="m-1 text-black dark:text-white">Show dots:</p>
+        <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.show_dots)}</p>
         <div class="flex">
             <TileDotsButton tile_dots=TileDots::No/>
             <TileDotsButton tile_dots=TileDots::Angled/>
@@ -16,6 +17,7 @@ pub fn TileDotsToggle() -> impl IntoView {
 
 #[component]
 pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
+    let i18n = use_i18n();
     let tile_dots = store_value(tile_dots);
     let config = expect_context::<Config>();
     let is_active = move || {
@@ -43,7 +45,13 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
 
                 type="submit"
             >
-                {tile_dots().to_string()}
+
+                {match tile_dots() {
+                    TileDots::No => t!(i18n, user_config.dots_buttons.no).into_view(),
+                    TileDots::Angled => t!(i18n, user_config.dots_buttons.angled).into_view(),
+                    TileDots::Vertical => t!(i18n, user_config.dots_buttons.vertical).into_view(),
+                }}
+
             </button>
         </ActionForm>
     }

@@ -35,7 +35,7 @@ pub fn OnlineUsers() -> impl IntoView {
         if pattern().is_empty() {
             t!(i18n, home.online_players, count = num).into_view()
         } else {
-            "Found:".into_view()
+            t!(i18n, home.found_players).into_view()
         }
     };
     view! {

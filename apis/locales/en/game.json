@@ -1,0 +1,53 @@
+{
+    "time_mode": {
+        "untimed": "No time limit",
+        "real_time": "Real time",
+        "correspondence": {
+            "title": "Correspondence",
+            "days_move_one": "{{count}} day per move",
+            "days_move_other": "{{count}} days per move",
+            "days_side_one": "{{count}} day per side",
+            "days_side_other": "{{count}} days per side"
+        }
+    },
+    "played_in": "Played in:",
+    "rated": "Rated",
+    "casual": "Casual",
+    "created_ago": {
+        "weeks_one": "Created {{count}} week ago",
+        "weeks_other": "Created {{count}} weeks ago",
+        "days_one": "Created {{count}} day ago",
+        "days_other": "Created {{count}} days ago",
+        "hours_one": "Created {{count}} hour ago",
+        "hours_other": "Created {{count}} hours ago",
+        "minutes_one": "Created {{count}} minute ago",
+        "minutes_other": "Created {{count}} minutes ago",
+        "less_than_minute": "Created less than a minute ago"
+    },
+    "finished_ago": {
+        "weeks_one": "Finished {{count}} week ago",
+        "weeks_other": "Finished {{count}} weeks ago",
+        "days_one": "Finished {{count}} day ago",
+        "days_other": "Finished {{count}} days ago",
+        "hours_one": "Finished {{count}} hour ago",
+        "hours_other": "Finished {{count}} hours ago",
+        "minutes_one": "Finished {{count}} minute ago",
+        "minutes_other": "Finished {{count}} minutes ago",
+        "less_than_minute": "Finished less than a minute ago"
+
+    },
+    "no_moves_played": "No moves played",
+    "start_when": {
+        "both_agree": "The game will start when both of you agree on a time",
+        "both_click": "The game will start when both of you click ready within 30s of each other",
+        "both_ready": "This tournament game will start when both players are ready"
+    },
+    "speeds": {
+        "bullet": "Bullet",
+        "blitz": "Blitz",
+        "rapid": "Rapid",
+        "classic": "Classic",
+        "correspondence": "Correspondence",
+        "untimed": "Untimed"
+    }
+}

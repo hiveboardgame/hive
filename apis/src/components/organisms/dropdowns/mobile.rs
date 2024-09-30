@@ -25,7 +25,7 @@ pub fn MobileDropdown() -> impl IntoView {
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/">
                     {t!(i18n, header.home)}
                 </a>
-                Community:
+                {t!(i18n, header.community.title)}
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/top_players">
                     {t!(i18n, header.community.top_players)}
                 </a>
@@ -47,14 +47,14 @@ pub fn MobileDropdown() -> impl IntoView {
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/analysis">
                     {t!(i18n, header.learn.analysis)}
                 </a>
-                Tournament:
+                {t!(i18n, header.tournaments.title)}
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments">
                     {t!(i18n, header.tournaments.view)}
                 </a>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments/create">
                     {t!(i18n, header.tournaments.create)}
                 </a>
-                Support:
+                {t!(i18n, header.support)}
                 <a
                     class=COMMON_LINK_STYLE
                     on:click=onclick_close

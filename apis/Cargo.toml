@@ -82,7 +82,7 @@ ssr = [
 [package.metadata.leptos-i18n]
 default = "en"
 locales = ["en", "es", "ca", "cs", "hu", "it", "pt", "ru"]
-namespaces = ["header", "home", "faq", "resources"]
+namespaces = ["header", "home", "faq", "resources", "profile", "user_config", "game", "donate"]
 
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name   
