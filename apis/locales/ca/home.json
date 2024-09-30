@@ -24,7 +24,8 @@
                 "time_other": "{{count}} dies"
             },
             "untimed": "Sense temps"
-        }
+        },
+        "button": "Personalitzada"
     },
     "challenge_details": {
         "player": "Jugador",
