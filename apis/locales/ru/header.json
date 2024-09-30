@@ -9,7 +9,8 @@
     "learn": {
         "title": "Обучение",
         "analysis": "Анализ",
-        "rules": "Правила"
+        "rules": "Правила",
+        "rules_summary": "Выжимка из правил"
     },
     "tournaments": {
         "view": "Список турниров",
