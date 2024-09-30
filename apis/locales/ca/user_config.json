@@ -32,7 +32,7 @@
                 "taken": "Nom d'usuari ja utilitzat",
                 "invalid": "Caracter invàlid al nom d'usuari"
             },
-            "description": "Si us plau, tria un nom d'usuari adequat per tothom. Tancarem tots els comptes amb noms d'usuari inapropiat!"
+            "description": "Si us plau, tria un nom d'usuari adequat per tothom. Tancarem tots els comptes amb noms d'usuari inapropiats!"
         },
         "email": {
             "title": "Email",
