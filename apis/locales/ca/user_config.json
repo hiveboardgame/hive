@@ -1,2 +1,56 @@
 {
+    "style_buttons": {
+        "flat": "Pla",
+        "three_d": "3D",
+        "official": "Oficial"
+    },
+    "rotation": "Rotació",
+    "rotation_buttons": {
+        "no": "No",
+        "yes": "Sí"
+    },
+    "show_dots": "Mostrar els punts",
+    "dots_buttons": {
+        "vertical": "En vertical",
+        "no": "No",
+        "angled": "En angle"
+    },
+    "game_speed": "Velocitat de la partida:",
+    "color_scheme": "Esquema de color:",
+    "edit_account": {
+        "new_password": "Nova contrassenya",
+        "confirm_password": "Confirmar contrassenya",
+        "save_button": "Guardar",
+        "confirm_password_placeholder": "Nova contassenya (altre cop)",
+        "current_password": "Contrassenya actual"
+    },
+    "preview": "Previsualització:",
+    "create_account": {
+        "username": {
+            "title": "Nom d'usuari",
+            "error": {
+                "taken": "Nom d'usuari ja utilitzat",
+                "invalid": "Caracter invàlid al nom d'usuari"
+            }
+        },
+        "email": {
+            "title": "Email",
+            "error": {
+                "invalid": "Email invàlid"
+            },
+            "description": "Ens cal la teva adreça d'email per enviar-te un missatge de confirmació a l'hora de crear el teu compte."
+        },
+        "confirm_password": "Confirmar contrassenya",
+        "signup_button": "Registrar-se",
+        "password": "Contrassenya",
+        "existing_account_prompt": "Ja tens un compte? <login_link>Inicia sessió</login_link>"
+    },
+    "login": {
+        "login_button": "Inicia sessió",
+        "no_account_prompt": "No tens un compte? <register_link>Registra't</register_link>",
+        "email": "Email",
+        "password": "Contrassenya"
+    },
+    "piece_style": "Estil de les peces",
+    "move_confirm": "Confirmació de moviments:"
 }
