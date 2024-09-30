@@ -35,7 +35,7 @@ pub fn MobileDropdown() -> impl IntoView {
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/faq">
                     {t!(i18n, header.community.faq)}
                 </a>
-                Learn:
+                {t!(i18n, header.learn.title)}
                 <a
                     class=COMMON_LINK_STYLE
                     on:click=onclick_close
@@ -44,6 +44,9 @@ pub fn MobileDropdown() -> impl IntoView {
                 >
                     {t!(i18n, header.learn.rules)}
                 </a>
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="/rules_summary">
+                    {t!(i18n, header.learn.rules_summary)}
+            </a>
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/analysis">
                     {t!(i18n, header.learn.analysis)}
                 </a>

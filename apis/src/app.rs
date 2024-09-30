@@ -17,6 +17,7 @@ use crate::{
         register::Register,
         resources::Resources,
         rules::Rules,
+        rules_summary::RulesSummary,
         strategy::Strategy,
         top_players::TopPlayers,
         tournament::Tournament,
@@ -136,6 +137,7 @@ pub fn App() -> impl IntoView {
                         <Route path="/strategy" view=|| view! { <Strategy/> }/>
                         <Route path="/resources" view=|| view! { <Resources/> }/>
                         <Route path="/tutorial" view=|| view! { <Tutorial/> }/>
+                        <Route path="/rules_summary" view=|| view! { <RulesSummary/> }/>
                         <Route
                             path="/game/:nanoid"
                             ssr=SsrMode::PartiallyBlocked

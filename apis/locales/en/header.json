@@ -9,6 +9,7 @@
     "learn": {
         "title": "Learn",
         "rules": "Rules",
+        "rules_summary": "Rules Summary",
         "analysis": "Analysis"
     },
     "tournaments": {
