@@ -6,6 +6,7 @@
     "online_players_other": "{{count}} Online players",
 
     "custom_game": {
+        "button": "Custom",
         "title": "Create a game:",
         "casual": "Casual",
         "rated": "Rated",
