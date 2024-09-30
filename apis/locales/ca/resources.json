@@ -14,7 +14,7 @@
     },
     "offline_tools": {
         "tools": {
-            "item3": "<bga_downloader_link>BGA Game Downloader</bga_downloader_link> Descarrega, en format .sfg, partides de Hive arxivades a BGA.",
+            "item3": "<bga_downloader_link>BGA Game Downloader</bga_downloader_link> Descarrega, en format .sgf, partides de Hive arxivades a BGA.",
             "item1": "<mzinga_link>Mzinga</mzinga_link> Mzinga és una col·lecció de software de codi obert per jugar a Hive. L'objectiu principal és construir una comunitat de desenvolupadors que creïn IAs que juguin a Hive. Funciona en Windows, Mac i Linux.",
             "item2": "<nokamute_link>Nokamute</nokamute_link> Nokamute és una IA de Hive de codi obert, compatible amb Mzinga."
         },
