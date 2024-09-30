@@ -3,7 +3,7 @@
     "search_players": "Поиск игроков",
     "online_players_one": "Игроков онлайн: {{count}}",
     "custom_game": {
-        "title": "Создать игру:",
+        "title": "Новая партия",
         "casual": "Без рейтинга",
         "rated": "Рейтинговая",
         "private": "По приглашению",
@@ -23,7 +23,8 @@
                 "total_time_each": "Общее время на игрока"
             },
             "untimed": "Не на время"
-        }
+        },
+        "button": "Настроить партию"
     },
     "challenge_details": {
         "player": "Игрок",
