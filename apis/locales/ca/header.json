@@ -9,7 +9,8 @@
     "learn": {
         "title": "Aprendre",
         "rules": "Regles",
-        "analysis": "Anàlisis"
+        "analysis": "Anàlisis",
+        "rules_summary": "Resum de les regles"
     },
     "tournaments": {
         "title": "Torneigs",
