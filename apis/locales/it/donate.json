@@ -1,1 +1,10 @@
-{}
+{
+    "kofi_button": "<kofi_button>Ko-fi</kofi_button>",
+    "small_team_blurb": "Siamo un team piccolo, il tuo supporto fa una grossa differenza!",
+    "title": "Hive® libero per tutti, per sempre!",
+    "subtitle": "No pubblicitá o abbonamenti ma open-source e passione.",
+    "about": "Siamo un progetto della comunitá di Hive e crediamo che tutti dovrebbero avere accesso liberamente a una piattaforma di alto livello per giocare ad Hive. Abbiamo bisogno di persone come te perché sia possibile. Se ti piace hivegame.com, considera supportarci con una donazione.",
+    "features_for_patrons": {
+        "answer": "No, perché hivegame é interamente gratis, per sempre, e per tutti. E' una promessa. Peró ti diamo una 👑."
+    }
+}

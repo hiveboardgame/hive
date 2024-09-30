@@ -1,1 +1,51 @@
-{}
+{
+    "style_buttons": {
+        "three_d": "3D",
+        "official": "Oficial",
+        "flat": "Plano"
+    },
+    "rotation": "Rotación",
+    "rotation_buttons": {
+        "yes": "Sí",
+        "no": "No"
+    },
+    "show_dots": "Mostrar los puntos",
+    "dots_buttons": {
+        "no": "No",
+        "angled": "En ángulo",
+        "vertical": "En vertical"
+    },
+    "game_speed": "Velocidad de la partida:",
+    "move_confirm": "Confirmación de movimientos:",
+    "color_scheme": "Esquema de color:",
+    "preview": "Previsualización:",
+    "edit_account": {
+        "new_password": "Nueva contrasenya",
+        "confirm_password": "Confirmar contrasenya",
+        "save_button": "Guardar",
+        "confirm_password_placeholder": "Nueva contrasenya (otra vez)",
+        "current_password": "Contrasenya actual"
+    },
+    "create_account": {
+        "username": {
+            "title": "Nombre de usuario",
+            "error": {
+                "taken": "Nombre de usuario ya utilizado",
+                "invalid": "Caracter inválido en el nombre de usuario"
+            }
+        },
+        "email": {
+            "title": "Email",
+            "error": {
+                "invalid": "Email inválido"
+            },
+            "description": "Necesitamos tu dirección de email para enviarte un mensaje de confirmación cuando creas la cuenta."
+        },
+        "password": "Contrasenya",
+        "confirm_password": "Confirma contrasenya"
+    },
+    "piece_style": "Estilo de las piezas",
+    "login": {
+        "password": "Contrasenya"
+    }
+}

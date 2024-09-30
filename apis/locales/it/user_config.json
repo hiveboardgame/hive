@@ -1,2 +1,11 @@
 {
+    "style_buttons": {
+        "official": "Ufficiale",
+        "flat": "Piatti",
+        "three_d": "3D"
+    },
+    "piece_style": "Design",
+    "dots_buttons": {
+        "no": "No"
+    }
 }

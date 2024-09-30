@@ -40,24 +40,24 @@
         }
     },
     "what_are_cornfirmation_modes": {
-        "question": "Com funcionen els diferent modes de confirmació de moviments?",
+        "question": "Com funcionen els diferents modes de confirmació de moviments?",
         "description": "Per fer un moviment hi han 3 modes:",
         "answers": {
-            "item2": "Un sol clic : El mode ràpid, si no vols perdre temps en les partides ràpides. Compte de no errar en el moviment perque un únic clic immediatament executa i confirma el moviemt.",
+            "item2": "Un sol clic : El mode ràpid, si no vols perdre temps en les partides ràpides. Compte de no errar en el moviment perque un únic clic immediatament executa i confirma el moviment.",
             "item3": "Clic al rellotge : El mode segur, si vols evitar equivocacions al fer moviments. Primer clica per col·locar o moure i seguidament clica al teu propi rellotge per confirmar el moviment.",
             "item1": "Doble clic : El mode per defecte, el primer clic col·loca la peça i el segon clic confirma el moviment."
         }
     },
     "can_i_play_base_game": {
         "question": "Puc jugar al joc base sense les expansions?",
-        "answer": "Sí però, ho vols fer de veritat? Bromes a part, el joc base està restingit a partides no puntuades. El Hive PLM (amb totes les tres expansions) és el format oficial que es fa servir en els tornejos. I és també el més desafiant i divertit!"
+        "answer": "Sí però, ho vols fer de veritat? Bromes a part, el joc base està restringit a partides no puntuades. El Hive PLM (amb totes les tres expansions) és el format oficial que es fa servir en els tornejos. I és també el més desafiant i divertit!"
     },
     "what_rating_system": {
         "question": "Quin sistema de puntuació es fa servir a hivegame.com?",
         "answer": "Fem servir el sistema <glicko2_link>Glicko-2</glicko2_link>. Amb els paràmetres de Lichess."
     },
     "how_to_recover_password": {
-        "answer": "Encara no tenim sistema automàtic per restablir contrassenyes. Ens pots contactar per Discord @klautcomputing / @ionoi i t'ajudarem a restablir la teva contrassenya.",
+        "answer": "Encara no tenim sistema automàtic per restablir contrassenyes. Ens pots contactar per Discord @klautcomputing / @ionoi i t'ajudarem a restablir-la.",
         "question": "Què puc fer si he oblidat la meva contrassenya?"
     },
     "why_basic_chat": {
@@ -65,12 +65,12 @@
         "answers": {
             "item1": "Actualment el chat no perdura a la base de dades, així que cada cop que actualitzem la web els missatges del chat es perden!",
             "item2": "Ara per ara només és possible de fer servir el chat dins una partida (en un futur afegirem els missatges directes i altres modes). Els espectadors no poden veure el chat dels jugadors, ni els jugadors el dels espectadors.",
-            "item3": "A vegades la notificació del chat en vermell s'activa encara que no hi hagin pas missatges nous."
+            "item3": "A vegades la notificació vermella del chat s'activa encara que no hi hagin pas missatges nous."
         },
         "details": "Estem encara treballant en la funció del chat, estem al corrent de que hi han qüestions a resoldre. Les coses importants que cal recordar quan el fem servir:"
     },
     "opponent_is_abusive": {
-        "answer": "Captura la pantalla el comportament i contacta'ns per Discord @klautcomputing / @ionoi i ho arreglarem.",
+        "answer": "Captura en pantalla el comportament i contacta'ns per Discord @klautcomputing / @ionoi i ho arreglarem.",
         "question": "Què puc fer si el meu oponent abusa o pertorba la partida o el chat o té un nom d'usuari inapropiat o ofensiu?"
     },
     "why_elo_has_questionmark": {

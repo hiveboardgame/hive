@@ -1,1 +1,11 @@
-{}
+{
+    "time_mode": {
+        "real_time": "Partita a tempo",
+        "untimed": "Senza limiti di tempo",
+        "correspondence": {
+            "title": "Corrispondenza",
+            "days_move_one": "{{count}} giorni per mossa"
+        }
+    },
+    "casual": "Amichevole"
+}

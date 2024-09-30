@@ -1,1 +1,13 @@
-{}
+{
+    "game_buttons": {
+        "playing": "Giocare",
+        "finished": "Completato",
+        "unstarted": "Partite di Torneo da giocare"
+    },
+    "color_buttons": {
+        "both": "Tutti"
+    },
+    "result_buttons": {
+        "draw": "Patta"
+    }
+}

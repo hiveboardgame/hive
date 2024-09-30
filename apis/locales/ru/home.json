@@ -34,5 +34,6 @@
             "yes": "Да"
         }
     },
-    "online_players_other": "Игроков онлайн: {{count}}"
+    "online_players_other": "Игроков онлайн: {{count}}",
+    "found_players": "Найдено:"
 }

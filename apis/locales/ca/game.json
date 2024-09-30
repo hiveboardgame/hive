@@ -1,1 +1,52 @@
-{}
+{
+    "time_mode": {
+        "untimed": "Sense límit de temps",
+        "real_time": "Temps real",
+        "correspondence": {
+            "title": "Correspondència",
+            "days_move_one": "{{count}} Dia per moviment",
+            "days_move_other": "{{count}} Dies per moviment",
+            "days_side_one": "{{count}} Dia per jugador",
+            "days_side_other": "{{count}} Dies per jugador"
+        }
+    },
+    "played_in": "Jugada a:",
+    "created_ago": {
+        "weeks_one": "Creada fa {{count}} setmana",
+        "weeks_other": "Creada fa {{count}} setmanes",
+        "days_one": "Creada fa {{count}} dia",
+        "days_other": "Creada fa {{count}} dies",
+        "hours_other": "Creada fa {{count}} hores",
+        "less_than_minute": "Creada fa menys d'un minut",
+        "hours_one": "Creada fa {{count}} hora",
+        "minutes_one": "Creada fa {{count}} minut",
+        "minutes_other": "Creada fa {{count}} minuts"
+    },
+    "finished_ago": {
+        "weeks_other": "Finalitzada fa {{count}} setmanes",
+        "weeks_one": "Finalitzada fa {{count}} setmana",
+        "days_one": "Finalitzada fa {{count}} dia",
+        "days_other": "Finalitzada fa {{count}} dies",
+        "less_than_minute": "Finalitzada fa menys d'un minut",
+        "hours_other": "Finalitzada fa {{count}} hores",
+        "minutes_other": "Finalitzada fa {{count}} minuts",
+        "hours_one": "Finalitzada fa {{count}} hora",
+        "minutes_one": "Finalitzada fa {{count}} minut"
+    },
+    "no_moves_played": "Sense moviments",
+    "start_when": {
+        "both_agree": "La partida començarà quan els dos jugadors acordeu un temps",
+        "both_ready": "Aquesta partida de torneig començarà quan els dos jugadors estiguin preparats",
+        "both_click": "La partida començarà quan els dos jugadors cliqueu a \"Preparat\" amb menys de 30 segons de diferència"
+    },
+    "speeds": {
+        "rapid": "Ràpida",
+        "classic": "Clàssica",
+        "untimed": "Sense temps",
+        "correspondence": "Correspondència",
+        "blitz": "Blitz",
+        "bullet": "Bullet"
+    },
+    "rated": "Puntuada",
+    "casual": "Casual"
+}
