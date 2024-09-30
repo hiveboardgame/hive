@@ -1,0 +1,60 @@
+{
+    "piece_style": "Piece style",
+    "style_buttons": {
+        "official": "Official",
+        "flat": "Flat",
+        "three_d": "ThreeD"
+    },
+    "rotation": "Rotation",
+    "rotation_buttons": {
+        "no": "No",
+        "yes": "Yes"
+    },
+    "show_dots": "Show dots",
+    "dots_buttons": {
+        "no": "No",
+        "angled": "Angled",
+        "vertical": "Vertical"
+    },
+    "game_speed": "Game speed:",
+    "move_confirm": "Move confirmation:",
+    "color_scheme": "Color scheme:",
+    "preview": "Preview:",
+
+    "edit_account": {
+        "current_password": "Current password",
+        "new_password": "New password",
+        "confirm_password": "Confirm password",
+        "confirm_password_placeholder": "New password (again)",
+        "save_button": "Save"
+    },
+    "create_account": { 
+        "username": {
+            "title": "Username",
+            "description": "Please choose a family-friendly username. Any accounts with inappropriate usernames will be closed!",
+            "error": {
+                "taken": "Username is taken",
+                "invalid": "Invalid character in username"
+            }
+        },
+        "email": {
+            "title": "Email",
+            "error": {
+                "invalid": "Invalid email"
+            },
+            "description": "We need your email address to send you a confirmation email when you create an account."
+        },
+        "password": "Password", 
+        "confirm_password": "Confirm password", 
+        "be_nice_checkbox": "I agree to be nice to other players and to report abuse on Discord",
+        "signup_button": "Sign up",
+        "registration_error": "Registration failed",
+        "existing_account_prompt": "Already have an account? <login_link>Sign in</login_link>"
+    },
+    "login": {
+        "email": "Email",
+        "password": "Password",
+        "login_button": "Sign in",
+        "no_account_prompt": "Don't have an account? <register_link>Sign up</register_link>"
+    }
+}

@@ -18,5 +18,13 @@
     },
     "buy_game": "Buy Game",
     "donate": "Donate",
-    "login": "Login"
+    "support": "Support", 
+    "login": "Login",
+    "user_menu": {
+        "profile": "Profile",
+        "edit_account": "Edit Account",
+        "config": "Config",
+        "logout": "Logout",
+        "login": "Login"
+    }
 }
