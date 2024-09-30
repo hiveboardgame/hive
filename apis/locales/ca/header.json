@@ -18,5 +18,13 @@
     },
     "buy_game": "Comprar el joc",
     "donate": "Donar",
-    "login": "Iniciar sessió"
+    "login": "Iniciar sessió",
+    "support": "Suport",
+    "user_menu": {
+        "edit_account": "Editar el compte",
+        "logout": "Sortir",
+        "login": "Iniciar sessió",
+        "profile": "Perfil",
+        "config": "Configuració"
+    }
 }
