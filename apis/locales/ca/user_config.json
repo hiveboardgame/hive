@@ -31,7 +31,8 @@
             "error": {
                 "taken": "Nom d'usuari ja utilitzat",
                 "invalid": "Caracter invàlid al nom d'usuari"
-            }
+            },
+            "description": "Si us plau, tria un nom d'usuari adequat per tothom. Tancarem tots els comptes amb noms d'usuari inapropiat!"
         },
         "email": {
             "title": "Email",
@@ -43,7 +44,9 @@
         "confirm_password": "Confirmar contrassenya",
         "signup_button": "Registrar-se",
         "password": "Contrassenya",
-        "existing_account_prompt": "Ja tens un compte? <login_link>Inicia sessió</login_link>"
+        "existing_account_prompt": "Ja tens un compte? <login_link>Inicia sessió</login_link>",
+        "be_nice_checkbox": "Estic d'acord en ser educat amb els altres jugadors i denuciar abusos a Discord",
+        "registration_error": "El registre ha fallat"
     },
     "login": {
         "login_button": "Inicia sessió",
