@@ -1,1 +1,16 @@
-{}
+{
+    "kofi_button": "<kofi_button>Ko-fi</kofi_button>",
+    "patreon_button": "<patreon_button>Patreon</patreon_button>",
+    "title": "Gratis Hive® voor iedereen, voor altijd!",
+    "subtitle": "Geen advertenties, geen abonnementen; maar open-source en passie.",
+    "about": "Wij zijn een community project en geloven dat iedereen toegang tot een gratis hive platform van wereldklasse zou moeten hebben. Wij steunen op support van mensen zoals jou om dit mogelijk te maken. Als je hivegame met plezier gebruikt, overweeg dan alsjeblieft om ons te ondersteunen met een donatie.",
+    "where_does_money_go": {
+        "question": "Waar gaat het geld heen?",
+        "answer": "Ten eerste de server, daarna onze ontwikkelaars."
+    },
+    "features_for_patrons": {
+        "question": "Zijn sommige functies alleen voor doneerders?",
+        "answer": "Nee, want hivegame is volledig gratis, voor altijd, en voor iedereen. Dat is een belofte. Je krijgt wel een 👑."
+    },
+    "small_team_blurb": "We zijn een klein team, dus jouw support maakt een groot verschil!"
+}
