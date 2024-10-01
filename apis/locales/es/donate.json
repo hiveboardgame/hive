@@ -4,13 +4,13 @@
     "patreon_button": "<patreon_button>Patreon</patreon_button>",
     "where_does_money_go": {
         "answer": "Primero de todo, al servidor, luego a los desarrolladores.",
-        "question": "¿Dónde va el dinero?"
+        "question": "¿A dónde va el dinero?"
     },
     "features_for_patrons": {
-        "question": "¿Hay funciones reservadas para los Patrons?",
+        "question": "¿Algunas funciones están reservadas para los patrocinadores?",
         "answer": "No, porque hivegame es completamente gratis, para siempre y para todos. Es una promesa. Pero consigues una 👑."
     },
     "small_team_blurb": "Somos un equipo pequeño, ¡por lo que tu apoyo hace una gran diferencia!",
-    "title": "Hive® gratis para todos, para siempre!",
+    "title": "¡Hive® gratis para todos, para siempre!",
     "about": "Somos un proyecto comunitario y creemos que todo el mundo debería tener acceso a una plataforma hive gratuita y de primera clase. Si disfrutas usando Hivegame, por favor considera apoyarnos donando."
 }
