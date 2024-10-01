@@ -42,10 +42,12 @@
             "description": "Necesitamos tu dirección de email para enviarte un mensaje de confirmación cuando creas la cuenta."
         },
         "password": "Contrasenya",
-        "confirm_password": "Confirma contrasenya"
+        "confirm_password": "Confirma contrasenya",
+        "signup_button": "Registrarse"
     },
     "piece_style": "Estilo de las piezas",
     "login": {
-        "password": "Contrasenya"
+        "password": "Contrasenya",
+        "email": "Email"
     }
 }
