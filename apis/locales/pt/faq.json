@@ -2,13 +2,13 @@
     "title": "Perguntas frequentes",
     "what_is_hivegame": {
         "question": "O que é hivegame.com?",
-        "answer": "hivegame.com é uma iniciativa da comunidade online para criar uma plataforma para jogar Hive® gratuitamente. hivegame.com não tem anúncios, é open-source e desenvolvido por membros da comunidade, apoiada oficialmente pelo criador do Hive® John Yianni."
+        "answer": "hivegame.com é uma iniciativa da comunidade online para criar uma plataforma para jogar Hive® de forma gratuita. hivegame.com não tem anúncios, é open-source e desenvolvido por membros da comunidade, e apoiado oficialmente pelo criador do Hive® John Yianni."
     },
     "how_to_help": {
         "answers": {
-            "item1": "Podes-nos ajudar contribuindo para a <source_link>code base.</source_link>",
+            "item1": "Podes-nos ajudar contribuindo para a <source_link>base de código do projecto.</source_link>",
             "item2": "Podes contribuir com ideias, feedback, e imagens gráficas no <discord_link>Discord</discord_link>",
-            "item3": "Podes manter o jogo disponível com uma <donate_link>doação.</donate_link>. A tua doação também permitirá que os developers continuem com o seu trabalho nesta plataforma."
+            "item3": "Podes manter o jogo vivo com uma <donate_link>doação.</donate_link>. A tua doação também permitirá que os developers continuem com o seu trabalho nesta plataforma."
         },
         "question": "Como posso ajudar este projecto a crescer?"
     },
@@ -27,15 +27,15 @@
     "how_to_play_with_friends": {
         "question": "Posso jogar com um amigo?",
         "answers": {
-            "item2": "Alternativamente, podes desafiar diretamente usando o icon das 'espadas cruzadas' a seguir a cada utilizador, isso enviará um desafio direto para esse utilizador.",
-            "item3": "Claro, também podes criar um jogo aberto que pode ser aceite por qualquer jogador dentro do limite de Elo e esperar que seja o primeiro a aceitar o teu jogo.",
+            "item2": "Alternativamente, podes desafiar diretamente usando o icon das 'espadas cruzadas' ao lado do nome de cada utilizador, isso enviará um desafio direto para esse utilizador.",
+            "item3": "Claro, também podes criar um jogo aberto que pode ser aceite por qualquer jogador dentro do limite de Elo e esperar que seja o teu amigo seja o primeiro a aceitar o teu jogo.",
             "item1": "Sim, podes criar um jogo carregando no botão \"Criar jogo\" na página principal, seleciona a opção \"privado\" e depois só tens de partilhar o link. O teu amigo vai ter que ter uma conta para poder jogar."
         }
     },
     "how_to_check_stack": {
         "answers": {
             "item2": "No computador, carrega com o lado direito do rato na pilha e verás a pilha expandida até largares.",
-            "item1": "No telemóvel, mantém selecionado na pilha de peças para a expandir. Depois de expandido, podes tirar o dedo do ecrã para ver a peça do fundo também."
+            "item1": "No telemóvel, mantém o dedo sobre a pilha de peças para a expandir. Depois de expandido, podes tirar o dedo do ecrã para ver a peça do fundo também."
         },
         "question": "Como posso ver o que está debaixo de uma peça?"
     },
@@ -87,7 +87,7 @@
     },
     "how_to_review_games": {
         "question": "Posso rever os jogos terminados com uma ferramenta de análise?",
-        "answer": "Sim, jogos terminados têm um icon de um microscópio que irá carregar o jogo no modo de análise mas esta funcionalidade ainda está em desenvolvimento, portanto não esperes muito."
+        "answer": "Sim, jogos terminados têm um ícone de um microscópio que irá carregar o jogo no modo de análise mas esta funcionalidade ainda está em desenvolvimento, portanto não esperes muito."
     },
     "can_i_set_up_a_tournament": {
         "question": "Posso criar um torneio?",
@@ -99,6 +99,6 @@
     },
     "where_to_learn_more": {
         "question": "Como posso aprender mais sobre estratégia de Hive?",
-        "answer": "Estamos a planear em adicionar um tutorial interactivo para te ajudar a aprender e conheceres todas as ideias estratégicas por detrás do jogo, no futuro volta a ver a <resources_link>secção de recursos</resources_link> para livros, videos e o discord!"
+        "answer": "Estamos a planear em adicionar um tutorial interactivo para te ajudar a aprender e conhecer todas as ideias estratégicas por detrás do jogo. No futuro volta a ver a <resources_link>secção de recursos</resources_link> para livros, videos e o discord!"
     }
 }
