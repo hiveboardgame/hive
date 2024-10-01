@@ -24,7 +24,8 @@
                 "time_other": "{{ count }} días"
             },
             "untimed": "Sin tiempo"
-        }
+        },
+        "button": "Personalizada"
     },
     "challenge_details": {
         "player": "Jugador",
