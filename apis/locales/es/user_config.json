@@ -9,7 +9,7 @@
         "yes": "Sí",
         "no": "No"
     },
-    "show_dots": "Mostrar los puntos",
+    "show_dots": "Mostrar puntos",
     "dots_buttons": {
         "no": "No",
         "angled": "En ángulo",
@@ -17,37 +17,43 @@
     },
     "game_speed": "Velocidad de la partida:",
     "move_confirm": "Confirmación de movimientos:",
-    "color_scheme": "Esquema de color:",
+    "color_scheme": "Esquema de colores:",
     "preview": "Previsualización:",
     "edit_account": {
-        "new_password": "Nueva contrasenya",
-        "confirm_password": "Confirmar contrasenya",
+        "new_password": "Nueva contraseña",
+        "confirm_password": "Confirmar contraseña",
         "save_button": "Guardar",
-        "confirm_password_placeholder": "Nueva contrasenya (otra vez)",
-        "current_password": "Contrasenya actual"
+        "confirm_password_placeholder": "Nueva contraseña (otra vez)",
+        "current_password": "Contraseña actual"
     },
     "create_account": {
         "username": {
             "title": "Nombre de usuario",
             "error": {
-                "taken": "Nombre de usuario ya utilizado",
-                "invalid": "Caracter inválido en el nombre de usuario"
-            }
+                "taken": "Nombre de usuario ocupado",
+                "invalid": "Carácter no válido en el nombre de usuario"
+            },
+            "description": "Por favor, elige un nombre de usuario apropiado para la familia. ¡Las cuentas con nombres de usuario inapropiados se cerrarán!"
         },
         "email": {
-            "title": "Email",
+            "title": "Correo electrónico",
             "error": {
-                "invalid": "Email inválido"
+                "invalid": "Correo electrónico no válido"
             },
-            "description": "Necesitamos tu dirección de email para enviarte un mensaje de confirmación cuando creas la cuenta."
+            "description": "Necesitamos tu dirección de correo electrónico para enviarte un mensaje de confirmación cuando crees una cuenta."
         },
-        "password": "Contrasenya",
-        "confirm_password": "Confirma contrasenya",
-        "signup_button": "Registrarse"
+        "password": "Contraseña",
+        "confirm_password": "Confirmar contraseña",
+        "signup_button": "Registrarse",
+        "be_nice_checkbox": "Acepto ser amable con los demás jugadores y denunciar los abusos en Discord",
+        "registration_error": "Registro fallido",
+        "existing_account_prompt": "¿Ya tienes una cuenta? <login_link>Iniciar sesión</login_link>"
     },
-    "piece_style": "Estilo de las piezas",
+    "piece_style": "Estilo de la pieza",
     "login": {
-        "password": "Contrasenya",
-        "email": "Email"
+        "password": "Contraseña",
+        "email": "Correo electrónico",
+        "login_button": "Iniciar sesión",
+        "no_account_prompt": "¿No tienes una cuenta? <register_link>Regístrate</register_link>"
     }
 }
