@@ -1,2 +1,59 @@
 {
+    "style_buttons": {
+        "three_d": "3D",
+        "flat": "Plano",
+        "official": "Oficial"
+    },
+    "rotation": "Rotação",
+    "rotation_buttons": {
+        "no": "Não",
+        "yes": "Sim"
+    },
+    "show_dots": "Mostrar pontos",
+    "dots_buttons": {
+        "angled": "Angulado",
+        "no": "Não",
+        "vertical": "Vertical"
+    },
+    "game_speed": "Velocidade de jogo:",
+    "move_confirm": "Confirmação da jogada:",
+    "color_scheme": "Esquema de cores:",
+    "preview": "Previsualizar:",
+    "edit_account": {
+        "current_password": "Password atual",
+        "save_button": "Guardar",
+        "confirm_password": "Confirma password",
+        "new_password": "Nova password",
+        "confirm_password_placeholder": "Nova password (novamente)"
+    },
+    "create_account": {
+        "username": {
+            "title": "Nome de utilizador",
+            "error": {
+                "taken": "Nome de utilizador já existe",
+                "invalid": "Caracter invalido no nome de utilizador"
+            },
+            "description": "Por favor, escolha um nome adequado. Qualquer conta com nomes inapropriados será eliminada!"
+        },
+        "email": {
+            "title": "Email",
+            "error": {
+                "invalid": "Email invalido"
+            },
+            "description": "Precisamos do teu email para te enviar um email de confirmação quando criares a tua conta."
+        },
+        "password": "Password",
+        "confirm_password": "Confirmação password",
+        "be_nice_checkbox": "Eu aceito não perturbar outros jogadores e reportar abusos no Discord",
+        "signup_button": "Registar",
+        "registration_error": "Falhou o registo",
+        "existing_account_prompt": "Já tens uma conta? <login_link>Faz login</login_link>"
+    },
+    "login": {
+        "email": "Email",
+        "password": "Password",
+        "login_button": "Login",
+        "no_account_prompt": "Não tens uma conta? <register_link>Inscreve-te</register_link>"
+    },
+    "piece_style": "Estilo das peças"
 }
