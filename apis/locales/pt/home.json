@@ -1,1 +1,40 @@
-{}
+{
+    "online_players_one": "{{count}} jogador online",
+    "custom_game": {
+        "title": "Cria um jogo:",
+        "casual": "Casual",
+        "rated": "Classificado",
+        "private": "Privado",
+        "public": "Público",
+        "rating_range": "Intervalo de ELO",
+        "mode": {
+            "real_time": {
+                "minutes_per_side": "Minutos para cada lado: {{count}}",
+                "increment_in_seconds": "Incremento em segundos: {{count}}",
+                "title": "Tempo real"
+            },
+            "correspondence": {
+                "days_per_move": "Dias por jogada",
+                "total_time_each": "Tempo total para cada",
+                "time_one": "{{count}} dia",
+                "title": "Correspondência",
+                "time_other": "{{count}} dias"
+            },
+            "untimed": "Sem tempo"
+        },
+        "button": "Customizar"
+    },
+    "found_players": "Encontrados:",
+    "online_players_other": "{{count}} jogadores online",
+    "challenge_details": {
+        "rated": {
+            "title": "Classificado",
+            "yes": "Sim",
+            "no": "Não"
+        },
+        "player": "Jogador",
+        "time": "Tempo"
+    },
+    "create_game": "Criar um jogo",
+    "search_players": "Procura jogadores"
+}
