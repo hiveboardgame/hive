@@ -19,13 +19,13 @@
     },
     "buy_game": "Comprar juego",
     "donate": "Donar",
-    "login": "Iniciar sesión",
+    "login": "Conectarse",
     "support": "Soporte",
     "user_menu": {
         "profile": "Perfil",
         "edit_account": "Editar cuenta",
         "config": "Configuración",
         "logout": "Cerrar sesión",
-        "login": "Iniciar sesión"
+        "login": "Conectarse"
     }
 }
