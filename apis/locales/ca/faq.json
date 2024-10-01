@@ -22,20 +22,20 @@
     },
     "what_is_hive": {
         "question": "Què és el Hive?",
-        "answer": "El Hive és un premiat joc d'estratègia abstracta dissenyat per John Yianni a l'any 2000 i publicat per <gen42_link>Gen42</gen42_link>."
+        "answer": "El Hive és un premiat joc d'estratègia abstracta dissenyat per John Yianni l'any 2000 i publicat per <gen42_link>Gen42</gen42_link>."
     },
     "how_to_play_with_friends": {
         "answers": {
-            "item2": "També pots enviar un repte directe clicant a les \"espases creuades\" al costat de cada nom d'usuari. Això envia un repte directe a aquest usuari concret.",
-            "item1": "Sí, pots crear una partida clicant al botó 'Crear una partida' a la pàgina principal, llavors seleccionar la opció 'Privada' i desprès compartir el link amb un amic que haurà de tenir o crear un compte per jugar.",
-            "item3": "Per descomptat també pots crear un repte obert que podrá ser acceptat per qualsevol jugador que compleixi el criteri de puntuació (ELO) i esperar que el teu amic sigui el primer en acceptar la partida."
+            "item2": "També pots enviar un repte directe clicant a les \"espases creuades\" al costat de cada nom d'usuari. Això envia directament un repte a aquest usuari concret.",
+            "item1": "Sí, pots crear una partida clicant al botó 'Crear una partida' a la pàgina principal, llavors seleccionar l'opció 'Privada' i després compartir el link amb un amic que haurà de tenir o crear un compte per jugar.",
+            "item3": "Per descomptat, també pots crear un repte obert que podrà ser acceptat per qualsevol jugador que compleixi el criteri de puntuació (ELO) i esperar que el teu amic sigui el primer en acceptar la partida."
         },
         "question": "Puc crear una patida amb un amic?"
     },
     "how_to_check_stack": {
         "question": "Com puc veure el què hi ha sota una peça?",
         "answers": {
-            "item1": "En un dispositiu mòbil, mantenint el dit sobre la torre de peces per expandir-la. Un cop expandida pots moure el dit per veure la peça de sota de tot.",
+            "item1": "En un dispositiu mòbil, mantén el dit sobre la torre de peces per expandir-la. Un cop expandida pots moure el dit per veure la peça de sota de tot.",
             "item2": "En un ordinador, mantenint pressionat el botó dret sobre la torre la farà expandir."
         }
     },
@@ -91,7 +91,7 @@
     },
     "where_to_learn_more": {
         "question": "Com puc aprendre més sobre l'estratègia del Hive®?",
-        "answer": "Tenim pensat d'afegir un tutorial interactiu per ajudar a aprendre i entendre totes les idees estratègiques dins el joc. Revisa la secció de <resources_link>recursos</resources_link> on pots trobar llibres, videos i el canal de Discord!"
+        "answer": "Tenim pensat afegir un tutorial interactiu per ajudar a aprendre i entendre totes les idees estratègiques dins el joc. Revisa la secció de <resources_link>recursos</resources_link> on pots trobar llibres, videos i el canal de Discord!"
     },
     "can_i_set_up_a_tournament": {
         "question": "Puc crear un torneig?",
