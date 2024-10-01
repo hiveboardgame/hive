@@ -6,7 +6,8 @@
             "days_move_one": "{{count}} día por turno",
             "days_side_one": "{{count}} día por jugador",
             "days_side_other": "{{count}} días por jugador",
-            "days_move_other": "{{count}} días por turno"
+            "days_move_other": "{{count}} días por turno",
+            "title": "Correspondencia"
         }
     },
     "rated": "Puntuada",
@@ -34,5 +35,18 @@
         "minutes_other": "Finalizada hace {{count}} minutos"
     },
     "no_moves_played": "Sin movimientos",
-    "played_in": "Jugada en:"
+    "played_in": "Jugada en:",
+    "start_when": {
+        "both_ready": "Este torneo comenzará cuando ambos jugadores estén listos",
+        "both_agree": "El juego comenzará cuando ambos acuerden una hora",
+        "both_click": "El juego comenzará cuando ambos pulsen \"Preparado\" con 30 segundos de diferencia"
+    },
+    "speeds": {
+        "bullet": "Bala",
+        "blitz": "Bombardeo",
+        "classic": "Clásico",
+        "untimed": "Sin tiempo",
+        "rapid": "Rápido",
+        "correspondence": "Correspondencia"
+    }
 }
