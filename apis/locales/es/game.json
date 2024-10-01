@@ -1,1 +1,38 @@
-{}
+{
+    "time_mode": {
+        "untimed": "Sin límite de tiempo",
+        "real_time": "Tiempo real",
+        "correspondence": {
+            "days_move_one": "{{count}} día por turno",
+            "days_side_one": "{{count}} día por jugador",
+            "days_side_other": "{{count}} días por jugador",
+            "days_move_other": "{{count}} días por turno"
+        }
+    },
+    "rated": "Puntuada",
+    "casual": "Casual",
+    "created_ago": {
+        "weeks_other": "Creada hace {{count}} semanas",
+        "days_one": "Creada hace {{count}} día",
+        "days_other": "Creada hace {{count}} días",
+        "hours_one": "Creada hace {{count}} hora",
+        "hours_other": "Creada hace {{count}} horas",
+        "minutes_one": "Creada hace {{count}} minuto",
+        "minutes_other": "Creada hace {{count}} minutos",
+        "less_than_minute": "Creada hace menos de un minuto",
+        "weeks_one": "Creada hace {{count}} semana"
+    },
+    "finished_ago": {
+        "days_one": "Finalizada hace {{count}} día",
+        "days_other": "Finalizada hace {{count}} días",
+        "hours_one": "Finalizada hace {{count}} hora",
+        "minutes_one": "Finalizada hace {{count}} minuto",
+        "less_than_minute": "Finalizada hace menos de un minuto",
+        "weeks_one": "Finalizada hace {{count}} semana",
+        "weeks_other": "Finalizada hace {{count}} semanas",
+        "hours_other": "Finalizada hace {{count}} horas",
+        "minutes_other": "Finalizada hace {{count}} minutos"
+    },
+    "no_moves_played": "Sin movimientos",
+    "played_in": "Jugada en:"
+}
