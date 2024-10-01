@@ -87,7 +87,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                             let _ = children
                                 .get_with_index(i)
                                 .expect("checked index")
-                                .add_event_listener_with_callback("click", &Function::default());
+                                .add_event_listener_with_callback("touchstart", &Function::default());
                         }
                     }
                 }
