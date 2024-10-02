@@ -28,7 +28,7 @@
     },
     "hive_news": {
         "title": "Noticias de Hive",
-        "description": "<tournaments_site> Torneos mundiales de Hive </tournaments_site> Torneos presenciales y en línea, resultados de torneos, artículos de estrategia. El lugar para conocer las últimas novedades de Hive."
+        "description": "<tournaments_site>Torneos mundiales de Hive</tournaments_site> Próximos torneos presenciales y en Internet, resultados de torneos, artículos de estrategia. El lugar para las últimas noticias de Hive."
     },
     "social_media": {
         "title": "Redes sociales",
@@ -36,7 +36,7 @@
             "item1": "<discord_link>Discord</discord_link> Únete al chat de nuestra comunidad",
             "item4": "<instagram_link>Hive en instagram</instagram_link> Bonitas fotos y memes de Hive",
             "item2": "<reddit_link> Subreddit de Hive </reddit_link> Comparte tus estrategias y experiencias",
-            "item3": "<facebook_link> Comunidad de Hive en Facebook </facebook_link> Conéctate con otros jugadores"
+            "item3": "<facebook_link> Comunidad Internacional de Hive en Facebook </facebook_link> Conéctate con otros jugadores"
         }
     },
     "books": {
@@ -44,7 +44,7 @@
         "links": {
             "item2": "<hive_canon_link>Canon of Hive: Groundwork</hive_canon_link> Primer libro parte de una trilogía planeada por el varias veces campeón del mundo de Hive Joe Schultz",
             "item1": "<hive_champion_link> Juega a Hive como un campeón </hive_champion_link>  Libro de estrategia Hive de Randy Ingersoll, campeón mundial de 2011.",
-            "item3": "<hive_puzzles_link>Puzzles de Hive</hive_puzzles_link> Colección gratuita de puzzles de Hive con soluciones para principiantes hasta aventajados"
+            "item3": "<hive_puzzles_link>Puzzles de Hive</hive_puzzles_link> Colección gratuita de puzzles de Hive con soluciones para principiantes hasta avanzados"
         }
     },
     "videos": {
