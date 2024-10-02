@@ -47,13 +47,16 @@
         "signup_button": "Registrarse",
         "be_nice_checkbox": "Acepto ser amable con los demás jugadores y denunciar los abusos en Discord",
         "registration_error": "Registro fallido",
-        "existing_account_prompt": "¿Ya tienes una cuenta? <login_link>Iniciar sesión</login_link>"
+        "existing_account_prompt": "¿Ya tienes una cuenta? <login_link>Iniciar sesión</login_link>",
+        "password_requirements": "Al menos 8 caracteres",
+        "password_error": "La contraseña es demasiado corta o no coincide"
     },
     "piece_style": "Estilo de la pieza",
     "login": {
         "password": "Contraseña",
         "email": "Correo electrónico",
         "login_button": "Iniciar sesión",
-        "no_account_prompt": "¿No tienes una cuenta? <register_link>Regístrate</register_link>"
+        "no_account_prompt": "¿No tienes una cuenta? <register_link>Regístrate</register_link>",
+        "invalid_login": "Correo electrónico o contraseña incorrectos"
     }
 }
