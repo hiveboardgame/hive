@@ -2,7 +2,7 @@
     "title": "Community Links",
     "hive_news": {
         "title": "Hive News",
-        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> in person and online tournaments, tournament results, strategy articles. The place for the latest hive news."
+        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> Upcoming in person and online tournaments, tournament results, strategy articles. The place for the latest hive news."
     },
     "online_tools": {
         "title": "Online Tools",
@@ -25,7 +25,7 @@
         "links": {
             "item1": "<discord_link>Discord</discord_link> Join our community chat",
             "item2": "<reddit_link>Hive Subreddit</reddit_link> Share your strategies and experiences",
-            "item3": "<facebook_link>World Hive Comunity Facebook</facebook_link> Connect with fellow players",
+            "item3": "<facebook_link>World Hive Community Facebook</facebook_link> Connect with fellow players",
             "item4": "<instagram_link>Hive instagram</instagram_link> Pretty hive photos and memes"
         }
     },
@@ -34,7 +34,7 @@
         "links": {
             "item1": "<hive_champion_link>Play Hive Like a Champion</hive_champion_link>  Hive strategy book by Randy Ingersoll the 2011 World Champion.",
             "item2": "<hive_canon_link>Canon of Hive: Groundwork</hive_canon_link> First book part of a planned trilogy by multiple times hive world champion Joe Schultz",
-            "item3": "<hive_puzzles_link>Hive Puzzles</hive_puzzles_link> Free collection of hive puzzles with solutions for beginners up to advanted"
+            "item3": "<hive_puzzles_link>Hive Puzzles</hive_puzzles_link> Free collection of hive puzzles with solutions for beginners up to advanced"
         }
     },
     "videos": {
@@ -51,7 +51,7 @@
         "links": {
             "item1": "<gen42_link>Gen42 - buy a physical game here</gen42_link>",
             "item2": "<facebook_gen42_link>Gen42 - Facebook</facebook_gen42_link>",
-            "item3": "<facebook_link>World Hive Comunity Facebook</facebook_link>",
+            "item3": "<facebook_link>World Hive Community Facebook</facebook_link>",
             "item4": "<instagram_gen42_link>Gen42 - Instagram</instagram_gen42_link>",
             "item5": "<youtube_gen42_link>Gen42 - Youtube</youtube_gen42_link>"
         }
