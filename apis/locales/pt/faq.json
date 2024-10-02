@@ -54,7 +54,7 @@
     },
     "what_rating_system": {
         "question": "Qual é sistema de rating usado pelo hivegame.com?",
-        "answer": "Usamos o sistema <glicko2_link>Glicko-2</glicko2_link>. Parametrizado como o lichess."
+        "answer": "Usamos o sistema <glicko2_link>Glicko-2</glicko2_link>. Parametrizado como no Lichess."
     },
     "how_to_recover_password": {
         "question": "O que posso fazer se esqueci a minha palavra passe?",
