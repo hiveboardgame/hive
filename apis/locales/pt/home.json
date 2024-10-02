@@ -22,7 +22,7 @@
             },
             "untimed": "Sem tempo"
         },
-        "button": "Customizar"
+        "button": "Personalizado"
     },
     "found_players": "Encontrados:",
     "online_players_other": "{{count}} jogadores online",
@@ -35,6 +35,6 @@
         "player": "Jogador",
         "time": "Tempo"
     },
-    "create_game": "Criar um jogo",
+    "create_game": "Cria um jogo",
     "search_players": "Procura jogadores"
 }
