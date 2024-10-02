@@ -1,6 +1,6 @@
 {
     "game_buttons": {
-        "playing": "Jogos em curso",
+        "playing": "Em curso",
         "unstarted": "Jogos de Torneio por começar",
         "finished": "Acabados"
     },
