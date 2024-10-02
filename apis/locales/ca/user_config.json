@@ -4,12 +4,12 @@
         "three_d": "3D",
         "official": "Oficial"
     },
-    "rotation": "Rotació",
+    "rotation": "Rotació:",
     "rotation_buttons": {
         "no": "No",
         "yes": "Sí"
     },
-    "show_dots": "Mostrar els punts",
+    "show_dots": "Mostrar els punts:",
     "dots_buttons": {
         "vertical": "En vertical",
         "no": "No",
@@ -46,14 +46,17 @@
         "password": "Contrassenya",
         "existing_account_prompt": "Ja tens un compte? <login_link>Inicia sessió</login_link>",
         "be_nice_checkbox": "Estic d'acord en ser educat amb els altres jugadors i denuciar abusos a Discord",
-        "registration_error": "El registre ha fallat"
+        "registration_error": "El registre ha fallat",
+        "password_requirements": "Almenys 8 caracters",
+        "password_error": "La contrassenya és massa curta o no coincideix"
     },
     "login": {
         "login_button": "Inicia sessió",
         "no_account_prompt": "No tens un compte? <register_link>Registra't</register_link>",
         "email": "Email",
-        "password": "Contrassenya"
+        "password": "Contrassenya",
+        "invalid_login": "Email o contrassenya incorrectes"
     },
-    "piece_style": "Estil de les peces",
+    "piece_style": "Estil de les peces:",
     "move_confirm": "Confirmació de moviments:"
 }
