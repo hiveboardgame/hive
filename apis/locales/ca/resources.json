@@ -2,7 +2,7 @@
     "title": "Enllaços de la comunitat",
     "hive_news": {
         "title": "Notícies sobre el Hive",
-        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> Tornejos presencials i online, resultats i articles d'estratègia. El lloc amb les últimes notícies sobre el món del Hive."
+        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> Propers tornejos presencials i online, resultats i articles d'estratègia. El lloc amb les últimes notícies sobre el món del Hive."
     },
     "online_tools": {
         "title": "Eines online",
@@ -25,7 +25,7 @@
         "links": {
             "item1": "<discord_link>Discord</discord_link> Uneix-te al chat de la nostra comunitat.",
             "item2": "<reddit_link>Hive Subreddit</reddit_link> Comparteix les teves estratègies i experiències.",
-            "item3": "<facebook_link>World Hive Comunity Facebook</facebook_link> Troba amics jugadors.",
+            "item3": "<facebook_link>World Hive Community Facebook</facebook_link> Troba amics jugadors.",
             "item4": "<instagram_link>Hive instagram</instagram_link> Fotos i memes del Hive."
         }
     },
@@ -50,7 +50,7 @@
         "links": {
             "item1": "<gen42_link>Gen42 - Compra el joc</gen42_link>",
             "item2": "<facebook_gen42_link>Gen42 - Facebook</facebook_gen42_link>",
-            "item3": "<facebook_link>World Hive Comunity Facebook</facebook_link>",
+            "item3": "<facebook_link>World Hive Community Facebook</facebook_link>",
             "item4": "<instagram_gen42_link>Gen42 - Instagram</instagram_gen42_link>",
             "item5": "<youtube_gen42_link>Gen42 - Youtube</youtube_gen42_link>"
         },
