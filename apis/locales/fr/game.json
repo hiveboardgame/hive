@@ -1,1 +1,52 @@
-{}
+{
+    "time_mode": {
+        "correspondence": {
+            "days_move_one": "{{count}} jour par déplacement",
+            "title": "Correspondance",
+            "days_side_other": "{{count}} jours par face",
+            "days_side_one": "{{count}} jour par face",
+            "days_move_other": "{{count}} jours par déplacement"
+        },
+        "untimed": "Pas de limite de temps",
+        "real_time": "Temps réel"
+    },
+    "created_ago": {
+        "minutes_other": "Créé il y a {{count}} minutes",
+        "less_than_minute": "Créé il y a moins d'une minute",
+        "days_one": "Créé il y a {{count}} jour",
+        "weeks_one": "Créé il y a {{count}} semaine",
+        "days_other": "Créé il y a {{count}} jours",
+        "hours_other": "Créé il y a {{count}} heures",
+        "weeks_other": "Créé il y a {{count}} semaines",
+        "hours_one": "Créé il y a {{count}} heure",
+        "minutes_one": "Créé il y a {{count}} minute"
+    },
+    "finished_ago": {
+        "weeks_one": "Terminé il y a {{count}} semaine",
+        "days_other": "Terminé il y a {{count}} jours",
+        "minutes_one": "Terminé il y a {{count}} minute",
+        "minutes_other": "Terminé il y a {{count}} minutes",
+        "less_than_minute": "Terminé il y a moins d'une minute",
+        "weeks_other": "Terminé il y a {{count}} semaines",
+        "hours_one": "Terminé il y a {{count}} heure",
+        "hours_other": "Terminé il y a {{count}} heures",
+        "days_one": "Terminé il y a {{count}} jour"
+    },
+    "no_moves_played": "Aucun mouvement joué",
+    "start_when": {
+        "both_agree": "La partie commencera lorsque vous serez tous deux d'accord sur la durée",
+        "both_click": "La partie commencera lorsque vous aurez tous les deux cliqué sur « prêt » à moins de 30 secondes d'intervalle",
+        "both_ready": "Ce tournoi commencera lorsque les deux joueurs seront prêts"
+    },
+    "speeds": {
+        "untimed": "Non chronométré",
+        "classic": "Classique",
+        "bullet": "Balle",
+        "blitz": "Éclair",
+        "rapid": "Rapide",
+        "correspondence": "Correspondance"
+    },
+    "rated": "Évalué",
+    "played_in": "Joué dans :",
+    "casual": "Libre"
+}
