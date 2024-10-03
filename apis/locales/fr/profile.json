@@ -1,1 +1,26 @@
-{}
+{
+    "game_buttons": {
+        "unstarted": "Parties de tournoi non commencées",
+        "playing": "En cours",
+        "finished": "Terminé"
+    },
+    "color_buttons": {
+        "black": "Noir",
+        "both": "Les deux",
+        "white": "Blanc"
+    },
+    "result_buttons": {
+        "win": "Victoire",
+        "loss": "Défaite",
+        "draw": "Match nul",
+        "all": "Tout"
+    },
+    "stats_box": {
+        "total": "Total : {{count}}",
+        "draws": "Matchs nuls : {{count}}",
+        "wins": "Victoires : {{count}}",
+        "losses": "Défaites : {{count}}"
+    },
+    "gamo_result": "Résultat de la partie :",
+    "player_color": "Couleur du joueur :"
+}
