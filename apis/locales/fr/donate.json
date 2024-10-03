@@ -1,1 +1,16 @@
-{}
+{
+    "title": "Hive® gratuit pour tout le monde et pour toujours !",
+    "subtitle": "Pas de publicité, pas d'abonnement, mais un logiciel libre et de la passion.",
+    "about": "Nous sommes un projet communautaire et nous pensons que tout le monde devrait avoir accès à une plateforme Hive gratuite et de niveau international. Si vous aimez utiliser HiveGame, pensez à nous soutenir en faisant un don.",
+    "where_does_money_go": {
+        "question": "Où va l'argent ?",
+        "answer": "D'abord le serveur, puis nos développeurs."
+    },
+    "features_for_patrons": {
+        "question": "Certaines fonctionnalités sont-elles réservées aux membres Patreon ?",
+        "answer": "Non, parce que HiveGame est entièrement gratuit, pour toujours et pour tout le monde. C'est une promesse. Cependant, vous avez droit à un 👑."
+    },
+    "kofi_button": "<kofi_button>Ko-fi</kofi_button>",
+    "patreon_button": "<patreon_button>Patreon</patreon_button>",
+    "small_team_blurb": "Nous sommes une petite équipe, c'est pourquoi votre soutien fait une énorme différence !"
+}
