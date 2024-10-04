@@ -32,9 +32,10 @@ services:
       - target:/app/target/
     ports:
       - 3000:3000
+      - 3001:3001
     env_file:
       - .env
-    restart: always
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgres://hive-dev@postgres:5432/hive-local
       TEST_DATABASE_URL: postgres://hive-dev@postgres:5432/hive-test
