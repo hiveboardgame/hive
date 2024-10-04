@@ -8,6 +8,7 @@
         "both": "Tutti"
     },
     "result_buttons": {
-        "draw": "Patta"
+        "draw": "Patta",
+        "all": "Tutto"
     }
 }
