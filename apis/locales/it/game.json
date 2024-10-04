@@ -7,5 +7,8 @@
             "days_move_one": "{{count}} giorni per mossa"
         }
     },
-    "casual": "Amichevole"
+    "casual": "Amichevole",
+    "created_ago": {
+        "weeks_one": "Creato {{count}} settimane fa"
+    }
 }
