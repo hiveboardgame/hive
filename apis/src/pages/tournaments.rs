@@ -6,28 +6,63 @@ use crate::{
 };
 use leptos::*;
 use leptos_use::core::ConnectionReadyState;
+use crate::common::TournamentAction::TournamentSortOrder;
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+enum TournamentFilter {
+    All,
+    Status(TournamentStatus),
+}
 
 #[component]
 pub fn Tournaments() -> impl IntoView {
     let tournament = expect_context::<TournamentStateContext>();
     let ws = expect_context::<WebsocketContext>();
+    let filter = create_rw_signal(TournamentFilter::Status(TournamentStatus::InProgress));
     create_effect(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
             let api = ApiRequests::new();
-            api.tournament(TournamentAction::GetAll(Abstract));
+            api.tournament(TournamentAction::GetAll(Abstract, TournamentSortOrder::CreatedAtDesc));
         };
     });
     let search = RwSignal::new("".to_string());
     view! {
-        <div class="pt-10">
-            <div class="container px-4 mx-auto">
-                <input
-                    type="text"
-                    class="items-center p-2 mx-2 my-2 w-5/6"
-                    placeholder="Search tournaments by name"
-                    on:input=move |ev| search.set(event_target_value(&ev))
-                    value=search
-                />
+            <div class="pt-10">
+                <div class="container px-4 mx-auto">
+                    <input
+                        type="text"
+                        class="items-center p-2 mx-2 my-2 w-5/6"
+                        placeholder="Search tournaments by name"
+                        on:input=move |ev| search.set(event_target_value(&ev))
+                        value=search
+                    />
+                    <div class="flex justify-center space-x-4 mb-4">
+                        <button
+                            class=move || get_button_classes(TournamentFilter::All, filter.get())
+                            on:click=move |_| filter.set(TournamentFilter::All)
+                        >
+                            "All"
+                        </button>
+                        <button
+                            class=move || get_button_classes(TournamentFilter::Status(TournamentStatus::NotStarted), filter.get())
+                            on:click=move |_| filter.set(TournamentFilter::Status(TournamentStatus::NotStarted))
+                        >
+                            "Upcoming"
+                        </button>
+                        <button
+                            class=move || get_button_classes(TournamentFilter::Status(TournamentStatus::InProgress), filter.get())
+                            on:click=move |_| filter.set(TournamentFilter::Status(TournamentStatus::InProgress))
+                        >
+                            "In Progress"
+                        </button>
+                        <button
+                            class=move || get_button_classes(TournamentFilter::Status(TournamentStatus::Finished), filter.get())
+                            on:click=move |_| filter.set(TournamentFilter::Status(TournamentStatus::Finished))
+                        >
+                            "Completed"
+                        </button>
+                    </div>
+                </div>
                 <For
                     each=move || {
                         let mut v: Vec<_> = tournament
@@ -35,15 +70,19 @@ pub fn Tournaments() -> impl IntoView {
                             .get()
                             .tournaments
                             .into_iter()
+                            .filter(|(_, t)| {
+                                match filter.get() {
+                                    TournamentFilter::All => true,
+                                    TournamentFilter::Status(status) => t.status == status,
+                                }
+                            })
                             .collect();
                         v.sort_by(|a, b| b.1.updated_at.cmp(&a.1.updated_at));
                         v
                     }
-
                     key=move |(nanoid, tournament)| {
-                        (nanoid.to_owned(), tournament.updated_at, search())
+                        (nanoid.to_owned(), tournament.updated_at, search(), filter.get())
                     }
-
                     children=move |(_id, tournament)| {
                         if search().is_empty()
                             || tournament.name.to_lowercase().contains(&search().to_lowercase())
@@ -54,8 +93,15 @@ pub fn Tournaments() -> impl IntoView {
                         }
                     }
                 />
-
             </div>
-        </div>
+    }
+}
+
+
+fn get_button_classes(current: TournamentFilter, selected: TournamentFilter) -> &'static str {
+    if current == selected {
+        "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+    } else {
+        "px-4 py-2 bg-blue-900 text-white rounded font-bold"
     }
 }

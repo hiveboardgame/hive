@@ -510,9 +510,9 @@ impl Tournament {
         Ok(games)
     }
 
-    pub async fn get_all(conn: &mut DbConn<'_>) -> Result<Vec<Tournament>, DbError> {
-        Ok(tournaments::table.get_results(conn).await?)
-    }
+   // pub async fn get_all(conn: &mut DbConn<'_>) -> Result<Vec<Tournament>, DbError> {
+        //Ok(tournaments::table.get_results(conn).await?)
+    //}
 
     pub async fn find(id: Uuid, conn: &mut DbConn<'_>) -> Result<Self, DbError> {
         Ok(tournaments::table.find(id).first(conn).await?)
@@ -552,5 +552,16 @@ impl Tournament {
             started_tournaments.push(tournament.start(conn).await?);
         }
         Ok(started_tournaments)
+    }
+
+    pub async fn get_all(sort_order: TournamentSortOrder, conn: &mut DbConn<'_>) -> Result<Vec<Tournament>, DbError> {
+        let query = tournaments::table.into_boxed();
+        let sorted_query = match sort_order {
+            TournamentSortOrder::CreatedAtDesc => query.order(tournaments::created_at.desc()),
+            TournamentSortOrder::CreatedAtAsc => query.order(tournaments::created_at.asc()),
+            TournamentSortOrder::StartedAtDesc => query.order(tournaments::started_at.desc()),
+            TournamentSortOrder::StartedAtAsc => query.order(tournaments::started_at.asc()),
+        };
+        Ok(sorted_query.get_results(conn).await?)
     }
 }
