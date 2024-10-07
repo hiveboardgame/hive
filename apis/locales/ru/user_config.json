@@ -33,13 +33,16 @@
         "confirm_password": "Подтвердите пароль",
         "be_nice_checkbox": "Соглашаюсь достойно себя вести по отношению к другим игрокам, а о недостойном поведении других сообщать в Дискорде",
         "signup_button": "Регистрация",
-        "registration_error": "Регистрация не удалась"
+        "registration_error": "Регистрация не удалась",
+        "password_requirements": "Минимум 8 символов",
+        "password_error": "Пароль слишком короткий или не совпадает"
     },
     "login": {
         "email": "Почта",
         "password": "Пароль",
         "login_button": "Войти",
-        "no_account_prompt": "Пока нет аккаунта? <register_link>Зарегистрироваться</register_link>"
+        "no_account_prompt": "Пока нет аккаунта? <register_link>Зарегистрироваться</register_link>",
+        "invalid_login": "Неверная почта или пароль"
     },
     "edit_account": {
         "confirm_password_placeholder": "Новый пароль (ещё раз)",
