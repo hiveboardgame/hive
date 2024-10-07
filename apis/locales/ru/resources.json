@@ -2,7 +2,7 @@
     "title": "Полезные ссылки",
     "hive_news": {
         "title": "Новости об Улье",
-        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> — онлайн и оффлайн турниры, результаты турниров, статьи о стратегии. Свежие новости об Улье."
+        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> — предстоящие онлайн и оффлайн турниры, результаты турниров, статьи о стратегии. Свежие новости об Улье."
     },
     "online_tools": {
         "title": "Онлайн-ресурсы",
@@ -17,7 +17,7 @@
         "links": {
             "item1": "<discord_link>Discord</discord_link> — чат нашего сообщества.",
             "item2": "<reddit_link>Hive Subreddit</reddit_link> — делитесь своим опытом и стратегиями.",
-            "item3": "<facebook_link>World Hive Comunity Facebook</facebook_link> — сообщество игроков в Фейсбуке.",
+            "item3": "<facebook_link>World Hive Community Facebook</facebook_link> — сообщество игроков в Фейсбуке.",
             "item4": "<instagram_link>Hive instagram</instagram_link> — красивые фотографии и мемы."
         }
     },
