@@ -2,7 +2,7 @@
     "title": "Link per la community",
     "hive_news": {
         "title": "Hive News",
-        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> tornei in persona e online, risultati, articoli di strategia. Il sito con tutte le ultime news su Hive®."
+        "description": "<tournaments_site>World Hive Tournaments</tournaments_site> Tornei in persona e online, risultati, articoli di strategia. Il sito con tutte le ultime news su Hive®."
     },
     "online_tools": {
         "title": "Strumenti Utili Online",
@@ -24,7 +24,7 @@
         "title": "Social Media",
         "links": {
             "item2": "<reddit_link>Hive Subreddit</reddit_link> Condividi la tue esperienze e conoscenze sul gioco",
-            "item3": "<facebook_link>World Hive Comunity Facebook</facebook_link> Incontra altri giocatori",
+            "item3": "<facebook_link>World Hive Community Facebook</facebook_link> Incontra altri giocatori",
             "item4": "<instagram_link>Hive instagram</instagram_link> Foto, immagine e meme su Hive®",
             "item1": "<discord_link>Discord</discord_link> Unisciti alla comunitá di Hive® su Discord"
         }
