@@ -14,6 +14,7 @@ pub mod puzzles;
 pub mod register;
 pub mod resources;
 pub mod rules;
+pub mod rules_summary;
 pub mod strategy;
 pub mod top_players;
 pub mod tournament;

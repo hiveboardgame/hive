@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use crate::{common::MoveConfirm, providers::Config};
 use leptos::*;
 use leptos_icons::Icon;
@@ -6,9 +7,10 @@ use shared_types::GameSpeed;
 
 #[component]
 pub fn ConfirmModeToggle(game_speed: GameSpeed) -> impl IntoView {
+    let i18n = use_i18n();
     let game_speed = store_value(game_speed);
     view! {
-        <p class="m-1 text-black dark:text-white">Move confirmation:</p>
+        <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.move_confirm)}</p>
         <div class="flex">
             <ConfirmModeButton move_confirm=MoveConfirm::Single game_speed=game_speed()/>
             <ConfirmModeButton move_confirm=MoveConfirm::Double game_speed=game_speed()/>

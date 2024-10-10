@@ -1,0 +1,27 @@
+{
+    "game_buttons": {
+        "playing": "Giocare",
+        "finished": "Completato",
+        "unstarted": "Partite di Torneo da giocare"
+    },
+    "color_buttons": {
+        "both": "Entrambi",
+        "white": "Bianco",
+        "black": "Nero"
+    },
+    "result_buttons": {
+        "draw": "Patta",
+        "all": "Tutto",
+        "loss": "Sconfitte",
+        "win": "Vittorie"
+    },
+    "stats_box": {
+        "total": "Total: {{count}}",
+        "wins": "Vittorie: {{count}}",
+        "losses": "Sconfitte: {{count}}",
+        "draws": "Patte: {{count}}"
+    },
+    "player_color": "Colore giocatore:",
+    "gamo_result": "Risultato della partita:",
+    "include_speeds": "Velocitá incluse:"
+}

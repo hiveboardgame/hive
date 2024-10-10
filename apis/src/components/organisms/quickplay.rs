@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use crate::{
     common::ChallengeAction,
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
@@ -11,6 +12,7 @@ use leptos_icons::*;
 use leptos_router::use_navigate;
 use shared_types::ChallengeVisibility;
 use shared_types::{ChallengeDetails, GameSpeed::*, TimeMode};
+
 pub enum QuickPlayTimeControl {
     Bullet1p2,
     Blitz3p3,
@@ -73,6 +75,7 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
 }
 #[component]
 pub fn QuickPlay() -> impl IntoView {
+    let i18n = use_i18n();
     let open = RwSignal::new(false);
     let dialog_el = NodeRef::<Dialog>::new();
     view! {
@@ -80,7 +83,9 @@ pub fn QuickPlay() -> impl IntoView {
             <Modal open dialog_el=dialog_el>
                 <ChallengeCreate open/>
             </Modal>
-            <span class="flex justify-center mb-4 text-xl font-bold">Create a game</span>
+            <span class="flex justify-center mb-4 text-xl font-bold">
+                {t!(i18n, home.create_game)}
+            </span>
             <div class="grid grid-cols-2 gap-2 place-items-center w-full sm:gap-4 sm:grid-cols-3">
                 <GridButton time_control=Bullet1p2/>
                 <GridButton time_control=Blitz3p3/>
@@ -104,7 +109,7 @@ pub fn QuickPlay() -> impl IntoView {
                     }
                 >
 
-                    Custom
+                    {t!(i18n, home.custom_game.button)}
                 </button>
             </div>
         </div>

@@ -1,0 +1,52 @@
+{
+    "time_mode": {
+        "real_time": "Partita a tempo",
+        "untimed": "Senza limiti di tempo",
+        "correspondence": {
+            "title": "Corrispondenza",
+            "days_move_one": "{{count}} giorni per mossa",
+            "days_move_other": "{{count}} giorni per mossa",
+            "days_side_one": "{{count}} giorno per giocatore",
+            "days_side_other": "{{count}} giorni per giocatore"
+        }
+    },
+    "casual": "Amichevole",
+    "created_ago": {
+        "weeks_one": "Creato {{count}} settimane fa",
+        "weeks_other": "Creata {{count}} settimane fa",
+        "days_other": "Creata {{count}} giorni fa",
+        "hours_one": "Creata {{count}} ora fa",
+        "minutes_one": "Creata {{count}} minuto fa",
+        "minutes_other": "Creata {{count}} minuti fa",
+        "less_than_minute": "Creata meno di un minuto fa",
+        "days_one": "Creata {{count}} giorno fa",
+        "hours_other": "Creata {{count}} ore fa"
+    },
+    "played_in": "Giocato in:",
+    "rated": "Con variazione",
+    "finished_ago": {
+        "weeks_one": "Finito {{count}} settimana fa",
+        "hours_one": "Finito {{count}} ora fa",
+        "hours_other": "Finito{{count}} ore fa",
+        "minutes_one": "Finito {{count}} minuto fa",
+        "minutes_other": "Finito {{count}} minuti fa",
+        "less_than_minute": "Finita meno di un minuto fa",
+        "weeks_other": "Finito {{count}} settimane fa",
+        "days_one": "Finito {{count}} giorno fa",
+        "days_other": "Finito {{count}} giorne fa"
+    },
+    "no_moves_played": "Nessuna mossa giocata",
+    "start_when": {
+        "both_click": "La partita incomincerà quando entrambi cliccherete su 'pronto' a 30 secondi massimo l'uno dall'altro",
+        "both_ready": "Questa partita di torneo inizierà quando entrambi i giocatori sono pronti",
+        "both_agree": "La partita incomincerà quando i giocatori si saranno accordati sull'orario di inizio"
+    },
+    "speeds": {
+        "blitz": "Lampo",
+        "rapid": "Semi-lampo",
+        "classic": "Classica",
+        "correspondence": "Corrsipondenza",
+        "untimed": "Tempo Illimitato",
+        "bullet": "Bullet"
+    }
+}

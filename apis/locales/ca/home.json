@@ -1,0 +1,40 @@
+{
+    "create_game": "Crear una partida",
+    "search_players": "Buscar jugadors",
+    "online_players_one": "{{count}} Jugador online",
+    "online_players_other": "{{count}} Jugadors online",
+    "custom_game": {
+        "title": "Crear una partida:",
+        "casual": "Casual",
+        "rated": "Puntuada",
+        "private": "Privada",
+        "public": "Pública",
+        "rating_range": "Marge de puntuació",
+        "mode": {
+            "real_time": {
+                "title": "Temps real",
+                "minutes_per_side": "Minuts per jugador: {{count}}",
+                "increment_in_seconds": "Increment en segons: {{count}}"
+            },
+            "correspondence": {
+                "title": "Correspondència",
+                "days_per_move": "Dies per moviment",
+                "total_time_each": "Temps total per jugador",
+                "time_one": "{{count}} dia",
+                "time_other": "{{count}} dies"
+            },
+            "untimed": "Sense temps"
+        },
+        "button": "Personalitzada"
+    },
+    "challenge_details": {
+        "player": "Jugador",
+        "time": "Temps",
+        "rated": {
+            "title": "Puntuada",
+            "yes": "Sí",
+            "no": "No"
+        }
+    },
+    "found_players": "Trobat:"
+}

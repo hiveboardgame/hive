@@ -1,9 +1,11 @@
+use crate::i18n::*;
 use crate::{components::organisms::header::Redirect, providers::AuthContext};
 use leptos::*;
 use leptos_router::ActionForm;
 
 #[component]
 pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
@@ -11,7 +13,16 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
     create_effect(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
-
+    let register_link = |children| {
+        view! {
+            <a
+                class="text-blue-500 transition-transform duration-300 transform hover:underline"
+                href="/register"
+            >
+                {children}
+            </a>
+        }
+    };
     view! {
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
@@ -19,7 +30,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-stone-300 dark:bg-reserve-twilight"
             >
                 <label class="block mb-2 font-bold" for="email">
-                    E-Mail
+                    {t!(i18n, user_config.login.email)}
                     <input
                         ref=my_input
                         class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
@@ -28,11 +39,11 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         type="email"
                         inputmode="email"
                         autocomplete="email"
-                        placeholder="E-mail"
+                        placeholder=t!(i18n, user_config.login.email)
                     />
                 </label>
                 <label class="block font-bold" for="password">
-                    Password
+                    {t!(i18n, user_config.login.password)}
                     <input
                         class="px-3 py-2 mb-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="password"
@@ -47,23 +58,19 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                     <Show when=move || {
                         auth_context.login.value().get().is_some_and(|v| v.is_err())
                     }>
-                        <small class="text-ladybug-red">"Invalid email or password"</small>
+                        <small class="text-ladybug-red">
+                            {t!(i18n, user_config.login.invalid_login)}
+                        </small>
                     </Show>
                 </p>
                 <input
                     class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none"
                     type="submit"
-                    value="Sign In"
+                    value=t!(i18n, user_config.login.login_button)
                 />
             </ActionForm>
             <p class="text-xs text-center text-gray-500">
-                "Don't have an account?"
-                <a
-                    class="text-blue-500 transition-transform duration-300 transform hover:underline"
-                    href="/register"
-                >
-                    Sign Up
-                </a>
+                {t!(i18n, user_config.login.no_account_prompt, < register_link >)}
             </p>
 
         </div>

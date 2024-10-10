@@ -1,0 +1,16 @@
+{
+    "title": "Hive® gratuït per tothom, per sempre!",
+    "subtitle": "Sense anuncis, sense subcripcions; de codi obert i amb passió.",
+    "where_does_money_go": {
+        "question": "On van els diners?",
+        "answer": "Primer de tot, al servidor. Després als desenvolupadors."
+    },
+    "features_for_patrons": {
+        "question": "Hi ha funcions reservades pels Patrons?",
+        "answer": "No, ja que hivegame és completament gratuït, per sempre i per tothom. Ho prometem. Pero aconsegueixes una 👑."
+    },
+    "small_team_blurb": "Som un equip petit, així que la teva ajuda significa molt!",
+    "about": "Som un projecte comunitari i creiem que tothom hauria de poder accedir a una plataforma gratuïta i de primer nivell per jugar al Hive®. Confiem en el suport de persones com tu per fer-ho possible. Si gaudeixes jugant a hivegame, si us plau, considera ajudar-nos fent una donació.",
+    "kofi_button": "<kofi_button>Ko-fi</kofi_button>",
+    "patreon_button": "<patreon_button>Patreon</patreon_button>"
+}
