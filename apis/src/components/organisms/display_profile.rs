@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use crate::{
     common::UserAction,
     components::{atoms::rating::RatingWithIcon, molecules::user_row::UserRow},
@@ -8,6 +9,7 @@ use shared_types::GameSpeed;
 
 #[component]
 pub fn DisplayProfile(user: UserResponse) -> impl IntoView {
+    let i18n = use_i18n();
     let ratings = GameSpeed::all_rated_games()
         .iter()
         .map(|speed| {
@@ -15,10 +17,10 @@ pub fn DisplayProfile(user: UserResponse) -> impl IntoView {
                 view! {
                     <div class="p-2 border border-dark dark:border-white">
                         <RatingWithIcon rating=store_value(rating.clone())/>
-                        <div>{format!("Total: {}", rating.played)}</div>
-                        <div>{format!("Wins: {}", rating.win)}</div>
-                        <div>{format!("Losses: {}", rating.loss)}</div>
-                        <div>{format!("Draws: {}", rating.draw)}</div>
+                        <div>{t!(i18n, profile.stats_box.total, count = rating.played)}</div>
+                        <div>{t!(i18n, profile.stats_box.wins, count = rating.win)}</div>
+                        <div>{t!(i18n, profile.stats_box.losses, count = rating.loss)}</div>
+                        <div>{t!(i18n, profile.stats_box.draws, count = rating.draw)}</div>
                     </div>
                 }
                 .into_view()

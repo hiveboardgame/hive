@@ -1,0 +1,104 @@
+{
+    "title": "Gyakori kérdések",
+    "what_is_hivegame": {
+        "question": "Mi ez a hivegame.com?",
+        "answer": "A hivegame.com egy közösségi kezdeményezés, amelynek célja, hogy létrehozzon egy új online platformot a Hive® játék ingyenes játszására. A weboldal reklámmentes, nyílt forráskódú, közösségi tagok fejlesztik, és hivatalosan támogatja a Hive® megalkotója, John Yianni."
+    },
+    "how_to_help": {
+        "question": "Hogyan segíthetem a projektet?",
+        "answers": {
+            "item3": "<donate_link>Adománnyal</donate_link> a fejlesztők munkáját és az oldal működtetését segítheted.",
+            "item1": "Segíthetsz a <source_link>kódbázis</source_link> fejlesztésében",
+            "item2": "Támogathatsz minket ötletekkel és visszajelzésekkel <discord_link>Discord</discord_link>-on keresztül, valamint az oldal grafikájának ellenőrzésével"
+        }
+    },
+    "how_to_play_with_friends": {
+        "question": "Hozhatok létre játékot egy baráttal?",
+        "answers": {
+            "item3": "Természetesen létrehozhatsz nyílt kihívást is, amelyet bárki elfogadhat az adott ELO tartományban, és csak remélheted, hogy a barátod lesz az első, aki elfogadja a kihívást.",
+            "item1": "Igen, létrehozhatsz egy játékot a főoldalon található 'játék létrehozása' gombra kattintva, majd a 'privát' opció kiválasztásával, és megoszthatod a linket a barátoddal. A játékhoz a barátnodnak is regisztrálnia kell.",
+            "item2": "Emellett bárkit kihívhatsz a felhasználónév melletti 'keresztezett kardok' ikonra kattintva, amely közvetlen kihívást küld a kiválasztott játékosnak."
+        }
+    },
+    "how_to_check_stack": {
+        "question": "Hogyan nézhetem meg mi van egy bogár alatt?",
+        "answers": {
+            "item1": "Mobilon hosszan nyomd meg az egymásra rakott bogarakat és az ujjadat a képernyőn tartva láthatod a kupac legalján lévő bogarat is.",
+            "item2": "Asztali gépen kattints jobb gombbal az egymásra rakott bogarakra. Ezután látni fogod a kupac összes letakart bogarát amíg el nem engeded az egeret."
+        }
+    },
+    "what_are_cornfirmation_modes": {
+        "question": "Mit jelentenek a különböző megerősítési módok?",
+        "description": "Három megerősítési mód van a lépés végrehajtására:",
+        "answers": {
+            "item1": "Dupla kattintás: Alapértelmezett mód. Az első kattintás elhelyezi a darabot, a második kattintás végrehajtja a lépést.",
+            "item2": "Egyszeri kattintás: Gyors megoldás, ha nem akarsz időt veszíteni a gyors játékokban. Vigyázz, nehogy rossz helyre kattints, mert egy egyetlen kattintás azonnal végrehajtja a lépést.",
+            "item3": "Óra megerősítés: Biztonságos módszer, ha nem szeretnél véletlenül hibás lépést végrehajtani. Az első kattintás elhelyezi a darabot, majd a lépés megerősítéséhez a saját órádra kell kattintanod."
+        }
+    },
+    "can_i_play_base_game": {
+        "question": "Játszhatok az alapjátékkal kiegészítések nélkül?",
+        "answer": "Igen, de miért tennéd? Félretéve a viccet, az alapjáték csak nem rangsorolt játékra korlátozódik. A Hive PLM (mindhárom kiegészítés: Pillbug, Ladybug, Mosquito) a hivatalos formátum, amelyet a versenyeken használnak. Ez a legnagyobb kihívás és a legszórakoztatóbb!"
+    },
+    "what_rating_system": {
+        "answer": "A <glicko2_link>Glicko-2</glicko2_link> rendszert használjuk, hasonló paraméterezéssel, mint a Lichess.",
+        "question": "Milyen rangsorolási rendszert használ a hivegame.com?"
+    },
+    "why_basic_chat": {
+        "details": "A chat funkció fejlesztés alatt áll, tisztában vagyunk vele, hogy vannak hibái. Fontos dolgok, amiket érdemes észben tartani a használatakor:",
+        "answers": {
+            "item3": "Néha a piros chat értesítés új üzenetet jelez, amikor valójában nincs is.",
+            "item1": "Jelenleg a chat üzenetek nem kerülnek tárolásra az adatbázisban, így amikor frissítést hajtunk végre, az üzenetek elvesznek!",
+            "item2": "Egyelőre csak játék közben lehet chatelni (a privát üzenetek és más lehetőségek később kerülnek hozzáadásra). A nézők nem látják a játékosok csevegését, és a játékosok sem látják a nézők üzeneteit."
+        },
+        "question": "Miért olyan egyszerű a chat?"
+    },
+    "where_to_meet_other_players": {
+        "question": "Hol ismerhetem meg a Hive® közösség többi tagját a világ minden tájáról?",
+        "answer": "A közösségi médiánk linkjeit <resources_link>itt</resources_link> találod. A Hive® közösség nagyon barátságos, biztosan találsz valakit a közeledben, akivel szemtől szemben játszhatsz is!"
+    },
+    "why_elo_has_questionmark": {
+        "question": "Miért van kérdőjel az ELO pontszámom mögött?",
+        "answer": "Ez akkor fordul elő, amikor az ELO értéked még bizonytalan. Eltűnik, miután elegendő játékot játszottál, és amikor a kérdőjel eltűnik, felkerülhetsz a ranglistára is."
+    },
+    "why_not_in_top_players": {
+        "question": "Miért nem jelenek meg a legjobban rangsorolt játékosok között?",
+        "answer": "Még nem játszottál elég játékot ahhoz, hogy a rendszer pontosan meg tudja határozni a rangsorolásodat. Játssz még néhány játékot, remélhetőleg nyerj, és felkerülsz a listára."
+    },
+    "where_to_learn_more": {
+        "answer": "Tervezzük egy interaktív útmutató hozzáadását, hogy segítsünk megérteni a játék stratégiai fogásait, addig is nézd meg a <resources_link>Források</resources_link> szekciót a Közösség menü pont alatt ahol különböző könyveket és videókat találsz, valamint a Discordot!",
+        "question": "Hogyan tanulhatok többet a Hive stratégiájáról?"
+    },
+    "can_i_set_up_a_tournament": {
+        "question": "Rendezhetek versenyt?",
+        "answer": "Dolgozunk rajta, de ha szeretnél segíteni, írjál ránk Discordon."
+    },
+    "can_i_play_with_bots": {
+        "answer": "Ez a funkció még nem támogatott, de hamarosan megvalósulhat (lépj kapcsolatba velünk, ha segíteni szeretnél a kódolásban).",
+        "question": "Játszhatok bot ellen?"
+    },
+    "what_is_hive": {
+        "question": "Mi az a Hive?",
+        "answer": "A Hive egy díjnyertes absztrakt stratégiai játék, amelyet John Yianni tervezett 2000-ben, és a <gen42_link>Gen42</gen42_link> kiadó adta ki."
+    },
+    "how_does_it_operate": {
+        "question": "Hogyan működik a hivegame.com?",
+        "answer": "A weboldalt a Hive közösség tagjai fejlesztik, és 100%-ban adományokból tartják fenn. A hivegame.com soha nem fog felhasználói adatokat gyűjteni, reklámokat megjeleníteni, vagy bármi mást alkalmazni, ami elvonná a figyelmed a játékról vagy pénzt termelne."
+    },
+    "how_to_get_crown": {
+        "question": "Hogyan kaphatok egy 👑-t a felhasználónevem mellé?",
+        "answer": "Adományozással!"
+    },
+    "how_to_recover_password": {
+        "question": "Mi a teendő, ha elfelejtettem a jelszavam?",
+        "answer": "Nincs automatikus jelszó-helyreállításunk, ezért Discordon keresztül felveheted velünk a kapcsolatot @klautcomputing vagy @ionoi címen, hogy új jelszót kérj."
+    },
+    "opponent_is_abusive": {
+        "answer": "Készíts screenshotot az esetről, és vedd fel velünk a kapcsolatot Discordon keresztül @klautcomputing vagy @ionoi címen. Megoldjuk a problémát.",
+        "question": "Mit tehetek, ha az ellenfelem zaklatóan viselkedik a játékban/chatben, vagy nem megfelelő felhasználóneve van?"
+    },
+    "how_to_review_games": {
+        "question": "Elemezhetek befejezett játékokat egy elemző eszközzel?",
+        "answer": "Igen, a befejezett játékoknál van egy mikroszkóp ikon, amely betölti a játékot az elemző módba, de ez a funkció jelenleg fejlesztés alatt áll, ezért még ne várj túl sokat tőle."
+    }
+}

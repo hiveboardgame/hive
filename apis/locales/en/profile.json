@@ -1,0 +1,27 @@
+{
+    "game_buttons": {
+        "unstarted": "Unstarted Tournament Games",
+        "playing": "Playing",
+        "finished": "Finished"
+    },
+    "color_buttons": {
+        "both": "Both",
+        "white": "White",
+        "black": "Black"
+    },
+    "result_buttons": {
+        "win": "Win",
+        "loss": "Loss",
+        "draw": "Draw",
+        "all": "All"
+    },
+    "stats_box":{
+        "total": "Total: {{count}}",
+        "wins": "Wins: {{count}}",
+        "losses": "Losses: {{count}}",
+        "draws": "Draws: {{count}}"
+    },
+    "player_color": "Player color:",
+    "gamo_result": "Game result:",
+    "include_speeds": "Included speeds:"
+}

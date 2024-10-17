@@ -1,0 +1,104 @@
+{
+    "title": "Foire Aux Questions",
+    "what_is_hivegame": {
+        "question": "Qu'est-ce que hivegame.com ?",
+        "answer": "hivegame.com est un projet communautaire visant à créer une nouvelle plateforme en ligne pour jouer à Hive® gratuitement. hivegame.com est sans publicité, open source, développé par les membres de la communauté, et officiellement soutenu par le créateur de Hive® John Yianni."
+    },
+    "how_to_help": {
+        "question": "Comment puis-je contribuer à la réussite de ce projet ?",
+        "answers": {
+            "item1": "Vous pouvez nous aider en contribuant à la <source_link>base de code.</source_link>",
+            "item2": "Vous pouvez nous aider en nous faisant part de vos idées, de vos commentaires et en vérifiant les illustrations sur <discord_link>Discord</discord_link>",
+            "item3": "Vous pouvez nous soutenir en faisant un <donate_link>don</donate_link>. Votre don permet de faire vivre le projet et soutenir les développeurs."
+        }
+    },
+    "how_does_it_operate": {
+        "question": "Comment fonctionne hivegame.com ?",
+        "answer": "Il est développé par les membres de la communauté, et 100% basé sur les dons. hivegame.com ne collectera jamais de données sur les utilisateurs, ne montrera jamais de publicités ou n'implémentera rien d'autre qui puisse vous distraire du jeu ou faire de l'argent."
+    },
+    "how_to_get_crown": {
+        "question": "Comment obtenir 👑 à côté de mon nom d'utilisateur ?",
+        "answer": "En faisant un don au projet !"
+    },
+    "what_is_hive": {
+        "question": "Qu'est-ce que Hive ?",
+        "answer": "Hive est un jeu de stratégie abstrait primé, conçu par John Yianni en 2000 et édité par <gen42_link>Gen42</gen42_link>."
+    },
+    "how_to_play_with_friends": {
+        "question": "Puis-je organiser une partie avec un(e) ami(e) ?",
+        "answers": {
+            "item1": "Oui, vous pouvez créer une partie en cliquant sur le bouton « Créer une partie » de la page principale, puis sélectionner l'option « Privé » et ensuite partager le lien avec un(e) ami(e). Il/Elle devra posséder/créer un compte pour pouvoir jouer.",
+            "item2": "Vous pouvez également envoyer une provocation directe en utilisant l'icône « épées croisées » à côté de chaque utilisateur.",
+            "item3": "Bien entendu, vous pouvez également lancer un défi ouvert qui peut être accepté par n'importe qui dans la fourchette de critères Elo et espérer qu'il soit le premier à accepter votre partie."
+        }
+    },
+    "how_to_check_stack": {
+        "question": "Comment puis-je voir ce qui se trouve sous une pièce ?",
+        "answers": {
+            "item1": "Sur mobile, appuyez longuement sur la pile pour l'agrandir. Une fois qu'elle est développée, vous pouvez déplacer votre doigt hors de l'écran pour voir également la pièce la plus basse.",
+            "item2": "Sur ordinateur de bureau, cliquez avec le bouton droit de la souris sur la pile et elle restera développée jusqu'à ce que vous la relâchiez."
+        }
+    },
+    "what_are_cornfirmation_modes": {
+        "question": "Que signifient les différents modes de confirmation ?",
+        "description": "Il existe trois modes de déplacement :",
+        "answers": {
+            "item3": "Confirmation par horloge : Le plus sûr, si vous voulez éviter de faire des mouvements par erreur. Cliquez d'abord sur l'endroit à placer/déplacer, puis pour confirmer et effectuer le déplacement, vous devez cliquer sur votre propre horloge.",
+            "item1": "Double clic : Par défaut, le premier clic place la pièce et le second clic effectue le déplacement.",
+            "item2": "Simple clic : Le plus rapide, si vous voulez ne pas perdre de temps dans les parties rapides. Attention à ne pas vous tromper de place, car le seul et unique clic déclenche immédiatement le déplacement."
+        }
+    },
+    "can_i_play_base_game": {
+        "answer": "Oui, mais pourquoi le feriez-vous ? Blague à part, le jeu de base est limité au jeu sans échanges. Hive PLM (les trois extensions : Pillbug, Ladybug, Mosquito) est le format officiel utilisé dans les tournois. C'est aussi le plus difficile et le plus amusant !",
+        "question": "Puis-je jouer au jeu de base sans les extensions ?"
+    },
+    "what_rating_system": {
+        "question": "Quel est le système d'évaluation utilisé par hivegame.com ?",
+        "answer": "Nous utilisons le système <glicko2_link>Glicko-2</glicko2_link>. Paramétré comme Lichess."
+    },
+    "how_to_recover_password": {
+        "question": "Que faire si j'ai oublié mon mot de passe ?",
+        "answer": "Nous n'avons pas encore de système de récupération automatique des mots de passe, vous pouvez nous contacter via Discord @klautcomputing / @ionoi et nous demander de réinitialiser votre mot de passe."
+    },
+    "why_basic_chat": {
+        "question": "Pourquoi le chat est-il si basique ?",
+        "details": "La fonctionnalité de chat est en cours d'élaboration, nous sommes conscients qu'elle présente des problèmes et qu'il est important de garder à l'esprit lors de son utilisation :",
+        "answers": {
+            "item2": "Pour l'instant, il n'est possible de chatter que dans une partie (des messages directs et d'autres modes seront ajoutés), les spectateurs ne voient pas le chat des joueurs et les joueurs ne voient pas le chat des spectateurs.",
+            "item3": "Parfois, la notification de chat rouge affiche de nouveaux messages alors qu'il n'y en a pas.",
+            "item1": "Actuellement, le chat n'est pas conservé dans la base de données. Par conséquent, lorsque nous effectuerons une mise à jour, vos messages de chat seront perdus !"
+        }
+    },
+    "where_to_meet_other_players": {
+        "answer": "Retrouvez les liens vers nos réseaux sociaux <resources_link>ici</resources_link>. La communauté Hive® est très amicale et vous trouverez sûrement quelqu'un près de chez vous pour jouer en face à face !",
+        "question": "Où puis-je rencontrer le reste de la communauté qui joue à Hive® dans le monde entier ?"
+    },
+    "why_elo_has_questionmark": {
+        "question": "Pourquoi mon elo est-il suivi d'un « ? » ?",
+        "answer": "Cela se produit alors que votre elo est encore incertain. Il disparaît lorsque vous avez joué suffisamment de parties et, une fois qu'il a disparu, vous pouvez également apparaître dans les classements."
+    },
+    "why_not_in_top_players": {
+        "question": "Pourquoi ne suis-je pas dans le classement des meilleurs joueurs ?",
+        "answer": "Vous n'avez pas encore joué suffisamment de parties pour que le système soit vraiment en mesure de déterminer la précision de votre classement. Continuez à jouer quelques parties de plus, essayez de les gagner et vous verrez."
+    },
+    "can_i_set_up_a_tournament": {
+        "question": "Puis-je organiser un tournoi ?",
+        "answer": "Oui, mais nous y travaillons encore. Vous pouvez nous contacter via Discord si vous souhaitez nous aider."
+    },
+    "can_i_play_with_bots": {
+        "question": "Puis-je jouer contre un robot ?",
+        "answer": "Cette fonctionnalité n'est pas encore prise en charge, mais elle pourrait l'être bientôt (contactez-nous si vous voulez nous aider à développer cette fonctionnalité)."
+    },
+    "opponent_is_abusive": {
+        "question": "Que puis-je faire si mon adversaire est violent ou perturbe le jeu/le chat ou s'il a un nom d'utilisateur inapproprié ?",
+        "answer": "Faites une capture d'écran du comportement et contactez-nous via Discord @klautcomputing / @ionoi, nous réglerons le problème."
+    },
+    "how_to_review_games": {
+        "question": "Puis-je revoir les parties terminées à l'aide d'un outil d'analyse ?",
+        "answer": "Oui, les parties terminées ont une icône de microscope qui charge le jeu en mode analyse, mais cette fonction est actuellement en cours de développement, alors soyez indulgents."
+    },
+    "where_to_learn_more": {
+        "question": "Comment puis-je en savoir plus sur la stratégie de Hive ?",
+        "answer": "Nous prévoyons d'ajouter un tutoriel interactif pour vous aider à apprendre et à comprendre toutes les idées stratégiques derrière le jeu, à l'avenir, consultez la section <resources_link>ressources</resources_link> pour des livres, des vidéos et le Discord !"
+    }
+}

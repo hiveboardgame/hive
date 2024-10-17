@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use crate::{
     common::TimeSignals,
     components::atoms::{input_slider::InputSlider, rating::icon_for_speed},
@@ -10,11 +11,17 @@ use std::str::FromStr;
 
 #[component]
 pub fn TimeSelect(
-    title: &'static str,
+    is_tournament: bool,
     time_signals: TimeSignals,
     on_value_change: Callback<String>,
     allowed_values: Vec<TimeMode>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
+    let title = if is_tournament {
+        "Match settings:".into_view()
+    } else {
+        t!(i18n, home.custom_game.title).into_view()
+    };
     let time_mode = move || time_signals.time_mode.get();
     let gamespeed_icon = move || {
         let speed = match time_mode() {
@@ -48,17 +55,17 @@ pub fn TimeSelect(
             >
                 <Show when=move || allow_realtime>
                     <RadioGroupItem value="Real Time" attr:class=radio_style>
-                        "Real Time"
+                        {t!(i18n, home.custom_game.mode.real_time.title)}
                     </RadioGroupItem>
                 </Show>
                 <Show when=move || allow_correspondence>
                     <RadioGroupItem value="Correspondence" attr:class=radio_style>
-                        "Correspondence"
+                        {t!(i18n, home.custom_game.mode.correspondence.title)}
                     </RadioGroupItem>
                 </Show>
                 <Show when=move || allow_untimed>
                     <RadioGroupItem value="Untimed" attr:class=radio_style>
-                        "Untimed"
+                        {t!(i18n, home.custom_game.mode.untimed)}
                     </RadioGroupItem>
                 </Show>
             </RadioGroupRoot>
@@ -68,9 +75,10 @@ pub fn TimeSelect(
             <div class="flex flex-col justify-center">
                 <label class="flex-col items-center">
                     <div>
-                        {move || {
-                            format!("Minutes per side: {}", time_signals.total_seconds.get() / 60)
-                        }}
+                        {t!(
+                            i18n, home.custom_game.mode.real_time.minutes_per_side, count = move ||
+                            time_signals.total_seconds.get() / 60
+                        )}
 
                     </div>
                     <InputSlider
@@ -83,7 +91,11 @@ pub fn TimeSelect(
                 </label>
                 <label class="flex-col items-center">
                     <div>
-                        {move || format!("Increment in sec: {}", time_signals.sec_per_move.get())}
+                        {t!(
+                            i18n, home.custom_game.mode.real_time.increment_in_seconds, count = move
+                            || time_signals.sec_per_move.get()
+                        )}
+
                     </div>
                     <InputSlider
                         signal_to_update=time_signals.step_sec
@@ -112,10 +124,10 @@ pub fn TimeSelect(
                 >
 
                     <RadioGroupItem value="Days per move" attr:class=radio_style>
-                        "Days per move"
+                        {t!(i18n, home.custom_game.mode.correspondence.days_per_move)}
                     </RadioGroupItem>
                     <RadioGroupItem value="Total time each" attr:class=radio_style>
-                        "Total time each"
+                        {t!(i18n, home.custom_game.mode.correspondence.total_time_each)}
                     </RadioGroupItem>
                 </RadioGroupRoot>
                 <div class="flex flex-row gap-4 p-3">
@@ -126,7 +138,13 @@ pub fn TimeSelect(
                         max=14
                         step=1
                     />
-                    <div class="flex">{time_signals.corr_days} day(s)</div>
+                    <div class="flex">
+                        {t!(
+                            i18n, home.custom_game.mode.correspondence.time, count = move ||
+                            time_signals.corr_days.get()
+                        )}
+
+                    </div>
                 </div>
             </div>
         </Show>

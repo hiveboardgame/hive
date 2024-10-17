@@ -1,0 +1,36 @@
+{
+    "title": "Liens de la Communauté",
+    "hive_news": {
+        "title": "Actualités de la ruche"
+    },
+    "online_tools": {
+        "title": "Outils en ligne"
+    },
+    "offline_tools": {
+        "title": "Outils hors-ligne"
+    },
+    "books": {
+        "title": "Livres"
+    },
+    "videos": {
+        "title": "Vidéos"
+    },
+    "publisher": {
+        "title": "Gen42 - Éditeur de Hive",
+        "links": {
+            "item1": "<gen42_link>Gen42 - Achetez le jeu physique ici</gen42_link>",
+            "item2": "<facebook_gen42_link>Gen42 - Facebook</facebook_gen42_link>",
+            "item4": "<instagram_gen42_link>Gen42 - Instagram</instagram_gen42_link>",
+            "item5": "<youtube_gen42_link>Gen42 - YouTube</youtube_gen42_link>"
+        }
+    },
+    "social_media": {
+        "links": {
+            "item3": "<facebook_link>Communauté mondiale Hive sur Facebook</facebook_link> Entrez en contact avec d'autres joueurs",
+            "item1": "<discord_link>Discord</discord_link> Rejoindre le chat de notre communauté",
+            "item2": "<reddit_link>Subreddit Hive</reddit_link> Partagez vos stratégies et vos expériences",
+            "item4": "<instagram_link>Instagram de Hive</instagram_link> Jolies photos et mèmes de la ruche"
+        },
+        "title": "Réseaux sociaux"
+    }
+}

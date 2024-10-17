@@ -1,0 +1,31 @@
+{
+    "home": "Home",
+    "community": {
+        "title": "Comunidade",
+        "top_players": "Top Jogadores",
+        "resources": "Recursos",
+        "faq": "FAQ"
+    },
+    "learn": {
+        "title": "Aprender",
+        "rules": "Regras",
+        "rules_summary": "Resumo das regras",
+        "analysis": "Análise"
+    },
+    "user_menu": {
+        "login": "Login",
+        "profile": "Perfil",
+        "edit_account": "Editar Conta",
+        "logout": "Sair",
+        "config": "Configurar"
+    },
+    "tournaments": {
+        "title": "Torneios",
+        "create": "Criar torneio",
+        "view": "Ver torneios"
+    },
+    "buy_game": "Comprar o jogo",
+    "donate": "Doar",
+    "support": "Apoiar",
+    "login": "Login"
+}

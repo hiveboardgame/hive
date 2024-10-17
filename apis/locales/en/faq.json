@@ -1,0 +1,105 @@
+{
+    "title": "Frequently asked questions",
+    "what_is_hivegame": {
+        "question": "What is hivegame.com?",
+        "answer": "hivegame.com is a community effort to create a new online platform to play Hive® for free. hivegame.com is ad-free, open source, developed by members of the community, and officially supported by the creator of Hive® John Yianni."
+    },
+    "how_to_help": {
+        "question": "How can I help this project thrive?",
+        "answers": {
+            "item1": "You can help us by contributing to the <source_link>code base.</source_link>",
+            "item2": "You can support us with ideas, feedback, and graphics check on <discord_link>Discord</discord_link>",
+            "item3": "You can keep the lights on with a <donate_link>donation.</donate_link> And once the lights are always on, your donation helps keeping the developers' lights on."
+        }
+    },
+    "how_does_it_operate": {
+        "question": "How does hivegame.com operate?",
+        "answer": "It's developed by communtity members, and 100% donation based. hivegame.com will never collect any user data, show ads or implement anything else that will distract you from the game or makes money."
+    },
+    "how_to_get_crown": {
+        "question": "How do I get a 👑 next to my username?",
+        "answer": "By donating to the project!"
+    },
+    "what_is_hive": {
+        "question": "What is Hive?",
+        "answer":"Hive is an award-winning abstract strategy game designed by John Yianni in 2000 and published by <gen42_link>Gen42</gen42_link>."
+    },
+    "how_to_play_with_friends": {
+        "question": "Can I set up a game with a friend?",
+        "answers": {
+            "item1": "Yes, you can create a game by clicking on the 'create a game' button of the main page, then select the ‘private’ option and afterwards share the link with a friend. They will need to have/create account to play.",
+            "item2": "Alternatively, you can send a direct challenge by using the 'crossed swords' icon next to each user, that will send a direct challenge to that specific user.",
+            "item3": "Of course, you can also set up an open challenge that can be accepted by anyone in the Elo range criteria and just hope they are first to accept your game."
+        }
+    },
+    "how_to_check_stack": {
+        "question": "How can I see what is under a piece?",
+        "answers": {
+            "item1": "On mobile, longpress on the stack to expand it. After it is expanded, you can move your finger out of the screen to see the lowest piece as well.",
+            "item2": "On desktop, right click on the stack and it will stay expanded until you let go."
+        }
+    },
+    "what_are_cornfirmation_modes": {
+        "question": "What do the different confirmation modes mean?",
+        "description": "When making a move there are 3 modes:",
+        "answers": {
+            "item1": "Double click - The default one, the first click places the piece and the second click makes the move.",
+            "item2": "Single click - The fast one, if you want to not lose time in fast games. Careful not to misplace because the one and only click immediately makes the move.",
+            "item3": "Clock confirm - The secure one, if you want to avoind making moves by mistake. First click where to place/move and then to confirm and make the move you have to click on your own timer."
+        }
+    },
+    "can_i_play_base_game": {
+        "question": "Can I play the base game without expansions?",
+        "answer": "Yes, but why would you? Bad joke aside, the base game is restricted to untraded play. Hive PLM (all three expansions: Pillbug, Ladybug, Mosquito) is the offical format used in tournaments. It's also the most challenging and fun!"
+    },
+    "what_rating_system": {
+        "question": "What rating system does hivegame.com use?",
+        "answer": "We use the <glicko2_link>Glicko-2</glicko2_link> system. Parameterized like Lichess."
+    },
+    "how_to_recover_password": {
+        "question": "What can I do if I forgot my password?",
+        "answer": "We don't have automatic password recovery yet, you can contact us via Discord @klautcomputing / @ionoi and ask us to reset your password."
+    },
+    "why_basic_chat": {
+        "question": "Why is chat so basic?",
+
+        "details": "The chat feature is very much a work in progress, we are aware it has issues, important things to keep in mind when using it:",
+        "answers": {
+            "item1": "Currently the chat is not persisted in the database so whenever we deploy an update your chat messages will be lost!",
+            "item2": "For now it is only possible to chat in a game (direct messages and other ways will be added), spectators don't see the player chat nor do the players see the spectator chat.",
+            "item3": "Sometimes the red chat notification will show new messages when there aren't any."
+        }
+    },
+    "opponent_is_abusive": {
+        "question": "What can I do if my opponent is abusive or disruptive in game/chat or has an inappropriate username, what can I do?",
+        "answer": "Screenshot the behaviour and contact us via Discord @klautcomputing / @ionoi we will sort it out."
+    },
+    "where_to_meet_other_players": {
+        "question": "Where can I get to know the rest of the community playing Hive® all around the world?",
+        "answer": "Find the links to our social media <resources_link>here</resources_link>. The Hive® community is very friendly and you will surely find someone close to you to play face to face as well!"
+    },
+    "why_elo_has_questionmark":{
+        "question": "Why does my elo have a “?” behind it?",
+        "answer": "This happens while your elo is still uncertain. It goes away once you have played enough games and once the ? is gone you can also show up on the leaderboards."
+    },
+    "why_not_in_top_players": {
+        "question": "Why do I not show up in the top ranked players?",
+        "answer": "You haven’t played enough games yet for the system to be really sure how accurate your rating is. Just keep playing a couple games more, hopefully win them and you will show up."
+    },
+    "how_to_review_games": {
+        "question": "Can I review finished games with an analysis tool?",
+        "answer": "Yes, finished games have a microscope icon that will load the game into analysis mode but this feature is currently under development, so don’t expect too much yet."
+    },
+    "where_to_learn_more": {
+        "question": "How can I learn more about the strategy of Hive?",
+        "answer": "We are planning on adding an interactive tutorial to help you learn and understand all the strategic ideas behind the game, in the future check the <resources_link>resources</resources_link> section for books, videos and the discord!"
+    },
+    "can_i_set_up_a_tournament": {
+        "question": "Can I set up a tournament?",
+        "answer": "Yes though we are still working on it. You can contact us via Discord if you want to help us out."
+    },
+    "can_i_play_with_bots": {
+        "question": "Can I play against a bot?",
+        "answer": "This feature is not supported yet, but it could be soon (get in contact with us if you want to help code this)."
+    }
+}

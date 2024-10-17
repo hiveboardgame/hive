@@ -3,11 +3,13 @@ use crate::components::molecules::chat_and_controls::ChatAndControls;
 use crate::components::organisms::{
     darkmode_toggle::DarkModeToggle,
     dropdowns::{
-        community::CommunityDropdown, learn::LearnDropdown, mobile::MobileDropdown,
-        notification::NotificationDropdown, tournament::TournamentDropdown, user::UserDropdown,
+        community::CommunityDropdown, learn::LearnDropdown, locale::LocaleDropdown,
+        mobile::MobileDropdown, notification::NotificationDropdown, tournament::TournamentDropdown,
+        user::UserDropdown,
     },
     sound_toggle::SoundToggle,
 };
+use crate::i18n::*;
 use crate::providers::AuthContext;
 use leptos::*;
 use leptos_router::use_location;
@@ -23,7 +25,7 @@ pub fn Header() -> impl IntoView {
         Some(Ok(Some(user))) => Some(user.username),
         _ => None,
     };
-
+    let i18n = use_i18n();
     view! {
         <header class="w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none">
             <div class="flex gap-1 items-center">
@@ -33,7 +35,7 @@ pub fn Header() -> impl IntoView {
                         class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
                         href="/"
                     >
-                        Home
+                        {t!(i18n, header.home)}
                     </a>
                     <CommunityDropdown/>
                     <LearnDropdown/>
@@ -44,13 +46,13 @@ pub fn Header() -> impl IntoView {
                         rel="external"
                         target="_blank"
                     >
-                        Buy Game
+                        {t!(i18n, header.buy_game)}
                     </a>
                     <a
                         class="block p-2 h-full font-bold uppercase whitespace-nowrap transition-transform duration-300 transform dark:text-[#FAB93F] text-[#2A6560] hover:text-pillbug-teal active:scale-95"
                         href="/donate"
                     >
-                        Donate
+                        {t!(i18n, header.donate)}
                     </a>
                 </div>
             </div>
@@ -64,6 +66,7 @@ pub fn Header() -> impl IntoView {
                     <div class="flex items-center mr-1">
                         <ChatAndControls/>
                         <SoundToggle/>
+                        <LocaleDropdown/>
                         <NotificationDropdown/>
                         <UserDropdown username=username().expect("Username is some")/>
                     </div>
@@ -79,6 +82,7 @@ fn GuestActions() -> impl IntoView {
         <div class="flex items-center mr-1">
             <ChatAndControls/>
             <SoundToggle/>
+            <LocaleDropdown/>
             <DarkModeToggle extend_tw_classes="max-h-6 sm:max-h-7"/>
             <a
                 class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
