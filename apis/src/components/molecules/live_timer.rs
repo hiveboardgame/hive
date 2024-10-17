@@ -6,7 +6,10 @@ use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;
 use leptos::*;
 use leptos_router::RouterContext;
-use leptos_use::{use_interval_fn_with_options, utils::Pausable, UseIntervalFnOptions};
+use leptos_use::{
+    use_interval_fn_with_options, watch_with_options, whenever_with_options, UseIntervalFnOptions,
+    WatchOptions,
+};
 use regex::Regex;
 use shared_types::GameId;
 use std::time::Duration;
@@ -18,7 +21,6 @@ lazy_static! {
 
 #[component]
 pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
-    let timer_signals = expect_context::<TimerSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let sounds = expect_context::<SoundsSignal>();
     let auth_context = expect_context::<AuthContext>();
@@ -26,111 +28,65 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         Some(Ok(Some(user))) => Some(user.id),
         _ => None,
     });
-
     let user_color = game_state.user_color_as_signal(user_id.into());
     let in_progress = create_read_slice(game_state.signal, |gs| {
         gs.game_response
             .as_ref()
             .map_or(false, |gr| gr.game_status == GameStatus::InProgress)
     });
-
-    let time_is_zero = Memo::new(move |_| {
-        let timer = timer_signals.signal.get();
-        let time_left = match side() {
-            Color::White => timer.white_time_left.unwrap_or_default(),
-            Color::Black => timer.black_time_left.unwrap_or_default(),
-        };
-        time_left == Duration::from_secs(0)
-    });
-    let user_needs_warning: Memo<bool> = Memo::new(move |_| {
-        if let Some(color) = user_color() {
-            let trigger_at = timer_signals.low_time.trigger_at.get();
-            if color != side() || trigger_at.is_none() {
-                return false;
-            }
-
-            let trigger_at = trigger_at.unwrap_or_default();
-
-            let timer = timer_signals.signal.get();
-            let time_left = match color {
-                Color::White => timer.white_time_left.unwrap_or_default(),
-                Color::Black => timer.black_time_left.unwrap_or_default(),
-            };
-
-            return !timer.finished
-                && !timer_signals.low_time.issued.get()
-                && time_left < trigger_at;
-        }
-        false
-    });
-
-    let should_refresh_warning: Memo<bool> = Memo::new(move |_| {
-        if let Some(color) = user_color() {
-            let refresh_at = timer_signals.low_time.refresh_at.get();
-            if color != side() || refresh_at.is_none() {
-                return false;
-            }
-
-            let refresh_at = refresh_at.unwrap_or(Duration::MAX);
-            let timer = timer_signals.signal.get();
-            let time_left = match color {
-                Color::White => timer.white_time_left.unwrap_or_default(),
-                Color::Black => timer.black_time_left.unwrap_or_default(),
-            };
-
-            return !timer.finished
-                && timer_signals.low_time.issued.get()
-                && time_left > refresh_at;
-        }
-        false
-    });
-    let time_is_red = Memo::new(move |_| {
-        if time_is_zero() {
-            String::from("bg-ladybug-red")
-        } else {
-            String::new()
-        }
-    });
+    let timer = expect_context::<TimerSignal>().signal;
     let tick_rate = Duration::from_millis(100);
-    let Pausable { pause, resume, .. } = use_interval_fn_with_options(
+    let interval = use_interval_fn_with_options(
         move || {
-            let timer = timer_signals.signal.get();
-            if !timer.finished {
-                batch(move || {
-                    timer_signals.signal.update(|timer| {
-                        if timer.turn % 2 == 0 {
-                            timer.white_time_left = timer.white_time_left.map(|t| {
-                                t.checked_sub(tick_rate).unwrap_or(Duration::from_secs(0))
-                            });
-                        } else {
-                            timer.black_time_left = timer.black_time_left.map(|t| {
-                                t.checked_sub(tick_rate).unwrap_or(Duration::from_secs(0))
-                            });
-                        }
-                    });
-                });
-            }
+            timer.update(|t| {
+                let upd = &mut if t.turn % 2 == 0 {
+                    t.white_time_left
+                } else {
+                    t.black_time_left
+                };
+                *upd = upd.map(|t| t.saturating_sub(tick_rate));
+            })
         },
         100,
         UseIntervalFnOptions::default().immediate(false),
     );
-
-    create_effect(move |_| {
-        let timer = timer_signals.signal.get();
-        if in_progress() {
-            if (side() == Color::White) == (timer.turn % 2 == 0) && !timer.finished {
-                resume();
-            } else {
-                pause();
-            }
-        } else {
-            pause();
-        }
+    let should_resume = Signal::derive(move || {
+        let timer = timer();
+        in_progress() && (side() == Color::White) == (timer.turn % 2 == 0) && !timer.finished
     });
+    let time_is_zero = Signal::derive(move || timer().time_left(side()).is_zero());
+    let user_needs_warning = Signal::derive(move || {
+        user_color().map_or(false, |color| {
+            let timer = timer();
+            timer.low_time_trigger_at().map_or(false, |trigger_at| {
+                if color == side() {
+                    let time_left = timer.time_left(color);
+                    !timer.finished && time_left < trigger_at && interval.is_active.get()
+                } else {
+                    false
+                }
+            })
+        })
+    });
+    #[allow(unused)]
+    watch_with_options(
+        should_resume,
+        move |v, _, _| {
+            if *v {
+                (interval.resume)();
+            } else {
+                (interval.pause)();
+            }
+        },
+        //Has immediate = true, hence not unused
+        WatchOptions::default().immediate(true),
+    );
 
-    create_effect(move |_| {
-        // When time runs out declare winner and style timer that ran out
-        if time_is_zero() && !timer_signals.signal.get().finished {
+    #[allow(unused)]
+    whenever_with_options(
+        move || time_is_zero() && !timer().finished,
+        move |v, _, _| {
+            // When time runs out declare winner and style timer that ran out
             let api = ApiRequests::new();
             let router = expect_context::<RouterContext>();
             if let Some(caps) = NANOID.captures(&router.pathname().get_untracked()) {
@@ -139,34 +95,35 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
                     api.game_check_time(&game_id);
                 }
             }
-        }
-    });
-
-    create_effect(move |_| {
-        if user_needs_warning() {
+        },
+        //Has immediate = true, hence not unused
+        WatchOptions::default().immediate(true),
+    );
+    #[allow(unused)]
+    whenever_with_options(
+        user_needs_warning,
+        move |_, _, _| {
             sounds.play_sound(SoundType::LowTime);
-            timer_signals.low_time.issued.set(true);
-        }
-    });
-    create_effect(move |_| {
-        if should_refresh_warning() {
-            timer_signals.low_time.issued.set(false);
-        }
-    });
+        },
+        //Has immediate = true, hence not unused
+        // send warning at most every 15 seconds
+        WatchOptions::default().immediate(true).throttle(15000.0),
+    );
 
     view! {
         <div class=move || {
             format!(
                 "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
-                time_is_red(),
+                if time_is_zero() {
+                    "bg-ladybug-red"
+                } else {
+                    ""
+                },
             )
         }>
             {move || {
-                let timer = timer_signals.signal.get();
-                let time_left = match side() {
-                    Color::White => timer.white_time_left.unwrap_or_default(),
-                    Color::Black => timer.black_time_left.unwrap_or_default(),
-                };
+                let timer = timer();
+                let time_left = timer.time_left(side());
                 timer.time_mode.time_remaining(time_left)
             }}
 
