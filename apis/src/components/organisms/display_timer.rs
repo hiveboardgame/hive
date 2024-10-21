@@ -51,9 +51,9 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                 "h-full flex justify-center md:leading-4 row-span-2 md:row-span-1 short:row-span-2 short:text-xs items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none"),
         true => ("flex grow justify-end items-center", "w-14 h-14 grow-0 duration-300",""),
     };
-    let timer = expect_context::<TimerSignal>();
+    let timer = expect_context::<TimerSignal>().signal;
     let active_side = create_memo(move |_| {
-        let timer = timer.signal.get();
+        let timer = timer();
         match timer.finished {
             true => "bg-stone-200 dark:bg-reserve-twilight",
             false => {
@@ -109,7 +109,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                 <Show
                     when=move || {
                         matches!(
-                            timer.signal.get().time_mode,
+                            timer().time_mode,
                             TimeMode::Correspondence | TimeMode::RealTime
                         )
                     }
