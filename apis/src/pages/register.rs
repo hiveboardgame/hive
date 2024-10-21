@@ -195,7 +195,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
 
                 <Show when=move || pw_invalid() && (!pw().is_empty())>
                     <small class="text-ladybug-red">
-                        [t!(i18n, user_config.create_account.password_error)]
+                        {t!(i18n, user_config.create_account.password_error)}
                     </small>
                 </Show>
 
