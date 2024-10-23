@@ -15,7 +15,7 @@ leptos_meta =  { version = "0.6", features = ["nightly"] }
 leptos_router =  { version = "0.6", features = ["nightly"] }
 leptos_actix =  { version = "0.6" }
 leptos_icons = { version = "0.3"}
-leptos_i18n = { version = "0.4" }
+leptos_i18n = { version = "0.4"}
 icondata = {version = "0.4"}
 actix-web = { version = "4",  features = ["macros"] }
 actix-files = { version = "0.6" }
