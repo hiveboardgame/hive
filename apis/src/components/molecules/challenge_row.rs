@@ -1,13 +1,10 @@
 use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::components::molecules::time_row::TimeRow;
 use crate::i18n::*;
-use crate::providers::ApiRequests;
+use crate::providers::{ApiRequests, Config};
 use crate::{
-    components::atoms::game_type::GameType,
-    components::atoms::profile_link::ProfileLink,
-    functions::hostname::hostname_and_port,
-    providers::{AuthContext, ColorScheme},
-    responses::ChallengeResponse,
+    components::atoms::game_type::GameType, components::atoms::profile_link::ProfileLink,
+    functions::hostname::hostname_and_port, providers::AuthContext, responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
 use leptos::*;
@@ -20,20 +17,20 @@ use shared_types::{ChallengeVisibility, TimeInfo};
 pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
     let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
-    let color_context = expect_context::<ColorScheme>;
+    let config = expect_context::<Config>().0;
     let icon = move || match challenge().color_choice {
         ColorChoice::Random => {
             view! { <Icon icon=icondata::BsHexagonHalf class="pb-[2px]"/> }
         }
         ColorChoice::White => {
-            if (color_context().prefers_dark)() {
+            if config().prefers_dark {
                 view! { <Icon icon=icondata::BsHexagonFill class="fill-white pb-[2px]"/> }
             } else {
                 view! { <Icon icon=icondata::BsHexagon class="stroke-black pb-[2px]"/> }
             }
         }
         ColorChoice::Black => {
-            if (color_context().prefers_dark)() {
+            if config().prefers_dark {
                 view! { <Icon icon=icondata::BsHexagon class="stroke-white pb-[2px]"/> }
             } else {
                 view! { <Icon icon=icondata::BsHexagonFill class="fill-black pb-[2px]"/> }

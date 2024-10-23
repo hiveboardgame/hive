@@ -1,7 +1,6 @@
 use crate::i18n::*;
 use crate::{common::TileDots, providers::Config};
 use leptos::*;
-use leptos_router::ActionForm;
 #[component]
 pub fn TileDotsToggle() -> impl IntoView {
     let i18n = use_i18n();
@@ -19,9 +18,10 @@ pub fn TileDotsToggle() -> impl IntoView {
 pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
     let i18n = use_i18n();
     let tile_dots = store_value(tile_dots);
-    let config = expect_context::<Config>();
+    let config = expect_context::<Config>().0;
+    let (_, set_cookie) = Config::get_cookie();
     let is_active = move || {
-        if (config.tile_dots.preferred_tile_dots)() == tile_dots() {
+        if config().tile_dots == tile_dots() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -29,12 +29,7 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
     };
 
     view! {
-        <ActionForm
-            action=config.tile_dots.action
-            class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer"
-        >
-            <input type="hidden" name="tile_dots" value=tile_dots().to_string()/>
-
+        <div class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer">
             <button
                 class=move || {
                     format!(
@@ -43,7 +38,14 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
                     )
                 }
 
-                type="submit"
+                on:click=move |_| {
+                    set_cookie
+                        .update(|c| {
+                            if let Some(cookie) = c {
+                                cookie.tile_dots = tile_dots();
+                            }
+                        });
+                }
             >
 
                 {match tile_dots() {
@@ -53,6 +55,6 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
                 }}
 
             </button>
-        </ActionForm>
+        </div>
     }
 }

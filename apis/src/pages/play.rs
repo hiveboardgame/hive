@@ -33,13 +33,13 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let orientation_signal = expect_context::<OrientationSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
-    let config = expect_context::<Config>();
+    let config = expect_context::<Config>().0;
     let current_confirm = Memo::new(move |_| {
         game_state
             .loaded
             .get()
             .then(|| {
-                let preferred_confirms = (config.confirm_mode.preferred_confirms)();
+                let preferred_confirms = config().confirm_mode;
                 game_state
                     .signal
                     .get_untracked()

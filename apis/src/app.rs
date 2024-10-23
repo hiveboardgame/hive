@@ -29,9 +29,9 @@ use crate::{
         challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state,
         games::provide_games, games_search::provide_profile_games,
         navigation_controller::provide_navigation_controller, online_users::provide_users,
-        provide_alerts, provide_auth, provide_challenge_params, provide_color_scheme,
-        provide_config, provide_notifications, provide_ping, provide_sounds,
-        refocus::provide_refocus, schedules::provide_schedules, timer::provide_timer,
+        provide_alerts, provide_auth, provide_challenge_params, provide_config,
+        provide_notifications, provide_ping, provide_sounds, refocus::provide_refocus,
+        schedules::provide_schedules, timer::provide_timer,
         tournament_ready::provide_tournament_ready, tournaments::provide_tournaments,
         user_search::provide_user_search, websocket::provide_websocket,
     },
@@ -48,7 +48,6 @@ const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
 
 #[component]
 pub fn App() -> impl IntoView {
-    provide_color_scheme();
     provide_config();
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
