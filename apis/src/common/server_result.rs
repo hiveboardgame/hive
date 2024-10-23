@@ -19,7 +19,7 @@ pub enum ServerResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum CommonMessage {
+pub enum WebsocketMessage {
     Server(ServerResult),
     Client(ClientRequest),
 }

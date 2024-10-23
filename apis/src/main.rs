@@ -1,22 +1,19 @@
 pub mod common;
 pub mod functions;
 pub mod jobs;
-pub mod lag_tracking;
-pub mod ping;
+pub mod providers;
 pub mod responses;
-pub mod websockets;
+pub mod websocket;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
 use actix_web::middleware::Compress;
-use lag_tracking::lags::Lags;
-use ping::pings::Pings;
-use websockets::tournament_game_start::TournamentGameStart;
+use websocket::{Lags, Pings, TournamentGameStart};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websockets::{chat::Chats, start_connection, ws_server::WsServer};
+    use crate::websocket::{Chats, start_connection, WsServer};
     use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
@@ -59,9 +56,9 @@ async fn main() -> std::io::Result<()> {
     let websocket_server = Data::new(WsServer::new(pings.clone(), pool.clone()).start());
     let tournament_game_start = Data::new(TournamentGameStart::new());
 
-    jobs::tournament_start::run(pool.clone(), Data::clone(&websocket_server));
-    jobs::heartbeat::run(Data::clone(&websocket_server));
-    jobs::ping::run(Data::clone(&websocket_server));
+    jobs::tournament_start(pool.clone(), Data::clone(&websocket_server));
+    jobs::heartbeat(Data::clone(&websocket_server));
+    jobs::ping(Data::clone(&websocket_server));
 
     println!("listening on http://{}", &addr);
 
@@ -82,7 +79,7 @@ async fn main() -> std::io::Result<()> {
             .service(Files::new("/assets", site_root))
             // serve the favicon from /favicon.ico
             .service(favicon)
-            .service(start_connection::start_connection)
+            .service(start_connection)
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(
                 leptos_options.to_owned(),
