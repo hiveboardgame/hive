@@ -42,12 +42,12 @@ pub fn OnlineUsers() -> impl IntoView {
                 prop:value=pattern
                 attr:maxlength="20"
             />
-        <Show when=move || pattern().is_empty()
-            fallback=move || {
-                t!(i18n, home.found_players)
-            }>
-            {t!(i18n, home.online_players, count = num)}
-        </Show>
+            <Show
+                when=move || pattern().is_empty()
+                fallback=move || { t!(i18n, home.found_players) }
+            >
+                {t!(i18n, home.online_players, count = num)}
+            </Show>
             <div class="overflow-y-auto max-h-96">
                 <For each=users key=move |(_, user)| user.uid let:user>
                     <UserRow actions=vec![UserAction::Challenge] user=store_value(user.1)/>

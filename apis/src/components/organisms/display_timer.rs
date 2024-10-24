@@ -108,10 +108,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
             <button on:click=onclick class=button_class>
                 <Show
                     when=move || {
-                        matches!(
-                            timer().time_mode,
-                            TimeMode::Correspondence | TimeMode::RealTime
-                        )
+                        matches!(timer().time_mode, TimeMode::Correspondence | TimeMode::RealTime)
                     }
 
                     fallback=|| {
