@@ -1,29 +1,29 @@
-use crate::providers::ColorScheme;
+use crate::providers::Config;
 use leptos::*;
-use leptos_router::ActionForm;
 
 #[component]
 pub fn DarkModeToggle(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let color_scheme = expect_context::<ColorScheme>();
+    let config = expect_context::<Config>().0;
+    let (_, set_cookie) = Config::get_cookie();
     view! {
-        <ActionForm
-            action=color_scheme.action
-            class=format!(
-                "inline-flex justify-center items-center m-1 rounded dark:bg-orange-twilight bg-gray-950 {extend_tw_classes}",
-            )
-        >
+        <div class=format!(
+            "inline-flex justify-center items-center m-1 rounded dark:bg-orange-twilight bg-gray-950 {extend_tw_classes}",
+        )>
 
-            <input
-                type="hidden"
-                name="prefers_dark"
-                value=move || (!(color_scheme.prefers_dark)()).to_string()
-            />
             <button
-                type="submit"
+                on:click=move |_| {
+                    set_cookie
+                        .update(|c| {
+                            if let Some(cookie) = c {
+                                cookie.prefers_dark = !config().prefers_dark;
+                            }
+                        });
+                }
+
                 class="flex justify-center items-center px-1 py-2 w-full h-full"
-                value=move || { if (color_scheme.prefers_dark)() { "dark" } else { "light" } }
+                value=move || { if config().prefers_dark { "dark" } else { "light" } }
                 inner_html=move || {
-                    if (color_scheme.prefers_dark)() {
+                    if config().prefers_dark {
                         r#"<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-4 text-hive-black bg-orange-twilight dark:text-text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                             </svg>
@@ -37,6 +37,6 @@ pub fn DarkModeToggle(#[prop(optional)] extend_tw_classes: &'static str) -> impl
                 }
             >
             </button>
-        </ActionForm>
+        </div>
     }
 }

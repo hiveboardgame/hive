@@ -113,8 +113,8 @@ pub fn Board(
     };
 
     let straight = {
-        let config = expect_context::<Config>();
-        (config.tile_design.preferred_tile_design)() == TileDesign::ThreeD
+        let config = expect_context::<Config>().0;
+        config().tile_design == TileDesign::ThreeD
     };
 
     let update_once = create_effect(move |_| {
@@ -139,8 +139,8 @@ pub fn Board(
     });
 
     let straight = {
-        let config = expect_context::<Config>();
-        (config.tile_design.preferred_tile_design)() == TileDesign::ThreeD
+        let config = expect_context::<Config>().0;
+        config().tile_design == TileDesign::ThreeD
     };
 
     //This handles board resizes

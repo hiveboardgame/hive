@@ -1,10 +1,11 @@
 use crate::components::atoms::{og::OG, title::Title};
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
+use crate::providers::Config;
 use crate::providers::{
     game_state::GameStateSignal, load_audio_buffer,
     navigation_controller::NavigationControllerSignal, refocus::RefocusSignal,
-    websocket::WebsocketContext, AuthContext, ColorScheme, PingContext, SoundsSignal,
+    websocket::WebsocketContext, AuthContext, PingContext, SoundsSignal,
 };
 use cfg_if::cfg_if;
 use chrono::Utc;
@@ -57,7 +58,7 @@ pub struct OrientationSignal {
 
 #[component]
 pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
-    let color_scheme = expect_context::<ColorScheme>();
+    let config = expect_context::<Config>().0;
     let sounds_signal = expect_context::<SoundsSignal>();
     let ping = expect_context::<PingContext>();
     let ws = expect_context::<WebsocketContext>();
@@ -96,7 +97,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     }
 
     let color_scheme_meta = move || {
-        if (color_scheme.prefers_dark)() {
+        if config().prefers_dark {
             "dark".to_string()
         } else {
             "light".to_string()
@@ -283,7 +284,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             content="width=device-width, initial-scale=1, interactive-widget=resizes-content, user-scalable=no"
         />
         <Html class=move || {
-            match (color_scheme.prefers_dark)() {
+            match config().prefers_dark {
                 true => "dark",
                 false => "",
             }

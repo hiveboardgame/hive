@@ -1,33 +1,9 @@
-use crate::functions::config::sound::ToggleSound;
+use super::Config;
 use leptos::*;
 use rand::Rng;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{js_sys::ArrayBuffer, AudioBuffer, AudioContext, Response};
-
-#[cfg(not(feature = "ssr"))]
-fn initial_prefers_sound() -> bool {
-    use wasm_bindgen::JsCast;
-
-    let doc = document().unchecked_into::<web_sys::HtmlDocument>();
-    let cookie = doc.cookie().unwrap_or_default();
-    cookie.contains("sound=true")
-}
-
-#[cfg(feature = "ssr")]
-fn initial_prefers_sound() -> bool {
-    use_context::<actix_web::HttpRequest>()
-        .and_then(|req| {
-            req.cookies()
-                .map(|cookies| {
-                    cookies
-                        .iter()
-                        .any(|cookie| cookie.name() == "sound" && cookie.value() == "true")
-                })
-                .ok()
-        })
-        .unwrap_or(false)
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SoundType {
@@ -38,9 +14,7 @@ pub enum SoundType {
 
 #[derive(Clone)]
 pub struct SoundsSignal {
-    pub action: Action<ToggleSound, Result<bool, ServerFnError>>,
     pub context: RwSignal<Option<AudioContext>>,
-    pub prefers_sound: Signal<bool>,
     pub turn: RwSignal<Option<AudioBuffer>>,
     pub low: RwSignal<Option<AudioBuffer>>,
     pub new: RwSignal<Option<AudioBuffer>>,
@@ -48,7 +22,8 @@ pub struct SoundsSignal {
 
 impl SoundsSignal {
     pub fn play_sound(&self, kind: SoundType) {
-        if !self.prefers_sound.get() {
+        let config = expect_context::<Config>().0;
+        if !config().prefers_sound {
             return;
         };
         if let Some(context) = self.context.get() {
@@ -82,37 +57,15 @@ pub async fn load_audio_buffer(context: &AudioContext, url: &str) -> Result<Audi
     Ok(audio_buffer)
 }
 
-pub fn provide_sounds() -> Signal<bool> {
+pub fn provide_sounds() {
     let context = RwSignal::new(None);
     let turn = RwSignal::new(None);
     let low = RwSignal::new(None);
     let new = RwSignal::new(None);
-    let initial = initial_prefers_sound();
-
-    let toggle_sound_action = create_server_action::<ToggleSound>();
-    // input is Some(value) when pending, and None if not pending
-    let input = toggle_sound_action.input();
-    // value contains most recently-returned value
-    let value = toggle_sound_action.value();
-
-    let prefers_sound_fn = move || {
-        match (input(), value()) {
-            // if there's some current input, use that optimistically
-            (Some(submission), _) => submission.prefers_sound,
-            // otherwise, if there was a previous value confirmed by server, use that
-            (_, Some(Ok(value))) => value,
-            // otherwise, use the initial value
-            _ => initial,
-        }
-    };
-    let prefers_sound = Signal::derive(prefers_sound_fn);
     provide_context(SoundsSignal {
-        action: toggle_sound_action,
         context,
-        prefers_sound,
         turn,
         low,
         new,
     });
-    prefers_sound
 }
