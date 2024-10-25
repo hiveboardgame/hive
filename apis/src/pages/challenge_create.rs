@@ -23,7 +23,7 @@ pub fn ChallengeCreate(
 ) -> impl IntoView {
     view! {
         <Show when=open>
-            <ChallengeCreateInner opponent=opponent.clone() open/>
+            <ChallengeCreateInner opponent=opponent.clone() open />
         </Show>
     }
 }
@@ -181,12 +181,12 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
                 /> {t!(i18n, home.custom_game.rated)}
             </div>
             <div class="flex gap-1 p-1">
-                Base <SimpleSwitch checked=params.with_expansions optional_action=make_unrated/> MLP
+                Base <SimpleSwitch checked=params.with_expansions optional_action=make_unrated />MLP
             </div>
 
             <Show when=move || opponent().is_none()>
                 <div class="flex gap-1 p-1">
-                    {t!(i18n, home.custom_game.private)} <SimpleSwitch checked=params.is_public/>
+                    {t!(i18n, home.custom_game.private)} <SimpleSwitch checked=params.is_public />
                     {t!(i18n, home.custom_game.public)}
                 </div>
                 <p class="flex justify-center">{t!(i18n, home.custom_game.rating_range)}</p>

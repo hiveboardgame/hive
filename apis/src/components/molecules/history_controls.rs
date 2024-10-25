@@ -84,8 +84,8 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
                 />
             </div>
             <div class="flex p-2">
-                <Reserve alignment=Alignment::DoubleRow color=Color::White analysis=false/>
-                <Reserve alignment=Alignment::DoubleRow color=Color::Black analysis=false/>
+                <Reserve alignment=Alignment::DoubleRow color=Color::White analysis=false />
+                <Reserve alignment=Alignment::DoubleRow color=Color::Black analysis=false />
             </div>
         </div>
     }

@@ -76,7 +76,7 @@ pub fn BoardPieces() -> impl IntoView {
         board()
             .into_iter()
             .map(|hs| {
-                view! { <HexStackView hex_stack=hs/> }
+                view! { <HexStackView hex_stack=hs /> }
             })
             .collect_view()
     }

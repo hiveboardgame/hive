@@ -93,15 +93,15 @@ pub fn Challenges() -> impl IntoView {
             </thead>
             <tbody>
                 <For each=move || { direct() } key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
+                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false />
                 </For>
                 <tr class="h-2"></tr>
                 <For each=move || { own() } key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
+                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false />
                 </For>
                 <tr class="h-2"></tr>
                 <For each=move || { public() } key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
+                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false />
                 </For>
             </tbody>
         </table>

@@ -20,9 +20,9 @@ pub fn ChatAndControls() -> impl IntoView {
     view! {
         <Show when=in_mobile_game>
             <Show when=move || !is_finished()>
-                <ToggleControls/>
+                <ToggleControls />
             </Show>
-            <ChatDropdown destination=SimpleDestination::Game/>
+            <ChatDropdown destination=SimpleDestination::Game />
         </Show>
     }
 }

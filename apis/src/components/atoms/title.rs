@@ -19,5 +19,5 @@ pub fn Title() -> impl IntoView {
         })
     };
 
-    view! { <T text=title_text/> }
+    view! { <T text=title_text /> }
 }

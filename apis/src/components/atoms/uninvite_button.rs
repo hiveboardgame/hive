@@ -39,7 +39,7 @@ pub fn UninviteButton(
                 on:click=uninvite
                 class="p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
             >
-                <Icon icon=icondata::AiUserDeleteOutlined class="w-6 h-6"/>
+                <Icon icon=icondata::AiUserDeleteOutlined class="w-6 h-6" />
             </button>
         </Show>
     }

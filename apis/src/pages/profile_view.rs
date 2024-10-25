@@ -86,7 +86,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
         <div class="flex flex-col pt-12 mx-3 bg-light dark:bg-gray-950">
             <Show when=move || ctx.user.get().is_some()>
                 <div class="flex flex-col m-1 w-full">
-                    <DisplayProfile user=ctx.user.get().unwrap()/>
+                    <DisplayProfile user=ctx.user.get().unwrap() />
                     <div class="flex flex-col m-1 w-full">
                         <RadioGroupRoot
                             attr:class="flex flex-wrap gap-1"
@@ -191,8 +191,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                     Callback::new(move |v: Vec<String>| {
                                         controls
                                             .update(|c| {
-                                                c
-                                                    .speeds = v
+                                                c.speeds = v
                                                     .iter()
                                                     .map(|s| GameSpeed::from_str(s).unwrap())
                                                     .collect();
@@ -278,7 +277,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     view! {
         <div node_ref=el class="flex flex-col overflow-x-hidden items-center h-[51vh]">
             <For each=ctx.games key=move |game| (game.uuid, tab_view) let:game>
-                <GameRow game=store_value(game)/>
+                <GameRow game=store_value(game) />
             </For>
         </div>
     }

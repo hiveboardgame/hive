@@ -100,7 +100,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     view! {
         <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
 
-            <HistoryControls parent=parent.into()/>
+            <HistoryControls parent=parent.into() />
             <div ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
                 <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
@@ -122,7 +122,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                         on:click=analysis_setup
                     >
                         <div class="flex gap-1 justify-center items-center">
-                            <Icon icon=icondata::TbMicroscope class="py-1 w-7 h-7"/>
+                            <Icon icon=icondata::TbMicroscope class="py-1 w-7 h-7" />
                             "Analyze here"
                         </div>
                     </a>

@@ -8,8 +8,8 @@ pub fn TileRotationToggle() -> impl IntoView {
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.rotation)}</p>
         <div class="flex">
-            <TileRotationButton tile_rotation=TileRotation::No/>
-            <TileRotationButton tile_rotation=TileRotation::Yes/>
+            <TileRotationButton tile_rotation=TileRotation::No />
+            <TileRotationButton tile_rotation=TileRotation::Yes />
         </div>
     }
 }

@@ -68,7 +68,7 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
             }
         >
 
-            <Icon icon=icon_data/>
+            <Icon icon=icon_data />
             {display_text}
         </button>
     }
@@ -81,17 +81,17 @@ pub fn QuickPlay() -> impl IntoView {
     view! {
         <div class="flex flex-col items-center m-2 grow">
             <Modal open dialog_el=dialog_el>
-                <ChallengeCreate open/>
+                <ChallengeCreate open />
             </Modal>
             <span class="flex justify-center mb-4 text-xl font-bold">
                 {t!(i18n, home.create_game)}
             </span>
             <div class="grid grid-cols-2 gap-2 place-items-center w-full sm:gap-4 sm:grid-cols-3">
-                <GridButton time_control=Bullet1p2/>
-                <GridButton time_control=Blitz3p3/>
-                <GridButton time_control=Blitz5p4/>
-                <GridButton time_control=Rapid10p10/>
-                <GridButton time_control=Classic20p20/>
+                <GridButton time_control=Bullet1p2 />
+                <GridButton time_control=Blitz3p3 />
+                <GridButton time_control=Blitz5p4 />
+                <GridButton time_control=Rapid10p10 />
+                <GridButton time_control=Classic20p20 />
                 <button
                     class=BUTTON_STYLE
                     on:click=move |_| {

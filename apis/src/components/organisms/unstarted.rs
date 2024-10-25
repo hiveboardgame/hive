@@ -70,11 +70,11 @@ pub fn Unstarted(
                         <Show
                             when=white_ready
                             fallback=|| {
-                                view! { <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/> }
+                                view! { <Icon icon=icondata::IoCloseSharp class="w-6 h-6" /> }
                             }
                         >
 
-                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6"/>
+                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6" />
                         </Show>
 
                     </div>
@@ -84,11 +84,11 @@ pub fn Unstarted(
                         <Show
                             when=black_ready
                             fallback=|| {
-                                view! { <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/> }
+                                view! { <Icon icon=icondata::IoCloseSharp class="w-6 h-6" /> }
                             }
                         >
 
-                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6"/>
+                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6" />
                         </Show>
 
                     </div>

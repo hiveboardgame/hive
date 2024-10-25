@@ -24,10 +24,10 @@ pub fn TileDesignToggle() -> impl IntoView {
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.piece_style)}</p>
         <div class="flex">
-            <TileDesignButton tile_design=TileDesign::Official/>
-            <TileDesignButton tile_design=TileDesign::Flat/>
+            <TileDesignButton tile_design=TileDesign::Official />
+            <TileDesignButton tile_design=TileDesign::Flat />
             <Show when=good_software>
-                <TileDesignButton tile_design=TileDesign::ThreeD/>
+                <TileDesignButton tile_design=TileDesign::ThreeD />
             </Show>
         </div>
     }

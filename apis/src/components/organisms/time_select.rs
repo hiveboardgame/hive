@@ -32,7 +32,7 @@ pub fn TimeSelect(
                 Some(time_signals.sec_per_move.get()),
             ),
         };
-        view! { <Icon width="50" height="50" class="p-2" icon=icon_for_speed(&speed)/> }
+        view! { <Icon width="50" height="50" class="p-2" icon=icon_for_speed(&speed) /> }
     };
     let radio_style = "flex items-center p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded data-[state=checked]:bg-button-dawn dark:data-[state=checked]:bg-button-twilight data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700 data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700";
     let allow_realtime = allowed_values.contains(&TimeMode::RealTime);

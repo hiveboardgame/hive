@@ -34,7 +34,7 @@ pub fn HistoryPieces() -> impl IntoView {
         history_pieces()
             .into_iter()
             .map(|hs| {
-                view! { <HexStackView hex_stack=hs/> }
+                view! { <HexStackView hex_stack=hs /> }
             })
             .collect_view()
     }

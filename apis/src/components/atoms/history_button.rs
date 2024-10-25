@@ -52,7 +52,7 @@ pub fn HistoryButton(
             on:click=debounced_action
         >
 
-            <Icon icon=icon/>
+            <Icon icon=icon />
         </button>
     }
 }

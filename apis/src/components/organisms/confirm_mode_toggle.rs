@@ -11,9 +11,9 @@ pub fn ConfirmModeToggle(game_speed: GameSpeed) -> impl IntoView {
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.move_confirm)}</p>
         <div class="flex">
-            <ConfirmModeButton move_confirm=MoveConfirm::Single game_speed=game_speed()/>
-            <ConfirmModeButton move_confirm=MoveConfirm::Double game_speed=game_speed()/>
-            <ConfirmModeButton move_confirm=MoveConfirm::Clock game_speed=game_speed()/>
+            <ConfirmModeButton move_confirm=MoveConfirm::Single game_speed=game_speed() />
+            <ConfirmModeButton move_confirm=MoveConfirm::Double game_speed=game_speed() />
+            <ConfirmModeButton move_confirm=MoveConfirm::Clock game_speed=game_speed() />
         </div>
     }
 }
@@ -65,7 +65,7 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> im
                 }
             >
 
-                <Icon icon=icon class="w-6 h-6"/>
+                <Icon icon=icon class="w-6 h-6" />
             </button>
         </div>
     }

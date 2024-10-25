@@ -39,7 +39,7 @@ pub fn AcceptDenyGc(
             }
         >
 
-            <Icon icon=icon class="w-6 h-6 lg:h-8 lg:w-8"/>
+            <Icon icon=icon class="w-6 h-6 lg:h-8 lg:w-8" />
         </button>
     }
 }
@@ -160,7 +160,7 @@ pub fn ConfirmButton(
                     on:click=cancel
                     class="absolute ml-1 bg-red-700 rounded-sm duration-300 aspect-square hover:bg-ladybug-red"
                 >
-                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6 lg:h-8 lg:w-8"/>
+                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6 lg:h-8 lg:w-8" />
                 </button>
             </Show>
         </div>

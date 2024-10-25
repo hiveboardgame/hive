@@ -8,29 +8,29 @@ pub fn Resources() -> impl IntoView {
     let header_class = "text-2xl font-semibold mb-4";
     let list_class = "space-y-2";
     let tournaments_site =
-        |children| view! { <SimpleLink link="https://www.worldhivetournaments.com/" children/> };
+        |children| view! { <SimpleLink link="https://www.worldhivetournaments.com/" children /> };
     let entomology_link =
-        |children| view! { <SimpleLink link="https://entomology.gitlab.io/ " children/> };
-    let explorer_link = |children| view! { <SimpleLink link="https://hive.bot.nu/" children/> };
-    let hexketch_link = |children| view! { <SimpleLink link="https://hextech.net/" children/> };
+        |children| view! { <SimpleLink link="https://entomology.gitlab.io/ " children /> };
+    let explorer_link = |children| view! { <SimpleLink link="https://hive.bot.nu/" children /> };
+    let hexketch_link = |children| view! { <SimpleLink link="https://hextech.net/" children /> };
     let mzinga_link =
-        |children| view! { <SimpleLink link="https://github.com/jonthysell/Mzinga" children/> };
+        |children| view! { <SimpleLink link="https://github.com/jonthysell/Mzinga" children /> };
     let nokamute_link =
-        |children| view! { <SimpleLink link="https://github.com/edre/nokamute" children/> };
+        |children| view! { <SimpleLink link="https://github.com/edre/nokamute" children /> };
     let bga_downloader_link =
-        |children| view! { <SimpleLink link="https://github.com/DavidEGx/Hive-bga2bs" children/> };
+        |children| view! { <SimpleLink link="https://github.com/DavidEGx/Hive-bga2bs" children /> };
     let discord_link =
-        |children| view! { <SimpleLink link="https://discord.gg/djdQZPFa7E" children/> };
+        |children| view! { <SimpleLink link="https://discord.gg/djdQZPFa7E" children /> };
     let reddit_link =
-        |children| view! { <SimpleLink link="https://www.reddit.com/r/hive/" children/> };
+        |children| view! { <SimpleLink link="https://www.reddit.com/r/hive/" children /> };
     let facebook_link = |children| {
-        view! { <SimpleLink link="https://www.facebook.com/groups/hivetheboardlessgame" children/> }
+        view! { <SimpleLink link="https://www.facebook.com/groups/hivetheboardlessgame" children /> }
     };
     let instagram_link = |children: ChildrenFn| {
-        view! { <SimpleLink link="https://www.instagram.com/world_hive_community/" children=children/> }
+        view! { <SimpleLink link="https://www.instagram.com/world_hive_community/" children=children /> }
     };
     let hive_champion_link = |children| {
-        view! { <SimpleLink link="https://sites.google.com/site/playhivelikeachampion/home" children/> }
+        view! { <SimpleLink link="https://sites.google.com/site/playhivelikeachampion/home" children /> }
     };
     let hive_canon_link = |children| {
         view! {
@@ -41,36 +41,36 @@ pub fn Resources() -> impl IntoView {
         }
     };
     let hive_puzzles_link = |children| {
-        view! { <SimpleLink link="https://gripot.se/hive/HivePuzzles_vol1.pdf" children/> }
+        view! { <SimpleLink link="https://gripot.se/hive/HivePuzzles_vol1.pdf" children /> }
     };
     let frasco_link = |children| {
-        view! { <SimpleLink link="https://www.youtube.com/@AdAbstraGames" children/> }
+        view! { <SimpleLink link="https://www.youtube.com/@AdAbstraGames" children /> }
     };
     let ringersol_link = |children| {
-        view! { <SimpleLink link="https://www.youtube.com/playhivelikeachampion" children/> }
+        view! { <SimpleLink link="https://www.youtube.com/playhivelikeachampion" children /> }
     };
     let ordep_cubik_link = |children| {
-        view! { <SimpleLink link="https://www.youtube.com/@OrdepCubik" children/> }
+        view! { <SimpleLink link="https://www.youtube.com/@OrdepCubik" children /> }
     };
     let cavaliers16_link = |children| {
-        view! { <SimpleLink link="https://www.twitch.tv/cavaliers16" children/> }
+        view! { <SimpleLink link="https://www.twitch.tv/cavaliers16" children /> }
     };
     let gen42_link = |children| {
-        view! { <SimpleLink link="https://www.gen42.com/" children/> }
+        view! { <SimpleLink link="https://www.gen42.com/" children /> }
     };
     let facebook_gen42_link = |children| {
-        view! { <SimpleLink link="https://www.facebook.com/HiveGen42Games" children/> }
+        view! { <SimpleLink link="https://www.facebook.com/HiveGen42Games" children /> }
     };
     let instagram_gen42_link = |children| {
-        view! { <SimpleLink link="https://www.instagram.com/gen42games/" children=children/> }
+        view! { <SimpleLink link="https://www.instagram.com/gen42games/" children=children /> }
     };
     let youtube_gen42_link = |children| {
-        view! { <SimpleLink link="https://www.youtube.com/@Gen42games" children=children/> }
+        view! { <SimpleLink link="https://www.youtube.com/@Gen42games" children=children /> }
     };
     view! {
         <div class="px-4 pt-20">
             <div class="container px-4 mx-auto">
-                <Banner title={ t!(i18n, resources.title) }.into_view()/>
+                <Banner title={ t!(i18n, resources.title) }.into_view() />
                 <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
                     <section>
                         <h2 class=header_class>{t!(i18n, resources.hive_news.title)}</h2>

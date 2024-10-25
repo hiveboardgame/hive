@@ -17,18 +17,18 @@ pub fn Config() -> impl IntoView {
     let i18n = use_i18n();
     let game_speed = RwSignal::new(GameSpeed::Blitz);
     let icon = move || {
-        view! { <Icon width="50" height="50" class="p-2" icon=icon_for_speed(&game_speed())/> }
+        view! { <Icon width="50" height="50" class="p-2" icon=icon_for_speed(&game_speed()) /> }
     };
     let toggle = move || {
         let game_speed = game_speed();
-        view! { <ConfirmModeToggle game_speed/> }
+        view! { <ConfirmModeToggle game_speed /> }
     };
     view! {
         <div class="flex flex-col pt-10 sm:flex-row">
             <div class="m-1">
-                <TileDesignToggle/>
-                <TileRotationToggle/>
-                <TileDotsToggle/>
+                <TileDesignToggle />
+                <TileRotationToggle />
+                <TileDotsToggle />
                 <label class="mr-1">
                     <div class="flex items-center">
                         {icon} <p>{t!(i18n, user_config.game_speed)}</p>
@@ -77,11 +77,11 @@ pub fn Config() -> impl IntoView {
                 </label>
                 {toggle}
                 <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.color_scheme)}</p>
-                <DarkModeToggle/>
+                <DarkModeToggle />
             </div>
             <div class="m-1">
                 <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.preview)}</p>
-                <PreviewTiles/>
+                <PreviewTiles />
             </div>
         </div>
     }

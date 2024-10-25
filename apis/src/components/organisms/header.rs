@@ -29,7 +29,7 @@ pub fn Header() -> impl IntoView {
     view! {
         <header class="w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none">
             <div class="flex gap-1 items-center">
-                <MobileDropdown/>
+                <MobileDropdown />
                 <div class="hidden lg:flex lg:items-center lg:gap-1">
                     <a
                         class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
@@ -37,9 +37,9 @@ pub fn Header() -> impl IntoView {
                     >
                         {t!(i18n, header.home)}
                     </a>
-                    <CommunityDropdown/>
-                    <LearnDropdown/>
-                    <TournamentDropdown/>
+                    <CommunityDropdown />
+                    <LearnDropdown />
+                    <TournamentDropdown />
                     <a
                         class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
                         href="https://www.gen42.com/"
@@ -56,19 +56,19 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </div>
             </div>
-            <Transition fallback=|| view! { <GuestActions/> }>
-                <Show when=move || username().is_some() fallback=|| view! { <GuestActions/> }>
+            <Transition fallback=|| view! { <GuestActions /> }>
+                <Show when=move || username().is_some() fallback=|| view! { <GuestActions /> }>
                     <div class="flex items-center">
-                        <NextGameButton time_mode=store_value(TimeMode::RealTime)/>
-                        <NextGameButton time_mode=store_value(TimeMode::Correspondence)/>
-                        <NextGameButton time_mode=store_value(TimeMode::Untimed)/>
+                        <NextGameButton time_mode=store_value(TimeMode::RealTime) />
+                        <NextGameButton time_mode=store_value(TimeMode::Correspondence) />
+                        <NextGameButton time_mode=store_value(TimeMode::Untimed) />
                     </div>
                     <div class="flex items-center mr-1">
-                        <ChatAndControls/>
-                        <SoundToggle/>
-                        <LocaleDropdown/>
-                        <NotificationDropdown/>
-                        <UserDropdown username=username().expect("Username is some")/>
+                        <ChatAndControls />
+                        <SoundToggle />
+                        <LocaleDropdown />
+                        <NotificationDropdown />
+                        <UserDropdown username=username().expect("Username is some") />
                     </div>
                 </Show>
             </Transition>
@@ -80,10 +80,10 @@ pub fn Header() -> impl IntoView {
 fn GuestActions() -> impl IntoView {
     view! {
         <div class="flex items-center mr-1">
-            <ChatAndControls/>
-            <SoundToggle/>
-            <LocaleDropdown/>
-            <DarkModeToggle extend_tw_classes="max-h-6 sm:max-h-7"/>
+            <ChatAndControls />
+            <SoundToggle />
+            <LocaleDropdown />
+            <DarkModeToggle extend_tw_classes="max-h-6 sm:max-h-7" />
             <a
                 class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                 href="/login"

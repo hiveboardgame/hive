@@ -135,12 +135,12 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     view! {
         <article class="flex relative px-2 py-4 mx-2 w-full h-72 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="mx-2 w-60 h-60">
-                <ThumbnailPieces game/>
+                <ThumbnailPieces game />
             </div>
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">
                 <div class="flex flex-col justify-between">
                     <div class="flex gap-1">
-                        {rated_string} <TimeRow time_info=time_info.into()/>
+                        {rated_string} <TimeRow time_info=time_info.into() />
                         <Show when=move || {
                             game().tournament.is_some()
                         }>
@@ -162,30 +162,30 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                 <div class="flex gap-1 justify-center items-center w-full">
                     <div class="mr-2">
                         <div class="flex items-center">
-                            <StatusIndicator username=game().white_player.username/>
+                            <StatusIndicator username=game().white_player.username />
                             <ProfileLink
                                 patreon=game().white_player.patreon
                                 username=game().white_player.username
                             />
                         </div>
-                        <br/>
+                        <br />
                         <Show when=is_finished fallback=move || { game().white_rating() }>
-                            <RatingAndChange ratings side=Color::White/>
+                            <RatingAndChange ratings side=Color::White />
                         </Show>
 
                     </div>
-                    <Icon icon=icondata::RiSwordOthersLine/>
+                    <Icon icon=icondata::RiSwordOthersLine />
                     <div class="ml-2">
                         <div class="flex items-center">
-                            <StatusIndicator username=game().black_player.username/>
+                            <StatusIndicator username=game().black_player.username />
                             <ProfileLink
                                 username=game().black_player.username
                                 patreon=game().black_player.patreon
                             />
                         </div>
-                        <br/>
+                        <br />
                         <Show when=is_finished fallback=move || { game().black_rating() }>
-                            <RatingAndChange ratings side=Color::Black/>
+                            <RatingAndChange ratings side=Color::Black />
                         </Show>
                     </div>
                 </div>
@@ -195,7 +195,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     </Show>
                 </div>
                 <div class="flex gap-1 justify-between items-center w-full">
-                    {history_string} <DownloadPgn game=game/>
+                    {history_string} <DownloadPgn game=game />
                 </div>
             </div>
             <a

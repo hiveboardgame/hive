@@ -121,12 +121,12 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                     }
                 >
 
-                    <LiveTimer side/>
+                    <LiveTimer side />
                 </Show>
             </button>
             <Show when=move || !vertical>
                 <div class=classes>
-                    <UserWithRating side=side() text_color=text_color()/>
+                    <UserWithRating side=side() text_color=text_color() />
                 </div>
             </Show>
         </div>

@@ -317,14 +317,14 @@ pub fn TournamentCreate() -> impl IntoView {
                         </select>
                     </div>
                     <div class="flex mb-2">
-                        <SimpleSwitch checked=tournament.invite_only/>
+                        <SimpleSwitch checked=tournament.invite_only />
                         <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
                             Invite Only
                         </label>
                     </div>
                     <div class="flex flex-col mb-2">
                         <div class="flex">
-                            <SimpleSwitch checked=organizer_start/>
+                            <SimpleSwitch checked=organizer_start />
                             <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
                                 Manual start
                             </label>
@@ -348,7 +348,7 @@ pub fn TournamentCreate() -> impl IntoView {
                     </div>
                     <div class="flex gap-1 mb-2">
                         <Show when=move || time_signals.time_mode.get() == TimeMode::RealTime>
-                            <SimpleSwitch checked=fixed_round_duration/>
+                            <SimpleSwitch checked=fixed_round_duration />
                             <label class="text-sm font-medium text-gray-900 dark:text-gray-300">
                                 Fixed round duration
                             </label>
@@ -372,7 +372,12 @@ pub fn TournamentCreate() -> impl IntoView {
                 </div>
                 <div class="basis-1/2">
                     <div class="flex flex-col items-center">
-                        <TimeSelect is_tournament=true time_signals on_value_change allowed_values/>
+                        <TimeSelect
+                            is_tournament=true
+                            time_signals
+                            on_value_change
+                            allowed_values
+                        />
                         <div class="flex">{rating_string}</div>
                         <div class="flex">
                             <div class="flex gap-1 my-1">

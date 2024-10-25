@@ -167,7 +167,7 @@ pub fn Reserve(
         stacked_pieces()
             .into_iter()
             .map(|hex_stack| {
-                view! { <HexStack hex_stack=hex_stack/> }
+                view! { <HexStack hex_stack=hex_stack /> }
             })
             .collect_view()
     };
@@ -203,13 +203,13 @@ pub fn ReserveContent(player_color: Memo<Color>) -> impl IntoView {
         })
     };
     view! {
-        <Reserve color=top_color alignment=Alignment::DoubleRow analysis=false/>
+        <Reserve color=top_color alignment=Alignment::DoubleRow analysis=false />
         <div class="flex flex-row-reverse justify-center items-center">
-            <AnalysisAndDownload/>
+            <AnalysisAndDownload />
             <Show when=show_buttons>
-                <ControlButtons/>
+                <ControlButtons />
             </Show>
         </div>
-        <Reserve color=bottom_color alignment=Alignment::DoubleRow analysis=false/>
+        <Reserve color=bottom_color alignment=Alignment::DoubleRow analysis=false />
     }
 }

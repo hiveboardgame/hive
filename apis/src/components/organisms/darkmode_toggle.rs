@@ -35,8 +35,7 @@ pub fn DarkModeToggle(#[prop(optional)] extend_tw_classes: &'static str) -> impl
                         "#
                     }
                 }
-            >
-            </button>
+            ></button>
         </div>
     }
 }

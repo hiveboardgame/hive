@@ -116,7 +116,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 /* All other nodes are placed at the same level as the parent
                 in a regular HistoryMove node */
                 view! {
-                    <HistoryMove current_path node/>
+                    <HistoryMove current_path node />
                     {content}
                 }
             };
@@ -146,7 +146,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                     action=HistoryNavigation::Next
                     post_action=focus
                 />
-                <UndoButton/>
+                <UndoButton />
             </div>
             <Show when=move || !mobile>
                 <div class="flex flex-col p-4">
@@ -166,9 +166,9 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
             </Show>
             <div class="flex justify-between w-full">
                 <Show when=move || walk_tree().is_some()>
-                    <DownloadTree tree=analysis.get().unwrap()/>
+                    <DownloadTree tree=analysis.get().unwrap() />
                 </Show>
-                <LoadTree/>
+                <LoadTree />
             </div>
             <div class="overflow-y-auto p-1">{walk_tree}</div>
         </div>
