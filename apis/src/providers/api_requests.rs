@@ -8,7 +8,7 @@ use crate::responses::create_challenge_handler;
 use hive_lib::{GameControl, Turn};
 use leptos::*;
 use shared_types::{
-    ChallengeId, ChatMessageContainer, GameId, GamesQueryOptions, TournamentGameResult,
+    ChallengeId, ChatMessageContainer, GameId, GamesQueryOptions, Takeback, TournamentGameResult,
     TournamentId,
 };
 
@@ -161,6 +161,10 @@ impl ApiRequests {
     }
     pub fn user_profile(&self, username: String) {
         let msg = ClientRequest::UserProfile(username);
+        self.websocket.send(&msg);
+    }
+    pub fn set_server_user_conf(&self, takeback: Takeback) {
+        let msg = ClientRequest::SetServerUserConf(takeback);
         self.websocket.send(&msg);
     }
 }

@@ -18,6 +18,7 @@ pub mod reserve;
 pub mod side_board;
 pub mod sound_toggle;
 pub mod standings;
+pub mod takeback_conf;
 pub mod tile_design_toggle;
 pub mod tile_dots_toggle;
 pub mod tile_rotation_toggle;
