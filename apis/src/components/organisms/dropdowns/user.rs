@@ -43,9 +43,9 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             >
                 {t!(i18n, header.user_menu.config)}
             </a>
-            <DarkModeToggle/>
-            <Logout on:submit=move |_| onclick_close()/>
-            <Ping/>
+            <DarkModeToggle />
+            <Logout on:submit=move |_| onclick_close() />
+            <Ping />
         </Hamburger>
     }
 }

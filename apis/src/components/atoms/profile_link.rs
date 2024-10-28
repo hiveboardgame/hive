@@ -31,12 +31,12 @@ pub fn ProfileLink(
                     extend_tw_classes,
                 )>
                     {username} <Show when=patreon>
-                        <Icon icon=icondata::LuCrown class="w-2 h-2"/>
+                        <Icon icon=icondata::LuCrown class="w-2 h-2" />
                     </Show>
                 </div>
             </a>
             <Show when=hover_show>
-                <HoverRating user=user_is_hoverable.expect("Showing because it's some")/>
+                <HoverRating user=user_is_hoverable.expect("Showing because it's some") />
             </Show>
         </div>
     }

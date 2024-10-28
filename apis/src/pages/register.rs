@@ -129,7 +129,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             {t!(i18n, user_config.create_account.username.error.invalid)}
                         </small>
                     </Show>
-                    <br/>
+                    <br />
                     <small>{t!(i18n, user_config.create_account.username.description)}</small>
                 </label>
                 <label class="mb-2">
@@ -159,7 +159,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             {t!(i18n, user_config.create_account.email.error.invalid)}
                         </small>
                     </Show>
-                    <br/>
+                    <br />
                     <small>{t!(i18n, user_config.create_account.email.description)}</small>
                 </label>
                 <label>
@@ -199,7 +199,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     </small>
                 </Show>
 
-                <input type="hidden" name="pathname" value=pathname().0/>
+                <input type="hidden" name="pathname" value=pathname().0 />
                 <div class="flex items-center mb-2">
                     <input
                         on:change=move |_| agree.update(|b| *b = !*b)

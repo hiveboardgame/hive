@@ -48,7 +48,7 @@ pub fn UndoButton() -> impl IntoView {
             on:click=undo
             prop:disabled=is_disabled
         >
-            <Icon icon=icondata::BiUndoRegular class="w-6 h-6"/>
+            <Icon icon=icondata::BiUndoRegular class="w-6 h-6" />
         </button>
     }
 }
@@ -109,7 +109,7 @@ pub fn HistoryButton(
             on:click=debounced_action
         >
 
-            <Icon icon=icon/>
+            <Icon icon=icon />
         </button>
     }
 }
@@ -197,9 +197,9 @@ pub fn CollapsibleMove(
                         </svg>
                     </button>
                 </CollapsibleTrigger>
-                <HistoryMove current_path node=node.clone()/>
+                <HistoryMove current_path node=node.clone() />
             </div>
-            <CollapsibleContent children=children.clone() attr:class="nested-content"/>
+            <CollapsibleContent children=children.clone() attr:class="nested-content" />
         </CollapsibleRoot>
     }
 }

@@ -175,7 +175,7 @@ pub fn PieceWithOnClick(
 
     view! {
         <g on:click=onclick class=sepia>
-            <PieceWithoutOnClick piece position level/>
+            <PieceWithoutOnClick piece position level />
         </g>
     }
 }
@@ -191,7 +191,7 @@ pub fn Piece(
     // TODO: hand in tile_design and don't get it all the time from config
 ) -> impl IntoView {
     if simple {
-        return view! { <PieceWithoutOnClick piece position level/> };
+        return view! { <PieceWithoutOnClick piece position level /> };
     }
-    view! { <PieceWithOnClick piece position level piece_type/> }.into_view()
+    view! { <PieceWithOnClick piece position level piece_type /> }.into_view()
 }

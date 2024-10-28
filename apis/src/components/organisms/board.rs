@@ -356,11 +356,11 @@ pub fn Board(
                         when=move || { View::History == board_view() && !last_turn() }
 
                         fallback=move || {
-                            view! { <BoardPieces/> }
+                            view! { <BoardPieces /> }
                         }
                     >
 
-                        <HistoryPieces/>
+                        <HistoryPieces />
                     </Show>
                 </g>
             </svg>

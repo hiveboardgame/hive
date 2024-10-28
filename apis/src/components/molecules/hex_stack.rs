@@ -76,12 +76,12 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
             if is_expandable {
                 view! {
                     <g ref=g_ref>
-                        <Hex hex=hex on:pointerdown=rightclick_expand/>
+                        <Hex hex=hex on:pointerdown=rightclick_expand />
                     </g>
                 }
                 .into_view()
             } else {
-                view! { <Hex hex=hex/> }
+                view! { <Hex hex=hex /> }
             }
         })
         .collect_view()

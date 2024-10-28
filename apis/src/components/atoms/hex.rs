@@ -34,40 +34,40 @@ pub fn Hex(hex: Hex) -> impl IntoView {
                 .is_none()
                 || hex.level == 0
             {
-                view! { <Active position=hex.position level=expanded_level/> }
+                view! { <Active position=hex.position level=expanded_level /> }
             } else {
-                view! { <Active position=hex.position level=expanded_sublevel/> }
+                view! { <Active position=hex.position level=expanded_sublevel /> }
             }
         }
         HexType::Target => {
             if hex.level == 0 {
-                view! { <Target position=hex.position level=hex.level/> }
+                view! { <Target position=hex.position level=hex.level /> }
             } else {
-                view! { <Target position=hex.position level=expanded_sublevel/> }
+                view! { <Target position=hex.position level=expanded_sublevel /> }
             }
         }
         HexType::Tile(piece, piece_type) => match piece_type {
             PieceType::Board | PieceType::Covered | PieceType::History => {
-                view! { <Piece piece=piece position=hex.position level=expanded_level piece_type=piece_type/> }
+                view! { <Piece piece=piece position=hex.position level=expanded_level piece_type=piece_type /> }
             }
             PieceType::Move => {
-                view! { <Piece piece=piece position=hex.position level=expanded_sublevel piece_type=piece_type/> }
+                view! { <Piece piece=piece position=hex.position level=expanded_sublevel piece_type=piece_type /> }
             }
             PieceType::Spawn => {
-                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type/> }
+                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> }
             }
             _ => {
-                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type/> }
+                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> }
             }
         },
         HexType::LastMove(Direction::To) => {
-            view! { <LastMove position=hex.position level=expanded_level direction=Direction::To/> }
+            view! { <LastMove position=hex.position level=expanded_level direction=Direction::To /> }
         }
         HexType::LastMove(Direction::From) => {
             if hex.level == 0 {
-                view! { <LastMove position=hex.position level=hex.level direction=Direction::From/> }
+                view! { <LastMove position=hex.position level=hex.level direction=Direction::From /> }
             } else {
-                view! { <LastMove position=hex.position level=expanded_sublevel direction=Direction::From/> }
+                view! { <LastMove position=hex.position level=expanded_sublevel direction=Direction::From /> }
             }
         }
     }

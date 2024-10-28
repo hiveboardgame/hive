@@ -47,9 +47,9 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 when=is_tall
                 fallback=move || {
                     view! {
-                        <Board/>
+                        <Board />
                         <div class="flex flex-col col-span-2 row-span-6 p-1 h-full border-2 border-black select-none dark:border-white">
-                            <History/>
+                            <History />
                         </div>
                     }
                 }
@@ -58,10 +58,10 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <div class="flex flex-col h-[85dvh]">
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
-                            <Reserve alignment=Alignment::SingleRow color=top_color analysis=true/>
+                            <Reserve alignment=Alignment::SingleRow color=top_color analysis=true />
                         </div>
                     </div>
-                    <Board overwrite_tw_classes="flex grow min-h-0"/>
+                    <Board overwrite_tw_classes="flex grow min-h-0" />
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
                             <Reserve
@@ -72,7 +72,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         </div>
                     </div>
                 </div>
-                <History mobile=true/>
+                <History mobile=true />
             </Show>
         </div>
     }

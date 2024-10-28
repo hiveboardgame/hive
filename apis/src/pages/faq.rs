@@ -9,27 +9,27 @@ pub fn Faq() -> impl IntoView {
     let paragraph_class = "mt-2 text-base";
     let div_class = "p-3";
     let source_link = |children| {
-        view! { <SimpleLink link="https://github.com/hiveboardgame/hive" children/> }
+        view! { <SimpleLink link="https://github.com/hiveboardgame/hive" children /> }
     };
     let discord_link = |children| {
-        view! { <SimpleLink link="https://discord.gg/jNTjr5vj9Z" children/> }
+        view! { <SimpleLink link="https://discord.gg/jNTjr5vj9Z" children /> }
     };
     let donate_link = |children| {
-        view! { <SimpleLink link="/donate" children=children/> }
+        view! { <SimpleLink link="/donate" children=children /> }
     };
     let gen42_link = |children| {
-        view! { <SimpleLink link="https://www.gen42.com/" children/> }
+        view! { <SimpleLink link="https://www.gen42.com/" children /> }
     };
     let glicko2_link = |children| {
-        view! { <SimpleLink link="https://en.wikipedia.org/wiki/Glicko-2" children/> }
+        view! { <SimpleLink link="https://en.wikipedia.org/wiki/Glicko-2" children /> }
     };
     let resources_link = |children| {
-        view! { <SimpleLink link="/resources" children=children/> }
+        view! { <SimpleLink link="/resources" children=children /> }
     };
     view! {
         <div class="pt-20">
             <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
-                <Banner title=t!(i18n, faq.title).into_view()/>
+                <Banner title=t!(i18n, faq.title).into_view() />
 
                 <div class="space-y-10 md:space-y-0 md:grid md:grid-cols-1 md:gap-x-6 lg:gap-x-8">
                     <div class=div_class>

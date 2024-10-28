@@ -26,7 +26,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                             view! {
                                 <div class="flex flex-col m-2 w-fit">
                                     <div class="flex gap-1 items-center">
-                                        <Icon icon=icon_for_speed(&speed())/>
+                                        <Icon icon=icon_for_speed(&speed()) />
                                         {speed().to_string()}
                                         :
                                     </div>

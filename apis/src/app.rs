@@ -76,7 +76,7 @@ pub fn App() -> impl IntoView {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)
             .same_site(SameSite::Lax)>
-            <Stylesheet id="leptos" href="/pkg/HiveGame.css"/>
+            <Stylesheet id="leptos" href="/pkg/HiveGame.css" />
             <Router trailing_slash=TrailingSlash::Redirect>
                 <Routes>
                     <Route
@@ -84,19 +84,19 @@ pub fn App() -> impl IntoView {
                         view=|| {
                             view! {
                                 <BaseLayout>
-                                    <Outlet/>
+                                    <Outlet />
                                 </BaseLayout>
                             }
                         }
                     >
 
-                        <Route path="" ssr=SsrMode::InOrder view=|| view! { <Home/> }/>
+                        <Route path="" ssr=SsrMode::InOrder view=|| view! { <Home /> } />
                         <Route
                             path="/@/:username"
                             view=|| {
                                 view! {
                                     <ProfileView>
-                                        <Outlet/>
+                                        <Outlet />
                                     </ProfileView>
                                 }
                             }
@@ -104,45 +104,45 @@ pub fn App() -> impl IntoView {
 
                             <Route
                                 path=""
-                                view=|| view! { <DisplayGames tab_view=GameProgress::Playing/> }
+                                view=|| view! { <DisplayGames tab_view=GameProgress::Playing /> }
                             />
                             <Route
                                 path="playing"
-                                view=|| view! { <DisplayGames tab_view=GameProgress::Playing/> }
+                                view=|| view! { <DisplayGames tab_view=GameProgress::Playing /> }
                             />
                             <Route
                                 path="finished"
-                                view=|| view! { <DisplayGames tab_view=GameProgress::Finished/> }
+                                view=|| view! { <DisplayGames tab_view=GameProgress::Finished /> }
                             />
                             <Route
                                 path="unstarted"
-                                view=|| view! { <DisplayGames tab_view=GameProgress::Unstarted/> }
+                                view=|| view! { <DisplayGames tab_view=GameProgress::Unstarted /> }
                             />
                         </Route>
-                        <Route path="/register" view=|| view! { <Register/> }/>
-                        <Route path="/top_players" view=|| view! { <TopPlayers/> }/>
-                        <Route path="/login" view=|| view! { <Login/> }/>
-                        <Route path="/account" view=|| view! { <Account/> }/>
-                        <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView/> }/>
-                        <Route path="/analysis" view=|| view! { <Analysis/> }/>
-                        <Route path="/config" view=|| view! { <Config/> }/>
-                        <Route path="/tournament/:nanoid" view=|| view! { <Tournament/> }/>
-                        <Route path="/tournaments/create" view=|| view! { <TournamentCreate/> }/>
-                        <Route path="/tournaments" view=|| view! { <Tournaments/> }/>
-                        <Route path="/donate" view=|| view! { <Donate/> }/>
-                        <Route path="/faq" view=|| view! { <Faq/> }/>
-                        <Route path="/puzzles" view=|| view! { <Puzzles/> }/>
-                        <Route path="/rules" view=|| view! { <Rules/> }/>
-                        <Route path="/strategy" view=|| view! { <Strategy/> }/>
-                        <Route path="/resources" view=|| view! { <Resources/> }/>
-                        <Route path="/tutorial" view=|| view! { <Tutorial/> }/>
-                        <Route path="/rules_summary" view=|| view! { <RulesSummary/> }/>
+                        <Route path="/register" view=|| view! { <Register /> } />
+                        <Route path="/top_players" view=|| view! { <TopPlayers /> } />
+                        <Route path="/login" view=|| view! { <Login /> } />
+                        <Route path="/account" view=|| view! { <Account /> } />
+                        <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView /> } />
+                        <Route path="/analysis" view=|| view! { <Analysis /> } />
+                        <Route path="/config" view=|| view! { <Config /> } />
+                        <Route path="/tournament/:nanoid" view=|| view! { <Tournament /> } />
+                        <Route path="/tournaments/create" view=|| view! { <TournamentCreate /> } />
+                        <Route path="/tournaments" view=|| view! { <Tournaments /> } />
+                        <Route path="/donate" view=|| view! { <Donate /> } />
+                        <Route path="/faq" view=|| view! { <Faq /> } />
+                        <Route path="/puzzles" view=|| view! { <Puzzles /> } />
+                        <Route path="/rules" view=|| view! { <Rules /> } />
+                        <Route path="/strategy" view=|| view! { <Strategy /> } />
+                        <Route path="/resources" view=|| view! { <Resources /> } />
+                        <Route path="/tutorial" view=|| view! { <Tutorial /> } />
+                        <Route path="/rules_summary" view=|| view! { <RulesSummary /> } />
                         <Route
                             path="/game/:nanoid"
                             ssr=SsrMode::PartiallyBlocked
-                            view=|| view! { <Play/> }
+                            view=|| view! { <Play /> }
                         />
-                        <Route path="/admin" view=|| view! { <Admin/> }/>
+                        <Route path="/admin" view=|| view! { <Admin /> } />
                     </Route>
                 </Routes>
             </Router>

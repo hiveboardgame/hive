@@ -55,12 +55,12 @@ pub fn GamePreviews(
                 <div class="flex flex-wrap gap-1 justify-center p-1 w-full text-center">
                     <div class="flex flex-grow gap-1 items-center w-auto min-w-0 whitespace-nowrap max-w-[fit-content]">
                         <p>{w_username}</p>
-                        <RatingAndChange ratings side=Color::White/>
+                        <RatingAndChange ratings side=Color::White />
                     </div>
                     <div class="w-auto text-center">vs</div>
                     <div class="flex flex-grow gap-1 items-center w-auto min-w-0 whitespace-nowrap max-w-[fit-content]">
                         <p>{b_username}</p>
-                        <RatingAndChange ratings side=Color::Black/>
+                        <RatingAndChange ratings side=Color::Black />
                     </div>
 
                 </div>
@@ -119,10 +119,10 @@ pub fn GamePreviews(
                             <Show when=move || show_time>
                                 <div class="flex items-center">
                                     {if rated { "RATED " } else { "CASUAL " }}
-                                    <TimeRow time_info=time_info().into()/>
+                                    <TimeRow time_info=time_info().into() />
                                 </div>
                             </Show>
-                            <ThumbnailPieces game/>
+                            <ThumbnailPieces game />
                             <a
                                 class="absolute top-0 left-0 z-10 w-full h-full"
                                 href=format!("/game/{}", game_id)

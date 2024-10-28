@@ -46,7 +46,7 @@ pub fn ThumbnailPieces(game: StoredValue<GameResponse>) -> impl IntoView {
                     thumbnail_pieces()
                         .into_iter()
                         .map(|hs| {
-                            view! { <SimpleHexStack hex_stack=hs/> }
+                            view! { <SimpleHexStack hex_stack=hs /> }
                         })
                         .collect_view()
                 }}

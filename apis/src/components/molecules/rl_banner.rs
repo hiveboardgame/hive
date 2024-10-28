@@ -17,7 +17,7 @@ pub fn RlBanner() -> impl IntoView {
                     class="text-blue-500 hover:underline"
                 >
                     here
-                </a> before July 15th.
+                </a>before July 15th.
             </div>
         </div>
     }

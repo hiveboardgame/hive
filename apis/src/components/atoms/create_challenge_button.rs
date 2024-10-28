@@ -12,20 +12,20 @@ pub fn CreateChallengeButton(
     let icon = move |color_choice: ColorChoice| {
         move || match color_choice {
             ColorChoice::Random => {
-                view! { <Icon icon=icondata::BsHexagonHalf class="w-full h-full"/> }
+                view! { <Icon icon=icondata::BsHexagonHalf class="w-full h-full" /> }
             }
             ColorChoice::White => {
                 if config().prefers_dark {
-                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-white"/> }
+                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-white" /> }
                 } else {
-                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-black"/> }
+                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-black" /> }
                 }
             }
             ColorChoice::Black => {
                 if config().prefers_dark {
-                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-white"/> }
+                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-white" /> }
                 } else {
-                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-black"/> }
+                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-black" /> }
                 }
             }
         }

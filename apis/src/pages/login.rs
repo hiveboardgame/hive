@@ -53,7 +53,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         placeholder="********"
                     />
                 </label>
-                <input type="hidden" name="pathname" value=pathname().0/>
+                <input type="hidden" name="pathname" value=pathname().0 />
                 <p class="h-5">
                     <Show when=move || {
                         auth_context.login.value().get().is_some_and(|v| v.is_err())

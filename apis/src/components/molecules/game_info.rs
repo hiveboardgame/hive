@@ -57,7 +57,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             view! {
                 <div class=extend_tw_classes>
                     <div class="flex gap-1 items-center">
-                        <TimeRow time_info=time_info.into() extend_tw_classes="whitespace-nowrap"/>
+                        <TimeRow time_info=time_info.into() extend_tw_classes="whitespace-nowrap" />
                         {rated}
                         <Show when=move || is_tournament>
                             <a href=link>{name()}</a>

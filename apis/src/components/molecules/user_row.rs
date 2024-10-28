@@ -56,16 +56,16 @@ pub fn UserRow(
         for action in actions {
             match action {
                 UserAction::Challenge => {
-                    views.push(view! { <DirectChallengeButton user/> });
+                    views.push(view! { <DirectChallengeButton user /> });
                 }
                 UserAction::Invite(tournament_id) => {
-                    views.push(view! { <InviteButton user tournament_id/> });
+                    views.push(view! { <InviteButton user tournament_id /> });
                 }
                 UserAction::Uninvite(tournament_id) => {
-                    views.push(view! { <UninviteButton user tournament_id/> });
+                    views.push(view! { <UninviteButton user tournament_id /> });
                 }
                 UserAction::Kick(tournament) => {
-                    views.push(view! { <KickButton user tournament=*tournament/> });
+                    views.push(view! { <KickButton user tournament=*tournament /> });
                 }
                 _ => {}
             };
@@ -77,11 +77,11 @@ pub fn UserRow(
         <div class=format!("flex p-1 items-center justify-between h-10 w-64 {color}")>
             <div class="flex justify-between mr-2 w-48">
                 <div class="flex items-center">
-                    <StatusIndicator username=user().username/>
+                    <StatusIndicator username=user().username />
                     {profile_link()}
                 </div>
                 <Show when=move || { rating().is_some() }>
-                    <Rating rating=rating().expect("Rating is some")/>
+                    <Rating rating=rating().expect("Rating is some") />
                 </Show>
 
             </div>
