@@ -1,5 +1,5 @@
-use crate::websockets::messages::GameHB;
-use crate::websockets::ws_server::WsServer;
+use crate::websocket::GameHB;
+use crate::websocket::WsServer;
 use actix::Addr;
 use actix_web::web::Data;
 use std::time::Duration;

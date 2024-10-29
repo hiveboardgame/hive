@@ -1,11 +1,9 @@
 use crate::common::{
-    CommonMessage, GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult,
-    TournamentUpdate,
+    GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult, TournamentUpdate,
+    WebsocketMessage,
 };
 use crate::responses::{GameResponse, TournamentResponse};
-use crate::websockets::internal_server_message::{InternalServerMessage, MessageDestination};
-use crate::websockets::messages::ClientActorMessage;
-use crate::websockets::ws_server::WsServer;
+use crate::websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer};
 use actix::Addr;
 use actix_web::web::Data;
 use codee::binary::MsgpackSerdeCodec;
@@ -84,7 +82,7 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                     }
                                 }
                                 for message in messages {
-                                    let serialized = CommonMessage::Server(ServerResult::Ok(
+                                    let serialized = WebsocketMessage::Server(ServerResult::Ok(
                                         Box::new(message.message),
                                     ));
                                     if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
