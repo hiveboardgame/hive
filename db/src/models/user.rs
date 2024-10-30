@@ -10,7 +10,7 @@ use crate::{
             dsl::{
                 email as email_field, normalized_username, password as password_field, updated_at,
                 users as users_table,
-            },
+            }, takeback,
         },
     },
     DbConn,
@@ -25,7 +25,7 @@ use diesel_async::RunQueryDsl;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, GameSpeed};
+use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
 const MAX_USERNAME_LENGTH: usize = 20;
@@ -123,6 +123,7 @@ pub struct User {
     pub normalized_username: String,
     pub patreon: bool,
     pub admin: bool,
+    pub takeback: String,
 }
 
 impl User {
@@ -173,6 +174,15 @@ impl User {
         })
     }
 
+    pub async fn set_takeback(&self, tb: Takeback, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+        let tb = tb.to_string();
+        diesel::update(self)
+            .set(takeback.eq(tb.to_string())
+        )
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
     pub async fn find_by_uuid(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         Ok(users_table.find(uuid).first(conn).await?)
     }

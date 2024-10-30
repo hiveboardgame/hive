@@ -59,5 +59,11 @@
         "login_button": "Sign in",
         "no_account_prompt": "Don't have an account? <register_link>Sign up</register_link>",
         "invalid_login": "Invalid email or password"
-    }
+    },
+   "allow_takeback": "Allow takebacks",
+   "allow_takeback_buttons": {
+    "always": "Always",
+    "never": "Never",
+    "casual_only": "Casual only"
+   }
 }

@@ -59,6 +59,7 @@ pub enum ServerMessage {
     Join(UserResponse),
     Error(String),
     Schedule(ScheduleUpdate),
+    CouldSetUserConf(bool),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

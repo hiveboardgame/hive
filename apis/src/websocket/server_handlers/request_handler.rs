@@ -5,6 +5,7 @@ use super::games_search::GamesSearchHandler;
 use super::pong::handler::PongHandler;
 use super::schedules::ScheduleHandler;
 use super::search::handler::UserSearchHandler;
+use super::set_userconf::ServerUserConfHandler;
 use super::tournaments::handler::TournamentHandler;
 use super::user_profile::UserProfileHandler;
 use super::user_status::handler::UserStatusHandler;
@@ -156,6 +157,13 @@ impl RequestHandler {
             }
             ClientRequest::UserProfile(username) => {
                 UserProfileHandler::new(self.user_id, username, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            ClientRequest::SetServerUserConf(takeback) => {
+                self.ensure_auth()?;
+                ServerUserConfHandler::new(self.user_id, takeback, &self.pool)
                     .await?
                     .handle()
                     .await?

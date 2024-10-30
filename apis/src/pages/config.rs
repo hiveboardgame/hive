@@ -2,8 +2,9 @@ use crate::components::{
     atoms::{rating::icon_for_speed, select_options::SelectOption},
     organisms::{
         confirm_mode_toggle::ConfirmModeToggle, darkmode_toggle::DarkModeToggle,
-        preview_tiles::PreviewTiles, tile_design_toggle::TileDesignToggle,
-        tile_dots_toggle::TileDotsToggle, tile_rotation_toggle::TileRotationToggle,
+        preview_tiles::PreviewTiles, takeback_conf::TakebackConf,
+        tile_design_toggle::TileDesignToggle, tile_dots_toggle::TileDotsToggle,
+        tile_rotation_toggle::TileRotationToggle,
     },
 };
 use crate::i18n::*;
@@ -29,6 +30,7 @@ pub fn Config() -> impl IntoView {
                 <TileDesignToggle />
                 <TileRotationToggle />
                 <TileDotsToggle />
+                <TakebackConf />
                 <label class="mr-1">
                     <div class="flex items-center">
                         {icon} <p>{t!(i18n, user_config.game_speed)}</p>

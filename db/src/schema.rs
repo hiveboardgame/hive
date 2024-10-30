@@ -174,6 +174,7 @@ diesel::table! {
         normalized_username -> Text,
         patreon -> Bool,
         admin -> Bool,
+        takeback -> Text,
     }
 }
 

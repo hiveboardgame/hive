@@ -2,8 +2,8 @@ use super::{
     challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
     games_search::handle::handle_games_search, ping::handle::handle_ping,
     player_profile::handle::handle_player_profile, schedule::handler::handle_schedule,
-    tournament::handler::handle_tournament, user_search::handle::handle_user_search,
-    user_status::handle::handle_user_status,
+    server_user_conf::handle_server_user_conf, tournament::handler::handle_tournament,
+    user_search::handle::handle_user_search, user_status::handle::handle_user_status,
 };
 use crate::common::{ServerMessage::*, ServerResult, WebsocketMessage};
 use leptos::{batch, logging::log};
@@ -22,6 +22,7 @@ pub fn handle_response(m: WebsocketMessage) {
                 GamesSearch(results) => handle_games_search(results),
                 PlayerProfile(results) => handle_player_profile(results),
                 Schedule(schedule_update) => handle_schedule(schedule_update),
+                CouldSetUserConf(success) => handle_server_user_conf(success),
                 todo => {
                     log!("Got {todo:?} which is currently still unimplemented");
                 }

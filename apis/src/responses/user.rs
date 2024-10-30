@@ -1,6 +1,6 @@
 use super::rating::RatingResponse;
 use serde::{Deserialize, Serialize};
-use shared_types::GameSpeed;
+use shared_types::{GameSpeed, Takeback};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -11,6 +11,7 @@ pub struct UserResponse {
     pub patreon: bool,
     pub admin: bool,
     pub ratings: HashMap<GameSpeed, RatingResponse>,
+    pub takeback: Takeback,
 }
 
 impl UserResponse {
@@ -21,6 +22,7 @@ impl UserResponse {
             patreon: false,
             admin: false,
             ratings: HashMap::new(),
+            takeback: Takeback::default(),
         }
     }
 
@@ -106,6 +108,7 @@ impl UserResponse {
             uid: user.id,
             patreon: user.patreon,
             admin: user.admin,
+            takeback: Takeback::from_str_or_default(&user.takeback),
             ratings,
         };
         Ok(response)

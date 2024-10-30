@@ -6,7 +6,7 @@ use crate::responses::GameResponse;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
 use leptos::*;
-use shared_types::{GameId, GameSpeed};
+use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
 use super::auth_context::AuthContext;
@@ -470,6 +470,24 @@ impl GameState {
 
     pub fn get_game_speed(&self) -> Option<GameSpeed> {
         self.game_response.as_ref().map(|gr| gr.speed.clone())
+    }
+
+    pub fn takeback_allowed(&self) -> bool {
+        let color_allowed = |color: &Color, game_response: &GameResponse| {
+            let rated = game_response.rated;
+            let takeback = match color {
+                Color::Black => &game_response.black_player.takeback,
+                Color::White => &game_response.white_player.takeback,
+            };
+            takeback == &Takeback::Always || takeback == &Takeback::CasualOnly && !rated
+        };
+        if let Some(game_response) = self.game_response.as_ref() {
+            let white = color_allowed(&Color::Black, game_response);
+            let black = color_allowed(&Color::White, game_response);
+            white && black
+        } else {
+            false
+        }
     }
 }
 
