@@ -272,7 +272,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
         },
         UseInfiniteScrollOptions::default()
             .distance(10.0)
-            .interval(150.0),
+            .interval(300.0),
     );
     view! {
         <div node_ref=el class="flex flex-col overflow-x-hidden items-center h-[51vh]">
