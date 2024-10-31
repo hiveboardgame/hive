@@ -29,13 +29,13 @@ pub fn HistoryMove(
     };
     let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
     let get_class = move || {
-        let mut class = "col-span-2 ml-3 h-auto max-h-6 leading-6 transition-transform duration-300 transform hover:bg-pillbug-teal active:scale-95";
+        let base_class = "col-span-2 p-1 h-auto max-h-6 leading-6 transition-transform duration-300 transform odd:ml-1 odd:justify-self-start even:mr-1 even:justify-self-end hover:bg-pillbug-teal active:scale-95";
         if let Some(history_turn) = history_turn() {
             if turn == history_turn {
-                class = "col-span-2 ml-3 h-auto max-h-6 leading-6 transition-transform duration-300 transform hover:bg-pillbug-teal bg-orange-twilight active:scale-95"
+                return format!("{} bg-orange-twilight", base_class);
             }
         }
-        class
+        base_class.to_string()
     };
     let rep = if repetition {
         String::from(" ↺")
@@ -136,7 +136,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <div class="col-span-4 text-center">{conclusion}</div>
                     <a
                         href="/analysis"
-                        class="col-span-4 w-full text-white rounded duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+                        class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
                         on:click=analysis_setup
                     >
                         <div class="flex gap-1 justify-center items-center">
