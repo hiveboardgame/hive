@@ -78,7 +78,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         if orientation_signal.orientation_vertical.get() {
             "flex flex-col"
         } else {
-            "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 pr-2"
+            "grid grid-cols-board xl:grid-cols-board-xl grid-rows-6 pr-2"
         }
     };
     let go_to_game = Callback::new(move |()| {
