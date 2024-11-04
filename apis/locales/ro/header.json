@@ -1,0 +1,31 @@
+{
+    "home": "Acasă",
+    "community": {
+        "title": "Comunitate",
+        "top_players": "Top jucători",
+        "resources": "Resurse",
+        "faq": "Întrebări frecvente"
+    },
+    "learn": {
+        "title": "Învață",
+        "rules": "Reguli",
+        "rules_summary": "Rezumat reguli",
+        "analysis": "Analiză"
+    },
+    "tournaments": {
+        "title": "Turnee",
+        "create": "Creează turneu",
+        "view": "Vezi turnee"
+    },
+    "buy_game": "Cumpără jocul",
+    "donate": "Donează",
+    "support": "Suport",
+    "login": "Autentificare",
+    "user_menu": {
+        "profile": "Profil",
+        "edit_account": "Editează contul",
+        "config": "Configurare",
+        "logout": "Deconectare",
+        "login": "Autentificare"
+    }
+}

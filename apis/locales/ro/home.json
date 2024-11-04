@@ -1,0 +1,40 @@
+{
+    "create_game": "Creează un joc",
+    "search_players": "Caută jucători",
+    "found_players": "Găsit:",
+    "online_players_one": "{{count}} jucător online",
+    "online_players_other": "{{count}} jucători online",
+    "custom_game": {
+        "button": "Personalizat",
+        "title": "Creează un joc:",
+        "casual": "Necotat",
+        "rated": "Cotat",
+        "private": "Privat",
+        "public": "Public",
+        "rating_range": "Interval elo",
+        "mode": {
+            "real_time": {
+                "title": "Timp real",
+                "minutes_per_side": "Minute per jucător: {{count}}",
+                "increment_in_seconds": "Increment în secunde: {{count}}"
+            },
+            "correspondence": {
+                "title": "Corespondență",
+                "days_per_move": "Zile per mutare",
+                "total_time_each": "Timp total fiecare",
+                "time_one": "{{count}} zi",
+                "time_other": "{{count}} zile"
+            },
+            "untimed": "Fără timp"
+        }
+    },
+    "challenge_details": {
+        "player": "Jucător",
+        "time": "Timp",
+        "rated": {
+            "title": "Cotat",
+            "yes": "Da",
+            "no": "Nu"
+        }
+    }
+}
