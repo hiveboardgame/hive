@@ -1,7 +1,7 @@
+use crate::i18n::*;
 use crate::{common::TileDesign, providers::Config};
 use lazy_static::lazy_static;
 use leptos::*;
-use leptos_router::ActionForm;
 use leptos_use::use_window;
 
 lazy_static! {
@@ -18,15 +18,16 @@ lazy_static! {
 
 #[component]
 pub fn TileDesignToggle() -> impl IntoView {
+    let i18n = use_i18n();
     let good_software = RwSignal::new(false);
     create_effect(move |_| good_software.update(|b| *b = *NOT_APPLE));
     view! {
-        <p class="m-1 text-black dark:text-white">Piece style:</p>
+        <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.piece_style)}</p>
         <div class="flex">
-            <TileDesignButton tile_design=TileDesign::Official/>
-            <TileDesignButton tile_design=TileDesign::Flat/>
+            <TileDesignButton tile_design=TileDesign::Official />
+            <TileDesignButton tile_design=TileDesign::Flat />
             <Show when=good_software>
-                <TileDesignButton tile_design=TileDesign::ThreeD/>
+                <TileDesignButton tile_design=TileDesign::ThreeD />
             </Show>
         </div>
     }
@@ -34,10 +35,12 @@ pub fn TileDesignToggle() -> impl IntoView {
 
 #[component]
 pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
+    let i18n = use_i18n();
     let tile_design = store_value(tile_design);
-    let config = expect_context::<Config>();
+    let config = expect_context::<Config>().0;
+    let (_, set_cookie) = Config::get_cookie();
     let is_active = move || {
-        if (config.tile_design.preferred_tile_design)() == tile_design() {
+        if config().tile_design == tile_design() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -45,11 +48,7 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
     };
 
     view! {
-        <ActionForm
-            action=config.tile_design.action
-            class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer"
-        >
-            <input type="hidden" name="tile_design" value=tile_design().to_string()/>
+        <div class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer">
             <button
                 class=move || {
                     format!(
@@ -58,10 +57,23 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
                     )
                 }
 
-                type="submit"
+                on:click=move |_| {
+                    set_cookie
+                        .update(|c| {
+                            if let Some(cookie) = c {
+                                cookie.tile_design = tile_design();
+                            }
+                        });
+                }
             >
-                {tile_design().to_string()}
+
+                {match tile_design() {
+                    TileDesign::Official => t!(i18n, user_config.style_buttons.official).into_view(),
+                    TileDesign::Flat => t!(i18n, user_config.style_buttons.flat).into_view(),
+                    TileDesign::ThreeD => t!(i18n, user_config.style_buttons.three_d).into_view(),
+                }}
+
             </button>
-        </ActionForm>
+        </div>
     }
 }

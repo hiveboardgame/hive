@@ -1,4 +1,4 @@
-use crate::providers::ColorScheme;
+use crate::providers::Config;
 use hive_lib::ColorChoice;
 use leptos::*;
 use leptos_icons::*;
@@ -8,24 +8,24 @@ pub fn CreateChallengeButton(
     color_choice: StoredValue<ColorChoice>,
     create_challenge: Callback<ColorChoice>,
 ) -> impl IntoView {
-    let color_context = expect_context::<ColorScheme>;
+    let config = expect_context::<Config>().0;
     let icon = move |color_choice: ColorChoice| {
         move || match color_choice {
             ColorChoice::Random => {
-                view! { <Icon icon=icondata::BsHexagonHalf class="w-full h-full"/> }
+                view! { <Icon icon=icondata::BsHexagonHalf class="w-full h-full" /> }
             }
             ColorChoice::White => {
-                if (color_context().prefers_dark)() {
-                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-white"/> }
+                if config().prefers_dark {
+                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-white" /> }
                 } else {
-                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-black"/> }
+                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-black" /> }
                 }
             }
             ColorChoice::Black => {
-                if (color_context().prefers_dark)() {
-                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-white"/> }
+                if config().prefers_dark {
+                    view! { <Icon icon=icondata::BsHexagon class="w-full h-full stroke-1 stroke-white" /> }
                 } else {
-                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-black"/> }
+                    view! { <Icon icon=icondata::BsHexagonFill class="w-full h-full fill-black" /> }
                 }
             }
         }

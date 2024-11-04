@@ -51,7 +51,7 @@ pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
                     <div class="flex gap-1">
                         <div>{tournament.mode}</div>
                     </div>
-                    <TimeRow time_info=time_info.into()/>
+                    <TimeRow time_info=time_info.into() />
                     <div>{seats_taken}</div>
                 </div>
                 <div class="flex flex-col">
@@ -62,7 +62,7 @@ pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
                     <div>{starts}</div>
                 </div>
             </div>
-            <ProgressBar current=finished_games total=total_games/>
+            <ProgressBar current=finished_games total=total_games />
             <a
                 class="absolute top-0 left-0 z-10 w-full h-full"
                 href=format!("/tournament/{}", tournament.tournament_id.0)

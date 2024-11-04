@@ -293,7 +293,10 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="DoubleRoundRobin"
-                                text=TournamentMode::DoubleRoundRobin.pretty_string()
+                                text=TournamentMode::DoubleRoundRobin
+                                    .pretty_string()
+                                    .into_view()
+                                    .into()
                             />
 
                         </select>
@@ -308,20 +311,20 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="Game"
-                                text=ScoringMode::Game.pretty_string()
+                                text=ScoringMode::Game.pretty_string().into_view().into()
                             />
 
                         </select>
                     </div>
                     <div class="flex mb-2">
-                        <SimpleSwitch checked=tournament.invite_only/>
+                        <SimpleSwitch checked=tournament.invite_only />
                         <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
                             Invite Only
                         </label>
                     </div>
                     <div class="flex flex-col mb-2">
                         <div class="flex">
-                            <SimpleSwitch checked=organizer_start/>
+                            <SimpleSwitch checked=organizer_start />
                             <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
                                 Manual start
                             </label>
@@ -345,7 +348,7 @@ pub fn TournamentCreate() -> impl IntoView {
                     </div>
                     <div class="flex gap-1 mb-2">
                         <Show when=move || time_signals.time_mode.get() == TimeMode::RealTime>
-                            <SimpleSwitch checked=fixed_round_duration/>
+                            <SimpleSwitch checked=fixed_round_duration />
                             <label class="text-sm font-medium text-gray-900 dark:text-gray-300">
                                 Fixed round duration
                             </label>
@@ -370,7 +373,7 @@ pub fn TournamentCreate() -> impl IntoView {
                 <div class="basis-1/2">
                     <div class="flex flex-col items-center">
                         <TimeSelect
-                            title=" Match settings:"
+                            is_tournament=true
                             time_signals
                             on_value_change
                             allowed_values

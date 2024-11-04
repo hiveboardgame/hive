@@ -31,7 +31,7 @@ pub fn ScoreRow(
             </td>
             <td class=td_class>
                 <div class="flex items-center">
-                    <StatusIndicator username=user().username/>
+                    <StatusIndicator username=user().username />
                     {profile_link()}
                 </div>
             </td>

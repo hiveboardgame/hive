@@ -16,15 +16,15 @@ pub fn PieceWithoutOnClick(
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let piece = piece.get_untracked();
-    let config = expect_context::<Config>();
+    let config = expect_context::<Config>().0;
     let position = position.get_untracked();
-    let three_d = move || (config.tile_design.preferred_tile_design)() == TileDesign::ThreeD;
+    let three_d = move || config().tile_design == TileDesign::ThreeD;
     let center = move || SvgPos::center_for_level(position, level(), three_d());
     let order = piece.order();
     let ds_transform = move || format!("translate({},{})", center().0, center().1);
     let position_transform = move || format!("translate({},{})", center().0, center().1,);
     let rotate_transform = move || {
-        if (config.tile_rotation.preferred_tile_rotation)() == TileRotation::No {
+        if config().tile_rotation == TileRotation::No {
             String::new()
         } else {
             format!("rotate({})", order.saturating_sub(1) * 60)
@@ -34,7 +34,7 @@ pub fn PieceWithoutOnClick(
     let bug = piece.bug();
     let color = piece.color();
 
-    let dot_color = move || match (config.tile_design.preferred_tile_design)() {
+    let dot_color = move || match config().tile_design {
         TileDesign::Official | TileDesign::ThreeD => match bug {
             Bug::Ant => "color: #289ee0",
             Bug::Beetle => "color: #9a7fc7",
@@ -61,7 +61,7 @@ pub fn PieceWithoutOnClick(
 
     let active_piece = create_read_slice(game_state.signal, |gs| gs.move_info.active);
     let show_ds = move || {
-        let shadow = match config.tile_design.preferred_tile_design.get() {
+        let shadow = match config().tile_design {
             TileDesign::Official => "/assets/tiles/common/all.svg#drop_shadow",
             TileDesign::Flat => "/assets/tiles/common/all.svg#drop_shadow",
             TileDesign::ThreeD => "/assets/tiles/3d/shadow.svg#dshadow",
@@ -84,19 +84,19 @@ pub fn PieceWithoutOnClick(
         }
     };
 
-    let dots = move || match config.tile_dots.preferred_tile_dots.get() {
+    let dots = move || match config().tile_dots {
         TileDots::No => String::new(),
         TileDots::Angled => format!("/assets/tiles/common/all.svg#a{order}"),
         TileDots::Vertical => format!("/assets/tiles/common/all.svg#v{order}"),
     };
 
-    let bug_svg = move || match config.tile_design.preferred_tile_design.get() {
+    let bug_svg = move || match config().tile_design {
         TileDesign::Official => format!("/assets/tiles/official/official.svg#{}", bug.name()),
         TileDesign::Flat => format!("/assets/tiles/flat/flat.svg#{}", bug.name()),
         TileDesign::ThreeD => format!("/assets/tiles/3d/3d.svg#{}{}", color.name(), bug.name()),
     };
 
-    let tile_svg = move || match config.tile_design.preferred_tile_design.get() {
+    let tile_svg = move || match config().tile_design {
         TileDesign::Official => format!("/assets/tiles/official/official.svg#{}", color.name()),
         TileDesign::Flat => format!("/assets/tiles/flat/flat.svg#{}", color.name()),
         TileDesign::ThreeD => format!("/assets/tiles/3d/3d.svg#{}", color.name()),
@@ -175,7 +175,7 @@ pub fn PieceWithOnClick(
 
     view! {
         <g on:click=onclick class=sepia>
-            <PieceWithoutOnClick piece position level/>
+            <PieceWithoutOnClick piece position level />
         </g>
     }
 }
@@ -191,7 +191,7 @@ pub fn Piece(
     // TODO: hand in tile_design and don't get it all the time from config
 ) -> impl IntoView {
     if simple {
-        return view! { <PieceWithoutOnClick piece position level/> };
+        return view! { <PieceWithoutOnClick piece position level /> };
     }
-    view! { <PieceWithOnClick piece position level piece_type/> }.into_view()
+    view! { <PieceWithOnClick piece position level piece_type /> }.into_view()
 }

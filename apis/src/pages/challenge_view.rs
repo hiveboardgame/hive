@@ -87,14 +87,14 @@ pub fn ChallengeView() -> impl IntoView {
                                                 on:click=copy
                                                 class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
                                             >
-                                                <Icon icon=icondata::AiCopyOutlined class="w-6 h-6"/>
+                                                <Icon icon=icondata::AiCopyOutlined class="w-6 h-6" />
                                             </button>
                                         </div>
                                         <p>
                                             "The first person to come to this URL will play with you."
                                         </p>
                                     </Show>
-                                    <ChallengeRow challenge=store_value(challenge) single=true/>
+                                    <ChallengeRow challenge=store_value(challenge) single=true />
                                 }
                                     .into_view()
                             }

@@ -9,7 +9,7 @@ pub fn HoverRating(user: StoredValue<UserResponse>) -> impl IntoView {
         .iter()
         .map(|speed| {
             if let Some(rating) = user().ratings.get(speed) {
-                view! { <RatingWithIcon rating=store_value(rating.clone())/> }
+                view! { <RatingWithIcon rating=store_value(rating.clone()) /> }
             } else {
                 "".into_view()
             }

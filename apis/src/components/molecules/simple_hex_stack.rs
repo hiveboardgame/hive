@@ -8,7 +8,7 @@ pub fn SimpleHexStack(hex_stack: HexStack) -> impl IntoView {
         .hexes
         .into_iter()
         .map(|hex| {
-            view! { <SimpleHex hex=hex/> }
+            view! { <SimpleHex hex=hex /> }
         })
         .collect_view()
 }

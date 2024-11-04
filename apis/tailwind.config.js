@@ -18,10 +18,8 @@ module.exports = {
     extend: {
       screens: { 'short': { 'raw': '(max-height: 700px)' }, },
       gridTemplateColumns: {
-        'board-xxl': 'repeat(8, minmax(0, 1fr)) repeat(2, minmax(110px, 1fr))',
-        'board-lg': 'repeat(8, minmax(0, 1fr)) repeat(2, minmax(150px, 1fr))',
-        'board-sm': 'repeat(8, minmax(0, 1fr)) repeat(2, minmax(120px, 1fr))',
-        'board-xs': 'repeat(8, minmax(0, 1fr)) repeat(2, minmax(105px, 1fr))',
+        'board-xl': 'repeat(8, minmax(0, 1fr)) repeat(2, minmax(0, 220px))',
+        'board': 'repeat(8, minmax(0, 1fr)) repeat(2, minmax(170px, 1fr))',
       },
       colors: {
         transparent: 'transparent',

@@ -1,0 +1,68 @@
+{
+    "piece_style": "Stilul piesei",
+    "style_buttons": {
+        "official": "Oficial",
+        "flat": "Plat",
+        "three_d": "3D"
+    },
+    "rotation": "Rotire",
+    "rotation_buttons": {
+        "no": "Nu",
+        "yes": "Da"
+    },
+    "show_dots": "Afișează puncte",
+    "dots_buttons": {
+        "no": "Nu",
+        "angled": "Înclinate",
+        "vertical": "Verticale"
+    },
+    "game_speed": "Viteza jocului:",
+    "move_confirm": "Confirmarea mutării:",
+    "color_scheme": "Schema de culori:",
+    "preview": "Previzualizare:",
+    "edit_account": {
+        "current_password": "Parola actuală",
+        "new_password": "Parola nouă",
+        "confirm_password": "Confirmă parola",
+        "confirm_password_placeholder": "Parola nouă (din nou)",
+        "save_button": "Salvează"
+    },
+    "create_account": {
+        "username": {
+            "title": "Nume de utilizator",
+            "description": "Te rugăm să alegi un nume de utilizator potrivit pentru toată familia. Orice conturi cu nume de utilizator nepotrivite vor fi închise!",
+            "error": {
+                "taken": "Nume de utilizator luat",
+                "invalid": "Caracter invalid în numele de utilizator"
+            }
+        },
+        "email": {
+            "title": "Email",
+            "error": {
+                "invalid": "Email invalid"
+            },
+            "description": "Avem nevoie de adresa ta de email pentru a-ți trimite un email de confirmare atunci când creezi un cont."
+        },
+        "password": "Parolă",
+        "confirm_password": "Confirmă parola",
+        "password_requirements": "Cel puțin 8 caractere",
+        "password_error": "Parolă prea scurtă sau nu se potrivește",
+        "be_nice_checkbox": "Sunt de acord să fiu amabil cu ceilalți jucători și să raportez abuzurile pe Discord",
+        "signup_button": "Înscrie-te",
+        "registration_error": "Înregistrarea a eșuat",
+        "existing_account_prompt": "Ai deja un cont? <login_link>Autentifică-te</login_link>"
+    },
+    "login": {
+        "email": "Email",
+        "password": "Parolă",
+        "login_button": "Conectează-te",
+        "no_account_prompt": "Nu ai un cont? <register_link>Înscrie-te</register_link>",
+        "invalid_login": "Email sau parolă incorecte"
+    },
+    "allow_takeback": "Permite anularea mutării",
+    "allow_takeback_buttons": {
+        "always": "Întotdeauna",
+        "never": "Niciodată",
+        "casual_only": "Doar necotat"
+    }
+}

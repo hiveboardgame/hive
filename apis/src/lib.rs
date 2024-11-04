@@ -2,11 +2,11 @@ pub mod app;
 pub mod common;
 pub mod components;
 pub mod functions;
-pub mod lag_tracking;
 pub mod pages;
-pub mod ping;
 pub mod providers;
 pub mod responses;
+pub mod websocket;
+leptos_i18n::load_locales!();
 
 use cfg_if::cfg_if;
 

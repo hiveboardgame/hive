@@ -1,0 +1,27 @@
+{
+    "game_buttons": {
+        "unstarted": "Jocuri de turneu neîncepute",
+        "playing": "În desfășurare",
+        "finished": "Finalizate"
+    },
+    "color_buttons": {
+        "both": "Ambele",
+        "white": "Alb",
+        "black": "Negru"
+    },
+    "result_buttons": {
+        "win": "Victorie",
+        "loss": "Înfrângere",
+        "draw": "Remiză",
+        "all": "Toate"
+    },
+    "stats_box": {
+        "total": "Total: {{count}}",
+        "wins": "Victorii: {{count}}",
+        "losses": "Înfrângeri: {{count}}",
+        "draws": "Remize: {{count}}"
+    },
+    "player_color": "Culoarea jucătorului:",
+    "gamo_result": "Rezultat:",
+    "include_speeds": "Categorii timp:"
+}

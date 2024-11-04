@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use crate::{
     components::molecules::challenge_row::ChallengeRow,
     providers::{challenges::ChallengeStateSignal, AuthContext},
@@ -7,6 +8,7 @@ use leptos::*;
 
 #[component]
 pub fn Challenges() -> impl IntoView {
+    let i18n = use_i18n();
     let th_class =
         "py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase max-h-[80vh] max-w-screen";
     let challenges = expect_context::<ChallengeStateSignal>();
@@ -81,25 +83,25 @@ pub fn Challenges() -> impl IntoView {
             <thead>
                 <tr>
                     <th class=th_class></th>
-                    <th class=th_class>Player</th>
+                    <th class=th_class>{t!(i18n, home.challenge_details.player)}</th>
                     <th class=th_class>Elo</th>
                     <th class=th_class>Plm</th>
-                    <th class=th_class>Time</th>
-                    <th class=th_class>Rated</th>
+                    <th class=th_class>{t!(i18n, home.challenge_details.time)}</th>
+                    <th class=th_class>{t!(i18n, home.challenge_details.rated.title)}</th>
                     <th class=th_class></th>
                 </tr>
             </thead>
             <tbody>
                 <For each=move || { direct() } key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
+                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false />
                 </For>
                 <tr class="h-2"></tr>
                 <For each=move || { own() } key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
+                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false />
                 </For>
                 <tr class="h-2"></tr>
                 <For each=move || { public() } key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false/>
+                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false />
                 </For>
             </tbody>
         </table>

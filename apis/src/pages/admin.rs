@@ -14,7 +14,7 @@ pub fn Admin() -> impl IntoView {
                     false
                 }
             }>
-                <ChatWindow destination=SimpleDestination::Global/>
+                <ChatWindow destination=SimpleDestination::Global />
             </Show>
         </div>
     }

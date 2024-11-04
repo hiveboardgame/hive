@@ -46,7 +46,7 @@ pub fn Tournament() -> impl IntoView {
                 <Show when=move || current_tournament().is_some()>
                     <LoadedTournament tournament=Signal::derive(move || {
                         current_tournament().expect("Current tournament is some")
-                    })/>
+                    }) />
                 </Show>
             </div>
         </div>
@@ -267,7 +267,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
                 <div class="m-2 h-6 text-lg font-bold">Tournament Info</div>
                 <div class="flex gap-1 m-2">
                     <span class="font-bold">"Time control: "</span>
-                    <TimeRow time_info=time_info.into()/>
+                    <TimeRow time_info=time_info.into() />
                 </div>
                 <div class="m-2">
                     <span class="font-bold">"Players: "</span>
@@ -292,13 +292,13 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
                             let:user
                         >
                             <div>
-                                <UserRow actions=vec![] user=store_value(user)/>
+                                <UserRow actions=vec![] user=store_value(user) />
                             </div>
                         </For>
                     </div>
 
                 </div>
-                <ProgressBar current=finished_games total=total_games()/>
+                <ProgressBar current=finished_games total=total_games() />
                 <Show when=not_started>
                     <div class="flex gap-1 justify-center items-center pb-2">
                         <Show
@@ -337,8 +337,8 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
             </div>
 
             <Show when=move || !not_started()>
-                <Standings tournament/>
-                <MySchedules games_hashmap user_id/>
+                <Standings tournament />
+                <MySchedules games_hashmap user_id />
                 <Show when=move || !pending_games().is_empty()>
                     <details class="m-2 min-w-[320px]">
                         <summary class="m-2 h-6 text-lg font-bold">{pending_games_string}</summary>
@@ -352,7 +352,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
 
                             {
                                 let (schedule, game) = tuple;
-                                view! { <PendingGameRow schedule game/> }
+                                view! { <PendingGameRow schedule game /> }
                             }
 
                         </For>
@@ -363,14 +363,14 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
                 <details class="flex items-center min-w-[320px] m-2 w-full">
                     <summary class="m-2 h-6 text-lg font-bold">Tournament chat</summary>
                     <div class="m-2 w-full h-60 whitespace-normal break-words bg-even-light dark:bg-even-dark">
-                        <ChatWindow destination=shared_types::SimpleDestination::Tournament/>
+                        <ChatWindow destination=shared_types::SimpleDestination::Tournament />
                     </div>
                 </details>
             </Show>
             <Show when=move || !game_previews(()).is_empty()>
                 <details class="min-w-[320px] m-2">
                     <summary class="m-2 h-6 text-lg font-bold">Finished or ongoing games:</summary>
-                    <GamePreviews games=game_previews/>
+                    <GamePreviews games=game_previews />
                 </details>
             </Show>
         </div>

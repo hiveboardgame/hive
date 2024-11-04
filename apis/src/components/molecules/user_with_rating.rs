@@ -32,7 +32,7 @@ pub fn UserWithRating(
     let patreon = move || player().map_or(false, |p| p.patreon);
     let rating = move || match (player(), speed()) {
         (Some(player), Some(speed)) => {
-            view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone()/> }
+            view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> }
         }
         _ => view! { "" }.into_view(),
     };
@@ -46,7 +46,7 @@ pub fn UserWithRating(
             {move || {
                 view! {
                     <div class="flex items-center">
-                        <StatusIndicator username=username()/>
+                        <StatusIndicator username=username() />
                         <ProfileLink
                             patreon=patreon()
                             username=username()
@@ -62,7 +62,7 @@ pub fn UserWithRating(
                 }
             >
 
-                <RatingAndChangeDynamic extend_tw_classes=text_color side=side/>
+                <RatingAndChangeDynamic extend_tw_classes=text_color side=side />
             </Show>
         </div>
     }

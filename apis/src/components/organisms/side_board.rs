@@ -75,23 +75,23 @@ pub fn SideboardTabs(
 
             <TabsList>
                 <div class="z-10 border-b-2 border-black dark:border-white flex justify-between [&>*]:grow sticky top-0 bg-inherit">
-                    <TriggerButton name=TabView::Reserve tab/>
-                    <TriggerButton name=TabView::History tab/>
-                    <TriggerButton name=TabView::Chat tab/>
+                    <TriggerButton name=TabView::Reserve tab />
+                    <TriggerButton name=TabView::History tab />
+                    <TriggerButton name=TabView::Chat tab />
                 </div>
             </TabsList>
             <TabsContent value="Game" attr:class="flex flex-col h-full">
-                <ReserveContent player_color/>
+                <ReserveContent player_color />
             </TabsContent>
             <TabsContent value="History" attr:class="h-full">
-                <History/>
+                <History />
             </TabsContent>
             <TabsContent
                 value="Chat"
                 attr:class="flex flex-col flex-grow h-full max-h-full justify-beetween"
             >
-                <HistoryControls/>
-                <ChatWindow destination=SimpleDestination::Game/>
+                <HistoryControls />
+                <ChatWindow destination=SimpleDestination::Game />
             </TabsContent>
         </TabsRoot>
     }

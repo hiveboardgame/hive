@@ -169,10 +169,10 @@ pub fn ChatWindow(
         >
             <div ref=div class="overflow-y-auto flex-grow w-full min-w-full h-0">
                 <For each=messages key=|message| message.timestamp let:message>
-                    <Message message=message/>
+                    <Message message=message />
                 </For>
             </div>
-            <ChatInput destination=actual_destination/>
+            <ChatInput destination=actual_destination />
         </div>
     }
 }

@@ -1,0 +1,104 @@
+{
+    "title": "Întrebări frecvente",
+    "what_is_hivegame": {
+        "question": "Ce este hivegame.com?",
+        "answer": "hivegame.com este un efort comunitar pentru a crea o nouă platformă online de a juca Hive® gratuit. hivegame.com este fără reclame, open source, dezvoltat de membrii comunității și susținut oficial de creatorul Hive® John Yianni."
+    },
+    "how_to_help": {
+        "question": "Cum pot ajuta acest proiect să prospere?",
+        "answers": {
+            "item1": "Ne poți ajuta contribuind la <source_link>codul sursă.</source_link>",
+            "item2": "Ne poți sprijini cu idei, feedback și grafică pe <discord_link>Discord</discord_link>",
+            "item3": "Poți susține proiectul cu o <donate_link>donație.</donate_link> Iar când cheltuielile sunt acoperite, donația ta ajută la susținerea dezvoltatorilor."
+        }
+    },
+    "how_does_it_operate": {
+        "question": "Cum funcționează hivegame.com?",
+        "answer": "Este dezvoltat de membrii comunității și 100% bazat pe donații. hivegame.com nu va colecta niciodată datele utilizatorilor, nu va afișa reclame sau implementa nimic care să distragă atenția de la joc sau să genereze venituri."
+    },
+    "how_to_get_crown": {
+        "question": "Cum obțin o 👑 lângă numele de utilizator?",
+        "answer": "Donând proiectului!"
+    },
+    "what_is_hive": {
+        "question": "Ce este Hive?",
+        "answer": "Hive este un joc de strategie abstract, premiat, creat de John Yianni în 2000 și publicat de <gen42_link>Gen42</gen42_link>."
+    },
+    "how_to_play_with_friends": {
+        "question": "Pot să joc cu un prieten?",
+        "answers": {
+            "item1": "Da, poți crea un joc făcând clic pe butonul 'creează un joc' de pe pagina principală, apoi selectează opțiunea ‘privat’ și trimite linkul unui prieten. Acesta va trebui să aibă/creeze un cont pentru a juca.",
+            "item2": "Alternativ, poți trimite o provocare directă folosind pictograma 'săbii încrucișate' de lângă fiecare utilizator, ceea ce va trimite o provocare directă acelui utilizator.",
+            "item3": "Desigur, poți de asemenea crea o provocare deschisă, care poate fi acceptată de oricine se încadrează în criteriile Elo, și speri ca prietenul să fie primul care acceptă jocul tău."
+        }
+    },
+    "how_to_check_stack": {
+        "question": "Cum pot vedea ce este sub o piesă?",
+        "answers": {
+            "item1": "Pe mobil, apasă lung pe stivă pentru a o extinde. După ce este extinsă, poți muta degetul pentru a vedea și piesa de sub deget.",
+            "item2": "Pe desktop, fă clic dreapta pe stivă și aceasta va rămâne extinsă până eliberezi clicul."
+        }
+    },
+    "what_are_cornfirmation_modes": {
+        "question": "Ce înseamnă diferitele moduri de confirmare?",
+        "description": "Când faci o mutare, există 3 moduri:",
+        "answers": {
+            "item1": "Dublu clic - Modul implicit, primul clic plasează piesa și al doilea clic confirmă mutarea.",
+            "item2": "Un singur clic - Mai rapid, dacă vrei să nu pierzi timp în jocuri rapide. Ai grijă să nu greșești plasarea, deoarece cu un singur clic confirmi mutarea.",
+            "item3": "Confirmare la ceas - Cel sigur, dacă vrei să eviți mutările din greșeală. Mai întâi selectezi unde să plasezi/muți, apoi pentru a confirma trebuie să apeși pe propriul ceas."
+        }
+    },
+    "can_i_play_base_game": {
+        "question": "Pot juca jocul de bază fără expansiuni?",
+        "answer": "Da, dar de ce ai face asta? Lăsând gluma deoparte, jocul de bază este limitat la jocuri fără elo. Hive PLM (toate cele trei expansiuni: Pillbug, Ladybug, Mosquito) este formatul oficial folosit în turnee. De asemenea, este cel mai provocator și distractiv!"
+    },
+    "what_rating_system": {
+        "question": "Ce sistem de evaluare folosește hivegame.com?",
+        "answer": "Folosim sistemul <glicko2_link>Glicko-2</glicko2_link>. Parametrii sunt similari cu cei de la Lichess."
+    },
+    "how_to_recover_password": {
+        "question": "Ce pot face dacă mi-am uitat parola?",
+        "answer": "Nu avem încă funcționalitate automată de recuperare a parolei, ne poți contacta pe Discord @klautcomputing / @ionoi pentru a-ți reseta parola."
+    },
+    "why_basic_chat": {
+        "question": "De ce chatul este atât de simplu?",
+        "details": "Funcția de chat este încă în dezvoltare, suntem conștienți de problemele sale, iată câteva aspecte importante de reținut când îl folosești:",
+        "answers": {
+            "item1": "În prezent, chatul nu este salvat în baza de date, așa că atunci când facem un update, mesajele vor fi pierdute!",
+            "item2": "Deocamdată, este posibil să comunici doar într-un joc (mesajele directe și alte moduri vor fi adăugate), spectatorii nu văd chatul jucătorilor și nici jucătorii nu văd chatul spectatorilor.",
+            "item3": "Uneori notificarea roșie de chat arată mesaje noi când de fapt nu sunt."
+        }
+    },
+    "opponent_is_abusive": {
+        "question": "Ce pot face dacă adversarul meu este abuziv sau deranjant în joc/chat sau are un nume de utilizator inadecvat?",
+        "answer": "Fă o captură de ecran și contactează-ne pe Discord @klautcomputing / @ionoi și vom rezolva problema."
+    },
+    "where_to_meet_other_players": {
+        "question": "Unde pot cunoaște restul comunității de Hive® din întreaga lume?",
+        "answer": "Găsește linkurile către rețelele noastre sociale <resources_link>aici</resources_link>. Comunitatea Hive® este foarte prietenoasă și vei găsi cu siguranță pe cineva aproape pentru a juca față în față!"
+    },
+    "why_elo_has_questionmark": {
+        "question": "De ce Elo-ul meu are un “?” în spatele lui?",
+        "answer": "Acest lucru se întâmplă în timp ce Elo-ul tău este încă incert. Dispare odată ce ai jucat suficiente jocuri și odată ce ? dispare, poți apărea și în clasamente."
+    },
+    "why_not_in_top_players": {
+        "question": "De ce nu apar în lista jucătorilor de top?",
+        "answer": "Nu ai jucat încă suficiente jocuri pentru ca sistemul să fie sigur de cât de exact este Elo-ul tău. Continuă să joci câteva jocuri în plus, ideal câștigă-le, și vei apărea în clasament."
+    },
+    "how_to_review_games": {
+        "question": "Pot analiza partidele încheiate?",
+        "answer": "Da, jocurile încheiate au o icoană microscop care va încărca jocul în modul de analiză, această funcționalitate este încă în dezvoltare, așa că nu te aștepta la prea multe încă."
+    },
+    "where_to_learn_more": {
+        "question": "Cum pot învăța mai multe despre strategia Hive?",
+        "answer": "Plănuim să adăugăm un tutorial interactiv pentru a te ajuta să înveți și să înțelegi toate ideile strategice din spatele jocului, în viitor verifică secțiunea <resources_link>resurse</resources_link> pentru cărți, videoclipuri și discord!"
+    },
+    "can_i_set_up_a_tournament": {
+        "question": "Pot organiza un turneu?",
+        "answer": "Da, deși încă lucrăm la asta. Ne poți contacta pe Discord dacă vrei să ne ajuți."
+    },
+    "can_i_play_with_bots": {
+        "question": "Pot juca împotriva unui bot?",
+        "answer": "Această funcționalitate nu este încă suportată, dar ar putea fi în curând (contactează-ne dacă vrei să ajuți la dezvoltare)."
+    }
+}

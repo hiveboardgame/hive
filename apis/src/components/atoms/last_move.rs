@@ -11,8 +11,8 @@ pub fn LastMove(
     #[prop(optional)] extend_tw_classes: &'static str,
     direction: Direction,
 ) -> impl IntoView {
-    let config = expect_context::<Config>();
-    let straight = move || (config.tile_design.preferred_tile_design)() == TileDesign::ThreeD;
+    let config = expect_context::<Config>().0;
+    let straight = move || config().tile_design == TileDesign::ThreeD;
     let center = move || SvgPos::center_for_level(position, level(), straight());
     let transform = move || format!("translate({},{})", center().0, center().1);
     let href = move || match direction {
