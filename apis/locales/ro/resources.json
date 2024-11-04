@@ -1,0 +1,59 @@
+{
+    "title": "Linkuri Comunitate",
+    "hive_news": {
+        "title": "Știri Hive",
+        "description": "<tournaments_site>Turnee Mondiale Hive</tournaments_site> Turnee în persoană și online, rezultate de turnee, articole de strategie. Locul pentru cele mai recente știri despre Hive."
+    },
+    "online_tools": {
+        "title": "Instrumente Online",
+        "tools": {
+            "item1": "<entomology_link>Entomology</entomology_link> Editor de poziții și explorator de jocuri pentru jocuri jucate pe BGA sau Boardspace",
+            "item2": "<explorer_link>Explorator de deschideri</explorer_link> Căutare de deschideri pentru jocurile de turneu de pe Boardspace",
+            "item3": "<hexketch_link>Hextech</hexketch_link> Hextech este un site care îți permite să generezi cu ușurință imagini ale pieselor pe o grilă hexagonală"
+        }
+    },
+    "offline_tools": {
+        "title": "Instrumente Offline",
+        "tools": {
+            "item1": "<mzinga_link>Mzinga</mzinga_link> Mzinga este o colecție de software open source pentru a juca Hive, cu scopul principal de a construi o comunitate de dezvoltatori care creează AI-uri pentru Hive. Funcționează pe Windows, Mac și Linux",
+            "item2": "<nokamute_link>Nokamute</nokamute_link> Nokamute este un AI open source pentru Hive, compatibil cu Mzinga.",
+            "item3": "<bga_downloader_link>Descarcă jocuri BGA</bga_downloader_link> Descarcă un joc Hive de pe BGA în format sgf."
+        }
+    },
+    "social_media": {
+        "title": "Rețele de Socializare",
+        "links": {
+            "item1": "<discord_link>Discord</discord_link> Alătură-te chatului comunității noastre",
+            "item2": "<reddit_link>Subreddit Hive</reddit_link> Împărtășește strategiile și experiențele tale",
+            "item3": "<facebook_link>Comunitatea Mondială Hive pe Facebook</facebook_link> Conectează-te cu alți jucători",
+            "item4": "<instagram_link>Instagram Hive</instagram_link> Fotografii și meme-uri amuzante despre Hive"
+        }
+    },
+    "books": {
+        "title": "Cărți",
+        "links": {
+            "item1": "<hive_champion_link>Joacă Hive Ca un Campion</hive_champion_link> Carte de strategie Hive scrisă de Randy Ingersoll, campion mondial din 2011.",
+            "item2": "<hive_canon_link>Canonul Hive: Bazele</hive_canon_link> Prima carte dintr-o trilogie planificată de Joe Schultz multiplu campion mondial",
+            "item3": "<hive_puzzles_link>Hive Puzzles</hive_puzzles_link> Colecție gratuită de puzzle-uri Hive cu soluții pentru toate nivelele de la începători până la avansați"
+        }
+    },
+    "videos": {
+        "title": "Video",
+        "links": {
+            "item1": "<frasco_link>Frasco</frasco_link> Specialist în Hive și alte jocuri abstracte de strategie",
+            "item2": "<ringersol_link>Joacă Hive ca un campion</ringersol_link> Canal YouTube al lui Randy Ingersoll,jocuri de turneu analizate și discuții de strategie",
+            "item3": "<ordep_cubik_link>OrdepCubik</ordep_cubik_link> 🇪🇸 Analize de joc în spaniolă de un maestru Hive în devenire",
+            "item4": "<cavaliers16_link>Cavaliers16</cavaliers16_link> Recenzii de jocuri de la unul dintre cei mai puternici jucători de Hive"
+        }
+    },
+    "publisher": {
+        "title": "Gen42 - Editorul Hive",
+        "links": {
+            "item1": "<gen42_link>Gen42 - cumpără jocul fizic aici</gen42_link>",
+            "item2": "<facebook_gen42_link>Gen42 - Facebook</facebook_gen42_link>",
+            "item3": "<facebook_link>Comunitatea Mondială Hive pe Facebook</facebook_link>",
+            "item4": "<instagram_gen42_link>Gen42 - Instagram</instagram_gen42_link>",
+            "item5": "<youtube_gen42_link>Gen42 - YouTube</youtube_gen42_link>"
+        }
+    }
+}
