@@ -58,5 +58,11 @@
         "invalid_login": "Email o contrassenya incorrectes"
     },
     "piece_style": "Estil de les peces:",
-    "move_confirm": "Confirmació de moviments:"
+    "move_confirm": "Confirmació de moviments:",
+    "allow_takeback_buttons": {
+        "always": "Sempre",
+        "casual_only": "Sols en Casual",
+        "never": "Mai"
+    },
+    "allow_takeback": "Permetre retrocessos"
 }
