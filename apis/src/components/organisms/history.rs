@@ -3,7 +3,7 @@ use crate::providers::game_state::{self, GameStateSignal};
 use hive_lib::GameStatus;
 use leptos::*;
 use leptos_icons::*;
-use shared_types::Conclusion;
+use shared_types::{Conclusion, TimeMode};
 
 #[component]
 pub fn HistoryMove(
@@ -28,6 +28,11 @@ pub fn HistoryMove(
         game_state.show_history_turn(turn);
     };
     let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
+    let is_realtime = create_read_slice(game_state.signal, |gs| {
+        gs.game_response
+            .as_ref()
+            .is_some_and(|gr| gr.time_mode == TimeMode::RealTime)
+    });
     let get_class = move || {
         let base_class = "col-span-2 p-1 h-auto max-h-6 leading-6 transition-transform duration-300 transform odd:ml-1 odd:justify-self-start even:mr-1 even:justify-self-end hover:bg-pillbug-teal active:scale-95";
         if let Some(history_turn) = history_turn() {
@@ -62,7 +67,7 @@ pub fn HistoryMove(
     view! {
         <div ref=div_ref class=get_class on:click=onclick>
             {format!("{}. {piece} {position}{}", turn + 1, rep)}
-            {time_took}
+            <Show when=is_realtime>{time_took}</Show>
         </div>
     }
 }
