@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use crate::providers::{online_users::OnlineUsersSignal, AuthContext};
 use leptos::*;
 use leptos_router::ActionForm;
@@ -5,6 +6,7 @@ use leptos_router::ActionForm;
 #[component]
 pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
+    let i18n = use_i18n();
     view! {
         <ActionForm action=auth_context.logout class=format!("flex m-1 {extend_tw_classes}")>
 
@@ -19,7 +21,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                 class="flex place-content-start px-4 py-2 w-full h-full font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red active:scale-95"
                 type="submit"
             >
-                Logout
+                {t!(i18n, header.user_menu.logout)}
             </button>
         </ActionForm>
     }

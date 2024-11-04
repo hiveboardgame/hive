@@ -3,7 +3,7 @@ use crate::providers::game_state::{self, GameStateSignal};
 use hive_lib::GameStatus;
 use leptos::*;
 use leptos_icons::*;
-use shared_types::Conclusion;
+use shared_types::{Conclusion, TimeMode};
 
 #[component]
 pub fn HistoryMove(
@@ -28,23 +28,46 @@ pub fn HistoryMove(
         game_state.show_history_turn(turn);
     };
     let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
+    let is_realtime = create_read_slice(game_state.signal, |gs| {
+        gs.game_response
+            .as_ref()
+            .is_some_and(|gr| gr.time_mode == TimeMode::RealTime)
+    });
     let get_class = move || {
-        let mut class = "col-span-2 ml-3 h-auto max-h-6 leading-6 transition-transform duration-300 transform hover:bg-pillbug-teal active:scale-95";
+        let base_class = "col-span-2 p-1 h-auto max-h-6 leading-6 transition-transform duration-300 transform odd:ml-1 odd:justify-self-start even:mr-1 even:justify-self-end hover:bg-pillbug-teal active:scale-95";
         if let Some(history_turn) = history_turn() {
             if turn == history_turn {
-                class = "col-span-2 ml-3 h-auto max-h-6 leading-6 transition-transform duration-300 transform hover:bg-pillbug-teal bg-orange-twilight active:scale-95"
+                return format!("{} bg-orange-twilight", base_class);
             }
         }
-        class
+        base_class.to_string()
     };
     let rep = if repetition {
         String::from(" ↺")
     } else {
         String::new()
     };
+    let time_took = move || {
+        let response = game_state.signal.get().game_response?;
+        let increment = response.time_increment? as i64 * 1_000_000_000;
+        let nano_sec = if turn > 1 {
+            let time_left = response.move_times[turn]?;
+            let prev_time = response.move_times[turn - 2]?;
+            prev_time + increment - time_left
+        } else {
+            return None;
+        };
+        let seconds = nano_sec as f64 / 1_000_000_000.0;
+        Some(if seconds > 60.0 {
+            format!(" ({:.1} m)", seconds / 60.0)
+        } else {
+            format!(" ({:.2} s)", seconds)
+        })
+    };
     view! {
         <div ref=div_ref class=get_class on:click=onclick>
             {format!("{}. {piece} {position}{}", turn + 1, rep)}
+            <Show when=is_realtime>{time_took}</Show>
         </div>
     }
 }
@@ -100,7 +123,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     view! {
         <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
 
-            <HistoryControls parent=parent.into()/>
+            <HistoryControls parent=parent.into() />
             <div ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
                 <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
@@ -118,11 +141,11 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <div class="col-span-4 text-center">{conclusion}</div>
                     <a
                         href="/analysis"
-                        class="col-span-4 w-full text-white rounded duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+                        class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
                         on:click=analysis_setup
                     >
                         <div class="flex gap-1 justify-center items-center">
-                            <Icon icon=icondata::TbMicroscope class="py-1 w-7 h-7"/>
+                            <Icon icon=icondata::TbMicroscope class="py-1 w-7 h-7" />
                             "Analyze here"
                         </div>
                     </a>

@@ -1,12 +1,10 @@
 use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::components::molecules::time_row::TimeRow;
-use crate::providers::ApiRequests;
+use crate::i18n::*;
+use crate::providers::{ApiRequests, Config};
 use crate::{
-    components::atoms::game_type::GameType,
-    components::atoms::profile_link::ProfileLink,
-    functions::hostname::hostname_and_port,
-    providers::{AuthContext, ColorScheme},
-    responses::ChallengeResponse,
+    components::atoms::game_type::GameType, components::atoms::profile_link::ProfileLink,
+    functions::hostname::hostname_and_port, providers::AuthContext, responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
 use leptos::*;
@@ -17,24 +15,25 @@ use shared_types::{ChallengeVisibility, TimeInfo};
 
 #[component]
 pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
-    let color_context = expect_context::<ColorScheme>;
+    let config = expect_context::<Config>().0;
     let icon = move || match challenge().color_choice {
         ColorChoice::Random => {
-            view! { <Icon icon=icondata::BsHexagonHalf class="pb-[2px]"/> }
+            view! { <Icon icon=icondata::BsHexagonHalf class="pb-[2px]" /> }
         }
         ColorChoice::White => {
-            if (color_context().prefers_dark)() {
-                view! { <Icon icon=icondata::BsHexagonFill class="fill-white pb-[2px]"/> }
+            if config().prefers_dark {
+                view! { <Icon icon=icondata::BsHexagonFill class="fill-white pb-[2px]" /> }
             } else {
-                view! { <Icon icon=icondata::BsHexagon class="stroke-black pb-[2px]"/> }
+                view! { <Icon icon=icondata::BsHexagon class="stroke-black pb-[2px]" /> }
             }
         }
         ColorChoice::Black => {
-            if (color_context().prefers_dark)() {
-                view! { <Icon icon=icondata::BsHexagon class="stroke-white pb-[2px]"/> }
+            if config().prefers_dark {
+                view! { <Icon icon=icondata::BsHexagon class="stroke-white pb-[2px]" /> }
             } else {
-                view! { <Icon icon=icondata::BsHexagonFill class="fill-black pb-[2px]"/> }
+                view! { <Icon icon=icondata::BsHexagonFill class="fill-black pb-[2px]" /> }
             }
         }
     };
@@ -81,7 +80,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             if challenge().challenger.uid == uid {
                 view! {
                     <div class="flex items-center">
-                        <StatusIndicator username=opponent.username.to_owned()/>
+                        <StatusIndicator username=opponent.username.to_owned() />
                         <ProfileLink
                             username=opponent.username
                             patreon=opponent.patreon
@@ -92,7 +91,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             } else {
                 view! {
                     <div class="flex items-center">
-                        <StatusIndicator username=challenge().challenger.username/>
+                        <StatusIndicator username=challenge().challenger.username />
                         <ProfileLink
                             username=challenge().challenger.username
                             patreon=challenge().challenger.patreon
@@ -104,7 +103,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
         } else {
             view! {
                 <div class="flex items-center">
-                    <StatusIndicator username=challenge().challenger.username/>
+                    <StatusIndicator username=challenge().challenger.username />
                     <ProfileLink
                         username=challenge().challenger.username
                         patreon=challenge().challenger.patreon
@@ -146,7 +145,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             </td>
             <td class=td_class>
                 <div class="flex justify-center items-center">
-                    <GameType game_type=challenge().game_type/>
+                    <GameType game_type=challenge().game_type />
                 </div>
             </td>
             <td class=td_class>
@@ -159,7 +158,14 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             </td>
             <td class=td_class>
                 <div class="flex justify-center items-center">
-                    <span class="font-bold">{if challenge().rated { "YES" } else { "NO" }}</span>
+                    <span class="font-bold">
+                        {if challenge().rated {
+                            t!(i18n, home.challenge_details.rated.yes).into_view()
+                        } else {
+                            t!(i18n, home.challenge_details.rated.no).into_view()
+                        }}
+
+                    </span>
                 </div>
             </td>
             <td class=td_class>
@@ -181,7 +187,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                         on:click=copy
                                         class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
                                     >
-                                        <Icon icon=icondata::AiCopyOutlined class="w-6 h-6"/>
+                                        <Icon icon=icondata::AiCopyOutlined class="w-6 h-6" />
                                     </button>
                                 </Show>
                                 <button
@@ -192,7 +198,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                                     class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
                                 >
-                                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/>
+                                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6" />
                                 </button>
                             }
                         }
@@ -214,7 +220,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                             class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
                         >
-                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6"/>
+                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6" />
 
                         </button>
                         {if challenge().opponent.is_some() {
@@ -235,7 +241,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                                     class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
                                 >
-                                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/>
+                                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6" />
 
                                 </button>
                             }

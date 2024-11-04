@@ -45,7 +45,7 @@ pub fn RatingAndChangeDynamic(
                 .map(|ratings| {
                     let ratings = StoredValue::new(ratings);
                     view! {
-                        <RatingAndChange extend_tw_classes=extend_tw_classes ratings side=side/>
+                        <RatingAndChange extend_tw_classes=extend_tw_classes ratings side=side />
                     }
                 })
         }}

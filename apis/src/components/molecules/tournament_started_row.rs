@@ -31,7 +31,7 @@ pub fn TournamentStartedNotification(tournament: StoredValue<TournamentResponse>
                     on:click=dismiss
                     class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95"
                 >
-                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/>
+                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6" />
                 </button>
             </div>
         </div>

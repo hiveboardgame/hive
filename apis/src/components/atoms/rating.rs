@@ -20,8 +20,8 @@ pub fn Rating(rating: RatingResponse) -> impl IntoView {
 pub fn RatingWithIcon(rating: StoredValue<RatingResponse>) -> impl IntoView {
     view! {
         <div class="flex flex-row gap-1 items-center">
-            <Icon icon=icon_for_speed(&rating().speed)/>
-            <Rating rating=rating()/>
+            <Icon icon=icon_for_speed(&rating().speed) />
+            <Rating rating=rating() />
         </div>
     }
 }

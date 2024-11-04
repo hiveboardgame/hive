@@ -20,7 +20,7 @@ pub fn DirectChallengeButton(user: StoredValue<UserResponse>) -> impl IntoView {
 
     view! {
         <Modal open=open dialog_el=dialog_el>
-            <ChallengeCreate open opponent=user().username/>
+            <ChallengeCreate open opponent=user().username />
         </Modal>
         <Show when=logged_in_and_not_user>
             <button
@@ -28,7 +28,7 @@ pub fn DirectChallengeButton(user: StoredValue<UserResponse>) -> impl IntoView {
                 on:click=move |_| open.update(move |b| *b = true)
                 class="p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
             >
-                <Icon icon=icondata::RiSwordOthersLine class="w-6 h-6"/>
+                <Icon icon=icondata::RiSwordOthersLine class="w-6 h-6" />
             </button>
         </Show>
     }

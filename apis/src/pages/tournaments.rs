@@ -48,7 +48,7 @@ pub fn Tournaments() -> impl IntoView {
                         if search().is_empty()
                             || tournament.name.to_lowercase().contains(&search().to_lowercase())
                         {
-                            view! { <TournamentRow tournament=tournament.clone()/> }
+                            view! { <TournamentRow tournament=tournament.clone() /> }
                         } else {
                             "".into_view()
                         }

@@ -5,9 +5,9 @@ use leptos::*;
 pub fn PlayersView() -> impl IntoView {
     view! {
         <div class="pt-2 md:pt-6 flex flex-col items-center">
-            <OnlineUsers/>
+            <OnlineUsers />
             // TODO: move this out to its own component "leaderboard_s_"
-            <Leaderboard speed=shared_types::game_speed::GameSpeed::Correspondence/>
+            <Leaderboard speed=shared_types::game_speed::GameSpeed::Correspondence />
         </div>
     }
 }

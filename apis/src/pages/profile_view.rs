@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use crate::{
     components::{molecules::game_row::GameRow, organisms::display_profile::DisplayProfile},
     providers::{
@@ -41,6 +42,7 @@ fn first_batch(user: String, c: ProfileControls) {
 
 #[component]
 pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
+    let i18n = use_i18n();
     let ctx = expect_context::<ProfileGamesContext>();
     let navi = expect_context::<NavigationControllerSignal>();
     let params = use_params::<UsernameParams>();
@@ -84,7 +86,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
         <div class="flex flex-col pt-12 mx-3 bg-light dark:bg-gray-950">
             <Show when=move || ctx.user.get().is_some()>
                 <div class="flex flex-col m-1 w-full">
-                    <DisplayProfile user=ctx.user.get().unwrap()/>
+                    <DisplayProfile user=ctx.user.get().unwrap() />
                     <div class="flex flex-col m-1 w-full">
                         <RadioGroupRoot
                             attr:class="flex flex-wrap gap-1"
@@ -95,16 +97,16 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         >
 
                             <RadioGroupItem value="Unstarted" attr:class=radio_classes>
-                                <A href="unstarted">"Unstarted Tournament Games"</A>
+                                <A href="unstarted">{t!(i18n, profile.game_buttons.unstarted)}</A>
                             </RadioGroupItem>
                             <RadioGroupItem value="Playing" attr:class=radio_classes>
-                                <A href="playing">"Playing"</A>
+                                <A href="playing">{t!(i18n, profile.game_buttons.playing)}</A>
                             </RadioGroupItem>
                             <RadioGroupItem value="Finished" attr:class=radio_classes>
-                                <A href="finished">"Finished Games"</A>
+                                <A href="finished">{t!(i18n, profile.game_buttons.finished)}</A>
                             </RadioGroupItem>
                         </RadioGroupRoot>
-                        <span class="font-bold text-md">Player color:</span>
+                        <span class="font-bold text-md">{t!(i18n, profile.player_color)}</span>
                         <RadioGroupRoot
                             attr:class="flex flex-wrap gap-1"
                             value=signal_debounced(
@@ -124,17 +126,17 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         >
 
                             <RadioGroupItem value="b" attr:class=radio_classes>
-                                "Black"
+                                {t!(i18n, profile.color_buttons.black)}
                             </RadioGroupItem>
                             <RadioGroupItem value="w" attr:class=radio_classes>
-                                "White"
+                                {t!(i18n, profile.color_buttons.white)}
                             </RadioGroupItem>
                             <RadioGroupItem value="Both" attr:class=radio_classes>
-                                "Both"
+                                {t!(i18n, profile.color_buttons.both)}
                             </RadioGroupItem>
                         </RadioGroupRoot>
                         <Show when=move || controls().tab_view == GameProgress::Finished>
-                            <span class="font-bold text-md">Game Result:</span>
+                            <span class="font-bold text-md">{t!(i18n, profile.gamo_result)}</span>
                             <RadioGroupRoot
                                 attr:class="flex flex-wrap gap-1"
                                 value=signal_debounced(
@@ -156,20 +158,20 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                             >
 
                                 <RadioGroupItem value="Win" attr:class=radio_classes>
-                                    "Win"
+                                    {t!(i18n, profile.result_buttons.win)}
                                 </RadioGroupItem>
                                 <RadioGroupItem value="Loss" attr:class=radio_classes>
-                                    "Loss"
+                                    {t!(i18n, profile.result_buttons.loss)}
                                 </RadioGroupItem>
                                 <RadioGroupItem value="Draw" attr:class=radio_classes>
-                                    "Draw"
+                                    {t!(i18n, profile.result_buttons.draw)}
                                 </RadioGroupItem>
                                 <RadioGroupItem value="All" attr:class=radio_classes>
-                                    "All"
+                                    {t!(i18n, profile.result_buttons.all)}
                                 </RadioGroupItem>
                             </RadioGroupRoot>
                         </Show>
-                        <span class="font-bold text-md">Included speeds:</span>
+                        <span class="font-bold text-md">{t!(i18n, profile.include_speeds)}</span>
                         <ToggleGroupRoot
                             attr:class="flex flex-wrap gap-1 mb-1"
                             kind=ToggleGroupKind::Multiple {
@@ -189,8 +191,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                     Callback::new(move |v: Vec<String>| {
                                         controls
                                             .update(|c| {
-                                                c
-                                                    .speeds = v
+                                                c.speeds = v
                                                     .iter()
                                                     .map(|s| GameSpeed::from_str(s).unwrap())
                                                     .collect();
@@ -202,22 +203,22 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         >
 
                             <ToggleGroupItem value="Bullet" attr:class=toggle_classes>
-                                "Bullet"
+                                {t!(i18n, game.speeds.bullet)}
                             </ToggleGroupItem>
                             <ToggleGroupItem value="Blitz" attr:class=toggle_classes>
-                                "Blitz"
+                                {t!(i18n, game.speeds.blitz)}
                             </ToggleGroupItem>
                             <ToggleGroupItem value="Rapid" attr:class=toggle_classes>
-                                "Rapid"
+                                {t!(i18n, game.speeds.rapid)}
                             </ToggleGroupItem>
                             <ToggleGroupItem value="Classic" attr:class=toggle_classes>
-                                "Classic"
+                                {t!(i18n, game.speeds.classic)}
                             </ToggleGroupItem>
                             <ToggleGroupItem value="Correspondence" attr:class=toggle_classes>
-                                "Correspondence"
+                                {t!(i18n, game.speeds.correspondence)}
                             </ToggleGroupItem>
                             <ToggleGroupItem value="Untimed" attr:class=toggle_classes>
-                                "Untimed"
+                                {t!(i18n, game.speeds.untimed)}
                             </ToggleGroupItem>
                         </ToggleGroupRoot>
                     </div>
@@ -271,12 +272,12 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
         },
         UseInfiniteScrollOptions::default()
             .distance(10.0)
-            .interval(150.0),
+            .interval(300.0),
     );
     view! {
         <div node_ref=el class="flex flex-col overflow-x-hidden items-center h-[51vh]">
             <For each=ctx.games key=move |game| (game.uuid, tab_view) let:game>
-                <GameRow game=store_value(game)/>
+                <GameRow game=store_value(game) />
             </For>
         </div>
     }

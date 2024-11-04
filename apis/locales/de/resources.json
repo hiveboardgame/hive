@@ -1,1 +1,59 @@
-{}
+{
+    "title": "Gemeinschaftslinks",
+    "hive_news": {
+        "title": "Hive Nachrichten",
+        "description": "<tournaments_site>Welt-Hive-Turniere</tournaments_site> Anstehende persönliche und Online-Turniere, Turnierergebnisse, Strategieartikel. Der Ort für die neuesten Hive-Nachrichten."
+    },
+    "online_tools": {
+        "title": "Online-Tools",
+        "tools": {
+            "item1": "<entomology_link>Entomologie</entomology_link> Positionseditor und Spiel-Explorer für Spiele, die auf BGA oder Boardspace gespielt werden",
+            "item2": "<explorer_link>Eröffnungs-Explorer</explorer_link> Eröffnungssuche für Turnier-Boardspace-Spiele",
+            "item3": "<hexketch_link>Hextech</hexketch_link> Hexketch ist eine Website, die es dir ermöglicht, einfach Bilder von hexagonalen Kacheln auf einem hexagonalen Gitter zu erstellen."
+        }
+    },
+    "offline_tools": {
+        "title": "Offline-Tools",
+        "tools": {
+            "item1": "<mzinga_link>Mzinga</mzinga_link> Mzinga ist eine Sammlung von Open-Source-Software zum Spielen von Hive, mit dem Hauptziel, eine Gemeinschaft von Entwickler*innen aufzubauen, die Hive spielende KIs erstellen. Funktioniert auf Windows, Mac und Linux.",
+            "item2": "<nokamute_link>Nokamute</nokamute_link> Nokamute ist eine Open-Source-Hive-KI, die mit Mzinga kompatibel ist.",
+            "item3": "<bga_downloader_link>BGA Spiel-Downloader</bga_downloader_link> Lade ein archiviertes BGA-Hive-Spiel im SGF-Format herunter."
+        }
+    },
+    "social_media": {
+        "title": "Soziale Medien",
+        "links": {
+            "item1": "<discord_link>Discord</discord_link> Trete unserem Gemeinschafts-Chat bei",
+            "item2": "<reddit_link>Hive Subreddit</reddit_link> Teile deine Strategien und Erfahrungen",
+            "item3": "<facebook_link>Welt-Hive-Community Facebook</facebook_link> Vernetze dich mit anderen Spieler*innen",
+            "item4": "<instagram_link>Hive Instagram</instagram_link> Schöne Hive Fotos und Memes"
+        }
+    },
+    "books": {
+        "title": "Bücher",
+        "links": {
+            "item1": "<hive_champion_link>Play Hive like a champion</hive_champion_link> Hive-Strategiebuch von Randy Ingersoll, dem Weltmeister von 2011.",
+            "item2": "<hive_canon_link>Canon of Hive: Groundwork</hive_canon_link> Erstes Buch einer geplanten Trilogie von mehrfachen Hive-Weltmeister Joe Schultz.",
+            "item3": "<hive_puzzles_link>Hive-Puzzles</hive_puzzles_link> Kostenlose Sammlung von Hive-Puzzles mit Lösungen für Anfänger*innen bis Fortgeschrittene."
+        }
+    },
+    "videos": {
+        "title": "Videos",
+        "links": {
+            "item1": "<frasco_link>Frasco</frasco_link> Spezialist für Hive und andere abstrakte Strategiespiele",
+            "item2": "<ringersol_link>Play hive like a champion</ringersol_link> YouTube-Kanal von Randy Ingersoll, Turnierspiel-Bewertungen und Strategiediskussionen",
+            "item3": "<ordep_cubik_link>OrdepCubik</ordep_cubik_link> 🇪🇸 Spielanalysen auf Spanisch von einem aufstrebenden Hive-Meister",
+            "item4": "<cavaliers16_link>Cavaliers16</cavaliers16_link> Spielbewertungen von einem der stärksten Hive-Spieler*innen"
+        }
+    },
+    "publisher": {
+        "title": "Gen42 - Hive Verlag",
+        "links": {
+            "item1": "<gen42_link>Gen42 - Kaufe ein physisches Spiel</gen42_link>",
+            "item2": "<facebook_gen42_link>Gen42 - Facebook</facebook_gen42_link>",
+            "item3": "<facebook_link>Welt-Hive-Community Facebook</facebook_link>",
+            "item4": "<instagram_gen42_link>Gen42 - Instagram</instagram_gen42_link>",
+            "item5": "<youtube_gen42_link>Gen42 - YouTube</youtube_gen42_link>"
+        }
+    }
+}

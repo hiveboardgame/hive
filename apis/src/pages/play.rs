@@ -33,13 +33,13 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let orientation_signal = expect_context::<OrientationSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
-    let config = expect_context::<Config>();
+    let config = expect_context::<Config>().0;
     let current_confirm = Memo::new(move |_| {
         game_state
             .loaded
             .get()
             .then(|| {
-                let preferred_confirms = (config.confirm_mode.preferred_confirms)();
+                let preferred_confirms = config().confirm_mode;
                 game_state
                     .signal
                     .get_untracked()
@@ -78,7 +78,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         if orientation_signal.orientation_vertical.get() {
             "flex flex-col"
         } else {
-            "grid grid-cols-board-xs sm:grid-cols-board-sm lg:grid-cols-board-lg xxl:grid-cols-board-xxl grid-rows-6 pr-2"
+            "grid grid-cols-board xl:grid-cols-board-xl grid-rows-6 pr-2"
         }
     };
     let go_to_game = Callback::new(move |()| {
@@ -111,17 +111,17 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         <Show
                             when=show_board
                             fallback=move || {
-                                view! { <Unstarted user_is_player/> }
+                                view! { <Unstarted user_is_player /> }
                             }
                         >
 
-                            <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight"/>
-                            <Board/>
+                            <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight" />
+                            <Board />
                         </Show>
                         <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full">
-                            <DisplayTimer placement=Placement::Top vertical=false/>
-                            <SideboardTabs player_color/>
-                            <DisplayTimer placement=Placement::Bottom vertical=false/>
+                            <DisplayTimer placement=Placement::Top vertical=false />
+                            <SideboardTabs player_color />
+                            <DisplayTimer placement=Placement::Bottom vertical=false />
                         </div>
                     }
                 }
@@ -131,9 +131,9 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                     <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
                         <Show when=show_controls>
                             <div class="flex flex-row-reverse justify-between items-center shrink">
-                                <AnalysisAndDownload/>
+                                <AnalysisAndDownload />
                                 <Show when=move || user_is_player().is_some()>
-                                    <ControlButtons/>
+                                    <ControlButtons />
                                 </Show>
                             </div>
                         </Show>
@@ -144,14 +144,14 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                 color=top_color()
                                 analysis=false
                             />
-                            <DisplayTimer vertical=true placement=Placement::Top/>
+                            <DisplayTimer vertical=true placement=Placement::Top />
                         </div>
                         <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1 bg-inherit">
                             <UserWithRating
                                 side=top_color()
                                 is_tall=orientation_signal.orientation_vertical
                             />
-                            <GameInfo/>
+                            <GameInfo />
                         </div>
 
                     </div>
@@ -168,7 +168,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         }
                     >
 
-                        <Board overwrite_tw_classes="flex grow min-h-0"/>
+                        <Board overwrite_tw_classes="flex grow min-h-0" />
                     </Show>
                     <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
                         <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
@@ -183,17 +183,17 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                 color=player_color()
                                 analysis=false
                             />
-                            <DisplayTimer vertical=true placement=Placement::Bottom/>
+                            <DisplayTimer vertical=true placement=Placement::Bottom />
                         </div>
                         <Show when=show_controls>
                             <div class="grid grid-cols-4 gap-8 pb-1">
-                                <HistoryButton action=HistoryNavigation::First/>
-                                <HistoryButton action=HistoryNavigation::Previous/>
+                                <HistoryButton action=HistoryNavigation::First />
+                                <HistoryButton action=HistoryNavigation::Previous />
                                 <HistoryButton
                                     action=HistoryNavigation::Next
                                     post_action=go_to_game
                                 />
-                                <HistoryButton action=HistoryNavigation::MobileLast/>
+                                <HistoryButton action=HistoryNavigation::MobileLast />
                             </div>
                         </Show>
 

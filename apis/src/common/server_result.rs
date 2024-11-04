@@ -19,7 +19,7 @@ pub enum ServerResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum CommonMessage {
+pub enum WebsocketMessage {
     Server(ServerResult),
     Client(ClientRequest),
 }
@@ -59,6 +59,7 @@ pub enum ServerMessage {
     Join(UserResponse),
     Error(String),
     Schedule(ScheduleUpdate),
+    CouldSetUserConf(bool),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,0 +1,52 @@
+{
+    "time_mode": {
+        "untimed": "Fără timp",
+        "real_time": "Timp real",
+        "correspondence": {
+            "title": "Corespondență",
+            "days_move_one": "{{count}} zi per mutare",
+            "days_move_other": "{{count}} zile per mutare",
+            "days_side_one": "{{count}} zi per jucător",
+            "days_side_other": "{{count}} zile per jucător"
+        }
+    },
+    "played_in": "Jucat în:",
+    "rated": "Cotat",
+    "casual": "Necotat",
+    "created_ago": {
+        "weeks_one": "Creat acum {{count}} săptămână",
+        "weeks_other": "Creat acum {{count}} săptămâni",
+        "days_one": "Creat acum {{count}} zi",
+        "days_other": "Creat acum {{count}} zile",
+        "hours_one": "Creat acum {{count}} oră",
+        "hours_other": "Creat acum {{count}} ore",
+        "minutes_one": "Creat acum {{count}} minut",
+        "minutes_other": "Creat acum {{count}} minute",
+        "less_than_minute": "Creat acum mai puțin de un minut"
+    },
+    "finished_ago": {
+        "weeks_one": "Finalizat acum {{count}} săptămână",
+        "weeks_other": "Finalizat acum {{count}} săptămâni",
+        "days_one": "Finalizat acum {{count}} zi",
+        "days_other": "Finalizat acum {{count}} zile",
+        "hours_one": "Finalizat acum {{count}} oră",
+        "hours_other": "Finalizat acum {{count}} ore",
+        "minutes_one": "Finalizat acum {{count}} minut",
+        "minutes_other": "Finalizat acum {{count}} minute",
+        "less_than_minute": "Finalizat acum mai puțin de un minut"
+    },
+    "no_moves_played": "Nicio mutare jucată",
+    "start_when": {
+        "both_agree": "Jocul va începe când amândoi jucătorii sunt de acord asupra unei timp",
+        "both_click": "Jocul va începe când amândoi jucătorii apasă pregătit în decurs de 30s unul de celălalt",
+        "both_ready": "Acest joc de turneu va începe când ambii jucători sunt pregătiți"
+    },
+    "speeds": {
+        "bullet": "Bullet",
+        "blitz": "Blitz",
+        "rapid": "Rapid",
+        "classic": "Clasic",
+        "correspondence": "Corespondență",
+        "untimed": "Fără timp"
+    }
+}

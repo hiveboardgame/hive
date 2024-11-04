@@ -1,0 +1,16 @@
+{
+    "title": "Hive® gratuit pentru toată lumea, pentru totdeauna!",
+    "subtitle": "Fără reclame, fără abonamente; doar open source și pasiune.",
+    "about": "Suntem un proiect al comunității și credem că toată lumea ar trebui să aibă acces la o platformă hive de clasă mondială, gratuită. Ne bazăm pe sprijinul oamenilor ca tine pentru a face acest lucru posibil. Dacă îți place să folosești hivegame, te rugăm să consideri sprijinirea noastră cu o donație.",
+    "kofi_button": "<kofi_button>Ko-fi</kofi_button>",
+    "patreon_button": "<patreon_button>Patreon</patreon_button>",
+    "where_does_money_go": {
+        "question": "Unde se duc banii?",
+        "answer": "În primul rând, plătim serverul, apoi la dezvoltatorii noștri."
+    },
+    "features_for_patrons": {
+        "question": "Există funcții rezervate pentru donatori?",
+        "answer": "Nu, pentru că hivegame este complet gratuit, pentru totdeauna și pentru toată lumea. Asta este o promisiune. Totuși, primești o 👑."
+    },
+    "small_team_blurb": "Suntem o echipă mică, așa că sprijinul tău face o diferență enormă!"
+}

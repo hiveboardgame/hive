@@ -46,7 +46,7 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
 
     view! {
         <button on:click=onclick class=style>
-            <Icon icon=icon() class="w-4 h-4"/>
+            <Icon icon=icon() class="w-4 h-4" />
             {text}
         </button>
     }

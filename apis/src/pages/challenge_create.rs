@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use crate::providers::{AuthContext, ChallengeParams};
 use crate::{
     common::ChallengeAction,
@@ -22,13 +23,14 @@ pub fn ChallengeCreate(
 ) -> impl IntoView {
     view! {
         <Show when=open>
-            <ChallengeCreateInner opponent=opponent.clone() open/>
+            <ChallengeCreateInner opponent=opponent.clone() open />
         </Show>
     }
 }
 
 #[component]
 fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl IntoView {
+    let i18n = use_i18n();
     let params = expect_context::<ChallengeParams>();
     let opponent = store_value(opponent);
     let time_signals = params.time_signals;
@@ -164,29 +166,30 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
             </Show>
             <div class="flex flex-col items-center">
                 <TimeSelect
-                    title=" Create a game:"
+                    is_tournament=false
                     time_signals
                     on_value_change=time_change
                     allowed_values
                 />
             </div>
             <div class="flex gap-1 p-1">
-                Casual
+                {t!(i18n, home.custom_game.casual)}
                 <SimpleSwitch
                     checked=params.rated
                     optional_action=add_expansions
                     disabled=untimed_no_rated
-                /> Rated
+                /> {t!(i18n, home.custom_game.rated)}
             </div>
             <div class="flex gap-1 p-1">
-                Base <SimpleSwitch checked=params.with_expansions optional_action=make_unrated/> MLP
+                Base <SimpleSwitch checked=params.with_expansions optional_action=make_unrated />MLP
             </div>
 
             <Show when=move || opponent().is_none()>
                 <div class="flex gap-1 p-1">
-                    Private <SimpleSwitch checked=params.is_public/> Public
+                    {t!(i18n, home.custom_game.private)} <SimpleSwitch checked=params.is_public />
+                    {t!(i18n, home.custom_game.public)}
                 </div>
-                <p class="flex justify-center">Rating range</p>
+                <p class="flex justify-center">{t!(i18n, home.custom_game.rating_range)}</p>
                 <div class="flex justify-center w-24">{rating_string}</div>
                 <div class="flex">
                     <div class="flex gap-1 mx-1">

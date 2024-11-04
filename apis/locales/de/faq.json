@@ -1,1 +1,104 @@
-{}
+{
+    "title": "Häufig gestellte Fragen",
+    "what_is_hivegame": {
+        "question": "Was ist hivegame.com?",
+        "answer": "hivegame.com ist eine Gemeinschaftsinitiative zur Schaffung einer neuen Online-Plattform, um Hive® kostenlos zu spielen. hivegame.com ist werbefrei, Open Source, wird von Mitgliedern der Gemeinschaft entwickelt und wird offiziell vom Erfinder von Hive®, John Yianni, unterstützt."
+    },
+    "how_to_help": {
+        "question": "Wie kann ich diesem Projekt helfen, erfolgreich zu sein?",
+        "answers": {
+            "item1": "Du kannst uns helfen, indem du mit <source_link>programmierst</source_link>",
+            "item2": "Du kannst uns mit Ideen, Feedback und Grafiken auf <discord_link>Discord</discord_link> unterstützen.",
+            "item3": "Du kannst mit einer <donate_link>Spende</donate_link> helfen die Hosting Kosten (und vielleicht irgendwann mal die Entwickler) zu bezahlen."
+        }
+    },
+    "how_does_it_operate": {
+        "question": "Wie funktioniert hivegame.com?",
+        "answer": "Es wird von Mitgliedern der Gemeinschaft entwickelt und basiert zu 100% auf Spenden. hivegame.com wird niemals Benutzerdaten sammeln, Werbung anzeigen oder irgendetwas implementieren, das dich vom Spiel ablenkt oder sonst irgendwie Geld einbringt."
+    },
+    "how_to_get_crown": {
+        "question": "Wie bekomme ich eine 👑 neben meinem Benutzernamen?",
+        "answer": "Wenn du an das Projekt spendest!"
+    },
+    "what_is_hive": {
+        "question": "Was ist Hive?",
+        "answer": "Hive ist ein preisgekröntes abstraktes Strategiespiel, das 2000 von John Yianni entworfen und von <gen42_link>Gen42</gen42_link> verkauft wird."
+    },
+    "how_to_play_with_friends": {
+        "question": "Wie kann ich ein Spiel mit einer/m Freund:in spielen?",
+        "answers": {
+            "item1": "Du kannst ein Spiel erstellen, indem du auf die Schaltfläche 'Spiel erstellen' auf der Hauptseite klickst, dann die Option 'privat' wählst und danach den Link mit einer/m Freund*in teilst. Sie/Er muss ein Konto haben oder erstellen, um zu spielen.",
+            "item2": "Alternativ kannst du eine 'direkte Herausforderung' senden, indem du auf das Symbol mit den 'gekreuzten Schwertern' neben jeder/m BenutzerIn klickst, das eine direkte Herausforderung an diese(n) bestimmte(n) Benutzer_in sendet.",
+            "item3": "Natürlich kannst du auch eine offene Herausforderung einrichten, die von allen im Elo-Bereich akzeptiert werden kann, und einfach hoffen, dass sie/er als erstes dein Spiel annimmt."
+        }
+    },
+    "how_to_check_stack": {
+        "question": "Wie kann ich sehen, was unter einem Stein ist?",
+        "answers": {
+            "item1": "Auf mobilen Geräten drücke lange auf den Stapel, um ihn auszuklappen. Nachdem er ausgeklappt wurde, kannst du deinen Finger aus dem Bildschirm bewegen, um den untersten Stein ebenfalls zu sehen.",
+            "item2": "Auf dem Desktop klicke mit der rechten Maustaste auf den Stapel, und er bleibt erweitert, bis du loslässt."
+        }
+    },
+    "what_are_cornfirmation_modes": {
+        "question": "Was bedeuten die verschiedenen Bestätigungsmodi?",
+        "description": "Beim Ziehen gibt es drei Modi:",
+        "answers": {
+            "item1": "Doppelklick - Der Standardmodus, der erste Klick platziert den Stein und der zweite Klick führt den Zug aus.",
+            "item2": "Einzelklick - Der schnelle Modus, wenn du in schnellen Spielen keine Zeit verlieren möchtest. Vorsichtig, denn der einzige Klick führt sofort den Zug aus.",
+            "item3": "Uhr-Bestätigung - Der sichere Modus, wenn du vermeiden möchtest, Züge versehentlich zu machen. Zuerst klickst du, wo du platzieren/ziehen möchtest, und dann musst du auf deinen eigenen Timer klicken, um den Zug zu bestätigen."
+        }
+    },
+    "can_i_play_base_game": {
+        "question": "Kann ich das Basisspiel ohne Erweiterungen spielen?",
+        "answer": "Ja, aber warum solltest du? Spaß beiseite, aber beim Basisspiel gibt es keine ELO Bewertung. Hive PLM (alle drei Erweiterungen: Pillbug, Ladybug, Mosquito) ist das offizielle Format, das in Turnieren verwendet wird. Es ist auch die herausforderndste und spaßigste Variante!"
+    },
+    "what_rating_system": {
+        "question": "Welches Bewertungssystem verwendet hivegame.com?",
+        "answer": "Wir verwenden das <glicko2_link>Glicko-2</glicko2_link>-System. Parametrisiert wie Lichess."
+    },
+    "how_to_recover_password": {
+        "question": "Was kann ich tun, wenn ich mein Passwort vergessen habe?",
+        "answer": "Wir haben noch keine automatische Passwortwiederherstellung. Du kannst uns über Discord @klautcomputing / @ionoi kontaktieren und uns bitten, dein Passwort zurückzusetzen."
+    },
+    "why_basic_chat": {
+        "question": "Warum ist der Chat einfach weg/nicht besser/...?",
+        "details": "Die Chatfunktion ist noch in der Entwicklung. Wir sind uns bewusst, dass sie Probleme hat, wichtige Dinge, die du bei der Nutzung beachten solltest:",
+        "answers": {
+            "item1": "Aktuell wird der Chat nicht in der Datenbank gespeichert, sodass deine Chatnachrichten bei jedem Update verloren gehen!",
+            "item2": "Derzeit ist es nur möglich, im Spiel zu chatten (Direktnachrichten und andere Möglichkeiten werden noch hinzugefügt). Zuschauer*innen sehen den Spieler*innen-Chat nicht und die Spieler*innen sehen den Zuschauer*innen-Chat nicht.",
+            "item3": "Manchmal zeigt die rote Chatbenachrichtigung neue Nachrichten an, obwohl keine vorhanden sind."
+        }
+    },
+    "opponent_is_abusive": {
+        "question": "Was kann ich tun, wenn mein/e Gegner:in im Spiel/Chat beleidigend oder störend ist oder einen unangemessenen Benutzernamen hat?",
+        "answer": "Mach einen Screenshot des Verhaltens und kontaktiere uns über Discord @klautcomputing / @ionoi."
+    },
+    "where_to_meet_other_players": {
+        "question": "Wo kann ich den Rest der Gemeinschaft kennenlernen, die Hive® auf der ganzen Welt spielt?",
+        "answer": "Du findest Links zu unseren sozialen Medien <resources_link>hier</resources_link>. Die Hive®-Gemeinschaft ist sehr freundlich und du wirst sicherlich jemanden in deiner Nähe finden, um persönlich zu spielen!"
+    },
+    "why_elo_has_questionmark": {
+        "question": "Warum hat meine Elo Bewertung ein “?” dahinter?",
+        "answer": "Das passiert, während deine Bewertung noch unsicher ist. Es verschwindet, sobald du genügend Spiele gespielt hast. Solange du ein ? hast, kannst du nicht auf den Bestenlisten erscheinen."
+    },
+    "why_not_in_top_players": {
+        "question": "Warum erscheine ich nicht in den bestplatzierten Spielern?",
+        "answer": "Du hast noch nicht genügend Spiele gespielt, damit das System wirklich sicher sein kann, wie genau deine Bewertung ist. Spiel einfach noch ein paar Spiele mehr, gewinne sie hoffentlich und du wirst erscheinen."
+    },
+    "how_to_review_games": {
+        "question": "Kann ich beendete Spiele mit einem Analysetool überprüfen?",
+        "answer": "Ja, beendete Spiele haben ein Mikroskop-Symbol, das das Spiel in den Analysemodus lädt, aber dieses Feature befindet sich derzeit in der Entwicklung, also erwarte noch nicht zu viel."
+    },
+    "where_to_learn_more": {
+        "question": "Wie kann ich mehr über die Strategie von Hive lernen?",
+        "answer": "Wir planen, ein interaktives Tutorial hinzuzufügen, um dir zu helfen, alle strategischen Ideen hinter dem Spiel zu lernen und zu verstehen. In Zukunft schaue im <resources_link>Ressourcen</resources_link>-Bereich nach Büchern, Videos und dem Discord!"
+    },
+    "can_i_set_up_a_tournament": {
+        "question": "Kann ich ein Turnier einrichten?",
+        "answer": "Ja, aber wir arbeiten noch daran arbeiten. Bis jetzt gibt es noch nicht alle Tuniermodi"
+    },
+    "can_i_play_with_bots": {
+        "question": "Kann ich gegen einen Bot spielen?",
+        "answer": "Dieses Feature wird noch nicht unterstützt, könnte aber bald verfügbar sein (kontaktiere uns, wenn du helfen möchtest, dies zu programmieren)."
+    }
+}

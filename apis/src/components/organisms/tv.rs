@@ -9,7 +9,7 @@ pub fn Tv() -> impl IntoView {
     view! {
         <div class="flex flex-col items-center pt-6">
             <div class="flex flex-col flex-wrap gap-1 justify-center items-center w-full md:flex-row">
-                <GamePreviews games=live_games show_time=true/>
+                <GamePreviews games=live_games show_time=true />
             </div>
         </div>
     }

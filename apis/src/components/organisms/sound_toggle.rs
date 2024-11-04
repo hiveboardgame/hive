@@ -1,33 +1,35 @@
-use crate::providers::SoundsSignal;
+use crate::providers::Config;
 use leptos::*;
 use leptos_icons::Icon;
-use leptos_router::ActionForm;
 
 #[component]
 pub fn SoundToggle() -> impl IntoView {
-    let sounds_signal = expect_context::<SoundsSignal>();
+    let config = expect_context::<Config>().0;
+    let (_, set_cookie) = Config::get_cookie();
     let icon = move || {
-        let icon = if sounds_signal.prefers_sound.get() {
+        let icon = if config().prefers_sound {
             icondata::BiVolumeFullRegular
         } else {
             icondata::BiVolumeMuteRegular
         };
-        view! { <Icon icon class="w-4 h-4"/> }
+        view! { <Icon icon class="w-4 h-4" /> }
     };
     view! {
-        <ActionForm
-            action=sounds_signal.action
-            class="inline-flex justify-center items-center m-1 rounded"
-        >
+        <div class="inline-flex justify-center items-center m-1 rounded">
+            <button
+                class="flex justify-center items-center px-1 py-2 w-full h-full"
+                on:click=move |_| {
+                    set_cookie
+                        .update(|c| {
+                            if let Some(cookie) = c {
+                                cookie.prefers_sound = !config().prefers_sound;
+                            }
+                        });
+                }
+            >
 
-            <input
-                type="hidden"
-                name="prefers_sound"
-                value=move || (!(sounds_signal.prefers_sound)()).to_string()
-            />
-            <button type="submit" class="flex justify-center items-center px-1 py-2 w-full h-full">
                 {icon}
             </button>
-        </ActionForm>
+        </div>
     }
 }

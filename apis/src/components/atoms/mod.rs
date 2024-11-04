@@ -21,6 +21,7 @@ pub mod rating;
 pub mod schedule_controls;
 pub mod select_options;
 pub mod simple_hex;
+pub mod simple_link;
 pub mod simple_switch;
 pub mod status_indicator;
 pub mod target;

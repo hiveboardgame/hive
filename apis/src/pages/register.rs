@@ -1,5 +1,6 @@
 use crate::functions;
 use crate::functions::users::get::UsernameTaken;
+use crate::i18n::*;
 use crate::{
     components::{organisms::header::Redirect, update_from_event::update_from_input},
     providers::AuthContext,
@@ -22,6 +23,17 @@ lazy_static! {
 
 #[component]
 pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    let login_link = |children| {
+        view! {
+            <a
+                class="text-blue-500 transition-transform duration-300 transform hover:underline"
+                href="/login"
+            >
+                {children}
+            </a>
+        }
+    };
+    let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let username_taken = create_server_action::<UsernameTaken>();
     let pathname =
@@ -93,7 +105,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
             >
                 <label class="block mb-2">
-                    <p class="font-bold">Username</p>
+                    <p class="font-bold">{t!(i18n, user_config.create_account.username.title)}</p>
                     <input
                         on:input=validate_username
                         ref=my_input
@@ -102,21 +114,23 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         type="text"
                         prop:value=username
                         autocomplete="username"
-                        placeholder="Username"
+                        placeholder=t!(i18n, user_config.create_account.username.title)
                         attr:minlength="2"
                         attr:maxlength="20"
                     />
 
                     <Show when=username_exists>
-                        <small class="text-ladybug-red">"Username taken"</small>
+                        <small class="text-ladybug-red">
+                            {t!(i18n, user_config.create_account.username.error.taken)}
+                        </small>
                     </Show>
                     <Show when=has_invalid_char>
-                        <small class="text-ladybug-red">"Invalid character in username"</small>
+                        <small class="text-ladybug-red">
+                            {t!(i18n, user_config.create_account.username.error.invalid)}
+                        </small>
                     </Show>
-                    <br/>
-                    <small>
-                        "Please choose a family-friendly username. Any accounts with inappropriate usernames will be closed!"
-                    </small>
+                    <br />
+                    <small>{t!(i18n, user_config.create_account.username.description)}</small>
                 </label>
                 <label class="mb-2">
                     <p class="font-bold">Email</p>
@@ -137,17 +151,19 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         inputmode="email"
                         prop:value=email
                         autocomplete="email"
-                        placeholder="Email"
+                        placeholder=t!(i18n, user_config.create_account.email.description)
                     />
 
                     <Show when=is_invalid_email>
-                        <small class="text-ladybug-red">"Invalid email"</small>
+                        <small class="text-ladybug-red">
+                            {t!(i18n, user_config.create_account.email.error.invalid)}
+                        </small>
                     </Show>
-                    <br/>
-                    <small>Email notifications and password reset once we implement them</small>
+                    <br />
+                    <small>{t!(i18n, user_config.create_account.email.description)}</small>
                 </label>
                 <label>
-                    <p class="font-bold">Password</p>
+                    <p class="font-bold">{t!(i18n, user_config.create_account.password)}</p>
                     <input
                         on:input=debounce(Duration::from_millis(350), update_from_input(pw))
 
@@ -156,14 +172,14 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         type="password"
                         prop:value=pw
                         autocomplete="new-password"
-                        placeholder="password"
+                        placeholder=t!(i18n, user_config.create_account.password)
                         attr:minlength="8"
                         attr:maxlength="128"
                     />
                 </label>
-                <small>At least 8 characters</small>
+                <small>{t!(i18n, user_config.create_account.password_requirements)}</small>
                 <label>
-                    <p class="font-bold">Confirm Password</p>
+                    <p class="font-bold">{t!(i18n, user_config.create_account.confirm_password)}</p>
                     <input
                         on:input=debounce(Duration::from_millis(350), update_from_input(pw_confirm))
                         class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
@@ -171,17 +187,19 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         type="password"
                         prop:value=pw_confirm
                         autocomplete="new-password"
-                        placeholder="password"
+                        placeholder=t!(i18n, user_config.create_account.password)
                         attr:minlength="8"
                         attr:maxlength="128"
                     />
                 </label>
 
                 <Show when=move || pw_invalid() && (!pw().is_empty())>
-                    <small class="text-ladybug-red">"Password too short or does not match"</small>
+                    <small class="text-ladybug-red">
+                        {t!(i18n, user_config.create_account.password_error)}
+                    </small>
                 </Show>
 
-                <input type="hidden" name="pathname" value=pathname().0/>
+                <input type="hidden" name="pathname" value=pathname().0 />
                 <div class="flex items-center mb-2">
                     <input
                         on:change=move |_| agree.update(|b| *b = !*b)
@@ -193,29 +211,25 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         for="agree-checkbox"
                         class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
                     >
-                        I agree to be nice to other players and to report abuse on Discord
+                        {t!(i18n, user_config.create_account.be_nice_checkbox)}
                     </label>
                 </div>
                 <input
                     type="submit"
                     disabled=conditionally_disable
                     class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                    value="Sign Up"
+                    value=t!(i18n, user_config.create_account.signup_button)
                 />
                 <Show when=display_register_error>
-                    <small class="text-ladybug-red">"Registration failed"</small>
+                    <small class="text-ladybug-red">
+                        {t!(i18n, user_config.create_account.registration_error)}
+                    </small>
                 </Show>
 
             </ActionForm>
 
             <p class="text-xs text-center text-gray-500">
-                Already have an account?
-                <a
-                    class="text-blue-500 transition-transform duration-300 transform hover:underline"
-                    href="/login"
-                >
-                    Sign in
-                </a>
+                {t!(i18n, user_config.create_account.existing_account_prompt, < login_link >)}
             </p>
         </div>
     }

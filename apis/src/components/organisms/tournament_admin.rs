@@ -33,7 +33,7 @@ pub fn TournamentAdminControls(
                     key=|(id, _)| (*id)
                     let:user
                 >
-                    <UserRow actions=user_kick() user=store_value(user.1)/>
+                    <UserRow actions=user_kick() user=store_value(user.1) />
                 </For>
             </Show>
         </div>
@@ -41,12 +41,12 @@ pub fn TournamentAdminControls(
             <Show when=move || !tournament().invitees.is_empty()>
                 <p class="font-bold">Invitees</p>
                 <For each=move || { tournament().invitees } key=|users| (users.uid) let:user>
-                    <UserRow actions=user_uninvite() user=store_value(user)/>
+                    <UserRow actions=user_uninvite() user=store_value(user) />
                 </For>
             </Show>
             <Show when=move || user_is_organizer>
                 <p class="font-bold">Invite players</p>
-                <InviteUser tournament=tournament()/>
+                <InviteUser tournament=tournament() />
             </Show>
         </div>
     }

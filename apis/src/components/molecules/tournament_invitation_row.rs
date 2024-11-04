@@ -37,7 +37,7 @@ pub fn TournamentInvitationNotification(tournament: RwSignal<TournamentResponse>
                     <div>{tournament().name}</div>
                 </div>
                 <div class=div_class>
-                    <TimeRow time_info=time_info.into()/>
+                    <TimeRow time_info=time_info.into() />
                 </div>
                 <div class=div_class>
                     <div>Players: {seats_taken}</div>
@@ -54,14 +54,14 @@ pub fn TournamentInvitationNotification(tournament: RwSignal<TournamentResponse>
                     prop:disabled=seats_full
                     class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
-                    <Icon icon=icondata::AiCheckOutlined class="w-6 h-6"/>
+                    <Icon icon=icondata::AiCheckOutlined class="w-6 h-6" />
                 </button>
                 <button
                     title="Decline Invitation"
                     on:click=decline
                     class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95"
                 >
-                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/>
+                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6" />
                 </button>
             </div>
         </div>

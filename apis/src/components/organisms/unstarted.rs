@@ -1,3 +1,4 @@
+use crate::i18n::*;
 use crate::providers::{
     game_state::GameStateSignal, tournament_ready::TournamentReadySignal, ApiRequests,
 };
@@ -11,6 +12,7 @@ pub fn Unstarted(
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] overwrite_tw_classes: &'static str,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateSignal>();
     let ready = expect_context::<TournamentReadySignal>().signal;
     let game_id = create_read_slice(game_state.signal, |gs| gs.game_id.clone());
@@ -68,11 +70,11 @@ pub fn Unstarted(
                         <Show
                             when=white_ready
                             fallback=|| {
-                                view! { <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/> }
+                                view! { <Icon icon=icondata::IoCloseSharp class="w-6 h-6" /> }
                             }
                         >
 
-                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6"/>
+                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6" />
                         </Show>
 
                     </div>
@@ -82,11 +84,11 @@ pub fn Unstarted(
                         <Show
                             when=black_ready
                             fallback=|| {
-                                view! { <Icon icon=icondata::IoCloseSharp class="w-6 h-6"/> }
+                                view! { <Icon icon=icondata::IoCloseSharp class="w-6 h-6" /> }
                             }
                         >
 
-                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6"/>
+                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6" />
                         </Show>
 
                     </div>
@@ -94,15 +96,11 @@ pub fn Unstarted(
                 <Show
                     when=move || user_is_player().is_some()
                     fallback=move || {
-                        view! {
-                            <div class="p-1">
-                                "This tournament game will start when both players are ready"
-                            </div>
-                        }
+                        view! { <div class="p-1">{t!(i18n, game.start_when.both_ready)}</div> }
                     }
                 >
 
-                    "The game will start when both of you click ready within 30s of each other"
+                    {t!(i18n, game.start_when.both_click)}
                     <button
                         on:click=start
 

@@ -9,12 +9,13 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-leptos = { version = "0.6" , features = ["nightly"] }
+leptos = { version = "0.6", features = ["nightly"] }
 leptos-use = { version = "0.13.5" }
-leptos_meta =  { version = "0.6" , features = ["nightly"] }
-leptos_router =  { version = "0.6" , features = ["nightly"] }
+leptos_meta =  { version = "0.6", features = ["nightly"] }
+leptos_router =  { version = "0.6", features = ["nightly"] }
 leptos_actix =  { version = "0.6" }
 leptos_icons = { version = "0.3"}
+leptos_i18n = { version = "0.4"}
 icondata = {version = "0.4"}
 actix-web = { version = "4",  features = ["macros"] }
 actix-files = { version = "0.6" }
@@ -32,7 +33,7 @@ serde_json = { version = "1" }
 cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
-codee = { version = "0.2", features = ["msgpack_serde"] }
+codee = { version = "0.2", features = ["msgpack_serde", "base64"] }
 regex = "1.10"
 http = "1.1.0"
 log = "0.4.22"
