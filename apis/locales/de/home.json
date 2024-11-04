@@ -1,1 +1,42 @@
-{}
+{
+    "create_game": "Ein Spiel erstellen",
+    "search_players": "Spieler*innen suchen",
+    "found_players": "Gefunden:",
+    "online_players_one": "{{count}} Online-Spieler*in",
+    "online_players_other": "{{count}} Online-Spieler*innen",
+
+    "custom_game": {
+        "button": "Benutzerdefiniert",
+        "title": "Ein Spiel erstellen:",
+        "casual": "Ungezwungen",
+        "rated": "Bewertet",
+        "private": "Privat",
+        "public": "Öffentlich",
+        "rating_range": "Bewertungsbereich",
+        "mode": {
+            "real_time": {
+                "title": "Echtzeit",
+                "minutes_per_side": "Minuten pro Seite: {{count}}",
+                "increment_in_seconds": "Zugabe in Sekunden: {{count}}"
+            },
+            "correspondence": {
+                "title": "Korrespondenz",
+                "days_per_move": "Tage pro Zug",
+                "total_time_each": "Gesamtzeit für jede*n",
+                "time_one": "{{count}} Tag",
+                "time_other": "{{count}} Tage"
+            },
+            "untimed": "Unbegrenzt"
+        }
+    },
+    "challenge_details": {
+        "player": "Spieler*in",
+        "time": "Zeit",
+        "rated": {
+            "title": "Bewertet",
+            "yes": "Ja",
+            "no": "Nein"
+        }
+    }
+}
+

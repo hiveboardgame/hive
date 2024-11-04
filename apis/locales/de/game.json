@@ -1,1 +1,52 @@
-{}
+{
+    "time_mode": {
+        "untimed": "Kein Zeitlimit",
+        "real_time": "Echtzeit",
+        "correspondence": {
+            "title": "Korrespondenz",
+            "days_move_one": "{{count}} Tag pro Zug",
+            "days_move_other": "{{count}} Tage pro Zug",
+            "days_side_one": "{{count}} Tag pro Seite",
+            "days_side_other": "{{count}} Tage pro Seite"
+        }
+    },
+    "played_in": "Gespielt in:",
+    "rated": "Bewertet",
+    "casual": "Ungezwungen",
+    "created_ago": {
+        "weeks_one": "Vor {{count}} Woche erstellt",
+        "weeks_other": "Vor {{count}} Wochen erstellt",
+        "days_one": "Vor {{count}} Tag erstellt",
+        "days_other": "Vor {{count}} Tagen erstellt",
+        "hours_one": "Vor {{count}} Stunde erstellt",
+        "hours_other": "Vor {{count}} Stunden erstellt",
+        "minutes_one": "Vor {{count}} Minute erstellt",
+        "minutes_other": "Vor {{count}} Minuten erstellt",
+        "less_than_minute": "Vor weniger als einer Minute erstellt"
+    },
+    "finished_ago": {
+        "weeks_one": "Vor {{count}} Woche beendet",
+        "weeks_other": "Vor {{count}} Wochen beendet",
+        "days_one": "Vor {{count}} Tag beendet",
+        "days_other": "Vor {{count}} Tagen beendet",
+        "hours_one": "Vor {{count}} Stunde beendet",
+        "hours_other": "Vor {{count}} Stunden beendet",
+        "minutes_one": "Vor {{count}} Minute beendet",
+        "minutes_other": "Vor {{count}} Minuten beendet",
+        "less_than_minute": "Vor weniger als einer Minute beendet"
+    },
+    "no_moves_played": "Keine Züge gespielt",
+    "start_when": {
+        "both_agree": "Das Spiel beginnt, wenn ihr beide euch auf eine Zeit einigt",
+        "both_click": "Das Spiel beginnt, wenn ihr beide innerhalb von 30 Sekunden bereit klickt",
+        "both_ready": "Dieses Turnierspiel beginnt, wenn beide Spieler:innnen bereit sind"
+    },
+    "speeds": {
+        "bullet": "Bullet",
+        "blitz": "Blitz",
+        "rapid": "Rapid",
+        "classic": "Klassisch",
+        "correspondence": "Korrespondenz",
+        "untimed": "Unbegrenzt"
+    }
+}

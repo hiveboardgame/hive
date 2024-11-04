@@ -1,1 +1,27 @@
-{}
+{
+    "game_buttons": {
+        "unstarted": "Unbegonnene Turnierspiele",
+        "playing": "Spielend",
+        "finished": "Beendet"
+    },
+    "color_buttons": {
+        "both": "Beide",
+        "white": "Weiß",
+        "black": "Schwarz"
+    },
+    "result_buttons": {
+        "win": "Sieg",
+        "loss": "Niederlage",
+        "draw": "Unentschieden",
+        "all": "Alle"
+    },
+    "stats_box": {
+        "total": "Gesamt: {{count}}",
+        "wins": "Siege: {{count}}",
+        "losses": "Niederlagen: {{count}}",
+        "draws": "Unentschieden: {{count}}"
+    },
+    "player_color": "Spieler*innenfarbe:",
+    "game_result": "Spielergebnis:",
+    "include_speeds": "Eingeschlossene Geschwindigkeiten:"
+}
