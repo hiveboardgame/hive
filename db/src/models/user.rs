@@ -10,7 +10,8 @@ use crate::{
             dsl::{
                 email as email_field, normalized_username, password as password_field, updated_at,
                 users as users_table,
-            }, takeback,
+            },
+            takeback,
         },
     },
     DbConn,
@@ -177,8 +178,7 @@ impl User {
     pub async fn set_takeback(&self, tb: Takeback, conn: &mut DbConn<'_>) -> Result<(), DbError> {
         let tb = tb.to_string();
         diesel::update(self)
-            .set(takeback.eq(tb.to_string())
-        )
+            .set(takeback.eq(tb.to_string()))
             .execute(conn)
             .await?;
         Ok(())

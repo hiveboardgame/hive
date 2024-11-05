@@ -1,7 +1,8 @@
-use crate::providers::game_state::GameStateSignal;
+use crate::providers::{game_state::GameStateSignal, timer::TimerSignal};
 use leptos::{leptos_dom::helpers::debounce, *};
 use leptos_icons::*;
-
+use shared_types::GameSpeed;
+use std::time::Duration;
 #[derive(Clone)]
 pub enum HistoryNavigation {
     First,
@@ -71,6 +72,50 @@ fn send_action(action: &HistoryNavigation) {
                     .update_untracked(|s| s.history_turn = Some(s.state.turn - 1));
             }
             game_state_signal.view_game()
+        }
+    }
+    set_timer_from_response();
+}
+
+pub fn set_timer_from_response() {
+    let game_state_signal = expect_context::<GameStateSignal>();
+    let timer = expect_context::<TimerSignal>();
+    let is_finished = game_state_signal.is_finished();
+    //don't update timer if game isnt finished or for correspondence games
+    if !is_finished()
+        || matches!(
+            game_state_signal.signal.get().get_game_speed(),
+            None | Some(GameSpeed::Correspondence) | Some(GameSpeed::Untimed)
+        )
+    {
+        return;
+    }
+    let turn = game_state_signal
+        .signal
+        .get()
+        .history_turn
+        .unwrap_or_default();
+    if let Some(response) = game_state_signal.signal.get().game_response.as_ref() {
+        if turn == 0 {
+            let base = response.time_base.expect("Base time is set");
+            timer.signal.update(|t| {
+                t.white_time_left = Some(Duration::from_secs(base as u64));
+                t.black_time_left = Some(Duration::from_secs(base as u64));
+            });
+        } else {
+            let curr_time_left = response.move_times[turn].expect("Turn is finished");
+            let prev_time_left = response.move_times[turn - 1].expect("Turn is finished");
+            let curr_time_left = Duration::from_nanos(curr_time_left as u64);
+            let prev_time_left = Duration::from_nanos(prev_time_left as u64);
+            timer.signal.update(|t| {
+                if turn % 2 == 0 {
+                    t.white_time_left = Some(curr_time_left);
+                    t.black_time_left = Some(prev_time_left);
+                } else {
+                    t.black_time_left = Some(curr_time_left);
+                    t.white_time_left = Some(prev_time_left);
+                }
+            });
         }
     }
 }
