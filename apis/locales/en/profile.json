@@ -15,13 +15,13 @@
         "draw": "Draw",
         "all": "All"
     },
-    "stats_box":{
+    "stats_box": {
         "total": "Total: {{count}}",
         "wins": "Wins: {{count}}",
         "losses": "Losses: {{count}}",
         "draws": "Draws: {{count}}"
     },
     "player_color": "Player color:",
-    "gamo_result": "Game result:",
+    "game_result": "Game result:",
     "include_speeds": "Included speeds:"
 }

@@ -22,6 +22,6 @@
         "draws": "Remize: {{count}}"
     },
     "player_color": "Culoarea jucătorului:",
-    "gamo_result": "Rezultat:",
+    "game_result": "Rezultat:",
     "include_speeds": "Categorii timp:"
 }

@@ -5,7 +5,7 @@
         "draws": "Ничьих: {{count}}",
         "losses": "Поражений: {{count}}"
     },
-    "gamo_result": "Результат партии:",
+    "game_result": "Результат партии:",
     "include_speeds": "Контроль времени:",
     "game_buttons": {
         "unstarted": "Неначатые турнирные игры",

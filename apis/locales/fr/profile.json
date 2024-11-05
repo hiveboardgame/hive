@@ -21,6 +21,6 @@
         "wins": "Victoires : {{count}}",
         "losses": "Défaites : {{count}}"
     },
-    "gamo_result": "Résultat de la partie :",
+    "game_result": "Résultat de la partie :",
     "player_color": "Couleur du joueur :"
 }

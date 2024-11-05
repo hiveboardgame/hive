@@ -136,7 +136,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                             </RadioGroupItem>
                         </RadioGroupRoot>
                         <Show when=move || controls().tab_view == GameProgress::Finished>
-                            <span class="font-bold text-md">{t!(i18n, profile.gamo_result)}</span>
+                            <span class="font-bold text-md">{t!(i18n, profile.game_result)}</span>
                             <RadioGroupRoot
                                 attr:class="flex flex-wrap gap-1"
                                 value=signal_debounced(
