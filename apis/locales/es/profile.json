@@ -22,6 +22,6 @@
         "draws": "Empates: {{count}}"
     },
     "player_color": "Color del jugador:",
-    "gamo_result": "Resultado de la partida:",
+    "game_result": "Resultado de la partida:",
     "include_speeds": "Velodidades incluidas:"
 }
