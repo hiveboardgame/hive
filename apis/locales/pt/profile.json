@@ -22,6 +22,6 @@
         "wins": "Vitórias: {{count}}"
     },
     "player_color": "Cor do jogador:",
-    "gamo_result": "Resultado do jogo:",
+    "game_result": "Resultado do jogo:",
     "include_speeds": "Velocidades incluídas:"
 }

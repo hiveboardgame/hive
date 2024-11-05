@@ -83,18 +83,15 @@ ssr = [
 default = "en"
 locales = [
   "ca", 
-  "cs", 
   "de",
   "en", 
   "es", 
   "fr",
   "hu",
   "it", 
-  "ja", 
-  "nl", 
-  "pt", 
-  "ru", 
-  "sv"
+  "pt",
+  "ro", 
+  "ru" 
 ]
 namespaces = [
   "header", 
