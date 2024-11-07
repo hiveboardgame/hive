@@ -1,3 +1,4 @@
+use crate::components::atoms::history_button::set_timer_from_response;
 use crate::components::molecules::history_controls::HistoryControls;
 use crate::providers::game_state::{self, GameStateSignal};
 use hive_lib::GameStatus;
@@ -26,6 +27,7 @@ pub fn HistoryMove(
     });
     let onclick = move |_| {
         game_state.show_history_turn(turn);
+        set_timer_from_response();
     };
     let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
     let is_realtime = create_read_slice(game_state.signal, |gs| {

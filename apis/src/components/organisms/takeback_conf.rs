@@ -50,9 +50,15 @@ fn Button(takeback: Takeback) -> impl IntoView {
             >
 
                 {match takeback() {
-                    Takeback::Always => t!(i18n, user_config.allow_takeback_buttons.always).into_view(),
-                    Takeback::CasualOnly => t!(i18n, user_config.allow_takeback_buttons.casual_only).into_view(),
-                    Takeback::Never => t!(i18n, user_config.allow_takeback_buttons.never).into_view(),
+                    Takeback::Always => {
+                        t!(i18n, user_config.allow_takeback_buttons.always).into_view()
+                    }
+                    Takeback::CasualOnly => {
+                        t!(i18n, user_config.allow_takeback_buttons.casual_only).into_view()
+                    }
+                    Takeback::Never => {
+                        t!(i18n, user_config.allow_takeback_buttons.never).into_view()
+                    }
                 }}
 
             </button>

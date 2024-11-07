@@ -199,33 +199,33 @@ pub fn ControlButtons() -> impl IntoView {
                                             })
                                         />
                                         <Show when=takeback_allowed>
-                                        <ConfirmButton
-                                        game_control=store_value(
-                                            GameControl::TakebackRequest(color()),
-                                        )
+                                            <ConfirmButton
+                                                game_control=store_value(
+                                                    GameControl::TakebackRequest(color()),
+                                                )
 
-                                        user_id=user_id()
-                                        hidden=memo_for_hidden_class(move || {
-                                            pending_takeback() || (game_state.signal)().state.turn < 2
-                                        })
-                                    />
+                                                user_id=user_id()
+                                                hidden=memo_for_hidden_class(move || {
+                                                    pending_takeback() || (game_state.signal)().state.turn < 2
+                                                })
+                                            />
 
-                                    <AcceptDenyGc
-                                        game_control=store_value(
-                                            GameControl::TakebackAccept(color()),
-                                        )
+                                            <AcceptDenyGc
+                                                game_control=store_value(
+                                                    GameControl::TakebackAccept(color()),
+                                                )
 
-                                        user_id=user_id()
-                                        hidden=memo_for_hidden_class(move || !pending_takeback())
-                                    />
-                                    <AcceptDenyGc
-                                        game_control=store_value(
-                                            GameControl::TakebackReject(color()),
-                                        )
+                                                user_id=user_id()
+                                                hidden=memo_for_hidden_class(move || !pending_takeback())
+                                            />
+                                            <AcceptDenyGc
+                                                game_control=store_value(
+                                                    GameControl::TakebackReject(color()),
+                                                )
 
-                                        user_id=user_id()
-                                        hidden=memo_for_hidden_class(move || !pending_takeback())
-                                    />
+                                                user_id=user_id()
+                                                hidden=memo_for_hidden_class(move || !pending_takeback())
+                                            />
                                         </Show>
                                     </div>
                                 </Show>
