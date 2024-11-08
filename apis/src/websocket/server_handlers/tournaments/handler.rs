@@ -63,7 +63,7 @@ impl TournamentHandler {
                 .handle()
                 .await?
             }
-            TournamentAction::GetAll(depth) => {
+            TournamentAction::GetAll(depth, _) => {
                 GetAllHandler::new(self.user_id, depth, &self.pool)
                     .await?
                     .handle()
