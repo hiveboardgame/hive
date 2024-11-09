@@ -3,8 +3,11 @@
 
   inputs = {
     nixpkgs.url      = "github:NixOS/nixpkgs/nixos-unstable";
-    rust-overlay.url = "github:oxalica/rust-overlay";
-    flake-utils.url  = "github:numtide/flake-utils";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
@@ -60,6 +63,8 @@
             leptosfmt
             postgresql
             flyctl
+            cargo-leptos
+            tailwindcss
             (rust-bin.selectLatestNightlyWith( toolchain: toolchain.default.override {
               extensions= [ "rust-src" "rust-analyzer" ];
               targets = [ "wasm32-unknown-unknown" ];
