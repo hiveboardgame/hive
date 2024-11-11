@@ -6,7 +6,7 @@ It is written in rust nightly and relies on the [Leptos](https://leptos.dev/) fr
 
 ## Development
 
-### Prerequisites
+### Prerequisites (skip if using Nix)
 
 #### 1. Setup the Rust Toolchain
 - Install the [Rust toolchain](https://www.rust-lang.org/tools/install).
@@ -76,11 +76,21 @@ experimental-features = nix-command flakes
 ```sh
 nix develop -c $SHELL
 ```
-3. now start the server
+3. Init and Start the PostgreSQL DB
+``` sh
+pg-start
+```
+
+4. Now start the server
 ```sh
 migration run
 server
 ```
+5. Stop PostgreSQL
+``` sh
+pg-stop
+```
+
 4. (Optional) Setup direnv
 5. Before committing code please run
 ```sh
