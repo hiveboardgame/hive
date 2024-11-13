@@ -283,6 +283,11 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             name="viewport"
             content="width=device-width, initial-scale=1, interactive-widget=resizes-content, user-scalable=no"
         />
+        <Link rel="manifest" href="/assets/site.webmanifest" />
+        <Link rel="apple-touch-icon" href="/assets/android-chrome-192x192.png" />
+        <Meta name="apple-mobile-web-app-capable" content="yes" />
+        <Meta name="apple-mobile-web-app-status-bar-style" content="black" />
+        <Script src="/assets/js/pwa.js" />
         <Html class=move || {
             match config().prefers_dark {
                 true => "dark",
