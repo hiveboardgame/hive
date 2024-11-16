@@ -2,6 +2,7 @@ pub mod common;
 pub mod functions;
 pub mod jobs;
 pub mod providers;
+pub mod pwa_cache;
 pub mod responses;
 pub mod websocket;
 use actix_session::config::PersistentSession;
@@ -14,6 +15,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     use crate::websocket::{Chats, start_connection, WsServer};
+    use crate::pwa_cache::pwa_cache;
     use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
@@ -73,6 +75,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::clone(&tournament_game_start))
             .app_data(Data::clone(&pings))
             .app_data(Data::clone(&lags))
+            .app_data(Data::new(site_root.to_string()))
+
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             // serve other assets from the `assets` directory
@@ -80,6 +84,7 @@ async fn main() -> std::io::Result<()> {
             // serve the favicon from /favicon.ico
             .service(favicon)
             .service(start_connection)
+            .service(pwa_cache)
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(
                 leptos_options.to_owned(),

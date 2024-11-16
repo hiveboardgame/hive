@@ -61,6 +61,7 @@ itertools = "0.13.0"
 leptix_primitives = { version = "0.2" }
 tree-ds = {version = "0.1.5", features = ["serde", "compact_serde"] }
 bimap = {version = "0.6.3", features = ["serde"] }
+walkdir = "2.5"
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]
 inherits = "release"

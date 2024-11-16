@@ -459,6 +459,7 @@ dependencies = [
  "tokio",
  "tree-ds",
  "uuid",
+ "walkdir",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

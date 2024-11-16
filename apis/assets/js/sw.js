@@ -1,16 +1,12 @@
 // Service Worker
+
+// Change CACHE_NAME for major upgrades
 const CACHE_NAME = 'hivegame-cache-v1';
-const ASSETS_TO_CACHE = [
-  '/assets/site.webmanifest',
-  '/pkg/HiveGame.wasm',
-  '/assets/android-chrome-192x192.png',
-  '/assets/android-chrome-512x512.png'
-];
 
 // Fetch and cache assets list from JSON
 async function getAssetsToCache() {
   try {
-    const response = await fetch('/js/cache.json');
+    const response = await fetch('/pwa-cache');
     const data = await response.json();
     return data;
   } catch (error) {
@@ -26,7 +22,7 @@ self.addEventListener('install', async (event) => {
         const assetsToCache = await getAssetsToCache();
         const cache = await caches.open(CACHE_NAME);
         await cache.addAll(assetsToCache);
-        await self.skipWaiting(); // Activate worker immediately
+        await self.skipWaiting();
       } catch (error) {
         console.error('Cache installation failed:', error);
       }
