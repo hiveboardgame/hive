@@ -76,7 +76,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::clone(&pings))
             .app_data(Data::clone(&lags))
             .app_data(Data::new(site_root.to_string()))
-
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             // serve other assets from the `assets` directory
