@@ -1,6 +1,6 @@
 {
-    "name": "Hive Game",
-    "short_name": "Hive Game",
+    "name": "HiveGame",
+    "short_name": "HiveGame",
     "start_url": "/",
     "scope": "/",
     "icons": [
