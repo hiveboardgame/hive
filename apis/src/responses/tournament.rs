@@ -29,6 +29,8 @@ pub struct TournamentAbstractResponse {
     pub ends_at: Option<DateTime<Utc>>,
     pub started_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
+    pub player_list: Vec<String>,
+    pub organizers: Vec<UserResponse>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -77,6 +79,15 @@ impl TournamentAbstractResponse {
     }
 
     pub async fn from_model(tournament: &Tournament, conn: &mut DbConn<'_>) -> Result<Self> {
+        let player_list = tournament.players(conn).await?
+            .iter()
+            .map(|p| p.username.clone())
+            .collect();
+        let organizers = tournament.organizers(conn).await?
+            .iter()
+            .map(|o| o.username.clone())
+            .collect();
+
         Ok(Self {
             id: tournament.id,
             tournament_id: TournamentId(tournament.nanoid.clone()),
@@ -98,10 +109,11 @@ impl TournamentAbstractResponse {
             ends_at: tournament.ends_at,
             started_at: tournament.started_at,
             updated_at: tournament.updated_at,
+            player_list,
+            organizers,
         })
     }
 }
-
 impl TournamentResponse {
     pub async fn from_tournament_id(
         tournament_id: &TournamentId,

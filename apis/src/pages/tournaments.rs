@@ -1,3 +1,5 @@
+use std::thread::current;
+
 use crate::pages::tournament::BUTTON_STYLE;
 use crate::{
     common::TournamentAction,
@@ -8,14 +10,15 @@ use crate::{
 use leptos::*;
 use leptos_use::core::ConnectionReadyState;
 use shared_types::{TournamentSortOrder, TournamentStatus};
+use crate::providers::navigation_controller::NavigationControllerSignal;
+
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 enum TournamentFilter {
     All,
     Status(TournamentStatus),
-}
-
-fn get_button_classes(current: TournamentFilter, selected: TournamentFilter) -> &'static str {
+    MyTournaments,
+}fn get_button_classes(current: TournamentFilter, selected: TournamentFilter) -> &'static str {
     if current == selected {
         return "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
     }
@@ -28,6 +31,10 @@ fn get_button_classes(current: TournamentFilter, selected: TournamentFilter) -> 
 pub fn Tournaments() -> impl IntoView {
     let tournament = expect_context::<TournamentStateContext>();
     let ws = expect_context::<WebsocketContext>();
+    let navi = expect_context::<NavigationControllerSignal>();
+    let current_user = Signal::derive(move || {
+        navi.profile_signal.get().username.unwrap_or_default()
+    });
     let filter = RwSignal::new(TournamentFilter::Status(TournamentStatus::NotStarted));
     create_effect(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
@@ -48,7 +55,7 @@ pub fn Tournaments() -> impl IntoView {
                     placeholder="Search tournaments by name"
                     on:input=move |ev| search.set(event_target_value(&ev))
                     value=search
-                />
+                />                
                 <div class="flex justify-center space-x-4 mb-4 w-full -mx-2 content-center">
                     <button
                         class=move || get_button_classes(TournamentFilter::All, filter.get())
@@ -89,6 +96,16 @@ pub fn Tournaments() -> impl IntoView {
                     >
                         "Completed"
                     </button>
+                    <button
+    class=move || get_button_classes(
+        TournamentFilter::MyTournaments,
+        filter.get(),
+    )
+    on:click=move |_| filter.set(TournamentFilter::MyTournaments)
+>
+    "My Tournaments"
+</button>
+
                 </div>
                 <For
                     each=move || {
@@ -101,8 +118,10 @@ pub fn Tournaments() -> impl IntoView {
                                 match filter.get() {
                                     TournamentFilter::All => true,
                                     TournamentFilter::Status(status) => t.status == status,
-                                }
-                            })
+                                    TournamentFilter::MyTournaments => {
+                                        t.player_list.contains(&current_user())
+                                    }
+                                }                            })
                             .collect();
                         v.sort_by(|a, b| b.1.updated_at.cmp(&a.1.updated_at));
                         v
