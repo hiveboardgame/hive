@@ -4,9 +4,8 @@ use walkdir::WalkDir;
 
 #[cfg(feature = "ssr")]
 #[get("/pwa-cache")]
-pub async fn pwa_cache(site_root: web::Data<String>) -> impl Responder {
+pub async fn cache(site_root: web::Data<String>) -> impl Responder {
     let site_root = site_root.into_inner();
-
     let assets = WalkDir::new(site_root.as_str())
         .into_iter()
         .filter_map(|e| e.ok())

@@ -4,7 +4,6 @@ pub mod components;
 pub mod functions;
 pub mod pages;
 pub mod providers;
-pub mod pwa_cache;
 pub mod responses;
 pub mod websocket;
 leptos_i18n::load_locales!();
