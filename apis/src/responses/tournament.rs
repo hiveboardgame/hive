@@ -30,7 +30,6 @@ pub struct TournamentAbstractResponse {
     pub started_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
     pub player_list: Vec<String>,
-    pub organizers: Vec<UserResponse>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -83,10 +82,6 @@ impl TournamentAbstractResponse {
             .iter()
             .map(|p| p.username.clone())
             .collect();
-        let organizers = tournament.organizers(conn).await?
-            .iter()
-            .map(|o| o.username.clone())
-            .collect();
 
         Ok(Self {
             id: tournament.id,
@@ -110,7 +105,6 @@ impl TournamentAbstractResponse {
             started_at: tournament.started_at,
             updated_at: tournament.updated_at,
             player_list,
-            organizers,
         })
     }
 }

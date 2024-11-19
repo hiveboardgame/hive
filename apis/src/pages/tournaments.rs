@@ -119,6 +119,11 @@ pub fn Tournaments() -> impl IntoView {
                                     TournamentFilter::All => true,
                                     TournamentFilter::Status(status) => t.status == status,
                                     TournamentFilter::MyTournaments => {
+                                        // Add debug logging
+                                        log::debug!("Tournament: {}", t.name);
+                                        log::debug!("Players: {:?}", t.player_list);
+                                        log::debug!("Current user: {}", current_user());
+                                        
                                         t.player_list.contains(&current_user())
                                     }
                                 }                            })
