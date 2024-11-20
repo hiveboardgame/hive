@@ -30,7 +30,7 @@ pub struct TournamentAbstractResponse {
     pub started_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
     pub player_list: Vec<String>,
-    pub organizers: Vec<UserResponse>,
+    pub organizers: Vec<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

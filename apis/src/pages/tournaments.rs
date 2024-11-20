@@ -11,6 +11,8 @@ use leptos::*;
 use leptos_use::core::ConnectionReadyState;
 use shared_types::{TournamentSortOrder, TournamentStatus};
 use crate::providers::navigation_controller::NavigationControllerSignal;
+use leptos::logging::log;
+use crate::providers::AuthContext;
 
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -32,9 +34,11 @@ pub fn Tournaments() -> impl IntoView {
     let tournament = expect_context::<TournamentStateContext>();
     let ws = expect_context::<WebsocketContext>();
     let navi = expect_context::<NavigationControllerSignal>();
-    let current_user = Signal::derive(move || {
-        navi.profile_signal.get().username.unwrap_or_default()
-    });
+    let auth_context = expect_context::<AuthContext>();
+    let username = move || match (auth_context.user)() {
+        Some(Ok(Some(user))) => Some(user.username),
+        _ => None
+    };
     let filter = RwSignal::new(TournamentFilter::Status(TournamentStatus::NotStarted));
     create_effect(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
@@ -116,10 +120,17 @@ pub fn Tournaments() -> impl IntoView {
                             .into_iter()
                             .filter(|(_, t)| {
                                 match filter.get() {
-                                    TournamentFilter::All => true,
+                                    TournamentFilter::All => {
+                                        log!("test me 123");
+                                        log!("players #: {}", t.player_list.len());
+                                        log!("players: {}", t.player_list.join(", "));
+                                        log!("current user: {}", username().unwrap_or_default());
+                                        true
+                                    },
                                     TournamentFilter::Status(status) => t.status == status,
                                     TournamentFilter::MyTournaments => {
-                                        t.player_list.contains(&current_user())
+                                        log!("test me 123");
+                                        t.player_list.contains(&username().unwrap_or_default().clone())
                                     }
                                 }                            })
                             .collect();
