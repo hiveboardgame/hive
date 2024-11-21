@@ -1,1 +1,52 @@
-{}
+{
+    "time_mode": {
+        "correspondence": {
+            "days_move_one": "{{count}} nap lépésenként",
+            "days_move_other": "{{count}} nap lépésenként",
+            "title": "Levelező",
+            "days_side_other": "{{count}} nap játékosonként",
+            "days_side_one": "{{count}} nap játékosonként"
+        },
+        "real_time": "Valós idő",
+        "untimed": "Végtelen"
+    },
+    "played_in": "Verseny:",
+    "rated": "Rangsorolt",
+    "casual": "Kötetlen",
+    "created_ago": {
+        "weeks_one": "Játék kezdete: {{count}} hete",
+        "weeks_other": "Játék kezdete: {{count}} hete",
+        "days_one": "Játék kezdete: {{count}} napja",
+        "days_other": "Játék kezdete: {{count}} napja",
+        "hours_one": "Játék kezdete: {{count}} órája",
+        "hours_other": "Játék kezdete: {{count}} órája",
+        "minutes_one": "Játék kezdete: {{count}} perce",
+        "minutes_other": "Játék kezdete: {{count}} perce",
+        "less_than_minute": "Játék kezdete: kevesebb mint egy perce"
+    },
+    "finished_ago": {
+        "weeks_one": "Játék vége: {{count}} hete",
+        "weeks_other": "Játék vége: {{count}} hete",
+        "days_one": "Játék vége: {{count}} napja",
+        "days_other": "Játék vége: {{count}} napja",
+        "hours_one": "Játék vége: {{count}} órája",
+        "hours_other": "Játék vége: {{count}} órája",
+        "minutes_one": "Játék vége: {{count}} perce",
+        "minutes_other": "Játék vége: {{count}} perce",
+        "less_than_minute": "Játék vége: kevesebb mint egy perce"
+    },
+    "no_moves_played": "Nem történt lépés",
+    "start_when": {
+        "both_agree": "A játék akkor veszi kezdetét ha mindketten megegyeztek az időben",
+        "both_click": "A játék akkor veszi kezdetét ha mindketten rákattintotok az Indulhat gombra 30 másodpercen belül",
+        "both_ready": "Ez a verseny-játszma akkor veszi kezdetét ha mindkét játékos készenáll"
+    },
+    "speeds": {
+        "bullet": "Bullet",
+        "blitz": "Blitz",
+        "rapid": "Rapid",
+        "classic": "Klasszikus",
+        "correspondence": "Levelező",
+        "untimed": "Végtelen"
+    }
+}

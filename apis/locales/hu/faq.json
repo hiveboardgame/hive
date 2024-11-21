@@ -1,7 +1,7 @@
 {
     "title": "Gyakori kérdések",
     "what_is_hivegame": {
-        "question": "Mi ez a hivegame.com?",
+        "question": "Mi a hivegame.com?",
         "answer": "A hivegame.com egy közösségi kezdeményezés, amelynek célja, hogy létrehozzon egy új online platformot a Hive® játék ingyenes játszására. A weboldal reklámmentes, nyílt forráskódú, közösségi tagok fejlesztik, és hivatalosan támogatja a Hive® megalkotója, John Yianni."
     },
     "how_to_help": {
@@ -16,7 +16,7 @@
         "question": "Hozhatok létre játékot egy baráttal?",
         "answers": {
             "item3": "Természetesen létrehozhatsz nyílt kihívást is, amelyet bárki elfogadhat az adott ELO tartományban, és csak remélheted, hogy a barátod lesz az első, aki elfogadja a kihívást.",
-            "item1": "Igen, létrehozhatsz egy játékot a főoldalon található 'játék létrehozása' gombra kattintva, majd a 'privát' opció kiválasztásával, és megoszthatod a linket a barátoddal. A játékhoz a barátnodnak is regisztrálnia kell.",
+            "item1": "Igen, létrehozhatsz egy játékot a főoldalon található 'Egyéni' gombra kattintva, majd a 'Privát' opció kiválasztásával, és megoszthatod a linket a barátoddal. A játékhoz a barátnodnak is regisztrálnia kell.",
             "item2": "Emellett bárkit kihívhatsz a felhasználónév melletti 'keresztezett kardok' ikonra kattintva, amely közvetlen kihívást küld a kiválasztott játékosnak."
         }
     },
@@ -32,7 +32,7 @@
         "description": "Három megerősítési mód van a lépés végrehajtására:",
         "answers": {
             "item1": "Dupla kattintás: Alapértelmezett mód. Az első kattintás elhelyezi a darabot, a második kattintás végrehajtja a lépést.",
-            "item2": "Egyszeri kattintás: Gyors megoldás, ha nem akarsz időt veszíteni a gyors játékokban. Vigyázz, nehogy rossz helyre kattints, mert egy egyetlen kattintás azonnal végrehajtja a lépést.",
+            "item2": "Egyszeri kattintás: Gyors megoldás, ha nem akarsz időt veszíteni a gyors játékokban. Vigyázz, nehogy rossz helyre kattints, mert egyetlen kattintás azonnal végrehajtja a lépést.",
             "item3": "Óra megerősítés: Biztonságos módszer, ha nem szeretnél véletlenül hibás lépést végrehajtani. Az első kattintás elhelyezi a darabot, majd a lépés megerősítéséhez a saját órádra kell kattintanod."
         }
     },
@@ -71,14 +71,14 @@
     },
     "can_i_set_up_a_tournament": {
         "question": "Rendezhetek versenyt?",
-        "answer": "Dolgozunk rajta, de ha szeretnél segíteni, írjál ránk Discordon."
+        "answer": "Igen, bár még dolgozunk rajta. Ha szeretnél segíteni, írjál ránk Discordon."
     },
     "can_i_play_with_bots": {
         "answer": "Ez a funkció még nem támogatott, de hamarosan megvalósulhat (lépj kapcsolatba velünk, ha segíteni szeretnél a kódolásban).",
         "question": "Játszhatok bot ellen?"
     },
     "what_is_hive": {
-        "question": "Mi az a Hive?",
+        "question": "Mi a Hive?",
         "answer": "A Hive egy díjnyertes absztrakt stratégiai játék, amelyet John Yianni tervezett 2000-ben, és a <gen42_link>Gen42</gen42_link> kiadó adta ki."
     },
     "how_does_it_operate": {
@@ -91,7 +91,7 @@
     },
     "how_to_recover_password": {
         "question": "Mi a teendő, ha elfelejtettem a jelszavam?",
-        "answer": "Nincs automatikus jelszó-helyreállításunk, ezért Discordon keresztül felveheted velünk a kapcsolatot @klautcomputing vagy @ionoi címen, hogy új jelszót kérj."
+        "answer": "Nincs automatikus jelszó-helyreállításunk, ezért Discordon keresztül veheted fel velünk a kapcsolatot @klautcomputing vagy @ionoi címen, hogy új jelszót kérj."
     },
     "opponent_is_abusive": {
         "answer": "Készíts screenshotot az esetről, és vedd fel velünk a kapcsolatot Discordon keresztül @klautcomputing vagy @ionoi címen. Megoldjuk a problémát.",
