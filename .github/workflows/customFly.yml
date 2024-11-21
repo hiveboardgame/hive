@@ -1,3 +1,5 @@
+env:
+ BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
 name: Deploy branch to Fly
 on: 
   workflow_dispatch:
@@ -5,7 +7,7 @@ on:
       branch:
         description: 'Define branch name'     
         required: true
-        default: 'master'
+        default: "main"
 
 jobs:
   deploy:
@@ -13,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # This step checks out a copy of your repository.
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
       - uses: superfly/flyctl-actions/setup-flyctl@master
