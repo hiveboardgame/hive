@@ -5,4 +5,5 @@ pub mod challenges;
 pub mod db;
 pub mod games;
 pub mod hostname;
+pub mod pwa;
 pub mod users;

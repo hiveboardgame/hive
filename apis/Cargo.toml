@@ -55,6 +55,7 @@ web-sys = { workspace = true }
 leptix_primitives = {workspace = true}
 tree-ds = {workspace = true}
 bimap = {workspace = true}
+walkdir = {workspace = true}
 [features]
 csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr", "leptos_i18n/csr"]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_i18n/hydrate"]

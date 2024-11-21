@@ -73,6 +73,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::clone(&tournament_game_start))
             .app_data(Data::clone(&pings))
             .app_data(Data::clone(&lags))
+            .app_data(Data::new(site_root.to_string()))
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             // serve other assets from the `assets` directory
@@ -80,6 +81,7 @@ async fn main() -> std::io::Result<()> {
             // serve the favicon from /favicon.ico
             .service(favicon)
             .service(start_connection)
+            .service(functions::pwa::cache)
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(
                 leptos_options.to_owned(),
