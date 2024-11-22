@@ -5,6 +5,7 @@ use crate::{
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbConn, DbPool};
+use shared_types::TournamentSortOrder;
 use uuid::Uuid;
 
 pub struct GetAllHandler {
@@ -32,7 +33,7 @@ impl GetAllHandler {
 
     async fn handle_full(&self, conn: &mut DbConn<'_>) -> Result<Vec<InternalServerMessage>> {
         let mut responses = vec![];
-        let tournaments = Tournament::get_all(conn).await?;
+        let tournaments = Tournament::get_all(TournamentSortOrder::CreatedAtDesc, conn).await?;
         for tournament in tournaments {
             responses.push(TournamentResponse::from_model(&tournament, conn).await?);
         }
@@ -44,7 +45,7 @@ impl GetAllHandler {
 
     async fn handle_abstract(&self, conn: &mut DbConn<'_>) -> Result<Vec<InternalServerMessage>> {
         let mut responses = vec![];
-        let tournaments = Tournament::get_all(conn).await?;
+        let tournaments = Tournament::get_all(TournamentSortOrder::CreatedAtDesc, conn).await?;
         for tournament in tournaments {
             responses.push(TournamentAbstractResponse::from_model(&tournament, conn).await?);
         }

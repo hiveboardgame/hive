@@ -1,7 +1,9 @@
-use crate::providers::game_state::GameStateSignal;
+use crate::providers::{game_state::GameStateSignal, timer::TimerSignal};
+use hive_lib::GameStatus;
 use leptos::{leptos_dom::helpers::debounce, *};
 use leptos_icons::*;
-
+use shared_types::TimeMode;
+use std::time::Duration;
 #[derive(Clone)]
 pub enum HistoryNavigation {
     First,
@@ -73,4 +75,43 @@ fn send_action(action: &HistoryNavigation) {
             game_state_signal.view_game()
         }
     }
+    set_timer_from_response();
+}
+
+pub fn set_timer_from_response() {
+    let game_state_signal = expect_context::<GameStateSignal>();
+    let timer = expect_context::<TimerSignal>();
+    game_state_signal.signal.with(|gs| {
+        if !matches!(gs.state.game_status, GameStatus::Finished(_)) {
+            return;
+        }
+        let turn = gs.history_turn.unwrap_or_default();
+        let response = gs.game_response.as_ref();
+        if let Some(response) = response {
+            if !matches!(response.time_mode, TimeMode::RealTime) {
+                return;
+            }
+            if turn == 0 {
+                let base = response.time_base.unwrap_or(0);
+                timer.signal.update(|t| {
+                    t.white_time_left = Some(Duration::from_secs(base as u64));
+                    t.black_time_left = Some(Duration::from_secs(base as u64));
+                });
+            } else {
+                let curr_time_left = response.move_times[turn].expect("Turn is finished");
+                let prev_time_left = response.move_times[turn - 1].expect("Turn is finished");
+                let curr_time_left = Duration::from_nanos(curr_time_left as u64);
+                let prev_time_left = Duration::from_nanos(prev_time_left as u64);
+                timer.signal.update(|t| {
+                    if turn % 2 == 0 {
+                        t.white_time_left = Some(curr_time_left);
+                        t.black_time_left = Some(prev_time_left);
+                    } else {
+                        t.black_time_left = Some(curr_time_left);
+                        t.white_time_left = Some(prev_time_left);
+                    }
+                });
+            }
+        }
+    });
 }
