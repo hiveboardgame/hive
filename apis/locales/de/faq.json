@@ -2,14 +2,14 @@
     "title": "Häufig gestellte Fragen",
     "what_is_hivegame": {
         "question": "Was ist hivegame.com?",
-        "answer": "hivegame.com ist eine Gemeinschaftsinitiative zur Schaffung einer neuen Online-Plattform, um Hive® kostenlos zu spielen. hivegame.com ist werbefrei, Open Source, wird von Mitgliedern der Gemeinschaft entwickelt und wird offiziell vom Erfinder von Hive®, John Yianni, unterstützt."
+        "answer": "hivegame.com ist eine Gemeinschaftsinitiative zur Schaffung einer neuen Online-Plattform, um Hive® kostenlos zu spielen. hivegame.com ist werbefrei, Open Source, wird vom Mitgliedern der Gemeinschaft entwickelt und wird offiziell vom Erfinder von Hive®, John Yianni, unterstützt."
     },
     "how_to_help": {
         "question": "Wie kann ich diesem Projekt helfen, erfolgreich zu sein?",
         "answers": {
             "item1": "Du kannst uns helfen, indem du mit <source_link>programmierst</source_link>",
             "item2": "Du kannst uns mit Ideen, Feedback und Grafiken auf <discord_link>Discord</discord_link> unterstützen.",
-            "item3": "Du kannst mit einer <donate_link>Spende</donate_link> helfen die Hosting Kosten (und vielleicht irgendwann mal die Entwickler) zu bezahlen."
+            "item3": "Du kannst mit einer <donate_link>Spende</donate_link> helfen, die Hosting Kosten (und vielleicht irgendwann mal die Entwickler) zu bezahlen."
         }
     },
     "how_does_it_operate": {
