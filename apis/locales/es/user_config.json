@@ -58,5 +58,11 @@
         "login_button": "Iniciar sesión",
         "no_account_prompt": "¿No tienes una cuenta? <register_link>Regístrate</register_link>",
         "invalid_login": "Correo electrónico o contraseña incorrectos"
-    }
+    },
+    "allow_takeback_buttons": {
+        "always": "Siempre",
+        "casual_only": "A veces",
+        "never": "Nunca"
+    },
+    "allow_takeback": "Permitir retrocesos"
 }
