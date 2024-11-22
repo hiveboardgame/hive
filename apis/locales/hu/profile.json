@@ -1,1 +1,27 @@
-{}
+{
+    "game_result": "Játék eredménye:",
+    "game_buttons": {
+        "unstarted": "Kezdetlen versenymérkőzések",
+        "playing": "Folyamatban lévő",
+        "finished": "Befejezett"
+    },
+    "color_buttons": {
+        "white": "Fehér",
+        "black": "Fekete",
+        "both": "Mindkettő"
+    },
+    "result_buttons": {
+        "win": "Győzelem",
+        "loss": "Vereség",
+        "draw": "Döntetlen",
+        "all": "Mind"
+    },
+    "stats_box": {
+        "total": "Összesen: {{count}}",
+        "draws": "Döntetlenek: {{count}}",
+        "wins": "Győzelmek: {{count}}",
+        "losses": "Vereségek: {{count}}"
+    },
+    "player_color": "Játékos színe:",
+    "include_speeds": "Kiválasztott játékidők:"
+}

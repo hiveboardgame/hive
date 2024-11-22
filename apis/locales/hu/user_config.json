@@ -1,2 +1,68 @@
 {
+    "piece_style": "Bábu stílus",
+    "style_buttons": {
+        "official": "Hivatalos",
+        "flat": "Lapos",
+        "three_d": "3D"
+    },
+    "rotation": "Forgatás",
+    "rotation_buttons": {
+        "no": "Nem",
+        "yes": "Igen"
+    },
+    "show_dots": "Pontok mutatása",
+    "dots_buttons": {
+        "no": "Nem",
+        "angled": "Dőlt",
+        "vertical": "Vertikális"
+    },
+    "game_speed": "Időbeállítás:",
+    "move_confirm": "Lépés jóváhagyás:",
+    "color_scheme": "Színséma:",
+    "preview": "Előnézet:",
+    "edit_account": {
+        "current_password": "Jelenlegi jelszó",
+        "new_password": "Új jelszó",
+        "confirm_password_placeholder": "Új jelszó (mégegyszer)",
+        "confirm_password": "Jelszó megerősítése",
+        "save_button": "Mentés"
+    },
+    "create_account": {
+        "username": {
+            "title": "Felhasználónév",
+            "error": {
+                "taken": "Ez a felhasználónév már foglalt",
+                "invalid": "Érvénytelen karakter a felhasználónévben"
+            },
+            "description": "Kérlek, válassz egy családbarát felhasználónevet. Minden olyan fiók, amely sértő felhasználónevet tartalmaz, törlésre kerül!"
+        },
+        "email": {
+            "title": "E-mail",
+            "error": {
+                "invalid": "Érvénytelen e-mail"
+            },
+            "description": "Szükségünk van az e-mail címedre, hogy megerősítő e-mailt küldhessünk, amikor fiókot hozol létre."
+        },
+        "password": "Jelszó",
+        "confirm_password": "Jelszó megerősítése",
+        "be_nice_checkbox": "Elfogadom, hogy kedves leszek a többi játékoshoz, és jelentem a visszaéléseket Discordon",
+        "existing_account_prompt": "Van már fiókod? <login_link>Bejelentkezés</login_link>",
+        "signup_button": "Regisztráció",
+        "registration_error": "Sikertelen regisztráció",
+        "password_requirements": "Legalább 8 karakter",
+        "password_error": "A jelszó túl rövid vagy nem egyezik"
+    },
+    "login": {
+        "email": "E-mail",
+        "password": "Jelszó",
+        "login_button": "Bejelentkezés",
+        "invalid_login": "Érvénytelen e-mail vagy jelszó",
+        "no_account_prompt": "Nincs még fiókod? <register_link>Regisztrálj</register_link>"
+    },
+    "allow_takeback": "Lépés visszavonás engedélyezése",
+    "allow_takeback_buttons": {
+        "always": "Mindig",
+        "never": "Soha",
+        "casual_only": "Kötetlen játék során"
+    }
 }

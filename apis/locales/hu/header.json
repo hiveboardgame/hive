@@ -6,11 +6,12 @@
         "resources": "Források"
     },
     "buy_game": "Játék vásárlás",
-    "donate": "Támogatás",
+    "donate": "Adakozz",
     "learn": {
         "rules": "Szabályok",
         "analysis": "Elemzés",
-        "title": "Tanulás"
+        "title": "Tanulás",
+        "rules_summary": "Szabályok összefoglalója"
     },
     "home": "Főoldal",
     "login": "Bejelentkezés",
@@ -18,5 +19,13 @@
         "title": "Versenyek",
         "create": "Verseny létrehozása",
         "view": "Versenyek böngészése"
+    },
+    "support": "Támogatás",
+    "user_menu": {
+        "profile": "Profil",
+        "edit_account": "Fiók szerkesztése",
+        "config": "Konfiguráció",
+        "logout": "Kijelentkezés",
+        "login": "Bejelentkezés"
     }
 }
