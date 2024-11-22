@@ -58,5 +58,11 @@
     },
     "rotation": "Поворот фигур",
     "color_scheme": "Цветовая палитра:",
-    "preview": "Пример:"
+    "preview": "Пример:",
+    "allow_takeback": "Отмена хода",
+    "allow_takeback_buttons": {
+        "casual_only": "Только в играх без рейтинга",
+        "always": "Разрешена всегда",
+        "never": "Никогда"
+    }
 }
