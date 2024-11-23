@@ -28,12 +28,12 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
             && matches!(websocket.ready_state.get(), ConnectionReadyState::Open)
     };
 
-    let icon_color = move || {
+    let icon_style = move || {
         if user_is_player() {
             if batch(user_has_ws) {
                 "fill-grasshopper-green"
             } else {
-                "fill-ladybug-red"
+                "w-6 h-6 fill-ladybug-red"
             }
         } else {
             match (online_users.signal)().username_status.get(&username()) {
@@ -47,7 +47,7 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     view! {
         <Icon
             icon=icondata::BiCircleSolid
-            class=TextProp::from(move || format!("mr-1 pb-[2px] {}", icon_color()))
+            class=TextProp::from(move || format!("mr-1 pb-[2px] {}", icon_style()))
         />
     }
 }
