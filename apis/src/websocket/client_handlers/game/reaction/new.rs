@@ -1,7 +1,7 @@
 use crate::{
     providers::{
         games::GamesSignal, navigation_controller::NavigationControllerSignal, AuthContext,
-        SoundType, SoundsSignal,
+        SoundType, Sounds,
     },
     responses::GameResponse,
 };
@@ -13,7 +13,7 @@ use shared_types::{GameStart, TimeMode};
 pub fn handle_new_game(game_response: GameResponse) {
     let mut games = expect_context::<GamesSignal>();
     let should_navigate = if game_response.game_start != GameStart::Ready {
-        let sounds = expect_context::<SoundsSignal>();
+        let sounds = expect_context::<Sounds>();
         games.own_games_add(game_response.to_owned());
         sounds.play_sound(SoundType::NewGame);
         match game_response.time_mode {

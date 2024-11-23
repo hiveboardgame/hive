@@ -1,6 +1,5 @@
 use crate::providers::{
-    game_state::GameStateSignal, timer::TimerSignal, ApiRequests, AuthContext, SoundType,
-    SoundsSignal,
+    game_state::GameStateSignal, timer::TimerSignal, ApiRequests, AuthContext, SoundType, Sounds,
 };
 use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;
@@ -22,7 +21,7 @@ lazy_static! {
 #[component]
 pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let sounds = expect_context::<SoundsSignal>();
+    let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
     let user_id = Signal::derive(move || match untrack(auth_context.user) {
         Some(Ok(Some(user))) => Some(user.id),
