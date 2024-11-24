@@ -1,4 +1,4 @@
-use crate::common::{ScheduleAction, TournamentAction};
+use crate::common::{markdown_to_html, ScheduleAction, TournamentAction};
 use crate::components::{
     atoms::progress_bar::ProgressBar,
     molecules::{
@@ -211,7 +211,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
             })
             .collect::<Vec<GameResponse>>()
     });
-
+    let markdown_desc = move || markdown_to_html(&tournament().description);
     let pending_games = move || {
         let mut result: HashMap<GameId, (Option<DateTime<Utc>>, GameResponse)> = HashMap::new();
         games_hashmap().iter().for_each(|(game_id, game)| {
@@ -253,13 +253,11 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
     };
 
     view! {
-        <div class="flex flex-col justify-center p-2 w-full">
+        <div class="flex flex-col items-center p-2 w-full">
             <h1 class="w-full max-w-full text-3xl font-bold text-center whitespace-normal break-words">
                 {move || tournament().name}
             </h1>
-            <div class="w-full text-center whitespace-normal break-words">
-                {move || tournament().description}
-            </div>
+            <div class="p-4 w-full break-words prose dark:prose-invert" inner_html=markdown_desc />
         </div>
         <div class=tournament_style>
 
