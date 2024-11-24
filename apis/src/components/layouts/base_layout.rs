@@ -3,9 +3,8 @@ use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
 use crate::providers::Config;
 use crate::providers::{
-    game_state::GameStateSignal, load_audio_buffer,
-    navigation_controller::NavigationControllerSignal, refocus::RefocusSignal,
-    websocket::WebsocketContext, AuthContext, PingContext, SoundsSignal,
+    game_state::GameStateSignal, navigation_controller::NavigationControllerSignal,
+    refocus::RefocusSignal, websocket::WebsocketContext, AuthContext, PingContext,
 };
 use cfg_if::cfg_if;
 use chrono::Utc;
@@ -19,9 +18,6 @@ use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
 use regex::Regex;
 use shared_types::{GameId, TournamentId};
-use std::cell::RefCell;
-use std::rc::Rc;
-use web_sys::AudioContext;
 
 cfg_if! { if #[cfg(not(feature = "ssr"))] {
     use leptos_use::utils::IS_IOS;
@@ -59,7 +55,6 @@ pub struct OrientationSignal {
 #[component]
 pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let config = expect_context::<Config>().0;
-    let sounds_signal = expect_context::<SoundsSignal>();
     let ping = expect_context::<PingContext>();
     let ws = expect_context::<WebsocketContext>();
     let ws_ready = ws.ready_state;
@@ -207,74 +202,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         },
         1000,
     );
-
-    let listener_triggered = RwSignal::new(false);
-    let sounds_loaded = RwSignal::new(false);
-    let update_sounds_effect = create_effect(move |_| {
-        if let Some(context) = sounds_signal.context.get() {
-            if !sounds_loaded() {
-                spawn_local(async move {
-                    if let Ok(turn_sound) = load_audio_buffer(&context, "/assets/moves.mp3").await {
-                        sounds_signal
-                            .turn
-                            .try_update_untracked(|v| *v = Some(turn_sound));
-                    }
-                    if let Ok(low_sound) = load_audio_buffer(&context, "/assets/low.mp3").await {
-                        sounds_signal
-                            .low
-                            .try_update_untracked(|v| *v = Some(low_sound));
-                    }
-                    if let Ok(new_sound) = load_audio_buffer(&context, "/assets/new.mp3").await {
-                        sounds_signal
-                            .new
-                            .try_update_untracked(|v| *v = Some(new_sound));
-                    }
-                });
-                sounds_loaded.set(true);
-            }
-        } else {
-            sounds_signal
-                .context
-                .try_update(|v| *v = AudioContext::new().ok());
-        }
-    });
-
-    let events = [
-        "touchend",
-        "pointerup",
-        "pointerdown",
-        "mousedown",
-        "keydown",
-    ];
-    let listeners = Rc::new(RefCell::new(vec![]));
-    for event in events {
-        let ev = window_event_listener_untyped(event, move |_| {
-            if let Some(context) = sounds_signal.context.get() {
-                if !listener_triggered.get_untracked() && context.resume().is_ok() {
-                    listener_triggered.set(true);
-                } else {
-                    sounds_signal
-                        .context
-                        .try_update(|v| *v = AudioContext::new().ok());
-                    listener_triggered.set(true);
-                };
-            }
-        });
-        listeners.borrow_mut().push(Box::new(ev));
-    }
-
-    create_effect(move |_| {
-        if sounds_loaded() {
-            update_sounds_effect.dispose();
-        }
-    });
-    create_effect(move |_| {
-        if listener_triggered() && sounds_loaded() {
-            for event in listeners.borrow_mut().drain(..) {
-                event.remove();
-            }
-        }
-    });
     view! {
         <Title />
         <OG />
