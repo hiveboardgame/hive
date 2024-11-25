@@ -16,7 +16,7 @@ leptos_router =  { version = "0.6", features = ["nightly"] }
 leptos_actix =  { version = "0.6" }
 leptos_icons = { version = "0.3"}
 leptos_i18n = { version = "0.4", features = ["suppress_key_warnings"] }
-icondata = {version = "0.4"}
+icondata = {version = "0.5"}
 actix-web = { version = "4",  features = ["macros"] }
 actix-files = { version = "0.6" }
 actix-web-actors = { version  = "4.3.0" }
@@ -38,7 +38,7 @@ regex = "1.10"
 http = "1.1.0"
 log = "0.4.22"
 simple_logger = "5.0"
-thiserror = "1"
+thiserror = "2"
 anyhow = "1"
 tokio = { version = "1.39.2", features = ["full"] }
 wasm-bindgen = "0.2.95"
@@ -62,6 +62,8 @@ leptix_primitives = { version = "0.2" }
 tree-ds = {version = "0.1.5", features = ["serde", "compact_serde"] }
 bimap = {version = "0.6.3", features = ["serde"] }
 walkdir = "2.5"
+#1.0.0-alpha is latest
+markdown = "1.0.0-alpha"
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]
 inherits = "release"
