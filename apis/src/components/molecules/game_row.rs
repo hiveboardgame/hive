@@ -133,8 +133,8 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     };
 
     view! {
-        <article class="flex relative px-2 py-4 mx-2 w-full h-72 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
-            <div class="mx-2 w-60 h-60">
+        <article class="flex relative px-2 py-4 mx-2 w-full h-40 duration-300 sm:h-56 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+            <div class="mx-2">
                 <ThumbnailPieces game />
             </div>
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">

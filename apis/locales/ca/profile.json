@@ -11,10 +11,10 @@
         "win": "Victòries"
     },
     "stats_box": {
-        "wins": "Victòries: {{count}}",
-        "draws": "Empats: {{count}}",
-        "total": "Total: {{count}}",
-        "losses": "Derrotes: {{count}}"
+        "wins": "Victòries",
+        "draws": "Empats",
+        "total": "Total",
+        "losses": "Derrotes"
     },
     "player_color": "Color del jugador:",
     "game_result": "Resultat de la partida:",

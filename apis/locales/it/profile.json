@@ -16,10 +16,10 @@
         "win": "Vittorie"
     },
     "stats_box": {
-        "total": "Total: {{count}}",
-        "wins": "Vittorie: {{count}}",
-        "losses": "Sconfitte: {{count}}",
-        "draws": "Patte: {{count}}"
+        "total": "Total",
+        "wins": "Vittorie",
+        "losses": "Sconfitte",
+        "draws": "Patte"
     },
     "player_color": "Colore giocatore:",
     "game_result": "Risultato della partita:",
