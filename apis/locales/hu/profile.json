@@ -17,10 +17,10 @@
         "all": "Mind"
     },
     "stats_box": {
-        "total": "Összesen: {{count}}",
-        "draws": "Döntetlenek: {{count}}",
-        "wins": "Győzelmek: {{count}}",
-        "losses": "Vereségek: {{count}}"
+        "total": "Összesen",
+        "draws": "Döntetlenek",
+        "wins": "Győzelmek",
+        "losses": "Vereségek"
     },
     "player_color": "Játékos színe:",
     "include_speeds": "Kiválasztott játékidők:"
