@@ -1,4 +1,5 @@
 use crate::common::UserAction;
+use crate::components::atoms::rating::icon_for_speed;
 use crate::components::molecules::user_row::UserRow;
 use crate::i18n::*;
 use crate::{
@@ -10,13 +11,13 @@ use crate::{
         ApiRequests,
     },
 };
-use leptos_icons::*;
 use hive_lib::Color;
 use leptix_primitives::{
     radio_group::{RadioGroupItem, RadioGroupRoot},
     toggle_group::{ToggleGroupItem, ToggleGroupKind, ToggleGroupMultiple, ToggleGroupRoot},
 };
 use leptos::*;
+use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::{
     core::ConnectionReadyState, signal_debounced, use_infinite_scroll_with_options,
@@ -24,7 +25,6 @@ use leptos_use::{
 };
 use shared_types::{GameProgress, GameSpeed, GamesContextToUpdate, GamesQueryOptions, ResultType};
 use std::str::FromStr;
-use crate::components::atoms::rating::icon_for_speed;
 
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
@@ -163,22 +163,22 @@ fn Controls(username: Signal<String>) -> impl IntoView {
             >
 
                 <ToggleGroupItem value="Bullet" attr:class=toggle_classes>
-                        <Icon icon=icon_for_speed(&GameSpeed::Bullet) />
+                    <Icon icon=icon_for_speed(&GameSpeed::Bullet) />
                 </ToggleGroupItem>
                 <ToggleGroupItem value="Blitz" attr:class=toggle_classes>
-                        <Icon icon=icon_for_speed(&GameSpeed::Blitz) />
+                    <Icon icon=icon_for_speed(&GameSpeed::Blitz) />
                 </ToggleGroupItem>
                 <ToggleGroupItem value="Rapid" attr:class=toggle_classes>
-                        <Icon icon=icon_for_speed(&GameSpeed::Rapid) />
+                    <Icon icon=icon_for_speed(&GameSpeed::Rapid) />
                 </ToggleGroupItem>
                 <ToggleGroupItem value="Classic" attr:class=toggle_classes>
-                        <Icon icon=icon_for_speed(&GameSpeed::Classic) />
+                    <Icon icon=icon_for_speed(&GameSpeed::Classic) />
                 </ToggleGroupItem>
                 <ToggleGroupItem value="Correspondence" attr:class=toggle_classes>
-                        <Icon icon=icon_for_speed(&GameSpeed::Correspondence) />
+                    <Icon icon=icon_for_speed(&GameSpeed::Correspondence) />
                 </ToggleGroupItem>
                 <ToggleGroupItem value="Untimed" attr:class=toggle_classes>
-                        <Icon icon=icon_for_speed(&GameSpeed::Untimed) />
+                    <Icon icon=icon_for_speed(&GameSpeed::Untimed) />
                 </ToggleGroupItem>
             </ToggleGroupRoot>
         </div>
