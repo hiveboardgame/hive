@@ -1194,13 +1194,35 @@ impl Game {
         new_result: &TournamentGameResult,
         conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
+        match Conclusion::from_str(&self.conclusion) {
+            Ok(Conclusion::Committee) | Ok(Conclusion::Unknown) | Ok(Conclusion::Forfeit) => {}
+            _ => {
+                return Err(DbError::InvalidAction {
+                    info: String::from("You cannot adjudicate a played game"),
+                });
+            }
+        }
         if let Some(tid) = self.tournament_id {
             let tournament = Tournament::find(tid, conn).await?;
             tournament.ensure_user_is_organizer(user_id, conn).await?;
+            if *new_result == TournamentGameResult::Draw {
+                return Err(DbError::InvalidAction {
+                    info: String::from("Not a valid tournament result for adjudication"),
+                });
+            }
+            let con = match new_result {
+                TournamentGameResult::DoubeForfeit => Conclusion::Forfeit,
+                TournamentGameResult::Unknown => Conclusion::Unknown,
+                _ => Conclusion::Committee,
+            };
+            let fin = new_result != &TournamentGameResult::Unknown;
             let game = diesel::update(games::table.find(self.id))
                 .set((
+                    finished.eq(fin),
+                    conclusion.eq(con.to_string()),
                     tournament_game_result.eq(new_result.to_string()),
                     updated_at.eq(Utc::now()),
+                    last_interaction.eq(Utc::now()),
                 ))
                 .get_result(conn)
                 .await?;

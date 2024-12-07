@@ -9,6 +9,7 @@ use shared_types::{PlayerScores, Tiebreaker};
 pub fn ScoreRow(
     user: StoredValue<UserResponse>,
     standing: String,
+    finished: i32,
     tiebreakers: Vec<Tiebreaker>,
     scores: PlayerScores,
 ) -> impl IntoView {
@@ -23,11 +24,22 @@ pub fn ScoreRow(
         }
     };
     let td_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
+    let div_class = "flex justify-center items-center";
+    let scores_view = tiebreakers
+        .iter()
+        .map(|tiebreaker| {
+            view! {
+                <td class=td_class>
+                    <div class=div_class>{*scores.get(tiebreaker).unwrap_or(&0.0)}</div>
+                </td>
+            }
+        })
+        .collect_view();
 
     view! {
         <tr class="h-6 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
             <td class=td_class>
-                <div class="flex justify-center items-center">{standing}</div>
+                <div class=div_class>{standing}</div>
             </td>
             <td class=td_class>
                 <div class="flex items-center">
@@ -35,18 +47,10 @@ pub fn ScoreRow(
                     {profile_link()}
                 </div>
             </td>
-            {tiebreakers
-                .iter()
-                .map(|tiebreaker| {
-                    view! {
-                        <td class=td_class>
-                            <div class="flex justify-center items-center">
-                                {*scores.get(tiebreaker).unwrap_or(&0.0)}
-                            </div>
-                        </td>
-                    }
-                })
-                .collect_view()}
+            {scores_view}
+            <td class=td_class>
+                <div class=div_class>{finished}</div>
+            </td>
         </tr>
     }
 }

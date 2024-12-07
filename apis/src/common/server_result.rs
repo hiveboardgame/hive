@@ -45,35 +45,37 @@ impl fmt::Display for ExternalServerError {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServerMessage {
-    Ping { nonce: u64, value: f64 },
-    ConnectionUpdated(Uuid, String),
+    Challenge(ChallengeUpdate),
     Chat(Vec<ChatMessageContainer>),
+    ConnectionUpdated(Uuid, String),
+    CouldSetUserConf(bool),
+    Error(String),
     Game(Box<GameUpdate>),
     GamesSearch(GamesSearchResponse),
-    Challenge(ChallengeUpdate),
-    UserSearch(Vec<UserResponse>),
-    UserStatus(UserUpdate),
-    Tournament(TournamentUpdate),
-    PlayerProfile(UserResponse),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
-    Error(String),
+    Ping { nonce: u64, value: f64 },
+    PlayerProfile(UserResponse),
     Schedule(ScheduleUpdate),
-    CouldSetUserConf(bool),
+    Tournament(TournamentUpdate),
+    UserSearch(Vec<UserResponse>),
+    UserStatus(UserUpdate),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TournamentUpdate {
-    Started(Box<TournamentResponse>),
+    AbstractTournaments(Vec<TournamentAbstractResponse>),
+    Adjudicated(Box<TournamentResponse>),
     Created(Box<TournamentResponse>),
+    Declined(Box<TournamentResponse>),
     Deleted(TournamentId),
-    Modified(Box<TournamentResponse>),
+    Finished(Box<TournamentResponse>),
+    Invited(Box<TournamentResponse>),
     Joined(Box<TournamentResponse>),
     Left(Box<TournamentResponse>),
+    Modified(Box<TournamentResponse>),
+    Started(Box<TournamentResponse>),
     Tournaments(Vec<Box<TournamentResponse>>),
-    AbstractTournaments(Vec<TournamentAbstractResponse>),
-    Invited(Box<TournamentResponse>),
-    Declined(Box<TournamentResponse>),
     Uninvited(Box<TournamentResponse>),
 }
 

@@ -39,7 +39,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
         GameStatus::Finished(res) => match res {
             GameResult::Winner(c) => GameResult::Winner(c).to_string().into_view(),
             GameResult::Draw => GameResult::Draw.to_string().into_view(),
-            _ => "".into_view(),
+            _ => game().conclusion.to_string().into_view(),
         },
     };
 
