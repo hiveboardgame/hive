@@ -12,6 +12,7 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
     match tournament {
         TournamentUpdate::Left(tournament)
         | TournamentUpdate::Created(tournament)
+        | TournamentUpdate::Adjudicated(tournament)
         | TournamentUpdate::Modified(tournament) => {
             let mut tournaments_signal = expect_context::<TournamentStateContext>();
             tournaments_signal.add_full(vec![*tournament]);
@@ -77,6 +78,14 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
                 tournaments.insert(tournament.tournament_id.clone());
             });
             // TODO: Inform users the tournament started
+        }
+        TournamentUpdate::Finished(tournament) => {
+            let mut tournaments_signal = expect_context::<TournamentStateContext>();
+            tournaments_signal.add_full(vec![*tournament.clone()]);
+            let notifications = expect_context::<NotificationContext>();
+            notifications.tournament_finished.update(|tournaments| {
+                tournaments.insert(tournament.tournament_id.clone());
+            });
         }
     }
 }

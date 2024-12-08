@@ -7,7 +7,9 @@ use std::{
     default::Default,
 };
 use uuid::Uuid;
+
 pub type PlayerScores = HashMap<Tiebreaker, f32>;
+
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Pairing {
     white_uuid: Uuid,
@@ -28,6 +30,7 @@ impl Pairing {
         None
     }
 }
+
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Standings {
     pub players: HashSet<Uuid>,
@@ -170,6 +173,18 @@ impl Standings {
         wins
     }
 
+    pub fn get_finished_games(&self, player: &Uuid) -> i32 {
+        let mut finished = 0;
+        if let Some(pairings) = self.pairings.get(player) {
+            for pairing in pairings {
+                if pairing.result != TournamentGameResult::Unknown {
+                    finished += 1;
+                }
+            }
+        }
+        finished
+    }
+
     pub fn head_to_head_pair(&self, one: Uuid, two: Uuid) -> (f32, f32) {
         let mut results = HashMap::new();
         let pairings = self.pairings_between(one, two);
@@ -300,8 +315,9 @@ impl Standings {
         self.pairings.entry(black_uuid).or_default().push(pairing);
     }
 
-    pub fn results(&self) -> Vec<Vec<(Uuid, String, PlayerScores)>> {
+    pub fn results(&self) -> Vec<Vec<(Uuid, String, i32, PlayerScores)>> {
         let mut position = 0;
+        println!("In results: Standings: {:?}", self.players_standings);
         self.players_standings
             .iter()
             .map(|group| {
@@ -309,6 +325,7 @@ impl Standings {
                 group
                     .iter()
                     .map(|uuid| {
+                        let finished = self.get_finished_games(uuid);
                         position += 1;
                         let position = if first_in_group {
                             first_in_group = false;
@@ -319,6 +336,7 @@ impl Standings {
                         (
                             *uuid,
                             position,
+                            finished,
                             self.players_scores.get(uuid).unwrap().clone(),
                         )
                     })

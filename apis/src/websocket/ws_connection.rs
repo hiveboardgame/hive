@@ -15,6 +15,7 @@ use actix_web_actors::ws::{self};
 use anyhow::Result;
 use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 use db_lib::DbPool;
+use indoc::printdoc;
 use shared_types::SimpleUser;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
@@ -183,15 +184,15 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                 }
                             }
                             Err(err) => {
-                                // TODO: @leex the error here needs to be nicer
-                                println!(
-                                    "---------------------------------------\n
-                                                ERROR\n
-                                Request:\n  {request:?}\n
-                                Error:\n  {err:?}\n
-                                User:\n  {username} {user_id}\n
-                                ---------------------------------------",
-                                );
+                                printdoc! {r#"
+                                    -----------------ERROR-----------------
+                                      Request: {:?}
+                                      Error:   {:?}
+                                      User:    {} {}
+                                    ------------------END------------------
+                                    "#,
+                                    request, err, username, user_id
+                                };
                                 let message = ServerResult::Err(ExternalServerError {
                                     user_id,
                                     field: "foo".to_string(),

@@ -2,6 +2,7 @@ pub mod abandon;
 pub mod adjudicate_result;
 pub mod create;
 pub mod delete;
+pub mod finish;
 pub mod get;
 pub mod get_all;
 pub mod handler;

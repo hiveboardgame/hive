@@ -7,6 +7,7 @@ pub struct NotificationContext {
     pub challenges: RwSignal<HashSet<ChallengeId>>,
     pub tournament_invitations: RwSignal<HashSet<TournamentId>>,
     pub tournament_started: RwSignal<HashSet<TournamentId>>,
+    pub tournament_finished: RwSignal<HashSet<TournamentId>>,
 }
 
 impl NotificationContext {
@@ -15,6 +16,7 @@ impl NotificationContext {
             challenges: RwSignal::new(HashSet::new()),
             tournament_invitations: RwSignal::new(HashSet::new()),
             tournament_started: RwSignal::new(HashSet::new()),
+            tournament_finished: RwSignal::new(HashSet::new()),
         }
     }
 
@@ -22,6 +24,7 @@ impl NotificationContext {
         self.challenges.get().is_empty()
             && self.tournament_invitations.get().is_empty()
             && self.tournament_started.get().is_empty()
+            && self.tournament_finished.get().is_empty()
     }
 }
 

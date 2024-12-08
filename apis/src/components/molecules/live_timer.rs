@@ -83,8 +83,8 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
             })
         })
     });
-    #[allow(unused)]
-    watch_with_options(
+
+    let _ = watch_with_options(
         should_resume,
         move |v, _, _| {
             if *v {
@@ -93,14 +93,12 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
                 pause();
             }
         },
-        //Has immediate = true, hence not unused
         WatchOptions::default().immediate(true),
     );
 
-    #[allow(unused)]
-    whenever_with_options(
+    let _ = whenever_with_options(
         move || time_is_zero() && !timer().finished,
-        move |v, _, _| {
+        move |_, _, _| {
             // When time runs out declare winner and style timer that ran out
             let api = ApiRequests::new();
             let router = expect_context::<RouterContext>();
@@ -111,11 +109,10 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
                 }
             }
         },
-        //Has immediate = true, hence not unused
         WatchOptions::default().immediate(true),
     );
-    #[allow(unused)]
-    whenever_with_options(
+
+    let _ = whenever_with_options(
         user_needs_warning,
         move |_, _, issued| {
             let issued = issued.unwrap_or_default();
@@ -126,7 +123,6 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
                 true
             }
         },
-        //Has immediate = true, hence not unused
         WatchOptions::default().immediate(true),
     );
 

@@ -29,7 +29,6 @@ impl StartHandler {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         let tournament = Tournament::find_by_tournament_id(&self.tournament_id, &mut conn).await?;
-        println!("Found tournament");
         let (tournament, games, deleted_invitations) = conn
             .transaction::<_, DbError, _>(move |tc| {
                 async move { tournament.start_by_organizer(&self.user_id, tc).await }.scope_boxed()
