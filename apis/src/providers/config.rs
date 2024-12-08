@@ -31,7 +31,7 @@ impl Config {
         use_cookie_with_options::<ConfigOpts, Base64<MsgpackSerdeCodec>>(
             USER_CONFIG_COOKIE,
             UseCookieOptions::default()
-                .same_site(SameSite::Strict)
+                .same_site(SameSite::Lax)
                 .secure(true)
                 .expires(exp),
         )
