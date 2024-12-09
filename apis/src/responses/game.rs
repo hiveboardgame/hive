@@ -242,7 +242,7 @@ impl GameResponse {
             black_rating_change,
             white_time_left,
             black_time_left,
-            time_mode: TimeMode::from_str(&game.time_mode).unwrap(),
+            time_mode: TimeMode::from_str(&game.time_mode)?,
             time_base: game.time_base,
             time_increment: game.time_increment,
             last_interaction: game.last_interaction,
