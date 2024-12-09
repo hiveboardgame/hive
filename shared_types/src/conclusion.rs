@@ -20,7 +20,7 @@ impl PrettyString for Conclusion {
             Conclusion::Committee => String::from("Committee decision"),
             Conclusion::Draw => String::from("Draw agreed"),
             Conclusion::Forfeit => String::from("Forfeit"),
-            Conclusion::Repetition => String::from("Draw by 3 move repetition"),
+            Conclusion::Repetition => String::from("3 move repetition"),
             Conclusion::Resigned => String::from("Resigned"),
             Conclusion::Timeout => String::from("Timeout"),
             Conclusion::Unknown => String::from("Unknown"),
