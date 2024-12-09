@@ -29,7 +29,9 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
 
     let result_string = match game().game_status {
         GameStatus::NotStarted => {
-            if game().game_start == GameStart::Ready {
+            if game().finished {
+                game().tournament_game_result.to_string().into_view()
+            } else if game().game_start == GameStart::Ready {
                 t!(i18n, game.start_when.both_agree).into_view()
             } else {
                 "Not started".into_view()
