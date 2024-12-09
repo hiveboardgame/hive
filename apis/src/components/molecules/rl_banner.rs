@@ -17,7 +17,7 @@ pub fn RlBanner() -> impl IntoView {
                     Sign up by January 4th 2025
                 </a>
                 <ul>
-                    <li> Starts January 6th </li>
+                    <li>Starts January 6th</li>
                     <li>
                         Each team consists of 3 to 4 players (only 3 players per team play each round)
                     </li>

@@ -17,6 +17,7 @@ pub enum TournamentAction {
     AdjudicateResult(GameId, TournamentGameResult),
     Create(Box<TournamentDetails>),
     Delete(TournamentId),
+    Finish(TournamentId),
     Get(TournamentId, TournamentResponseDepth),
     GetAll(TournamentResponseDepth, TournamentSortOrder),
     InvitationAccept(TournamentId),

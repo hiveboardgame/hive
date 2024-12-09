@@ -61,43 +61,45 @@ impl LagTracker {
         );
     }
 
-    pub fn moves(&self) -> usize {
-        self.lag_stats.samples
-    }
-
-    pub fn lag_mean(&self) -> Option<f64> {
-        if self.moves() > 0 {
-            Some(self.lag_stats.total / self.moves() as f64)
-        } else {
-            None
-        }
-    }
-
-    pub fn comp_est_std_err(&self) -> Option<f64> {
-        if self.moves() > 2 {
-            Some(self.comp_est_sq_err.sqrt() / ((self.moves() - 2) as f64))
-        } else {
-            None
-        }
-    }
-
-    pub fn comp_avg(&self) -> Option<f64> {
-        if self.moves() > 0 {
-            Some(self.total_comp() / self.moves() as f64)
-        } else {
-            None
-        }
-    }
-
-    pub fn total_comp(&self) -> f64 {
-        self.total_lag() - self.total_uncomped()
-    }
-
-    pub fn total_lag(&self) -> f64 {
-        self.lag_stats.total
-    }
-
-    pub fn total_uncomped(&self) -> f64 {
-        self.uncomp_stats.total
-    }
+    // These are currently unused but it would be nice to create a page where you can view all of
+    // them at a later date
+    // pub fn moves(&self) -> usize {
+    //     self.lag_stats.samples
+    // }
+    //
+    // pub fn lag_mean(&self) -> Option<f64> {
+    //     if self.moves() > 0 {
+    //         Some(self.lag_stats.total / self.moves() as f64)
+    //     } else {
+    //         None
+    //     }
+    // }
+    //
+    // pub fn comp_est_std_err(&self) -> Option<f64> {
+    //     if self.moves() > 2 {
+    //         Some(self.comp_est_sq_err.sqrt() / ((self.moves() - 2) as f64))
+    //     } else {
+    //         None
+    //     }
+    // }
+    //
+    // pub fn comp_avg(&self) -> Option<f64> {
+    //     if self.moves() > 0 {
+    //         Some(self.total_comp() / self.moves() as f64)
+    //     } else {
+    //         None
+    //     }
+    // }
+    //
+    // pub fn total_comp(&self) -> f64 {
+    //     self.total_lag() - self.total_uncomped()
+    // }
+    //
+    // pub fn total_lag(&self) -> f64 {
+    //     self.lag_stats.total
+    // }
+    //
+    // pub fn total_uncomped(&self) -> f64 {
+    //     self.uncomp_stats.total
+    // }
 }

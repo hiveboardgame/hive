@@ -7,14 +7,16 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+actix = { workspace = true, optional = true }
 actix-files = { workspace = true, optional = true }
 actix-identity = { workspace = true, optional = true }
 actix-rt = { workspace = true, optional = true }
 actix-session = { workspace = true, optional = true }
 actix-web = { workspace = true, optional = true, features = ["macros"] }
 actix-web-actors = { workspace = true, optional = true }
-actix = { workspace = true, optional = true }
+anyhow = { workspace = true }
 argon2 = { workspace = true, optional = true }
+bimap = {workspace = true}
 cfg-if = { workspace = true }
 chrono = { workspace = true }
 codee ={ workspace = true }
@@ -22,41 +24,41 @@ console_error_panic_hook = { workspace = true }
 cookie = { workspace = true }
 db = { path = "../db", optional = true  }
 diesel = { workspace = true, optional = true }
-diesel_migrations = { workspace = true, optional = true }
 diesel-async = { workspace = true, optional = true }
+diesel_migrations = { workspace = true, optional = true }
 hive = { path = "../engine" }
-shared_types = { path = "../shared_types" }
 http = { workspace = true }
+http-serde = { workspace = true }
+icondata = { workspace = true }
+indoc = { workspace = true }
+lazy_static = { workspace = true }
+leptix_primitives = {workspace = true}
 leptos = { workspace = true }
 leptos-use = { workspace = true }
 leptos_actix = { workspace = true, optional = true }
+leptos_i18n = { workspace = true }
+leptos_icons = { workspace = true }
 leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
-leptos_icons = { workspace = true }
-leptos_i18n = { workspace = true }
-icondata = { workspace = true }
 log = { workspace = true }
+markdown = {workspace = true}
 rand = { workspace = true }
 rand_core = { workspace = true }
 regex = { workspace = true }
-lazy_static = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-http-serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+shared_types = { path = "../shared_types" }
 simple_logger = { workspace = true }
 thiserror = { workspace = true }
-anyhow = { workspace = true }
 tokio = { workspace = true, optional = true }
+tree-ds = {workspace = true}
 uuid = { workspace = true }
+walkdir = {workspace = true}
 wasm-bindgen = { workspace = true}
 wasm-bindgen-futures = { workspace = true}
 web-sys = { workspace = true }
-leptix_primitives = {workspace = true}
-tree-ds = {workspace = true}
-bimap = {workspace = true}
-walkdir = {workspace = true}
-markdown = {workspace = true}
+
 [features]
 csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr", "leptos_i18n/csr"]
 hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_i18n/hydrate"]
