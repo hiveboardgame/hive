@@ -19,7 +19,7 @@ use shared_types::{
 use std::str::FromStr;
 use uuid::Uuid;
 
-const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
 #[derive(Debug, Clone, Copy)]
 pub struct TournamentSignals {
@@ -253,14 +253,7 @@ pub fn TournamentCreate() -> impl IntoView {
 
                     <div class="flex flex-col mt-4 mb-2">
                         <div class="flex flex-row">
-                            <button
-                                on:click=move |_| is_not_preview_desc.update(|b| *b = !*b)
-                                class="flex gap-1 justify-center items-center px-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                            >
-                                {move || if is_not_preview_desc() { "Preview" } else { "Edit" }}
-                            </button>
                             <span class="px-1 font-bold">Description:</span>
-
                         </div>
                         <Show
                             when=is_not_preview_desc
@@ -282,6 +275,15 @@ pub fn TournamentCreate() -> impl IntoView {
                                 on:input=update_from_input(tournament.description)
                                 attr:maxlength="2000"
                             ></textarea>
+
+                        <div class="flex flex-row p-1 gap-1">
+                            <button
+                                on:click=move |_| is_not_preview_desc.update(|b| *b = !*b)
+                                class="mr-4 flex gap-1 justify-center items-center px-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                                {move || if is_not_preview_desc() { "Preview" } else { "Edit" }}
+                            </button>
+
                             <a
                                 class="font-bold text-blue-500 hover:underline"
                                 href="https://commonmark.org/help/"
@@ -289,6 +291,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             >
                                 "Markdown Cheat Sheet"
                             </a>
+                    </div>
                         </Show>
                     </div>
                     <div class="p-1">

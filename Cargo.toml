@@ -9,61 +9,62 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-leptos = { version = "0.6", features = ["nightly"] }
-leptos-use = { version = "0.13" }
-leptos_meta =  { version = "0.6", features = ["nightly"] }
-leptos_router =  { version = "0.6", features = ["nightly"] }
-leptos_actix =  { version = "0.6" }
-leptos_icons = { version = "0.3"}
-leptos_i18n = { version = "0.4", features = ["suppress_key_warnings"] }
-icondata = {version = "0.5"}
-actix-web = { version = "4",  features = ["macros"] }
-actix-files = { version = "0.6" }
-actix-web-actors = { version  = "4.3.0" }
 actix = "0.13.5"
-actix-rt = "2.10.0"
+actix-files = { version = "0.6" }
 actix-identity = { version = "0.8" }
+actix-rt = "2.10.0"
 actix-session = { version = "0.10", features = ["cookie-session"] }
+actix-web = { version = "4",  features = ["macros"] }
+actix-web-actors = { version  = "4.3.0" }
+anyhow = "1"
 argon2 = "0.5"
-sha2 = "0.10"
-serde = { version = "1" }
-serde_with = { version = "3.9" }
-http-serde = { version = "2" }
-serde_json = { version = "1" }
+bb8 = { version = "0.8" }
+bimap = {version = "0.6.3", features = ["serde"] }
 cfg-if = "1.0.0"
+chrono = { version = "0.4", features = ["serde"] }
+codee = { version = "0.2", features = ["msgpack_serde", "base64"] }
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
-codee = { version = "0.2", features = ["msgpack_serde", "base64"] }
-regex = "1.10"
-http = "1.1.0"
-log = "0.4.22"
-simple_logger = "5.0"
-thiserror = "2"
-anyhow = "1"
-tokio = { version = "1.39.2", features = ["full"] }
-wasm-bindgen = "0.2.95"
-wasm-bindgen-futures = "0.4"
-web-sys = {version = "0.3.70", features = ["AbortController", "AbortSignal", "AudioContext", "AudioBuffer", "AudioBufferSourceNode", "AudioDestinationNode", "Blob", "Clipboard", "HtmlDocument", "SvgPoint", "SvgsvgElement", "SvgGraphicsElement", "SvgRect", "SvgMatrix", "Url", "Window"] }
-bb8 = { version = "0.8" }
+cookie = "0.18"
 diesel = { version = "2.2", features = ["postgres", "chrono", "uuid", "serde_json"] }
 diesel-async = { version = "0.5", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.2", features = ["postgres"]}
-uuid = { version = "1.10", features = ["v4", "js", "serde"] }
-nanoid = "0.4"
 dotenvy = "0.15"
+http = "1.1.0"
+http-serde = { version = "2" }
+icondata = {version = "0.5"}
+indoc = "2"
+itertools = "0.13.0"
 lazy_static = "1.5"
+leptix_primitives = { version = "0.2" }
+leptos = { version = "0.6", features = ["nightly"] }
+leptos-use = { version = "0.13" }
+leptos_actix =  { version = "0.6" }
+leptos_i18n = { version = "0.4", features = ["suppress_key_warnings"] }
+leptos_icons = { version = "0.3"}
+leptos_meta =  { version = "0.6", features = ["nightly"] }
+leptos_router =  { version = "0.6", features = ["nightly"] }
+log = "0.4.22"
+markdown = "1.0.0-alpha"
+nanoid = "0.4"
 rand = "0.8"
 rand_core = "0.6"
-cookie = "0.18"
+regex = "1.10"
+serde = { version = "1" }
+serde_json = { version = "1" }
+serde_with = { version = "3.9" }
+sha2 = "0.10"
+simple_logger = "5.0"
 skillratings = "0.27"
-chrono = { version = "0.4", features = ["serde"] }
-itertools = "0.13.0"
-leptix_primitives = { version = "0.2" }
+thiserror = "1"
+tokio = { version = "1.39.2", features = ["full"] }
 tree-ds = {version = "0.1.5", features = ["serde", "compact_serde"] }
-bimap = {version = "0.6.3", features = ["serde"] }
+uuid = { version = "1.10", features = ["v4", "js", "serde"] }
 walkdir = "2.5"
-#1.0.0-alpha is latest
-markdown = "1.0.0-alpha"
+wasm-bindgen = "0.2.95"
+wasm-bindgen-futures = "0.4"
+web-sys = {version = "0.3.70", features = ["AbortController", "AbortSignal", "AudioContext", "AudioBuffer", "AudioBufferSourceNode", "AudioDestinationNode", "Blob", "Clipboard", "HtmlDocument", "SvgPoint", "SvgsvgElement", "SvgGraphicsElement", "SvgRect", "SvgMatrix", "Url", "Window"] }
+
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]
 inherits = "release"

@@ -1,13 +1,17 @@
-use crate::components::atoms::{
-    profile_link::ProfileLink,
-    schedule_controls::{GameDateControls, ProposeDateControls},
-};
 use crate::providers::schedules::SchedulesContext;
 use crate::responses::GameResponse;
 use crate::responses::ScheduleResponse;
+use crate::{
+    components::atoms::{
+        profile_link::ProfileLink,
+        schedule_controls::{GameDateControls, ProposeDateControls},
+    },
+    pages::tournament::INFO_STYLE,
+};
 use chrono::{Duration, Utc};
 use hive_lib::GameStatus;
 use leptos::*;
+use shared_types::Conclusion;
 use shared_types::GameId;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -22,6 +26,7 @@ pub fn MySchedules(
             games_hashmap.get().iter().any(|(_game_id, game)| {
                 game.game_status == GameStatus::NotStarted
                     && (game.white_player.uid == user_id || game.black_player.uid == user_id)
+                    && game.conclusion == Conclusion::Unknown
             })
         })
     };
@@ -67,8 +72,8 @@ fn MySchedulesInner(
         ret
     };
     view! {
-        <details class="m-2 w-80" attr:open="true">
-            <summary class="m-2 h-6 text-lg font-bold">My Schedules:</summary>
+        <details class="m-2 w-80">
+            <summary class=INFO_STYLE>My Schedules:</summary>
             <For each=my_schedules key=|g| (g.0.uuid, g.1) let:game>
 
                 {
