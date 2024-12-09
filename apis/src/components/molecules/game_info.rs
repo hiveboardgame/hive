@@ -71,7 +71,9 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             let conclusion = game_conclusion();
 
             match (result, conclusion) {
-                (GameResult::Draw, Some(conclusion)) => conclusion.pretty_string(),
+                (GameResult::Draw, Some(conclusion)) => {
+                    format!("{} {}", GameResult::Draw, conclusion.pretty_string())
+                }
                 (GameResult::Winner(color), Some(conclusion)) => winner_str(color, conclusion),
                 _ => String::new(),
             }
@@ -80,7 +82,13 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             let conclusion = game_conclusion();
 
             match (result, conclusion) {
-                (TournamentGameResult::Draw, Some(conclusion)) => conclusion.pretty_string(),
+                (TournamentGameResult::Draw, Some(conclusion)) => {
+                    format!(
+                        "{} {}",
+                        TournamentGameResult::Draw,
+                        conclusion.pretty_string()
+                    )
+                }
                 (TournamentGameResult::Winner(color), Some(conclusion)) => {
                     winner_str(color, conclusion)
                 }
