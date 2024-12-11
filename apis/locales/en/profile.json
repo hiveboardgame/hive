@@ -16,10 +16,10 @@
         "all": "All"
     },
     "stats_box": {
-        "total": "Total: {{count}}",
-        "wins": "Wins: {{count}}",
-        "losses": "Losses: {{count}}",
-        "draws": "Draws: {{count}}"
+        "total": "Total",
+        "wins": "Wins",
+        "losses": "Losses",
+        "draws": "Draws"
     },
     "player_color": "Player color:",
     "game_result": "Game result:",

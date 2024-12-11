@@ -16,10 +16,10 @@
         "draw": "Empate"
     },
     "stats_box": {
-        "total": "Total: {{count}}",
-        "draws": "Empates: {{count}}",
-        "losses": "Derrotas: {{count}}",
-        "wins": "Vitórias: {{count}}"
+        "total": "Total",
+        "draws": "Empates",
+        "losses": "Derrotas",
+        "wins": "Vitórias"
     },
     "player_color": "Cor do jogador:",
     "game_result": "Resultado do jogo:",

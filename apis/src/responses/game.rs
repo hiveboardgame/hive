@@ -3,7 +3,8 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{Conclusion, GameId, GameSpeed, GameStart, TimeMode};
+use shared_types::{Conclusion, GameId, GameSpeed, GameStart, TimeMode, TournamentGameResult};
+use std::cmp::Ordering;
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
@@ -62,6 +63,7 @@ pub struct GameResponse {
     pub game_start: GameStart,
     pub game_speed: GameSpeed,
     pub move_times: Vec<Option<i64>>,
+    pub tournament_game_result: TournamentGameResult,
 }
 
 impl PartialEq for GameResponse {
@@ -72,6 +74,20 @@ impl PartialEq for GameResponse {
             && self.last_interaction == other.last_interaction
     }
 }
+
+impl Ord for GameResponse {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.game_id.0.cmp(&other.game_id.0)
+    }
+}
+
+impl PartialOrd for GameResponse {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for GameResponse {}
 
 impl GameResponse {
     pub fn white_rating(&self) -> u64 {
@@ -226,7 +242,7 @@ impl GameResponse {
             black_rating_change,
             white_time_left,
             black_time_left,
-            time_mode: TimeMode::from_str(&game.time_mode).unwrap(),
+            time_mode: TimeMode::from_str(&game.time_mode)?,
             time_base: game.time_base,
             time_increment: game.time_increment,
             last_interaction: game.last_interaction,
@@ -238,6 +254,7 @@ impl GameResponse {
             game_start: GameStart::from_str(&game.game_start)?,
             game_speed: GameSpeed::from_base_increment(game.time_base, game.time_increment),
             move_times: game.move_times.clone(),
+            tournament_game_result: TournamentGameResult::from_str(&game.tournament_game_result)?,
         })
     }
 

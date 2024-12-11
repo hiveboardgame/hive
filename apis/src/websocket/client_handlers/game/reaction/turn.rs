@@ -2,8 +2,7 @@ use crate::{
     common::GameActionResponse,
     providers::{
         game_state::GameStateSignal, games::GamesSignal,
-        navigation_controller::NavigationControllerSignal, timer::TimerSignal, SoundType,
-        SoundsSignal,
+        navigation_controller::NavigationControllerSignal, timer::TimerSignal, SoundType, Sounds,
     },
 };
 use hive_lib::Turn;
@@ -11,7 +10,7 @@ use leptos::*;
 
 pub fn handle_turn(turn: Turn, gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();
-    let sounds = expect_context::<SoundsSignal>();
+    let sounds = expect_context::<Sounds>();
     games.own_games_add(gar.game.clone());
     let mut game_state = expect_context::<GameStateSignal>();
     let navigation_controller = expect_context::<NavigationControllerSignal>();

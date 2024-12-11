@@ -17,11 +17,11 @@ enum TournamentFilter {
 
 fn get_button_classes(current: TournamentFilter, selected: TournamentFilter) -> &'static str {
     if current == selected {
-        return "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        return "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600";
     }
 
     // default state
-    return BUTTON_STYLE
+    BUTTON_STYLE
 }
 
 #[component]
@@ -49,7 +49,7 @@ pub fn Tournaments() -> impl IntoView {
                     on:input=move |ev| search.set(event_target_value(&ev))
                     value=search
                 />
-                <div class="flex justify-center space-x-4 mb-4 w-full -mx-2 content-center">
+                <div class="flex justify-center content-center -mx-2 mb-4 space-x-4 w-full">
                     <button
                         class=move || get_button_classes(TournamentFilter::All, filter.get())
                         on:click=move |_| filter.set(TournamentFilter::All)

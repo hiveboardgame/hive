@@ -1,6 +1,5 @@
 use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::components::molecules::time_row::TimeRow;
-use crate::i18n::*;
 use crate::providers::{ApiRequests, Config};
 use crate::{
     components::atoms::game_type::GameType, components::atoms::profile_link::ProfileLink,
@@ -8,6 +7,7 @@ use crate::{
 };
 use hive_lib::ColorChoice;
 use leptos::*;
+use crate::i18n::*;
 use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::use_window;

@@ -4,7 +4,7 @@ use crate::providers::game_state::{self, GameStateSignal};
 use hive_lib::GameStatus;
 use leptos::*;
 use leptos_icons::*;
-use shared_types::{Conclusion, TimeMode};
+use shared_types::{PrettyString, TimeMode};
 
 #[component]
 pub fn HistoryMove(
@@ -99,14 +99,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
 
     let conclusion = create_read_slice(game_state.signal, |gs| {
         if let Some(game) = &gs.game_response {
-            match game.conclusion {
-                Conclusion::Board => String::from("Finished on board"),
-                Conclusion::Draw => String::from("Draw agreed"),
-                Conclusion::Resigned => String::from("Resigned"),
-                Conclusion::Timeout => String::from("Timeout"),
-                Conclusion::Repetition => String::from("3 move repetition"),
-                Conclusion::Unknown => String::from("Unknown"),
-            }
+            game.conclusion.pretty_string()
         } else {
             String::from("No data")
         }

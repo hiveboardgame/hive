@@ -16,10 +16,10 @@
         "all": "Alle"
     },
     "stats_box": {
-        "total": "Gesamt: {{count}}",
-        "wins": "Siege: {{count}}",
-        "losses": "Niederlagen: {{count}}",
-        "draws": "Unentschieden: {{count}}"
+        "total": "Gesamt",
+        "wins": "Siege",
+        "losses": "Niederlagen",
+        "draws": "Unentschieden"
     },
     "player_color": "Spieler*innenfarbe:",
     "game_result": "Spielergebnis:",
