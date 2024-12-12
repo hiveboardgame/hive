@@ -118,6 +118,20 @@ docker compose up -d
 
 This will create a database, apply migrations and run the app on localhost:3000.
 
+### Troubleshooting
+
+If you get an error of the form
+```
+ it looks like the Rust project used to create this Wasm file was linked against
+ version of wasm-bindgen that uses a different bindgen format than this binary:
+ 
+   rust Wasm file schema version: 0.2.93
+      this binary schema version: 0.2.95
+ 
+```
+That means that the Cargo.lock file was built with a different version of cargo-leptos than your current one.
+You have two options to fix this. 
+Either update cargo-leptos as the lock file was probably created by a newer version than you have or delete the lock file.
 
 ## License
 This source code with the exception of the graphics is licensed under the GNU
