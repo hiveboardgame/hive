@@ -1,9 +1,9 @@
 {
     "stats_box": {
-        "wins": "Побед: {{count}}",
-        "total": "Всего: {{count}}",
-        "draws": "Ничьих: {{count}}",
-        "losses": "Поражений: {{count}}"
+        "wins": "Побед",
+        "total": "Всего",
+        "draws": "Ничьих",
+        "losses": "Поражений"
     },
     "game_result": "Результат партии:",
     "include_speeds": "Контроль времени:",

@@ -29,7 +29,9 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
 
     let result_string = match game().game_status {
         GameStatus::NotStarted => {
-            if game().game_start == GameStart::Ready {
+            if game().finished {
+                game().tournament_game_result.to_string().into_view()
+            } else if game().game_start == GameStart::Ready {
                 t!(i18n, game.start_when.both_agree).into_view()
             } else {
                 "Not started".into_view()
@@ -39,7 +41,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
         GameStatus::Finished(res) => match res {
             GameResult::Winner(c) => GameResult::Winner(c).to_string().into_view(),
             GameResult::Draw => GameResult::Draw.to_string().into_view(),
-            _ => "".into_view(),
+            _ => game().conclusion.to_string().into_view(),
         },
     };
 
@@ -133,8 +135,8 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     };
 
     view! {
-        <article class="flex relative px-2 py-4 mx-2 w-full h-72 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
-            <div class="mx-2 w-60 h-60">
+        <article class="flex relative px-2 py-4 mx-2 w-full h-40 duration-300 sm:h-56 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+            <div class="mx-2">
                 <ThumbnailPieces game />
             </div>
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">

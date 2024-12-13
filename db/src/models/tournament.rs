@@ -230,6 +230,25 @@ impl Tournament {
         Ok(())
     }
 
+    fn ensure_inprogress(&self) -> Result<(), DbError> {
+        if self.status != TournamentStatus::InProgress.to_string() {
+            return Err(DbError::InvalidInput {
+                info: format!("Tournament status is {}", self.status),
+                error: String::from("Cannot start tournament a second time"),
+            });
+        }
+        Ok(())
+    }
+
+    pub async fn ensure_games_finished(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+        if self.number_of_games(conn).await? != self.number_of_finished_games(conn).await? {
+            return Err(DbError::InvalidAction {
+                info: String::from("Not all games have finished"),
+            });
+        }
+        Ok(())
+    }
+
     pub async fn ensure_user_is_organizer(
         &self,
         user_id: &Uuid,
@@ -260,6 +279,24 @@ impl Tournament {
         let invitation = TournamentInvitation::new(self.id, *invitee);
         invitation.insert(conn).await?;
         Ok(self.clone())
+    }
+
+    pub async fn finish(
+        &self,
+        user_id: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Tournament, DbError> {
+        self.ensure_inprogress()?;
+        self.ensure_user_is_organizer(user_id, conn).await?;
+        self.ensure_games_finished(conn).await?;
+        let tournament = diesel::update(tournaments::table.find(self.id))
+            .set((
+                updated_at.eq(Utc::now()),
+                status_column.eq(TournamentStatus::Finished.to_string()),
+            ))
+            .get_result(conn)
+            .await?;
+        Ok(tournament)
     }
 
     pub async fn retract_invitation(

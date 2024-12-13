@@ -13,59 +13,65 @@ pub enum SoundType {
 }
 
 #[derive(Clone)]
-pub struct SoundsSignal {
-    pub context: RwSignal<Option<AudioContext>>,
-    pub turn: RwSignal<Option<AudioBuffer>>,
-    pub low: RwSignal<Option<AudioBuffer>>,
-    pub new: RwSignal<Option<AudioBuffer>>,
+struct ClientData {
+    ctx: AudioContext,
+    turn: AudioBuffer,
+    low: AudioBuffer,
+    new: AudioBuffer,
+}
+#[derive(Clone)]
+pub struct Sounds {
+    client_data: Resource<(), Result<ClientData, JsValue>>,
 }
 
-impl SoundsSignal {
+impl Sounds {
     pub fn play_sound(&self, kind: SoundType) {
         let config = expect_context::<Config>().0;
         if !config().prefers_sound {
             return;
         };
-        if let Some(context) = self.context.get() {
-            let (signal, offset, duration) = match kind {
-                SoundType::Turn => (self.turn, rand::thread_rng().gen_range(0..20) as f64, 1.0),
-                SoundType::NewGame => (self.new, 0.0, 3.0),
-                SoundType::LowTime => (self.low, 0.0, 2.0),
+        if let Some(Ok(s)) = self.client_data.get() {
+            let (buffer, offset, duration) = match kind {
+                SoundType::Turn => (&s.turn, rand::thread_rng().gen_range(0..20) as f64, 1.0),
+                SoundType::NewGame => (&s.new, 0.0, 3.0),
+                SoundType::LowTime => (&s.low, 0.0, 2.0),
             };
-            if let Some(buffer) = signal.get_untracked() {
-                let source = context.create_buffer_source().unwrap();
-                source.set_buffer(Some(&buffer));
-                source.set_loop(false);
-                source
-                    .start_with_when_and_grain_offset_and_grain_duration(0.0, offset, duration)
-                    .unwrap();
-                source
-                    .connect_with_audio_node(&context.destination())
-                    .unwrap();
-            }
+            let source = s.ctx.create_buffer_source().unwrap();
+            source.set_buffer(Some(buffer));
+            source.set_loop(false);
+            source
+                .start_with_when_and_grain_offset_and_grain_duration(0.0, offset, duration)
+                .unwrap();
+            source
+                .connect_with_audio_node(&(s.ctx.destination()))
+                .unwrap();
         }
     }
 }
 
-pub async fn load_audio_buffer(context: &AudioContext, url: &str) -> Result<AudioBuffer, JsValue> {
-    let response_value = JsFuture::from(window().fetch_with_str(url)).await?;
-    let response: Response = response_value.dyn_into()?;
-    let array_buffer_value = JsFuture::from(response.array_buffer()?).await?;
-    let array_buffer: ArrayBuffer = array_buffer_value.dyn_into()?;
-    let audio_buffer_value = JsFuture::from(context.decode_audio_data(&array_buffer)?).await?;
-    let audio_buffer: AudioBuffer = audio_buffer_value.dyn_into()?;
-    Ok(audio_buffer)
+async fn load_audio_buffer(ctx: &AudioContext, url: &str) -> Result<AudioBuffer, JsValue> {
+    let f: JsFuture = window().fetch_with_str(url).into();
+    let f: JsFuture = f.await?.dyn_into::<Response>()?.array_buffer()?.into();
+    JsFuture::from(ctx.decode_audio_data(&f.await?.dyn_into::<ArrayBuffer>()?)?)
+        .await?
+        .dyn_into::<AudioBuffer>()
 }
 
-pub fn provide_sounds() {
-    let context = RwSignal::new(None);
-    let turn = RwSignal::new(None);
-    let low = RwSignal::new(None);
-    let new = RwSignal::new(None);
-    provide_context(SoundsSignal {
-        context,
+async fn load_client_data() -> Result<ClientData, JsValue> {
+    let ctx = AudioContext::new()?;
+    let low = load_audio_buffer(&ctx, "/assets/low.mp3").await?;
+    let new = load_audio_buffer(&ctx, "/assets/new.mp3").await?;
+    let turn = load_audio_buffer(&ctx, "/assets/moves.mp3").await?;
+    Ok(ClientData {
+        ctx,
         turn,
         low,
         new,
+    })
+}
+
+pub fn provide_sounds() {
+    provide_context(Sounds {
+        client_data: Resource::local(|| (), |_| load_client_data()),
     });
 }
