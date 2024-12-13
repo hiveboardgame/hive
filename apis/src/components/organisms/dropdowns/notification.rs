@@ -1,7 +1,7 @@
-use crate::components::molecules::tournament_started_row::TournamentStartedNotification;
 use crate::components::molecules::{
     challenge_row::ChallengeRow, hamburger::Hamburger,
-    tournament_invitation_row::TournamentInvitationNotification,
+    tournament_invitation_notification::TournamentInvitationNotification,
+    tournament_status_notification::TournamentStatusNotification,
 };
 use crate::providers::challenges::ChallengeStateSignal;
 use crate::providers::tournaments::TournamentStateContext;
@@ -55,7 +55,6 @@ pub fn NotificationDropdown() -> impl IntoView {
                     view! { "No notifications right now" }
                 }
             >
-
                 <For
                     each=move || notifications_context().challenges.get()
                     key=|c| { c.clone() }
@@ -72,7 +71,6 @@ pub fn NotificationDropdown() -> impl IntoView {
                                     .expect("Challenge exists")
                                     .clone(),
                             )
-
                             single=false
                         />
                     </div>
@@ -83,7 +81,6 @@ pub fn NotificationDropdown() -> impl IntoView {
                         <TournamentInvitationNotification tournament=RwSignal::new(
                             tournament.clone(),
                         ) />
-
                     </div>
                 </For>
 
@@ -93,7 +90,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                     let:tournament_id
                 >
                     <div on:click=onclick_close>
-                        <TournamentStartedNotification tournament=store_value(
+                        <TournamentStatusNotification tournament=store_value(
                             tournaments
                                 .full
                                 .get_untracked()
@@ -102,7 +99,24 @@ pub fn NotificationDropdown() -> impl IntoView {
                                 .expect("Tournament exists")
                                 .clone(),
                         ) />
+                    </div>
+                </For>
 
+                <For
+                    each=move || notifications_context().tournament_finished.get()
+                    key=|c| { c.clone() }
+                    let:tournament_id
+                >
+                    <div on:click=onclick_close>
+                        <TournamentStatusNotification tournament=store_value(
+                            tournaments
+                                .full
+                                .get_untracked()
+                                .tournaments
+                                .get(&tournament_id)
+                                .expect("Tournament exists")
+                                .clone(),
+                        ) />
                     </div>
                 </For>
             </Show>

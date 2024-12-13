@@ -55,7 +55,7 @@ impl AdjudicateResultHandler {
 
         Ok(vec![InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Modified(response)),
+            message: ServerMessage::Tournament(TournamentUpdate::Adjudicated(response)),
         }])
     }
 }

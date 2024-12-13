@@ -16,10 +16,10 @@
         "all": "Toate"
     },
     "stats_box": {
-        "total": "Total: {{count}}",
-        "wins": "Victorii: {{count}}",
-        "losses": "Înfrângeri: {{count}}",
-        "draws": "Remize: {{count}}"
+        "total": "Total",
+        "wins": "Victorii",
+        "losses": "Înfrângeri",
+        "draws": "Remize"
     },
     "player_color": "Culoarea jucătorului:",
     "game_result": "Rezultat:",

@@ -135,7 +135,7 @@ pub fn TimeSelect(
                         signal_to_update=time_signals.corr_days
                         name="CorrespondenceSlider"
                         min=1
-                        max=14
+                        max=20
                         step=1
                     />
                     <div class="flex">

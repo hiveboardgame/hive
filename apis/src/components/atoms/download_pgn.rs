@@ -85,6 +85,7 @@ fn blob_and_filename(game: StoredValue<GameResponse>) -> (Blob, String) {
         file.push(format!("\n{game_result}\n"));
     }
     let file = file.into_iter().map(JsValue::from).collect::<Array>();
+    let date = game.created_at.format("%+").to_string();
     (
         Blob::new_with_u8_array_sequence(&file).unwrap(),
         format!(

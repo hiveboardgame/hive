@@ -1,4 +1,4 @@
-use crate::common::{TimeSignals, TournamentAction};
+use crate::common::{markdown_to_html, TimeSignals, TournamentAction};
 use crate::components::organisms::time_select::TimeSelect;
 use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
 use crate::{
@@ -19,7 +19,7 @@ use shared_types::{
 use std::str::FromStr;
 use uuid::Uuid;
 
-const BUTTON_STYLE: &str = "flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
 #[derive(Debug, Clone, Copy)]
 pub struct TournamentSignals {
@@ -216,6 +216,8 @@ pub fn TournamentCreate() -> impl IntoView {
             String::from("Tournament length not automatically enforced")
         }
     };
+    let is_not_preview_desc = RwSignal::new(true);
+    let markdown_desc = move || markdown_to_html(&tournament.description.get());
     //let unused = move || {
     //    view! {
 
@@ -249,17 +251,48 @@ pub fn TournamentCreate() -> impl IntoView {
                         />
                     </div>
 
-                    <div class="flex flex-col">
-                        Description:
-                        <textarea
-                            class="px-3 py-2 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
-                            name="Tournament description"
-                            type="text"
-                            prop:value=tournament.description
-                            placeholder="At least a 50 character description"
-                            on:input=update_from_input(tournament.description)
-                            attr:maxlength="2000"
-                        ></textarea>
+                    <div class="flex flex-col mt-4 mb-2">
+                        <div class="flex flex-row">
+                            <span class="px-1 font-bold">Description:</span>
+                        </div>
+                        <Show
+                            when=is_not_preview_desc
+                            fallback=move || {
+                                view! {
+                                    <div
+                                        class="p-4 w-full break-words prose dark:prose-invert"
+                                        inner_html=markdown_desc
+                                    />
+                                }
+                            }
+                        >
+                            <textarea
+                                class="px-3 py-2 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
+                                name="Tournament description"
+                                type="text"
+                                prop:value=tournament.description
+                                placeholder="At least a 50 character description.\nMarkdown supported, for links do <https://example.com> or check below."
+                                on:input=update_from_input(tournament.description)
+                                attr:maxlength="2000"
+                            ></textarea>
+
+                        <div class="flex flex-row p-1 gap-1">
+                            <button
+                                on:click=move |_| is_not_preview_desc.update(|b| *b = !*b)
+                                class="mr-4 flex gap-1 justify-center items-center px-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                                {move || if is_not_preview_desc() { "Preview" } else { "Edit" }}
+                            </button>
+
+                            <a
+                                class="font-bold text-blue-500 hover:underline"
+                                href="https://commonmark.org/help/"
+                                target="_blank"
+                            >
+                                "Markdown Cheat Sheet"
+                            </a>
+                    </div>
+                        </Show>
                     </div>
                     <div class="p-1">
                         Min number of players:
