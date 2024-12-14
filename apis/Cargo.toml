@@ -14,6 +14,7 @@ actix-rt = { workspace = true, optional = true }
 actix-session = { workspace = true, optional = true }
 actix-web = { workspace = true, optional = true, features = ["macros"] }
 actix-web-actors = { workspace = true, optional = true }
+actix-web-httpauth = "0.8.2"
 anyhow = { workspace = true }
 argon2 = { workspace = true, optional = true }
 bimap = {workspace = true}

@@ -1,3 +1,4 @@
+pub mod api;
 pub mod common;
 pub mod functions;
 pub mod jobs;
@@ -7,6 +8,7 @@ pub mod websocket;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
 use actix_web::middleware::Compress;
+use api::bot::{games::games, play::play};
 use websocket::{Lags, Pings, TournamentGameStart};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
@@ -82,6 +84,8 @@ async fn main() -> std::io::Result<()> {
             .service(favicon)
             .service(start_connection)
             .service(functions::pwa::cache)
+            .service(play)
+            .service(games)
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(
                 leptos_options.to_owned(),
