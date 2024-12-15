@@ -6,7 +6,7 @@ use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
 use crate::responses::create_challenge_handler;
 use hive_lib::{GameControl, Turn};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{
     ChallengeId, ChatMessageContainer, GameId, GamesQueryOptions, Takeback, TournamentGameResult,
     TournamentId,

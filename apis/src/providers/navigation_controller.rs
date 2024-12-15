@@ -2,7 +2,7 @@ use crate::{
     common::{TournamentAction, TournamentResponseDepth::Full},
     providers::{api_requests::ApiRequests, chat::Chat, game_state::GameStateSignal},
 };
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{GameId, TournamentId};
 
 #[derive(Clone, Debug, Copy)]
@@ -28,7 +28,6 @@ impl NavigationControllerSignal {
     }
 
     pub fn update_ids(&mut self, game_id: Option<GameId>, tournament_id: Option<TournamentId>) {
-        batch(move || {
             self.game_signal
                 .update(|s| game_id.clone_into(&mut s.game_id));
             self.tournament_signal
@@ -47,7 +46,6 @@ impl NavigationControllerSignal {
                 api.tournament(TournamentAction::Get(tournament_id, Full));
                 chat.typed_message.update(|s| s.clear());
             }
-        });
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::components::molecules::score_row::ScoreRow;
 use crate::responses::TournamentResponse;
-use leptos::*;
+use leptos::prelude::*;
 
 const TH_CLASS: &str = "py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase";
 

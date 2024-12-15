@@ -1,7 +1,7 @@
 use crate::components::layouts::base_layout::COMMON_LINK_STYLE;
 use crate::components::molecules::hamburger::Hamburger;
 use crate::i18n::*;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 
 const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md left-34 p-2";
@@ -17,7 +17,7 @@ pub fn MobileDropdown() -> impl IntoView {
             hamburger_show=hamburger_show
             button_style="py-1 transform transition-transform duration-300 active:scale-95 whitespace-nowrap block lg:hidden m-1"
             dropdown_style=DROPDOWN_MENU_STYLE
-            content=view! { <Icon icon=icondata::ChMenuHamburger class="w-6 h-6" /> }
+            content=view! { <Icon icon=icondata::ChMenuHamburger attr:class="w-6 h-6" /> }
             id="Mobile"
         >
 

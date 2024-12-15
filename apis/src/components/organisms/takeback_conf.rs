@@ -1,6 +1,6 @@
 use crate::i18n::*;
 use crate::providers::{ApiRequests, AuthContext};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::Takeback;
 
 #[component]

@@ -24,7 +24,7 @@ async fn main() -> std::io::Result<()> {
     use diesel::pg::PgConnection;
     use diesel::Connection;
     use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-    use leptos::*;
+    use leptos::prelude::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use sha2::*;
 

@@ -6,7 +6,7 @@ use crate::components::organisms::{
     reserve::{Alignment, Reserve},
 };
 use hive_lib::Color;
-use leptos::{ev::keydown, *};
+use leptos::{ev::keydown, prelude::*, html};
 use leptos_use::{use_event_listener, use_window};
 use std::collections::HashMap;
 use tree_ds::prelude::*;

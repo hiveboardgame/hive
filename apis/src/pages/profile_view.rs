@@ -16,7 +16,7 @@ use leptix_primitives::{
     radio_group::{RadioGroupItem, RadioGroupRoot},
     toggle_group::{ToggleGroupItem, ToggleGroupKind, ToggleGroupMultiple, ToggleGroupRoot},
 };
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_router::*;
 use leptos_use::{
@@ -202,7 +202,6 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     create_effect(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
             let api = ApiRequests::new();
-            batch(move || {
                 navi.profile_signal.update(|v| {
                     *v = ProfileNavigationControllerState {
                         username: Some(username()),
@@ -218,7 +217,6 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         GameSpeed::Untimed,
                     ];
                 });
-            });
             api.user_profile(username.get_untracked());
         }
     });

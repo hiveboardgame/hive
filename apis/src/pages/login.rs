@@ -1,7 +1,7 @@
 use crate::i18n::*;
 use crate::{components::organisms::header::Redirect, providers::AuthContext};
-use leptos::*;
-use leptos_router::ActionForm;
+use leptos::prelude::*;
+use leptos::{form::ActionForm, html};
 
 #[component]
 pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
@@ -32,7 +32,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 <label class="block mb-2 font-bold" for="email">
                     {t!(i18n, user_config.login.email)}
                     <input
-                        ref=my_input
+                        node_ref=my_input
                         class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="email"
                         id="email"

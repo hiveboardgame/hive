@@ -4,7 +4,7 @@ use crate::{
     },
     responses::GamesSearchResponse,
 };
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GamesContextToUpdate;
 
 pub fn handle_games_search(results: GamesSearchResponse) {

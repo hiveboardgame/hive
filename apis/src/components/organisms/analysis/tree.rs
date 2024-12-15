@@ -1,7 +1,7 @@
 use crate::providers::game_state::{GameState, GameStateSignal};
 use bimap::BiMap;
 use hive_lib::{GameType, History, State};
-use leptos::*;
+use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, vec};
 use tree_ds::prelude::{Node, Tree};
@@ -20,7 +20,7 @@ pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct AnalysisTree {
-    pub current_node: Option<Node<i32, TreeNode>>,
+    pub current_node: Option<(i32, TreeNode)>,
     pub tree: Tree<i32, TreeNode>,
     pub hashes: BiMap<u64, i32>,
     pub game_type: GameType,

@@ -6,7 +6,7 @@ use crate::pages::play::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
 use hive_lib::Position;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Target(
@@ -27,7 +27,6 @@ pub fn Target(
     let onclick = move |_| {
         let in_analysis = analysis.get().is_some();
         if in_analysis || game_state.is_move_allowed() {
-            batch(move || {
                 game_state.set_target(position);
                 if current_confirm() == MoveConfirm::Single || in_analysis {
                     game_state.move_active();
@@ -46,7 +45,6 @@ pub fn Target(
                         analysis.add_node(moves[last_index].clone(), hashes[last_index]);
                     }
                 });
-            });
         }
     };
 

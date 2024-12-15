@@ -7,8 +7,8 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use leptos::leptos_dom::helpers::debounce;
-use leptos::*;
-use leptos_router::ActionForm;
+use leptos::prelude::*;
+use leptos::{form::ActionForm, html};
 use regex::Regex;
 use std::time::Duration;
 use web_sys::Event;
@@ -72,10 +72,8 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 }
             })(evt);
         } else {
-            batch(move || {
                 username.set(String::new());
                 has_invalid_char.set(false);
-            })
         }
     };
     let username_exists = move || {
@@ -90,7 +88,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             })
     };
     let conditionally_disable =
-        move || batch(move || !agree() || username_exists() || pw_invalid() || is_invalid_email());
+        move || !agree() || username_exists() || pw_invalid() || is_invalid_email();
     let display_register_error = move || {
         auth_context
             .register
@@ -108,15 +106,15 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <p class="font-bold">{t!(i18n, user_config.create_account.username.title)}</p>
                     <input
                         on:input=validate_username
-                        ref=my_input
+                        node_ref=my_input
                         class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="username"
                         type="text"
                         prop:value=username
                         autocomplete="username"
                         placeholder=t!(i18n, user_config.create_account.username.title)
-                        attr:minlength="2"
-                        attr:maxlength="20"
+                        minlength="2"
+                        maxlength="20"
                     />
 
                     <Show when=username_exists>
@@ -173,8 +171,8 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         prop:value=pw
                         autocomplete="new-password"
                         placeholder=t!(i18n, user_config.create_account.password)
-                        attr:minlength="8"
-                        attr:maxlength="128"
+                        minlength="8"
+                        maxlength="128"
                     />
                 </label>
                 <small>{t!(i18n, user_config.create_account.password_requirements)}</small>
@@ -188,8 +186,8 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         prop:value=pw_confirm
                         autocomplete="new-password"
                         placeholder=t!(i18n, user_config.create_account.password)
-                        attr:minlength="8"
-                        attr:maxlength="128"
+                        minlength="8"
+                        maxlength="128"
                     />
                 </label>
 

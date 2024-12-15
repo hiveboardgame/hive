@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use leptos::*;
+use leptos::prelude::*;
 
 #[derive(Clone, Debug, Copy)]
 pub struct PingContext {

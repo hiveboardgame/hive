@@ -3,7 +3,7 @@ use crate::{
     providers::{challenges::ChallengeStateSignal, AuthContext, NotificationContext},
     responses::ChallengeResponse,
 };
-use leptos::*;
+use leptos::prelude::*;
 
 fn filter_challenges(challenges: &mut Vec<ChallengeResponse>) {
     let auth_context = expect_context::<AuthContext>();
@@ -57,15 +57,12 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
         }
         ChallengeUpdate::Removed(challenge_id) => {
             let mut challenges = expect_context::<ChallengeStateSignal>();
-            batch(move || {
                 challenges.remove(challenge_id.clone());
                 notifications.challenges.update(|challenges| {
                     challenges.remove(&challenge_id);
                 })
-            });
         }
         ChallengeUpdate::Created(challenge) | ChallengeUpdate::Direct(challenge) => {
-            batch(move || {
                 if let Some(account) = account() {
                     if let Some(ref opponent) = challenge.opponent {
                         if opponent.uid == account.user.uid {
@@ -78,7 +75,6 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
                 let mut new_challenges = vec![challenge];
                 filter_challenges(&mut new_challenges);
                 challenges.add(new_challenges);
-            });
         }
     }
 }

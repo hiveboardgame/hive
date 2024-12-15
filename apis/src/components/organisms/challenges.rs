@@ -6,7 +6,7 @@ use crate::{
     providers::{challenges::ChallengeStateSignal, AuthContext},
     responses::ChallengeResponse,
 };
-use leptos::*;
+use leptos::prelude::*;
 
 fn challenge_order(
     a: &ChallengeResponse,

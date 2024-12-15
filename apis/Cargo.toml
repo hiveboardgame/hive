@@ -60,8 +60,8 @@ wasm-bindgen-futures = { workspace = true}
 web-sys = { workspace = true }
 
 [features]
-csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr", "leptos_i18n/csr"]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_i18n/hydrate"]
+csr = ["leptos/csr", "leptos_i18n/csr"]
+hydrate = ["leptos/hydrate", "leptos_i18n/hydrate"]
 ssr = [
   "dep:actix",
   "dep:actix-files",

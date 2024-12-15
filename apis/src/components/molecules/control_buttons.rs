@@ -6,8 +6,8 @@ use crate::{
     },
 };
 use hive_lib::{ColorChoice, GameControl};
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 use shared_types::{ChallengeDetails, ChallengeVisibility};
 
 #[component]
@@ -82,7 +82,7 @@ pub fn ControlButtons() -> impl IntoView {
             };
             let challenge_action = ChallengeAction::Create(details);
             let api = ApiRequests::new();
-            let navigate = leptos_router::use_navigate();
+            let navigate = leptos_router::hooks::use_navigate();
             api.challenge(challenge_action);
             navigate("/", Default::default());
         }

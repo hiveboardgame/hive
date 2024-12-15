@@ -1,5 +1,5 @@
 use hive_lib::Color;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GameSpeed;
 
 use crate::{

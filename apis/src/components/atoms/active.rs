@@ -3,7 +3,7 @@ use crate::common::TileDesign;
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
 use hive_lib::Position;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Active(

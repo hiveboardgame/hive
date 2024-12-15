@@ -1,9 +1,9 @@
 use crate::components::atoms::history_button::{HistoryButton, HistoryNavigation};
 use crate::components::organisms::reserve::{Alignment, Reserve};
 use crate::providers::game_state::GameStateSignal;
-use ev::keydown;
+use leptos::ev::keydown;
 use hive_lib::Color;
-use leptos::*;
+use leptos::{prelude::*, html};
 use leptos_use::{use_event_listener, use_window};
 
 #[component]

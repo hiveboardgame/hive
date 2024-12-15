@@ -1,5 +1,5 @@
 use super::Config;
-use leptos::*;
+use leptos::prelude::*;
 use rand::Rng;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;

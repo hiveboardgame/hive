@@ -1,5 +1,5 @@
 use actix_identity::Identity;
-use leptos::*;
+use leptos::prelude::*;
 use uuid::Uuid;
 
 pub fn identity() -> Result<Identity, ServerFnError> {

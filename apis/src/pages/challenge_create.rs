@@ -12,7 +12,7 @@ use crate::{
     providers::ApiRequests,
 };
 use hive_lib::{ColorChoice, GameType};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
 use std::str::FromStr;
 

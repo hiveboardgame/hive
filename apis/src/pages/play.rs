@@ -18,7 +18,7 @@ use crate::{
     providers::{config::Config, game_state::GameStateSignal, AuthContext},
 };
 use hive_lib::{Color, GameStatus, Position};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{GameStart, TournamentGameResult};
 
 #[derive(Clone)]

@@ -12,7 +12,7 @@ use crate::{
     providers::game_state::GameStateSignal,
 };
 use hive_lib::Color;
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::HashSet;
 
 #[component]

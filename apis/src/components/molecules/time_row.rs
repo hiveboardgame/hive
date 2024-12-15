@@ -1,6 +1,6 @@
 use crate::components::atoms::rating::icon_for_speed;
 use crate::i18n::*;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{GameSpeed, TimeInfo, TimeMode};
 
@@ -20,7 +20,7 @@ pub fn TimeRow(
                 GameSpeed::from_base_increment(time_info.base, time_info.increment)
             }
         };
-        view! { <Icon icon=icon_for_speed(&speed) class="w-4 h-4" /> }
+        view! { <Icon icon=icon_for_speed(&speed) attr:class="w-4 h-4" /> }
     };
     let text = move || {
         let time_info = time_info();

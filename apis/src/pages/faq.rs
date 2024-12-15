@@ -1,6 +1,6 @@
 use crate::components::{atoms::simple_link::SimpleLink, molecules::banner::Banner};
 use crate::i18n::*;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Faq() -> impl IntoView {

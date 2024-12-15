@@ -1,6 +1,6 @@
 use crate::i18n::*;
 use crate::{common::TileDots, providers::Config};
-use leptos::*;
+use leptos::prelude::*;
 #[component]
 pub fn TileDotsToggle() -> impl IntoView {
     let i18n = use_i18n();

@@ -1,11 +1,11 @@
-use leptos::{html::Img, *};
+use leptos::{html::{HtmlElement, Img}, prelude::*};
 
 #[component]
 pub fn Banner(
-    title: View,
-    #[prop(optional)] text: MaybeProp<View>,
+    title: View<AnyView>,
+    #[prop(optional)] text: MaybeProp<String>,
     #[prop(optional)] extend_tw_classes: &'static str,
-    #[prop(optional)] logo: Option<HtmlElement<Img>>,
+    #[prop(optional)] logo: Option<HtmlElement<Img, (), ()>>,
 ) -> impl IntoView {
     let text_class = format!(
         "text-xl text-center mb-4 {}",

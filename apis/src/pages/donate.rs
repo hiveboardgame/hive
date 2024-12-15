@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::components::{layouts::base_layout::COMMON_LINK_STYLE, molecules::banner::Banner};
 use crate::i18n::*;

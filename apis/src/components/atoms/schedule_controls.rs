@@ -3,7 +3,7 @@ use crate::components::atoms::date_time_picker::DateTimePicker;
 use crate::providers::ApiRequests;
 use crate::responses::ScheduleResponse;
 use chrono::{DateTime, Duration, Local, Utc};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GameId;
 use uuid::Uuid;
 

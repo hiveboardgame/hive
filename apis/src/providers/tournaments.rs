@@ -1,5 +1,5 @@
 use crate::responses::{TournamentAbstractResponse, TournamentResponse};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::TournamentId;
 use std::collections::HashMap;
 

@@ -1,17 +1,17 @@
 use crate::components::atoms::rating::RatingWithIcon;
 use crate::responses::UserResponse;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GameSpeed;
 
 #[component]
-pub fn HoverRating(user: StoredValue<UserResponse>) -> impl IntoView {
+pub fn HoverRating(user: UserResponse) -> impl IntoView {
     let ratings = GameSpeed::all_rated_games()
         .iter()
         .map(|speed| {
-            if let Some(rating) = user().ratings.get(speed) {
-                view! { <RatingWithIcon rating=store_value(rating.clone()) /> }
+            if let Some(rating) = user.ratings.get(speed) {
+                view! { <RatingWithIcon rating=store_value(rating.clone()) /> }.into_any()
             } else {
-                "".into_view()
+                "".into_any()
             }
         })
         .collect_view();

@@ -1,4 +1,4 @@
-use leptos::{ev::MouseEvent, html::Dialog, *};
+use leptos::{ev::MouseEvent, html::Dialog, prelude::*};
 use wasm_bindgen::JsCast;
 
 #[component]
@@ -39,7 +39,7 @@ pub fn Modal(
 
     view! {
         <dialog
-            ref=dialog_el
+            node_ref=dialog_el
             open=open.get_untracked()
             class="rounded-lg border shadow-xl drop-shadow-xl backdrop:backdrop-blur bg-stone-300 dark:bg-gray-600 dark:border-gray-500"
             // clicking on ::backdrop should dismiss modal

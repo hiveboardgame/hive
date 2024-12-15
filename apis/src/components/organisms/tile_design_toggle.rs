@@ -1,7 +1,7 @@
 use crate::i18n::*;
 use crate::{common::TileDesign, providers::Config};
 use lazy_static::lazy_static;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::use_window;
 
 lazy_static! {

@@ -1,6 +1,6 @@
 use crate::i18n::*;
 use crate::{common::TileRotation, providers::Config};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn TileRotationToggle() -> impl IntoView {

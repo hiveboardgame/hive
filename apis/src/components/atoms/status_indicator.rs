@@ -5,7 +5,7 @@ use crate::{
     },
 };
 use chrono::Utc;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::core::ConnectionReadyState;
 
@@ -15,9 +15,9 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     let ping = expect_context::<PingContext>();
     let auth_context = expect_context::<AuthContext>();
     let online_users = expect_context::<OnlineUsersSignal>();
-    let username = store_value(username);
-    let user_is_player = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => user.username == username(),
+    let username = Signal::derive(move || username.clone());
+    let user_is_player = move || match auth_context.user.get() {
+        Some(Ok(user)) => user.username == username(),
         _ => false,
     };
     let user_has_ws = move || {
@@ -30,7 +30,7 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
 
     let icon_style = move || {
         if user_is_player() {
-            if batch(user_has_ws) {
+            if user_has_ws() {
                 "fill-grasshopper-green"
             } else {
                 "w-6 h-6 fill-ladybug-red"
@@ -47,7 +47,7 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     view! {
         <Icon
             icon=icondata::BiCircleSolid
-            class=TextProp::from(move || format!("mr-1 pb-[2px] {}", icon_style()))
+            prop:class=move || format!("mr-1 pb-[2px] {}", icon_style())
         />
     }
 }

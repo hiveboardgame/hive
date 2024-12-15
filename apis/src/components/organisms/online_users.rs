@@ -6,7 +6,7 @@ use crate::{
 };
 use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;
-use leptos::*;
+use leptos::prelude::*;
 use std::time::Duration;
 #[component]
 pub fn OnlineUsers() -> impl IntoView {
@@ -40,7 +40,7 @@ pub fn OnlineUsers() -> impl IntoView {
                 on:input=debounced_search
                 placeholder=t!(i18n, home.search_players)
                 prop:value=pattern
-                attr:maxlength="20"
+                maxlength="20"
             />
             <Show
                 when=move || pattern().is_empty()

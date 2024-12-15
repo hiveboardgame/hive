@@ -2,7 +2,7 @@ use crate::responses::{GameResponse, HeartbeatResponse};
 use chrono::DateTime;
 use chrono::Utc;
 use hive_lib::Color;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GameId;
 use shared_types::TimeMode;
 use std::time::Duration;

@@ -11,8 +11,8 @@ use crate::components::organisms::{
 };
 use crate::i18n::*;
 use crate::providers::AuthContext;
-use leptos::*;
-use leptos_router::use_location;
+use leptos::prelude::*;
+use leptos_router::hooks::use_location;
 use shared_types::TimeMode;
 
 #[derive(Clone)]

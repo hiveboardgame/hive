@@ -1,7 +1,7 @@
 use crate::i18n::*;
 use crate::{components::molecules::time_row::TimeRow, providers::game_state::GameStateSignal};
 use hive_lib::{Color, GameResult, GameStatus};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{Conclusion, PrettyString, TimeInfo, TournamentGameResult, TournamentId};
 
 #[component]

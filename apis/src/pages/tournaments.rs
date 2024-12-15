@@ -5,7 +5,7 @@ use crate::{
     components::molecules::tournament_row::TournamentRow,
     providers::{tournaments::TournamentStateContext, websocket::WebsocketContext, ApiRequests},
 };
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::core::ConnectionReadyState;
 use shared_types::{TournamentSortOrder, TournamentStatus};
 

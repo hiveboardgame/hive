@@ -1,5 +1,5 @@
 use leptix_primitives::components::switch::{SwitchRoot, SwitchThumb};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn SimpleSwitch(
