@@ -8,7 +8,7 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ThumbnailPieces(game: StoredValue<GameResponse>) -> impl IntoView {
-    let state = store_value(game().create_state());
+    let state = Signal::derive(move || game.get_value().create_state());
     let thumbnail_pieces = move || {
         let mut pieces = Vec::new();
         for r in 0..32 {

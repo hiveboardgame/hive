@@ -200,7 +200,7 @@ pub fn TournamentCreate() -> impl IntoView {
             navigate("/tournaments", Default::default());
         }
     };
-    let on_value_change: Callback<String, ()> = Callback::from(move |string: String| {
+    let on_value_change: Callback<(String,), ()> = Callback::from(move |string: String| {
         if let Ok(new_value) = TimeMode::from_str(&string) {
             time_signals.time_mode.update(|v| *v = new_value);
         };

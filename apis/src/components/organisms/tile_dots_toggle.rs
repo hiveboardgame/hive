@@ -17,7 +17,7 @@ pub fn TileDotsToggle() -> impl IntoView {
 #[component]
 pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
     let i18n = use_i18n();
-    let tile_dots = store_value(tile_dots);
+    let tile_dots = Signal::derive(move || tile_dots.clone());
     let config = expect_context::<Config>().0;
     let (_, set_cookie) = Config::get_cookie();
     let is_active = move || {

@@ -28,9 +28,7 @@ pub fn Hamburger<T: IntoView>(
             );
         }
     });
-
-    let children = store_value(children);
-
+    
     view! {
         <div node_ref=target class=format!("inline-block {extend_tw_classes}")>
             <button

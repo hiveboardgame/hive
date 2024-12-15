@@ -96,7 +96,7 @@ pub fn HistoryButton(
             });
         }
         if let Some(post_action) = post_action {
-            post_action(())
+            post_action.run(())
         }
     });
     let _definite_node_ref = node_ref.unwrap_or(create_node_ref::<html::Button>());

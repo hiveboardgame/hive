@@ -32,9 +32,9 @@ pub fn UserWithRating(
     let patreon = move || player().map_or(false, |p| p.patreon);
     let rating = move || match (player(), speed()) {
         (Some(player), Some(speed)) => {
-            view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> }
+            view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> }.into_any()
         }
-        _ => view! { "" }.into_view(),
+        _ => view! { "" }.into_any()
     };
     view! {
         <div class=move || {

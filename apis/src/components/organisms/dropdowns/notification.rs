@@ -14,7 +14,7 @@ use leptos_icons::*;
 pub fn NotificationDropdown() -> impl IntoView {
     let hamburger_show = create_rw_signal(false);
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
-    let notifications_context = store_value(expect_context::<NotificationContext>());
+    let notifications_context = Signal::derive(move || expect_context::<NotificationContext>());
     let challenges = expect_context::<ChallengeStateSignal>();
     let tournaments = expect_context::<TournamentStateContext>();
     let has_notifications = move || !notifications_context().is_empty();

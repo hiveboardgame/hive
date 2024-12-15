@@ -7,9 +7,9 @@ use shared_types::TournamentStatus;
 #[component]
 pub fn TournamentStatusNotification(tournament: StoredValue<TournamentResponse>) -> impl IntoView {
     let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
-    let tournament = tournament();
+    let tournament = tournament.get_value();
     let started = tournament.status == TournamentStatus::InProgress;
-    let tournament_id = StoredValue::new(tournament.tournament_id);
+    let tournament_id =Signal::derive(move || tournament.tournament_id.clone());
     let notification_text = move || {
         format!(
             "Tournament: {} {}",

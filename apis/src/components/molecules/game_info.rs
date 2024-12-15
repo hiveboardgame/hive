@@ -109,7 +109,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             } else {
                 t!(i18n, game.casual).into_view()
             };
-            let name = store_value(name);
+            let name = Signal::derive(move || name.clone());
             let name = move || {
                 if let Some(name) = name() {
                     format!("played in {}", name)
@@ -117,7 +117,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     String::new()
                 }
             };
-            let nanoid = store_value(nanoid);
+            let nanoid = Signal::derive(move || nanoid.clone());
             let link = move || {
                 if let Some(TournamentId(id)) = nanoid() {
                     format!("/tournament/{}", id)

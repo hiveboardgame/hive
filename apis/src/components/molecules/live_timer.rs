@@ -11,7 +11,6 @@ use leptos_use::{
 use regex::Regex;
 use shared_types::GameId;
 use std::time::Duration;
-
 lazy_static! {
     static ref NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");

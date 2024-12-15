@@ -18,9 +18,9 @@ pub fn TimeSelect(
 ) -> impl IntoView {
     let i18n = use_i18n();
     let title = if is_tournament {
-        "Match settings:".into_view()
+        "Match settings:".into_any()
     } else {
-        t!(i18n, home.custom_game.title).into_view()
+        t!(i18n, home.custom_game.title).into_any()
     };
     let time_mode = move || time_signals.time_mode.get();
     let gamespeed_icon = move || {

@@ -31,7 +31,7 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
                             gar.username
                         )));
                     });
-                    let navigate = leptos_router::use_navigate();
+                    let navigate = leptos_router::hooks::use_navigate();
                     navigate("/", Default::default());
                 }
             }

@@ -60,7 +60,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
     let gamestate = expect_context::<GameStateSignal>();
-    let stored_children = store_value(children);
+    let stored_children = Signal::derive(move || children.clone());
     let is_tall = use_media_query("(min-height: 100vw)");
     let chat_dropdown_open = RwSignal::new(false);
     let orientation_vertical = Signal::derive(move || is_tall() || chat_dropdown_open());
@@ -168,7 +168,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let Pausable { .. } = use_interval_fn(
         move || {
                 let ws = ws.clone();
-                move || {
                     counter.update(|c| *c += 1);
                     match ws_ready() {
                         ConnectionReadyState::Closed => {
@@ -196,7 +195,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                         counter.update(|c| *c = 0);
                         retry_at.update(|r| *r *= 2);
                     };
-                }
         },
         1000,
     );

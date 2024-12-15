@@ -9,9 +9,10 @@ use shared_types::TournamentId;
 
 #[component]
 pub fn UninviteButton(
-    user: StoredValue<UserResponse>,
+    user: UserResponse,
     tournament_id: TournamentId,
 ) -> impl IntoView {
+    let user = StoredValue::new(user);
     let auth_context = expect_context::<AuthContext>();
 
     let logged_in_and_not_user = move || {

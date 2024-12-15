@@ -9,7 +9,6 @@ use shared_types::SimpleDestination;
 #[component]
 pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
     let chat = expect_context::<Chat>();
-    let destination = StoredValue::new(destination);
     let hamburger_show = expect_context::<OrientationSignal>().chat_dropdown_open;
     let chat_style = "absolute z-50 flex-col w-full h-[80dvh] max-w-screen bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md left-0 p-2";
     let button_color = move || {
@@ -41,7 +40,7 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
             content=view! { <Icon icon=icondata::BiChatRegular attr:class="w-4 h-4" /> }
             id="chat"
         >
-            <ChatWindow destination=destination() />
+            <ChatWindow destination=destination.clone() />
         </Hamburger>
     }
 }

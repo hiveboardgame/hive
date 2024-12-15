@@ -46,7 +46,7 @@ pub fn UserRow(
                     patreon=user().patreon
                     username=user().username
                     extend_tw_classes="truncate max-w-[120px]"
-                    user_is_hoverable=Some(store_value(user()))
+                    user_is_hoverable=user()
                 />
             }
         }
@@ -57,16 +57,16 @@ pub fn UserRow(
         for action in actions {
             match action {
                 UserAction::Challenge => {
-                    views.push(view! { <DirectChallengeButton user=user() /> });
+                    views.push(view! { <DirectChallengeButton user=user() /> }.into_any());
                 }
                 UserAction::Invite(tournament_id) => {
-                    views.push(view! { <InviteButton user=user() tournament_id /> });
+                    views.push(view! { <InviteButton user=user() tournament_id /> }.into_any());
                 }
                 UserAction::Uninvite(tournament_id) => {
-                    views.push(view! { <UninviteButton user=user() tournament_id /> });
+                    views.push(view! { <UninviteButton user=user() tournament_id /> }.into_any());
                 }
                 UserAction::Kick(tournament) => {
-                    views.push(view! { <KickButton user=user() tournament=*tournament /> });
+                    views.push(view! { <KickButton user=user() tournament=*tournament /> }.into_any());
                 }
                 _ => {}
             };

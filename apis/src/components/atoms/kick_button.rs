@@ -8,7 +8,7 @@ use leptos_icons::*;
 
 #[component]
 pub fn KickButton(
-    user: StoredValue<UserResponse>,
+    user: UserResponse,
     tournament: TournamentResponse,
 ) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
@@ -16,7 +16,7 @@ pub fn KickButton(
 
     let is_organizer = move || {
         if let Some(Ok(current_user)) = auth_context.user.get() {
-            current_user.id != user.get_value().uid
+            current_user.id != user.uid
                 && tournament.get_value()
                     .organizers
                     .iter()
@@ -30,7 +30,7 @@ pub fn KickButton(
         let api = ApiRequests::new();
         api.tournament(TournamentAction::Kick(
             tournament.get_value().tournament_id,
-            user.get_value().uid,
+            user.uid,
         ));
     };
 

@@ -35,7 +35,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     };
     let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
-    let username_taken = create_server_action::<UsernameTaken>();
+    let username_taken = ServerAction::<UsernameTaken>::new();
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
     let my_input = NodeRef::<html::Input>::new();
@@ -100,7 +100,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=auth_context.register
-                class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
+                attr:class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
             >
                 <label class="block mb-2">
                     <p class="font-bold">{t!(i18n, user_config.create_account.username.title)}</p>
@@ -170,7 +170,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         type="password"
                         prop:value=pw
                         autocomplete="new-password"
-                        placeholder=t!(i18n, user_config.create_account.password)
+                        placeholder=t!(i18n, user_config.create_account.password).into_any()
                         minlength="8"
                         maxlength="128"
                     />

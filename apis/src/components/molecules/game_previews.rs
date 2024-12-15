@@ -80,7 +80,7 @@ pub fn GamePreviews(
                     let finished = move || game.finished;
                     let rated = game.rated;
                     let game_id = game.game_id.clone();
-                    let time_info = StoredValue::new(TimeInfo {
+                    let time_info = Signal::derive(move || TimeInfo {
                         mode: game.time_mode,
                         base,
                         increment: inc,

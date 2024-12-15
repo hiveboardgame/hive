@@ -12,13 +12,14 @@ use crate::{
     },
 };
 use hive_lib::Color;
+use hooks::use_params;
 use leptix_primitives::{
     radio_group::{RadioGroupItem, RadioGroupRoot},
     toggle_group::{ToggleGroupItem, ToggleGroupKind, ToggleGroupMultiple, ToggleGroupRoot},
 };
-use leptos::prelude::*;
+use leptos::{html, prelude::*};
 use leptos_icons::*;
-use leptos_router::*;
+use leptos_router::{params::Params, *};
 use leptos_use::{
     core::ConnectionReadyState, signal_debounced, use_infinite_scroll_with_options,
     UseInfiniteScrollOptions,
@@ -63,13 +64,13 @@ fn Controls(username: Signal<String>) -> impl IntoView {
             >
 
                 <RadioGroupItem value="Unstarted" attr:class=radio_classes>
-                    <A href="unstarted">{t!(i18n, profile.game_buttons.unstarted)}</A>
+                    <a href="unstarted">{t!(i18n, profile.game_buttons.unstarted)}</a>
                 </RadioGroupItem>
                 <RadioGroupItem value="Playing" attr:class=radio_classes>
-                    <A href="playing">{t!(i18n, profile.game_buttons.playing)}</A>
+                    <a href="playing">{t!(i18n, profile.game_buttons.playing)}</a>
                 </RadioGroupItem>
                 <RadioGroupItem value="Finished" attr:class=radio_classes>
-                    <A href="finished">{t!(i18n, profile.game_buttons.finished)}</A>
+                    <a href="finished">{t!(i18n, profile.game_buttons.finished)}</a>
                 </RadioGroupItem>
             </RadioGroupRoot>
             <div class="font-bold text-md">{t!(i18n, profile.player_color)}</div>

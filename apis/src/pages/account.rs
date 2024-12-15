@@ -1,9 +1,9 @@
 use crate::{components::organisms::header::Redirect, functions::accounts::edit::EditAccount};
-use leptos::prelude::*;
+use leptos::{html, prelude::*};
 use leptos::form::ActionForm;
 #[component]
 pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let account_action = create_server_action::<EditAccount>();
+    let account_action = ServerAction::<EditAccount>::new();
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
     let my_input = NodeRef::<html::Input>::new();
@@ -15,7 +15,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         <div class=format!("mx-auto max-w-xs pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=account_action
-                class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
+                attr:class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
             >
                 <label class="hidden mb-2 font-bold" for="email">
                     New Email
