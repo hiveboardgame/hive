@@ -6,8 +6,10 @@ pub mod providers;
 pub mod responses;
 pub mod websocket;
 use actix_session::config::PersistentSession;
-use actix_web::cookie::time::Duration;
 use actix_web::middleware::Compress;
+use actix_web::{cookie::time::Duration, web};
+use actix_web_httpauth::middleware::HttpAuthentication;
+use api::auth;
 use api::bot::{games::games, play::play};
 use websocket::{Lags, Pings, TournamentGameStart};
 
@@ -67,6 +69,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let leptos_options = &conf.leptos_options;
         let site_root = &leptos_options.site_root;
+        let auth = HttpAuthentication::basic(auth::validate_basic_auth);
 
         App::new()
             .app_data(Data::new(pool.clone()))
@@ -84,9 +87,11 @@ async fn main() -> std::io::Result<()> {
             .service(favicon)
             .service(start_connection)
             .service(functions::pwa::cache)
-            .service(play)
-            .service(games)
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
+            .service(games)
+            .service(web::scope("/api/bot").wrap(auth)
+                    .route("/play", play)
+                )
             .leptos_routes(
                 leptos_options.to_owned(),
                 routes.to_owned(),

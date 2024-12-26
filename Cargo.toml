@@ -16,7 +16,7 @@ actix-rt = "2.10.0"
 actix-session = { version = "0.10", features = ["cookie-session"] }
 actix-web = { version = "4",  features = ["macros"] }
 actix-web-actors = { version  = "4.3.0" }
-actix-web-httpauth = "0.8.2"
+actix-web-httpauth = { version = "0.8.2" }
 anyhow = "1"
 argon2 = "0.5"
 bb8 = { version = "0.8" }

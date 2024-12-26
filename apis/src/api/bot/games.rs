@@ -1,7 +1,6 @@
 use actix_web::{web, post, HttpRequest, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Serialize, Deserialize)]
 struct GameRequest {
     bot_id: String,
