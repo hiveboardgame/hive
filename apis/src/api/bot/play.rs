@@ -3,14 +3,13 @@ use serde::{Deserialize, Serialize};
 
 
 #[derive(Serialize, Deserialize)]
-struct PlayRequest {
+pub struct PlayRequest {
     bot_id: String,
     game_id: String,
     move_: String,
 }
 
 #[cfg(feature = "ssr")]
-#[post("/api/bot/play")]
 pub async fn play(req: web::Json<PlayRequest>) -> HttpResponse {
     println!(
         "Bot {} playing game {}: {}",

@@ -8,7 +8,6 @@ pub mod websocket;
 use actix_session::config::PersistentSession;
 use actix_web::middleware::Compress;
 use actix_web::{cookie::time::Duration, web};
-use actix_web_httpauth::middleware::HttpAuthentication;
 use api::auth;
 use api::bot::{games::games, play::play};
 use websocket::{Lags, Pings, TournamentGameStart};
@@ -23,6 +22,7 @@ async fn main() -> std::io::Result<()> {
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
     use actix_web::{cookie::Key, web::Data, App, HttpServer};
+    use actix_web_httpauth::middleware::HttpAuthentication;
     use apis::app::App;
     use db_lib::{config::DbConfig, get_pool};
     use diesel::pg::PgConnection;
@@ -90,7 +90,7 @@ async fn main() -> std::io::Result<()> {
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .service(games)
             .service(web::scope("/api/bot").wrap(auth)
-                    .route("/play", play)
+                    .route("/play", web::post().to(play))
                 )
             .leptos_routes(
                 leptos_options.to_owned(),
