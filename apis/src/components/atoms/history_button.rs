@@ -97,11 +97,12 @@ pub fn set_timer_from_response() {
                     t.white_time_left = Some(Duration::from_secs(base as u64));
                     t.black_time_left = Some(Duration::from_secs(base as u64));
                 });
-            } else {
-                let curr_time_left = response.move_times[turn].expect("Turn is finished");
-                let prev_time_left = response.move_times[turn - 1].expect("Turn is finished");
-                let curr_time_left = Duration::from_nanos(curr_time_left as u64);
-                let prev_time_left = Duration::from_nanos(prev_time_left as u64);
+            } else if let (Some(Some(curr_time_left)), Some(Some(prev_time_left))) = (
+                response.move_times.get(turn),
+                response.move_times.get(turn - 1),
+            ) {
+                let curr_time_left = Duration::from_nanos(*curr_time_left as u64);
+                let prev_time_left = Duration::from_nanos(*prev_time_left as u64);
                 timer.signal.update(|t| {
                     if turn % 2 == 0 {
                         t.white_time_left = Some(curr_time_left);
