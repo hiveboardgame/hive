@@ -6,6 +6,8 @@ use leptos::*;
 use leptos_icons::*;
 use shared_types::{PrettyString, TimeMode};
 
+static NANOS_IN_SECOND: u64 = 1000000000_u64;
+
 #[component]
 pub fn HistoryMove(
     turn: usize,
@@ -50,21 +52,19 @@ pub fn HistoryMove(
         String::new()
     };
     let time_took = move || {
-        let response = game_state.signal.get().game_response?;
-        let increment = response.time_increment? as i64 * 1_000_000_000;
-        let nano_sec = if turn > 1 {
-            let time_left = response.move_times[turn]?;
-            let prev_time = response.move_times[turn - 2]?;
-            prev_time + increment - time_left
-        } else {
+        if turn < 2 {
             return None;
-        };
-        let seconds = nano_sec as f64 / 1_000_000_000.0;
-        Some(if seconds > 60.0 {
-            format!(" ({:.1} m)", seconds / 60.0)
+        }
+        let response = game_state.signal.get().game_response?;
+        let increment = response.time_increment? as i64 * NANOS_IN_SECOND as i64;
+        let time_left = (*response.move_times.get(turn)?)?;
+        let prev_time = (*response.move_times.get(turn - 2)?)?;
+        let seconds = ((prev_time + increment - time_left) as f64) / (NANOS_IN_SECOND as f64);
+        if seconds > 60.0 {
+            Some(format!(" ({:.1} m)", seconds / 60.0))
         } else {
-            format!(" ({:.2} s)", seconds)
-        })
+            Some(format!(" ({:.2} s)", seconds))
+        }
     };
     view! {
         <div ref=div_ref class=get_class on:click=onclick>

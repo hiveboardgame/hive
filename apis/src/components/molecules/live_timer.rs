@@ -58,9 +58,9 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     });
     let time_is_zero = Signal::derive(move || timer().time_left(side()).is_zero());
     let user_needs_warning = Signal::derive(move || {
-        user_color().map_or(false, |color| {
+        user_color().is_some_and(|color| {
             timer.with(|t| {
-                t.warning_trigger().map_or(false, |trigger_at| {
+                t.warning_trigger().is_some_and(|trigger_at| {
                     if color == side() && !t.finished {
                         t.time_left(color) < trigger_at
                     } else {
@@ -71,9 +71,9 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         })
     });
     let should_refresh_warning = Signal::derive(move || {
-        user_color().map_or(false, |color| {
+        user_color().is_some_and(|color| {
             timer.with(|t| {
-                t.warning_refresh().map_or(false, |refresh_at| {
+                t.warning_refresh().is_some_and(|refresh_at| {
                     if color == side() && !t.finished {
                         t.time_left(color) > refresh_at
                     } else {
