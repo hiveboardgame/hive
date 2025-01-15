@@ -30,6 +30,7 @@ cargo install cargo-leptos
 
 #### 3. Install and Setup PostgreSQL
 - Follow the installation instructions for your OS ([example for Arch Linux](https://wiki.archlinux.org/title/PostgreSQL)).
+- Edit `hba.conf` to `host   all   all  local 127.0.0.1/32 trust` (to allow passwordless login).
 - With PostgreSQL running, create a database `hive-local` and a user `hive-dev` as the owner:
 ```sh
 sudo -u postgres createuser hive-dev && sudo -u postgres createdb -O hive-dev hive-local
