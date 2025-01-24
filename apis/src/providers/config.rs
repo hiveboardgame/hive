@@ -55,7 +55,7 @@ impl ConfigOpts {
         let prefers_sound = prefers_sound().unwrap_or_default();
 
         let (prefers_dark, _) = use_cookie::<String, FromToStringCodec>("darkmode");
-        let prefers_dark = prefers_dark().map_or(false, |v| v == "true");
+        let prefers_dark = prefers_dark().is_some_and(|v| v == "true");
 
         let mut confirm_mode = HashMap::new();
         for speed in GameSpeed::all().iter() {

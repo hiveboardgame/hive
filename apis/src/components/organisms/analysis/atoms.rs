@@ -14,7 +14,7 @@ pub fn UndoButton() -> impl IntoView {
     let is_disabled = move || {
         analysis
             .get()
-            .map_or(true, |analysis| analysis.current_node.is_none())
+            .is_none_or(|analysis| analysis.current_node.is_none())
     };
     let undo = move |_| {
         analysis.update(|a| {
@@ -75,8 +75,8 @@ pub fn HistoryButton(
     };
 
     let is_disabled = move || {
-        analysis.get().map_or(true, |analysis| {
-            analysis.current_node.map_or(true, |n| match cloned_action {
+        analysis.get().is_none_or(|analysis| {
+            analysis.current_node.is_none_or(|n| match cloned_action {
                 HistoryNavigation::Next => n.get_children_ids().is_empty(),
                 HistoryNavigation::Previous => n.get_parent_id().is_none(),
             })

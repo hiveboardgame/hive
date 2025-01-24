@@ -41,7 +41,7 @@ impl Hasher {
         } else {
             panic!("We need an index");
         };
-        self.hashes[revolution as usize] ^= Self::hash(index << 32 | bug_stack.simple() as u64);
+        self.hashes[revolution as usize] ^= Self::hash((index << 32) | bug_stack.simple() as u64);
     }
 
     // This implements wyhash

@@ -714,8 +714,8 @@ impl Game {
     }
 
     pub fn last_game_control(&self) -> Option<GameControl> {
-        if let Some(last) = self.game_control_history.split_terminator(';').last() {
-            if let Some(gc) = last.split(' ').last() {
+        if let Some(last) = self.game_control_history.split_terminator(';').next_back() {
+            if let Some(gc) = last.split(' ').next_back() {
                 return Some(
                     GameControl::from_str(gc)
                         .expect("Could not get GameControl from game_control_history"),

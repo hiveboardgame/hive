@@ -92,7 +92,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let show_controls =
         Signal::derive(move || !controls_signal.hidden.get() || game_state.is_finished()());
     let show_board = create_read_slice(game_state.signal, |gs| {
-        !gs.game_response.as_ref().map_or(false, |gr| {
+        !gs.game_response.as_ref().is_some_and(|gr| {
             gr.game_start == GameStart::Ready
                 && matches!(gr.game_status, GameStatus::NotStarted)
                 && gr.tournament_game_result == TournamentGameResult::Unknown

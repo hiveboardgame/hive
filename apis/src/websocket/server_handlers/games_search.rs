@@ -40,7 +40,7 @@ impl GamesSearchHandler {
             results: game_responses,
             batch,
             ctx_to_update: self.options.ctx_to_update.clone(),
-            more_rows: options.batch_size.map_or(false, |b| b == games.len()),
+            more_rows: options.batch_size == Some(games.len()),
             first_batch: options.current_batch.is_none(),
         };
         Ok(vec![InternalServerMessage {
