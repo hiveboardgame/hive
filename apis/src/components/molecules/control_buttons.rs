@@ -31,7 +31,7 @@ pub fn ControlButtons() -> impl IntoView {
     let not_tournament = create_read_slice(game_state.signal, |gs| {
         gs.game_response
             .as_ref()
-            .map_or(false, |gr| gr.tournament.is_none())
+            .is_some_and(|gr| gr.tournament.is_none())
     });
     let takeback_allowed = create_read_slice(game_state.signal, |gs| gs.takeback_allowed());
     let navigate_to_tournament = move |_| {

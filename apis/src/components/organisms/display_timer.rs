@@ -26,7 +26,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     };
     let black_id = create_read_slice(game_state.signal, |gs| gs.black_id);
     let player_is_black =
-        create_memo(move |_| user().map_or(false, |user| Some(user.id) == black_id()));
+        create_memo(move |_| user().is_some_and(|user| Some(user.id) == black_id()));
     let side = Signal::derive(move || match (player_is_black(), placement) {
         (true, Placement::Top) => Color::White,
         (true, Placement::Bottom) => Color::Black,

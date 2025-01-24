@@ -78,7 +78,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
             let children_ids = node.get_children_ids();
             let siblings_ids = tree.get_sibling_ids(&node_id, true).ok()?;
             let parent_deg = siblings_ids.len();
-            let not_first_sibling = siblings_ids.first().map_or(true, |s| *s != node_id);
+            let not_first_sibling = siblings_ids.first().is_none_or(|s| *s != node_id);
             content = if children_ids.len() > 1 {
                 /* == More than one child ==
                 gather all children but the first (secondary variations)

@@ -87,7 +87,7 @@ pub fn Reserve(
         let tournament = game_state
             .game_response
             .as_ref()
-            .map_or(false, |gr| gr.tournament.is_some());
+            .is_some_and(|gr| gr.tournament.is_some());
         let status = game_state
             .game_response
             .as_ref()
@@ -197,7 +197,7 @@ pub fn ReserveContent(player_color: Memo<Color>) -> impl IntoView {
     };
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
     let show_buttons = move || {
-        user().map_or(false, |user| {
+        user().is_some_and(|user| {
             let (white_id, black_id) = white_and_black();
             Some(user.id) == black_id || Some(user.id) == white_id
         })

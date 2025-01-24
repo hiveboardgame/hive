@@ -31,7 +31,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     let in_progress = create_read_slice(game_state.signal, |gs| {
         gs.game_response
             .as_ref()
-            .map_or(false, |gr| gr.game_status == GameStatus::InProgress)
+            .is_some_and(|gr| gr.game_status == GameStatus::InProgress)
     });
     let timer = expect_context::<TimerSignal>().signal;
     let tick_rate = Duration::from_millis(100);

@@ -48,12 +48,12 @@ impl Chat {
             self.games_public_new_messages
                 .get()
                 .get(&game_id)
-                .map_or(false, |v| *v)
+                .is_some_and(|v| *v)
                 || self
                     .games_private_new_messages
                     .get()
                     .get(&game_id)
-                    .map_or(false, |v| *v)
+                    .is_some_and(|v| *v)
         } else {
             false
         }

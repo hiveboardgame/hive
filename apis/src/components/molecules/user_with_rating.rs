@@ -29,7 +29,7 @@ pub fn UserWithRating(
         })
     };
     let username = move || player().map_or(String::new(), |p| p.username);
-    let patreon = move || player().map_or(false, |p| p.patreon);
+    let patreon = move || player().is_some_and(|p| p.patreon);
     let rating = move || match (player(), speed()) {
         (Some(player), Some(speed)) => {
             view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> }

@@ -22,7 +22,7 @@ pub fn MySchedules(
     user_id: Signal<Option<Uuid>>,
 ) -> impl IntoView {
     let has_schedules = move || {
-        user_id().map_or(false, |user_id| {
+        user_id().is_some_and(|user_id| {
             games_hashmap.get().iter().any(|(_game_id, game)| {
                 game.game_status == GameStatus::NotStarted
                     && (game.white_player.uid == user_id || game.black_player.uid == user_id)

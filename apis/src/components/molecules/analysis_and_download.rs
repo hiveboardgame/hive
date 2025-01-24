@@ -12,7 +12,7 @@ pub fn AnalysisAndDownload() -> impl IntoView {
         game_state.do_analysis();
     };
     let correspondence = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map_or(false, |gr| {
+        gs.game_response.as_ref().is_some_and(|gr| {
             gr.speed == GameSpeed::Correspondence || gr.speed == GameSpeed::Untimed
         })
     });
