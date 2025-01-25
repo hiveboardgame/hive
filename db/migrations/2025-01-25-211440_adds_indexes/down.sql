@@ -1,0 +1,9 @@
+drop index users_username;
+drop index users_email;
+drop index games_nanoid;
+drop index games_tournament;
+drop index games_white;
+drop index games_black;
+drop index ratings_user;
+drop index ratings_rating;
+drop index tournament_nanoid;
