@@ -11,9 +11,10 @@ pub fn Home() -> impl IntoView {
     let in_column = use_media_query("(max-width: 1023px)");
     view! {
         <div class="flex overflow-x-hidden flex-col justify-start items-center pt-20 w-full md:justify-center">
-            <div>
-                <RlBanner />
-            </div>
+            // INFO: Leave this here for future tournaments
+            // <div>
+            //     <RlBanner />
+            // </div>
             <div class="container flex flex-col justify-center items-center lg:flex-row lg:items-start">
                 <div class="flex justify-center items-center">
                     <Logo tw_class="flex lg:w-72 w-48" />
