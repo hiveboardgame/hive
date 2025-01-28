@@ -3,12 +3,13 @@ use crate::{
     models::user::User,
     schema::{
         challenges::{self, nanoid as nanoid_field, opponent_id as opponent_id_field},
+        games::{self, nanoid as game_nanoid},
         users,
     },
     DbConn,
 };
 use chrono::prelude::*;
-use diesel::prelude::*;
+use diesel::{dsl::exists, prelude::*, select};
 use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::Serialize;
@@ -35,10 +36,11 @@ pub struct NewChallenge {
 }
 
 impl NewChallenge {
-    pub fn new(
+    pub async fn new(
         challenger_id: Uuid,
         opponent_id: Option<Uuid>,
         d: &ChallengeDetails,
+        conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
         match d.time_mode {
             TimeMode::Untimed => {
@@ -85,8 +87,18 @@ impl NewChallenge {
                 error: String::new(),
             });
         };
+        let mut nanoid: String;
+        loop {
+            nanoid = nanoid!(12);
+            if let Ok(false) = select(exists(games::table.filter(game_nanoid.eq(&nanoid))))
+                .get_result(conn)
+                .await
+            {
+                break;
+            }
+        }
         Ok(Self {
-            nanoid: nanoid!(12),
+            nanoid,
             challenger_id,
             opponent_id,
             game_type: d.game_type.to_string(),

@@ -35,7 +35,8 @@ impl CreateHandler {
             None => None,
         };
 
-        let new_challenge = NewChallenge::new(self.user_id, opponent, &self.details)?;
+        let new_challenge =
+            NewChallenge::new(self.user_id, opponent, &self.details, &mut conn).await?;
         let challenge = Challenge::create(&new_challenge, &mut conn).await?;
         let challenge_response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
         let mut messages = Vec::new();
