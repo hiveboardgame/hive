@@ -4,7 +4,7 @@ use crate::responses::GameResponse;
 use crate::responses::HeartbeatResponse;
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameControl};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GameId;
 use shared_types::TimeMode;
 use std::cmp::Ordering;

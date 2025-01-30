@@ -5,7 +5,7 @@ use crate::providers::api_requests::ApiRequests;
 use crate::responses::GameResponse;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
@@ -114,7 +114,6 @@ impl GameStateSignal {
     }
 
     pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
-        batch(move || {
             self.reset();
             let turn = if state.turn != 0 {
                 Some(state.turn - 1)
@@ -127,7 +126,6 @@ impl GameStateSignal {
                 s.black_id = Some(black_id);
                 s.white_id = Some(white_id);
             })
-        });
     }
 
     pub fn set_game_id(&mut self, game_id: GameId) {

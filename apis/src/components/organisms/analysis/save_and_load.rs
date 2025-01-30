@@ -1,6 +1,6 @@
 use core::str;
 use hive_lib::History;
-use leptos::*;
+use leptos::{prelude::*, html, logging};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{js_sys::Array, Blob, Url};
 
@@ -75,7 +75,7 @@ pub fn LoadTree() -> impl IntoView {
         Some(())
     };
     view! {
-        <div ref=div_ref class="m-1 w-1/3 h-7">
+        <div node_ref=div_ref class="m-1 w-1/3 h-7">
             <Show when=loaded>
 
                 {
@@ -109,7 +109,7 @@ pub fn LoadTree() -> impl IntoView {
                         >
                             "Load"
                             <input
-                                ref=input_ref
+                                node_ref=input_ref
                                 on:input=move |_| {
                                     let file = input_ref
                                         .get_untracked()

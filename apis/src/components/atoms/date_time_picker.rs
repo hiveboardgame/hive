@@ -1,13 +1,13 @@
 use chrono::{DateTime, Duration, Local, NaiveDateTime, Utc};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn DateTimePicker(
     text: &'static str,
     min: DateTime<Local>,
     max: DateTime<Local>,
-    success_callback: Callback<DateTime<Utc>>,
-    #[prop(optional)] failure_callback: Option<Callback<()>>,
+    success_callback: Callback<(DateTime<Utc>,), ()>,
+    #[prop(optional)] failure_callback: Option<Callback<(), ()>>,
 ) -> impl IntoView {
     view! {
         <label>{text}</label>
@@ -16,9 +16,9 @@ pub fn DateTimePicker(
             id="start-time"
             name="start-time"
             class="p-1 rounded-md"
-            attr:min=move || { min.format("%Y-%m-%dT%H:%M").to_string() }
+            prop:min=move || { min.format("%Y-%m-%dT%H:%M").to_string() }
 
-            attr:max=move || { max.format("%Y-%m-%dT%H:%M").to_string() }
+            prop:max=move || { max.format("%Y-%m-%dT%H:%M").to_string() }
 
             value=(min + Duration::minutes(1)).format("%Y-%m-%dT%H:%M").to_string()
             on:input=move |evt| {
@@ -33,10 +33,10 @@ pub fn DateTimePicker(
                         *offset,
                     ) {
                         let utc = local.to_utc();
-                        success_callback(utc);
+                        success_callback.run((utc,));
                     }
                 } else if let Some(failure_callback) = failure_callback {
-                    failure_callback(());
+                    failure_callback.run(());
                 }
             }
         />

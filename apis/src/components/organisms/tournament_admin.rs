@@ -1,14 +1,14 @@
 use crate::components::molecules::invite_user::InviteUser;
 use crate::components::molecules::user_row::UserRow;
 use crate::{common::UserAction, responses::TournamentResponse};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn TournamentAdminControls(
     user_is_organizer: bool,
     tournament: TournamentResponse,
 ) -> impl IntoView {
-    let tournament = store_value(tournament);
+    let tournament = Signal::derive(move || tournament.clone());
     let user_kick = move || {
         if user_is_organizer {
             vec![UserAction::Kick(Box::new(tournament()))]

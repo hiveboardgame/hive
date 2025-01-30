@@ -1,5 +1,5 @@
 use crate::{components::organisms::chat::ChatWindow, providers::AuthContext};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::SimpleDestination;
 
 #[component]

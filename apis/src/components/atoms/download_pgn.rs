@@ -1,5 +1,5 @@
 use hive_lib::{Color, GameResult, GameStatus};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{js_sys::Array, Blob, Url};
@@ -45,7 +45,7 @@ pub fn DownloadPgn(
                 class="flex z-20 justify-center items-center m-1 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                 on:click=download
             >
-                <Icon icon=icondata::AiDownloadOutlined class="py-1 w-7 h-7" />
+                <Icon icon=icondata::AiDownloadOutlined attr:class="py-1 w-7 h-7" />
             </button>
         </Show>
     }

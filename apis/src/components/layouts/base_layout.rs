@@ -10,9 +10,9 @@ use cfg_if::cfg_if;
 use chrono::Utc;
 use hive_lib::GameControl;
 use lazy_static::lazy_static;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::use_location;
+use leptos_router::hooks::use_location;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
@@ -60,7 +60,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
     let gamestate = expect_context::<GameStateSignal>();
-    let stored_children = store_value(children);
+    let stored_children = Signal::derive(move || children.clone());
     let is_tall = use_media_query("(min-height: 100vw)");
     let chat_dropdown_open = RwSignal::new(false);
     let orientation_vertical = Signal::derive(move || is_tall() || chat_dropdown_open());
@@ -167,9 +167,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
     let Pausable { .. } = use_interval_fn(
         move || {
-            batch({
                 let ws = ws.clone();
-                move || {
                     counter.update(|c| *c += 1);
                     match ws_ready() {
                         ConnectionReadyState::Closed => {
@@ -197,8 +195,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                         counter.update(|c| *c = 0);
                         retry_at.update(|r| *r *= 2);
                     };
-                }
-            })
         },
         1000,
     );
@@ -215,7 +211,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         <Meta name="mobile-web-app-capable" content="yes" />
         <Meta name="apple-mobile-web-app-status-bar-style" content="black" />
         <Script src="/assets/js/pwa.js" />
-        <Html class=move || {
+        <Html prop:class=move || {
             match config().prefers_dark {
                 true => "dark",
                 false => "",

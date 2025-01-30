@@ -4,7 +4,7 @@ use crate::{
     common::ScheduleUpdate::{self, *},
     providers::schedules::SchedulesContext,
 };
-use leptos::{expect_context, SignalSet, SignalUpdate};
+use leptos::prelude::expect_context;
 
 pub fn handle_schedule(schedule_update: ScheduleUpdate) {
     let ctx = expect_context::<SchedulesContext>();

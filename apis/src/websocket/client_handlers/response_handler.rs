@@ -7,10 +7,10 @@ use super::{
     user_status::handle::handle_user_status,
 };
 use crate::common::{ServerMessage::*, ServerResult, WebsocketMessage};
-use leptos::{batch, logging::log};
+use leptos::logging::log;
 
 pub fn handle_response(m: WebsocketMessage) {
-    batch(move || match m {
+    match m {
         WebsocketMessage::Server(result) => match result {
             ServerResult::Ok(message) => match *message {
                 Ping { value, nonce } => handle_ping(nonce, value),
@@ -34,5 +34,5 @@ pub fn handle_response(m: WebsocketMessage) {
         WebsocketMessage::Client(request) => {
             log!("Got a client request: {request:?}")
         }
-    });
+    };
 }

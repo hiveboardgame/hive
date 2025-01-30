@@ -9,8 +9,8 @@ use crate::{
     providers::{ApiRequests, AuthContext},
 };
 use chrono::{DateTime, Duration, Local, Utc};
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 use shared_types::PrettyString;
 use shared_types::{
     CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
@@ -200,7 +200,7 @@ pub fn TournamentCreate() -> impl IntoView {
             navigate("/tournaments", Default::default());
         }
     };
-    let on_value_change: Callback<String, ()> = Callback::from(move |string: String| {
+    let on_value_change: Callback<(String,), ()> = Callback::from(move |string: String| {
         if let Ok(new_value) = TimeMode::from_str(&string) {
             time_signals.time_mode.update(|v| *v = new_value);
         };
@@ -247,7 +247,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             prop:value=tournament.name
                             placeholder="At least a 4 character name"
                             on:input=update_from_input(tournament.name)
-                            attr:maxlength="50"
+                            maxlength="50"
                         />
                     </div>
 
@@ -273,13 +273,13 @@ pub fn TournamentCreate() -> impl IntoView {
                                 prop:value=tournament.description
                                 placeholder="At least a 50 character description.\nMarkdown supported, for links do <https://example.com> or check below."
                                 on:input=update_from_input(tournament.description)
-                                attr:maxlength="2000"
+                                maxlength="2000"
                             ></textarea>
 
-                            <div class="flex flex-row p-1 gap-1">
+                            <div class="flex flex-row gap-1 p-1">
                                 <button
                                     on:click=move |_| is_not_preview_desc.update(|b| *b = !*b)
-                                    class="mr-4 flex gap-1 justify-center items-center px-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                    class="flex gap-1 justify-center items-center px-4 mr-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                 >
                                     {move || if is_not_preview_desc() { "Preview" } else { "Edit" }}
                                 </button>

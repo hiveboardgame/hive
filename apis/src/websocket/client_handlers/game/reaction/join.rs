@@ -4,7 +4,7 @@ use crate::{
     providers::{game_state::GameStateSignal, timer::TimerSignal},
 };
 use hive_lib::GameControl;
-use leptos::*;
+use leptos::prelude::*;
 
 pub fn handle_join(gar: GameActionResponse) {
     let game_state = expect_context::<GameStateSignal>();

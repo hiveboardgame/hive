@@ -1,5 +1,5 @@
 use crate::responses::GameResponse;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GameId;
 use uuid::Uuid;
 

@@ -1,5 +1,5 @@
 use crate::{components::molecules::game_previews::GamePreviews, providers::games::GamesSignal};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Tv() -> impl IntoView {

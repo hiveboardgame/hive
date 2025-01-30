@@ -6,8 +6,8 @@ use crate::{
     responses::GameResponse,
 };
 
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 use shared_types::{GameStart, TimeMode};
 
 pub fn handle_new_game(game_response: GameResponse) {

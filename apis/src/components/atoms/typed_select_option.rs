@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::PrettyString;
 
 #[component]

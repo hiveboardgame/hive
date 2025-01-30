@@ -1,5 +1,5 @@
 use crate::components::organisms::{leaderboard::Leaderboard, online_users::OnlineUsers};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn PlayersView() -> impl IntoView {

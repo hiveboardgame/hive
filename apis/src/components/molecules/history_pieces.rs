@@ -3,7 +3,7 @@ use crate::{
     providers::game_state::GameStateSignal,
 };
 use hive_lib::{History, Position, State};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn HistoryPieces() -> impl IntoView {

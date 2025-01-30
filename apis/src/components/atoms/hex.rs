@@ -4,7 +4,7 @@ use crate::{
     pages::play::TargetStack,
     providers::game_state::GameStateSignal,
 };
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Hex(hex: Hex) -> impl IntoView {
@@ -34,40 +34,40 @@ pub fn Hex(hex: Hex) -> impl IntoView {
                 .is_none()
                 || hex.level == 0
             {
-                view! { <Active position=hex.position level=expanded_level /> }
+                view! { <Active position=hex.position level=expanded_level /> }.into_any()
             } else {
-                view! { <Active position=hex.position level=expanded_sublevel /> }
+                view! { <Active position=hex.position level=expanded_sublevel /> }.into_any()
             }
         }
         HexType::Target => {
             if hex.level == 0 {
-                view! { <Target position=hex.position level=hex.level /> }
+                view! { <Target position=hex.position level=hex.level /> }.into_any()
             } else {
-                view! { <Target position=hex.position level=expanded_sublevel /> }
+                view! { <Target position=hex.position level=expanded_sublevel /> }.into_any()
             }
         }
         HexType::Tile(piece, piece_type) => match piece_type {
             PieceType::Board | PieceType::Covered | PieceType::History => {
-                view! { <Piece piece=piece position=hex.position level=expanded_level piece_type=piece_type /> }
+                view! { <Piece piece=piece position=hex.position level=expanded_level piece_type=piece_type /> }.into_any()
             }
             PieceType::Move => {
-                view! { <Piece piece=piece position=hex.position level=expanded_sublevel piece_type=piece_type /> }
+                view! { <Piece piece=piece position=hex.position level=expanded_sublevel piece_type=piece_type /> }.into_any()
             }
             PieceType::Spawn => {
-                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> }
+                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> }.into_any()
             }
             _ => {
-                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> }
+                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> }.into_any()
             }
         },
         HexType::LastMove(Direction::To) => {
-            view! { <LastMove position=hex.position level=expanded_level direction=Direction::To /> }
+            view! { <LastMove position=hex.position level=expanded_level direction=Direction::To /> }.into_any()
         }
         HexType::LastMove(Direction::From) => {
             if hex.level == 0 {
-                view! { <LastMove position=hex.position level=hex.level direction=Direction::From /> }
+                view! { <LastMove position=hex.position level=hex.level direction=Direction::From /> }.into_any()
             } else {
-                view! { <LastMove position=hex.position level=expanded_sublevel direction=Direction::From /> }
+                view! { <LastMove position=hex.position level=expanded_sublevel direction=Direction::From /> }.into_any()
             }
         }
     }

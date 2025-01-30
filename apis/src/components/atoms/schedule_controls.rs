@@ -3,7 +3,8 @@ use crate::components::atoms::date_time_picker::DateTimePicker;
 use crate::providers::ApiRequests;
 use crate::responses::ScheduleResponse;
 use chrono::{DateTime, Duration, Local, Utc};
-use leptos::*;
+use leptos::prelude::*;
+use leptos::callback::Callback;
 use shared_types::GameId;
 use uuid::Uuid;
 
@@ -38,7 +39,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             )>{formated_game_date(start_date)}</div>
             <Show when=move || !agreed && proposer_id != player_id>
                 <button
-                    on:click=move |_| accept(id)
+                    on:click=move |_| accept.run((id,))
                     class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
 
@@ -66,20 +67,21 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
         let api = ApiRequests::new();
         api.schedule_action(ScheduleAction::Propose(date, game_id.clone()));
     });
+    let callback = Callback::from(move |utc: DateTime<Utc>| {
+        selected_time.set(utc);
+    });
     view! {
         <div class="flex justify-between p-2">
             <DateTimePicker
                 text=""
                 min=Local::now() + Duration::minutes(10)
                 max=Local::now() + Duration::weeks(12)
-                success_callback=Callback::from(move |utc| {
-                    selected_time.set(utc);
-                })
+                success_callback=callback
             />
 
             <button
                 class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                on:click=move |_| propose(selected_time.get())
+                on:click=move |_| propose.run((selected_time.get(),))
             >
 
                 "Propose Date"

@@ -16,8 +16,8 @@ use crate::providers::{
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 use shared_types::{
     Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentStatus,
 };

@@ -1,6 +1,6 @@
 use crate::i18n::*;
 use crate::{common::TileRotation, providers::Config};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn TileRotationToggle() -> impl IntoView {
@@ -21,7 +21,7 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
     let config = expect_context::<Config>().0;
     let (_, set_cookie) = Config::get_cookie();
     let is_active = move || {
-        if config().tile_rotation == tile_rotation() {
+        if config().tile_rotation == tile_rotation.get_value() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -41,13 +41,13 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
                     set_cookie
                         .update(|c| {
                             if let Some(cookie) = c {
-                                cookie.tile_rotation = tile_rotation();
+                                cookie.tile_rotation = tile_rotation.get_value();
                             }
                         });
                 }
             >
 
-                {match tile_rotation() {
+                {match tile_rotation.get_value() {
                     TileRotation::No => t!(i18n, user_config.rotation_buttons.no).into_view(),
                     TileRotation::Yes => t!(i18n, user_config.rotation_buttons.yes).into_view(),
                 }}

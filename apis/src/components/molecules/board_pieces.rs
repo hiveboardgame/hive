@@ -4,7 +4,7 @@ use crate::{
     providers::game_state::GameStateSignal,
 };
 use hive_lib::Position;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn BoardPieces() -> impl IntoView {
