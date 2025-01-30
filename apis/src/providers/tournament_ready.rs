@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GameId;
 use std::collections::HashMap;
 use std::collections::HashSet;

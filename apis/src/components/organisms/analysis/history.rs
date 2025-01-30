@@ -6,7 +6,7 @@ use crate::components::organisms::{
     reserve::{Alignment, Reserve},
 };
 use hive_lib::Color;
-use leptos::{ev::keydown, *};
+use leptos::{ev::keydown, prelude::*, html};
 use leptos_use::{use_event_listener, use_window};
 use std::collections::HashMap;
 use tree_ds::prelude::*;
@@ -71,8 +71,8 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         let node_order = tree
             .traverse(&root.get_node_id(), TraversalStrategy::PostOrder)
             .ok()?;
-        let mut content = Fragment::new(vec![]);
-        let mut branches = HashMap::<i32, Fragment>::new();
+        let mut content = "".into_any();
+        let mut branches = HashMap::<i32, AnyView>::new();
         for node_id in node_order {
             let node = tree.get_node_by_id(&node_id)?;
             let children_ids = node.get_children_ids();
@@ -97,7 +97,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                         {inner}
                     </CollapsibleMove>
                     {branches.remove(&children_ids[0])}
-                }
+                }.into_any()
             } else if parent_deg > 2 && not_first_sibling && children_ids.len() == 1 {
                 /* We make a colapsible for nodes with one child
                 for aesthetic reasons, to hide its content.
@@ -105,27 +105,27 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 (else a toggle would not be needed)
                 and this must not be the "main variation" (first child)
                 */
-                let static_cont = store_value(content);
+                //let static_cont = store_value(content);
                 view! {
                     <CollapsibleMove current_path node>
-                        {static_cont}
+                        {content}
                     </CollapsibleMove>
                 }
-                .into()
+                .into_any()
             } else {
                 /* All other nodes are placed at the same level as the parent
                 in a regular HistoryMove node */
                 view! {
                     <HistoryMove current_path node />
                     {content}
-                }
+                }.into_any()
             };
             /* We are start of a new branch so clear the content
             to process either the next sibling or tho parent */
             if parent_deg > 1 {
                 //save the branch only when its the start
                 branches.insert(node_id, content.clone());
-                content = Fragment::new(vec![]);
+                content = "".into_any();
             }
         }
         //all branches are processed

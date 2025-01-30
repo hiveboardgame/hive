@@ -6,7 +6,7 @@ use crate::providers::game_state::{GameStateSignal, View};
 use crate::providers::AuthContext;
 use hive_lib::History;
 use hive_lib::{Bug, BugStack, Color, GameStatus, Piece, Position, State};
-use leptos::*;
+use leptos::prelude::*;
 use std::str::FromStr;
 
 fn piece_active(
@@ -191,8 +191,8 @@ pub fn ReserveContent(player_color: Memo<Color>) -> impl IntoView {
     let top_color = Signal::derive(move || player_color().opposite_color());
     let bottom_color = Signal::derive(player_color);
     let auth_context = expect_context::<AuthContext>();
-    let user = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user),
+    let user = move || match auth_context.user.get() {
+        Some(Ok(user)) => Some(user),
         _ => None,
     };
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));

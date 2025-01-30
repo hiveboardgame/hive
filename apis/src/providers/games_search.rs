@@ -1,5 +1,5 @@
 use hive_lib::Color;
-use leptos::{provide_context, RwSignal};
+use leptos::prelude::{provide_context, RwSignal};
 use shared_types::{BatchInfo, GameProgress, GameSpeed, ResultType};
 use std::vec;
 

@@ -7,9 +7,9 @@ use crate::{
 };
 use core::panic;
 use hive_lib::{ColorChoice, GameType};
-use leptos::{html::Dialog, *};
+use leptos::{html::Dialog, prelude::*};
 use leptos_icons::*;
-use leptos_router::use_navigate;
+use leptos_router::hooks::use_navigate;
 use shared_types::ChallengeVisibility;
 use shared_types::{ChallengeDetails, GameSpeed::*, TimeMode};
 
@@ -41,8 +41,8 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
             class=BUTTON_STYLE
             on:click=move |_| {
                 let auth_context = expect_context::<AuthContext>();
-                let account = match (auth_context.user)() {
-                    Some(Ok(Some(account))) => Some(account),
+                let account = match auth_context.user.get() {
+                    Some(Ok(account)) => Some(account),
                     _ => None,
                 };
                 if account.is_some() {
@@ -96,8 +96,8 @@ pub fn QuickPlay() -> impl IntoView {
                     class=BUTTON_STYLE
                     on:click=move |_| {
                         let auth_context = expect_context::<AuthContext>();
-                        let account = match (auth_context.user)() {
-                            Some(Ok(Some(account))) => Some(account),
+                        let account = match auth_context.user.get() {
+                            Some(Ok(account)) => Some(account),
                             _ => None,
                         };
                         if account.is_some() {

@@ -5,7 +5,7 @@ use crate::{
     providers::{game_state::GameStateSignal, timer::TimerSignal, AuthContext},
 };
 use hive_lib::Color;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::TimeMode;
 
@@ -115,7 +115,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                         view! {
                             <Icon
                                 icon=icondata::BiInfiniteRegular
-                                class="w-full h-full bg-inherit"
+                                attr:class="w-full h-full bg-inherit"
                             />
                         }
                     }

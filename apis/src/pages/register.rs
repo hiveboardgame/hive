@@ -7,8 +7,8 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use leptos::leptos_dom::helpers::debounce;
-use leptos::*;
-use leptos_router::ActionForm;
+use leptos::prelude::*;
+use leptos::{form::ActionForm, html};
 use regex::Regex;
 use std::time::Duration;
 use web_sys::Event;
@@ -35,7 +35,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     };
     let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
-    let username_taken = create_server_action::<UsernameTaken>();
+    let username_taken = ServerAction::<UsernameTaken>::new();
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
     let my_input = NodeRef::<html::Input>::new();
@@ -72,10 +72,8 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 }
             })(evt);
         } else {
-            batch(move || {
                 username.set(String::new());
                 has_invalid_char.set(false);
-            })
         }
     };
     let username_exists = move || {
@@ -90,7 +88,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             })
     };
     let conditionally_disable =
-        move || batch(move || !agree() || username_exists() || pw_invalid() || is_invalid_email());
+        move || !agree() || username_exists() || pw_invalid() || is_invalid_email();
     let display_register_error = move || {
         auth_context
             .register
@@ -102,21 +100,21 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=auth_context.register
-                class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
+                attr:class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
             >
                 <label class="block mb-2">
                     <p class="font-bold">{t!(i18n, user_config.create_account.username.title)}</p>
                     <input
                         on:input=validate_username
-                        ref=my_input
+                        node_ref=my_input
                         class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="username"
                         type="text"
                         prop:value=username
                         autocomplete="username"
                         placeholder=t!(i18n, user_config.create_account.username.title)
-                        attr:minlength="2"
-                        attr:maxlength="20"
+                        minlength="2"
+                        maxlength="20"
                     />
 
                     <Show when=username_exists>
@@ -172,9 +170,9 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         type="password"
                         prop:value=pw
                         autocomplete="new-password"
-                        placeholder=t!(i18n, user_config.create_account.password)
-                        attr:minlength="8"
-                        attr:maxlength="128"
+                        placeholder=t!(i18n, user_config.create_account.password).into_any()
+                        minlength="8"
+                        maxlength="128"
                     />
                 </label>
                 <small>{t!(i18n, user_config.create_account.password_requirements)}</small>
@@ -188,8 +186,8 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         prop:value=pw_confirm
                         autocomplete="new-password"
                         placeholder=t!(i18n, user_config.create_account.password)
-                        attr:minlength="8"
-                        attr:maxlength="128"
+                        minlength="8"
+                        maxlength="128"
                     />
                 </label>
 

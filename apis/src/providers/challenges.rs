@@ -1,5 +1,5 @@
 use crate::responses::ChallengeResponse;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::ChallengeId;
 use std::collections::HashMap;
 

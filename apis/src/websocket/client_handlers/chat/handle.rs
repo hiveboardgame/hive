@@ -1,5 +1,5 @@
 use crate::providers::chat::Chat;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::ChatMessageContainer;
 
 pub fn handle_chat(containers: Vec<ChatMessageContainer>) {

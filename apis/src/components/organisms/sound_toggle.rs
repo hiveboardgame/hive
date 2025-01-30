@@ -1,5 +1,5 @@
 use crate::providers::Config;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::Icon;
 
 #[component]
@@ -12,7 +12,7 @@ pub fn SoundToggle() -> impl IntoView {
         } else {
             icondata::BiVolumeMuteRegular
         };
-        view! { <Icon icon class="w-4 h-4" /> }
+        view! { <Icon icon attr:class="w-4 h-4" /> }
     };
     view! {
         <div class="inline-flex justify-center items-center m-1 rounded">

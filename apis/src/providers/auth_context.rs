@@ -2,14 +2,14 @@ use crate::functions::accounts::get::get_account;
 use crate::functions::auth::{login::Login, logout::Logout, register::Register};
 use crate::providers::websocket::WebsocketContext;
 use crate::responses::AccountResponse;
-use leptos::*;
+use leptos::prelude::*;
 
 #[derive(Clone)]
 pub struct AuthContext {
     pub login: Action<Login, Result<AccountResponse, ServerFnError>>,
     pub logout: Action<Logout, Result<(), ServerFnError>>,
     pub register: Action<Register, Result<(), ServerFnError>>,
-    pub user: Resource<(usize, usize, usize), Result<Option<AccountResponse>, ServerFnError>>,
+    pub user: Resource<Result<AccountResponse, ServerFnError>>,
 }
 
 /// Get the current user and place it in Context

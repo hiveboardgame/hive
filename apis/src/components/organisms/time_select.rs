@@ -4,7 +4,7 @@ use crate::{
     components::atoms::{input_slider::InputSlider, rating::icon_for_speed},
 };
 use leptix_primitives::components::radio_group::{RadioGroupItem, RadioGroupRoot};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{CorrespondenceMode, GameSpeed, TimeMode};
 use std::str::FromStr;
@@ -18,9 +18,9 @@ pub fn TimeSelect(
 ) -> impl IntoView {
     let i18n = use_i18n();
     let title = if is_tournament {
-        "Match settings:".into_view()
+        "Match settings:".into_any()
     } else {
-        t!(i18n, home.custom_game.title).into_view()
+        t!(i18n, home.custom_game.title).into_any()
     };
     let time_mode = move || time_signals.time_mode.get();
     let gamespeed_icon = move || {
@@ -32,7 +32,7 @@ pub fn TimeSelect(
                 Some(time_signals.sec_per_move.get()),
             ),
         };
-        view! { <Icon width="50" height="50" class="p-2" icon=icon_for_speed(&speed) /> }
+        view! { <Icon width="50" height="50" attr:class="p-2" icon=icon_for_speed(&speed) /> }
     };
     let radio_style = "flex items-center p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded data-[state=checked]:bg-button-dawn dark:data-[state=checked]:bg-button-twilight data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700 data-[state=unchecked]:bg-odd-light dark:data-[state=unchecked]:bg-gray-700";
     let allow_realtime = allowed_values.contains(&TimeMode::RealTime);

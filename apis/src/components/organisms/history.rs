@@ -2,7 +2,7 @@ use crate::components::atoms::history_button::set_timer_from_response;
 use crate::components::molecules::history_controls::HistoryControls;
 use crate::providers::game_state::{self, GameStateSignal};
 use hive_lib::GameStatus;
-use leptos::*;
+use leptos::{html, prelude::*};
 use leptos_icons::*;
 use shared_types::{PrettyString, TimeMode};
 
@@ -67,7 +67,7 @@ pub fn HistoryMove(
         }
     };
     view! {
-        <div ref=div_ref class=get_class on:click=onclick>
+        <div node_ref=div_ref class=get_class on:click=onclick>
             {format!("{}. {piece} {position}{}", turn + 1, rep)}
             <Show when=is_realtime>{time_took}</Show>
         </div>
@@ -119,7 +119,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
 
             <HistoryControls parent=parent.into() />
-            <div ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
+            <div node_ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
                 <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
                     <HistoryMove
@@ -140,7 +140,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                         on:click=analysis_setup
                     >
                         <div class="flex gap-1 justify-center items-center">
-                            <Icon icon=icondata::TbMicroscope class="py-1 w-7 h-7" />
+                            <Icon icon=icondata::TbMicroscope attr:class="py-1 w-7 h-7" />
                             "Analyze here"
                         </div>
                     </a>

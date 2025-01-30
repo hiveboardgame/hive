@@ -14,34 +14,35 @@ use crate::{
 };
 use chrono::Utc;
 use hive_lib::{Color, GameResult, GameStatus};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{GameStart, PrettyString, TimeInfo};
 
 #[component]
 pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
+    let game = Signal::derive(move || game.get_value().clone());
     let i18n = use_i18n();
     let rated_string = if game().rated {
-        t!(i18n, game.rated).into_view()
+        t!(i18n, game.rated).into_any()
     } else {
-        t!(i18n, game.casual).into_view()
+        t!(i18n, game.casual).into_any()
     };
 
     let result_string = match game().game_status {
         GameStatus::NotStarted => {
             if game().finished {
-                game().tournament_game_result.to_string().into_view()
+                game().tournament_game_result.to_string().into_any()
             } else if game().game_start == GameStart::Ready {
-                t!(i18n, game.start_when.both_agree).into_view()
+                t!(i18n, game.start_when.both_agree).into_any()
             } else {
-                "Not started".into_view()
+                "Not started".into_any()
             }
         }
-        GameStatus::InProgress => "Playing now".into_view(),
+        GameStatus::InProgress => "Playing now".into_any(),
         GameStatus::Finished(res) => match res {
-            GameResult::Winner(c) => GameResult::Winner(c).to_string().into_view(),
-            GameResult::Draw => GameResult::Draw.to_string().into_view(),
-            _ => game().conclusion.to_string().into_view(),
+            GameResult::Winner(c) => GameResult::Winner(c).to_string().into_any(),
+            GameResult::Draw => GameResult::Draw.to_string().into_any(),
+            _ => game().conclusion.to_string().into_any(),
         },
     };
 
@@ -55,30 +56,30 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     game.finished_ago.weeks,
                     count = move || time.num_weeks()
                 )
-                .into_view()
+                .into_any()
             } else if time.num_days() >= 1 {
                 t!(
                     i18n,
                     game.finished_ago.days,
                     count = move || time.num_days()
                 )
-                .into_view()
+                .into_any()
             } else if time.num_hours() >= 1 {
                 t!(
                     i18n,
                     game.finished_ago.hours,
                     count = move || time.num_hours()
                 )
-                .into_view()
+                .into_any()
             } else if time.num_minutes() >= 1 {
                 t!(
                     i18n,
                     game.finished_ago.minutes,
                     count = move || time.num_minutes()
                 )
-                .into_view()
+                .into_any()
             } else {
-                t!(i18n, game.finished_ago.less_than_minute).into_view()
+                t!(i18n, game.finished_ago.less_than_minute).into_any()
             }
         } else {
             let time = Utc::now().signed_duration_since(game().created_at);
@@ -88,31 +89,31 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     game.created_ago.weeks,
                     count = move || time.num_weeks()
                 )
-                .into_view()
+                .into_any()
             } else if time.num_days() >= 1 {
-                t!(i18n, game.created_ago.days, count = move || time.num_days()).into_view()
+                t!(i18n, game.created_ago.days, count = move || time.num_days()).into_any()
             } else if time.num_hours() >= 1 {
                 t!(
                     i18n,
                     game.created_ago.hours,
                     count = move || time.num_hours()
                 )
-                .into_view()
+                .into_any()
             } else if time.num_minutes() >= 1 {
                 t!(
                     i18n,
                     game.created_ago.minutes,
                     count = move || time.num_minutes()
                 )
-                .into_view()
+                .into_any()
             } else {
-                t!(i18n, game.created_ago.less_than_minute).into_view()
+                t!(i18n, game.created_ago.less_than_minute).into_any()
             }
         }
     };
     let history = game().history;
     let history_string = match history.len() {
-        0 => t!(i18n, game.no_moves_played).into_view(),
+        0 => t!(i18n, game.no_moves_played).into_any(),
         _ => history
             .iter()
             .take(6)
@@ -124,7 +125,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                 None
             })
             .collect::<String>()
-            .into_view(),
+            .into_any(),
     };
     let conclusion = move || game().conclusion.pretty_string();
     let ratings = store_value(RatingChangeInfo::from_game_response(&game()));
@@ -137,7 +138,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     view! {
         <article class="flex relative px-2 py-4 mx-2 w-full h-40 duration-300 sm:h-56 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="mx-2">
-                <ThumbnailPieces game />
+                <ThumbnailPieces game=store_value(game()) />
             </div>
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">
                 <div class="flex flex-col justify-between">
@@ -197,7 +198,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     </Show>
                 </div>
                 <div class="flex gap-1 justify-between items-center w-full">
-                    {history_string} <DownloadPgn game=game />
+                    {history_string} <DownloadPgn game=store_value(game()) />
                 </div>
             </div>
             <a

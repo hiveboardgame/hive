@@ -6,7 +6,7 @@ use crate::{
 };
 use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;
-use leptos::*;
+use leptos::prelude::*;
 use std::time::Duration;
 
 #[component]
@@ -43,7 +43,7 @@ pub fn InviteUser(tournament: TournamentResponse) -> impl IntoView {
                 on:input=debounced_search
                 placeholder="Invite player"
                 prop:value=pattern
-                attr:maxlength="20"
+                maxlength="20"
             />
             <div class="overflow-y-auto max-h-96">
                 <For each=users key=move |(_, user)| user.uid let:user>

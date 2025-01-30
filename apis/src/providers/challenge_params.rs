@@ -1,5 +1,5 @@
 use crate::common::TimeSignals;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{CorrespondenceMode, TimeMode};
 
 #[derive(Debug, Clone, Copy)]

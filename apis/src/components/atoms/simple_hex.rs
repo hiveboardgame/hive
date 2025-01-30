@@ -2,13 +2,13 @@ use crate::{
     common::{Hex, HexType},
     components::atoms::piece::Piece,
 };
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn SimpleHex(hex: Hex) -> impl IntoView {
     if let HexType::Tile(piece, _) = hex.kind {
-        view! { <Piece piece=piece position=hex.position level=hex.level simple=true /> }
+        view! { <Piece piece=piece position=hex.position level=hex.level simple=true /> }.into_any()
     } else {
-        view! {}.into_view()
+        ().into_any()
     }
 }

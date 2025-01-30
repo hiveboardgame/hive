@@ -1,6 +1,6 @@
 use crate::{common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
 use hive_lib::{GameType, Position, State};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn PreviewTiles() -> impl IntoView {
