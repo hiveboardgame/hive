@@ -7,7 +7,7 @@ use crate::{
 };
 use hive_lib::Color;
 use leptix_primitives::components::tabs::{TabsContent, TabsList, TabsRoot, TabsTrigger};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::SimpleDestination;
 
 #[derive(Clone, PartialEq, Copy)]

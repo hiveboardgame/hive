@@ -1,5 +1,5 @@
 use crate::responses::UserResponse;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GameSpeed;
 use uuid::Uuid;
 

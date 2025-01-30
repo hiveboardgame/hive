@@ -36,14 +36,14 @@ icondata = {version = "0.5"}
 indoc = "2"
 itertools = "0.13.0"
 lazy_static = "1.5"
-leptix_primitives = { version = "0.2" }
-leptos = { version = "0.6", features = ["nightly"] }
-leptos-use = { version = "0.13" }
-leptos_actix =  { version = "0.6" }
-leptos_i18n = { version = "0.4", features = ["suppress_key_warnings"] }
-leptos_icons = { version = "0.3"}
-leptos_meta =  { version = "0.6", features = ["nightly"] }
-leptos_router =  { version = "0.6", features = ["nightly"] }
+leptix_primitives = { git="https://github.com/IongIer/leptix.git", branch="leptos-0.7-support-updated" }
+leptos = { version = "0.7", features = ["nightly"] }
+leptos-use = { version = "0.14" }
+leptos_actix =  { version = "0.7" }
+leptos_i18n = { version = "0.5.0-rc1", features = ["suppress_key_warnings", "plurals"] }
+leptos_icons = { version = "0.4"}
+leptos_meta =  { version = "0.7"}
+leptos_router =  { version = "0.7", features = ["nightly"] }
 log = "0.4.22"
 markdown = "1.0.0-alpha"
 nanoid = "0.4"
@@ -59,7 +59,7 @@ simple_logger = "5.0"
 skillratings = "0.27"
 thiserror = "1"
 tokio = { version = "1.39.2", features = ["full"] }
-tree-ds = {version = "0.1.5", features = ["serde", "compact_serde"] }
+tree-ds = {version = "0.1.5", features = ["serde", "compact_serde", "async"] }
 uuid = { version = "1.10", features = ["v4", "js", "serde"] }
 walkdir = "2.5"
 wasm-bindgen = "0.2.95"

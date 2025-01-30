@@ -12,7 +12,7 @@ use crate::{
     providers::ApiRequests,
 };
 use hive_lib::{ColorChoice, GameType};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
 use std::str::FromStr;
 
@@ -32,7 +32,7 @@ pub fn ChallengeCreate(
 fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl IntoView {
     let i18n = use_i18n();
     let params = expect_context::<ChallengeParams>();
-    let opponent = store_value(opponent);
+    let opponent = Signal::derive(move || opponent.clone());
     let time_signals = params.time_signals;
     create_effect(move |_| {
         let opponent = opponent();

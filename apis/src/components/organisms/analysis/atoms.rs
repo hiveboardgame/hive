@@ -4,7 +4,7 @@ use crate::providers::game_state::GameStateSignal;
 use leptix_primitives::components::collapsible::{
     CollapsibleContent, CollapsibleRoot, CollapsibleTrigger,
 };
-use leptos::*;
+use leptos::{html, prelude::*};
 use leptos_icons::Icon;
 use tree_ds::prelude::Node;
 
@@ -48,7 +48,7 @@ pub fn UndoButton() -> impl IntoView {
             on:click=undo
             prop:disabled=is_disabled
         >
-            <Icon icon=icondata::BiUndoRegular class="w-6 h-6" />
+            <Icon icon=icondata::BiUndoRegular attr:class="w-6 h-6" />
         </button>
     }
 }
@@ -96,14 +96,14 @@ pub fn HistoryButton(
             });
         }
         if let Some(post_action) = post_action {
-            post_action(())
+            post_action.run(())
         }
     });
     let _definite_node_ref = node_ref.unwrap_or(create_node_ref::<html::Button>());
 
     view! {
         <button
-            ref=_definite_node_ref
+            node_ref=_definite_node_ref
             class=nav_buttons_style
             prop:disabled=is_disabled
             on:click=debounced_action

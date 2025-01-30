@@ -5,7 +5,7 @@ use crate::{
     },
     providers::{game_state::GameStateSignal, navigation_controller::NavigationControllerSignal},
 };
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::SimpleDestination;
 
 #[component]

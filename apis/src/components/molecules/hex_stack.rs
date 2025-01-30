@@ -5,24 +5,25 @@ use crate::{
     common::{ActiveState, HexStack},
     components::atoms::hex::Hex,
 };
-use leptos::ev::{pointerup, touchend, touchstart};
-use leptos::*;
+use leptos::{ev::{pointerup, touchend, touchstart}, svg};
+use leptos::prelude::*;
 use leptos_use::{
     use_event_listener, use_event_listener_with_options, use_interval_with_options, use_window,
     UseEventListenerOptions, UseIntervalOptions,
 };
 use std::rc::Rc;
+use std::sync::Arc;
 use web_sys::PointerEvent;
 
 #[component]
 pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
     let target_stack = expect_context::<TargetStack>().0;
-    let interval = store_value(Rc::new(use_interval_with_options(
+    let interval = store_value(Arc::new(use_interval_with_options(
         500,
         UseIntervalOptions::default().immediate(false),
     )));
-    create_isomorphic_effect(move |_| {
-        if (interval().counter)() >= 1 {
+    Effect::new_isomorphic(move |_| {
+        if (interval.get_value().counter)() >= 1 {
             target_stack.set(Some(hex_stack.position));
         }
     });
@@ -44,8 +45,8 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
         g_ref,
         touchstart,
         move |_| {
-            (interval().reset)();
-            (interval().resume)();
+            (interval.get_value().reset)();
+            (interval.get_value().resume)();
         },
         UseEventListenerOptions::default().passive(true),
     );
@@ -54,8 +55,8 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
         g_ref,
         touchend,
         move |_| {
-            (interval().reset)();
-            (interval().pause)();
+            (interval.get_value().reset)();
+            (interval.get_value().pause)();
             target_stack.set(None);
         },
         UseEventListenerOptions::default().passive(true),
@@ -75,13 +76,13 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
             };
             if is_expandable {
                 view! {
-                    <g ref=g_ref>
+                    <g node_ref=g_ref>
                         <Hex hex=hex on:pointerdown=rightclick_expand />
                     </g>
                 }
-                .into_view()
+                .into_any()
             } else {
-                view! { <Hex hex=hex /> }
+                view! { <Hex hex=hex /> }.into_any()
             }
         })
         .collect_view()

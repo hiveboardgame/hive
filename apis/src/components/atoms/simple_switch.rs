@@ -1,5 +1,5 @@
 use leptix_primitives::components::switch::{SwitchRoot, SwitchThumb};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn SimpleSwitch(
@@ -10,7 +10,7 @@ pub fn SimpleSwitch(
     let on_checked_change = Callback::new(move |_| {
         checked.update(|b| *b = !*b);
         if let Some(optional) = optional_action {
-            optional(())
+            optional.run(())
         };
     });
     view! {

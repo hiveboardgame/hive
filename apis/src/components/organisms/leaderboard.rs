@@ -2,13 +2,13 @@ use crate::common::UserAction;
 use crate::components::atoms::rating::icon_for_speed;
 use crate::{components::molecules::user_row::UserRow, functions::users::get::get_top_users};
 use leptos::logging::log;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::Icon;
 use shared_types::GameSpeed;
 
 #[component]
 pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
-    let speed = store_value(speed);
+    let speed = Signal::derive(move || speed);
     let top_users = Resource::once(move || get_top_users(speed(), 10));
     view! {
         <Transition>
@@ -21,8 +21,8 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                 .into_view()
                         }
                         Ok(users) => {
-                            let users = store_value(users);
-                            let is_empty = move || users().is_empty();
+                            let users = StoredValue::new(users);
+                            let is_empty = move || users.get_value().is_empty();
                             view! {
                                 <div class="flex flex-col m-2 w-fit">
                                     <div class="flex gap-1 items-center">
@@ -38,7 +38,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                     }>{move || if is_empty() { "No one yet" } else { "" }}</div>
                                     <div>
                                         <For
-                                            each=move || { users() }
+                                            each=move || { users.get_value() }
 
                                             key=|users| (users.uid)
                                             let:user
@@ -46,7 +46,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                             <UserRow
                                                 actions=vec![UserAction::Challenge]
                                                 user=store_value(user)
-                                                game_speed=speed
+                                                game_speed=store_value(speed())
                                             />
                                         </For>
                                     </div>

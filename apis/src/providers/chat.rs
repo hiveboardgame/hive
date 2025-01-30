@@ -2,7 +2,7 @@ use super::{
     api_requests::ApiRequests, auth_context::AuthContext, game_state::GameStateSignal,
     navigation_controller::NavigationControllerSignal, AlertType, AlertsContext,
 };
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId, TournamentId};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -61,7 +61,6 @@ impl Chat {
 
     pub fn seen_messages(&self) {
         let navi = expect_context::<NavigationControllerSignal>();
-        batch(move || {
             if let Some(game_id) = navi.game_signal.get_untracked().game_id {
                 self.games_public_new_messages.update(|m| {
                     m.entry(game_id.clone())
@@ -72,7 +71,6 @@ impl Chat {
                     m.entry(game_id).and_modify(|b| *b = false).or_insert(false);
                 });
             }
-        })
     }
 
     pub fn send(&self, message: &str, destination: ChatDestination) {
@@ -105,7 +103,6 @@ impl Chat {
                             }
                         }
                     }
-                    batch(move || {
                         self.tournament_lobby_messages.update(|tournament| {
                             tournament.entry(id.clone()).or_default().extend(
                                 containers.iter().map(|container| container.message.clone()),
@@ -116,7 +113,6 @@ impl Chat {
                                 .and_modify(|value| *value = true)
                                 .or_insert(true);
                         });
-                    });
                 }
 
                 ChatDestination::User((id, _name)) => {
@@ -128,7 +124,6 @@ impl Chat {
                         }
                     }
 
-                    batch(move || {
                         self.users_messages.update(|users| {
                             users.entry(*id).or_default().extend(
                                 containers.iter().map(|container| container.message.clone()),
@@ -139,7 +134,6 @@ impl Chat {
                                 .and_modify(|value| *value = true)
                                 .or_insert(true);
                         });
-                    });
                 }
                 ChatDestination::GamePlayers(id, ..) => {
                     if let Some(messages) = self.games_private_messages.get_untracked().get(id) {

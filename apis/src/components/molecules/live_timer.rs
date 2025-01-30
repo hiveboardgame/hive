@@ -3,8 +3,7 @@ use crate::providers::{
 };
 use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;
-use leptos::*;
-use leptos_router::RouterContext;
+use leptos::prelude::*;
 use leptos_use::{
     use_interval_fn_with_options, utils::Pausable, watch_with_options, whenever_with_options,
     UseIntervalFnOptions, WatchOptions,
@@ -12,19 +11,17 @@ use leptos_use::{
 use regex::Regex;
 use shared_types::GameId;
 use std::time::Duration;
-
 lazy_static! {
     static ref NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
 }
-
 #[component]
 pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
-    let user_id = Signal::derive(move || match untrack(auth_context.user) {
-        Some(Ok(Some(user))) => Some(user.id),
+    let user_id = Signal::derive(move || match auth_context.user.get_untracked() {
+        Some(Ok(user)) => Some(user.id),
         _ => None,
     });
     let user_color = game_state.user_color_as_signal(user_id.into());

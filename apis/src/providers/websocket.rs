@@ -3,7 +3,7 @@ use crate::functions::hostname::hostname_and_port;
 use crate::websocket::client_handlers::response_handler::handle_response;
 use codee::binary::MsgpackSerdeCodec;
 use lazy_static::lazy_static;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::*;
 use regex::Regex;

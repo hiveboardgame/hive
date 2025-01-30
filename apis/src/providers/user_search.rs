@@ -1,5 +1,5 @@
 use crate::responses::UserResponse;
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, Copy)]

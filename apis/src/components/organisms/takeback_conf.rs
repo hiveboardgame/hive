@@ -1,6 +1,6 @@
 use crate::i18n::*;
 use crate::providers::{ApiRequests, AuthContext};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::Takeback;
 
 #[component]
@@ -22,12 +22,12 @@ fn Button(takeback: Takeback) -> impl IntoView {
     let i18n = use_i18n();
     let takeback = store_value(takeback);
     let auth_context = expect_context::<AuthContext>();
-    let user = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user),
+    let user = move || match auth_context.user.get() {
+        Some(Ok(user)) => Some(user),
         _ => None,
     };
     let is_active = move || {
-        if user().is_some_and(|user| user.user.takeback == takeback()) {
+        if user().is_some_and(|user| user.user.takeback == takeback.get_value()) {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -45,11 +45,11 @@ fn Button(takeback: Takeback) -> impl IntoView {
                 }
 
                 on:click=move |_| {
-                    api.set_server_user_conf(takeback());
+                    api.set_server_user_conf(takeback.get_value());
                 }
             >
 
-                {match takeback() {
+                {match takeback.get_value() {
                     Takeback::Always => {
                         t!(i18n, user_config.allow_takeback_buttons.always).into_view()
                     }

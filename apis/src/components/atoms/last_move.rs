@@ -2,7 +2,7 @@ use crate::common::TileDesign;
 use crate::common::{Direction, SvgPos};
 use crate::providers::Config;
 use hive_lib::Position;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn LastMove(

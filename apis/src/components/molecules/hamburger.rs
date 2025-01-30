@@ -1,5 +1,5 @@
 use leptos::html::Div;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
 
 #[component]
@@ -28,11 +28,9 @@ pub fn Hamburger<T: IntoView>(
             );
         }
     });
-
-    let children = store_value(children);
-
+    
     view! {
-        <div ref=target class=format!("inline-block {extend_tw_classes}")>
+        <div node_ref=target class=format!("inline-block {extend_tw_classes}")>
             <button
                 id=id
                 on:click=move |_| hamburger_show.update(|b| *b = !*b)

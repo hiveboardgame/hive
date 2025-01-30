@@ -1,5 +1,5 @@
 use crate::providers::Config;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn DarkModeToggle(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {

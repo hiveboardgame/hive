@@ -1,7 +1,7 @@
 use crate::providers::websocket::WebsocketContext;
 use crate::providers::PingContext;
 use chrono::Utc;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::core::ConnectionReadyState;
 
@@ -16,18 +16,18 @@ pub fn Ping() -> impl IntoView {
             .num_seconds()
             >= 5
         {
-            view! { <Icon class="fill-ladybug-red" icon=icondata::BiNoSignalRegular /> }.into_view()
+            view! { <Icon attr:class="fill-ladybug-red" icon=icondata::BiNoSignalRegular /> }.into_any()
         } else {
             match websocket.ready_state.get() {
                 ConnectionReadyState::Open => view! {
                     <div class="flex items-center">
-                        <Icon class="fill-grasshopper-green" icon=icondata::BiSignal5Regular />
+                        <Icon attr:class="fill-grasshopper-green" icon=icondata::BiSignal5Regular />
                         {move || { format!("{:.0}ms", ping.ping.get()) }}
                     </div>
                 }
-                .into_view(),
-                _ => view! { <Icon class="fill-ladybug-red" icon=icondata::BiNoSignalRegular /> }
-                    .into_view(),
+                .into_any(),
+                _ => view! { <Icon attr:class="fill-ladybug-red" icon=icondata::BiNoSignalRegular /> }
+                    .into_any(),
             }
         }
     };

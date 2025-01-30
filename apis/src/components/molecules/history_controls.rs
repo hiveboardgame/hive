@@ -1,9 +1,9 @@
 use crate::components::atoms::history_button::{HistoryButton, HistoryNavigation};
 use crate::components::organisms::reserve::{Alignment, Reserve};
 use crate::providers::game_state::GameStateSignal;
-use ev::keydown;
+use leptos::ev::keydown;
 use hive_lib::Color;
-use leptos::*;
+use leptos::{prelude::*, html};
 use leptos_use::{use_event_listener, use_window};
 
 #[component]
@@ -47,12 +47,12 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
         game_state.show_history_turn(game_state.signal.get_untracked().state.turn - 1);
     });
     let if_last_go_to_end = Callback::new(move |()| {
-        focus(());
+        focus.run(());
         let gamestate = game_state.signal.get_untracked();
         {
             if let Some(turn) = gamestate.history_turn {
                 if turn == gamestate.state.turn - 1 {
-                    go_to_end(());
+                    go_to_end.run(());
                 }
             }
         }

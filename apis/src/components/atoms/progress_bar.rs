@@ -1,5 +1,5 @@
 use leptix_primitives::progress::{ProgressIndicator, ProgressRoot};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn ProgressBar(current: Signal<usize>, total: usize) -> impl IntoView {
