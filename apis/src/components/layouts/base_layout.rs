@@ -124,9 +124,9 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     provide_context(hide_controls);
 
     let is_hidden = RwSignal::new("hidden");
-    create_effect(move |_| is_hidden.set(""));
+    Effect::new(move |_| is_hidden.set(""));
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let location = use_location();
         let mut navi = expect_context::<NavigationControllerSignal>();
         let pathname = (location.pathname)();
@@ -149,7 +149,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     });
 
     let focused = use_window_focus();
-    let _ = watch(
+    let _ = Effect::watch(
         focused,
         move |focused, _, _| {
             let mut refocus = expect_context::<RefocusSignal>();
@@ -167,34 +167,34 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
     let Pausable { .. } = use_interval_fn(
         move || {
-                let ws = ws.clone();
-                    counter.update(|c| *c += 1);
-                    match ws_ready() {
-                        ConnectionReadyState::Closed => {
-                            if retry_at.get() == counter.get() {
-                                //log!("Reconnecting due to ReadyState");
-                                ws.open();
-                                counter.update(|c| *c = 0);
-                                retry_at.update(|r| *r *= 2);
-                            }
-                        }
-                        ConnectionReadyState::Open => {
-                            counter.update(|c| *c = 0);
-                            retry_at.update(|r| *r = 2);
-                        }
-                        _ => {}
-                    }
-                    if Utc::now()
-                        .signed_duration_since(ping.last_updated.get_untracked())
-                        .num_seconds()
-                        >= 5
-                        && retry_at.get() == counter.get()
-                    {
-                        //log!("Reconnecting due to ping duration");
+            let ws = ws.clone();
+            counter.update(|c| *c += 1);
+            match ws_ready() {
+                ConnectionReadyState::Closed => {
+                    if retry_at.get() == counter.get() {
+                        //log!("Reconnecting due to ReadyState");
                         ws.open();
                         counter.update(|c| *c = 0);
                         retry_at.update(|r| *r *= 2);
-                    };
+                    }
+                }
+                ConnectionReadyState::Open => {
+                    counter.update(|c| *c = 0);
+                    retry_at.update(|r| *r = 2);
+                }
+                _ => {}
+            }
+            if Utc::now()
+                .signed_duration_since(ping.last_updated.get_untracked())
+                .num_seconds()
+                >= 5
+                && retry_at.get() == counter.get()
+            {
+                //log!("Reconnecting due to ping duration");
+                ws.open();
+                counter.update(|c| *c = 0);
+                retry_at.update(|r| *r *= 2);
+            };
         },
         1000,
     );

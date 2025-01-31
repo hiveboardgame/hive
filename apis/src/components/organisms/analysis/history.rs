@@ -29,8 +29,8 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         };
         current_path
     });
-    let prev_button = create_node_ref::<html::Button>();
-    let next_button = create_node_ref::<html::Button>();
+    let prev_button = NodeRef::new::<html::Button>();
+    let next_button = NodeRef::new::<html::Button>();
     let window = use_window();
     let active = Signal::derive(move || {
         window
@@ -39,7 +39,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
             .query_selector(".bg-orange-twilight")
             .ok()?
     });
-    create_effect(move |_| {
+    Effect::new(move |_| {
         _ = use_event_listener(document().body(), keydown, move |evt| {
             if evt.key() == "ArrowLeft" {
                 evt.prevent_default();

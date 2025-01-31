@@ -8,7 +8,7 @@ const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-
 
 #[component]
 pub fn MobileDropdown() -> impl IntoView {
-    let hamburger_show = create_rw_signal(false);
+    let hamburger_show = RwSignal::new(false);
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
     let div_style = "flex flex-col font-bold m-1 dark:text-white";
     let i18n = use_i18n();

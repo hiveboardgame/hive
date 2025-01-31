@@ -25,7 +25,7 @@ pub fn Modal(
         }
     };
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if let Some(dialog) = dialog_el.get_untracked() {
             if open() {
                 if dialog.show_modal().is_err() {

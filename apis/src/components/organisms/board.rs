@@ -11,7 +11,11 @@ use leptos::ev::{
     contextmenu, pointerdown, pointerleave, pointermove, pointerup, touchmove, touchstart, wheel,
 };
 use leptos::leptos_dom::helpers::debounce;
-use leptos::{prelude::*, html, svg::{self, Svg}};
+use leptos::{
+    html,
+    prelude::*,
+    svg::{self, Svg},
+};
 use leptos_use::{
     use_event_listener, use_event_listener_with_options, use_intersection_observer_with_options,
     use_resize_observer, use_throttle_fn_with_arg, UseEventListenerOptions,
@@ -116,7 +120,7 @@ pub fn Board(
         config().tile_design == TileDesign::ThreeD
     };
 
-    let update_once = create_effect(move |_| {
+    let update_once = Effect::new(move |_| {
         if game_state.loaded.get() {
             let div = div_ref.get_untracked().expect("it exists");
             let rect = div.get_bounding_client_rect();
@@ -131,7 +135,7 @@ pub fn Board(
             });
         };
     });
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if game_state.loaded.get() {
             update_once.dispose();
         }
@@ -240,16 +244,15 @@ pub fn Board(
                     || (scale > 0.0 && initial_height <= zoom_out_limit)
                 {
                     if is_visible() {
-                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                                *viewbox_controls = future_viewbox;
-                            });
-                            has_zoomed.set(true);
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox;
+                        });
+                        has_zoomed.set(true);
                     } else if will_svg_be_visible(g_bbox, &future_viewbox) {
-                       
-                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                                *viewbox_controls = future_viewbox;
-                            });
-                            has_zoomed.set(true);
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox;
+                        });
+                        has_zoomed.set(true);
                     }
                 }
             }
@@ -293,15 +296,15 @@ pub fn Board(
                     current_point_0.y() - (current_point_0.y() - future_viewbox.y) / scale;
                 if intermediate_height >= zoom_in_limit && intermediate_height <= zoom_out_limit {
                     if is_visible() {
-                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                                *viewbox_controls = future_viewbox
-                            });
-                            has_zoomed.set(true);
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox
+                        });
+                        has_zoomed.set(true);
                     } else if will_svg_be_visible(g_bbox, &future_viewbox) {
-                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                                *viewbox_controls = future_viewbox
-                            });
-                            has_zoomed.set(true);
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox
+                        });
+                        has_zoomed.set(true);
                     }
                 };
             }

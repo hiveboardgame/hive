@@ -15,7 +15,7 @@ pub fn DownloadPgn(
             Some(game)
         } else {
             let game_state = expect_context::<GameStateSignal>();
-            (game_state.signal)().game_response.map(store_value)
+            (game_state.signal)().game_response.map(StoredValue::new)
         }
     };
     let download = move |_| {
@@ -52,7 +52,7 @@ pub fn DownloadPgn(
 }
 
 fn blob_and_filename(game: StoredValue<GameResponse>) -> (Blob, String) {
-    let game = game();
+    let game = game.get_value();
     let date = game.created_at.format("%d-%b-%Y_%H:%M:%S").to_string();
     let game_result = match game.game_status {
         GameStatus::Finished(result) => match result {

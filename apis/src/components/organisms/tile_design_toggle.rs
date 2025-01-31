@@ -20,7 +20,7 @@ lazy_static! {
 pub fn TileDesignToggle() -> impl IntoView {
     let i18n = use_i18n();
     let good_software = RwSignal::new(false);
-    create_effect(move |_| good_software.update(|b| *b = *NOT_APPLE));
+    Effect::new(move |_| good_software.update(|b| *b = *NOT_APPLE));
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.piece_style)}</p>
         <div class="flex">

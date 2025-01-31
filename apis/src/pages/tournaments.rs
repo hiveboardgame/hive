@@ -29,7 +29,7 @@ pub fn Tournaments() -> impl IntoView {
     let tournament = expect_context::<TournamentStateContext>();
     let ws = expect_context::<WebsocketContext>();
     let filter = RwSignal::new(TournamentFilter::Status(TournamentStatus::NotStarted));
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
             let api = ApiRequests::new();
             api.tournament(TournamentAction::GetAll(

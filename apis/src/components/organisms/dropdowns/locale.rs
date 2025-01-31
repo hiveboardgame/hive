@@ -25,7 +25,7 @@ const ALL_LOCALES: [Locale; 10] = [
 
 #[component]
 pub fn LocaleDropdown() -> impl IntoView {
-    let hamburger_show = create_rw_signal(false);
+    let hamburger_show = RwSignal::new(false);
     let onclick_close = move |locale| {
         use_i18n().set_locale(locale);
         hamburger_show.update(|b| *b = false);

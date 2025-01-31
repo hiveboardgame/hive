@@ -34,7 +34,7 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
     let params = expect_context::<ChallengeParams>();
     let opponent = Signal::derive(move || opponent.clone());
     let time_signals = params.time_signals;
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let opponent = opponent();
         if opponent.is_some() {
             params.opponent.update(|o| *o = opponent);

@@ -26,8 +26,8 @@ impl Default for GamesSignal {
 impl GamesSignal {
     pub fn new() -> Self {
         Self {
-            own: create_rw_signal(OwnGames::new()),
-            live: create_rw_signal(LiveGames::new()),
+            own: RwSignal::new(OwnGames::new()),
+            live: RwSignal::new(LiveGames::new()),
         }
     }
 
