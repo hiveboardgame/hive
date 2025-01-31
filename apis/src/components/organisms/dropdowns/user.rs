@@ -9,7 +9,7 @@ use leptos::prelude::*;
 #[component]
 pub fn UserDropdown(username: String) -> impl IntoView {
     let i18n = use_i18n();
-    let hamburger_show = create_rw_signal(false);
+    let hamburger_show = RwSignal::new(false);
     let onclick_close = move || hamburger_show.update(|b| *b = false);
     view! {
         <Hamburger

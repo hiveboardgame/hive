@@ -8,11 +8,12 @@ use crate::providers::tournaments::TournamentStateContext;
 use crate::providers::NotificationContext;
 use crate::responses::TournamentResponse;
 use leptos::prelude::*;
+use leptos::text_prop::TextProp;
 use leptos_icons::*;
 
 #[component]
 pub fn NotificationDropdown() -> impl IntoView {
-    let hamburger_show = create_rw_signal(false);
+    let hamburger_show = RwSignal::new(false);
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
     let notifications_context = Signal::derive(move || expect_context::<NotificationContext>());
     let challenges = expect_context::<ChallengeStateSignal>();

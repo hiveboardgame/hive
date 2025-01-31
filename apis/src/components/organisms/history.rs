@@ -17,7 +17,7 @@ pub fn HistoryMove(
     parent_div: NodeRef<html::Div>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let div_ref = create_node_ref::<html::Div>();
+    let div_ref = NodeRef::new::<html::Div>();
     div_ref.on_load(move |_| {
         let _ = div_ref
             .get_untracked()
@@ -91,7 +91,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             .collect::<Vec<(usize, String, String)>>()
     };
 
-    let parent = create_node_ref::<html::Div>();
+    let parent = NodeRef::new::<html::Div>();
     let game_result = move || match state().game_status {
         GameStatus::Finished(result) => result.to_string(),
         _ => "".to_string(),

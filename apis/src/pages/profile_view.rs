@@ -200,7 +200,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                 .map_or(String::new(), |user| user)
         })
     });
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
             let api = ApiRequests::new();
                 navi.profile_signal.update(|v| {

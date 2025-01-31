@@ -16,7 +16,7 @@ impl Default for OnlineUsersSignal {
 impl OnlineUsersSignal {
     pub fn new() -> Self {
         Self {
-            signal: create_rw_signal(OnlineUsersState::new()),
+            signal: RwSignal::new(OnlineUsersState::new()),
         }
     }
 
