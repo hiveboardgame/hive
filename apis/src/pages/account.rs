@@ -14,7 +14,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
     let my_input = NodeRef::<html::Input>::new();
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
 

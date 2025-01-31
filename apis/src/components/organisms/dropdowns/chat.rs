@@ -21,7 +21,7 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
         }
     };
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         hamburger_show();
         chat.seen_messages()
     });

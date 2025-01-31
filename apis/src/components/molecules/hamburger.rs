@@ -13,7 +13,7 @@ pub fn Hamburger<T: IntoView>(
     content: T,
 ) -> impl IntoView {
     let target = NodeRef::<Div>::new();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if hamburger_show() {
             let _ = on_click_outside_with_options(
                 target,

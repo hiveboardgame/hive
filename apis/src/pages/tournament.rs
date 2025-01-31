@@ -73,7 +73,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
         }
     });
     let tournament_id = Memo::new(move |_| tournament().tournament_id);
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if tournament().status != TournamentStatus::NotStarted {
             let api = ApiRequests::new();
             api.schedule_action(ScheduleAction::TournamentPublic(tournament_id()));

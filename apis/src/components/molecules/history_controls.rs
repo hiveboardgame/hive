@@ -1,30 +1,31 @@
 use crate::components::atoms::history_button::{HistoryButton, HistoryNavigation};
 use crate::components::organisms::reserve::{Alignment, Reserve};
 use crate::providers::game_state::GameStateSignal;
-use leptos::ev::keydown;
 use hive_lib::Color;
-use leptos::{prelude::*, html};
+use leptos::ev::keydown;
+use leptos::{html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 
 #[component]
 pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let window = use_window();
-    let active = Signal::derive(move || {
-        window.as_ref().and_then(|w| {
-            w.document()
-                .expect("window to have a document")
-                .query_selector(".bg-orange-twilight")
-                .expect("to have an Element")
-        })
-    });
-    let focus = Callback::new(move |()| {
-        if let Some(elem) = active.get_untracked() {
-            elem.scroll_into_view_with_bool(false);
-        }
-    });
-    let prev_button = create_node_ref::<html::Button>();
-    let next_button = create_node_ref::<html::Button>();
+    //TODO: FIX ACTIVE
+    //let active = Signal::derive(move || {
+    //    window.as_ref().and_then(|w| {
+    //        w.document()
+    //            .expect("window to have a document")
+    //            .query_selector(".bg-orange-twilight")
+    //            .expect("to have an Element")
+    //    })
+    //});
+    //let focus = Callback::new(move |()| {
+    //    if let Some(elem) = active.get_untracked() {
+    //        elem.scroll_into_view_with_bool(false);
+    //    }
+    //});
+    let prev_button = NodeRef::<html::Button>::new();
+    let next_button = NodeRef::<html::Button>::new();
     _ = use_event_listener(document().body(), keydown, move |evt| {
         if evt.key() == "ArrowLeft" {
             evt.prevent_default();
@@ -47,7 +48,7 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
         game_state.show_history_turn(game_state.signal.get_untracked().state.turn - 1);
     });
     let if_last_go_to_end = Callback::new(move |()| {
-        focus.run(());
+        //focus.run(());
         let gamestate = game_state.signal.get_untracked();
         {
             if let Some(turn) = gamestate.history_turn {
@@ -63,13 +64,13 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
                 <HistoryButton
 
                     action=HistoryNavigation::First
-                    post_action=focus
+                    //post_action=focus
                 />
 
                 <HistoryButton
                     node_ref=prev_button
                     action=HistoryNavigation::Previous
-                    post_action=focus
+                    //post_action=focus
                 />
                 <HistoryButton
                     node_ref=next_button

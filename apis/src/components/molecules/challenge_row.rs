@@ -25,16 +25,20 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
         }
         ColorChoice::White => {
             if config().prefers_dark {
-                view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-white pb-[2px]" /> }.into_any()
+                view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-white pb-[2px]" /> }
+                    .into_any()
             } else {
-                view! { <Icon icon=icondata::BsHexagon attr:class="stroke-black pb-[2px]" /> }.into_any()
+                view! { <Icon icon=icondata::BsHexagon attr:class="stroke-black pb-[2px]" /> }
+                    .into_any()
             }
         }
         ColorChoice::Black => {
             if config().prefers_dark {
-                view! { <Icon icon=icondata::BsHexagon attr:class="stroke-white pb-[2px]" /> }.into_any()
+                view! { <Icon icon=icondata::BsHexagon attr:class="stroke-white pb-[2px]" /> }
+                    .into_any()
             } else {
-                view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-black pb-[2px]" /> }.into_any()
+                view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-black pb-[2px]" /> }
+                    .into_any()
             }
         }
     };
@@ -46,7 +50,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             challenge().challenge_id
         )
     };
-    let button_ref = create_node_ref::<html::Button>();
+    let button_ref = NodeRef::<html::Button>::new();
     let copy = move |_| {
         let clipboard = use_window()
             .as_ref()
@@ -246,9 +250,9 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                                 </button>
                             }
-                                .into_view()
+                                .into_any()
                         } else {
-                            view! { "" }.into_view()
+                            view! { "" }.into_any()
                         }}
 
                     </Show>

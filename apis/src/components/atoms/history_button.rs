@@ -1,6 +1,6 @@
 use crate::providers::{game_state::GameStateSignal, timer::TimerSignal};
 use hive_lib::GameStatus;
-use leptos::{leptos_dom::helpers::debounce, prelude::*, html};
+use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
 use leptos_icons::*;
 use shared_types::TimeMode;
 use std::time::Duration;
@@ -44,7 +44,7 @@ pub fn HistoryButton(
             post_action.run(())
         }
     });
-    let _definite_node_ref = node_ref.unwrap_or(create_node_ref::<html::Button>());
+    let _definite_node_ref = node_ref.unwrap_or(NodeRef::<html::Button>::new());
 
     view! {
         <button

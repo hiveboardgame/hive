@@ -105,9 +105,9 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             (game_info(), tournament_info())
         {
             let rated = if rated {
-                t!(i18n, game.rated).into_view()
+                t!(i18n, game.rated).into_any()
             } else {
-                t!(i18n, game.casual).into_view()
+                t!(i18n, game.casual).into_any()
             };
             let name = Signal::derive(move || name.clone());
             let name = move || {
@@ -142,9 +142,9 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     </div>
                 </div>
             }
-            .into_view()
+            .into_any()
         } else {
-            view! { "" }.into_view()
+            view! { "" }.into_any()
         }
     }
 }

@@ -9,8 +9,8 @@ pub fn SimpleLink(
 ) -> impl IntoView {
     //let link = Signal::derive(move || link.to_owned());
     //let link = link.into_any();
-   // let text =  text.into_any();
-    let children = StoredValue::new(children);
+    // let text =  text.into_any();
+    let children = StoredValue::new_local(children);
     view! {
         <a href=link rel="external" target="_blank" class="text-blue-500 hover:underline">
             {text}

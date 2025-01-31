@@ -6,7 +6,7 @@ use crate::{
     },
 };
 use chrono::Local;
-use leptos::{attr::Novalidate, prelude::*, html};
+use leptos::{attr::Novalidate, html, prelude::*};
 use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};
 use shared_types::{ChatDestination, ChatMessage, SimpleDestination};
 use uuid::Uuid;
@@ -37,11 +37,11 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let send = move || {
-            let message = chat.typed_message.get();
-            if !message.is_empty() {
-                chat.send(&message, destination());
-                chat.typed_message.set(String::new());
-            };
+        let message = chat.typed_message.get();
+        if !message.is_empty() {
+            chat.send(&message, destination());
+            chat.typed_message.set(String::new());
+        };
     };
     let placeholder = move || match destination() {
         ChatDestination::GamePlayers(_, _, _) => "Chat with opponent",
@@ -49,7 +49,7 @@ pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
         _ => "Chat",
     };
     let my_input = NodeRef::<html::Input>::new();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
     view! {

@@ -14,11 +14,11 @@ pub struct AuthContext {
 
 /// Get the current user and place it in Context
 pub fn provide_auth() {
-    let login = create_server_action::<Login>();
-    let logout = create_server_action::<Logout>();
-    let register = create_server_action::<Register>();
+    let login = ServerAction::<Login>::new();
+    let logout = ServerAction::<Logout>::new();
+    let register = ServerAction::<Register>::new();
 
-    let user = create_local_resource(
+    let user = Resource::new(
         move || {
             (
                 login.version().get(),
@@ -29,7 +29,7 @@ pub fn provide_auth() {
         move |_| get_account(),
     );
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         user.and_then(|user| {
             let websocket_context = expect_context::<WebsocketContext>();
             websocket_context.close();
@@ -39,7 +39,7 @@ pub fn provide_auth() {
         });
     });
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let websocket_context = expect_context::<WebsocketContext>();
         logout.version().get();
         websocket_context.close();

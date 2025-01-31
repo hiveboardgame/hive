@@ -23,7 +23,7 @@ pub fn Alert() -> impl IntoView {
         None => ("", ""),
     };
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if (alerts.last_alert)().is_some() {
             resume();
         } else {
