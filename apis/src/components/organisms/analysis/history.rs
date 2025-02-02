@@ -18,7 +18,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     //let current_node = create_read_slice(analysis, |a| {
     //    a.as_ref().and_then(|a| a.current_node.clone())
     //});
-    //let current_path = create_memo(move |_| {
+    //let current_path = Memo::new(move |_| {
     //    let mut current_path = vec![];
     //    if let Some(current_node) = current_node.get() {
     //        let current_id = current_node.get_node_id();
@@ -106,7 +106,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     //            (else a toggle would not be needed)
     //            and this must not be the "main variation" (first child)
     //            */
-    //            //let static_cont = store_value(content);
+    //            //let static_cont = StoredValue::new(content);
     //            view! {
     //                <CollapsibleMove current_path node>
     //                    {content}

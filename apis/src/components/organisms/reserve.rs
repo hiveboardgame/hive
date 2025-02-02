@@ -55,7 +55,7 @@ pub enum Alignment {
 
 #[component]
 pub fn Reserve(
-    #[prop(into)] color: MaybeSignal<Color>,
+    #[prop(into)] color: Signal<Color>,
     alignment: Alignment,
     analysis: bool,
     #[prop(optional)] extend_tw_classes: &'static str,

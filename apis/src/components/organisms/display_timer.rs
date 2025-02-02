@@ -20,13 +20,13 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
-    let user = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user),
+    let user = move || match auth_context.user.get() {
+        Some(Ok(user)) => Some(user),
         _ => None,
     };
     let black_id = create_read_slice(game_state.signal, |gs| gs.black_id);
     let player_is_black =
-        create_memo(move |_| user().is_some_and(|user| Some(user.id) == black_id()));
+        Memo::new(move |_| user().is_some_and(|user| Some(user.id) == black_id()));
     let side = Signal::derive(move || match (player_is_black(), placement) {
         (true, Placement::Top) => Color::White,
         (true, Placement::Bottom) => Color::Black,
@@ -52,7 +52,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
         true => ("flex grow justify-end items-center", "w-14 h-14 grow-0 duration-300",""),
     };
     let timer = expect_context::<TimerSignal>().signal;
-    let active_side = create_memo(move |_| {
+    let active_side = Memo::new(move |_| {
         let timer = timer();
         match timer.finished {
             true => "bg-stone-200 dark:bg-reserve-twilight",

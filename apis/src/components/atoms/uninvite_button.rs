@@ -23,7 +23,7 @@ pub fn UninviteButton(
         }
     };
 
-    let tournament_id = store_value(tournament_id);
+    let tournament_id = StoredValue::new(tournament_id);
 
     let uninvite = move |_| {
         let api = ApiRequests::new();

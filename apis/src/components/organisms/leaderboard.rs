@@ -8,17 +8,17 @@ use shared_types::GameSpeed;
 
 #[component]
 pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
-    let speed = Signal::derive(move || speed);
-    let top_users = Resource::once(move || get_top_users(speed(), 10));
+    let speed = Signal::derive(move || speed.clone());
+    let top_users = OnceResource::new(get_top_users(speed(), 10));
     view! {
         <Transition>
             {move || {
-                top_users()
+                top_users.get()
                     .map(|data| match data {
                         Err(e) => {
                             log!("Error is: {:?}", e);
                             view! { <pre class="m-2 h-6">"Couldn't fetch top users"</pre> }
-                                .into_view()
+                                .into_any()
                         }
                         Ok(users) => {
                             let users = StoredValue::new(users);
@@ -45,14 +45,14 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                         >
                                             <UserRow
                                                 actions=vec![UserAction::Challenge]
-                                                user=store_value(user)
-                                                game_speed=store_value(speed())
+                                                user=StoredValue::new(user)
+                                                game_speed=StoredValue::new(speed())
                                             />
                                         </For>
                                     </div>
                                 </div>
                             }
-                                .into_view()
+                                .into_any()
                         }
                     })
             }}

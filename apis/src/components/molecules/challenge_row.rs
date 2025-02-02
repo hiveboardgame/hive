@@ -233,7 +233,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                 <button
                                     on:click=move |_| {
                                         match auth_context.user.get() {
-                                            Some(Ok(Some(_))) => {
+                                            Some(Ok(_)) => {
                                                 ApiRequests::new()
                                                     .challenge_cancel(challenge().challenge_id);
                                             }

@@ -153,7 +153,7 @@ pub fn ControlButtons() -> impl IntoView {
         } else {
             let game_state = expect_context::<GameStateSignal>();
             let auth_context = expect_context::<AuthContext>();
-            if let Some(Ok(Some(user))) = (auth_context.user).get() {
+            if let Some(Ok(user)) = (auth_context.user).get() {
                 if let Some(game) = game_state.signal.get_untracked().game_response {
                     // TODO: color and opponent
                     let (color_choice, opponent) = if user.id == game.black_player.uid {
@@ -194,7 +194,7 @@ pub fn ControlButtons() -> impl IntoView {
                                 <Show when=not_tournament>
                                     <div class="relative">
                                         <ConfirmButton
-                                            game_control=store_value(GameControl::Abort(color()))
+                                            game_control=StoredValue::new(GameControl::Abort(color()))
                                             user_id=user_id()
                                             hidden=memo_for_hidden_class(move || {
                                                 (game_state.signal)().state.turn > 1
@@ -202,7 +202,7 @@ pub fn ControlButtons() -> impl IntoView {
                                         />
                                         <Show when=takeback_allowed>
                                             <ConfirmButton
-                                                game_control=store_value(
+                                                game_control=StoredValue::new(
                                                     GameControl::TakebackRequest(color()),
                                                 )
 
@@ -213,7 +213,7 @@ pub fn ControlButtons() -> impl IntoView {
                                             />
 
                                             <AcceptDenyGc
-                                                game_control=store_value(
+                                                game_control=StoredValue::new(
                                                     GameControl::TakebackAccept(color()),
                                                 )
 
@@ -221,7 +221,7 @@ pub fn ControlButtons() -> impl IntoView {
                                                 hidden=memo_for_hidden_class(move || !pending_takeback())
                                             />
                                             <AcceptDenyGc
-                                                game_control=store_value(
+                                                game_control=StoredValue::new(
                                                     GameControl::TakebackReject(color()),
                                                 )
 
@@ -233,24 +233,24 @@ pub fn ControlButtons() -> impl IntoView {
                                 </Show>
                                 <div class="relative">
                                     <ConfirmButton
-                                        game_control=store_value(GameControl::DrawOffer(color()))
+                                        game_control=StoredValue::new(GameControl::DrawOffer(color()))
                                         user_id=user_id()
                                         hidden=memo_for_hidden_class(pending_draw)
                                     />
 
                                     <AcceptDenyGc
-                                        game_control=store_value(GameControl::DrawAccept(color()))
+                                        game_control=StoredValue::new(GameControl::DrawAccept(color()))
                                         user_id=user_id()
                                         hidden=memo_for_hidden_class(move || !pending_draw())
                                     />
                                     <AcceptDenyGc
-                                        game_control=store_value(GameControl::DrawReject(color()))
+                                        game_control=StoredValue::new(GameControl::DrawReject(color()))
                                         user_id=user_id()
                                         hidden=memo_for_hidden_class(move || !pending_draw())
                                     />
                                 </div>
                                 <ConfirmButton
-                                    game_control=store_value(GameControl::Resign(color()))
+                                    game_control=StoredValue::new(GameControl::Resign(color()))
                                     user_id=user_id()
                                 />
                             </div>

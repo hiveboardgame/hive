@@ -18,7 +18,7 @@ use web_sys::PointerEvent;
 #[component]
 pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
     let target_stack = expect_context::<TargetStack>().0;
-    let interval = store_value(Arc::new(use_interval_with_options(
+    let interval = StoredValue::new(Arc::new(use_interval_with_options(
         500,
         UseIntervalOptions::default().immediate(false),
     )));

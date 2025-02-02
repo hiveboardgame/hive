@@ -7,7 +7,7 @@ use leptos::prelude::*;
 #[component]
 pub fn LastMove(
     position: Position,
-    #[prop(into)] level: MaybeSignal<usize>,
+    #[prop(into)] level: Signal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
     direction: Direction,
 ) -> impl IntoView {
