@@ -17,7 +17,7 @@ pub fn TileRotationToggle() -> impl IntoView {
 #[component]
 pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
     let i18n = use_i18n();
-    let tile_rotation = store_value(tile_rotation);
+    let tile_rotation = StoredValue::new(tile_rotation);
     let config = expect_context::<Config>().0;
     let (_, set_cookie) = Config::get_cookie();
     let is_active = move || {

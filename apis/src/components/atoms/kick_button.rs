@@ -7,17 +7,15 @@ use leptos::prelude::*;
 use leptos_icons::*;
 
 #[component]
-pub fn KickButton(
-    user: UserResponse,
-    tournament: TournamentResponse,
-) -> impl IntoView {
+pub fn KickButton(user: UserResponse, tournament: TournamentResponse) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let tournament = store_value(tournament);
+    let tournament = StoredValue::new(tournament);
 
     let is_organizer = move || {
-        if let Some(Ok(current_user)) = auth_context.user.get() {
+        if let Some(Ok(Some(current_user))) = auth_context.user.get() {
             current_user.id != user.uid
-                && tournament.get_value()
+                && tournament
+                    .get_value()
                     .organizers
                     .iter()
                     .any(|o| o.uid == current_user.id)

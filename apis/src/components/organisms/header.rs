@@ -21,8 +21,8 @@ pub struct Redirect(pub RwSignal<String>);
 #[component]
 pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let username = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user.username),
+    let username = move || match auth_context.user.get() {
+        Some(Ok(user)) => Some(user.username),
         _ => None,
     };
     let i18n = use_i18n();
@@ -59,9 +59,9 @@ pub fn Header() -> impl IntoView {
             <Transition fallback=|| view! { <GuestActions /> }>
                 <Show when=move || username().is_some() fallback=|| view! { <GuestActions /> }>
                     <div class="flex items-center">
-                        <NextGameButton time_mode=store_value(TimeMode::RealTime) />
-                        <NextGameButton time_mode=store_value(TimeMode::Correspondence) />
-                        <NextGameButton time_mode=store_value(TimeMode::Untimed) />
+                        <NextGameButton time_mode=StoredValue::new(TimeMode::RealTime) />
+                        <NextGameButton time_mode=StoredValue::new(TimeMode::Correspondence) />
+                        <NextGameButton time_mode=StoredValue::new(TimeMode::Untimed) />
                     </div>
                     <div class="flex items-center mr-1">
                         <ChatAndControls />

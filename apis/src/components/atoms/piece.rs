@@ -10,9 +10,9 @@ use web_sys::MouseEvent;
 
 #[component]
 pub fn PieceWithoutOnClick(
-    #[prop(into)] piece: MaybeSignal<Piece>,
-    #[prop(into)] position: MaybeSignal<Position>,
-    #[prop(into)] level: MaybeSignal<usize>,
+    #[prop(into)] piece: Signal<Piece>,
+    #[prop(into)] position: Signal<Position>,
+    #[prop(into)] level: Signal<usize>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let piece = piece.get_untracked();
@@ -130,9 +130,9 @@ pub fn PieceWithoutOnClick(
 
 #[component]
 pub fn PieceWithOnClick(
-    #[prop(into)] piece: MaybeSignal<Piece>,
-    #[prop(into)] position: MaybeSignal<Position>,
-    #[prop(into)] level: MaybeSignal<usize>,
+    #[prop(into)] piece: Signal<Piece>,
+    #[prop(into)] position: Signal<Position>,
+    #[prop(into)] level: Signal<usize>,
     #[prop(optional, into)] piece_type: PieceType,
 ) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
@@ -186,9 +186,9 @@ pub fn PieceWithOnClick(
 #[component]
 pub fn Piece(
     // WARN piece and position are untracked and might break reactivity if passed in as signals in the future
-    #[prop(into)] piece: MaybeSignal<Piece>,
-    #[prop(into)] position: MaybeSignal<Position>,
-    #[prop(into)] level: MaybeSignal<usize>,
+    #[prop(into)] piece: Signal<Piece>,
+    #[prop(into)] position: Signal<Position>,
+    #[prop(into)] level: Signal<usize>,
     #[prop(optional, into)] piece_type: PieceType,
     #[prop(optional, default = false)] simple: bool,
     // TODO: hand in tile_design and don't get it all the time from config

@@ -20,7 +20,7 @@ pub fn TakebackConf() -> impl IntoView {
 fn Button(takeback: Takeback) -> impl IntoView {
     let api = ApiRequests::new();
     let i18n = use_i18n();
-    let takeback = store_value(takeback);
+    let takeback = StoredValue::new(takeback);
     let auth_context = expect_context::<AuthContext>();
     let user = move || match auth_context.user.get() {
         Some(Ok(user)) => Some(user),

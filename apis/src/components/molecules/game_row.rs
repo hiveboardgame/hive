@@ -128,7 +128,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
             .into_any(),
     };
     let conclusion = move || game().conclusion.pretty_string();
-    let ratings = store_value(RatingChangeInfo::from_game_response(&game()));
+    let ratings = StoredValue::new(RatingChangeInfo::from_game_response(&game()));
     let time_info = TimeInfo {
         mode: game().time_mode,
         base: game().time_base,
@@ -138,7 +138,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     view! {
         <article class="flex relative px-2 py-4 mx-2 w-full h-40 duration-300 sm:h-56 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="mx-2">
-                <ThumbnailPieces game=store_value(game()) />
+                <ThumbnailPieces game=StoredValue::new(game()) />
             </div>
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">
                 <div class="flex flex-col justify-between">
@@ -198,7 +198,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     </Show>
                 </div>
                 <div class="flex gap-1 justify-between items-center w-full">
-                    {history_string} <DownloadPgn game=store_value(game()) />
+                    {history_string} <DownloadPgn game=StoredValue::new(game()) />
                 </div>
             </div>
             <a

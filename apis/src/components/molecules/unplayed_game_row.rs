@@ -12,8 +12,8 @@ pub const BUTTON_STYLE: &str = "flex justify-center items-center min-w-fit px-4 
 #[component]
 pub fn UnplayedGameRow(
     game: GameResponse,
-    user_is_organizer: MaybeSignal<bool>,
-    tournament_finished: MaybeSignal<bool>,
+    user_is_organizer: Signal<bool>,
+    tournament_finished: Signal<bool>,
 ) -> impl IntoView {
     let schedules_signal = expect_context::<SchedulesContext>();
     let game = Signal::derive(move || game.clone());

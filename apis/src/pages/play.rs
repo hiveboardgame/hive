@@ -65,7 +65,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             }
         })
     });
-    let player_color = create_memo(move |_| {
+    let player_color = Memo::new(move |_| {
         user().map_or(Color::White, |user| {
             let black_id = white_and_black().1;
             match Some(user.id) == black_id {

@@ -63,7 +63,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                 >
                     <div on:click=onclick_close>
                         <ChallengeRow
-                            challenge=store_value(
+                            challenge=StoredValue::new(
                                 challenges
                                     .signal
                                     .get_untracked()
@@ -91,7 +91,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                     let:tournament_id
                 >
                     <div on:click=onclick_close>
-                        <TournamentStatusNotification tournament=store_value(
+                        <TournamentStatusNotification tournament=StoredValue::new(
                             tournaments
                                 .full
                                 .get_untracked()
@@ -109,7 +109,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                     let:tournament_id
                 >
                     <div on:click=onclick_close>
-                        <TournamentStatusNotification tournament=store_value(
+                        <TournamentStatusNotification tournament=StoredValue::new(
                             tournaments
                                 .full
                                 .get_untracked()

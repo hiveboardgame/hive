@@ -43,7 +43,7 @@ pub fn Challenges() -> impl IntoView {
     let online_users = expect_context::<OnlineUsersSignal>().signal;
     let auth_context = expect_context::<AuthContext>();
     let user = move || {
-        if let Some(Ok(Some(user))) = (auth_context.user)() {
+        if let Some(Ok(user)) = auth_context.user.get() {
             Some(user)
         } else {
             None
@@ -128,15 +128,15 @@ pub fn Challenges() -> impl IntoView {
             </thead>
             <tbody>
                 <For each=direct key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false />
+                    <ChallengeRow challenge=StoredValue::new(challenge.to_owned()) single=false />
                 </For>
                 <tr class="h-2"></tr>
                 <For each=own key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false />
+                    <ChallengeRow challenge=StoredValue::new(challenge.to_owned()) single=false />
                 </For>
                 <tr class="h-2"></tr>
                 <For each=public key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=store_value(challenge.to_owned()) single=false />
+                    <ChallengeRow challenge=StoredValue::new(challenge.to_owned()) single=false />
                 </For>
             </tbody>
         </table>
