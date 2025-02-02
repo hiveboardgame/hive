@@ -11,7 +11,7 @@ use uuid::Uuid;
 pub fn AcceptDenyGc(
     game_control: StoredValue<GameControl>,
     user_id: Uuid,
-    #[prop(optional, into)] hidden: MaybeSignal<String>,
+    #[prop(optional, into)] hidden: Signal<String>,
 ) -> impl IntoView {
     let (icon, title) = get_icon_and_title(game_control.get_value());
 
@@ -48,20 +48,22 @@ pub fn AcceptDenyGc(
 pub fn ConfirmButton(
     game_control: StoredValue<GameControl>,
     user_id: Uuid,
-    #[prop(optional, into)] hidden: MaybeSignal<String>,
+    #[prop(optional, into)] hidden: Signal<String>,
 ) -> impl IntoView {
-    let game_state = store_value(expect_context::<GameStateSignal>());
+    let game_state = StoredValue::new(expect_context::<GameStateSignal>());
     let (icon, title) = get_icon_and_title(game_control.get_value());
     let color = game_control.get_value().color();
     let is_clicked = RwSignal::new(false);
-    let interval = store_value(Arc::new(use_interval_with_options(
+    let interval = StoredValue::new(Arc::new(use_interval_with_options(
         5000,
         UseIntervalOptions::default().immediate(false),
     )));
 
     let onclick_confirm = move |_| {
         if is_clicked() {
-            game_state.get_value().send_game_control(game_control.get_value(), user_id);
+            game_state
+                .get_value()
+                .send_game_control(game_control.get_value(), user_id);
             is_clicked.update(|v| *v = false);
             (interval.get_value().reset)();
             (interval.get_value().pause)();
@@ -79,8 +81,9 @@ pub fn ConfirmButton(
         }
     });
 
-    let pending_slice =
-        create_read_slice(game_state.get_value().signal, |gs| gs.game_control_pending.clone());
+    let pending_slice = create_read_slice(game_state.get_value().signal, |gs| {
+        gs.game_control_pending.clone()
+    });
 
     let cancel = move |_| is_clicked.update(|v| *v = false);
     let pending = move |game_control: GameControl| match pending_slice() {

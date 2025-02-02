@@ -19,7 +19,7 @@ pub fn InviteButton(user: UserResponse, tournament_id: TournamentId) -> impl Int
         }
     };
 
-    let tournament_id = store_value(tournament_id);
+    let tournament_id = StoredValue::new(tournament_id);
 
     let invite = move |_| {
         let api = ApiRequests::new();

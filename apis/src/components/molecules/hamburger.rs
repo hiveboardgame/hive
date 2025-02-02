@@ -6,7 +6,7 @@ use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
 pub fn Hamburger<T: IntoView>(
     hamburger_show: RwSignal<bool>,
     children: ChildrenFn,
-    #[prop(into)] button_style: MaybeSignal<String>,
+    #[prop(into)] button_style: Signal<String>,
     #[prop(optional)] extend_tw_classes: &'static str,
     dropdown_style: &'static str,
     id: &'static str,

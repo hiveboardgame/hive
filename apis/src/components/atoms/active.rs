@@ -8,7 +8,7 @@ use leptos::prelude::*;
 #[component]
 pub fn Active(
     position: Position,
-    #[prop(into)] level: MaybeSignal<usize>,
+    #[prop(into)] level: Signal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     let config = expect_context::<Config>().0;

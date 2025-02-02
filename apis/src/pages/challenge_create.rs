@@ -216,15 +216,15 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
             </Show>
             <div class="flex justify-center items-baseline">
                 <CreateChallengeButton
-                    color_choice=store_value(ColorChoice::White)
+                    color_choice=StoredValue::new(ColorChoice::White)
                     create_challenge
                 />
                 <CreateChallengeButton
-                    color_choice=store_value(ColorChoice::Random)
+                    color_choice=StoredValue::new(ColorChoice::Random)
                     create_challenge
                 />
                 <CreateChallengeButton
-                    color_choice=store_value(ColorChoice::Black)
+                    color_choice=StoredValue::new(ColorChoice::Black)
                     create_challenge
                 />
             </div>

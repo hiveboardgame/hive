@@ -203,21 +203,21 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     Effect::new(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
             let api = ApiRequests::new();
-                navi.profile_signal.update(|v| {
-                    *v = ProfileNavigationControllerState {
-                        username: Some(username()),
-                    }
-                });
-                ctx.controls.update(|c| {
-                    c.speeds = vec![
-                        GameSpeed::Bullet,
-                        GameSpeed::Blitz,
-                        GameSpeed::Rapid,
-                        GameSpeed::Classic,
-                        GameSpeed::Correspondence,
-                        GameSpeed::Untimed,
-                    ];
-                });
+            navi.profile_signal.update(|v| {
+                *v = ProfileNavigationControllerState {
+                    username: Some(username()),
+                }
+            });
+            ctx.controls.update(|c| {
+                c.speeds = vec![
+                    GameSpeed::Bullet,
+                    GameSpeed::Blitz,
+                    GameSpeed::Rapid,
+                    GameSpeed::Classic,
+                    GameSpeed::Correspondence,
+                    GameSpeed::Untimed,
+                ];
+            });
             api.user_profile(username.get_untracked());
         }
     });
@@ -227,7 +227,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                 <div class="flex justify-center w-full text-lg sm:text-xl">
                     <UserRow
                         actions=vec![UserAction::Challenge]
-                        user=store_value(ctx.user.get().unwrap())
+                        user=StoredValue::new(ctx.user.get().unwrap())
                         on_profile=true
                     />
                 </div>
@@ -294,7 +294,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
             class="overflow-x-hidden items-center sm:grid sm:grid-cols-2 sm:gap-1 h-[53vh] sm:h-[66vh]"
         >
             <For each=ctx.games key=move |game| (game.uuid, tab_view) let:game>
-                <GameRow game=store_value(game) />
+                <GameRow game=StoredValue::new(game) />
             </For>
         </div>
     }
