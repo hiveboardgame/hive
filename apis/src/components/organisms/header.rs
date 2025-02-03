@@ -22,7 +22,7 @@ pub struct Redirect(pub RwSignal<String>);
 pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let username = move || match auth_context.user.get() {
-        Some(Ok(user)) => Some(user.username),
+        Some(Ok(Some(user))) => Some(user.username),
         _ => None,
     };
     let i18n = use_i18n();

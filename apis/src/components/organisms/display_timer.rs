@@ -21,7 +21,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
     let user = move || match auth_context.user.get() {
-        Some(Ok(user)) => Some(user),
+        Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
     let black_id = create_read_slice(game_state.signal, |gs| gs.black_id);
