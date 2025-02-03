@@ -61,22 +61,22 @@ impl Chat {
 
     pub fn seen_messages(&self) {
         let navi = expect_context::<NavigationControllerSignal>();
-            if let Some(game_id) = navi.game_signal.get_untracked().game_id {
-                self.games_public_new_messages.update(|m| {
-                    m.entry(game_id.clone())
-                        .and_modify(|b| *b = false)
-                        .or_insert(false);
-                });
-                self.games_private_new_messages.update(|m| {
-                    m.entry(game_id).and_modify(|b| *b = false).or_insert(false);
-                });
-            }
+        if let Some(game_id) = navi.game_signal.get_untracked().game_id {
+            self.games_public_new_messages.update(|m| {
+                m.entry(game_id.clone())
+                    .and_modify(|b| *b = false)
+                    .or_insert(false);
+            });
+            self.games_private_new_messages.update(|m| {
+                m.entry(game_id).and_modify(|b| *b = false).or_insert(false);
+            });
+        }
     }
 
     pub fn send(&self, message: &str, destination: ChatDestination) {
         let auth_context = expect_context::<AuthContext>();
         let gamestate = expect_context::<GameStateSignal>();
-        if let Some(Ok(Some(account))) = untrack(auth_context.user) {
+        if let Some(Ok(Some(account))) = auth_context.user.get_untracked() {
             let id = account.user.uid;
             let name = account.user.username;
             let turn = match destination {
@@ -103,16 +103,17 @@ impl Chat {
                             }
                         }
                     }
-                        self.tournament_lobby_messages.update(|tournament| {
-                            tournament.entry(id.clone()).or_default().extend(
-                                containers.iter().map(|container| container.message.clone()),
-                            );
-                        });
-                        self.tournament_lobby_new_messages.update(|m| {
-                            m.entry(id.clone())
-                                .and_modify(|value| *value = true)
-                                .or_insert(true);
-                        });
+                    self.tournament_lobby_messages.update(|tournament| {
+                        tournament
+                            .entry(id.clone())
+                            .or_default()
+                            .extend(containers.iter().map(|container| container.message.clone()));
+                    });
+                    self.tournament_lobby_new_messages.update(|m| {
+                        m.entry(id.clone())
+                            .and_modify(|value| *value = true)
+                            .or_insert(true);
+                    });
                 }
 
                 ChatDestination::User((id, _name)) => {
@@ -124,16 +125,17 @@ impl Chat {
                         }
                     }
 
-                        self.users_messages.update(|users| {
-                            users.entry(*id).or_default().extend(
-                                containers.iter().map(|container| container.message.clone()),
-                            );
-                        });
-                        self.users_new_messages.update(|m| {
-                            m.entry(*id)
-                                .and_modify(|value| *value = true)
-                                .or_insert(true);
-                        });
+                    self.users_messages.update(|users| {
+                        users
+                            .entry(*id)
+                            .or_default()
+                            .extend(containers.iter().map(|container| container.message.clone()));
+                    });
+                    self.users_new_messages.update(|m| {
+                        m.entry(*id)
+                            .and_modify(|value| *value = true)
+                            .or_insert(true);
+                    });
                 }
                 ChatDestination::GamePlayers(id, ..) => {
                     if let Some(messages) = self.games_private_messages.get_untracked().get(id) {
