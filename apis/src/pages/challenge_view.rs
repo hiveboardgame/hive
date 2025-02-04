@@ -58,13 +58,13 @@ pub fn ChallengeView() -> impl IntoView {
         <div class="flex flex-col items-center pt-20 mx-auto">
             <Transition>
                 {move || {
-                    challenge()
+                    challenge.get()
                         .map(|data| match data {
                             Err(_) => {
-                                view! { <pre>"Challenge doesn't seem to exist"</pre> }.into_view()
+                                view! { <pre>"Challenge doesn't seem to exist"</pre> }.into_any()
                             }
                             Ok(challenge) => {
-                                let user = move || match (auth_context.user)() {
+                                let user = move || match auth_context.user.get() {
                                     Some(Ok(Some(user))) => Some(user),
                                     _ => None,
                                 };
@@ -97,7 +97,7 @@ pub fn ChallengeView() -> impl IntoView {
                                     </Show>
                                     <ChallengeRow challenge=StoredValue::new(challenge) single=true />
                                 }
-                                    .into_view()
+                                    .into_any()
                             }
                         })
                 }}

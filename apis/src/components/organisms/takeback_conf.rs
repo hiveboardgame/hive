@@ -23,7 +23,7 @@ fn Button(takeback: Takeback) -> impl IntoView {
     let takeback = StoredValue::new(takeback);
     let auth_context = expect_context::<AuthContext>();
     let user = move || match auth_context.user.get() {
-        Some(Ok(user)) => Some(user),
+        Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
     let is_active = move || {
@@ -51,13 +51,13 @@ fn Button(takeback: Takeback) -> impl IntoView {
 
                 {match takeback.get_value() {
                     Takeback::Always => {
-                        t!(i18n, user_config.allow_takeback_buttons.always).into_view()
+                        t!(i18n, user_config.allow_takeback_buttons.always).into_any()
                     }
                     Takeback::CasualOnly => {
-                        t!(i18n, user_config.allow_takeback_buttons.casual_only).into_view()
+                        t!(i18n, user_config.allow_takeback_buttons.casual_only).into_any()
                     }
                     Takeback::Never => {
-                        t!(i18n, user_config.allow_takeback_buttons.never).into_view()
+                        t!(i18n, user_config.allow_takeback_buttons.never).into_any()
                     }
                 }}
 
