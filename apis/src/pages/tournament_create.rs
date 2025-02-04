@@ -107,7 +107,7 @@ pub fn TournamentCreate() -> impl IntoView {
 
     let create = move |_| {
         let auth_context = expect_context::<AuthContext>();
-        let account = match (auth_context.user)() {
+        let account = match auth_context.user.get() {
             Some(Ok(Some(account))) => Some(account),
             _ => None,
         };
@@ -269,7 +269,6 @@ pub fn TournamentCreate() -> impl IntoView {
                             <textarea
                                 class="px-3 py-2 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
                                 name="Tournament description"
-                                type="text"
                                 prop:value=tournament.description
                                 placeholder="At least a 50 character description.\nMarkdown supported, for links do <https://example.com> or check below."
                                 on:input=update_from_input(tournament.description)

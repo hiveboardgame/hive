@@ -68,9 +68,9 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
             >
 
                 {match tile_design() {
-                    TileDesign::Official => t!(i18n, user_config.style_buttons.official).into_view(),
-                    TileDesign::Flat => t!(i18n, user_config.style_buttons.flat).into_view(),
-                    TileDesign::ThreeD => t!(i18n, user_config.style_buttons.three_d).into_view(),
+                    TileDesign::Official => t!(i18n, user_config.style_buttons.official).into_any(),
+                    TileDesign::Flat => t!(i18n, user_config.style_buttons.flat).into_any(),
+                    TileDesign::ThreeD => t!(i18n, user_config.style_buttons.three_d).into_any(),
                 }}
 
             </button>

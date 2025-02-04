@@ -50,7 +50,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             .unwrap_or(MoveConfirm::Single)
     });
     provide_context(CurrentConfirm(current_confirm));
-    let user = move || match (auth_context.user)() {
+    let user = move || match auth_context.user.get() {
         Some(Ok(Some(user))) => Some(user),
         _ => None,
     };

@@ -49,9 +49,9 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
             >
 
                 {match tile_dots() {
-                    TileDots::No => t!(i18n, user_config.dots_buttons.no).into_view(),
-                    TileDots::Angled => t!(i18n, user_config.dots_buttons.angled).into_view(),
-                    TileDots::Vertical => t!(i18n, user_config.dots_buttons.vertical).into_view(),
+                    TileDots::No => t!(i18n, user_config.dots_buttons.no).into_any(),
+                    TileDots::Angled => t!(i18n, user_config.dots_buttons.angled).into_any(),
+                    TileDots::Vertical => t!(i18n, user_config.dots_buttons.vertical).into_any(),
                 }}
 
             </button>
