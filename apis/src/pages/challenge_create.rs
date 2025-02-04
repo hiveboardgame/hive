@@ -43,7 +43,7 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
     let create_challenge = Callback::new(move |color_choice| {
         let api = ApiRequests::new();
         let auth_context = expect_context::<AuthContext>();
-        let account = move || match (auth_context.user)() {
+        let account = move || match auth_context.user.get() {
             Some(Ok(Some(account))) => Some(account),
             _ => None,
         };

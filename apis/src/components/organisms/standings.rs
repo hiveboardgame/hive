@@ -44,7 +44,7 @@ pub fn Standings(tournament: Signal<TournamentResponse>) -> impl IntoView {
                         );
                         view! {
                             <ScoreRow
-                                user=user
+                                user=user.get_value()
                                 standing=position
                                 finished
                                 tiebreakers=tournament().tiebreakers

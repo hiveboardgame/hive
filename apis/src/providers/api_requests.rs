@@ -111,7 +111,7 @@ impl ApiRequests {
         let challenge_action = match challenge_action {
             ChallengeAction::Create(details) => {
                 let auth_context = expect_context::<AuthContext>();
-                let account = match (auth_context.user)() {
+                let account = match auth_context.user.get() {
                     Some(Ok(Some(account))) => Some(account),
                     _ => None,
                 };

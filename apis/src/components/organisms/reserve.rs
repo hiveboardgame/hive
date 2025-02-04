@@ -192,7 +192,7 @@ pub fn ReserveContent(player_color: Memo<Color>) -> impl IntoView {
     let bottom_color = Signal::derive(player_color);
     let auth_context = expect_context::<AuthContext>();
     let user = move || match auth_context.user.get() {
-        Some(Ok(user)) => Some(user),
+        Some(Ok(Some(user))) => Some(user),
         _ => None,
     };
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
