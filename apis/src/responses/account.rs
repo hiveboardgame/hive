@@ -8,6 +8,7 @@ pub struct AccountResponse {
     pub email: String,
     pub id: Uuid,
     pub user: UserResponse,
+    pub discord_handle: String,
 }
 
 use cfg_if::cfg_if;
@@ -17,6 +18,7 @@ use db_lib::{
     DbConn,
 };
 use leptos::*;
+
 impl AccountResponse {
     pub async fn from_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self, ServerFnError> {
         let user = User::find_by_uuid(id, conn).await?;
@@ -26,6 +28,7 @@ impl AccountResponse {
             email: user.email,
             id: user.id,
             user: response,
+            discord_handle: user.discord_handle.unwrap_or(String::new()),
         })
     }
 }

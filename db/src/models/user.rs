@@ -6,12 +6,10 @@ use crate::{
         games::{self, current_player_id, finished, game_status, tournament_id},
         ratings::{self, rating},
         users::{
-            self,
-            dsl::{
+            self, discord_handle, dsl::{
                 email as email_field, normalized_username, password as password_field, updated_at,
                 users as users_table,
-            },
-            takeback,
+            }, takeback
         },
     },
     DbConn,
@@ -125,6 +123,7 @@ pub struct User {
     pub patreon: bool,
     pub admin: bool,
     pub takeback: String,
+    pub discord_handle: Option<String>,
 }
 
 impl User {
@@ -175,6 +174,14 @@ impl User {
         })
     }
 
+    pub async fn set_discord_handle(&self, discord: String, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+        diesel::update(self)
+            .set(discord_handle.eq(discord.to_string()))
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
     pub async fn set_takeback(&self, tb: Takeback, conn: &mut DbConn<'_>) -> Result<(), DbError> {
         let tb = tb.to_string();
         diesel::update(self)
@@ -183,6 +190,7 @@ impl User {
             .await?;
         Ok(())
     }
+
     pub async fn find_by_uuid(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         Ok(users_table.find(uuid).first(conn).await?)
     }
