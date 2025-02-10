@@ -19,13 +19,9 @@ pub fn HistoryMove(
     let game_state = expect_context::<GameStateSignal>();
     let div_ref = NodeRef::<html::Div>::new();
     div_ref.on_load(move |_| {
-        let _ = div_ref
-            .get_untracked()
-            .expect("div to be loaded")
-            .on_mount(move |_| {
-                let parent_div = parent_div.get_untracked().expect("div to be loaded");
-                parent_div.set_scroll_top(parent_div.scroll_height())
-            });
+        if let Some(parent_div) = parent_div.get_untracked() {
+            parent_div.set_scroll_top(parent_div.scroll_height())
+        }
     });
     let onclick = move |_| {
         game_state.show_history_turn(turn);

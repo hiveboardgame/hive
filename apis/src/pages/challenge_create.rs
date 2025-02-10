@@ -132,7 +132,7 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
         )
     };
 
-    let time_change = Callback::from(move |s: String| {
+    let time_change = Callback::new(move |s: String| {
         if let Ok(new_value) = TimeMode::from_str(&s) {
             time_signals.corr_days.update(|v| *v = 2);
             if new_value == TimeMode::Untimed {
