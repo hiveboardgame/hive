@@ -307,7 +307,7 @@ pub fn ControlButtons() -> impl IntoView {
     }
 }
 
-fn memo_for_hidden_class(condition: impl Fn() -> bool + 'static) -> Memo<String> {
+fn memo_for_hidden_class(condition: impl Fn() -> bool + Send + Sync + 'static) -> Memo<String> {
     Memo::new(move |_| {
         if condition() {
             String::from("hidden")

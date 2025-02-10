@@ -49,7 +49,7 @@ pub fn Tournaments() -> impl IntoView {
                     on:input=move |ev| search.set(event_target_value(&ev))
                     value=search
                 />
-                <div class="flex justify-center space-x-4 mb-4 w-full -mx-2 content-center">
+                <div class="flex justify-center content-center -mx-2 mb-4 space-x-4 w-full">
                     <button
                         class=move || get_button_classes(TournamentFilter::All, filter.get())
                         on:click=move |_| filter.set(TournamentFilter::All)
@@ -114,9 +114,9 @@ pub fn Tournaments() -> impl IntoView {
                         if search().is_empty()
                             || tournament.name.to_lowercase().contains(&search().to_lowercase())
                         {
-                            view! { <TournamentRow tournament=tournament.clone() /> }
+                            view! { <TournamentRow tournament=tournament.clone() /> }.into_any()
                         } else {
-                            "".into_view()
+                            "".into_any()
                         }
                     }
                 />

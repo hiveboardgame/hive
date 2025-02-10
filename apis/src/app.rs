@@ -4,7 +4,7 @@ use crate::{
     pages::{
         account::Account,
         admin::Admin,
-        analysis::Analysis,
+        //analysis::Analysis,
         challenge_view::ChallengeView,
         config::Config,
         donate::Donate,
@@ -39,7 +39,10 @@ use crate::{
 use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
-use leptos_router::{components::{Outlet, ParentRoute, Route, Router, Routes}, path, SsrMode};
+use leptos_router::{
+    components::{Outlet, ParentRoute, Route, Router, Routes},
+    path, SsrMode,
+};
 use leptos_use::SameSite;
 use shared_types::GameProgress;
 
@@ -126,7 +129,7 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/login") view=|| view! { <Login /> } />
                         <Route path=path!("/account") view=|| view! { <Account /> } />
                         <Route path=path!("/challenge/:nanoid") view=|| view! { <ChallengeView /> } />
-                        <Route path=path!("/analysis") view=|| view! { <Analysis /> } />
+                        //<Route path=path!("/analysis") view=|| view! { <Analysis /> } />
                         <Route path=path!("/config") view=|| view! { <Config /> } />
                         <Route path=path!("/tournament/:nanoid") view=|| view! { <Tournament /> } />
                         <Route path=path!("/tournaments/create") view=|| view! { <TournamentCreate /> } />

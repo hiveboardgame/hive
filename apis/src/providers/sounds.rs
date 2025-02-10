@@ -21,7 +21,7 @@ struct ClientData {
 }
 #[derive(Clone)]
 pub struct Sounds {
-    client_data: Resource<(), Result<ClientData, JsValue>>,
+    client_data: LocalResource<Result<ClientData, JsValue>>,
 }
 
 impl Sounds {
@@ -72,6 +72,6 @@ async fn load_client_data() -> Result<ClientData, JsValue> {
 
 pub fn provide_sounds() {
     provide_context(Sounds {
-        client_data: Resource::local(|| (), |_| load_client_data()),
+        client_data: LocalResource::new(|| load_client_data()),
     });
 }

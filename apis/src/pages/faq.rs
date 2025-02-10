@@ -29,7 +29,7 @@ pub fn Faq() -> impl IntoView {
     view! {
         <div class="pt-20">
             <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
-                <Banner title=t!(i18n, faq.title).into_view() />
+                <Banner title=t!(i18n, faq.title).into_any() />
 
                 <div class="space-y-10 md:space-y-0 md:grid md:grid-cols-1 md:gap-x-6 lg:gap-x-8">
                     <div class=div_class>
