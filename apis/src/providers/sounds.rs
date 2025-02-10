@@ -30,7 +30,7 @@ impl Sounds {
         if !config().prefers_sound {
             return;
         };
-        if let Some(Ok(s)) = self.client_data.get() {
+        if let Some(Ok(s)) = self.client_data.get().as_deref() {
             let (buffer, offset, duration) = match kind {
                 SoundType::Turn => (&s.turn, rand::thread_rng().gen_range(0..20) as f64, 1.0),
                 SoundType::NewGame => (&s.new, 0.0, 3.0),

@@ -38,6 +38,7 @@ pub fn TimeSelect(
     let allow_realtime = allowed_values.contains(&TimeMode::RealTime);
     let allow_correspondence = allowed_values.contains(&TimeMode::Correspondence);
     let allow_untimed = allowed_values.contains(&TimeMode::Untimed);
+
     view! {
         <div class="flex flex-col p-2">
             <div class="flex items-center">
@@ -51,7 +52,7 @@ pub fn TimeSelect(
                     time_signals.time_mode.get().to_string(),
                 ))
 
-                on_value_change
+                on_value_change=on_value_change
             >
                 <Show when=move || allow_realtime>
                     <RadioGroupItem value="Real Time" attr:class=radio_style>
