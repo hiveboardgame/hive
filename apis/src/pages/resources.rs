@@ -44,7 +44,7 @@ pub fn Resources() -> impl IntoView {
         view! { <SimpleLink link="https://gripot.se/hive/HivePuzzles_vol1.pdf" children /> }
     };
     let frasco_link = |children| {
-        view! { <SimpleLink link="https://www.youtube.com/@AdAbstraGames" children /> }
+        view! { <SimpleLink link="https://www.youtube.com/@FrascoAdAbstra" children /> }
     };
     let ringersol_link = |children| {
         view! { <SimpleLink link="https://www.youtube.com/playhivelikeachampion" children /> }
