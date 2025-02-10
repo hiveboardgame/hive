@@ -336,7 +336,7 @@ impl GameState {
         let auth_context = expect_context::<AuthContext>();
 
         let user = move || match auth_context.user.get() {
-            Some(Ok(user)) => Some(user),
+            Some(Ok(Some(user))) => Some(user),
             _ => None,
         };
         if matches!(self.state.game_status, GameStatus::Finished(_)) {
