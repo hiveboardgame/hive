@@ -53,14 +53,42 @@ fn Controls(username: Signal<String>) -> impl IntoView {
     let toggle_classes = "flex hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-3 rounded bg-button-dawn dark:bg-button-twilight data-[state=on]:bg-pillbug-teal";
     let radio_classes = "hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded bg-button-dawn dark:bg-button-twilight data-[state=checked]:bg-pillbug-teal";
     let delay = 250.0;
+    // WHY CAN'T COMPILER FIGURE OUT THE TYPES IN THE VIEW MACRO?
+    let controls_string: Signal<String> = signal_debounced(
+        Signal::derive(move || controls().tab_view.to_string()),
+        delay,
+    );
+    let color_string: Signal<String> = signal_debounced(
+        Signal::derive(move || {
+            controls()
+                .color
+                .map_or("Both".to_string(), |c| c.to_string())
+        }),
+        delay,
+    );
+    let results_string: Signal<String> = signal_debounced(
+        Signal::derive(move || {
+            controls()
+                .result
+                .map_or("All".to_string(), |c| c.to_string())
+        }),
+        delay,
+    );
+    let speeds_strings: Signal<Vec<String>> = signal_debounced(
+        Signal::derive(move || {
+            controls()
+                .speeds
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>()
+        }),
+        delay,
+    );
     view! {
         <div class="flex flex-col m-1 text-md sm:text-lg">
             <RadioGroupRoot
                 attr:class="flex gap-1"
-                value=signal_debounced(
-                    Signal::derive(move || { controls().tab_view.to_string() }),
-                    delay,
-                )
+                value=controls_string
             >
 
                 <RadioGroupItem value="Unstarted" attr:class=radio_classes>
@@ -76,12 +104,7 @@ fn Controls(username: Signal<String>) -> impl IntoView {
             <div class="font-bold text-md">{t!(i18n, profile.player_color)}</div>
             <RadioGroupRoot
                 attr:class="flex gap-1"
-                value=signal_debounced(
-                    Signal::derive(move || {
-                        controls().color.map_or("Both".to_string(), |c| c.to_string())
-                    }),
-                    delay,
-                )
+                value=color_string
 
                 on_value_change=Callback::new(move |v: String| {
                     controls
@@ -106,12 +129,7 @@ fn Controls(username: Signal<String>) -> impl IntoView {
                 <div class="font-bold text-md">{t!(i18n, profile.game_result)}</div>
                 <RadioGroupRoot
                     attr:class="flex gap-1"
-                    value=signal_debounced(
-                        Signal::derive(move || {
-                            controls().result.map_or("All".to_string(), |c| c.to_string())
-                        }),
-                        delay,
-                    )
+                    value=results_string
 
                     on_value_change=Callback::new(move |v: String| {
                         controls
@@ -140,12 +158,7 @@ fn Controls(username: Signal<String>) -> impl IntoView {
             <ToggleGroupRoot
                 attr:class="flex gap-1 mb-1"
                 kind=ToggleGroupKind::Multiple {
-                    value: signal_debounced(
-                            Signal::derive(move || {
-                                controls().speeds.iter().map(|s| s.to_string()).collect::<Vec<_>>()
-                            }),
-                            delay,
-                        )
+                    value: speeds_strings
                         .into(),
                     default_value: ToggleGroupMultiple::none().into(),
                     on_value_change: Some(
