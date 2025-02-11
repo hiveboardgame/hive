@@ -1,8 +1,11 @@
-use leptos::{html::{HtmlElement, Img}, prelude::*};
+use leptos::{
+    html::{HtmlElement, Img},
+    prelude::*,
+};
 
 #[component]
 pub fn Banner(
-    title: View<AnyView>,
+    title: AnyView,
     #[prop(optional)] text: MaybeProp<String>,
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] logo: Option<HtmlElement<Img, (), ()>>,

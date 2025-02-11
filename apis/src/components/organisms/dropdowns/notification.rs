@@ -11,6 +11,7 @@ use leptos::prelude::*;
 use leptos::text_prop::TextProp;
 use leptos_icons::*;
 
+//TODO: Put style back into the icon
 #[component]
 pub fn NotificationDropdown() -> impl IntoView {
     let hamburger_show = RwSignal::new(false);
@@ -19,13 +20,13 @@ pub fn NotificationDropdown() -> impl IntoView {
     let challenges = expect_context::<ChallengeStateSignal>();
     let tournaments = expect_context::<TournamentStateContext>();
     let has_notifications = move || !notifications_context().is_empty();
-    let icon_style = TextProp::from(move || {
+    let icon_style = move || {
         if has_notifications() {
             "w-4 h-4 fill-ladybug-red"
         } else {
             "w-4 h-4"
         }
-    });
+    };
     let each_tournament = move || {
         notifications_context()
             .tournament_invitations
@@ -47,7 +48,7 @@ pub fn NotificationDropdown() -> impl IntoView {
             hamburger_show=hamburger_show
             button_style="h-full p-2 transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
             dropdown_style="mr-1 items-center xs:mt-0 mt-1 flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md p-2 right-0"
-            content="Temporary NOTIFICATION"
+            content=view! {<span class=icon_style> <Icon icon=icondata::IoNotifications attr:class="w-full h-full"/> </span> }
             id="Notifications"
         >
             <Show
