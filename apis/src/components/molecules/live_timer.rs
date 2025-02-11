@@ -1,6 +1,5 @@
 use crate::providers::{
-    game_state::GameStateSignal, navigation_controller::NavigationControllerSignal,
-    timer::TimerSignal, ApiRequests, AuthContext, SoundType, Sounds,
+    game_state::GameStateSignal, timer::TimerSignal, ApiRequests, AuthContext, SoundType, Sounds,
 };
 use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;

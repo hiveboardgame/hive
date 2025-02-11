@@ -2,7 +2,6 @@ use crate::{
     components::molecules::modal::Modal, pages::challenge_create::ChallengeCreate,
     providers::AuthContext, responses::UserResponse,
 };
-use diesel_async::RunQueryDsl;
 use leptos::{html::Dialog, prelude::*};
 use leptos_icons::*;
 

@@ -200,7 +200,7 @@ pub fn TournamentCreate() -> impl IntoView {
             navigate("/tournaments", Default::default());
         }
     };
-    let on_value_change: Callback<(String,), ()> = Callback::from(move |string: String| {
+    let on_value_change = Callback::new(move |string: String| {
         if let Ok(new_value) = TimeMode::from_str(&string) {
             time_signals.time_mode.update(|v| *v = new_value);
         };
@@ -325,10 +325,11 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="DoubleRoundRobin"
-                                text=TournamentMode::DoubleRoundRobin
-                                    .pretty_string()
-                                    .into_view()
-                                    .into()
+                                //TODO: add code back in
+                                //text=TournamentMode::DoubleRoundRobin
+                                //    .pretty_string()
+                                //    .into_view()
+                                //    .into()
                             />
 
                         </select>
@@ -343,7 +344,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="Game"
-                                text=ScoringMode::Game.pretty_string().into_view().into()
+                                //text=ScoringMode::Game.pretty_string().into_view().into()
                             />
 
                         </select>
@@ -374,7 +375,7 @@ pub fn TournamentCreate() -> impl IntoView {
                                         })
                                 })
 
-                                failure_callback=Callback::from(move |_| organizer_start.set(true))
+                                failure_callback=Callback::new(move |_| organizer_start.set(true))
                             />
                         </Show>
                     </div>

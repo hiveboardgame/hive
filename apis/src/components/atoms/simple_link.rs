@@ -1,5 +1,4 @@
-use diesel::sql_types::Text;
-use leptos::{html::A, prelude::*, text_prop::TextProp};
+use leptos::prelude::*;
 
 #[component]
 pub fn SimpleLink(

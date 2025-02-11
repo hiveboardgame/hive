@@ -5,13 +5,15 @@ use crate::{
     common::{ActiveState, HexStack},
     components::atoms::hex::Hex,
 };
-use leptos::{ev::{pointerup, touchend, touchstart}, svg};
 use leptos::prelude::*;
+use leptos::{
+    ev::{pointerup, touchend, touchstart},
+    svg,
+};
 use leptos_use::{
     use_event_listener, use_event_listener_with_options, use_interval_with_options, use_window,
     UseEventListenerOptions, UseIntervalOptions,
 };
-use std::rc::Rc;
 use std::sync::Arc;
 use web_sys::PointerEvent;
 
