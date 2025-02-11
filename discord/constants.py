@@ -10,7 +10,7 @@ DISCORD_BOT_DATABASE_URL = os.environ["DISCORD_BOT_DATABASE_URL"]
 # Will attempt to look for the user in each of these channels,
 # and pings them in the first one it finds which they have access to
 PING_CHANNELS_IDS = [
-    1326224200431697983
+    1338963129664671818
 ]
 
 OAUTH_SECRET_EXPIRY = 20 * 60 # 20 minutes
