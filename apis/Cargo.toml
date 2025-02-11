@@ -86,16 +86,7 @@ ssr = [
 [package.metadata.leptos-i18n]
 default = "en"
 locales = [
-  "ca", 
-  "de",
   "en", 
-  "es", 
-  "fr",
-  "hu",
-  "it", 
-  "pt",
-  "ro", 
-  "ru" 
 ]
 namespaces = [
   "header", 

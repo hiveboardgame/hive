@@ -19,7 +19,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 class="text-blue-500 transition-transform duration-300 transform hover:underline"
                 href="/register"
             >
-                {children}
+                {children()}
             </a>
         }
     };

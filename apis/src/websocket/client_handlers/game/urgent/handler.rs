@@ -10,7 +10,7 @@ pub fn handle_urgent(games: Vec<GameResponse>) {
     //        .iter()
     //        .map(|g| g.nanoid.clone())
     //        .collect::<Vec<String>>(),
-    //    untrack(auth_context.user)
+    //    auth_context.user.get_untracked()
     //);
     games_signal.own_games_set(games);
 }
