@@ -48,7 +48,7 @@ pub fn Config() -> impl IntoView {
                         <SelectOption
                             value=game_speed
                             is="Bullet"
-                            text=t!(i18n, game.speeds.bullet).into_any().into()
+                            text=t!(i18n, game.speeds.bullet)
                         />
                         <SelectOption
                             value=game_speed
