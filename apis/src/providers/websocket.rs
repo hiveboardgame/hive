@@ -7,7 +7,7 @@ use leptos::prelude::*;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::*;
 use regex::Regex;
-use std::rc::Rc;
+use std::sync::Arc;
 lazy_static! {
     static ref NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
@@ -16,19 +16,19 @@ lazy_static! {
 #[derive(Clone)]
 pub struct WebsocketContext {
     pub message: Signal<Option<WebsocketMessage>>,
-    send: Rc<dyn Fn(&WebsocketMessage)>,
+    send: Arc<dyn Fn(&WebsocketMessage) + Send + Sync>,
     pub ready_state: Signal<ConnectionReadyState>,
-    open: Rc<dyn Fn()>,
-    close: Rc<dyn Fn()>,
+    open: Arc<dyn Fn() + Send + Sync>,
+    close: Arc<dyn Fn() + Send + Sync>,
 }
 
 impl WebsocketContext {
     pub fn new(
         message: Signal<Option<WebsocketMessage>>,
-        send: Rc<dyn Fn(&WebsocketMessage)>,
+        send: Arc<dyn Fn(&WebsocketMessage) + Send + Sync>,
         ready_state: Signal<ConnectionReadyState>,
-        open: Rc<dyn Fn()>,
-        close: Rc<dyn Fn()>,
+        open: Arc<dyn Fn() + Send + Sync>,
+        close: Arc<dyn Fn() + Send + Sync>,
     ) -> Self {
         Self {
             message,
@@ -94,9 +94,9 @@ pub fn provide_websocket(url: &str) {
     );
     provide_context(WebsocketContext::new(
         message,
-        Rc::new(send),
+        Arc::new(send),
         ready_state,
-        Rc::new(open),
-        Rc::new(close),
+        Arc::new(open),
+        Arc::new(close),
     ));
 }

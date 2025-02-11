@@ -6,7 +6,7 @@ use crate::{
     },
 };
 use chrono::Local;
-use leptos::{attr::Novalidate, html, prelude::*};
+use leptos::{html, prelude::*};
 use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};
 use shared_types::{ChatDestination, ChatMessage, SimpleDestination};
 use uuid::Uuid;
@@ -58,7 +58,7 @@ pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
             type="text"
             class="box-border px-2 py-4 w-full rounded-lg resize-none bg-odd-light dark:bg-odd-dark focus:outline-none shrink-0"
             prop:value=chat.typed_message
-            prop:placeholder
+            prop:placeholder=placeholder
             on:input=update_from_input(chat.typed_message)
             on:keydown=move |evt| {
                 if evt.key() == "Enter" {

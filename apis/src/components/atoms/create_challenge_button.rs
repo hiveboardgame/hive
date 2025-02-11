@@ -1,6 +1,6 @@
 use crate::providers::Config;
 use hive_lib::ColorChoice;
-use leptos::{prelude::*, text_prop::TextProp};
+use leptos::prelude::*;
 use leptos_icons::*;
 
 #[component]
@@ -9,24 +9,23 @@ pub fn CreateChallengeButton(
     create_challenge: Callback<ColorChoice>,
 ) -> impl IntoView {
     let config = expect_context::<Config>().0;
-    let icon_data = |color_choice: ColorChoice| {
-        match color_choice {
-            ColorChoice::Random => {
-                (icondata::BsHexagonHalf,"w-full h-full stroke-1 stroke-black")
+    let icon_data = |color_choice: ColorChoice| match color_choice {
+        ColorChoice::Random => (
+            icondata::BsHexagonHalf,
+            "w-full h-full stroke-1 stroke-black",
+        ),
+        ColorChoice::White => {
+            if config().prefers_dark {
+                (icondata::BsHexagonFill, "w-full h-full fill-white")
+            } else {
+                (icondata::BsHexagon, "w-full h-full stroke-1 stroke-black")
             }
-            ColorChoice::White => {
-                if config().prefers_dark {
-                    (icondata::BsHexagonFill,"w-full h-full fill-white")
-                } else {
-                    (icondata::BsHexagon,"w-full h-full stroke-1 stroke-black")
-                }
-            }
-            ColorChoice::Black => {
-                if config().prefers_dark {
-                    (icondata::BsHexagon, "w-full h-full stroke-1 stroke-white")
-                } else {
-                    (icondata::BsHexagonFill,"w-full h-full fill-black")
-                }
+        }
+        ColorChoice::Black => {
+            if config().prefers_dark {
+                (icondata::BsHexagon, "w-full h-full stroke-1 stroke-white")
+            } else {
+                (icondata::BsHexagonFill, "w-full h-full fill-black")
             }
         }
     };

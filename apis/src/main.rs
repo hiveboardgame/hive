@@ -28,7 +28,7 @@ async fn main() -> std::io::Result<()> {
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use sha2::*;
 
-    let conf = get_configuration(None).await.expect("Got configuration");
+    let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
 
@@ -77,14 +77,13 @@ async fn main() -> std::io::Result<()> {
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             // serve other assets from the `assets` directory
-            .service(Files::new("/assets", site_root))
+            .service(Files::new("/assets", site_root.as_ref()))
             // serve the favicon from /favicon.ico
             .service(favicon)
             .service(start_connection)
             .service(functions::pwa::cache)
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(
-                leptos_options.to_owned(),
                 routes.to_owned(),
                 || view! { <App/> },
             )
@@ -108,7 +107,7 @@ async fn main() -> std::io::Result<()> {
 
 #[actix_web::get("favicon.ico")]
 async fn favicon(
-    leptos_options: actix_web::web::Data<leptos::LeptosOptions>,
+    leptos_options: actix_web::web::Data<leptos::prelude::LeptosOptions>,
 ) -> actix_web::Result<actix_files::NamedFile> {
     let leptos_options = leptos_options.into_inner();
     let site_root = &leptos_options.site_root;

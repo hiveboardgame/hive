@@ -199,7 +199,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
     let inprogress = Memo::new(move |_| tournament().status == TournamentStatus::InProgress);
     let finished = Memo::new(move |_| tournament().status == TournamentStatus::Finished);
 
-    let game_previews = Callback::new(move |_| {
+    let game_previews = Callback::new(move |()| {
         games_hashmap
             .get()
             .iter()
@@ -244,7 +244,6 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
             "flex flex-col gap-1 w-full sm:flex-row sm:flex-wrap justify-center"
         }
     };
-
     view! {
         <div class="flex flex-col items-center p-2 w-full">
             <h1 class="w-full max-w-full text-3xl font-bold text-center whitespace-normal break-words">
@@ -373,7 +372,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
                     </For>
                 </details>
             </Show>
-            <Show when=move || !game_previews(()).is_empty()>
+            <Show when=move || !game_previews.run(()).is_empty()>
                 <details class=DETAILS_STYLE>
                     <summary class=INFO_STYLE>Finished or ongoing games:</summary>
                     <GamePreviews games=game_previews />

@@ -24,6 +24,7 @@ pub fn Config() -> impl IntoView {
         let game_speed = game_speed();
         view! { <ConfirmModeToggle game_speed /> }
     };
+    //TODO: add MaybeProp back in
     view! {
         <div class="flex flex-col pt-10 sm:flex-row">
             <div class="m-1">
@@ -48,32 +49,32 @@ pub fn Config() -> impl IntoView {
                         <SelectOption
                             value=game_speed
                             is="Bullet"
-                            text=t!(i18n, game.speeds.bullet)
+                            //text=t!(i18n, game.speeds.bullet)
                         />
                         <SelectOption
                             value=game_speed
                             is="Blitz"
-                            text=t!(i18n, game.speeds.blitz).into_any().into()
+                            //text=t!(i18n, game.speeds.blitz).into_any().into()
                         />
                         <SelectOption
                             value=game_speed
                             is="Rapid"
-                            text=t!(i18n, game.speeds.rapid).into_any().into()
+                            //text=t!(i18n, game.speeds.rapid).into_any().into()
                         />
                         <SelectOption
                             value=game_speed
                             is="Classic"
-                            text=t!(i18n, game.speeds.classic).into_any().into()
+                            //text=t!(i18n, game.speeds.classic).into_any().into()
                         />
                         <SelectOption
                             value=game_speed
                             is="Correspondence"
-                            text=t!(i18n, game.speeds.correspondence).into_any()
+                            //text=t!(i18n, game.speeds.correspondence).into_any()
                         />
                         <SelectOption
                             value=game_speed
                             is="Untimed"
-                            text=t!(i18n, game.speeds.untimed).into_any()
+                            //text=t!(i18n, game.speeds.untimed).into_any()
                         />
                     </select>
                 </label>

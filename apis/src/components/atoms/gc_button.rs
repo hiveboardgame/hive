@@ -1,7 +1,7 @@
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::GameControl;
 use icondata::Icon;
-use leptos::{prelude::*, text_prop::TextProp};
+use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::{use_interval_with_options, UseIntervalOptions};
 use std::sync::Arc;
