@@ -72,8 +72,8 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 }
             })(evt);
         } else {
-                username.set(String::new());
-                has_invalid_char.set(false);
+            username.set(String::new());
+            has_invalid_char.set(false);
         }
     };
     let username_exists = move || {

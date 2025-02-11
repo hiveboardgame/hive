@@ -70,7 +70,7 @@ pub fn Resources() -> impl IntoView {
     view! {
         <div class="px-4 pt-20">
             <div class="container px-4 mx-auto">
-                <Banner title={ t!(i18n, resources.title) }.into_view() />
+                <Banner title={ t!(i18n, resources.title) }.into_any() />
                 <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
                     <section>
                         <h2 class=header_class>{t!(i18n, resources.hive_news.title)}</h2>

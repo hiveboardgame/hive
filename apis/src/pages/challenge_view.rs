@@ -28,7 +28,9 @@ pub fn ChallengeView() -> impl IntoView {
     };
     let challenge_id = move || ChallengeId(nanoid());
 
-    let challenge = OnceResource::new(move || get_challenge(challenge_id()));
+    //let challenge = OnceResource::new(move || get_challenge(challenge_id()));
+    let challenge = OnceResource::new((move || get_challenge(challenge_id()))());
+
     let challenge_address = move || format!("{}/challenge/{}", hostname_and_port(), nanoid());
     let button_ref = NodeRef::<html::Button>::new();
     let copy = move |_| {
