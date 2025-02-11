@@ -13,21 +13,21 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
-    let register_link = |children| {
-        view! {
-            <a
-                class="text-blue-500 transition-transform duration-300 transform hover:underline"
-                href="/register"
-            >
-                {children}
-            </a>
-        }
-    };
+    //let register_link = |children| {
+    //    view! {
+    //        <a
+    //            class="text-blue-500 transition-transform duration-300 transform hover:underline"
+    //            href="/register"
+    //        >
+    //            {children}
+    //        </a>
+    //    }
+    //};
     view! {
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=auth_context.login
-                class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-stone-300 dark:bg-reserve-twilight"
+                //class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-stone-300 dark:bg-reserve-twilight"
             >
                 <label class="block mb-2 font-bold" for="email">
                     {t!(i18n, user_config.login.email)}
@@ -39,7 +39,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         type="email"
                         inputmode="email"
                         autocomplete="email"
-                        placeholder=t!(i18n, user_config.login.email)
+                        //placeholder=t!(i18n, user_config.login.email)
                     />
                 </label>
                 <label class="block font-bold" for="password">
@@ -66,11 +66,17 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 <input
                     class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none"
                     type="submit"
-                    value=t!(i18n, user_config.login.login_button)
+                    //value=t!(i18n, user_config.login.login_button)
                 />
             </ActionForm>
             <p class="text-xs text-center text-gray-500">
-                {t!(i18n, user_config.login.no_account_prompt, < register_link >)}
+                //{t!(i18n, user_config.login.no_account_prompt, < register_link >)}
+                            <a
+                class="text-blue-500 transition-transform duration-300 transform hover:underline"
+                href="/register"
+            >
+                "Register"
+            </a>
             </p>
 
         </div>

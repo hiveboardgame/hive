@@ -1,4 +1,4 @@
-use leptos::prelude::{expect_context, Get, Set, Signal};
+use leptos::prelude::{expect_context, Get, Set};
 
 use crate::{
     providers::{

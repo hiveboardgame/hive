@@ -32,7 +32,7 @@ pub fn handle_new_game(game_response: GameResponse) {
     };
     if should_navigate {
         let auth_context = expect_context::<AuthContext>();
-        let user_uuid = move || auth_context.user.get_untracked() {
+        let user_uuid = move || match auth_context.user.get_untracked() {
             Some(Ok(Some(user))) => Some(user.id),
             _ => None,
         };

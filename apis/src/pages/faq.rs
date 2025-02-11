@@ -26,6 +26,8 @@ pub fn Faq() -> impl IntoView {
     let resources_link = |children| {
         view! { <SimpleLink link="/resources" children=children /> }
     };
+    // TODO: figure out why interpolation doesn't work
+
     view! {
         <div class="pt-20">
             <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
@@ -40,9 +42,9 @@ pub fn Faq() -> impl IntoView {
                         <h3 class=header_class>{t!(i18n, faq.how_to_help.question)}</h3>
                         <p class=paragraph_class>
                             <ul class="mt-2 list-disc list-inside">
-                                <li>{t!(i18n, faq.how_to_help.answers.item1, < source_link >)}</li>
-                                <li>{t!(i18n, faq.how_to_help.answers.item2, < discord_link >)}</li>
-                                <li>{t!(i18n, faq.how_to_help.answers.item3, < donate_link >)}</li>
+                                //<li>{t!(i18n, faq.how_to_help.answers.item1, < source_link >)}</li>
+                                //<li>{t!(i18n, faq.how_to_help.answers.item2, < discord_link >)}</li>
+                                //<li>{t!(i18n, faq.how_to_help.answers.item3, < donate_link >)}</li>
                             </ul>
                         </p>
                     </div>
@@ -57,7 +59,7 @@ pub fn Faq() -> impl IntoView {
                     <div class=div_class>
                         <h3 class=header_class>{t!(i18n, faq.what_is_hive.question)}</h3>
                         <p class=paragraph_class>
-                            {t!(i18n, faq.what_is_hive.answer, < gen42_link >)}
+                            //{t!(i18n, faq.what_is_hive.answer, < gen42_link >)}
                         </p>
                     </div>
                     <div class=div_class>
@@ -104,7 +106,7 @@ pub fn Faq() -> impl IntoView {
                         <h3 class=header_class>{t!(i18n, faq.what_rating_system.question)}</h3>
                         <p class=paragraph_class>
 
-                            {t!(i18n, faq.what_rating_system.answer, < glicko2_link >)}
+                            //{t!(i18n, faq.what_rating_system.answer, < glicko2_link >)}
                         </p>
                     </div>
                     <div class=div_class>
@@ -131,7 +133,7 @@ pub fn Faq() -> impl IntoView {
                             {t!(i18n, faq.where_to_meet_other_players.question)}
                         </h3>
                         <p class=paragraph_class>
-                            {t!(i18n, faq.where_to_meet_other_players.answer, < resources_link >)}
+                            //{t!(i18n, faq.where_to_meet_other_players.answer, < resources_link >)}
                         </p>
                     </div>
                     <div class=div_class>
@@ -151,7 +153,7 @@ pub fn Faq() -> impl IntoView {
                     <div class=div_class>
                         <h3 class=header_class>{t!(i18n, faq.where_to_learn_more.question)}</h3>
                         <p class=paragraph_class>
-                            {t!(i18n, faq.where_to_learn_more.answer, < resources_link >)}
+                            //{t!(i18n, faq.where_to_learn_more.answer, < resources_link >)}
                         </p>
                     </div>
                     <div class=div_class>
