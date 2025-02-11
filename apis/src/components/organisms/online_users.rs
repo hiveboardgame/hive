@@ -31,15 +31,15 @@ pub fn OnlineUsers() -> impl IntoView {
         }
     };
     let num = move || online_users.signal.get().username_user.len();
-
+    //TODO: Uncoment out code
     view! {
         <div class="flex flex-col m-2 w-fit">
             <input
                 class="p-1 w-64"
                 type="text"
                 on:input=debounced_search
-                placeholder={t!(i18n, home.search_players)}
-                value=pattern
+                //placeholder={t!(i18n, home.search_players)}
+                //value=pattern
                 maxlength="20"
             />
             <Show
