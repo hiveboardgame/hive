@@ -38,8 +38,8 @@ pub fn OnlineUsers() -> impl IntoView {
                 class="p-1 w-64"
                 type="text"
                 on:input=debounced_search
-                placeholder=t!(i18n, home.search_players)
-                prop:value=pattern
+                placeholder={t!(i18n, home.search_players)}
+                value=pattern
                 maxlength="20"
             />
             <Show
