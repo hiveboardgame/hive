@@ -6,9 +6,9 @@ use leptos::prelude::*;
 
 #[derive(Clone)]
 pub struct AuthContext {
-    pub login: Action<Login, Result<AccountResponse, ServerFnError>>,
-    pub logout: Action<Logout, Result<(), ServerFnError>>,
-    pub register: Action<Register, Result<(), ServerFnError>>,
+    pub login: ServerAction<Login>,
+    pub logout: ServerAction<Logout>,
+    pub register: ServerAction<Register>,
     pub user: Resource<Result<Option<AccountResponse>, ServerFnError>>,
 }
 
@@ -47,8 +47,8 @@ pub fn provide_auth() {
 
     provide_context(AuthContext {
         user,
-        login: *login,
-        logout: *logout,
-        register: *register,
+        login,
+        logout,
+        register,
     })
 }
