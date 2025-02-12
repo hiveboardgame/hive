@@ -25,7 +25,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         Some(Ok(Some(user))) => Some(user.id),
         _ => None,
     });
-    let user_color = game_state.user_color_as_signal(user_id.into());
+    let user_color = game_state.user_color_as_signal(user_id);
     let in_progress = create_read_slice(game_state.signal, |gs| {
         gs.game_response
             .as_ref()
