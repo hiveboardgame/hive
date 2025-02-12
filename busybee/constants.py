@@ -18,7 +18,10 @@ OAUTH_SECRET_EXPIRY = 20 * 60 # 20 minutes
 ERROR_COLOR = discord.Color(0xFF0000)
 BOT_NAME = "Hive Game Discord Bot"
 
-REDIRECT_URI = "http://localhost:8080/oauth/callback"
+REDIRECT_URI = os.environ.get("BUSYBEE_API_REDIRECT_URI", "http://localhost:8080/oauth/callback")
+if "REDIRECT_URI" not in os.environ:
+    print("Warning: BUSYBEE_API_REDIRECT_URI not set in environment variables, using default")
+
 
 WS_URL = "ws://localhost:8080/ws"
 RETRY_TIMEOUT_SECONDS = 1

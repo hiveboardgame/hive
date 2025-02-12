@@ -1,80 +1,113 @@
-# Hive Discord Bot MVP
+# Busybee - Hivegame's Discord Bot Service
 
-This is a proof of concept for a discord bot that does the following:
+Busybee is a Discord Bot service that enables the following:
 
-- Connects a provided uuid to a discord user via oauth
-- Pings a user in discord whenever a certain endpoint is hit
-- Allows users on discord to disable pings via discord commands
+- Connecting a provided uuid from Hivegame to a Discord user via Oauth2
+- Messaging a ping to a user in Discord whenever a certain endpoint is called
+- Allowing users on Discord to manage ping settings via Discord user commands
 
-## Launching 
+Busybee exposes a locally hosted API for the Hivegame's core to interact with.
+This API allows for interfacing with the Discord Community that Busybee is apart of.
 
-To launch the bot needs a few environment variables set:
+## Launching Manually  
+
+### Prerequisites
+
+To launch, the service looks for the following environment variables
 
 ```
-# These can be found in the discord developer portal
-DISCORD_BOT_TOKEN # The token for the discord bot
-DISCORD_CLIENT_ID # The client id for the discord bot
-DISCORD_CLIENT_SECRET # The client secret for the discord bot
+# These can be found in the Discord developer portal
+DISCORD_BOT_TOKEN # The token for the Discord Bot
+DISCORD_CLIENT_ID # The client id for the Discord Bot
+DISCORD_CLIENT_SECRET # The client secret for the Discord Bot
+
+# Note: new redirect uris must be added to the Discord Developer Portal
+BUSYBEE_API_REDIRECT_URI # The redirect uri for the Oauth2 flow (ex. https://hivegame.com/oauth/callback)
 
 # This must be provisioned separately
-DISCORD_BOT_DATABASE_URL # The sqlite database url for the bot
+DISCORD_BOT_DATABASE_URL # The sqlite database url for the Bot (ex. sqlite:///busybee.db)
 ```
 
-Once these are set you can run the bot with the following commands (be sure to set up an python3 virtual environment first):
-
-Install the requirements:
+Setup a new Python virtual environment and install the requirements:
 
 ```
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Run the server
+### Launching
+
+There are two processes that need to be launched, the API and the Discord Bot:
+
 ```
-uvicorn api:app --host 0.0.0.0 --port 8080
+source venv/bin/activate                              # If not already activated
+uvicorn api:app --host 0.0.0.0 --port 8080&           # Launches the API server
+python3 bot.py                                        # Launches the Discord Bot
 ```
 
-Run the Discord Bot
-```
-python3 bot.py 
-```
+## Launcing with Docker
+
+- TODO
 
 ## TODOS
 
-I'm planning to clean up the code a bit and add some more features. Here are some of the things I'm planning to do:
+Planning to clean up the code a bit and add some more features:
 
-- [ ] Make PORT and REDIRECT\_URI configurable
-- [ ] Documentation for API endpoints fleshed out
-- [ ] Containerize everything and add Nix flack command to have single command setup
+- [x] Make REDIRECT\_URI configurable
+
+- [ ] Documentation for API endpoints fleshed out 
+    - [ ] document expected responses 
+    - [ ] add examples
+
+- [ ] Containerize and have 1-line docker launch script 
+
 - [ ] Custom Message endpoint
+
+- [ ] Add structured logging
+
 - [ ] Clean up requirements file
 - [ ] Clean up dead code
-- [ ] Add structured logging
+- [ ] Make port configurable?
 
 ## Endpoints
 
 ```
-// Returns a new discord.com hosted url for initiating the Oauth flow. 
-// Returns error message and error code if unsuccessful 
-// ( configuration incorrect, missing discord token etc ...)
+// Health check endpoint
 //
-POST localhost:8080/oauth/new/{hive_game_user_id}
+// Returns 200 if the API is alive, connected
+// to the database, and the Discord Bot is in operation. 
+//
+// Returns an error code with an explanation if issues are found
+// 
+GET localhost:8080/health
 
-// uses the callback code and state URL parameters from discord provided 
-// at the end of the Oauth to verify successful integration, 
-// if code checks out, link hive_game_user_id <--> discord_user_id
-// all pings should work now
+// Returns a new discord.com hosted url for initiating the Oauth2 flow. 
+//
+// Returns error code with an explanation if unsuccessful 
+//
+POST localhost:8080/oauth/new/{HIVE_GAME_USER_ID}
+
+// Accepts the code and state URL parameters from the discord callback provided 
+// at the end of the Oauth2 flow. If the code and state is valid, 
+// links the provided HIVE_GAME_USER_ID to a DISCORD_USER_ID extracted from the 
+// code and state in Busybee's database.
+// 
+// Returns error code with an explanation if unsuccessful
 //
 POST localhost:8080/oauth/callback?code={CALLBACK_CODE}&state={CALLBACK_STATE}
 
-// pings the corresponding discord user saying that it is their turn to move on hivegame
-// returns error message and if ping was unsuccessful 
-// (invalid user, user left server, dm not reachable etc..)
+// Pings the corresponding Discord user with a standard message 
+// saying that it is their turn to move on hivegame
 //
-POST localhost:8080/ping/{hive_game_user_id } 
-
-
-// Gets the ID of the discord user linked to the hive game user
-// returns error message if unsuccessful
+// Returns error code with explanation if ping was unsuccessful 
 //
-GET localhost:8080/discord_id/{hive_game_user_id}
+POST localhost:8080/ping/{HIVE_GAME_USER_ID} 
+
+// Gets the information of a Discord user that is linked to the provided 
+// HIVE_GAME_USER_ID 
+//
+// Returns error code with an explanation if unsuccessful
+//
+GET localhost:8080/discord/{HIVE_GAME_USER_ID}
 ```

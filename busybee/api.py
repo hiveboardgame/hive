@@ -34,6 +34,11 @@ def init_user(discord_id, hive_user_id):
     new_user_preferences.save_to_database()
     new_user.save_to_database()
     return new_user 
+
+@app.get("/health")
+async def health(request: Request):
+    return JSONResponse({"detail": "alive"})
+
     
 @app.post("/oauth/new/{hive_user_id}")
 async def start_flow(request: Request, hive_user_id : str):
