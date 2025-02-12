@@ -44,7 +44,7 @@ pub fn HistoryButton(
             post_action.run(())
         }
     });
-    let _definite_node_ref = node_ref.unwrap_or(NodeRef::<html::Button>::new());
+    let _definite_node_ref = node_ref.unwrap_or_default();
 
     view! {
         <button

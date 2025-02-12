@@ -104,7 +104,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         _ => None,
     });
 
-    let user_color = gamestate.user_color_as_signal(user_id.into());
+    let user_color = gamestate.user_color_as_signal(user_id);
     let has_gamecontrol = create_read_slice(gamestate.signal, move |gs| {
         if let Some(color) = user_color() {
             let opp_color = color.opposite_color();

@@ -40,7 +40,7 @@ leptix_primitives = { git="https://github.com/IongIer/leptix.git", branch="lepto
 leptos = { version = "0.7", features = ["nightly"] }
 leptos-use = { version = "0.14" }
 leptos_actix =  { version = "0.7" }
-leptos_i18n = { git="https://github.com/Baptistemontan/leptos_i18n.git", branch="fix_missing_static_lifetime" }
+leptos_i18n = { git = "https://github.com/Baptistemontan/leptos_i18n.git", branch = "fix_missing_static_lifetime", features = ["suppress_key_warnings", "plurals"] }
 leptos_icons = { version = "0.4"}
 leptos_meta =  { version = "0.7"}
 leptos_router =  { version = "0.7", features = ["nightly"] }
