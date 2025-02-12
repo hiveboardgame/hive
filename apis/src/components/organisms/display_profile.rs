@@ -1,5 +1,5 @@
 use crate::components::atoms::rating::{icon_for_speed, Rating};
-use crate::i18n::*;
+use leptos_i18n::*;
 use crate::responses::UserResponse;
 use leptos::prelude::*;
 use leptos_icons::*;

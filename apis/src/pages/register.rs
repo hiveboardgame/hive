@@ -1,6 +1,6 @@
 use crate::functions;
 use crate::functions::users::get::UsernameTaken;
-use crate::i18n::*;
+use leptos_i18n::*;
 use crate::{
     components::{organisms::header::Redirect, update_from_event::update_from_input},
     providers::AuthContext,

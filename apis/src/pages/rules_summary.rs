@@ -1,4 +1,4 @@
-use crate::i18n::*;
+use leptos_i18n::*;
 use leptos::prelude::*;
 const ALLOWED_LOCALES: [&str; 6] = ["en", "es", "ca", "it", "fr", "pt"];
 

@@ -1,4 +1,4 @@
-use crate::i18n::*;
+use leptos_i18n::*;
 use crate::{common::TileDots, providers::Config};
 use leptos::prelude::*;
 #[component]

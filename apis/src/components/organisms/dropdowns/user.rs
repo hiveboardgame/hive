@@ -3,7 +3,7 @@ use crate::components::molecules::{hamburger::Hamburger, ping::Ping};
 use crate::components::organisms::darkmode_toggle::DarkModeToggle;
 use crate::components::organisms::header::set_redirect;
 use crate::components::organisms::logout::Logout;
-use crate::i18n::*;
+use leptos_i18n::*;
 use leptos::prelude::*;
 
 #[component]
