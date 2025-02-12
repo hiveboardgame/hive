@@ -7,6 +7,7 @@ pub mod websocket;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
 use actix_web::middleware::Compress;
+use leptos_meta::MetaTags;
 use websocket::{Lags, Pings, TournamentGameStart};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
@@ -84,10 +85,27 @@ async fn main() -> std::io::Result<()> {
             .service(functions::pwa::cache)
             .service(functions::oauth::callback)
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
-            .leptos_routes(
-                routes.to_owned(),
-                || view! { <App/> },
-            )
+            .leptos_routes(routes.to_owned(), {
+                let leptos_options = leptos_options.clone();
+                move || {
+                    use leptos::prelude::*;
+
+                    view! {
+                        <!DOCTYPE html>
+                        <html lang="en">
+                            <head>
+                                <meta charset="utf-8"/>
+                                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                                <AutoReload options=leptos_options.clone() />
+                                <HydrationScripts options=leptos_options.clone()/>
+                                <MetaTags/>
+                            </head>
+                            <body>
+                                <App/>
+                            </body>
+                        </html>
+                    }
+            }})
             .app_data(Data::new(leptos_options.to_owned()))
             // IdentityMiddleware needs to be first
             .wrap(IdentityMiddleware::default())
