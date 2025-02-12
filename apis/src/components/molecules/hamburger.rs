@@ -3,7 +3,7 @@ use leptos::prelude::*;
 use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
 
 #[component]
-pub fn Hamburger<T: IntoView>(
+pub fn Hamburger<T: IntoView +'static>(
     hamburger_show: RwSignal<bool>,
     children: ChildrenFn,
     #[prop(into)] button_style: Signal<String>,
