@@ -81,7 +81,7 @@ pub fn ChatWindow(
     let chat = expect_context::<Chat>();
     let auth_context = expect_context::<AuthContext>();
     let game_state = expect_context::<GameStateSignal>();
-    let uid = if let Some(Ok(Some(account))) = auth_context.user.get_untracked() {
+    let uid = if let Some(Ok(account)) = auth_context.user.get_untracked() {
         Some(account.user.uid)
     } else {
         None
