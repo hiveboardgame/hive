@@ -7,4 +7,4 @@ codegen-backend = "cranelift"
 [profile.db-dev]
 codegen-backend = "cranelift"
 [build]
-rustflags = ["-Z", "threads=8","--cfg=web_sys_unstable_apis"]
+rustflags = ["-Z", "threads=8", "--cfg=web_sys_unstable_apis", "--cfg=erase_components"]
