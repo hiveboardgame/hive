@@ -2642,8 +2642,7 @@ dependencies = [
 [[package]]
 name = "leptos_i18n"
 version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83f700fc997fb1b12d22d412b8d33156438f8c6a2c4277da82099f4c6e75a89f"
+source = "git+https://github.com/Baptistemontan/leptos_i18n.git?branch=fix_missing_static_lifetime#5e281404e96c5817983e130231d3a7fafb2e89b5"
 dependencies = [
  "codee 0.2.0",
  "default-struct-builder",
@@ -2653,7 +2652,6 @@ dependencies = [
  "icu_list",
  "icu_locid",
  "icu_plurals",
- "icu_provider",
  "js-sys",
  "leptos",
  "leptos-use 0.15.6",
@@ -2669,8 +2667,7 @@ dependencies = [
 [[package]]
 name = "leptos_i18n_macro"
 version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a78cfbc78ce4b217f6bde9539a613d11ca05e99039b56c83380deb57014464a5"
+source = "git+https://github.com/Baptistemontan/leptos_i18n.git?branch=fix_missing_static_lifetime#5e281404e96c5817983e130231d3a7fafb2e89b5"
 dependencies = [
  "fixed_decimal",
  "icu_locid",
@@ -2687,8 +2684,7 @@ dependencies = [
 [[package]]
 name = "leptos_i18n_parser"
 version = "0.5.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "856d9027220f0b690b6c2893014a863b43f28fc580abc3bee77b6dcd6251389c"
+source = "git+https://github.com/Baptistemontan/leptos_i18n.git?branch=fix_missing_static_lifetime#5e281404e96c5817983e130231d3a7fafb2e89b5"
 dependencies = [
  "fixed_decimal",
  "icu_locid",
