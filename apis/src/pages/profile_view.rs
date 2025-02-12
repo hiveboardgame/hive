@@ -1,7 +1,7 @@
 use crate::common::UserAction;
 use crate::components::atoms::rating::icon_for_speed;
 use crate::components::molecules::user_row::UserRow;
-use leptos_i18n::*;
+use crate::i18n::*;
 use crate::{
     components::{molecules::game_row::GameRow, organisms::display_profile::DisplayProfile},
     providers::{

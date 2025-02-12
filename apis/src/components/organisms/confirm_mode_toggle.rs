@@ -1,4 +1,4 @@
-use leptos_i18n::*;
+use crate::i18n::*;
 use crate::{common::MoveConfirm, providers::Config};
 use leptos::prelude::*;
 use leptos_icons::Icon;
