@@ -1,5 +1,5 @@
 use crate::common::UserStatus;
-use leptos_i18n::*;
+use crate::i18n::*;
 use crate::providers::online_users::{OnlineUsersSignal, OnlineUsersState};
 use crate::{
     components::molecules::challenge_row::ChallengeRow,
