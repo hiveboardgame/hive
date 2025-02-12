@@ -108,7 +108,7 @@ pub fn TournamentCreate() -> impl IntoView {
     let create = move |_| {
         let auth_context = expect_context::<AuthContext>();
         let account = match auth_context.user.get() {
-            Some(Ok(Some(account))) => Some(account),
+            Some(Ok(account)) => Some(account),
             _ => None,
         };
         tournament

@@ -60,7 +60,7 @@ pub fn Tournament() -> impl IntoView {
 fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let account = move || match auth_context.user.get() {
-        Some(Ok(Some(account))) => Some(account),
+        Some(Ok(account)) => Some(account),
         _ => None,
     };
     let user_id = Signal::derive(move || account().map(|a| a.user.uid));

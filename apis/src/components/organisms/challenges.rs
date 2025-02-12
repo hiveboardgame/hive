@@ -43,7 +43,7 @@ pub fn Challenges() -> impl IntoView {
     let online_users = expect_context::<OnlineUsersSignal>().signal;
     let auth_context = expect_context::<AuthContext>();
     let user = move || {
-        if let Some(Ok(Some(user))) = auth_context.user.get_untracked() {
+        if let Some(Ok(user)) = auth_context.user.get_untracked() {
             Some(user)
         } else {
             None
