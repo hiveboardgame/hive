@@ -2652,6 +2652,7 @@ dependencies = [
  "icu_list",
  "icu_locid",
  "icu_plurals",
+ "icu_provider",
  "js-sys",
  "leptos",
  "leptos-use 0.15.6",
