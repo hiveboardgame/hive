@@ -1,4 +1,4 @@
-use crate::i18n::*;
+use leptos_i18n::*;
 use crate::providers::{online_users::OnlineUsersSignal, AuthContext};
 use leptos::form::ActionForm;
 use leptos::prelude::*;

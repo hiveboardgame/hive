@@ -1,4 +1,4 @@
-use crate::i18n::*;
+use leptos_i18n::*;
 use crate::{components::organisms::header::Redirect, providers::AuthContext};
 use leptos::prelude::*;
 use leptos::{form::ActionForm, html};
