@@ -1,4 +1,4 @@
-use leptos_i18n::*;
+use crate::i18n::*;
 use crate::{
     common::ChallengeAction,
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},

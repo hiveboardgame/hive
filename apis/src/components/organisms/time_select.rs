@@ -1,4 +1,4 @@
-use leptos_i18n::*;
+use crate::i18n::*;
 use crate::{
     common::TimeSignals,
     components::atoms::{input_slider::InputSlider, rating::icon_for_speed},

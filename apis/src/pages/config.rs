@@ -7,7 +7,7 @@ use crate::components::{
         tile_rotation_toggle::TileRotationToggle,
     },
 };
-use leptos_i18n::*;
+use crate::i18n::*;
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use shared_types::GameSpeed;

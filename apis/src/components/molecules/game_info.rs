@@ -1,4 +1,4 @@
-use leptos_i18n::*;
+use crate::i18n::*;
 use crate::{components::molecules::time_row::TimeRow, providers::game_state::GameStateSignal};
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos::prelude::*;

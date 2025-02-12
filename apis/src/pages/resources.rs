@@ -1,5 +1,5 @@
 use crate::components::{atoms::simple_link::SimpleLink, molecules::banner::Banner};
-use leptos_i18n::*;
+use crate::i18n::*;
 use leptos::prelude::*;
 
 #[component]

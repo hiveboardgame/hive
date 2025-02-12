@@ -1,4 +1,4 @@
-use leptos_i18n::*;
+use crate::i18n::*;
 use crate::{common::TileDesign, providers::Config};
 use lazy_static::lazy_static;
 use leptos::prelude::*;
