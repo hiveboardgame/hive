@@ -67,7 +67,7 @@ pub fn ChallengeView() -> impl IntoView {
                             }
                             Ok(challenge) => {
                                 let user = move || match auth_context.user.get() {
-                                    Some(Ok(Some(user))) => Some(user),
+                                    Some(Ok(user)) => Some(user),
                                     _ => None,
                                 };
                                 view! {

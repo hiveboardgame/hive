@@ -12,7 +12,7 @@ pub fn KickButton(user: UserResponse, tournament: TournamentResponse) -> impl In
     let tournament = StoredValue::new(tournament);
 
     let is_organizer = move || {
-        if let Some(Ok(Some(current_user))) = auth_context.user.get() {
+        if let Some(Ok(current_user)) = auth_context.user.get() {
             current_user.id != user.uid
                 && tournament
                     .get_value()

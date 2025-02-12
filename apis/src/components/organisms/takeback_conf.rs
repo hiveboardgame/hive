@@ -23,7 +23,7 @@ fn Button(takeback: Takeback) -> impl IntoView {
     let takeback = StoredValue::new(takeback);
     let auth_context = expect_context::<AuthContext>();
     let user = move || match auth_context.user.get() {
-        Some(Ok(Some(user))) => Some(user),
+        Some(Ok(user)) => Some(user),
         _ => None,
     };
     let is_active = move || {

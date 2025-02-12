@@ -8,7 +8,7 @@ use leptos::prelude::*;
 fn filter_challenges(challenges: &mut Vec<ChallengeResponse>) {
     let auth_context = expect_context::<AuthContext>();
     let account = move || match auth_context.user.get_untracked() {
-        Some(Ok(Some(account))) => Some(account),
+        Some(Ok(account)) => Some(account),
         _ => None,
     };
     if let Some(account) = account() {
@@ -36,7 +36,7 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
     let notifications = expect_context::<NotificationContext>();
     let auth_context = expect_context::<AuthContext>();
     let account = move || match auth_context.user.get_untracked() {
-        Some(Ok(Some(account))) => Some(account),
+        Some(Ok(account)) => Some(account),
         _ => None,
     };
     match challenge {

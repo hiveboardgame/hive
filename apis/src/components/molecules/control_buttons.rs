@@ -18,8 +18,7 @@ pub fn ControlButtons() -> impl IntoView {
         auth_context
             .user
             .get_untracked()
-            .and_then(|result| result.ok())
-            .and_then(|account| account.map(|user| user.id))
+            .and_then(|result| result.ok()).map(|account| account.id)
             .expect("Control buttons show only for logged in players")
     };
 
@@ -153,7 +152,7 @@ pub fn ControlButtons() -> impl IntoView {
         } else {
             let game_state = expect_context::<GameStateSignal>();
             let auth_context = expect_context::<AuthContext>();
-            if let Some(Ok(Some(user))) = auth_context.user.get() {
+            if let Some(Ok(user)) = auth_context.user.get() {
                 if let Some(game) = game_state.signal.get_untracked().game_response {
                     // TODO: color and opponent
                     let (color_choice, opponent) = if user.id == game.black_player.uid {

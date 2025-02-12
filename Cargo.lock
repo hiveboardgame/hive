@@ -2150,6 +2150,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d424c994071c6f5644f999925fc868c85fec82295326e75ad5017bc94b41523"
 
 [[package]]
+name = "icu_experimental"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "844ad7b682a165c758065d694bc4d74ac67f176da1c499a04d85d492c0f193b7"
+dependencies = [
+ "displaydoc",
+ "fixed_decimal",
+ "icu_collections",
+ "icu_decimal",
+ "icu_experimental_data",
+ "icu_locid",
+ "icu_locid_transform",
+ "icu_normalizer",
+ "icu_pattern",
+ "icu_plurals",
+ "icu_properties",
+ "icu_provider",
+ "litemap",
+ "num-bigint",
+ "num-rational",
+ "num-traits",
+ "smallvec",
+ "tinystr",
+ "writeable",
+ "zerofrom",
+ "zerotrie",
+ "zerovec",
+]
+
+[[package]]
+name = "icu_experimental_data"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c178b9a34083fca5bd70d61f647575335e9c197d0f30c38e8ccd187babc69d0"
+
+[[package]]
 name = "icu_list"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2225,6 +2261,19 @@ name = "icu_normalizer_data"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8cafbf7aa791e9b22bec55a167906f9e1215fd475cd22adfcf660e03e989516"
+
+[[package]]
+name = "icu_pattern"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb7f36aafd098d6717de34e668a8120822275c1fba22b936e757b7de8a2fd7e4"
+dependencies = [
+ "displaydoc",
+ "either",
+ "writeable",
+ "yoke",
+ "zerofrom",
+]
 
 [[package]]
 name = "icu_plurals"
@@ -2644,14 +2693,16 @@ dependencies = [
 
 [[package]]
 name = "leptos_i18n"
-version = "0.5.5"
-source = "git+https://github.com/Baptistemontan/leptos_i18n.git?branch=fix_missing_static_lifetime#5e281404e96c5817983e130231d3a7fafb2e89b5"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50cc82c91c69a9d610db59510d91837682fc01f5be510e6dae8450ce2faf22ae"
 dependencies = [
  "codee 0.2.0",
  "default-struct-builder",
  "icu_calendar",
  "icu_datetime",
  "icu_decimal",
+ "icu_experimental",
  "icu_list",
  "icu_locid",
  "icu_plurals",
@@ -2670,8 +2721,9 @@ dependencies = [
 
 [[package]]
 name = "leptos_i18n_macro"
-version = "0.5.5"
-source = "git+https://github.com/Baptistemontan/leptos_i18n.git?branch=fix_missing_static_lifetime#5e281404e96c5817983e130231d3a7fafb2e89b5"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fcc4f781e18e312ad48e52604289e26833af93bd7f789d5c85c0ad9da6fb946"
 dependencies = [
  "fixed_decimal",
  "icu_locid",
@@ -2682,13 +2734,15 @@ dependencies = [
  "serde",
  "serde_json",
  "syn",
+ "tinystr",
  "toml",
 ]
 
 [[package]]
 name = "leptos_i18n_parser"
-version = "0.5.5"
-source = "git+https://github.com/Baptistemontan/leptos_i18n.git?branch=fix_missing_static_lifetime#5e281404e96c5817983e130231d3a7fafb2e89b5"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c4d4e26dce2c19c372793e55296c956f23b7e9bdbcbe791925eafee4337f930"
 dependencies = [
  "fixed_decimal",
  "icu_locid",
@@ -2700,6 +2754,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "syn",
+ "tinystr",
  "toml",
 ]
 
@@ -3025,10 +3080,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-bigint"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5e44f723f1133c9deac646763579fdb3ac745e418f2a7af9cd0c431da1f20b9"
+dependencies = [
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
 name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
+
+[[package]]
+name = "num-integer"
+version = "0.1.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "num-rational"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f83d14da390562dca69fc84082e73e548e1ad308d24accdedd2720017cb37824"
+dependencies = [
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+]
 
 [[package]]
 name = "num-traits"
@@ -5195,6 +5280,9 @@ name = "writeable"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e9df38ee2d2c3c5948ea468a8406ff0db0b29ae1ffde1bcf20ef305bcc95c51"
+dependencies = [
+ "either",
+]
 
 [[package]]
 name = "xxhash-rust"

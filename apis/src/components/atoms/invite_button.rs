@@ -12,7 +12,7 @@ pub fn InviteButton(user: UserResponse, tournament_id: TournamentId) -> impl Int
     let auth_context = expect_context::<AuthContext>();
 
     let logged_in_and_not_user = move || {
-        if let Some(Ok(Some(current_user))) = auth_context.user.get() {
+        if let Some(Ok(current_user)) = auth_context.user.get() {
             current_user.id != user.uid
         } else {
             false
