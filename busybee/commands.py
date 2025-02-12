@@ -43,7 +43,7 @@ async def enable_pings(interaction):
 
     prefs = UserPreferences.find_one(discord_user_id=interaction.user.id)
     if not prefs:
-        await interaction.response.send_message("User not linked Hivegame account! Please link your account first.") 
+        await interaction.response.send_message("User not linked to any Hivegame account! Please link your account first.") 
         return
 
     prefs.set_pings_enabled(True)

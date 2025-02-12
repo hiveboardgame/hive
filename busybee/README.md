@@ -43,7 +43,7 @@ uvicorn api:app --host 0.0.0.0 --port 8080&           # Launches the API server
 python3 bot.py                                        # Launches the Discord Bot
 ```
 
-## Launcing with Docker
+## Launching with Docker
 
 ```console
 docker build -t busybee .
@@ -57,6 +57,7 @@ Replace `PATH_TO_DOT_ENV` with the location of your .env and `PATH_TO_DB_FILE` w
 Planning to clean up the code a bit and add some more features:
 
 - [x] Make REDIRECT\_URI configurable
+- [ ] Add `/info` and `/help` user commands
 - [ ] Documentation for API endpoints fleshed out 
     - [ ] document expected responses 
     - [ ] add examples
