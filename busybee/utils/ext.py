@@ -13,6 +13,9 @@ import errors
 import constants
 import time
 from websockets.asyncio.client import connect
+import logging
+
+logger = logging.getLogger(__name__)
 
 def output_to_channel(*channels):
     def inner(cog_function):
@@ -58,8 +61,7 @@ async def ping_in_dm(user, msg) -> bool:
     try:
         await dm.send(msg)
     except discord.Forbidden as e:
-        print("Could not send message to user")
-        print(e)
+        logger.error( f"Could not send message to user\n {e}")
         return False
 
     return True
@@ -72,34 +74,38 @@ async def ping_in_guild(user, msg):
         choices.extend(allowed_channels)
 
     if not choices:
-        print("Bot cache did not contain valid channels to ping user in")
-        print("Are the PING_CHANNELS_IDS correctly configured?")
+        logger.warning(
+            "Bot cache did not contain valid channels to ping user in\n"
+            "Are the PING_CHANNELS_IDS correctly configured?"
+        )
         return False
 
     choices.sort(key=lambda x: PING_CHANNELS_IDS.index(x.id)) 
 
     for channel in choices:
         if not channel.permissions_for(guild.me).send_messages:
-            print(f"Bot does not have permission to send messages in channel {channel.name} in guild {channel.guild.name}, skipping...")
+            logger.info(f"Bot does not have permission to send messages in channel {channel.name} in guild {channel.guild.name}, skipping...")
             continue
 
         try:
             await channel.send(msg)
             return True
         except discord.Forbidden as e:
-            print(f"Could not send message to user in channel {channel.name} in guild {channel.guild.name} due to the following error:")
-            print(e)
-            print("Trying next channel...")
+            logger.error(f"Could not send message to user in channel {channel.name} in guild {channel.guild.name} due to the following error:")
+            logger.error(e)
+            logger.error("Trying next channel...")
             continue
 
-    print("Exhausted all channels, could not send message to user in any channel")
-    print("Are the PING_CHANNELS_IDS correctly configured?")
+    logger.warning(
+        "Exhausted all channels, could not send message to user in any channel\n"
+        "Are the PING_CHANNELS_IDS correctly configured?"
+    )
     return False
 
 async def reconnecting_websocket(process_func):
-    print("Connecting to message queue websocket...")
+    logger.info("Connecting to message queue websocket...")
     async for ws in connect(constants.WS_URL, ping_timeout=None):
-        print("Connected to message queue websocket!")
+        logger.info("Connected to message queue websocket!")
 
         try:
             await ws.send("hello")
@@ -107,8 +113,8 @@ async def reconnecting_websocket(process_func):
             if data != "hello": ws.close()
             await process_func(ws)
         except Exception as e:
-            print("Connection to message queue websocket was severed...")
-            print(f"Error: {e}")
-            print(f"Reconnecting in {constants.RETRY_TIMEOUT_SECONDS} seconds...")
+            logger.info("Connection to message queue websocket was severed...")
+            logger.info(f"Error: {e}")
+            logger.info(f"Reconnecting in {constants.RETRY_TIMEOUT_SECONDS} seconds...")
             await asyncio.sleep(constants.RETRY_TIMEOUT_SECONDS)
 

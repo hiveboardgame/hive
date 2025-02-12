@@ -5,9 +5,10 @@ import secrets
 import random
 import config
 import constants
+import logging
 
 config.init()
-
+logger = logging.getLogger(__name__)
 
 class LazyDatabaseModel:
     """
@@ -59,7 +60,7 @@ class LazyDatabaseModel:
     def delete_from_database(cls, **search_args):
         was_deleted_successfully = config.db[cls.model_name].delete(**search_args)
         if not search_args:
-            print("WARNING: Suppressed deletion of all records in table, use delete_all if you want to do that")
+            logger.error("Suppressed deletion of all records in table, use delete_all explicity if you want to do that!!!")
             return False
 
         config.db.commit()

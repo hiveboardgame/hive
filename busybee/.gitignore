@@ -137,3 +137,5 @@ bot_token
 # Test Databases
 test.db*
 test.db
+busybee.db
+busybee.db*

@@ -1,6 +1,6 @@
 import config
-
 config.init()
+import logging
 
 from pydantic import BaseModel
 from constants import *
@@ -12,6 +12,8 @@ from models import *
 from utils.ext import *
 
 from rauth import OAuth2Service
+
+logger = logging.getLogger("api")
 
 app = FastAPI()
 message_queue = Queue(maxsize=3)
@@ -109,7 +111,7 @@ async def ping_user(request: Request, hive_user_id : str):
     if not user_prefs: raise HTTPException(404, detail="User preferences not found")
 
     if not user_prefs.pings_enabled():
-        return JSONResponse({"detail": "User ping unsuccessful, user has pings disabled"})
+        raise HTTPException(400, detail="User ping unsuccessful, user has pings disabled")
 
     msg = { "discord_id": discord_id }
     success_response = None
@@ -148,6 +150,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
     while True:
         message = await message_queue.get()
-        print(f"Sending message to discord bot: {message}")
+        logger.info(f"Sending message to discord bot: {message}")
         await websocket.send_text(message)
 

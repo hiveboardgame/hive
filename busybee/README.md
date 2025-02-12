@@ -23,14 +23,11 @@ DISCORD_CLIENT_SECRET # The client secret for the Discord Bot
 
 # Note: new redirect uris must be added to the Discord Developer Portal
 BUSYBEE_API_REDIRECT_URI # The redirect uri for the Oauth2 flow (ex. https://hivegame.com/oauth/callback)
-
-# This must be provisioned separately
-DISCORD_BOT_DATABASE_URL # The sqlite database url for the Bot (ex. sqlite:///busybee.db)
 ```
 
 Setup a new Python virtual environment and install the requirements:
 
-```
+```console
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -40,7 +37,7 @@ pip install -r requirements.txt
 
 There are two processes that need to be launched, the API and the Discord Bot:
 
-```
+```console
 source venv/bin/activate                              # If not already activated
 uvicorn api:app --host 0.0.0.0 --port 8080&           # Launches the API server
 python3 bot.py                                        # Launches the Discord Bot
@@ -48,24 +45,24 @@ python3 bot.py                                        # Launches the Discord Bot
 
 ## Launcing with Docker
 
-- TODO
+```console
+docker build -t busybee .
+docker run -d -p 8080:8080 --env-file PATH_TO_DOT_ENV -v PATH_TO_DB_FILE:/code/busybee.db busybee
+```
+
+Replace `PATH_TO_DOT_ENV` with the location of your .env and `PATH_TO_DB_FILE` with the location of the sqlite database.
 
 ## TODOS
 
 Planning to clean up the code a bit and add some more features:
 
 - [x] Make REDIRECT\_URI configurable
-
 - [ ] Documentation for API endpoints fleshed out 
     - [ ] document expected responses 
     - [ ] add examples
-
-- [ ] Containerize and have 1-line docker launch script 
-
+- [x] Containerize and have 1-line docker launch script 
 - [ ] Custom Message endpoint
-
-- [ ] Add structured logging
-
+- [x] Add better logging
 - [ ] Clean up requirements file
 - [ ] Clean up dead code
 - [ ] Make port configurable?

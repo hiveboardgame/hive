@@ -9,10 +9,13 @@ import config
 from models import *
 from constants import GUILD_ID
 
+import logging
+logger = logging.getLogger(__name__)
+
 @config.bot.tree.command(
         name="enable_pings",
         description = "Enable pings from HiveGame.com to be sent to user.",
-        guild = discord.Object(id=GUILD_ID)
+        guilds = discord.Object(id=GUILD_ID)
 ) 
 async def enable_pings(interaction):
 
@@ -21,7 +24,7 @@ async def enable_pings(interaction):
         prefs = UserPreferences(discord_user_id=interaction.user.id)
 
     prefs.set_pings_enabled(True)
-    print(f"Set pings enabled to {True} for {interaction.user.id} ({interaction.user})")
+    logger.info(f"Set pings enabled to {True} for {interaction.user.id} ({interaction.user})")
     prefs.save_to_database()
     await interaction.response.send_message("Pings enabled!", ephemeral=True)
 
@@ -39,6 +42,6 @@ async def disable_pings(interaction):
         prefs = UserPreferences(discord_user_id=interaction.user.id)
 
     prefs.set_pings_enabled(False)
-    print(f"Set pings enabled to {False} for {interaction.user.id} ({interaction.user})")
+    logger.info(f"Set pings enabled to {False} for {interaction.user.id} ({interaction.user})")
     prefs.save_to_database()
     await interaction.response.send_message("Pings disabled!", ephemeral=True)

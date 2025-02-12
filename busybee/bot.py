@@ -1,6 +1,7 @@
 import discord
 import config
 import websockets
+import logging
 
 config.init()
 
@@ -9,6 +10,8 @@ from utils.ext import *
 import json
 
 from commands import *
+logger = logging.getLogger("bot")
+
 
 
 #TODO: better error handling + logging
@@ -18,40 +21,43 @@ from commands import *
 async def on_ready():
     # Note: commands must sync with Discord's command register
     # it may take up to an hour for commands to be registered
+    logger.info("Syncing global commands with Discord's servers...")
     await config.bot.tree.sync()  
+    logger.info("Global commands synced!")
     for guild in config.bot.guilds:
-        print(f"Adding commands to {guild.name}")
+        logger.info(f"Adding commands to server: '{guild.name}'...")
         await config.bot.tree.sync(guild=guild)
 
 
-    print("Bot is now Online!")
+    logger.info("Bot is now Online!")
     asyncio.create_task(handle_message_queue())
 
 
 async def process_loop(ws):
     while True:
         message = await ws.recv()
-        print(f"Received message: {message}")
+        logger.debug(f"Received message: {message}")
         try:
             message = json.loads(message) 
         except json.JSONDecodeError as e:
-            print("Could not decode message as json, skipping...")
-            print(e)
+            logger.error(f"Could not decode message as json, skipping... {e}")
             continue
 
 
         if "type" not in message:
-            print("Error: Could not retrieve 'type' from message, skipping...")
+            logger.error("Could not retrieve 'type' from message, skipping...")
             return
 
         if "discord_id" not in message: 
-            print("Error: Could not retrieve 'discord_id' from message, skipping...")
+            logger.error("Could not retrieve 'discord_id' from message, skipping...")
             continue
         
         user = config.bot.get_user(int(message["discord_id"]))
         if not user:
-            print("Error: Could not retrieve user from discord, skipping...")
-            print(f"User ID: {message['discord_id']}")
+            logger.error(
+                "Could not retrieve user from discord, skipping...\n"
+                f"User ID: {message['discord_id']}"
+            )
             continue
 
         msg = f"<@{user.id}> [PLACEHOLDER TESTING MESSAGE] Your turn on hivegame.com! :D"
@@ -64,9 +70,9 @@ async def process_loop(ws):
             result = await ping_in_guild(user, msg)
 
         if result:
-            print(f"Successfully pinged user {user.name} in {message['type']}")
+            logger.info(f"Successfully pinged user {user.name} in {message['type']}")
         else:
-            print(f"Failed to ping user {user.name} in {message['type']}")
+            logger.error(f"Failed to ping user {user.name} in {message['type']}")
 
 async def handle_message_queue(): 
     await reconnecting_websocket(process_loop)
