@@ -9,7 +9,7 @@ use crate::components::organisms::{
     },
     sound_toggle::SoundToggle,
 };
-use crate::i18n::*;
+use leptos_i18n::*;
 use crate::providers::AuthContext;
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;

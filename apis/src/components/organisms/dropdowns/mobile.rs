@@ -1,6 +1,6 @@
 use crate::components::layouts::base_layout::COMMON_LINK_STYLE;
 use crate::components::molecules::hamburger::Hamburger;
-use crate::i18n::*;
+use leptos_i18n::*;
 use leptos::prelude::*;
 use leptos_icons::*;
 

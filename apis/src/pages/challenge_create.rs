@@ -1,4 +1,4 @@
-use crate::i18n::*;
+use leptos_i18n::*;
 use crate::providers::{AuthContext, ChallengeParams};
 use crate::{
     common::ChallengeAction,
