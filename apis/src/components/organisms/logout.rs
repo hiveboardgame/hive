@@ -13,7 +13,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
             <button
                 on:click=move |_| {
                     let mut online_users = expect_context::<OnlineUsersSignal>();
-                    if let Some(Ok(Some(user))) = auth_context.user.get() {
+                    if let Some(Ok(user)) = auth_context.user.get() {
                         online_users.remove(user.username);
                     }
                 }

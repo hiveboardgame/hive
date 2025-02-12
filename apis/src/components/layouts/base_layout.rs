@@ -100,7 +100,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     };
 
     let user_id = Signal::derive(move || match auth_context.user.get_untracked() {
-        Some(Ok(Some(user))) => Some(user.id),
+        Some(Ok(user)) => Some(user.id),
         _ => None,
     });
 

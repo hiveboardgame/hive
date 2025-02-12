@@ -17,7 +17,7 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     let online_users = expect_context::<OnlineUsersSignal>();
     let username = Signal::derive(move || username.clone());
     let user_is_player = move || match auth_context.user.get() {
-        Some(Ok(Some(user))) => user.username == username(),
+        Some(Ok(user)) => user.username == username(),
         _ => false,
     };
     let user_has_ws = move || {

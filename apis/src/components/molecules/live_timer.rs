@@ -22,7 +22,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
     let user_id = Signal::derive(move || match auth_context.user.get_untracked() {
-        Some(Ok(Some(user))) => Some(user.id),
+        Some(Ok(user)) => Some(user.id),
         _ => None,
     });
     let user_color = game_state.user_color_as_signal(user_id);

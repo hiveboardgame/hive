@@ -9,7 +9,7 @@ pub struct AuthContext {
     pub login: ServerAction<Login>,
     pub logout: ServerAction<Logout>,
     pub register: ServerAction<Register>,
-    pub user: Resource<Result<Option<AccountResponse>, ServerFnError>>,
+    pub user: Resource<Result<AccountResponse, ServerFnError>>
 }
 
 /// Get the current user and place it in Context
@@ -33,9 +33,7 @@ pub fn provide_auth() {
         user.and_then(|user| {
             let websocket_context = expect_context::<WebsocketContext>();
             websocket_context.close();
-            if user.is_some() {
-                websocket_context.open();
-            }
+            websocket_context.open();
         });
     });
 
