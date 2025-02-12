@@ -25,7 +25,7 @@ Once these are set you can run the bot with the following commands (be sure to s
 Install the requirements:
 
 ```
-python3 -r requirements.txt
+pip install -r requirements.txt
 ```
 
 Run the server
