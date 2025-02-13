@@ -10,17 +10,17 @@ import logging
 config.init()
 logger = logging.getLogger(__name__)
 
+
 class LazyDatabaseModel:
     """
     This class abstracts the implementation details of storing to a database
-    and creates python objects from SQL data and vice versa easily. 
+    and creates python objects from SQL data and vice versa easily.
     """
-    model_name = "generic"
 
+    model_name = "generic"
 
     # These are internal variables that are not saved to the database
     unsaved_vars = []
-
 
     def __init__(self, unique_id=None):
         self.unique_id = unique_id
@@ -60,7 +60,9 @@ class LazyDatabaseModel:
     def delete_from_database(cls, **search_args):
         was_deleted_successfully = config.db[cls.model_name].delete(**search_args)
         if not search_args:
-            logger.error("Suppressed deletion of all records in table, use delete_all explicity if you want to do that!!!")
+            logger.error(
+                "Suppressed deletion of all records in table, use delete_all explicity if you want to do that!!!"
+            )
             return False
 
         config.db.commit()
@@ -136,10 +138,13 @@ class UserRecord(LazyDatabaseModel):
     """
     Stores linked users, linked via discord snowflake id and hive user uuid
     """
+
     model_name = "user_record"
 
-    def __init__(self, discord_user_id=None, hive_user_id=None, unique_id = None):
-        assert int(discord_user_id) == discord_user_id, "Discord user id must be an integer"
+    def __init__(self, discord_user_id=None, hive_user_id=None, unique_id=None):
+        assert (
+            int(discord_user_id) == discord_user_id
+        ), "Discord user id must be an integer"
         assert hive_user_id is not None, "Hive user id missing"
         self.unique_id = unique_id or discord_user_id
         self.discord_user_id = int(discord_user_id)
@@ -148,13 +153,16 @@ class UserRecord(LazyDatabaseModel):
 
 class UserPreferences(LazyDatabaseModel):
     """
-    Stores linked user preferences, should have a one to one relationship with 
+    Stores linked user preferences, should have a one to one relationship with
     UserRecords
     """
+
     model_name = "user_preferences"
 
-    def __init__(self, discord_user_id=None, preferences=None, unique_id = None):
-        assert int(discord_user_id) == discord_user_id, "Discord user id must be an integer"
+    def __init__(self, discord_user_id=None, preferences=None, unique_id=None):
+        assert (
+            int(discord_user_id) == discord_user_id
+        ), "Discord user id must be an integer"
         self.unique_id = unique_id or discord_user_id
         self.discord_user_id = int(discord_user_id)
         prefs = default_prefs()
@@ -168,19 +176,21 @@ class UserPreferences(LazyDatabaseModel):
     def send_pings_to_dm_enabled(self):
         return self.preferences.get("send_pings_to_dm_enabled", False)
 
-    def set_pings_enabled(self, enabled : bool):
+    def set_pings_enabled(self, enabled: bool):
         self.preferences["pings_enabled"] = enabled
 
-    def set_send_pings_to_dm_enabled(self, enabled : bool):
+    def set_send_pings_to_dm_enabled(self, enabled: bool):
         self.preferences["send_pings_to_dm_enabled"] = enabled
 
-# Note: For hassle free migration, always *add* new default preferences 
-# and never remove them. 
+
+# Note: For hassle free migration, always *add* new default preferences
+# and never remove them.
 def default_prefs():
     return {
         "send_pings_to_dm_enabled": True,
         "pings_enabled": False,
     }
+
 
 class OauthState(LazyDatabaseModel):
     """
@@ -189,11 +199,12 @@ class OauthState(LazyDatabaseModel):
     """
 
     model_name = "oauth_state"
+
     def __init__(self, hive_user_id=None, token=None, expires=None, unique_id=None):
         assert hive_user_id is not None, "Hive user id missing"
         self.unique_id = unique_id or hive_user_id
         self.hive_user_id = hive_user_id
-        self.token = token or "t01" + secrets.token_urlsafe(64) 
+        self.token = token or "t01" + secrets.token_urlsafe(64)
         self.expires = expires or int(time.time()) + constants.OAUTH_SECRET_EXPIRY
 
     @staticmethod
@@ -205,7 +216,7 @@ class OauthState(LazyDatabaseModel):
         if oauth_state.expires < time.time():
             return False
         return True
-    
+
     @staticmethod
     def generate_token(hive_user_id):
         state = OauthState(hive_user_id=hive_user_id)

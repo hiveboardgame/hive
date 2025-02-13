@@ -4,7 +4,7 @@ import asyncio
 
 import functools
 
-import requests 
+import requests
 
 import sys
 import os
@@ -16,6 +16,7 @@ from websockets.asyncio.client import connect
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 def output_to_channel(*channels):
     def inner(cog_function):
@@ -56,15 +57,17 @@ def send_to_dm(cog_function):
 
     return wrapper
 
+
 async def ping_in_dm(user, msg) -> bool:
     dm = await user.create_dm()
     try:
         await dm.send(msg)
     except discord.Forbidden as e:
-        logger.error( f"Could not send message to user\n {e}")
+        logger.error(f"Could not send message to user\n {e}")
         return False
 
     return True
+
 
 async def ping_in_guild(user, msg):
     choices = []
@@ -80,18 +83,22 @@ async def ping_in_guild(user, msg):
         )
         return False
 
-    choices.sort(key=lambda x: PING_CHANNELS_IDS.index(x.id)) 
+    choices.sort(key=lambda x: PING_CHANNELS_IDS.index(x.id))
 
     for channel in choices:
         if not channel.permissions_for(guild.me).send_messages:
-            logger.info(f"Bot does not have permission to send messages in channel {channel.name} in guild {channel.guild.name}, skipping...")
+            logger.info(
+                f"Bot does not have permission to send messages in channel {channel.name} in guild {channel.guild.name}, skipping..."
+            )
             continue
 
         try:
             await channel.send(msg)
             return True
         except discord.Forbidden as e:
-            logger.error(f"Could not send message to user in channel {channel.name} in guild {channel.guild.name} due to the following error:")
+            logger.error(
+                f"Could not send message to user in channel {channel.name} in guild {channel.guild.name} due to the following error:"
+            )
             logger.error(e)
             logger.error("Trying next channel...")
             continue
@@ -102,6 +109,7 @@ async def ping_in_guild(user, msg):
     )
     return False
 
+
 async def reconnecting_websocket(process_func):
     logger.info("Connecting to message queue websocket...")
     async for ws in connect(constants.WS_URL, ping_timeout=None):
@@ -110,11 +118,11 @@ async def reconnecting_websocket(process_func):
         try:
             await ws.send("hello")
             data = await ws.recv()
-            if data != "hello": ws.close()
+            if data != "hello":
+                ws.close()
             await process_func(ws)
         except Exception as e:
             logger.info("Connection to message queue websocket was severed...")
             logger.info(f"Error: {e}")
             logger.info(f"Reconnecting in {constants.RETRY_TIMEOUT_SECONDS} seconds...")
             await asyncio.sleep(constants.RETRY_TIMEOUT_SECONDS)
-

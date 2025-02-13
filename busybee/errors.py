@@ -5,15 +5,18 @@ from utils import pretty_print
 import sys
 import traceback
 
+
 class DatabaseError(commands.CommandError):
     def __init__(self, message, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.message = message
 
+
 class UserNotLinked(commands.CommandError):
     def __init__(self, message, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.message = message
+
 
 class AuthenticationFailure(commands.CommandError):
     def __init__(self, message, *args, **kwargs):

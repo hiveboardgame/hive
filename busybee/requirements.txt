@@ -5,3 +5,4 @@ pydantic==2.10.6
 rauth==0.7.3
 uvicorn==0.34.0
 websockets==14.2
+coloredlogs==15.0.1

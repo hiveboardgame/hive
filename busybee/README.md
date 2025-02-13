@@ -64,7 +64,8 @@ Planning to clean up the code a bit and add some more features:
 - [x] Containerize and have 1-line docker launch script 
 - [ ] Custom Message endpoint
 - [x] Add better logging
-- [ ] Clean up requirements file
+- [x] Clean up requirements file
+- [x] Format
 - [ ] Clean up dead code
 - [ ] Make port configurable?
 
