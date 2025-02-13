@@ -15,8 +15,10 @@ from rauth import OAuth2Service
 
 logger = logging.getLogger("api")
 
+MAX_QUEUE_SIZE = 3
+
 app = FastAPI()
-message_queue = Queue(maxsize=3)
+message_queue = Queue(maxsize=MAX_QUEUE_SIZE)
 
 discord_oauth = OAuth2Service(
     name="discord",
@@ -37,8 +39,29 @@ def init_user(discord_id, hive_user_id):
     new_user.save_to_database()
     return new_user 
 
+# A quick and dirty test to see if the discord bot is operational,
+# spam the message queue with a bunch of hello messages and 
+# see if the discord bot consumes the message queue quickly
+async def queue_empties_quickly() -> bool:
+    try:
+        async with asyncio.timeout(1):
+            hello_msg = json.dumps({"type": "HELLO"})
+            for i in range(MAX_QUEUE_SIZE + 1):
+                await message_queue.put(hello_msg)
+    except asyncio.TimeoutError:
+        return False
+    return True
+
 @app.get("/health")
 async def health(request: Request):
+    if not await queue_empties_quickly():
+        raise HTTPException(500, detail="Message queue is not emptying quickly enough, the discord bot service may be down or disconnected from the message stream.")
+
+    try:
+        UserRecord.find_one(discord_user_id=0) # Test database connection
+    except Exception as e:
+        raise HTTPException(500, detail="Database connection error")
+
     return JSONResponse({"detail": "alive"})
 
     
