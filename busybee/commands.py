@@ -9,10 +9,34 @@ import config
 config.init()
 
 from models import *
-from constants import GUILD_ID
+from constants import GUILD_ID, BOT_NAME
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+async def send_help(interaction):
+    embed = discord.Embed(title="Help Menu", description="Here's how you can use the bot:", color=discord.Color.blue())
+    embed.add_field(name="`/pings status`", value="Check to see if pings are enabled for user", inline=False)
+    embed.add_field(name="`/pings enable`", value="Enable pings from HiveGame.com to be sent to user", inline=False)
+    embed.add_field(name="`/pings disable`", value="Disables pings from HiveGame.com to be sent to user", inline=False)
+    await interaction.response.send_message(embed=embed)
+
+@config.bot.tree.command(
+        name = "help",
+        description = "Get help on how to use {BOT_NAME}",
+        guild = discord.Object(id=GUILD_ID)
+)
+async def help(interaction):
+    await send_help(interaction)
+
+@config.bot.tree.command(
+        name = "info",
+        description = "Get help on how to use {BOT_NAME}!",
+        guild = discord.Object(id=GUILD_ID)
+)
+async def help(interaction):
+    await send_help(interaction)
 
 ping_group = app_commands.Group(name="pings", description="Commands for managing pings from HiveGame.com")
 config.bot.tree.add_command(ping_group)
@@ -33,8 +57,6 @@ async def status(interaction):
     )
 
 
-
-
 @ping_group.command(
         name="enable",
         description = "Enable pings from HiveGame.com to be sent to user.",
@@ -50,7 +72,6 @@ async def enable_pings(interaction):
     logger.info(f"Set pings enabled to {True} for {interaction.user.id} ({interaction.user})")
     prefs.save_to_database()
     await interaction.response.send_message("Pings enabled!")
-
 
 
 @ping_group.command(

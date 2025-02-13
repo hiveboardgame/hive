@@ -19,7 +19,7 @@ PING_CHANNELS_IDS = [
 OAUTH_SECRET_EXPIRY = 20 * 60 # 20 minutes
 
 ERROR_COLOR = discord.Color(0xFF0000)
-BOT_NAME = "Hive Game Discord Bot"
+BOT_NAME = "BusyBee"
 
 REDIRECT_URI = os.environ.get("BUSYBEE_API_REDIRECT_URI", "http://localhost:8080/oauth/callback")
 

@@ -57,7 +57,7 @@ Replace `PATH_TO_DOT_ENV` with the location of your .env and `PATH_TO_DB_FILE` w
 Planning to clean up the code a bit and add some more features:
 
 - [x] Make REDIRECT\_URI configurable
-- [ ] Add `/info` and `/help` user commands
+- [x] Add `/info` and `/help` user commands
 - [ ] Documentation for API endpoints fleshed out 
     - [ ] document expected responses 
     - [ ] add examples
