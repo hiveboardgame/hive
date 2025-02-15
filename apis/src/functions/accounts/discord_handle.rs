@@ -2,9 +2,7 @@ use crate::responses::AccountResponse;
 use leptos::*;
 
 #[server]
-pub async fn discord_handle(
-    discord_handle: String,
-) -> Result<AccountResponse, ServerFnError> {
+pub async fn discord_handle(discord_handle: String) -> Result<AccountResponse, ServerFnError> {
     use crate::functions::auth::identity::uuid;
     use crate::functions::db::pool;
     use db_lib::get_conn;

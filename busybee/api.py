@@ -132,8 +132,10 @@ async def end_flow(request: Request, code: str, state: str):
     else:
         raise HTTPException(500, detail="User link failed")
 
+
 class Message(BaseModel):
     content: str
+
 
 @app.post("/msg/{hive_user_id}")
 async def msg_user(request: Request, hive_user_id: str, message: Message):
@@ -152,9 +154,8 @@ async def msg_user(request: Request, hive_user_id: str, message: Message):
             400, detail="User ping unsuccessful, user has pings disabled"
         )
 
-
     msg = dict()
-    msg["discord_id"] =  discord_id
+    msg["discord_id"] = discord_id
     msg["content"] = message.content
 
     success_response = None

@@ -6,10 +6,12 @@ use crate::{
         games::{self, current_player_id, finished, game_status, tournament_id},
         ratings::{self, rating},
         users::{
-            self, discord_handle, dsl::{
+            self, discord_handle,
+            dsl::{
                 email as email_field, normalized_username, password as password_field, updated_at,
                 users as users_table,
-            }, takeback
+            },
+            takeback,
         },
     },
     DbConn,
@@ -174,7 +176,11 @@ impl User {
         })
     }
 
-    pub async fn set_discord_handle(&self, discord: String, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+    pub async fn set_discord_handle(
+        &self,
+        discord: String,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
         diesel::update(self)
             .set(discord_handle.eq(discord.to_string()))
             .execute(conn)

@@ -62,12 +62,11 @@ async def process_loop(ws):
         msg = (
             f"<@{user.id}> [PLACEHOLDER TESTING MESSAGE] Your turn on hivegame.com! :D"
         )
-        if message["type"] == "MSG_DM": 
+        if message["type"] == "MSG_DM":
             msg = message["content"]
         if message["type"] == "MSG_GUILD":
             content = message["content"]
             msg = f"<@{user.id}> {content}"
-
 
         result = False
         if message["type"] == "PING_DM" or message["type"] == "MSG_DM":

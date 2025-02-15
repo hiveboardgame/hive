@@ -2,6 +2,7 @@ use super::challenges::handler::ChallengeHandler;
 use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
 use super::games_search::GamesSearchHandler;
+use super::oauth::handler::OauthHandler;
 use super::pong::handler::PongHandler;
 use super::schedules::ScheduleHandler;
 use super::search::handler::UserSearchHandler;
@@ -77,6 +78,7 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
+            ClientRequest::LinkDiscord => OauthHandler::new(self.user_id).handle().await?,
             ClientRequest::UserSearch(pattern) => {
                 UserSearchHandler::new(self.user_id, pattern, &self.pool)
                     .handle()
