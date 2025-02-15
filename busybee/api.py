@@ -132,6 +132,52 @@ async def end_flow(request: Request, code: str, state: str):
     else:
         raise HTTPException(500, detail="User link failed")
 
+class Message(BaseModel):
+    content: str
+
+@app.post("/msg/{hive_user_id}")
+async def msg_user(request: Request, hive_user_id: str, message: Message):
+    user = UserRecord.find_one(hive_user_id=hive_user_id)
+
+    if not user:
+        raise HTTPException(404, detail="User not linked yet")
+    discord_id = user.discord_user_id
+
+    user_prefs = UserPreferences.find_one(discord_user_id=discord_id)
+    if not user_prefs:
+        raise HTTPException(404, detail="User preferences not found")
+
+    if not user_prefs.pings_enabled():
+        raise HTTPException(
+            400, detail="User ping unsuccessful, user has pings disabled"
+        )
+
+
+    msg = dict()
+    msg["discord_id"] =  discord_id
+    msg["content"] = message.content
+
+    success_response = None
+
+    if user_prefs.send_pings_to_dm_enabled():
+        success_response = JSONResponse({"detail": "Ping message for DM sent to queue"})
+        msg["type"] = "MSG_DM"
+    else:
+        success_response = JSONResponse(
+            {"detail": "Ping message for Guild sent to queue"}
+        )
+        msg["type"] = "MSG_GUILD"
+
+    try:
+        await message_queue.put(json.dumps(msg))
+    except Exception as e:
+        raise HTTPException(
+            500,
+            detail="Message queue is full! Is the discord bot running and connected?",
+        )
+
+    return success_response
+
 
 @app.post("/ping/{hive_user_id}")
 async def ping_user(request: Request, hive_user_id: str):

@@ -62,7 +62,7 @@ Planning to clean up the code a bit and add some more features:
     - [ ] document expected responses 
     - [ ] add examples
 - [x] Containerize and have 1-line docker launch script 
-- [ ] Custom Message endpoint
+- [x] Custom Message endpoint
 - [x] Add better logging
 - [x] Clean up requirements file
 - [x] Format
@@ -74,7 +74,7 @@ Planning to clean up the code a bit and add some more features:
 ```
 // Health check endpoint
 //
-// Returns 200 if the API is alive, connected
+// Returns 200 status code if the API is alive, connected
 // to the database, and the Discord Bot is in operation. 
 //
 // Returns an error code with an explanation if issues are found
@@ -102,6 +102,15 @@ POST localhost:8080/oauth/callback?code={CALLBACK_CODE}&state={CALLBACK_STATE}
 // Returns error code with explanation if ping was unsuccessful 
 //
 POST localhost:8080/ping/{HIVE_GAME_USER_ID} 
+
+// Message the corresponding Discord user with a custom message
+// if they are linked to this HIVE_GAME_USER_ID
+// 
+// expects {"content" : "YOUR_MESSAGE_HERE"} in the json request body
+//
+// Returns error code with explanation if ping was unsuccessful 
+//
+POST localhost:8080/msg/{HIVE_GAME_USER_ID} 
 
 // Gets the information of a Discord user that is linked to the provided 
 // HIVE_GAME_USER_ID 
