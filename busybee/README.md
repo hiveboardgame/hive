@@ -47,7 +47,7 @@ python3 bot.py                                        # Launches the Discord Bot
 
 ```console
 docker build -t busybee .
-docker run -d -p 8080:8080 --env-file PATH_TO_DOT_ENV -v ./persistent/:/code/persistent busybee
+docker run -d -p 8080:8080 --env-file PATH_TO_DOT_ENV --volume ./persistent/:/code/persistent busybee
 ```
 
 Replace `PATH_TO_DOT_ENV` with the location of your .env 
