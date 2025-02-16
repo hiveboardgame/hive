@@ -74,10 +74,6 @@ async def health(request: Request):
 @app.post("/oauth/new/{hive_user_id}")
 async def start_flow(request: Request, hive_user_id: str):
 
-    user_found = UserRecord.find_one(hive_user_id=hive_user_id)
-    if user_found:
-        raise HTTPException(400, detail="User already linked to discord")
-
     token = OauthState.generate_token(hive_user_id)
 
     auth_url = discord_oauth.get_authorize_url(
@@ -113,10 +109,6 @@ async def end_flow(request: Request, code: str, state: str):
 
     if not discord_id:
         raise HTTPException(401, detail="Cannot retrieve discord id")
-
-    user_found = UserRecord.find_one(discord_user_id=discord_id)
-    if user_found:
-        raise HTTPException(400, detail="User already linked, cannot link again")
 
     if not OauthState.is_valid(state):
         raise HTTPException(401, detail="Invalid oauth secret")

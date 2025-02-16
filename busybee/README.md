@@ -66,6 +66,8 @@ Planning to clean up the code a bit and add some more features:
 - [x] Add better logging
 - [x] Clean up requirements file
 - [x] Format
+- [ ] Get username
+- [x] /oauth/new/{HIVE\_GAME\_USER\_ID} should always work even if user already linked
 - [ ] Clean up dead code
 - [ ] Make port configurable?
 
