@@ -26,3 +26,22 @@ pub async fn callback(params: web::Query<OAuthParams>) -> impl Responder {
     Redirect::to("/discord").temporary()
 }
 }}
+
+use leptos::*;
+#[server]
+pub async fn get_discord_handle() -> Result<String, ServerFnError> {
+    use crate::functions::auth::identity::uuid;
+    use serde::Deserialize;
+    use serde_json::Value;
+
+    if let Ok(uuid) = uuid() {
+        println!("Trying to get discord handle for: {}", uuid);
+        let url = format!("http://localhost:8080/discord/{}", uuid);
+        let client = reqwest::Client::new();
+        let response = client.get(url).send().await.unwrap();
+        let json_str = response.text().await.unwrap();
+        println!("Discord handle: {}", json_str);
+        return Ok(json_str.to_string());
+    }
+    return Ok("Not logged in".to_string());
+}

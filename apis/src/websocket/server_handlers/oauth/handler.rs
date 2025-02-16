@@ -27,6 +27,7 @@ impl OauthHandler {
 
         let json_str = response.text().await?;
         let json: Value = serde_json::from_str(&json_str)?;
+        println!("Body: {}", json_str);
         let link = json["url"].as_str().unwrap();
 
         println!("Link {:?}", link);
