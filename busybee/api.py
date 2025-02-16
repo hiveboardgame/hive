@@ -106,6 +106,13 @@ async def end_flow(request: Request, code: str, state: str):
     response = authorized_session.get("users/@me").json()
     discord_id = response.get("id")
     discord_id = int(discord_id)
+    username = response.get("global_name")
+    avatar_hash = response.get("avatar")
+
+    if avatar_hash:
+        avatar_url = f"https://cdn.discordapp.com/avatars/{discord_id}/{avatar_hash}.png"
+    else:
+        avatar_url = None
 
     if not discord_id:
         raise HTTPException(401, detail="Cannot retrieve discord id")
@@ -119,7 +126,11 @@ async def end_flow(request: Request, code: str, state: str):
     # delete to prevent replay attacks
     OauthState.delete_from_database(hive_user_id=hive_id)
 
-    if init_user(discord_id, hive_id):
+    user = init_user(discord_id, hive_id)
+    if user:
+        user.avatar_url = avatar_url
+        user.username = username
+        user.save_to_database()
         return JSONResponse({"detail": "User linked successfully"})
     else:
         raise HTTPException(500, detail="User link failed")
@@ -218,7 +229,11 @@ async def discord_id(request: Request, hive_user_id: str):
     if not user:
         raise HTTPException(404, detail="User not linked yet")
 
-    return JSONResponse({"discord_id": user.discord_user_id})
+    return JSONResponse({
+        "discord_id": user.discord_user_id,
+        "avatar_url": user.avatar_url,
+        "username": user.username
+    })
 
 
 @app.websocket("/ws")

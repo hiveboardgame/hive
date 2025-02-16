@@ -141,7 +141,7 @@ class UserRecord(LazyDatabaseModel):
 
     model_name = "user_record"
 
-    def __init__(self, discord_user_id=None, hive_user_id=None, unique_id=None):
+    def __init__(self, discord_user_id=None, hive_user_id=None, unique_id=None,  avatar_url=None, username=None):
         assert (
             int(discord_user_id) == discord_user_id
         ), "Discord user id must be an integer"
@@ -149,6 +149,8 @@ class UserRecord(LazyDatabaseModel):
         self.unique_id = unique_id or discord_user_id
         self.discord_user_id = int(discord_user_id)
         self.hive_user_id = str(hive_user_id)
+        self.avatar_url = avatar_url
+        self.username = username
 
 
 class UserPreferences(LazyDatabaseModel):
