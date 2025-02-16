@@ -220,7 +220,7 @@ async def ping_user(request: Request, hive_user_id: str):
     return success_response
 
 
-@app.get("/discord_id/{hive_user_id}")
+@app.get("/discord/{hive_user_id}")
 async def discord_id(request: Request, hive_user_id: str):
     user = UserRecord.find_one(hive_user_id=hive_user_id)
     if not user:
