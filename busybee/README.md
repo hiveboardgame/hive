@@ -47,10 +47,10 @@ python3 bot.py                                        # Launches the Discord Bot
 
 ```console
 docker build -t busybee .
-docker run -d -p 8080:8080 --env-file PATH_TO_DOT_ENV -v PATH_TO_DB_FILE:/code/busybee.db busybee
+docker run -d -p 8080:8080 --env-file PATH_TO_DOT_ENV -v ./persistent/:/code/persistent busybee
 ```
 
-Replace `PATH_TO_DOT_ENV` with the location of your .env and `PATH_TO_DB_FILE` with the location of the sqlite database.
+Replace `PATH_TO_DOT_ENV` with the location of your .env 
 
 ## TODOS
 

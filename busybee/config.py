@@ -27,17 +27,15 @@ def init():
             "BUSYBEE_API_REDIRECT_URI not set in environment variables, using default"
         )
 
-    # Auto-create a database in the working directory if it does not yet exist
-    # Make sure the working directory is not ephemeral!
-    if "busybee.db" not in os.listdir():
-        logger.warning(
-            "Database not found, will create new database when new data needs to be saved (./busybee.db)..."
-        )
-
     intents = discord.Intents.default()
     intents.members = True
     intents.guilds = True
     intents.message_content = True
     bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
+
     db = dataset.connect(DISCORD_BOT_DATABASE_URL)
+
+    # quick and dirty way to crash if it can't write to the database
+    db["test"].upsert({"id":0, "test":"test"}, ["id"])
     initialized = True
+

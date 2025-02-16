@@ -7,7 +7,7 @@ BOT_TOKEN = os.environ["DISCORD_BOT_TOKEN"]
 DISCORD_CLIENT_ID = os.environ["DISCORD_CLIENT_ID"]
 DISCORD_CLIENT_SECRET = os.environ["DISCORD_CLIENT_SECRET"]
 
-DISCORD_BOT_DATABASE_URL = "sqlite:///busybee.db"
+DISCORD_BOT_DATABASE_URL = "sqlite:///persistent/busybee.db"
 
 
 # Will attempt to look for the user in each of these channels,
