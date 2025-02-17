@@ -190,7 +190,7 @@ class UserPreferences(LazyDatabaseModel):
 def default_prefs():
     return {
         "send_pings_to_dm_enabled": True,
-        "pings_enabled": False,
+        "pings_enabled": True,
     }
 
 
