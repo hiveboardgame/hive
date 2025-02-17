@@ -7,7 +7,6 @@ use crate::{
         analysis::Analysis,
         challenge_view::ChallengeView,
         config::Config,
-        discord::Discord,
         donate::Donate,
         faq::Faq,
         home::Home,
@@ -138,7 +137,6 @@ pub fn App() -> impl IntoView {
                         <Route path="/resources" view=|| view! { <Resources /> } />
                         <Route path="/tutorial" view=|| view! { <Tutorial /> } />
                         <Route path="/rules_summary" view=|| view! { <RulesSummary /> } />
-                        <Route path="/discord" view=|| view! { <Discord /> } />
                         <Route
                             path="/game/:nanoid"
                             ssr=SsrMode::PartiallyBlocked

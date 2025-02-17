@@ -1,7 +1,9 @@
+use serde::Deserialize;
+use leptos::*;
+
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 use actix_web::{get, web::{self, Redirect}, HttpResponse, Responder};
-use serde::Deserialize;
 use serde_json::Value;
 
 #[derive(Deserialize)]
@@ -27,7 +29,13 @@ pub async fn callback(params: web::Query<OAuthParams>) -> impl Responder {
 }
 }}
 
-use leptos::*;
+#[derive(Deserialize)]
+struct DiscordParams {
+    discord_id: String,
+    avatar_url: String,
+    username: String,
+}
+
 #[server]
 pub async fn get_discord_handle() -> Result<String, ServerFnError> {
     use crate::functions::auth::identity::uuid;
@@ -38,10 +46,9 @@ pub async fn get_discord_handle() -> Result<String, ServerFnError> {
         println!("Trying to get discord handle for: {}", uuid);
         let url = format!("http://localhost:8080/discord/{}", uuid);
         let client = reqwest::Client::new();
-        let response = client.get(url).send().await.unwrap();
-        let json_str = response.text().await.unwrap();
-        println!("Discord handle: {}", json_str);
-        return Ok(json_str.to_string());
+        let response = client.get(url).send().await?;
+        let data: DiscordParams = response.text().await?;
+        return Ok(data.username);
     }
     return Ok("Not logged in".to_string());
 }
