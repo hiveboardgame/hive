@@ -106,7 +106,7 @@ async def end_flow(request: Request, code: str, state: str):
     response = authorized_session.get("users/@me").json()
     discord_id = response.get("id")
     discord_id = int(discord_id)
-    username = response.get("global_name")
+    username = response.get("username")
     avatar_hash = response.get("avatar")
 
     if avatar_hash:
