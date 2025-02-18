@@ -16,6 +16,8 @@ use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use hive_lib::{GameError, State, Turn};
 use shared_types::{GameId, TimeMode};
+use std::collections::HashMap;
+use std::str::FromStr;
 use uuid::Uuid;
 
 pub struct TurnHandler {
@@ -85,6 +87,18 @@ impl TurnHandler {
                 async move { Ok(self.game.update_gamestate(&state, comp, tc).await?) }.scope_boxed()
             })
             .await?;
+
+        match TimeMode::from_str(&game.time_mode).unwrap() {
+            TimeMode::RealTime => {}
+            _ => {
+                let url = format!("http://localhost:8080/msg/{}", game.current_player_id);
+                let mut json = HashMap::new();
+                let msg = format!("It's your turn: https://hivegame.com/game/{}", game.nanoid);
+                json.insert("content", msg);
+                let client = reqwest::Client::new();
+                let res = client.post(url).json(&json).send().await?;
+            }
+        }
 
         let mut messages = Vec::new();
         let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
