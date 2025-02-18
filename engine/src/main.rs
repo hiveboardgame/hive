@@ -1,6 +1,13 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use hive_lib::{Color, GameError, GameResult, GameStatus, GameType, History, State};
-use std::{env, path::PathBuf};
+use std::path::PathBuf;
+
+fn print_game_from_file(file: PathBuf, turn: usize) -> Result<(), GameError> {
+    println!("Printing for turn: {}", turn);
+    let history = History::from_filepath(file.clone())?;
+    State::print_turn_from_history(&history, turn, file)?;
+    Ok(())
+}
 
 fn play_game_from_file(file: PathBuf) -> Result<State, GameError> {
     println!("Playing game: {}", file.display());
@@ -63,7 +70,7 @@ enum Commands {
     Print {
         /// Move to be printed, defaults to 0 i.e. last move
         #[arg(short, long, default_value_t = 0)]
-        turn: u32,
+        turn: usize,
     },
 }
 
@@ -71,14 +78,15 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Some(Commands::Print { turn }) => {
-            // TODO: this is what we need to implement
-        }
-        None => {}
-    }
-    match play_game_from_file(cli.file) {
-        Ok(_) => {}
-        Err(e) => eprintln!("{e}"),
+        Some(Commands::Print { turn }) => match print_game_from_file(cli.file, turn) {
+            Ok(_) => {}
+            Err(e) => eprintln!("{e}"),
+        },
+        // TODO: this is what we need to implement
+        None => match play_game_from_file(cli.file) {
+            Ok(_) => {}
+            Err(e) => eprintln!("{e}"),
+        },
     }
 }
 
@@ -101,7 +109,7 @@ mod tests {
         for entry in fs::read_dir("./test_pgns/invalid/").expect("Should be valid directory") {
             let entry = entry.expect("PGN").path();
             println!("{}", entry.display());
-            assert!(play_game_from_file(entry).is_ok());
+            assert!(play_game_from_file(entry).is_err());
         }
     }
 
