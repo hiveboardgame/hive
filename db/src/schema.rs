@@ -175,7 +175,6 @@ diesel::table! {
         patreon -> Bool,
         admin -> Bool,
         takeback -> Text,
-        discord_handle -> Nullable<Text>,
     }
 }
 

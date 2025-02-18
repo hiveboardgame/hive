@@ -19,23 +19,19 @@ impl OauthHandler {
         let mut messages = Vec::new();
         let url = format!("http://localhost:8080/oauth/new/{}", self.uuid);
         let client = reqwest::Client::new();
-        let response = client
-            .post(url)
-            //.header(USER_AGENT, "rust-web-api-client") // gh api requires a user-agent header
-            .send()
-            .await?;
+        let response = client.post(url).send().await?;
 
         let json_str = response.text().await?;
         let json: Value = serde_json::from_str(&json_str)?;
-        println!("Body: {}", json_str);
-        let link = json["url"].as_str().unwrap();
+        if let Some(url) = json.get("url") {
+            let url = url.to_string().replace("\"", "");
 
-        println!("Link {:?}", link);
-        let message = InternalServerMessage {
-            destination: MessageDestination::User(self.uuid),
-            message: ServerMessage::RedirectLink(link.to_string()),
-        };
-        messages.push(message);
+            let message = InternalServerMessage {
+                destination: MessageDestination::User(self.uuid),
+                message: ServerMessage::RedirectLink(url.to_string()),
+            };
+            messages.push(message);
+        }
         Ok(messages)
     }
 }

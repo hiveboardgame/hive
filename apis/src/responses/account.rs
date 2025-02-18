@@ -8,7 +8,6 @@ pub struct AccountResponse {
     pub email: String,
     pub id: Uuid,
     pub user: UserResponse,
-    pub discord_handle: String,
 }
 
 use cfg_if::cfg_if;
@@ -28,7 +27,6 @@ impl AccountResponse {
             email: user.email,
             id: user.id,
             user: response,
-            discord_handle: user.discord_handle.unwrap_or(String::new()),
         })
     }
 }

@@ -1,11 +1,8 @@
 use crate::functions;
 use crate::functions::oauth::GetDiscordHandle;
 use crate::{
-    components::molecules::banner::Banner,
-    components::organisms::header::Redirect,
-    functions::accounts::{discord_handle::DiscordHandle, edit::EditAccount},
-    providers::ApiRequests,
-    providers::AuthContext,
+    components::organisms::header::Redirect, functions::accounts::edit::EditAccount,
+    providers::ApiRequests, providers::AuthContext,
 };
 use leptos::*;
 use leptos_router::ActionForm;
@@ -33,14 +30,17 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         <div class=format!("mx-auto max-w-xs pt-20 {extend_tw_classes}")>
             <div class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800">
                 <div>
-                    <label class="block font-bold mb-2" for="old_password">
+                    <div class="block font-bold mb-2">
                         Linked Discord account
-                    </label>
-                    <Show when=move || {
-                        matches!((auth_context.user)(), Some(Ok(Some(_account))))
-                    }>{move || { discord_name.value().get() }}</Show>
+                    </div>
+                    <div class="block font-bold mb-2">
+                        <Show when=move || {
+                            matches!((auth_context.user)(), Some(Ok(Some(_account))))
+                        }>{move || { discord_name.value().get() }}</Show>
+
+                    </div>
                 </div>
-                <div class="pt6">
+                <div>
                     <button
                         class="bg-button-dawn dark:bg-button-twilight transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer"
                         on:click=oauth

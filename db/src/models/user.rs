@@ -6,7 +6,7 @@ use crate::{
         games::{self, current_player_id, finished, game_status, tournament_id},
         ratings::{self, rating},
         users::{
-            self, discord_handle,
+            self,
             dsl::{
                 email as email_field, normalized_username, password as password_field, updated_at,
                 users as users_table,
@@ -125,7 +125,6 @@ pub struct User {
     pub patreon: bool,
     pub admin: bool,
     pub takeback: String,
-    pub discord_handle: Option<String>,
 }
 
 impl User {
@@ -174,18 +173,6 @@ impl User {
                     .await?
             }
         })
-    }
-
-    pub async fn set_discord_handle(
-        &self,
-        discord: String,
-        conn: &mut DbConn<'_>,
-    ) -> Result<(), DbError> {
-        diesel::update(self)
-            .set(discord_handle.eq(discord.to_string()))
-            .execute(conn)
-            .await?;
-        Ok(())
     }
 
     pub async fn set_takeback(&self, tb: Takeback, conn: &mut DbConn<'_>) -> Result<(), DbError> {
