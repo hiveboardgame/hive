@@ -45,10 +45,16 @@ impl StartHandler {
             });
         }
 
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Started(tournament_response)),
-        });
+        let players = tournament.players(&mut conn).await?;
+
+        for player in players {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::User(player.id),
+                message: ServerMessage::Tournament(TournamentUpdate::Started(
+                    tournament_response.clone(),
+                )),
+            });
+        }
 
         for game in games {
             let game_response = GameResponse::from_model(&game, &mut conn).await?;
