@@ -13,36 +13,44 @@ pub struct AuthContext {
 }
 
 /// Get the current user and place it in Context
-pub fn provide_auth() {
+pub fn provide_auth(websocket_context: WebsocketContext) {
     let login = ServerAction::<Login>::new();
     let logout = ServerAction::<Logout>::new();
     let register = ServerAction::<Register>::new();
     let user = RwSignal::new(None);
-    Effect::watch(move || {
-        (
-            login.version().get(),
-            logout.version().get(),
-            register.version().get(),
-        )
-    } , move |curr, prev, _| {
-        spawn(async move {
-            let account = get_account().await;
-            if let Ok(account) = account {
-                user.set(Some(Ok(account)));
-                let websocket_context = expect_context::<WebsocketContext>();
-                websocket_context.close();
-                websocket_context.open();
-            } else {
-                user.set(None);
-            }
-        });
-    }, true);
+    let ws_clone = websocket_context.clone();
     Effect::watch(
-        move || logout.version().get(), move |_,_,_|{
-            let websocket_context = expect_context::<WebsocketContext>();
+        move || {
+            (
+                login.version().get(),
+                logout.version().get(),
+                register.version().get(),
+            )
+        },
+        move |curr, prev, _| {
+            let ws = websocket_context.clone();
+            spawn(async move {
+                let account = get_account().await;
+                if let Ok(account) = account {
+                    user.set(Some(Ok(account)));
+                    ws.close();
+                    ws.open();
+                } else {
+                    user.set(None);
+                }
+            });
+        },
+        true,
+    );
+    Effect::watch(
+        move || logout.version().get(),
+        move |_, _, _| {
+            //let ws = websocket_context.clone();
             logout.version().get();
-            websocket_context.close();
-    }, true);
+            ws_clone.close();
+        },
+        true,
+    );
     provide_context(AuthContext {
         user,
         login,
