@@ -60,6 +60,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
     let gamestate = expect_context::<GameStateSignal>();
+    let mut refocus = expect_context::<RefocusSignal>();
     let stored_children = Signal::derive(move || children.clone());
     let is_tall = use_media_query("(min-height: 100vw)");
     let chat_dropdown_open = RwSignal::new(false);
@@ -152,7 +153,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let _ = Effect::watch(
         focused,
         move |focused, _, _| {
-            let mut refocus = expect_context::<RefocusSignal>();
             if *focused {
                 refocus.refocus();
             } else {
