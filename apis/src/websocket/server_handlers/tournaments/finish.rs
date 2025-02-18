@@ -36,10 +36,15 @@ impl FinishHandler {
             .await?;
         let tournament_response = TournamentResponse::from_model(&tournament, &mut conn).await?;
 
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Finished(tournament_response)),
-        });
+        let players = tournament.players(&mut conn).await?;
+        for player in players {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::User(player.id),
+                message: ServerMessage::Tournament(TournamentUpdate::Finished(
+                    tournament_response.clone(),
+                )),
+            });
+        }
 
         Ok(messages)
     }
