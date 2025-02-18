@@ -2,7 +2,7 @@ use crate::{
     common::HexStack, components::molecules::hex_stack::HexStack as HexStackView,
     providers::game_state::GameStateSignal,
 };
-use hive_lib::{History, Position, State};
+use hive_lib::{History, State};
 use leptos::*;
 
 #[component]
@@ -18,13 +18,11 @@ pub fn HistoryPieces() -> impl IntoView {
             history.moves = game_state.state.history.moves[0..=turn].into();
         }
         let state = State::new_from_history(&history).expect("Got state from history");
-        for r in 0..32 {
-            for q in 0..32 {
-                let position = Position::new(q, r);
-                let bug_stack = state.board.board.get(position).clone();
-                if !bug_stack.is_empty() {
-                    history_pieces.push(HexStack::new_history(&bug_stack, position));
-                }
+
+        for position in state.board.positions.iter().flatten() {
+            let bug_stack = state.board.board.get(*position).clone();
+            if !bug_stack.is_empty() {
+                history_pieces.push(HexStack::new_history(&bug_stack, *position));
             }
         }
         history_pieces

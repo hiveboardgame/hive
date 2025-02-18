@@ -35,10 +35,9 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let current_confirm = Memo::new(move |_| {
-        game_state
+        if game_state
             .loaded
-            .get()
-            .then(|| {
+            .get() { {
                 let preferred_confirms = config().confirm_mode;
                 game_state
                     .signal
@@ -46,8 +45,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                     .get_game_speed()
                     .and_then(|game_speed| preferred_confirms.get(&game_speed).cloned())
                     .unwrap_or(MoveConfirm::Single)
-            })
-            .unwrap_or(MoveConfirm::Single)
+            } } else { MoveConfirm::Single }
     });
     provide_context(CurrentConfirm(current_confirm));
     let user = move || match (auth_context.user)() {
