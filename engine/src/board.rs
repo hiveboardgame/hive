@@ -12,7 +12,7 @@ use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{self, Write};
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::path::PathBuf;
 
 pub const BOARD_SIZE: i32 = 32;
@@ -77,7 +77,7 @@ impl Board {
             .truncate(true)
             .open(path)?;
         for (offset, position) in self.positions.iter().enumerate() {
-            let piece = self.offset_to_piece(offset);
+            let piece = Self::offset_to_piece(offset);
             if let Some(pos) = position {
                 let level = self
                     .level_of_piece(piece, *pos)
@@ -429,7 +429,7 @@ impl Board {
         piece.color() as usize * 24 + piece.bug() as usize * 3 + piece.order().saturating_sub(1)
     }
 
-    pub fn offset_to_piece(&self, offset: usize) -> Piece {
+    pub fn offset_to_piece(offset: usize) -> Piece {
         let color = offset as u8 / 24;
         let bug = (offset as u8 - color * 24) / 3;
         let order = (offset as u8 + 1 - bug * 3 - color * 24) as usize;
@@ -628,7 +628,7 @@ impl Board {
             .enumerate()
             .filter_map(|(i, maybe_pos)| {
                 if let Some(pos) = maybe_pos {
-                    if self.is_bottom_piece(self.offset_to_piece(i), *pos) {
+                    if self.is_bottom_piece(Self::offset_to_piece(i), *pos) {
                         Some(DfsInfo {
                             position: *pos,
                             piece: self.bottom_piece(*pos).unwrap(),
@@ -692,7 +692,7 @@ impl Board {
         let bugs_for_game_type = Bug::bugs_count(game_type);
         for (i, maybe_pos) in self.positions[start..end].iter().enumerate() {
             if maybe_pos.is_none() {
-                let piece = self.offset_to_piece(i + 24 * color as usize);
+                let piece = Self::offset_to_piece(i + 24 * color as usize);
                 if let Some(number_of_bugs) = bugs_for_game_type.get(&piece.bug()) {
                     if (*number_of_bugs as usize) > (i % 3) {
                         res.entry(piece.bug()).or_default().push(piece.to_string());

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::thread::current;
 
 use crate::bug::Bug;
 use crate::color::Color;

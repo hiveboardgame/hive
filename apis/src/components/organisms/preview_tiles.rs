@@ -1,5 +1,5 @@
 use crate::{common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
-use hive_lib::{GameType, Position, State};
+use hive_lib::{GameType, State};
 use leptos::*;
 
 #[component]
@@ -8,13 +8,11 @@ pub fn PreviewTiles() -> impl IntoView {
     let state = State::new_from_str(moves, &GameType::MLP.to_string()).unwrap();
     let thumbnail_pieces = move || {
         let mut pieces = Vec::new();
-        for r in 0..32 {
-            for q in 0..32 {
-                let position = Position::new(q, r);
-                let bug_stack = state.board.board.get(position).clone();
-                if !bug_stack.is_empty() {
-                    pieces.push(HexStack::new_history(&bug_stack, position));
-                }
+
+        for position in state.board.positions.iter().flatten() {
+            let bug_stack = state.board.board.get(*position).clone();
+            if !bug_stack.is_empty() {
+                pieces.push(HexStack::new_history(&bug_stack, *position));
             }
         }
         pieces
