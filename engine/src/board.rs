@@ -34,6 +34,10 @@ pub struct Board {
     pub last_move: (Option<Position>, Option<Position>),
     pub stunned: Option<Piece>,
     pub positions: [Option<Position>; 48],
+    //   wA1, wA2, wA3, wB1, wB2, ...
+    // [ qr   N     qr  N     N
+    // offset_to_piece
+    // for every piece: bottom?
     pinned: [bool; 48],
     pub played: usize,
     pub hasher: Hasher,
