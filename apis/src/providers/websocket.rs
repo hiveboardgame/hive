@@ -78,6 +78,7 @@ fn fix_wss(url: &str) -> String {
 
 pub fn provide_websocket(url: &str) {
     let url = fix_wss(url);
+    let owner = Owner::current().unwrap();
     //log!("Establishing new websocket connection");
     let UseWebSocketReturn {
         message,
@@ -89,7 +90,7 @@ pub fn provide_websocket(url: &str) {
     } = use_websocket_with_options::<WebsocketMessage, WebsocketMessage, MsgpackSerdeCodec, _, _>(
         &url,
         UseWebSocketOptions::default()
-            .on_message(on_message_callback)
+            .on_message(move |m| owner.with(|| on_message_callback(m)))
             .immediate(false),
     );
     provide_context(WebsocketContext::new(
