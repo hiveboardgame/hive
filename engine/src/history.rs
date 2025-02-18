@@ -6,6 +6,7 @@ use std::{
     fmt,
     fs::File,
     io::{self, BufRead},
+    path::PathBuf,
 };
 
 #[derive(Debug, Clone, Serialize, Default, Deserialize, PartialEq, Eq)]
@@ -175,7 +176,7 @@ impl History {
         Ok(())
     }
 
-    pub fn from_filepath(file_path: &str) -> Result<Self, GameError> {
+    pub fn from_filepath(file: PathBuf) -> Result<Self, GameError> {
         let mut history = History::new();
         lazy_static! {
             static ref HEADER: Regex = Regex::new(r"\[.*").expect("This regex should compile");
@@ -187,7 +188,7 @@ impl History {
             static ref GAME_TYPE_LINE: Regex =
                 Regex::new(r"\[GameType.*").expect("This regex should compile");
         }
-        match File::open(file_path) {
+        match File::open(file) {
             Ok(file) => {
                 for line in io::BufReader::new(file).lines().map_while(Result::ok) {
                     if line.is_empty() {
