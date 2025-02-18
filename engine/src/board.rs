@@ -6,11 +6,14 @@ use crate::{
     game_result::GameResult, game_type::GameType, piece::Piece, position::Position,
     torus_array::TorusArray,
 };
+use anyhow::Result;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{self, Write};
+use std::fs::{File, OpenOptions};
+use std::path::PathBuf;
 
 pub const BOARD_SIZE: i32 = 32;
 lazy_static! {
@@ -63,6 +66,26 @@ impl Board {
             smallest: None,
             eigen_direction: None,
         }
+    }
+
+    pub fn create_svg(&self, mut path: PathBuf) -> Result<()> {
+        path.set_extension("svg");
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true) // Required for creation
+            .create(true)
+            .truncate(true)
+            .open(path)?;
+        for (offset, position) in self.positions.iter().enumerate() {
+            let piece = self.offset_to_piece(offset);
+            if let Some(pos) = position {
+                let level = self
+                    .level_of_piece(piece, *pos)
+                    .expect("TODO get rid of this expect");
+                println!("Position: {} Piece: {} Level: {}", pos, piece, level);
+            }
+        }
+        Ok(())
     }
 
     // this always gets called as a last step
@@ -430,6 +453,14 @@ impl Board {
 
     pub fn under_piece(&self, position: Position) -> Option<Piece> {
         self.board.get(position).under_piece()
+    }
+
+    pub fn level_of_piece(&self, piece: Piece, position: Position) -> Option<usize> {
+        self.board
+            .get(position)
+            .pieces
+            .iter()
+            .position(|e| *e == piece)
     }
 
     pub fn is_bottom_piece(&self, piece: Piece, position: Position) -> bool {
