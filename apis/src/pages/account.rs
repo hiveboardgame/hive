@@ -30,9 +30,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         <div class=format!("mx-auto max-w-xs pt-20 {extend_tw_classes}")>
             <div class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800">
                 <div>
-                    <div class="block font-bold mb-2">
-                        Linked Discord account
-                    </div>
+                    <div class="block font-bold mb-2">Linked Discord account</div>
                     <div class="block font-bold mb-2">
                         <Show when=move || {
                             matches!((auth_context.user)(), Some(Ok(Some(_account))))

@@ -88,12 +88,15 @@ impl TurnHandler {
             })
             .await?;
 
-        match TimeMode::from_str(&game.time_mode).unwrap() {
-            TimeMode::RealTime => {}
+        match TimeMode::from_str(&game.time_mode) {
+            Ok(TimeMode::RealTime) => {}
             _ => {
                 let url = format!("http://localhost:8080/msg/{}", game.current_player_id);
                 let mut json = HashMap::new();
-                let msg = format!("[It's your turn!](<https://hivegame.com/game/{}>)", game.nanoid);
+                let msg = format!(
+                    "[It's your turn!](<https://hivegame.com/game/{}>)",
+                    game.nanoid
+                );
                 json.insert("content", msg);
                 let client = reqwest::Client::new();
                 let res = client.post(url).json(&json).send().await?;

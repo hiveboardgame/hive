@@ -2,8 +2,7 @@ use leptos::*;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
-use actix_web::{get, web::{self, Redirect}, HttpResponse, Responder};
-use serde_json::Value;
+use actix_web::{get, web::{self, Redirect}, Responder};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -15,10 +14,12 @@ struct OAuthParams {
 pub async fn callback(params: web::Query<OAuthParams>) -> impl Responder {
     let url = format!("http://localhost:8080/oauth/callback?code={}&state={}", params.code, params.state);
     let client = reqwest::Client::new();
-    let response = client
+    if let Err(e) = client
         .post(url)
         .send()
-        .await.unwrap();
+        .await {
+            println!("Error in oauth callback");
+        };
 
     Redirect::to("/account").temporary()
 }
@@ -27,7 +28,7 @@ pub async fn callback(params: web::Query<OAuthParams>) -> impl Responder {
 #[server]
 pub async fn get_discord_handle() -> Result<String, ServerFnError> {
     use crate::functions::auth::identity::uuid;
-    use serde::Deserialize;
+
     use serde_json::Value;
 
     if let Ok(uuid) = uuid() {
@@ -45,5 +46,5 @@ pub async fn get_discord_handle() -> Result<String, ServerFnError> {
             return Ok(detail.to_string());
         }
     }
-    return Ok("Not logged in".to_string());
+    Ok("Not logged in".to_string())
 }
