@@ -1083,7 +1083,8 @@ impl Game {
                 query = query.filter(
                     games::game_status
                         .eq("NotStarted")
-                        .and(games::game_start.eq("Ready")),
+                        .and(games::game_start.eq("Ready"))
+                        .and(games::conclusion.ne("Committee")),
                 );
             }
             GameProgress::Playing => {
