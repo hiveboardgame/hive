@@ -1,7 +1,7 @@
 use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::components::molecules::time_row::TimeRow;
 use crate::i18n::*;
-use crate::providers::{ApiRequests, Config};
+use crate::providers::{ApiRequestsProvider, Config};
 use crate::{
     components::atoms::game_type::GameType, components::atoms::profile_link::ProfileLink,
     functions::hostname::hostname_and_port, providers::AuthContext, responses::ChallengeResponse,
@@ -14,11 +14,13 @@ use leptos_use::use_window;
 use shared_types::{ChallengeVisibility, TimeInfo};
 
 #[component]
-pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
-    let challenge = Signal::derive(move || challenge.get_value().clone());
+pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView {
+    //let challenge = Signal::derive(move || challenge.get_value().clone());
     let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let challenge = Signal::derive(move || challenge.clone());
     let icon = move || match challenge().color_choice {
         ColorChoice::Random => {
             view! { <Icon icon=icondata::BsHexagonHalf attr:class="pb-[2px]" /> }.into_any()
@@ -197,8 +199,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                 </Show>
                                 <button
                                     on:click=move |_| {
-                                        ApiRequests::new()
-                                            .challenge_cancel(challenge().challenge_id)
+                                        api.get_value().challenge_cancel(challenge().challenge_id)
                                     }
 
                                     class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
@@ -213,8 +214,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                             on:click=move |_| {
                                 match (auth_context.user).get() {
                                     Some(Ok(_)) => {
-                                        ApiRequests::new()
-                                            .challenge_accept(challenge().challenge_id);
+                                        api.get_value().challenge_accept(challenge().challenge_id);
                                     }
                                     _ => {
                                         let navigate = use_navigate();
@@ -234,8 +234,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                     on:click=move |_| {
                                         match auth_context.user.get() {
                                             Some(Ok(_)) => {
-                                                ApiRequests::new()
-                                                    .challenge_cancel(challenge().challenge_id);
+                                                api.get_value().challenge_cancel(challenge().challenge_id);
                                             }
                                             _ => {
                                                 let navigate = use_navigate();

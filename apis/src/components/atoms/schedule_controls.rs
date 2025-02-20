@@ -1,6 +1,6 @@
 use crate::common::ScheduleAction;
 use crate::components::atoms::date_time_picker::DateTimePicker;
-use crate::providers::ApiRequests;
+use crate::providers::ApiRequestsProvider;
 use crate::responses::ScheduleResponse;
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
@@ -14,6 +14,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
     let agreed = schedule.agreed;
     let id = schedule.id;
     let proposer_id = schedule.proposer_id;
+    let api = expect_context::<ApiRequestsProvider>().0;
     let formated_game_date = move |time: DateTime<Utc>| {
         let to_date = time - Utc::now();
 
@@ -28,7 +29,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
         )
     };
     let accept = Callback::from(move |id| {
-        let api = ApiRequests::new();
+        let api = api.get_value();
         api.schedule_action(ScheduleAction::Accept(id));
     });
     view! {
@@ -48,7 +49,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             </Show>
             <button
                 on:click=move |_| {
-                    let api = ApiRequests::new();
+                    let api = api.get_value();
                     api.schedule_action(ScheduleAction::Cancel(id));
                 }
 
@@ -63,8 +64,9 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
 #[component]
 pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
     let selected_time = RwSignal::new(Utc::now() + Duration::minutes(10));
+    let api = expect_context::<ApiRequestsProvider>().0;
     let propose = Callback::from(move |date| {
-        let api = ApiRequests::new();
+        let api = api.get_value();
         api.schedule_action(ScheduleAction::Propose(date, game_id.clone()));
     });
     let callback = Callback::from(move |utc: DateTime<Utc>| {

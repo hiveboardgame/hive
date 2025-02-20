@@ -1,9 +1,10 @@
 use crate::pages::tournament::BUTTON_STYLE;
+use crate::providers::ApiRequestsProvider;
 use crate::{
     common::TournamentAction,
     common::TournamentResponseDepth::Abstract,
     components::molecules::tournament_row::TournamentRow,
-    providers::{tournaments::TournamentStateContext, websocket::WebsocketContext, ApiRequests},
+    providers::{tournaments::TournamentStateContext, websocket::WebsocketContext},
 };
 use leptos::prelude::*;
 use leptos_use::core::ConnectionReadyState;
@@ -29,9 +30,10 @@ pub fn Tournaments() -> impl IntoView {
     let tournament = expect_context::<TournamentStateContext>();
     let ws = expect_context::<WebsocketContext>();
     let filter = RwSignal::new(TournamentFilter::Status(TournamentStatus::NotStarted));
+    let api = expect_context::<ApiRequestsProvider>().0;
     Effect::new(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
-            let api = ApiRequests::new();
+            let api = api.get_value();
             api.tournament(TournamentAction::GetAll(
                 Abstract,
                 TournamentSortOrder::CreatedAtDesc,

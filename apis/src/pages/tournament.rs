@@ -9,9 +9,9 @@ use crate::components::{
         chat::ChatWindow, standings::Standings, tournament_admin::TournamentAdminControls,
     },
 };
+use crate::providers::ApiRequestsProvider;
 use crate::providers::{
-    navigation_controller::NavigationControllerSignal, tournaments::TournamentStateContext,
-    ApiRequests, AuthContext,
+    navigation_controller::NavigationControllerSignal, tournaments::TournamentStateContext, AuthContext,
 };
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
@@ -59,6 +59,7 @@ pub fn Tournament() -> impl IntoView {
 #[component]
 fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     let account = move || match auth_context.user.get() {
         Some(Ok(account)) => Some(account),
         _ => None,
@@ -75,7 +76,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
     let tournament_id = Memo::new(move |_| tournament().tournament_id);
     Effect::new(move |_| {
         if tournament().status != TournamentStatus::NotStarted {
-            let api = ApiRequests::new();
+            let api = api.get_value();
             api.schedule_action(ScheduleAction::TournamentPublic(tournament_id()));
             if user_id().is_some() {
                 api.schedule_action(ScheduleAction::TournamentOwn(tournament_id()));
@@ -110,7 +111,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
         }
     });
     let send_action = move |action: TournamentAction| {
-        let api = ApiRequests::new();
+        let api = api.get_value();
         api.tournament(action);
     };
     let delete = move |_| {

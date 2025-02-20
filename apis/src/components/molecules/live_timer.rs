@@ -1,5 +1,5 @@
 use crate::providers::{
-    game_state::GameStateSignal, timer::TimerSignal, ApiRequests, AuthContext, SoundType, Sounds,
+    game_state::GameStateSignal, timer::TimerSignal, ApiRequestsProvider, AuthContext, SoundType, Sounds
 };
 use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;
@@ -21,6 +21,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     let user_id = Signal::derive(move || match auth_context.user.get_untracked() {
         Some(Ok(user)) => Some(user.id),
         _ => None,
@@ -98,7 +99,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         move || time_is_zero() && !timer().finished,
         move |_, _, _| {
             // When time runs out declare winner and style timer that ran out
-            let api = ApiRequests::new();
+            let api = api.get_value();
             let location = use_location();
             let pathname = (location.pathname)();
             if let Some(caps) = NANOID.captures(&pathname) {

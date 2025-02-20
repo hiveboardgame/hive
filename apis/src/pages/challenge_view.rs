@@ -97,7 +97,7 @@ pub fn ChallengeView() -> impl IntoView {
                                             "The first person to come to this URL will play with you."
                                         </p>
                                     </Show>
-                                    <ChallengeRow challenge=StoredValue::new(challenge) single=true />
+                                    <ChallengeRow challenge=challenge single=true />
                                 }
                                     .into_any()
                             }

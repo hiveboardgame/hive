@@ -62,15 +62,14 @@ pub fn NotificationDropdown() -> impl IntoView {
                 >
                     <div on:click=onclick_close>
                         <ChallengeRow
-                            challenge=StoredValue::new(
+                            challenge=
                                 challenges
                                     .signal
                                     .get_untracked()
                                     .challenges
                                     .get(&challenge_id)
                                     .expect("Challenge exists")
-                                    .clone(),
-                            )
+                                    .clone()
                             single=false
                         />
                     </div>
