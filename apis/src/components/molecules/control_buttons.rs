@@ -83,7 +83,7 @@ pub fn ControlButtons() -> impl IntoView {
                 band_lower: None,
             };
             let challenge_action = ChallengeAction::Create(details);
-            let api = api.get_value();
+            let api = api.get();
             let navigate = leptos_router::hooks::use_navigate();
             api.challenge(challenge_action);
             navigate("/", Default::default());
@@ -148,7 +148,7 @@ pub fn ControlButtons() -> impl IntoView {
 
     let rematch = move |_| {
         if let Some(challenge) = rematch_present() {
-            let api = api.get_value();
+            let api = api.get();
             api.challenge_accept(challenge.challenge_id);
         } else {
             let game_state = expect_context::<GameStateSignal>();
@@ -176,7 +176,7 @@ pub fn ControlButtons() -> impl IntoView {
                         band_lower: None,
                     };
                     let challenge_action = ChallengeAction::Create(details);
-                    let api = api.get_value();
+                    let api = api.get();
                     api.challenge(challenge_action);
                 }
             }

@@ -78,7 +78,7 @@ pub fn UserRow(
         <div class=format!("flex p-1 items-center justify-between h-10 w-64 {color}")>
             <div class="flex justify-between mr-2 w-48">
                 <div class="flex items-center">
-                    <StatusIndicator username=user().username />
+                    <StatusIndicator username=Signal::derive(move ||user().username) />
                     {profile_link()}
                 </div>
                 <Show when=move || { rating().is_some() }>

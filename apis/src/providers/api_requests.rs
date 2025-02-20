@@ -19,8 +19,9 @@ pub struct ApiRequests {
     auth_context: auth_context::AuthContext,
     pub challenges: ChallengeStateSignal
 }
+
 #[derive(Clone)]
-pub struct ApiRequestsProvider(pub StoredValue<ApiRequests>);
+pub struct ApiRequestsProvider(pub Signal<ApiRequests>);
 
 impl ApiRequests {
     pub fn new(websocket: websocket::WebsocketContext, games: GamesSignal, auth_context: auth_context::AuthContext, challenges: ChallengeStateSignal) -> Self {
@@ -169,5 +170,5 @@ pub fn provide_api_requests(ws: websocket::WebsocketContext) {
     let auth_context = expect_context::<auth_context::AuthContext>();
     let challenges = expect_context::<ChallengeStateSignal>();
     let api_requests = ApiRequests::new(ws, games, auth_context, challenges);
-    provide_context(ApiRequestsProvider(StoredValue::new(api_requests)));
+    provide_context(ApiRequestsProvider(Signal::derive( move || api_requests.clone())));
 }
