@@ -1,4 +1,9 @@
-use crate::{components::organisms::header::Redirect, functions::accounts::edit::EditAccount};
+use crate::functions;
+use crate::functions::oauth::GetDiscordHandle;
+use crate::{
+    components::organisms::header::Redirect, functions::accounts::edit::EditAccount,
+    providers::ApiRequests, providers::AuthContext,
+};
 use leptos::*;
 use leptos_router::ActionForm;
 
@@ -12,8 +17,39 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
     create_effect(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
+
+    let oauth = move |_| {
+        let api = ApiRequests::new();
+        api.link_discord();
+    };
+    let auth_context = expect_context::<AuthContext>();
+    let discord_name = create_server_action::<GetDiscordHandle>();
+    discord_name.dispatch(functions::oauth::GetDiscordHandle {});
+
     view! {
         <div class=format!("mx-auto max-w-xs pt-20 {extend_tw_classes}")>
+            <div class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800">
+                <div>
+                    <div class="block font-bold mb-2">Linked Discord account</div>
+                    <div class="block font-bold mb-2">
+                        <Show when=move || {
+                            matches!((auth_context.user)(), Some(Ok(Some(_account))))
+                        }>{move || { discord_name.value().get() }}</Show>
+
+                    </div>
+                </div>
+                <div>
+                    <button
+                        class="bg-button-dawn dark:bg-button-twilight transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer"
+                        on:click=oauth
+                    >
+                        Link Discord
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class=format!("mx-auto max-w-xs {extend_tw_classes}")>
             <ActionForm
                 action=account_action
                 class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800"

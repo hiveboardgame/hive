@@ -45,6 +45,7 @@ markdown = {workspace = true}
 rand = { workspace = true }
 rand_core = { workspace = true }
 regex = { workspace = true }
+reqwest = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

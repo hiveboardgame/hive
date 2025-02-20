@@ -5,16 +5,17 @@ use shared_types::{ChatMessageContainer, GameId, GamesQueryOptions, Takeback};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClientRequest {
-    UserSearch(String),
-    UserProfile(String),
-    Chat(ChatMessageContainer),
     Challenge(ChallengeAction),
+    Chat(ChatMessageContainer),
     Game { game_id: GameId, action: GameAction },
+    GamesSearch(GamesQueryOptions),
+    LinkDiscord,
     Pong(u64),
     Schedule(ScheduleAction),
-    Tournament(TournamentAction),
-    GamesSearch(GamesQueryOptions),
     SetServerUserConf(Takeback),
+    Tournament(TournamentAction),
+    UserProfile(String),
+    UserSearch(String),
     // leptos-use idle or window unfocused will send
     Away, // Online and Offline are not needed because they will be handled by the WS connection
           // being established/torn down

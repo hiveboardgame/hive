@@ -60,6 +60,7 @@ pub enum ServerMessage {
     Tournament(TournamentUpdate),
     UserSearch(Vec<UserResponse>),
     UserStatus(UserUpdate),
+    RedirectLink(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
