@@ -7,7 +7,7 @@ use uuid::Uuid;
 pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
-    let pool = pool()?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     UserResponse::from_uuid(&uuid, &mut conn)
         .await
@@ -19,7 +19,7 @@ pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
     use db_lib::models::User;
-    let pool = pool()?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     Ok(User::username_exists(&username, &mut conn).await?)
 }
@@ -32,7 +32,7 @@ pub async fn get_top_users(
     use crate::functions::db::pool;
     use db_lib::get_conn;
     use db_lib::models::{Rating, User};
-    let pool = pool()?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let top_users: Vec<(User, Rating)> = User::get_top_users(&game_speed, limit, &mut conn).await?;
     let mut results: Vec<UserResponse> = Vec::new();
