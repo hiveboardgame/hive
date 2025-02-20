@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn SimpleLink(
@@ -9,7 +9,7 @@ pub fn SimpleLink(
     view! {
         <a href=link rel="external" target="_blank" class="text-blue-500 hover:underline">
             {text}
-            {children}
+            {children()}
         </a>
     }
 }

@@ -1,15 +1,15 @@
 use crate::components::layouts::base_layout::COMMON_LINK_STYLE;
 use crate::components::molecules::{hamburger::Hamburger, ping::Ping};
 use crate::components::organisms::darkmode_toggle::DarkModeToggle;
-use crate::components::organisms::header::set_redirect;
+//use crate::components::organisms::header::set_redirect;
 use crate::components::organisms::logout::Logout;
 use crate::i18n::*;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn UserDropdown(username: String) -> impl IntoView {
     let i18n = use_i18n();
-    let hamburger_show = create_rw_signal(false);
+    let hamburger_show = RwSignal::new(false);
     let onclick_close = move || hamburger_show.update(|b| *b = false);
     view! {
         <Hamburger
@@ -30,7 +30,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             <a
                 class=COMMON_LINK_STYLE
                 href="/account"
-                on:focus=move |_| set_redirect()
+                //on:focus=move |_| set_redirect()
                 on:click=move |_| onclick_close()
             >
                 {t!(i18n, header.user_menu.edit_account)}
@@ -38,7 +38,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             <a
                 class=COMMON_LINK_STYLE
                 href="/config"
-                on:focus=move |_| set_redirect()
+                //on:focus=move |_| set_redirect()
                 on:click=move |_| onclick_close()
             >
                 {t!(i18n, header.user_menu.config)}

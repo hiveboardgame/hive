@@ -6,7 +6,7 @@ use crate::{
     },
 };
 use hive_lib::Turn;
-use leptos::*;
+use leptos::prelude::*;
 
 pub fn handle_turn(turn: Turn, gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();

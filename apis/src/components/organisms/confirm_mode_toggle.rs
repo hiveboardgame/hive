@@ -1,13 +1,13 @@
 use crate::i18n::*;
 use crate::{common::MoveConfirm, providers::Config};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::Icon;
 use shared_types::GameSpeed;
 
 #[component]
 pub fn ConfirmModeToggle(game_speed: GameSpeed) -> impl IntoView {
     let i18n = use_i18n();
-    let game_speed = store_value(game_speed);
+    let game_speed = Signal::derive( move || game_speed.clone());
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.move_confirm)}</p>
         <div class="flex">
@@ -20,8 +20,8 @@ pub fn ConfirmModeToggle(game_speed: GameSpeed) -> impl IntoView {
 
 #[component]
 pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> impl IntoView {
-    let move_confirm = store_value(move_confirm);
-    let game_speed = store_value(game_speed);
+    let move_confirm = Signal::derive(move || move_confirm.clone());
+    let game_speed = Signal::derive(move || game_speed.clone());
     let config = expect_context::<Config>().0;
     let (_, set_cookie) = Config::get_cookie();
     let (title, icon) = match move_confirm() {
@@ -65,7 +65,7 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> im
                 }
             >
 
-                <Icon icon=icon class="w-6 h-6" />
+                <Icon icon=icon attr:class="w-6 h-6" />
             </button>
         </div>
     }

@@ -16,8 +16,8 @@ use crate::providers::{
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 use shared_types::{
     Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentStatus,
 };
@@ -59,8 +59,8 @@ pub fn Tournament() -> impl IntoView {
 #[component]
 fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let account = move || match (auth_context.user)() {
-        Some(Ok(Some(account))) => Some(account),
+    let account = move || match auth_context.user.get() {
+        Some(Ok(account)) => Some(account),
         _ => None,
     };
     let user_id = Signal::derive(move || account().map(|a| a.user.uid));
@@ -73,7 +73,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
         }
     });
     let tournament_id = Memo::new(move |_| tournament().tournament_id);
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if tournament().status != TournamentStatus::NotStarted {
             let api = ApiRequests::new();
             api.schedule_action(ScheduleAction::TournamentPublic(tournament_id()));
@@ -199,7 +199,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
     let inprogress = Memo::new(move |_| tournament().status == TournamentStatus::InProgress);
     let finished = Memo::new(move |_| tournament().status == TournamentStatus::Finished);
 
-    let game_previews = Callback::new(move |_| {
+    let game_previews = Callback::new(move |()| {
         games_hashmap
             .get()
             .iter()
@@ -244,7 +244,6 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
             "flex flex-col gap-1 w-full sm:flex-row sm:flex-wrap justify-center"
         }
     };
-
     view! {
         <div class="flex flex-col items-center p-2 w-full">
             <h1 class="w-full max-w-full text-3xl font-bold text-center whitespace-normal break-words">
@@ -282,7 +281,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
                             let:user
                         >
                             <div>
-                                <UserRow actions=vec![] user=store_value(user) />
+                                <UserRow actions=vec![] user=StoredValue::new(user) />
                             </div>
                         </For>
                     </div>
@@ -373,7 +372,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
                     </For>
                 </details>
             </Show>
-            <Show when=move || !game_previews(()).is_empty()>
+            <Show when=move || !game_previews.run(()).is_empty()>
                 <details class=DETAILS_STYLE>
                     <summary class=INFO_STYLE>Finished or ongoing games:</summary>
                     <GamePreviews games=game_previews />

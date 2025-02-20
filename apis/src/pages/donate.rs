@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::components::{layouts::base_layout::COMMON_LINK_STYLE, molecules::banner::Banner};
 use crate::i18n::*;
@@ -9,28 +9,30 @@ pub fn Donate() -> impl IntoView {
     let kofi_button = |children: ChildrenFn| {
         view! {
             <a href="https://ko-fi.com/hivedevs" class=COMMON_LINK_STYLE>
-                {children}
+                {children()}
             </a>
         }
     };
     let patreon_button = |children: ChildrenFn| {
         view! {
             <a href="https://www.patreon.com/HiveDevs" class=COMMON_LINK_STYLE>
-                {children}
+                {children()}
             </a>
         }
     };
+
+    //TODO: add uncomented code back in
     view! {
         <div class="pt-20">
             <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
                 <Banner
-                    title=t!(i18n, donate.title).into_view()
-                    text=t!(i18n, donate.subtitle).into_view().into()
+                    title=t!(i18n, donate.title).into_any()
+                    //text=t!(i18n, donate.subtitle)
                 />
                 <p class="my-4 text-lg text-center">{t!(i18n, donate.about)}</p>
                 <div class="flex justify-center items-center my-4">
-                    {t!(i18n, donate.kofi_button, < kofi_button >)}
-                    {t!(i18n, donate.patreon_button, < patreon_button >)}
+                    //{t!(i18n, donate.kofi_button, < kofi_button >)}
+                    //{t!(i18n, donate.patreon_button, < patreon_button >)}
                 </div>
 
                 <div class="p-3">

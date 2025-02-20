@@ -3,8 +3,8 @@ use crate::providers::{
 };
 use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;
-use leptos::*;
-use leptos_router::RouterContext;
+use leptos::prelude::*;
+use leptos_router::hooks::use_location;
 use leptos_use::{
     use_interval_fn_with_options, utils::Pausable, watch_with_options, whenever_with_options,
     UseIntervalFnOptions, WatchOptions,
@@ -12,22 +12,20 @@ use leptos_use::{
 use regex::Regex;
 use shared_types::GameId;
 use std::time::Duration;
-
 lazy_static! {
     static ref NANOID: Regex =
         Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
 }
-
 #[component]
 pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
-    let user_id = Signal::derive(move || match untrack(auth_context.user) {
-        Some(Ok(Some(user))) => Some(user.id),
+    let user_id = Signal::derive(move || match auth_context.user.get_untracked() {
+        Some(Ok(user)) => Some(user.id),
         _ => None,
     });
-    let user_color = game_state.user_color_as_signal(user_id.into());
+    let user_color = game_state.user_color_as_signal(user_id);
     let in_progress = create_read_slice(game_state.signal, |gs| {
         gs.game_response
             .as_ref()
@@ -101,8 +99,9 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         move |_, _, _| {
             // When time runs out declare winner and style timer that ran out
             let api = ApiRequests::new();
-            let router = expect_context::<RouterContext>();
-            if let Some(caps) = NANOID.captures(&router.pathname().get_untracked()) {
+            let location = use_location();
+            let pathname = (location.pathname)();
+            if let Some(caps) = NANOID.captures(&pathname) {
                 if let Some(nanoid) = caps.name("nanoid") {
                     let game_id = GameId(nanoid.as_str().to_string());
                     api.game_check_time(&game_id);

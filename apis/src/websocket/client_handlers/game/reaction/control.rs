@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use hive_lib::{GameControl, GameResult, GameStatus};
-use leptos::*;
+use leptos::prelude::*;
 
 pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();
@@ -31,7 +31,7 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
                             gar.username
                         )));
                     });
-                    let navigate = leptos_router::use_navigate();
+                    let navigate = leptos_router::hooks::use_navigate();
                     navigate("/", Default::default());
                 }
             }

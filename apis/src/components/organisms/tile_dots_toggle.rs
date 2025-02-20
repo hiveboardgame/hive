@@ -1,6 +1,6 @@
 use crate::i18n::*;
 use crate::{common::TileDots, providers::Config};
-use leptos::*;
+use leptos::prelude::*;
 #[component]
 pub fn TileDotsToggle() -> impl IntoView {
     let i18n = use_i18n();
@@ -17,7 +17,7 @@ pub fn TileDotsToggle() -> impl IntoView {
 #[component]
 pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
     let i18n = use_i18n();
-    let tile_dots = store_value(tile_dots);
+    let tile_dots = Signal::derive(move || tile_dots.clone());
     let config = expect_context::<Config>().0;
     let (_, set_cookie) = Config::get_cookie();
     let is_active = move || {
@@ -49,9 +49,9 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
             >
 
                 {match tile_dots() {
-                    TileDots::No => t!(i18n, user_config.dots_buttons.no).into_view(),
-                    TileDots::Angled => t!(i18n, user_config.dots_buttons.angled).into_view(),
-                    TileDots::Vertical => t!(i18n, user_config.dots_buttons.vertical).into_view(),
+                    TileDots::No => t!(i18n, user_config.dots_buttons.no).into_any(),
+                    TileDots::Angled => t!(i18n, user_config.dots_buttons.angled).into_any(),
+                    TileDots::Vertical => t!(i18n, user_config.dots_buttons.vertical).into_any(),
                 }}
 
             </button>

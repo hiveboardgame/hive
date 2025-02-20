@@ -4,7 +4,7 @@ use crate::responses::GameResponse;
 use crate::responses::HeartbeatResponse;
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameControl};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GameId;
 use shared_types::TimeMode;
 use std::cmp::Ordering;
@@ -26,8 +26,8 @@ impl Default for GamesSignal {
 impl GamesSignal {
     pub fn new() -> Self {
         Self {
-            own: create_rw_signal(OwnGames::new()),
-            live: create_rw_signal(LiveGames::new()),
+            own: RwSignal::new(OwnGames::new()),
+            live: RwSignal::new(LiveGames::new()),
         }
     }
 
@@ -47,7 +47,7 @@ impl GamesSignal {
     pub fn visit(&mut self, time_mode: TimeMode) -> Option<GameId> {
         let navigation_controller = expect_context::<NavigationControllerSignal>();
         let auth_context = expect_context::<AuthContext>();
-        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+        if let Some(Ok(user)) = auth_context.user.get_untracked() {
             self.own.update(|s| {
                 if let Some(game_id) = navigation_controller.game_signal.get_untracked().game_id {
                     if let Some(game) = s.untimed.get(&game_id) {
@@ -138,7 +138,7 @@ impl GamesSignal {
         let auth_context = expect_context::<AuthContext>();
         let mut next_required = false;
         let mut player_color = Color::White;
-        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+        if let Some(Ok(user)) = auth_context.user.get_untracked() {
             if game.current_player_id == user.id {
                 next_required = true;
             }
@@ -248,7 +248,7 @@ impl GamesSignal {
     pub fn live_games_add(&mut self, game: GameResponse) {
         let auth_context = expect_context::<AuthContext>();
         let mut should_show = true;
-        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+        if let Some(Ok(user)) = auth_context.user.get_untracked() {
             if game.black_player.uid == user.id || game.white_player.uid == user.id {
                 should_show = false;
             }

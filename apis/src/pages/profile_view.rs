@@ -12,13 +12,14 @@ use crate::{
     },
 };
 use hive_lib::Color;
+use hooks::use_params;
 use leptix_primitives::{
     radio_group::{RadioGroupItem, RadioGroupRoot},
     toggle_group::{ToggleGroupItem, ToggleGroupKind, ToggleGroupMultiple, ToggleGroupRoot},
 };
-use leptos::*;
+use leptos::{html, prelude::*};
 use leptos_icons::*;
-use leptos_router::*;
+use leptos_router::{params::Params, *};
 use leptos_use::{
     core::ConnectionReadyState, signal_debounced, use_infinite_scroll_with_options,
     UseInfiniteScrollOptions,
@@ -52,35 +53,58 @@ fn Controls(username: Signal<String>) -> impl IntoView {
     let toggle_classes = "flex hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-3 rounded bg-button-dawn dark:bg-button-twilight data-[state=on]:bg-pillbug-teal";
     let radio_classes = "hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded bg-button-dawn dark:bg-button-twilight data-[state=checked]:bg-pillbug-teal";
     let delay = 250.0;
+    // WHY CAN'T COMPILER FIGURE OUT THE TYPES IN THE VIEW MACRO?
+    let controls_string: Signal<String> = signal_debounced(
+        Signal::derive(move || controls().tab_view.to_string()),
+        delay,
+    );
+    let color_string: Signal<String> = signal_debounced(
+        Signal::derive(move || {
+            controls()
+                .color
+                .map_or("Both".to_string(), |c| c.to_string())
+        }),
+        delay,
+    );
+    let results_string: Signal<String> = signal_debounced(
+        Signal::derive(move || {
+            controls()
+                .result
+                .map_or("All".to_string(), |c| c.to_string())
+        }),
+        delay,
+    );
+    let speeds_strings: Signal<Vec<String>> = signal_debounced(
+        Signal::derive(move || {
+            controls()
+                .speeds
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>()
+        }),
+        delay,
+    );
     view! {
         <div class="flex flex-col m-1 text-md sm:text-lg">
             <RadioGroupRoot
                 attr:class="flex gap-1"
-                value=signal_debounced(
-                    Signal::derive(move || { controls().tab_view.to_string() }),
-                    delay,
-                )
+                value=controls_string
             >
 
                 <RadioGroupItem value="Unstarted" attr:class=radio_classes>
-                    <A href="unstarted">{t!(i18n, profile.game_buttons.unstarted)}</A>
+                    <a href="unstarted">{t!(i18n, profile.game_buttons.unstarted)}</a>
                 </RadioGroupItem>
                 <RadioGroupItem value="Playing" attr:class=radio_classes>
-                    <A href="playing">{t!(i18n, profile.game_buttons.playing)}</A>
+                    <a href="playing">{t!(i18n, profile.game_buttons.playing)}</a>
                 </RadioGroupItem>
                 <RadioGroupItem value="Finished" attr:class=radio_classes>
-                    <A href="finished">{t!(i18n, profile.game_buttons.finished)}</A>
+                    <a href="finished">{t!(i18n, profile.game_buttons.finished)}</a>
                 </RadioGroupItem>
             </RadioGroupRoot>
             <div class="font-bold text-md">{t!(i18n, profile.player_color)}</div>
             <RadioGroupRoot
                 attr:class="flex gap-1"
-                value=signal_debounced(
-                    Signal::derive(move || {
-                        controls().color.map_or("Both".to_string(), |c| c.to_string())
-                    }),
-                    delay,
-                )
+                value=color_string
 
                 on_value_change=Callback::new(move |v: String| {
                     controls
@@ -105,12 +129,7 @@ fn Controls(username: Signal<String>) -> impl IntoView {
                 <div class="font-bold text-md">{t!(i18n, profile.game_result)}</div>
                 <RadioGroupRoot
                     attr:class="flex gap-1"
-                    value=signal_debounced(
-                        Signal::derive(move || {
-                            controls().result.map_or("All".to_string(), |c| c.to_string())
-                        }),
-                        delay,
-                    )
+                    value=results_string
 
                     on_value_change=Callback::new(move |v: String| {
                         controls
@@ -139,12 +158,7 @@ fn Controls(username: Signal<String>) -> impl IntoView {
             <ToggleGroupRoot
                 attr:class="flex gap-1 mb-1"
                 kind=ToggleGroupKind::Multiple {
-                    value: signal_debounced(
-                            Signal::derive(move || {
-                                controls().speeds.iter().map(|s| s.to_string()).collect::<Vec<_>>()
-                            }),
-                            delay,
-                        )
+                    value: speeds_strings
                         .into(),
                     default_value: ToggleGroupMultiple::none().into(),
                     on_value_change: Some(
@@ -199,25 +213,23 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                 .map_or(String::new(), |user| user)
         })
     });
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
             let api = ApiRequests::new();
-            batch(move || {
-                navi.profile_signal.update(|v| {
-                    *v = ProfileNavigationControllerState {
-                        username: Some(username()),
-                    }
-                });
-                ctx.controls.update(|c| {
-                    c.speeds = vec![
-                        GameSpeed::Bullet,
-                        GameSpeed::Blitz,
-                        GameSpeed::Rapid,
-                        GameSpeed::Classic,
-                        GameSpeed::Correspondence,
-                        GameSpeed::Untimed,
-                    ];
-                });
+            navi.profile_signal.update(|v| {
+                *v = ProfileNavigationControllerState {
+                    username: Some(username()),
+                }
+            });
+            ctx.controls.update(|c| {
+                c.speeds = vec![
+                    GameSpeed::Bullet,
+                    GameSpeed::Blitz,
+                    GameSpeed::Rapid,
+                    GameSpeed::Classic,
+                    GameSpeed::Correspondence,
+                    GameSpeed::Untimed,
+                ];
             });
             api.user_profile(username.get_untracked());
         }
@@ -228,7 +240,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                 <div class="flex justify-center w-full text-lg sm:text-xl">
                     <UserRow
                         actions=vec![UserAction::Challenge]
-                        user=store_value(ctx.user.get().unwrap())
+                        user=StoredValue::new(ctx.user.get().unwrap())
                         on_profile=true
                     />
                 </div>
@@ -295,7 +307,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
             class="overflow-x-hidden items-center sm:grid sm:grid-cols-2 sm:gap-1 h-[53vh] sm:h-[66vh]"
         >
             <For each=ctx.games key=move |game| (game.uuid, tab_view) let:game>
-                <GameRow game=store_value(game) />
+                <GameRow game=StoredValue::new(game) />
             </For>
         </div>
     }

@@ -1,5 +1,5 @@
 use crate::responses::AccountResponse;
-use leptos::*;
+use leptos::prelude::*;
 
 #[server]
 pub async fn login(

@@ -6,7 +6,7 @@ use crate::{
 };
 use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;
-use leptos::*;
+use leptos::prelude::*;
 use std::time::Duration;
 #[component]
 pub fn OnlineUsers() -> impl IntoView {
@@ -31,16 +31,16 @@ pub fn OnlineUsers() -> impl IntoView {
         }
     };
     let num = move || online_users.signal.get().username_user.len();
-
+    //TODO: Uncoment out code
     view! {
         <div class="flex flex-col m-2 w-fit">
             <input
                 class="p-1 w-64"
                 type="text"
                 on:input=debounced_search
-                placeholder=t!(i18n, home.search_players)
-                prop:value=pattern
-                attr:maxlength="20"
+                //placeholder={t!(i18n, home.search_players)}
+                //value=pattern
+                maxlength="20"
             />
             <Show
                 when=move || pattern().is_empty()
@@ -50,7 +50,7 @@ pub fn OnlineUsers() -> impl IntoView {
             </Show>
             <div class="overflow-y-auto max-h-96">
                 <For each=users key=move |(_, user)| user.uid let:user>
-                    <UserRow actions=vec![UserAction::Challenge] user=store_value(user.1) />
+                    <UserRow actions=vec![UserAction::Challenge] user=StoredValue::new(user.1) />
                 </For>
 
             </div>

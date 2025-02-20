@@ -18,7 +18,7 @@ use crate::{
     providers::{config::Config, game_state::GameStateSignal, AuthContext},
 };
 use hive_lib::{Color, GameStatus, Position};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{GameStart, TournamentGameResult};
 
 #[derive(Clone)]
@@ -50,8 +50,8 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         }
     });
     provide_context(CurrentConfirm(current_confirm));
-    let user = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user),
+    let user = move || match auth_context.user.get() {
+        Some(Ok(user)) => Some(user),
         _ => None,
     };
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
@@ -65,7 +65,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             }
         })
     });
-    let player_color = create_memo(move |_| {
+    let player_color = Memo::new(move |_| {
         user().map_or(Color::White, |user| {
             let black_id = white_and_black().1;
             match Some(user.id) == black_id {

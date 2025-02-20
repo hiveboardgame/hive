@@ -6,7 +6,7 @@ use crate::{
         timer::TimerSignal, tournament_ready::TournamentReadySignal,
     },
 };
-use leptos::*;
+use leptos::prelude::*;
 
 pub fn handle_start(gar: GameActionResponse) {
     let navi = expect_context::<NavigationControllerSignal>();

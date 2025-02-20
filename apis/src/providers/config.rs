@@ -1,7 +1,7 @@
 use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
 use chrono::Utc;
 use codee::{binary::MsgpackSerdeCodec, string::Base64, string::FromToStringCodec};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::{use_cookie, use_cookie_with_options, SameSite, UseCookieOptions};
 use serde::{Deserialize, Serialize};
 use shared_types::GameSpeed;

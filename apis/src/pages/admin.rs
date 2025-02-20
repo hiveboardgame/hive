@@ -1,5 +1,5 @@
 use crate::{components::organisms::chat::ChatWindow, providers::AuthContext};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::SimpleDestination;
 
 #[component]
@@ -8,7 +8,7 @@ pub fn Admin() -> impl IntoView {
     view! {
         <div class="pt-20">
             <Show when=move || {
-                if let Some(Ok(Some(account))) = (auth_context.user)() {
+                if let Some(Ok(account)) = auth_context.user.get() {
                     account.user.admin
                 } else {
                     false

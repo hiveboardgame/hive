@@ -5,8 +5,8 @@ use crate::{
         NotificationContext,
     },
 };
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 
 pub fn handle_tournament(tournament: TournamentUpdate) {
     match tournament {

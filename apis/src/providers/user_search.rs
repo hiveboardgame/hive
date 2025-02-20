@@ -1,5 +1,5 @@
 use crate::responses::UserResponse;
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, Copy)]
@@ -16,7 +16,7 @@ impl Default for UserSearchSignal {
 impl UserSearchSignal {
     pub fn new() -> Self {
         Self {
-            signal: create_rw_signal(BTreeMap::new()),
+            signal: RwSignal::new(BTreeMap::new()),
         }
     }
 

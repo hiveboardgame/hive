@@ -6,7 +6,7 @@ use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
 use crate::responses::create_challenge_handler;
 use hive_lib::{GameControl, Turn};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{
     ChallengeId, ChatMessageContainer, GameId, GamesQueryOptions, Takeback, TournamentGameResult,
     TournamentId,
@@ -106,8 +106,8 @@ impl ApiRequests {
         let challenge_action = match challenge_action {
             ChallengeAction::Create(details) => {
                 let auth_context = expect_context::<AuthContext>();
-                let account = match (auth_context.user)() {
-                    Some(Ok(Some(account))) => Some(account),
+                let account = match auth_context.user.get() {
+                    Some(Ok(account)) => Some(account),
                     _ => None,
                 };
                 if let Some(account) = account {

@@ -1,18 +1,18 @@
 use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
 use crate::common::{PieceType, SvgPos};
-use crate::components::organisms::analysis::AnalysisSignal;
+//use crate::components::organisms::analysis::AnalysisSignal;
 use crate::pages::play::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
 use hive_lib::{Bug, GameStatus, Piece, Position};
-use leptos::*;
+use leptos::prelude::*;
 use web_sys::MouseEvent;
 
 #[component]
 pub fn PieceWithoutOnClick(
-    #[prop(into)] piece: MaybeSignal<Piece>,
-    #[prop(into)] position: MaybeSignal<Position>,
-    #[prop(into)] level: MaybeSignal<usize>,
+    #[prop(into)] piece: Signal<Piece>,
+    #[prop(into)] position: Signal<Position>,
+    #[prop(into)] level: Signal<usize>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let piece = piece.get_untracked();
@@ -130,17 +130,18 @@ pub fn PieceWithoutOnClick(
 
 #[component]
 pub fn PieceWithOnClick(
-    #[prop(into)] piece: MaybeSignal<Piece>,
-    #[prop(into)] position: MaybeSignal<Position>,
-    #[prop(into)] level: MaybeSignal<usize>,
+    #[prop(into)] piece: Signal<Piece>,
+    #[prop(into)] position: Signal<Position>,
+    #[prop(into)] level: Signal<usize>,
     #[prop(optional, into)] piece_type: PieceType,
 ) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
-    let analysis = use_context::<AnalysisSignal>()
-        .unwrap_or(AnalysisSignal(RwSignal::new(None)))
-        .0;
-
+    // TODO: FIX ANALYSIS
+    //let analysis = use_context::<AnalysisSignal>()
+    //    .unwrap_or(AnalysisSignal(RwSignal::new(None)))
+    //    .0;
+    //
     let sepia = if piece_type == PieceType::Inactive {
         "sepia-[.75]"
     } else {
@@ -149,7 +150,9 @@ pub fn PieceWithOnClick(
 
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
-        let in_analysis = analysis.get_untracked().is_some();
+        // TODO: FIX ANALYSIS
+        // let in_analysis = analysis.get_untracked().is_some();
+        let in_analysis = false;
         let is_finished = matches!(
             game_state.signal.get_untracked().state.game_status,
             GameStatus::Finished(_)
@@ -183,15 +186,15 @@ pub fn PieceWithOnClick(
 #[component]
 pub fn Piece(
     // WARN piece and position are untracked and might break reactivity if passed in as signals in the future
-    #[prop(into)] piece: MaybeSignal<Piece>,
-    #[prop(into)] position: MaybeSignal<Position>,
-    #[prop(into)] level: MaybeSignal<usize>,
+    #[prop(into)] piece: Signal<Piece>,
+    #[prop(into)] position: Signal<Position>,
+    #[prop(into)] level: Signal<usize>,
     #[prop(optional, into)] piece_type: PieceType,
     #[prop(optional, default = false)] simple: bool,
     // TODO: hand in tile_design and don't get it all the time from config
 ) -> impl IntoView {
     if simple {
-        return view! { <PieceWithoutOnClick piece position level /> };
+        return view! { <PieceWithoutOnClick piece position level /> }.into_any();
     }
-    view! { <PieceWithOnClick piece position level piece_type /> }.into_view()
+    view! { <PieceWithOnClick piece position level piece_type /> }.into_any()
 }

@@ -1,6 +1,6 @@
 use actix_web::web::Data;
 use db_lib::DbPool;
-use leptos::*;
+use leptos::prelude::*;
 
 pub fn pool() -> Result<DbPool, ServerFnError> {
     let req = use_context::<actix_web::HttpRequest>()

@@ -2,12 +2,12 @@ use crate::common::TileDesign;
 use crate::common::{Direction, SvgPos};
 use crate::providers::Config;
 use hive_lib::Position;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn LastMove(
     position: Position,
-    #[prop(into)] level: MaybeSignal<usize>,
+    #[prop(into)] level: Signal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
     direction: Direction,
 ) -> impl IntoView {

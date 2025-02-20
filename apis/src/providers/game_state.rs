@@ -5,7 +5,7 @@ use crate::providers::api_requests::ApiRequests;
 use crate::responses::GameResponse;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
@@ -56,10 +56,7 @@ impl GameStateSignal {
     }
 
     // No longer access the whole signal when getting user_color
-    pub fn user_color_as_signal(
-        &self,
-        user_id: MaybeSignal<Option<Uuid>>,
-    ) -> Signal<Option<Color>> {
+    pub fn user_color_as_signal(&self, user_id: Signal<Option<Uuid>>) -> Signal<Option<Color>> {
         create_read_slice(self.signal, move |gamestate| {
             match (gamestate.white_id, gamestate.black_id) {
                 (Some(w), Some(b)) => {
@@ -114,20 +111,18 @@ impl GameStateSignal {
     }
 
     pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
-        batch(move || {
-            self.reset();
-            let turn = if state.turn != 0 {
-                Some(state.turn - 1)
-            } else {
-                None
-            };
-            self.signal.update(|s| {
-                s.history_turn = turn;
-                s.state = state;
-                s.black_id = Some(black_id);
-                s.white_id = Some(white_id);
-            })
-        });
+        self.reset();
+        let turn = if state.turn != 0 {
+            Some(state.turn - 1)
+        } else {
+            None
+        };
+        self.signal.update(|s| {
+            s.history_turn = turn;
+            s.state = state;
+            s.black_id = Some(black_id);
+            s.white_id = Some(white_id);
+        })
     }
 
     pub fn set_game_id(&mut self, game_id: GameId) {
@@ -340,8 +335,8 @@ impl GameState {
     pub fn is_move_allowed(&self) -> bool {
         let auth_context = expect_context::<AuthContext>();
 
-        let user = move || match (auth_context.user)() {
-            Some(Ok(Some(user))) => Some(user),
+        let user = move || match auth_context.user.get() {
+            Some(Ok(user)) => Some(user),
             _ => None,
         };
         if matches!(self.state.game_status, GameStatus::Finished(_)) {

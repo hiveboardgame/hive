@@ -1,7 +1,7 @@
 use crate::i18n::*;
 use crate::{common::TileDesign, providers::Config};
 use lazy_static::lazy_static;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::use_window;
 
 lazy_static! {
@@ -20,7 +20,7 @@ lazy_static! {
 pub fn TileDesignToggle() -> impl IntoView {
     let i18n = use_i18n();
     let good_software = RwSignal::new(false);
-    create_effect(move |_| good_software.update(|b| *b = *NOT_APPLE));
+    Effect::new(move |_| good_software.update(|b| *b = *NOT_APPLE));
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.piece_style)}</p>
         <div class="flex">
@@ -36,7 +36,7 @@ pub fn TileDesignToggle() -> impl IntoView {
 #[component]
 pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
     let i18n = use_i18n();
-    let tile_design = store_value(tile_design);
+    let tile_design = Signal::derive(move || tile_design.clone());
     let config = expect_context::<Config>().0;
     let (_, set_cookie) = Config::get_cookie();
     let is_active = move || {
@@ -68,9 +68,9 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
             >
 
                 {match tile_design() {
-                    TileDesign::Official => t!(i18n, user_config.style_buttons.official).into_view(),
-                    TileDesign::Flat => t!(i18n, user_config.style_buttons.flat).into_view(),
-                    TileDesign::ThreeD => t!(i18n, user_config.style_buttons.three_d).into_view(),
+                    TileDesign::Official => t!(i18n, user_config.style_buttons.official).into_any(),
+                    TileDesign::Flat => t!(i18n, user_config.style_buttons.flat).into_any(),
+                    TileDesign::ThreeD => t!(i18n, user_config.style_buttons.three_d).into_any(),
                 }}
 
             </button>

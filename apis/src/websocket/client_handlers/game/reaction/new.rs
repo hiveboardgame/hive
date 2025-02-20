@@ -6,8 +6,8 @@ use crate::{
     responses::GameResponse,
 };
 
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 use shared_types::{GameStart, TimeMode};
 
 pub fn handle_new_game(game_response: GameResponse) {
@@ -32,8 +32,8 @@ pub fn handle_new_game(game_response: GameResponse) {
     };
     if should_navigate {
         let auth_context = expect_context::<AuthContext>();
-        let user_uuid = move || match untrack(auth_context.user) {
-            Some(Ok(Some(user))) => Some(user.id),
+        let user_uuid = move || match auth_context.user.get_untracked() {
+            Some(Ok(user)) => Some(user.id),
             _ => None,
         };
         if let Some(id) = user_uuid() {

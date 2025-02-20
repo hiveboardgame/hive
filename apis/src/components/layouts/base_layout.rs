@@ -10,9 +10,9 @@ use cfg_if::cfg_if;
 use chrono::Utc;
 use hive_lib::GameControl;
 use lazy_static::lazy_static;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::use_location;
+use leptos_router::hooks::use_location;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
@@ -60,7 +60,8 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
     let gamestate = expect_context::<GameStateSignal>();
-    let stored_children = store_value(children);
+    let mut refocus = expect_context::<RefocusSignal>();
+    let stored_children = Signal::derive(move || children.clone());
     let is_tall = use_media_query("(min-height: 100vw)");
     let chat_dropdown_open = RwSignal::new(false);
     let orientation_vertical = Signal::derive(move || is_tall() || chat_dropdown_open());
@@ -99,12 +100,12 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         }
     };
 
-    let user_id = Signal::derive(move || match untrack(auth_context.user) {
-        Some(Ok(Some(user))) => Some(user.id),
+    let user_id = Signal::derive(move || match auth_context.user.get_untracked() {
+        Some(Ok(user)) => Some(user.id),
         _ => None,
     });
 
-    let user_color = gamestate.user_color_as_signal(user_id.into());
+    let user_color = gamestate.user_color_as_signal(user_id);
     let has_gamecontrol = create_read_slice(gamestate.signal, move |gs| {
         if let Some(color) = user_color() {
             let opp_color = color.opposite_color();
@@ -124,9 +125,9 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     provide_context(hide_controls);
 
     let is_hidden = RwSignal::new("hidden");
-    create_effect(move |_| is_hidden.set(""));
+    Effect::new(move |_| is_hidden.set(""));
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let location = use_location();
         let mut navi = expect_context::<NavigationControllerSignal>();
         let pathname = (location.pathname)();
@@ -149,10 +150,9 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     });
 
     let focused = use_window_focus();
-    let _ = watch(
+    let _ = Effect::watch(
         focused,
         move |focused, _, _| {
-            let mut refocus = expect_context::<RefocusSignal>();
             if *focused {
                 refocus.refocus();
             } else {
@@ -167,38 +167,34 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
     let Pausable { .. } = use_interval_fn(
         move || {
-            batch({
-                let ws = ws.clone();
-                move || {
-                    counter.update(|c| *c += 1);
-                    match ws_ready() {
-                        ConnectionReadyState::Closed => {
-                            if retry_at.get() == counter.get() {
-                                //log!("Reconnecting due to ReadyState");
-                                ws.open();
-                                counter.update(|c| *c = 0);
-                                retry_at.update(|r| *r *= 2);
-                            }
-                        }
-                        ConnectionReadyState::Open => {
-                            counter.update(|c| *c = 0);
-                            retry_at.update(|r| *r = 2);
-                        }
-                        _ => {}
-                    }
-                    if Utc::now()
-                        .signed_duration_since(ping.last_updated.get_untracked())
-                        .num_seconds()
-                        >= 5
-                        && retry_at.get() == counter.get()
-                    {
-                        //log!("Reconnecting due to ping duration");
+            let ws = ws.clone();
+            counter.update(|c| *c += 1);
+            match ws_ready() {
+                ConnectionReadyState::Closed => {
+                    if retry_at.get() == counter.get() {
+                        //log!("Reconnecting due to ReadyState");
                         ws.open();
                         counter.update(|c| *c = 0);
                         retry_at.update(|r| *r *= 2);
-                    };
+                    }
                 }
-            })
+                ConnectionReadyState::Open => {
+                    counter.update(|c| *c = 0);
+                    retry_at.update(|r| *r = 2);
+                }
+                _ => {}
+            }
+            if Utc::now()
+                .signed_duration_since(ping.last_updated.get_untracked())
+                .num_seconds()
+                >= 5
+                && retry_at.get() == counter.get()
+            {
+                //log!("Reconnecting due to ping duration");
+                ws.open();
+                counter.update(|c| *c = 0);
+                retry_at.update(|r| *r *= 2);
+            };
         },
         1000,
     );
@@ -215,7 +211,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         <Meta name="mobile-web-app-capable" content="yes" />
         <Meta name="apple-mobile-web-app-status-bar-style" content="black" />
         <Script src="/assets/js/pwa.js" />
-        <Html class=move || {
+        <Html prop:class=move || {
             match config().prefers_dark {
                 true => "dark",
                 false => "",

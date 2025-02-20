@@ -2,23 +2,24 @@ use crate::functions::accounts::get::get_account;
 use crate::functions::auth::{login::Login, logout::Logout, register::Register};
 use crate::providers::websocket::WebsocketContext;
 use crate::responses::AccountResponse;
-use leptos::*;
+use leptos::{prelude::*, task::spawn};
 
 #[derive(Clone)]
 pub struct AuthContext {
-    pub login: Action<Login, Result<AccountResponse, ServerFnError>>,
-    pub logout: Action<Logout, Result<(), ServerFnError>>,
-    pub register: Action<Register, Result<(), ServerFnError>>,
-    pub user: Resource<(usize, usize, usize), Result<Option<AccountResponse>, ServerFnError>>,
+    pub login: ServerAction<Login>,
+    pub logout: ServerAction<Logout>,
+    pub register: ServerAction<Register>,
+    pub user: RwSignal<Option<Result<AccountResponse, ServerFnError>>>,
 }
 
 /// Get the current user and place it in Context
-pub fn provide_auth() {
-    let login = create_server_action::<Login>();
-    let logout = create_server_action::<Logout>();
-    let register = create_server_action::<Register>();
-
-    let user = create_local_resource(
+pub fn provide_auth(websocket_context: WebsocketContext) {
+    let login = ServerAction::<Login>::new();
+    let logout = ServerAction::<Logout>::new();
+    let register = ServerAction::<Register>::new();
+    let user = RwSignal::new(None);
+    let ws_clone = websocket_context.clone();
+    Effect::watch(
         move || {
             (
                 login.version().get(),
@@ -26,25 +27,30 @@ pub fn provide_auth() {
                 register.version().get(),
             )
         },
-        move |_| get_account(),
+        move |curr, prev, _| {
+            let ws = websocket_context.clone();
+            spawn(async move {
+                let account = get_account().await;
+                if let Ok(account) = account {
+                    user.set(Some(Ok(account)));
+                    ws.close();
+                    ws.open();
+                } else {
+                    user.set(None);
+                }
+            });
+        },
+        true,
     );
-
-    create_effect(move |_| {
-        user.and_then(|user| {
-            let websocket_context = expect_context::<WebsocketContext>();
-            websocket_context.close();
-            if user.is_some() {
-                websocket_context.open();
-            }
-        });
-    });
-
-    create_effect(move |_| {
-        let websocket_context = expect_context::<WebsocketContext>();
-        logout.version().get();
-        websocket_context.close();
-    });
-
+    Effect::watch(
+        move || logout.version().get(),
+        move |_, _, _| {
+            //let ws = websocket_context.clone();
+            logout.version().get();
+            ws_clone.close();
+        },
+        true,
+    );
     provide_context(AuthContext {
         user,
         login,

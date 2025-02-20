@@ -1,5 +1,5 @@
 use crate::{common::GameActionResponse, providers::tournament_ready::TournamentReadySignal};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::{use_interval_fn, utils::Pausable};
 
 pub fn handle_ready(gar: GameActionResponse) {

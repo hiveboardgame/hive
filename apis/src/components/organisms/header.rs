@@ -11,8 +11,8 @@ use crate::components::organisms::{
 };
 use crate::i18n::*;
 use crate::providers::AuthContext;
-use leptos::*;
-use leptos_router::use_location;
+use leptos::prelude::*;
+use leptos_router::hooks::use_location;
 use shared_types::TimeMode;
 
 #[derive(Clone)]
@@ -21,8 +21,8 @@ pub struct Redirect(pub RwSignal<String>);
 #[component]
 pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let username = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user.username),
+    let username = move || match auth_context.user.get() {
+        Some(Ok(user)) => Some(user.username),
         _ => None,
     };
     let i18n = use_i18n();
@@ -59,9 +59,9 @@ pub fn Header() -> impl IntoView {
             <Transition fallback=|| view! { <GuestActions /> }>
                 <Show when=move || username().is_some() fallback=|| view! { <GuestActions /> }>
                     <div class="flex items-center">
-                        <NextGameButton time_mode=store_value(TimeMode::RealTime) />
-                        <NextGameButton time_mode=store_value(TimeMode::Correspondence) />
-                        <NextGameButton time_mode=store_value(TimeMode::Untimed) />
+                        <NextGameButton time_mode=StoredValue::new(TimeMode::RealTime) />
+                        <NextGameButton time_mode=StoredValue::new(TimeMode::Correspondence) />
+                        <NextGameButton time_mode=StoredValue::new(TimeMode::Untimed) />
                     </div>
                     <div class="flex items-center mr-1">
                         <ChatAndControls />
@@ -87,7 +87,7 @@ fn GuestActions() -> impl IntoView {
             <a
                 class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                 href="/login"
-                on:focus=move |_| set_redirect()
+                //on:focus=move |_| set_redirect()
             >
                 Login
             </a>
@@ -95,9 +95,9 @@ fn GuestActions() -> impl IntoView {
     }
 }
 
-pub fn set_redirect() {
-    let referrer = RwSignal::new(String::from("/"));
-    let location = use_location().pathname.get();
-    referrer.update(|s| *s = location);
-    provide_context(Redirect(referrer));
-}
+//pub fn set_redirect() {
+//    let referrer = RwSignal::new(String::from("/"));
+//    let location = use_location().pathname.get();
+//    referrer.update(|s| *s = location);
+//    provide_context(Redirect(referrer));
+//}

@@ -7,33 +7,38 @@ use crate::{
     functions::hostname::hostname_and_port, providers::AuthContext, responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
-use leptos::*;
+use leptos::{html, prelude::*};
 use leptos_icons::*;
-use leptos_router::*;
+use leptos_router::hooks::use_navigate;
 use leptos_use::use_window;
 use shared_types::{ChallengeVisibility, TimeInfo};
 
 #[component]
 pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> impl IntoView {
+    let challenge = Signal::derive(move || challenge.get_value().clone());
     let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let icon = move || match challenge().color_choice {
         ColorChoice::Random => {
-            view! { <Icon icon=icondata::BsHexagonHalf class="pb-[2px]" /> }
+            view! { <Icon icon=icondata::BsHexagonHalf attr:class="pb-[2px]" /> }.into_any()
         }
         ColorChoice::White => {
             if config().prefers_dark {
-                view! { <Icon icon=icondata::BsHexagonFill class="fill-white pb-[2px]" /> }
+                view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-white pb-[2px]" /> }
+                    .into_any()
             } else {
-                view! { <Icon icon=icondata::BsHexagon class="stroke-black pb-[2px]" /> }
+                view! { <Icon icon=icondata::BsHexagon attr:class="stroke-black pb-[2px]" /> }
+                    .into_any()
             }
         }
         ColorChoice::Black => {
             if config().prefers_dark {
-                view! { <Icon icon=icondata::BsHexagon class="stroke-white pb-[2px]" /> }
+                view! { <Icon icon=icondata::BsHexagon attr:class="stroke-white pb-[2px]" /> }
+                    .into_any()
             } else {
-                view! { <Icon icon=icondata::BsHexagonFill class="fill-black pb-[2px]" /> }
+                view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-black pb-[2px]" /> }
+                    .into_any()
             }
         }
     };
@@ -45,7 +50,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
             challenge().challenge_id
         )
     };
-    let button_ref = create_node_ref::<html::Button>();
+    let button_ref = NodeRef::<html::Button>::new();
     let copy = move |_| {
         let clipboard = use_window()
             .as_ref()
@@ -71,8 +76,8 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
     let td_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let time_mode = challenge().time_mode;
-    let uid = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user.id),
+    let uid = move || match (auth_context.user).get() {
+        Some(Ok(user)) => Some(user.id),
         _ => None,
     };
     let player = move || {
@@ -160,9 +165,9 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                 <div class="flex justify-center items-center">
                     <span class="font-bold">
                         {if challenge().rated {
-                            t!(i18n, home.challenge_details.rated.yes).into_view()
+                            t!(i18n, home.challenge_details.rated.yes).into_any()
                         } else {
-                            t!(i18n, home.challenge_details.rated.no).into_view()
+                            t!(i18n, home.challenge_details.rated.no).into_any()
                         }}
 
                     </span>
@@ -183,11 +188,11 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
                                         && !single
                                 }>
                                     <button
-                                        ref=button_ref
+                                        node_ref=button_ref
                                         on:click=copy
                                         class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
                                     >
-                                        <Icon icon=icondata::AiCopyOutlined class="w-6 h-6" />
+                                        <Icon icon=icondata::AiCopyOutlined attr:class="w-6 h-6" />
                                     </button>
                                 </Show>
                                 <button
@@ -198,7 +203,7 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                                     class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
                                 >
-                                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6" />
+                                    <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
                                 </button>
                             }
                         }
@@ -206,8 +211,8 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                         <button
                             on:click=move |_| {
-                                match (auth_context.user)() {
-                                    Some(Ok(Some(_))) => {
+                                match (auth_context.user).get() {
+                                    Some(Ok(_)) => {
                                         ApiRequests::new()
                                             .challenge_accept(challenge().challenge_id);
                                     }
@@ -220,15 +225,15 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                             class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
                         >
-                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6" />
+                            <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
 
                         </button>
                         {if challenge().opponent.is_some() {
                             view! {
                                 <button
                                     on:click=move |_| {
-                                        match (auth_context.user)() {
-                                            Some(Ok(Some(_))) => {
+                                        match auth_context.user.get() {
+                                            Some(Ok(_)) => {
                                                 ApiRequests::new()
                                                     .challenge_cancel(challenge().challenge_id);
                                             }
@@ -241,13 +246,13 @@ pub fn ChallengeRow(challenge: StoredValue<ChallengeResponse>, single: bool) -> 
 
                                     class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
                                 >
-                                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6" />
+                                    <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
 
                                 </button>
                             }
-                                .into_view()
+                                .into_any()
                         } else {
-                            view! { "" }.into_view()
+                            view! { "" }.into_any()
                         }}
 
                     </Show>

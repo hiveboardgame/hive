@@ -1,6 +1,6 @@
 use core::str;
 use hive_lib::History;
-use leptos::*;
+use leptos::{html, logging, prelude::*};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{js_sys::Array, Blob, Url};
 
@@ -55,7 +55,7 @@ fn blob_and_filename(tree: AnalysisTree) -> (Blob, String) {
 
 #[component]
 pub fn LoadTree() -> impl IntoView {
-    let input_ref = create_node_ref::<html::Input>();
+    let input_ref = NodeRef::<html::Input>::new();
     let analysis = expect_context::<AnalysisSignal>().0;
     let game_state = expect_context::<GameStateSignal>();
     let loaded = RwSignal::new(false);
@@ -75,7 +75,7 @@ pub fn LoadTree() -> impl IntoView {
         Some(())
     };
     view! {
-        <div ref=div_ref class="m-1 w-1/3 h-7">
+        <div node_ref=div_ref class="m-1 w-1/3 h-7">
             <Show when=loaded>
 
                 {
@@ -109,7 +109,7 @@ pub fn LoadTree() -> impl IntoView {
                         >
                             "Load"
                             <input
-                                ref=input_ref
+                                node_ref=input_ref
                                 on:input=move |_| {
                                     let file = input_ref
                                         .get_untracked()
