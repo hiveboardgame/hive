@@ -89,7 +89,7 @@ impl TurnHandler {
             .await?;
 
         match TimeMode::from_str(&game.time_mode) {
-            Ok(TimeMode::RealTime) => {}
+            Ok(TimeMode::RealTime) | Err(_) => {}
             _ => {
                 let url = format!("http://localhost:8080/msg/{}", game.current_player_id);
                 let mut json = HashMap::new();
@@ -99,7 +99,7 @@ impl TurnHandler {
                 );
                 json.insert("content", msg);
                 let client = reqwest::Client::new();
-                let res = client.post(url).json(&json).send().await?;
+                client.post(url).json(&json).send().await?;
             }
         }
 

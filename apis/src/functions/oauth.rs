@@ -18,7 +18,7 @@ pub async fn callback(params: web::Query<OAuthParams>) -> impl Responder {
         .post(url)
         .send()
         .await {
-            println!("Error in oauth callback");
+            println!("Error in oauth callback: {e}");
         };
 
     Redirect::to("/account").temporary()
