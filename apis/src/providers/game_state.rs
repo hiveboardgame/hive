@@ -321,7 +321,7 @@ impl GameState {
     }
 
     pub fn send_game_control(&mut self, game_control: GameControl, user_id: Uuid) {
-        let api = expect_context::<ApiRequestsProvider>().0.get_value();
+        let api = expect_context::<ApiRequestsProvider>().0.get();
         if let Some(color) = self.user_color(user_id) {
             if color != game_control.color() {
                 log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
@@ -357,7 +357,7 @@ impl GameState {
 
     pub fn move_active(&mut self) {
         //log!("Moved active!");
-        let api = expect_context::<ApiRequestsProvider>().0.get_value();
+        let api = expect_context::<ApiRequestsProvider>().0.get();
         if let (Some(active), Some(position)) =
             (self.move_info.active, self.move_info.target_position)
         {

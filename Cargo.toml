@@ -34,14 +34,14 @@ http = "1.1.0"
 http-serde = { version = "2" }
 icondata = {version = "0.5"}
 indoc = "2"
-itertools = "0.13.0"
+itertools = "0.14.0"
 lazy_static = "1.5"
 leptix_primitives = { git="https://github.com/IongIer/leptix.git", branch="leptos-0.7-support-updated" }
 leptos = { version = "0.7", features = ["nightly"] }
 leptos-use = { version = "0.15" }
 leptos_actix =  { version = "0.7" }
 leptos_i18n = { version="0.5", features = ["suppress_key_warnings", "plurals"] }
-leptos_icons = { version = "0.4"}
+leptos_icons = { version = "0.5"}
 leptos_meta =  { version = "0.7"}
 leptos_router =  { version = "0.7", features = ["nightly"] }
 log = "0.4.22"

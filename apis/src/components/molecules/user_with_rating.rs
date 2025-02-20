@@ -28,7 +28,7 @@ pub fn UserWithRating(
             _ => resp.speed,
         })
     };
-    let username = move || player().map_or(String::new(), |p| p.username);
+    let username = Signal::derive(move || player().map_or(String::new(), |p| p.username));
     let patreon = move || player().is_some_and(|p| p.patreon);
     let rating = move || match (player(), speed()) {
         (Some(player), Some(speed)) => {
@@ -46,7 +46,7 @@ pub fn UserWithRating(
             {move || {
                 view! {
                     <div class="flex items-center">
-                        <StatusIndicator username=username() />
+                        <StatusIndicator username />
                         <ProfileLink
                             patreon=patreon()
                             username=username()

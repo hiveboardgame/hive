@@ -75,7 +75,7 @@ impl Chat {
     pub fn send(&self, message: &str, destination: ChatDestination) {
         let auth_context = expect_context::<AuthContext>();
         let gamestate = expect_context::<GameStateSignal>();
-        let api = expect_context::<ApiRequestsProvider>().0.get_value();
+        let api = expect_context::<ApiRequestsProvider>().0.get();
         if let Some(Ok(account)) = auth_context.user.get_untracked() {
             let id = account.user.uid;
             let name = account.user.username;

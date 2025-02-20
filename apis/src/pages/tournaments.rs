@@ -33,7 +33,7 @@ pub fn Tournaments() -> impl IntoView {
     let api = expect_context::<ApiRequestsProvider>().0;
     Effect::new(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
-            let api = api.get_value();
+            let api = api.get();
             api.tournament(TournamentAction::GetAll(
                 Abstract,
                 TournamentSortOrder::CreatedAtDesc,

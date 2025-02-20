@@ -195,7 +195,7 @@ pub fn TournamentCreate() -> impl IntoView {
             },
         };
         if account.is_some() {
-            let api = api.get_value();
+            let api = api.get();
             let action = TournamentAction::Create(Box::new(details));
             api.tournament(action);
             let navigate = use_navigate();

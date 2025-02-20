@@ -22,7 +22,7 @@ pub fn InviteButton(user: UserResponse, tournament_id: TournamentId) -> impl Int
     let tournament_id = StoredValue::new(tournament_id);
 
     let invite = move |_| {
-        let api = api.get_value();
+        let api = api.get();
         api.tournament(TournamentAction::InvitationCreate(
             tournament_id.get_value(),
             user.uid,

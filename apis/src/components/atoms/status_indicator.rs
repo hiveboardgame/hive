@@ -10,12 +10,11 @@ use leptos_icons::*;
 use leptos_use::core::ConnectionReadyState;
 
 #[component]
-pub fn StatusIndicator(username: String) -> impl IntoView {
+pub fn StatusIndicator(username: Signal<String>) -> impl IntoView {
     let websocket = expect_context::<WebsocketContext>();
     let ping = expect_context::<PingContext>();
     let auth_context = expect_context::<AuthContext>();
     let online_users = expect_context::<OnlineUsersSignal>();
-    let username = Signal::derive(move || username.clone());
     let user_is_player = move || match auth_context.user.get() {
         Some(Ok(user)) => user.username == username(),
         _ => false,

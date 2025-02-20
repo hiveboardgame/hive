@@ -42,7 +42,7 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
         }
     });
     let create_challenge = Callback::new(move |color_choice| {
-        let api = api.get_value();
+        let api = api.get();
         let account = move || match auth_context.user.get() {
             Some(Ok(account)) => Some(account),
             _ => None,
