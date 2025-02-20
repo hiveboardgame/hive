@@ -22,8 +22,8 @@ pub async fn edit_account(
     if new_password != new_password_confirmation {
         return Err(ServerFnError::new("Passwords don't match."));
     }
-    let uuid = uuid()?;
-    let pool = pool()?;
+    let uuid = uuid().await?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let user = User::find_by_uuid(&uuid, &mut conn).await?;
     let argon2 = Argon2::default();
