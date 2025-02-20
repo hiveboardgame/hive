@@ -13,7 +13,7 @@ pub async fn login(
     use argon2::{password_hash::PasswordHash, Argon2, PasswordVerifier};
     use db_lib::get_conn;
     use db_lib::models::User;
-    let pool = pool()?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let user: User = User::find_by_email(&email, &mut conn)
         .await
@@ -23,9 +23,8 @@ pub async fn login(
     let parsed_hash = PasswordHash::new(&user.password).map_err(ServerFnError::new)?;
     match argon2.verify_password(password.as_bytes(), &parsed_hash) {
         Ok(_) => {
-            let req = use_context::<actix_web::HttpRequest>()
-                .ok_or("Failed to get HttpRequest")
-                .map_err(ServerFnError::new)?;
+
+            let req: actix_web::HttpRequest = leptos_actix::extract().await?;
             Identity::login(&req.extensions(), user.id.to_string())?;
             leptos_actix::redirect(&pathname);
             AccountResponse::from_uuid(&user.id, &mut conn).await

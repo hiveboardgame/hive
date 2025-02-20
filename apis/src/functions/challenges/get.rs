@@ -8,7 +8,7 @@ pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, Server
     use crate::functions::db::pool;
     use db_lib::get_conn;
     use db_lib::models::Challenge;
-    let pool = pool()?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let challenge = Challenge::find_by_uuid(&id, &mut conn).await?;
     ChallengeResponse::from_model(&challenge, &mut conn)
@@ -21,7 +21,7 @@ pub async fn get_challenge(challenge_id: ChallengeId) -> Result<ChallengeRespons
     use crate::functions::db::pool;
     use db_lib::get_conn;
     use db_lib::models::Challenge;
-    let pool = pool()?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let challenge = Challenge::find_by_challenge_id(&challenge_id, &mut conn).await?;
     ChallengeResponse::from_model(&challenge, &mut conn)
