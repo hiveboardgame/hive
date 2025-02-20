@@ -21,7 +21,7 @@ pub mod tournaments;
 pub mod user_search;
 pub mod websocket;
 pub use alerts::{provide_alerts, AlertType, AlertsContext};
-pub use api_requests::ApiRequests;
+pub use api_requests::{provide_api_requests, ApiRequestsProvider};
 pub use auth_context::{provide_auth, AuthContext};
 pub use challenge_params::{provide_challenge_params, ChallengeParams};
 pub use config::{provide_config, Config};

@@ -1,5 +1,5 @@
 use crate::i18n::*;
-use crate::providers::{AuthContext, ChallengeParams};
+use crate::providers::{ApiRequestsProvider, AuthContext, ChallengeParams};
 use crate::{
     common::ChallengeAction,
     components::{
@@ -9,7 +9,6 @@ use crate::{
         },
         organisms::time_select::TimeSelect,
     },
-    providers::ApiRequests,
 };
 use hive_lib::{ColorChoice, GameType};
 use leptos::prelude::*;
@@ -32,6 +31,8 @@ pub fn ChallengeCreate(
 fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl IntoView {
     let i18n = use_i18n();
     let params = expect_context::<ChallengeParams>();
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let auth_context = expect_context::<AuthContext>();
     let opponent = Signal::derive(move || opponent.clone());
     let time_signals = params.time_signals;
     Effect::new(move |_| {
@@ -41,8 +42,7 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
         }
     });
     let create_challenge = Callback::new(move |color_choice| {
-        let api = ApiRequests::new();
-        let auth_context = expect_context::<AuthContext>();
+        let api = api.get_value();
         let account = move || match auth_context.user.get() {
             Some(Ok(account)) => Some(account),
             _ => None,

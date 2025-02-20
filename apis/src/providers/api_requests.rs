@@ -1,6 +1,6 @@
 use super::challenges::ChallengeStateSignal;
 use super::games::GamesSignal;
-use super::AuthContext;
+use super::{auth_context, websocket, AuthContext};
 use crate::common::{ChallengeAction, ScheduleAction, TournamentAction};
 use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
@@ -15,18 +15,16 @@ use shared_types::{
 #[derive(Clone)]
 pub struct ApiRequests {
     websocket: WebsocketContext,
+    games: GamesSignal,
+    auth_context: auth_context::AuthContext,
+    pub challenges: ChallengeStateSignal
 }
-
-impl Default for ApiRequests {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+#[derive(Clone)]
+pub struct ApiRequestsProvider(pub StoredValue<ApiRequests>);
 
 impl ApiRequests {
-    pub fn new() -> Self {
-        let websocket = expect_context::<WebsocketContext>();
-        Self { websocket }
+    pub fn new(websocket: websocket::WebsocketContext, games: GamesSignal, auth_context: auth_context::AuthContext, challenges: ChallengeStateSignal) -> Self {
+        Self { websocket, games, auth_context, challenges }
     }
 
     pub fn turn(&self, game_id: GameId, turn: Turn) {
@@ -110,15 +108,12 @@ impl ApiRequests {
     pub fn challenge(&self, challenge_action: ChallengeAction) {
         let challenge_action = match challenge_action {
             ChallengeAction::Create(details) => {
-                let auth_context = expect_context::<AuthContext>();
-                let account = match auth_context.user.get() {
+                let account = match self.auth_context.user.get() {
                     Some(Ok(account)) => Some(account),
                     _ => None,
                 };
                 if let Some(account) = account {
-                    let challenges = expect_context::<ChallengeStateSignal>()
-                        .signal
-                        .get_untracked();
+                    let challenges = self.challenges.signal.get_untracked();
                     let challenges = challenges.challenges.into_values().collect();
                     create_challenge_handler(account.user.username, details, challenges)
                 } else {
@@ -172,4 +167,12 @@ impl ApiRequests {
         let msg = ClientRequest::SetServerUserConf(takeback);
         self.websocket.send(&msg);
     }
+}
+
+pub fn provide_api_requests(ws: websocket::WebsocketContext) {
+    let games = expect_context::<GamesSignal>();
+    let auth_context = expect_context::<auth_context::AuthContext>();
+    let challenges = expect_context::<ChallengeStateSignal>();
+    let api_requests = ApiRequests::new(ws, games, auth_context, challenges);
+    provide_context(ApiRequestsProvider(StoredValue::new(api_requests)));
 }

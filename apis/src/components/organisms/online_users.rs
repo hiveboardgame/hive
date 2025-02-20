@@ -1,8 +1,9 @@
 use crate::i18n::*;
+use crate::providers::ApiRequestsProvider;
 use crate::{
     common::UserAction,
     components::molecules::user_row::UserRow,
-    providers::{online_users::OnlineUsersSignal, user_search::UserSearchSignal, ApiRequests},
+    providers::{online_users::OnlineUsersSignal, user_search::UserSearchSignal},
 };
 use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;
@@ -13,13 +14,14 @@ pub fn OnlineUsers() -> impl IntoView {
     let i18n = use_i18n();
     let user_search = expect_context::<UserSearchSignal>();
     let online_users = expect_context::<OnlineUsersSignal>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     let pattern = RwSignal::new(String::new());
     let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
         pattern.set(event_target_value(&ev));
         if pattern().is_empty() {
             user_search.signal.update(|s| s.clear());
         } else {
-            let api = ApiRequests::new();
+            let api = api.get_value();
             api.search_user(pattern());
         }
     });
