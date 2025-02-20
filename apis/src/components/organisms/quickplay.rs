@@ -27,6 +27,7 @@ const BUTTON_STYLE: &str = "flex w-full gap-1 justify-center items-center px-4 p
 
 #[component]
 pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
+    let auth_context = expect_context::<AuthContext>();
     let (display_text, icon_data, base, increment) = match time_control {
         Bullet1p2 => ("1+2".to_owned(), icon_for_speed(&Bullet), 1, 2),
         Blitz3p3 => ("3+3".to_owned(), icon_for_speed(&Blitz), 3, 3),
@@ -40,7 +41,6 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
         <button
             class=BUTTON_STYLE
             on:click=move |_| {
-                let auth_context = expect_context::<AuthContext>();
                 let account = match auth_context.user.get() {
                     Some(Ok(account)) => Some(account),
                     _ => None,
@@ -78,6 +78,7 @@ pub fn QuickPlay() -> impl IntoView {
     let i18n = use_i18n();
     let open = RwSignal::new(false);
     let dialog_el = NodeRef::<Dialog>::new();
+    let auth_context = expect_context::<AuthContext>();
     view! {
         <div class="flex flex-col items-center m-2 grow">
             <Modal open dialog_el=dialog_el>
@@ -95,7 +96,6 @@ pub fn QuickPlay() -> impl IntoView {
                 <button
                     class=BUTTON_STYLE
                     on:click=move |_| {
-                        let auth_context = expect_context::<AuthContext>();
                         let account = match auth_context.user.get() {
                             Some(Ok(account)) => Some(account),
                             _ => None,
