@@ -1,6 +1,6 @@
 use crate::{
     common::TournamentAction,
-    providers::{ApiRequests, AuthContext},
+    providers::{ApiRequestsProvider, AuthContext},
     responses::{TournamentResponse, UserResponse},
 };
 use leptos::prelude::*;
@@ -9,6 +9,7 @@ use leptos_icons::*;
 #[component]
 pub fn KickButton(user: UserResponse, tournament: TournamentResponse) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     let tournament = StoredValue::new(tournament);
 
     let is_organizer = move || {
@@ -24,8 +25,8 @@ pub fn KickButton(user: UserResponse, tournament: TournamentResponse) -> impl In
         }
     };
 
-    let kick = move |_| {
-        let api = ApiRequests::new();
+    let kick = move |_| { 
+        let api = api.get_value();
         api.tournament(TournamentAction::Kick(
             tournament.get_value().tournament_id,
             user.uid,

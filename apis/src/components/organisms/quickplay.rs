@@ -1,9 +1,10 @@
 use crate::i18n::*;
+use crate::providers::ApiRequestsProvider;
 use crate::{
     common::ChallengeAction,
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
     pages::challenge_create::ChallengeCreate,
-    providers::{ApiRequests, AuthContext},
+    providers::{AuthContext},
 };
 use core::panic;
 use hive_lib::{ColorChoice, GameType};
@@ -28,6 +29,7 @@ const BUTTON_STYLE: &str = "flex w-full gap-1 justify-center items-center px-4 p
 #[component]
 pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     let (display_text, icon_data, base, increment) = match time_control {
         Bullet1p2 => ("1+2".to_owned(), icon_for_speed(&Bullet), 1, 2),
         Blitz3p3 => ("3+3".to_owned(), icon_for_speed(&Blitz), 3, 3),
@@ -46,7 +48,7 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
                     _ => None,
                 };
                 if account.is_some() {
-                    let api = ApiRequests::new();
+                    let api = api.get_value();
                     let details = ChallengeDetails {
                         rated: true,
                         game_type: GameType::MLP,

@@ -1,6 +1,7 @@
 use crate::common::UserStatus;
 use crate::i18n::*;
 use crate::providers::online_users::{OnlineUsersSignal, OnlineUsersState};
+use crate::providers::ApiRequestsProvider;
 use crate::{
     components::molecules::challenge_row::ChallengeRow,
     providers::{challenges::ChallengeStateSignal, AuthContext},
@@ -39,7 +40,7 @@ pub fn Challenges() -> impl IntoView {
     let i18n = use_i18n();
     let th_class =
         "py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase max-h-[80vh] max-w-screen";
-    let challenges = expect_context::<ChallengeStateSignal>();
+    let challenges = expect_context::<ApiRequestsProvider>().0.get_value().challenges.signal;
     let online_users = expect_context::<OnlineUsersSignal>().signal;
     let auth_context = expect_context::<AuthContext>();
     let user = move || {
@@ -53,7 +54,6 @@ pub fn Challenges() -> impl IntoView {
         let mut ret = if let Some(user) = user() {
             // Get the challenges direct at the current user
             challenges
-                .signal
                 .get()
                 .challenges
                 .values()
@@ -62,7 +62,6 @@ pub fn Challenges() -> impl IntoView {
                 .collect::<Vec<ChallengeResponse>>()
         } else {
             challenges
-                .signal
                 .get()
                 .challenges
                 .values()
@@ -76,7 +75,6 @@ pub fn Challenges() -> impl IntoView {
     let own = Signal::derive(move || {
         let mut ret = if let Some(user) = user() {
             challenges
-                .signal
                 .get()
                 .challenges
                 .values()
@@ -93,7 +91,6 @@ pub fn Challenges() -> impl IntoView {
     let public = Signal::derive(move || {
         let mut ret = if let Some(user) = user() {
             challenges
-                .signal
                 .get()
                 .challenges
                 .values()
@@ -108,9 +105,9 @@ pub fn Challenges() -> impl IntoView {
         ret.sort_by(|a, b| challenge_order(a, b, &online_users.get()));
         ret
     });
-    let has_games = move |list: Vec<ChallengeResponse>| !list.is_empty();
+    let has_games = |list: &Vec<ChallengeResponse>| !list.is_empty();
     let not_hidden =
-        Memo::new(move |_| has_games(direct()) || has_games(own()) || has_games(public()));
+        Memo::new(move |_| has_games(&direct()) || has_games(&own()) || has_games(&public()));
     view! {
         <table class=move || {
             format!("table-fixed max-w-fit m-2 {}", if not_hidden() { "" } else { "hidden" })
@@ -128,15 +125,15 @@ pub fn Challenges() -> impl IntoView {
             </thead>
             <tbody>
                 <For each=direct key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=StoredValue::new(challenge.to_owned()) single=false />
+                    <ChallengeRow challenge=challenge.to_owned() single=false />
                 </For>
                 <tr class="h-2"></tr>
                 <For each=own key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=StoredValue::new(challenge.to_owned()) single=false />
+                    <ChallengeRow challenge=challenge.to_owned() single=false />
                 </For>
                 <tr class="h-2"></tr>
                 <For each=public key=|c| c.challenge_id.to_owned() let:challenge>
-                    <ChallengeRow challenge=StoredValue::new(challenge.to_owned()) single=false />
+                    <ChallengeRow challenge=challenge.to_owned() single=false />
                 </For>
             </tbody>
         </table>

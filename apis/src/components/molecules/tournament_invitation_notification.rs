@@ -1,6 +1,6 @@
 use crate::common::TournamentAction;
 use crate::components::molecules::time_row::TimeRow;
-use crate::providers::ApiRequests;
+use crate::providers::ApiRequestsProvider;
 use crate::responses::TournamentResponse;
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -9,17 +9,18 @@ use shared_types::TimeInfo;
 #[component]
 pub fn TournamentInvitationNotification(tournament: RwSignal<TournamentResponse>) -> impl IntoView {
     let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
+    let api = expect_context::<ApiRequestsProvider>().0;
     let seats_taken = format!("{}/{}", tournament().players.len(), tournament().seats);
     let seats_full = move || tournament().players.len() as i32 >= tournament().seats;
 
     let decline = move |_| {
-        let api = ApiRequests::new();
+        let api = api.get_value();
         api.tournament(TournamentAction::InvitationDecline(
             tournament().tournament_id,
         ));
     };
     let accept = move |_| {
-        let api = ApiRequests::new();
+        let api = api.get_value();
         api.tournament(TournamentAction::InvitationAccept(
             tournament().tournament_id,
         ));

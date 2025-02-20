@@ -1,12 +1,13 @@
 use crate::common::{markdown_to_html, TimeSignals, TournamentAction};
 use crate::components::organisms::time_select::TimeSelect;
 use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
+use crate::providers::ApiRequestsProvider;
 use crate::{
     components::atoms::{
         date_time_picker::DateTimePicker, input_slider::InputSlider, select_options::SelectOption,
         simple_switch::SimpleSwitch,
     },
-    providers::{ApiRequests, AuthContext},
+    providers::{AuthContext},
 };
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
@@ -87,6 +88,7 @@ pub fn TournamentCreate() -> impl IntoView {
     let max_rating = RwSignal::new(2500);
     let organizer_start = RwSignal::new(true);
     let fixed_round_duration = RwSignal::new(false);
+    let api = expect_context::<ApiRequestsProvider>().0;
     let rating_string = move || {
         format!(
             "Min Rating: {}/ Max Rating: {}",
@@ -193,7 +195,7 @@ pub fn TournamentCreate() -> impl IntoView {
             },
         };
         if account.is_some() {
-            let api = ApiRequests::new();
+            let api = api.get_value();
             let action = TournamentAction::Create(Box::new(details));
             api.tournament(action);
             let navigate = use_navigate();
