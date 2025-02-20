@@ -87,7 +87,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
             if challenge().challenger.uid == uid {
                 view! {
                     <div class="flex items-center">
-                        <StatusIndicator username=opponent.username.to_owned() />
+                        <StatusIndicator username=opponent.username.to_owned().into() />
                         <ProfileLink
                             username=opponent.username
                             patreon=opponent.patreon
@@ -98,7 +98,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
             } else {
                 view! {
                     <div class="flex items-center">
-                        <StatusIndicator username=challenge().challenger.username />
+                        <StatusIndicator username=challenge().challenger.username.into() />
                         <ProfileLink
                             username=challenge().challenger.username
                             patreon=challenge().challenger.patreon
@@ -110,7 +110,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
         } else {
             view! {
                 <div class="flex items-center">
-                    <StatusIndicator username=challenge().challenger.username />
+                    <StatusIndicator username=Signal::derive( move || challenge().challenger.username) />
                     <ProfileLink
                         username=challenge().challenger.username
                         patreon=challenge().challenger.patreon
@@ -199,7 +199,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                                 </Show>
                                 <button
                                     on:click=move |_| {
-                                        api.get_value().challenge_cancel(challenge().challenge_id)
+                                        api.get().challenge_cancel(challenge().challenge_id)
                                     }
 
                                     class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
@@ -214,7 +214,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                             on:click=move |_| {
                                 match (auth_context.user).get() {
                                     Some(Ok(_)) => {
-                                        api.get_value().challenge_accept(challenge().challenge_id);
+                                        api.get().challenge_accept(challenge().challenge_id);
                                     }
                                     _ => {
                                         let navigate = use_navigate();
@@ -234,7 +234,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                                     on:click=move |_| {
                                         match auth_context.user.get() {
                                             Some(Ok(_)) => {
-                                                api.get_value().challenge_cancel(challenge().challenge_id);
+                                                api.get().challenge_cancel(challenge().challenge_id);
                                             }
                                             _ => {
                                                 let navigate = use_navigate();
@@ -251,7 +251,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                             }
                                 .into_any()
                         } else {
-                            view! { "" }.into_any()
+                            view! { "CMUrio :(" }.into_any()
                         }}
 
                     </Show>

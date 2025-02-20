@@ -48,7 +48,7 @@ pub fn UnplayedGameRow(
     let adjudicate = move |result| {
         if user_is_organizer() {
             let action = TournamentAction::AdjudicateResult(game().game_id.clone(), result);
-            let api = api.get_value();
+            let api = api.get();
             api.tournament(action);
             show_adjudicate_menu.update(|b| *b = !*b);
         }

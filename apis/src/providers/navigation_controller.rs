@@ -30,7 +30,7 @@ impl NavigationControllerSignal {
     }
 
     pub fn update_ids(&mut self, game_id: Option<GameId>, tournament_id: Option<TournamentId>) {
-            let api = expect_context::<ApiRequestsProvider>().0.get_value();
+            let api = expect_context::<ApiRequestsProvider>().0.get();
             self.game_signal
                 .update(|s| game_id.clone_into(&mut s.game_id));
             self.tournament_signal

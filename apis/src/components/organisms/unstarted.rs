@@ -55,7 +55,7 @@ pub fn Unstarted(
 
     let start = move |_| {
         if let Some(id) = game_id() {
-            let api = api.get_value();
+            let api = api.get();
             api.tournament_game_start(id);
         };
     };

@@ -26,7 +26,7 @@ pub fn KickButton(user: UserResponse, tournament: TournamentResponse) -> impl In
     };
 
     let kick = move |_| { 
-        let api = api.get_value();
+        let api = api.get();
         api.tournament(TournamentAction::Kick(
             tournament.get_value().tournament_id,
             user.uid,

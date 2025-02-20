@@ -40,11 +40,11 @@ pub fn Challenges() -> impl IntoView {
     let i18n = use_i18n();
     let th_class =
         "py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase max-h-[80vh] max-w-screen";
-    let challenges = expect_context::<ApiRequestsProvider>().0.get_value().challenges.signal;
+    let challenges = expect_context::<ChallengeStateSignal>().signal;
     let online_users = expect_context::<OnlineUsersSignal>().signal;
     let auth_context = expect_context::<AuthContext>();
     let user = move || {
-        if let Some(Ok(user)) = auth_context.user.get_untracked() {
+        if let Some(Ok(user)) = auth_context.user.get() {
             Some(user)
         } else {
             None
@@ -124,15 +124,15 @@ pub fn Challenges() -> impl IntoView {
                 </tr>
             </thead>
             <tbody>
-                <For each=direct key=|c| c.challenge_id.to_owned() let:challenge>
+                <For each=direct key=|c| c.challenge_id.to_owned() let(challenge)>
                     <ChallengeRow challenge=challenge.to_owned() single=false />
                 </For>
                 <tr class="h-2"></tr>
-                <For each=own key=|c| c.challenge_id.to_owned() let:challenge>
+                <For each=own key=|c| c.challenge_id.to_owned() let(challenge)>
                     <ChallengeRow challenge=challenge.to_owned() single=false />
                 </For>
                 <tr class="h-2"></tr>
-                <For each=public key=|c| c.challenge_id.to_owned() let:challenge>
+                <For each=public key=|c| c.challenge_id.to_owned() let(challenge)>
                     <ChallengeRow challenge=challenge.to_owned() single=false />
                 </For>
             </tbody>

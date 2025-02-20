@@ -99,7 +99,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         move || time_is_zero() && !timer().finished,
         move |_, _, _| {
             // When time runs out declare winner and style timer that ran out
-            let api = api.get_value();
+            let api = api.get();
             let location = use_location();
             let pathname = (location.pathname)();
             if let Some(caps) = NANOID.captures(&pathname) {

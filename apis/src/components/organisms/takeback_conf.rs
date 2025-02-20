@@ -20,7 +20,7 @@ pub fn TakebackConf() -> impl IntoView {
 
 #[component]
 fn Button(takeback: Takeback) -> impl IntoView {
-    let api = expect_context::<ApiRequestsProvider>().0.get_value();
+    let api = expect_context::<ApiRequestsProvider>().0.get();
     let i18n = use_i18n();
     let takeback = StoredValue::new(takeback);
     let auth_context = expect_context::<AuthContext>();

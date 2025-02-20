@@ -29,7 +29,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
         )
     };
     let accept = Callback::from(move |id| {
-        let api = api.get_value();
+        let api = api.get();
         api.schedule_action(ScheduleAction::Accept(id));
     });
     view! {
@@ -49,7 +49,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             </Show>
             <button
                 on:click=move |_| {
-                    let api = api.get_value();
+                    let api = api.get();
                     api.schedule_action(ScheduleAction::Cancel(id));
                 }
 
@@ -66,7 +66,7 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
     let selected_time = RwSignal::new(Utc::now() + Duration::minutes(10));
     let api = expect_context::<ApiRequestsProvider>().0;
     let propose = Callback::from(move |date| {
-        let api = api.get_value();
+        let api = api.get();
         api.schedule_action(ScheduleAction::Propose(date, game_id.clone()));
     });
     let callback = Callback::from(move |utc: DateTime<Utc>| {

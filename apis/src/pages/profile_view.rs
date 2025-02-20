@@ -33,7 +33,7 @@ struct UsernameParams {
 }
 
 fn first_batch(user: String, c: ProfileControls) {
-    let api = expect_context::<ApiRequestsProvider>().0.get_value();
+    let api = expect_context::<ApiRequestsProvider>().0.get();
 
     api.games_search(GamesQueryOptions {
         players: vec![(user.clone(), c.color, c.result)],
@@ -216,7 +216,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     });
     Effect::new(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
-            let api = api.get_value();
+            let api = api.get();
             navi.profile_signal.update(|v| {
                 *v = ProfileNavigationControllerState {
                     username: Some(username()),
@@ -285,7 +285,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     let _ = use_infinite_scroll_with_options(
         el,
         move |_| async move {
-            let api = api.get_value();
+            let api = api.get();
 
             if ctx.more_games.get() {
                 let controls = ctx.controls.get();

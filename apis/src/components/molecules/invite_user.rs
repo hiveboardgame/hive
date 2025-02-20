@@ -19,7 +19,7 @@ pub fn InviteUser(tournament: TournamentResponse) -> impl IntoView {
         if pattern().is_empty() {
             user_search.signal.update(|s| s.clear());
         } else {
-            let api = api.get_value();
+            let api = api.get();
             api.search_user(pattern());
         }
     });
