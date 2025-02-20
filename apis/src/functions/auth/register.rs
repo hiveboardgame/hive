@@ -41,7 +41,7 @@ pub async fn register(
         )));
     }
 
-    let pool = pool()?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
