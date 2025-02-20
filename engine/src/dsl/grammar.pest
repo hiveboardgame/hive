@@ -1,0 +1,35 @@
+color = {"b" | "w"}
+order = { "1" | "2" | "3" }
+stack_num = { "1" | "2" | "3" | "4" | "5" | "6" | "7" }
+singlebug = { "Q" | "P" | "M" | "L" }
+multibug =  { "B" | "Q" | "S" | "G" | "A" | "M" | "P" | "L" }
+piece_no_num = @{ color ~ singlebug  } 
+piece_with_num = @{ color ~ multibug ~ order } 
+piece = { piece_no_num | piece_with_num }
+
+star = { "*" }
+hex = { star | stack_num | piece }
+separated_hex = { hex ~ " "+ }
+endline = { "\n" | EOI }
+aligned_row = { separated_hex* ~ hex? ~ endline }
+shifted_row = { "  " ~ aligned_row }
+
+board0 = @{ aligned_row ~ (shifted_row ~ aligned_row)* ~ shifted_row? ~ endline}
+board1 = @{ shifted_row ~ (aligned_row ~ shifted_row)* ~ aligned_row? ~ endline}
+board_desc = { board0 | board1 ~ endline}
+board_label= { "board" ~ ":" ~ endline}
+
+board_section = { board_label ~ board_desc } 
+
+stack_label= { "stack" ~ ":" ~ endline}
+stack_left = { "bottom" ~ "->" }
+stack_right = { "<-" ~ "top" }
+
+piece_list = { (piece ~ " "+) ~ piece }
+stack_middle = {  "[" ~ piece_list ~ "]" } 
+stack_id = { stack_num ~ ":" }
+stack_desc = { stack_id ~ stack_left? ~ stack_middle ~ stack_right ~ endline}
+
+stack_section = { stack_label ~ (stack_desc)* }
+
+valid_dsl = { board_section ~ stack_section? }
