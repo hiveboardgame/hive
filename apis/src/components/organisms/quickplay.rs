@@ -48,7 +48,7 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
                     _ => None,
                 };
                 if account.is_some() {
-                    let api = api.get_value();
+                    let api = api.get();
                     let details = ChallengeDetails {
                         rated: true,
                         game_type: GameType::MLP,

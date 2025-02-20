@@ -24,7 +24,7 @@ pub fn UninviteButton(user: UserResponse, tournament_id: TournamentId) -> impl I
     let tournament_id = StoredValue::new(tournament_id);
 
     let uninvite = move |_| {
-        let api = api.get_value();
+        let api = api.get();
         api.tournament(TournamentAction::InvitationRetract(
             tournament_id.get_value(),
             user.get_value().uid,

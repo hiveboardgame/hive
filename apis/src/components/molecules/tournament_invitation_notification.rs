@@ -14,13 +14,13 @@ pub fn TournamentInvitationNotification(tournament: RwSignal<TournamentResponse>
     let seats_full = move || tournament().players.len() as i32 >= tournament().seats;
 
     let decline = move |_| {
-        let api = api.get_value();
+        let api = api.get();
         api.tournament(TournamentAction::InvitationDecline(
             tournament().tournament_id,
         ));
     };
     let accept = move |_| {
-        let api = api.get_value();
+        let api = api.get();
         api.tournament(TournamentAction::InvitationAccept(
             tournament().tournament_id,
         ));

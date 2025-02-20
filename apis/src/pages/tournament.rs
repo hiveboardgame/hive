@@ -76,7 +76,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
     let tournament_id = Memo::new(move |_| tournament().tournament_id);
     Effect::new(move |_| {
         if tournament().status != TournamentStatus::NotStarted {
-            let api = api.get_value();
+            let api = api.get();
             api.schedule_action(ScheduleAction::TournamentPublic(tournament_id()));
             if user_id().is_some() {
                 api.schedule_action(ScheduleAction::TournamentOwn(tournament_id()));
@@ -111,7 +111,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
         }
     });
     let send_action = move |action: TournamentAction| {
-        let api = api.get_value();
+        let api = api.get();
         api.tournament(action);
     };
     let delete = move |_| {
