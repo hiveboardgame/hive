@@ -58,9 +58,8 @@ pub async fn register(
         })
         .await?;
 
-    let req = use_context::<actix_web::HttpRequest>()
-        .ok_or("Failed to get HttpRequest")
-        .map_err(ServerFnError::new)?;
+    let req: actix_web::HttpRequest = leptos_actix::extract().await?;
+    
     Identity::login(&req.extensions(), user.id.to_string()).expect("To have logged in");
     leptos_actix::redirect(&pathname);
 
