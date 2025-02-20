@@ -1,4 +1,5 @@
 mod board;
+mod dsl;
 mod bug;
 mod bug_stack;
 mod color;
@@ -35,3 +36,4 @@ pub use player::Player;
 pub use position::Position;
 pub use state::State;
 pub use turn::Turn;
+pub use dsl::*;

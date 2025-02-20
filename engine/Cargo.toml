@@ -22,3 +22,5 @@ bitfield-struct = "0.8"
 itertools = "0.13"
 clap = { version = "4.5.30", features = ["derive"] }
 anyhow.workspace = true
+pest = "2.7.15"
+pest_derive = "2.7.15"

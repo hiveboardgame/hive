@@ -10,6 +10,7 @@ use crate::{
     piece::Piece,
 };
 
+/// Position represented via [odd-r horizontal](https://www.redblobgames.com/grids/hexagons/#coordinates-offset) coordinates
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord, Deserialize, Serialize)]
 pub struct Position {
     pub q: i32,

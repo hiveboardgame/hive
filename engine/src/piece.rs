@@ -13,6 +13,9 @@ pub struct Piece {
     pub color: Color,
     #[bits(3)]
     pub bug: Bug,
+    /// order is the numeric value of the piece when represented 
+    /// in Universal Hive Protocol for example "wB2" has order 1 but 
+    /// "wQ" has order 0
     #[bits(2)]
     pub order: usize,
     #[bits(1)]

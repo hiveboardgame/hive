@@ -68,6 +68,7 @@ impl Board {
         }
     }
 
+    /// TODO: insertion point @neal
     pub fn create_svg(&self, mut path: PathBuf) -> Result<()> {
         path.set_extension("svg");
         let file = OpenOptions::new()
@@ -76,15 +77,19 @@ impl Board {
             .create(true)
             .truncate(true)
             .open(path)?;
+
         for (offset, position) in self.positions.iter().enumerate() {
+            // piece type
             let piece = Self::offset_to_piece(offset);
             if let Some(pos) = position {
+                // height
                 let level = self
                     .level_of_piece(piece, *pos)
                     .expect("TODO get rid of this expect");
-                println!("Position: {} Piece: {} Level: {}", pos, piece, level);
+                println!("STUB Position: {} Piece: {} Level: {}", pos, piece, level);
             }
         }
+        
         Ok(())
     }
 
@@ -346,6 +351,7 @@ impl Board {
         self.position_of_piece(piece).is_some()
     }
 
+    /// @neal - move piece
     pub fn move_piece(
         &mut self,
         piece: Piece,
@@ -369,6 +375,7 @@ impl Board {
         Ok(())
     }
 
+    /// @neal - remove piece
     pub fn remove(&mut self, position: Position) -> Piece {
         let bug_stack = self.board.get_mut(position);
         let piece = bug_stack.pop_piece();
@@ -817,6 +824,7 @@ impl Board {
         self.stunned = stunned;
     }
 
+    /// @neal - add piece
     pub fn insert(&mut self, position: Position, piece: Piece, spawn: bool) {
         self.last_moved = Some((piece, position));
         let stack = self.board.get_mut(position);
