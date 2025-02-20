@@ -1,6 +1,7 @@
 use crate::i18n::*;
+use crate::providers::ApiRequestsProvider;
 use crate::providers::{
-    game_state::GameStateSignal, tournament_ready::TournamentReadySignal, ApiRequests,
+    game_state::GameStateSignal, tournament_ready::TournamentReadySignal,
 };
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -15,6 +16,7 @@ pub fn Unstarted(
     let i18n = use_i18n();
     let game_state = expect_context::<GameStateSignal>();
     let ready = expect_context::<TournamentReadySignal>().signal;
+    let api = expect_context::<ApiRequestsProvider>().0;
     let game_id = create_read_slice(game_state.signal, |gs| gs.game_id.clone());
     let white_id = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().map(|gr| (gr.white_player.uid))
@@ -53,7 +55,7 @@ pub fn Unstarted(
 
     let start = move |_| {
         if let Some(id) = game_id() {
-            let api = ApiRequests::new();
+            let api = api.get_value();
             api.tournament_game_start(id);
         };
     };

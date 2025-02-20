@@ -1,7 +1,7 @@
 use crate::{
     common::UserAction,
     components::molecules::user_row::UserRow,
-    providers::{user_search::UserSearchSignal, ApiRequests},
+    providers::{user_search::UserSearchSignal, ApiRequestsProvider},
     responses::TournamentResponse,
 };
 use leptos::ev::Event;
@@ -12,13 +12,14 @@ use std::time::Duration;
 #[component]
 pub fn InviteUser(tournament: TournamentResponse) -> impl IntoView {
     let user_search = expect_context::<UserSearchSignal>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     let pattern = RwSignal::new(String::new());
     let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
         pattern.set(event_target_value(&ev));
         if pattern().is_empty() {
             user_search.signal.update(|s| s.clear());
         } else {
-            let api = ApiRequests::new();
+            let api = api.get_value();
             api.search_user(pattern());
         }
     });

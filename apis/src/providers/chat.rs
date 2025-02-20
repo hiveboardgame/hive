@@ -1,6 +1,5 @@
-use super::{
-    api_requests::ApiRequests, auth_context::AuthContext, game_state::GameStateSignal,
-    navigation_controller::NavigationControllerSignal, AlertType, AlertsContext,
+use super::{ auth_context::AuthContext, game_state::GameStateSignal,
+    navigation_controller::NavigationControllerSignal, AlertType, AlertsContext, ApiRequestsProvider,
 };
 use leptos::prelude::*;
 use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId, TournamentId};
@@ -76,6 +75,7 @@ impl Chat {
     pub fn send(&self, message: &str, destination: ChatDestination) {
         let auth_context = expect_context::<AuthContext>();
         let gamestate = expect_context::<GameStateSignal>();
+        let api = expect_context::<ApiRequestsProvider>().0.get_value();
         if let Some(Ok(account)) = auth_context.user.get_untracked() {
             let id = account.user.uid;
             let name = account.user.username;
@@ -88,7 +88,7 @@ impl Chat {
             };
             let msg = ChatMessage::new(name, id, message, None, turn);
             let container = ChatMessageContainer::new(destination, &msg);
-            ApiRequests::new().chat(&container);
+            api.chat(&container);
         }
     }
 

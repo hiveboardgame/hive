@@ -2,7 +2,7 @@ use crate::{
     common::ChallengeAction,
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
     providers::{
-        challenges::ChallengeStateSignal, game_state::GameStateSignal, ApiRequests, AuthContext,
+        challenges::ChallengeStateSignal, game_state::GameStateSignal, ApiRequestsProvider, AuthContext
     },
 };
 use hive_lib::{ColorChoice, GameControl};
@@ -14,6 +14,7 @@ use shared_types::{ChallengeDetails, ChallengeVisibility};
 pub fn ControlButtons() -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     let user_id = move || {
         auth_context
             .user
@@ -82,7 +83,7 @@ pub fn ControlButtons() -> impl IntoView {
                 band_lower: None,
             };
             let challenge_action = ChallengeAction::Create(details);
-            let api = ApiRequests::new();
+            let api = api.get_value();
             let navigate = leptos_router::hooks::use_navigate();
             api.challenge(challenge_action);
             navigate("/", Default::default());
@@ -147,7 +148,7 @@ pub fn ControlButtons() -> impl IntoView {
 
     let rematch = move |_| {
         if let Some(challenge) = rematch_present() {
-            let api = ApiRequests::new();
+            let api = api.get_value();
             api.challenge_accept(challenge.challenge_id);
         } else {
             let game_state = expect_context::<GameStateSignal>();
@@ -175,7 +176,7 @@ pub fn ControlButtons() -> impl IntoView {
                         band_lower: None,
                     };
                     let challenge_action = ChallengeAction::Create(details);
-                    let api = ApiRequests::new();
+                    let api = api.get_value();
                     api.challenge(challenge_action);
                 }
             }

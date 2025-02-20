@@ -2,13 +2,13 @@ use crate::common::UserAction;
 use crate::components::atoms::rating::icon_for_speed;
 use crate::components::molecules::user_row::UserRow;
 use crate::i18n::*;
+use crate::providers::ApiRequestsProvider;
 use crate::{
     components::{molecules::game_row::GameRow, organisms::display_profile::DisplayProfile},
     providers::{
         games_search::{ProfileControls, ProfileGamesContext},
         navigation_controller::{NavigationControllerSignal, ProfileNavigationControllerState},
         websocket::WebsocketContext,
-        ApiRequests,
     },
 };
 use hive_lib::Color;
@@ -33,7 +33,7 @@ struct UsernameParams {
 }
 
 fn first_batch(user: String, c: ProfileControls) {
-    let api = ApiRequests::new();
+    let api = expect_context::<ApiRequestsProvider>().0.get_value();
 
     api.games_search(GamesQueryOptions {
         players: vec![(user.clone(), c.color, c.result)],
@@ -205,6 +205,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let navi = expect_context::<NavigationControllerSignal>();
     let params = use_params::<UsernameParams>();
     let ws = expect_context::<WebsocketContext>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     let username = Signal::derive(move || {
         params.with(|p| {
             p.as_ref()
@@ -215,7 +216,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     });
     Effect::new(move |_| {
         if ws.ready_state.get() == ConnectionReadyState::Open {
-            let api = ApiRequests::new();
+            let api = api.get_value();
             navi.profile_signal.update(|v| {
                 *v = ProfileNavigationControllerState {
                     username: Some(username()),
@@ -260,6 +261,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
 pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     let ctx = expect_context::<ProfileGamesContext>();
     let params = use_params::<UsernameParams>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     let username = Signal::derive(move || {
         params.with(|p| {
             p.as_ref()
@@ -283,7 +285,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     let _ = use_infinite_scroll_with_options(
         el,
         move |_| async move {
-            let api = ApiRequests::new();
+            let api = api.get_value();
 
             if ctx.more_games.get() {
                 let controls = ctx.controls.get();
