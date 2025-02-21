@@ -3,12 +3,14 @@ use thiserror::Error;
 use crate::color::Color;
 use crate::bug::Bug;
 use crate::piece::Piece;
+use crate::board::Board;
+use anyhow::Result;
+use std::str::FromStr;
 
-use pest::Parser;
+use pest::{Parser, RuleType};
+use pest::iterators::Pair;
 use pest_derive::Parser;
 
-
-pub type Result<T> = std::result::Result<T, ParserError>;
 
 #[derive(Error, Debug)]
 pub enum ParserError {
@@ -66,6 +68,9 @@ pub struct BoardParser;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BoardInput {
+    Star, 
+    Piece(Piece),
+    StackId(u8),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -76,43 +81,106 @@ pub enum Alignment {
     Shifted,
 }
 
+
+
+impl BoardParser {
+
+    fn handle_aligned_row(pair: Pair<Rule>) -> Vec<BoardInput> {
+        let mut row = Vec::new();
+        for p in pair.into_inner() {
+            if p.as_rule() == Rule::EOI {
+                continue;
+            }
+            if p.as_rule() != Rule::hex {
+                panic!("Expected hex rule. Got {:?}", p);
+            }
+
+            let hex = p.clone().into_inner().next().unwrap();
+            match hex.as_rule() {
+                Rule::star => row.push(BoardInput::Star),
+                Rule::piece => {
+                    let piece = Piece::from_str(hex.as_str()).unwrap();
+                    row.push(BoardInput::Piece(piece));
+                },
+                Rule::stack_num => {
+                    let stack_id = hex.as_str().parse::<u8>().unwrap();
+                    row.push(BoardInput::StackId(stack_id));
+                },
+                _ => {panic!("Unexpected rule: {:?}", hex)}
+            }
+        }
+
+        row
+    }
+
+    pub fn handle_board_section(pair : Pair<Rule>) -> Vec<Vec<BoardInput>> { 
+        let mut board = Vec::new();
+        for p in pair.into_inner() {
+            match p.as_rule() {
+                Rule::aligned_row => board.push(BoardParser::handle_aligned_row(p)),
+                Rule::EOI => {},
+                _ => {panic!("Unexpected rule: {:?}", p)}
+            }
+        }
+
+        board
+    }
+
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    pub fn test_dsl_syntax() {
+    pub fn test_parser() {
+        let board = concat!(
+            "board:\n",
+            "  *   *   *   *   * \n",
+            "*   *  bQ  wB1  * \n",
+            "  *   2  wQ   *   * \n",
+            "*   *   1   *   * \n",
+            "  *   *   *   *   * \n",
+        );
+
+        let pair = BoardParser::parse(Rule::board_section, board)
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let board = BoardParser::handle_board_section(pair);
+        assert_eq!(board.len(), 5);
+    }
+
+    #[test]
+    pub fn test_dsl_rules() {
         let dsls = [
             concat!(
-                "board:\n",
+                "board\n",
                 "  *   *   *   *   * \n",
-                "*   *  bQ  wB1  * \n",
-                "  *   2  wQ   *   * \n",
-                "*   *   1   *   * \n",
-                "  *   *   *   *   * \n",
-                "\n\n",
-                "stack : \n",
+                "end",
+
+                "stack \n",
                 "1: bottom -> [wA1 bM] <- top\n",
                 "2: bottom -> [bG1 bB2 wB3] <- top\n",
+                "end",
             ),
             concat!(
-                "board:\n",
+                "board :\n",
                 "  *   *   *   *   * \n",
                 "*   *  bA1 wB1  * \n",
                 "  *  bA2 wQ   *   * \n",
                 "*   *  wM   *   * \n",
                 "  *   *   *   *   * \n",
-                "\n\n",
             ),
             concat!(
-                "board : \n\n\n",
+                "board: \n",
                 "  *   *   *   *   * \n",
                 "*   *  bA1 wB1  * \n",
                 "  *  bA2 wQ   *   * \n",
                 "*   *  wM   *   * \n",
                 "  *   *   *   *   * \n",
-                "\n\n",
-                "stack: \n",
+                "stack:",
             ),
             concat!(
                 "board:\n",
