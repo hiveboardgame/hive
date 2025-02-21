@@ -20,7 +20,7 @@ ERROR_COLOR = discord.Color(0xFF0000)
 BOT_NAME = "BusyBee"
 
 REDIRECT_URI = os.environ.get(
-    "BUSYBEE_API_REDIRECT_URI", "http://localhost:3000/oauth/callback"
+    "BUSYBEE_API_REDIRECT_URI", "https://hivegame.com/oauth/callback"
 )
 
 WS_URL = "ws://localhost:8080/ws"
