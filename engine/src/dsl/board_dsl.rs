@@ -30,19 +30,19 @@ pub enum ParserError {
 /// The idea is to take a string representation such as following and
 /// interpret it deterministically as a [`Board`]:
 ///
-/// ```
-/// board:
+/// ```text
+///  board:
 ///
-///   *   *   *   *   *
-/// *   *  bQ  wB1  *
-///   *   2  wQ   *   *
-/// *   *   1   *   *
-///   *   *   *   *   *
+///    *   *   *   *   *
+///  *   *  bQ  wB1  *
+///    *   2  wQ   *   *
+///  *   *   1   *   *
+///    *   *   *   *   *
 ///
-/// stack:
+///  stack:
 ///
-/// 1: bottom -> [wA1 bM] <- top
-/// 2: bottom -> [bG1 bB2 wB3] <- top
+///  1: bottom -> [wA1 bM] <- top
+///  2: bottom -> [bG1 bB2 wB3] <- top
 /// ```
 ///
 ///
@@ -142,6 +142,22 @@ mod tests {
     #[test]
     pub fn test_dsl_rules() {
         let dsls = [
+            concat!(
+                // make sure that the example parses correctly
+                "board:\n",
+                "\n",
+                "  *   *   *   *   *\n",
+                "*   *  bQ  wB1  *\n",
+                "  *   2  wQ   *   *\n",
+                "*   *   1   *   *\n",
+                "  *   *   *   *   *\n",
+                "\n",
+                "stack:\n",
+                //"\n",
+                "1: bottom -> [wA1 bM] <- top\n",
+                "2: bottom -> [bG1 bB2 wB3] <- top\n",
+            ),
+
             concat!(
                 "board:\n",
                 "  *   *   1   2   * \n", // can parse single row
@@ -313,17 +329,41 @@ mod tests {
 
     #[test]
     pub fn test_stack_section_rules() {
-        let valid_stack_section = [concat!(
-            "stack:\n",
-            "\n",
-            "3:bottom->[wA1 bM]<-top\n",
-            " 1:bottom -> [wA1 bM] <- top \n",
-            "2: [wA1 bM   bQ wB2 ] <-     top\n", // "bottom ->" is optional
-            "5 : bottom  ->[ bA1 wG3]",           // "<- top" is optional
-        )];
+        let valid_stack_section = [
+            concat!(
+                "stack:\n",
+                "\n",
+                "3:bottom->[wA1 bM]<-top\n",
+            ),
+            concat!(
+                "stack:\n",
+                "\n",
+                "3:bottom->[wA1 bM]<-top\n",
+                "1:bottom -> [wA1 bM] <- top \n",
+            ),
+            concat!(
+                "stack:\n",
+                "\n",
+                "3:bottom->[wA1 bM]<-top\n",
+                "1:bottom -> [wA1 bM] <- top \n",
+                "2: [wA1 bM   bQ wB2 ] <-     top\n", // "bottom ->" is optional
+                "5: bottom  ->[ bA1 wG3]",           // "<- top" is optional
+            ),
+            concat!(
+                "stack:\n",
+                "3:bottom->[wA1 bM]<-top\n",
+                "1:bottom -> [wA1 bM] <- top \n",
+                "2: [wA1 bM   bQ wB2 ] <-     top\n", // "bottom ->" is optional
+                "5 : bottom  ->[ bA1 wG3]",           // "<- top" is optional
+            ),
+
+            concat!(
+                "stack:\n",
+            ),
+        ];
 
         for stack_section in valid_stack_section.iter() {
-            let parsed = BoardParser::parse(Rule::stack_section, stack_section);
+            let parsed = BoardParser::parse(Rule::stack_section_test, stack_section);
             if parsed.is_err() {
                 panic!(
                     "Failed to parse stack_section: {:?} {:?}",
