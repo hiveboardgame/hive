@@ -38,7 +38,7 @@ async def send_help(interaction):
         value="Disables pings from HiveGame.com to be sent to user",
         inline=False,
     )
-    await interaction.response.send_message(embed=embed)
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 @config.bot.tree.command(
@@ -78,6 +78,7 @@ async def status(interaction):
     await interaction.response.send_message(
         f"Pings are {'enabled' if pings_enabled else 'disabled'} for {interaction.user}. \n"
         f"This discord account is {'linked' if linked_on_hive else 'not yet linked'} to a Hivegame account.",
+        ephemeral=True,
     )
 
 
@@ -99,7 +100,7 @@ async def enable_pings(interaction):
         f"Set pings enabled to {True} for {interaction.user.id} ({interaction.user})"
     )
     prefs.save_to_database()
-    await interaction.response.send_message("Pings enabled!")
+    await interaction.response.send_message("Pings enabled!", ephemeral=True)
 
 
 @ping_group.command(
@@ -111,7 +112,8 @@ async def disable_pings(interaction):
     prefs = UserPreferences.find_one(discord_user_id=interaction.user.id)
     if not prefs:
         await interaction.response.send_message(
-            "User not linked Hivegame account! Please link your account first."
+            "User not linked Hivegame account! Please link your account first.",
+            ephemeral=True,
         )
         return
 
@@ -120,4 +122,4 @@ async def disable_pings(interaction):
         f"Set pings enabled to {False} for {interaction.user.id} ({interaction.user})"
     )
     prefs.save_to_database()
-    await interaction.response.send_message("Pings disabled!")
+    await interaction.response.send_message("Pings disabled!", ephemeral=True)
