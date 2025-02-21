@@ -26,7 +26,7 @@ pub enum ParserError {
     StackParseError(String),
 }
 
-/// Domain Specific Language parser for the [`Board`] struct.
+/// Domain Specific Language (DSL) parser for the [`Board`] struct.
 ///
 /// The idea is to take a string representation such as following and
 /// interpret it deterministically as a [`Board`]:
@@ -58,6 +58,9 @@ pub enum ParserError {
 ///
 /// Comprehensive syntax rules for the DSL can be found in the `dsl/grammar.pest` file.
 /// 
+/// Note: the goal of this DSL is to strike a balance between human readability (so
+/// the DSL is useful for debugging and is easily written by hand) and
+/// brevity.
 /// 
 /// [`Board`]: crate::board::Board
 /// [`Flush`]: crate::Alignment::Flush
@@ -66,6 +69,8 @@ pub enum ParserError {
 #[grammar = "dsl/grammar.pest"]
 pub struct BoardParser;
 
+/// Describes the details of symbols collect
+/// from the board section or stack section of the DSL.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BoardInput {
     Star, 
@@ -73,6 +78,7 @@ pub enum BoardInput {
     StackId(u8),
 }
 
+/// Describes the alignment of a row in the board section of the DSL.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Alignment {
     /// Row is flush with the left side of the input
