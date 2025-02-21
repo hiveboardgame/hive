@@ -7,7 +7,7 @@ use shared_types::TimeMode;
 pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
     let navigate = leptos_router::hooks::use_navigate();
     let navigation_controller = expect_context::<NavigationControllerSignal>();
-    let games = expect_context::<GamesSignal>();
+    let mut games = expect_context::<GamesSignal>();
     let next_games = move || {
         let game_id = navigation_controller
             .game_signal
@@ -36,7 +36,6 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
     };
     let text = move || format!(": {}", next_games());
     let onclick = move |_| {
-        let mut games = expect_context::<GamesSignal>();
         if let Some(game) = games.visit(time_mode.get_value()) {
             navigate(&format!("/game/{}", game), Default::default());
         } else {
