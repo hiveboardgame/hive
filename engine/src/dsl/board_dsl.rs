@@ -81,10 +81,7 @@ pub enum Alignment {
     Shifted,
 }
 
-
-
 impl BoardParser {
-
     fn handle_aligned_row(pair: Pair<Rule>) -> Vec<BoardInput> {
         let mut row = Vec::new();
         for p in pair.into_inner() {
@@ -125,7 +122,6 @@ impl BoardParser {
 
         board
     }
-
 }
 
 #[cfg(test)]
@@ -133,68 +129,98 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test_parser() {
-        let board = concat!(
-            "board:\n",
-            "  *   *   *   *   * \n",
-            "*   *  bQ  wB1  * \n",
-            "  *   2  wQ   *   * \n",
-            "*   *   1   *   * \n",
-            "  *   *   *   *   * \n",
-        );
-
-        let pair = BoardParser::parse(Rule::board_section, board)
-            .unwrap()
-            .next()
-            .unwrap();
-
-        let board = BoardParser::handle_board_section(pair);
-        assert_eq!(board.len(), 5);
-    }
-
-    #[test]
     pub fn test_dsl_rules() {
         let dsls = [
             concat!(
-                "board\n",
-                "  *   *   *   *   * \n",
-                "end",
-
-                "stack \n",
+                "board:\n",
+                "  *   *   1   2   * \n", // can parse single row
+                "stack: \n",
                 "1: bottom -> [wA1 bM] <- top\n",
                 "2: bottom -> [bG1 bB2 wB3] <- top\n",
-                "end",
             ),
             concat!(
-                "board :\n",
-                "  *   *   *   *   * \n",
+                "board :\n",  // odd rows, starts shifted
+                "  1   5   *   *   * \n",
+                "*   *  bA1 wB1  * \n",
+                "  *  bA2 wQ   *   * \n",
+                // stack can be omitted
+                // Note : syntactically correct but not semantically correct
+                // 1 and 5 stacks are missing
+            ),
+            concat!(
+                "board :\n", // even rows, starts flush, space after board allowed
+                "1   6   *   *   * \n",
+                "  *   *  bA1 wB1  * \n",
+                // stack can be omitted 
+                // Note : syntactically correct but not semantically correct,
+                // 1 and 6 stacks are missing
+            ),
+            concat!(
+                "board:\n", 
+                "*   *  bA1 wB1  * \n",
+                "  1   *   *   *   * \n",
+                "*   *  bA1 wB1  * \n",
+                "  *  bA2 wQ   *   * \n",
+                "*   *  wM   *   * \n",
+                // stack can be omitted
+                // Note : syntactically correct but not semantically correct
+                // 1 stack is missing
+            ),
+            concat!(
+                "board: \n", // space after colon
+                "  2   *   *   *   * \n",
                 "*   *  bA1 wB1  * \n",
                 "  *  bA2 wQ   *   * \n",
                 "*   *  wM   *   * \n",
                 "  *   *   *   *   * \n",
+                "stack:",  // stack ids can be omitted 
+                           // Note: syntactically correct but not 
+                           // semantically correct, the 2 stack is missing
             ),
             concat!(
-                "board: \n",
-                "  *   *   *   *   * \n",
-                "*   *  bA1 wB1  * \n",
-                "  *  bA2 wQ   *   * \n",
-                "*   *  wM   *   * \n",
-                "  *   *   *   *   * \n",
-                "stack:",
+                " \n", // new lines and space before "board:" allowed
+                " board:\n", 
+                "  3   *   *   * \n",
+                "*   *   *   * \n",
+                "  *   *   *   * \n",
+                "*   *   *   *     \n", // trailing spaces allowed
+                "  *   *   *   *\n",
+                "stack: \n",  // stack ids can be omitted Note: 
+                              // syntactically correct but not semantically correct
+                              // the 3 stack is missing
             ),
             concat!(
+                "\n",
+                "board:\n",
+                "\n", // new lines and space after "board:" allowed
+                "*   *   *   * \n",
+                "  *   *   *   * \n",
+                "*   *   *   * \n",
+                "  *   *   *   * \n",
+                "stack: \n",  // stack ids can be omitted (syntactically correct and
+                              // semantically correct, there are no stacks)
+            ),
+            concat!(
+                " \n\n",
+                "board:\n",
+                "  *\n", // single piece allowed
+                "stack: \n",
+            ),
+            concat!(
+                " \n\n",
                 "board:\n",
                 "  *   *   *   *   * \n",
-                "*   *   *   *   * \n",
-                "  *   *   *   *   * \n",
-                "*   *   *   *   * \n",
+                "*   *   *   *   * \n", 
+                "  *   *          *   *   * \n", // too many intra-row spaces allowed
+                "*   *   * *   * \n", // almost too few intra-row spaces allowed
                 "  *   *   *   *   * \n",
                 "stack: \n",
             ),
             concat!(
-                "board: \n",
-                "stack:\n",
+                "board: \n", // empty board allowed
+                "stack:\n", // empty stack allowed
             ),
+
         ];
 
         for dsl in dsls.iter() {
@@ -248,20 +274,60 @@ mod tests {
         for dsl in invalid_dsls.iter() {
             let parsed = BoardParser::parse(Rule::valid_dsl, dsl);
             if parsed.is_ok() {
-                panic!("Expected {:?} to fail. Got {:?}", dsl, parsed);
+                panic!("Expected\n-----\n{}\n------\n to fail.\nGot {:?}", dsl, parsed);
             }
         }
     }
 
     #[test]
-    pub fn test_stack_rules() {
-        let valid_stack_descs = [
+    pub fn test_board_section_rules() {
+        let board = concat!(
+            "board:\n",
+            "  *   *   *   *   * \n",
+            "*   *  bQ  wB1  * \n",
+            "  *   2  wQ   *   * \n",
+            "*   *   1   *   * \n",
+            "  *   *   *   *   * \n",
+            "\n"
+        );
+
+        let pair = BoardParser::parse(Rule::board_section, board)
+            .unwrap()
+            .next()
+            .unwrap();
+
+        //let board = BoardParser::handle_board_section(pair);
+    }
+
+    #[test]
+    pub fn test_stack_section_rules() {
+        let valid_stack_section = [
             concat!(
+                "stack:\n",
+                "\n",
                 "3:bottom->[wA1 bM]<-top\n", 
                 " 1:bottom -> [wA1 bM] <- top \n",      
-                "2: [wA1 bM   bQ wB2 ] <-     top ",  // "bottom ->" is optional 
+                "2: [wA1 bM   bQ wB2 ] <-     top\n",  // "bottom ->" is optional 
                 "5 : bottom  ->[ bA1 wG3]", // "<- top" is optional
             ),
+        ];
+
+        for stack_section in valid_stack_section.iter() {
+            let parsed = BoardParser::parse(Rule::stack_section, stack_section);
+            if parsed.is_err() {
+                panic!("Failed to parse stack_section: {:?} {:?}", stack_section, parsed);
+            }
+        }
+
+    }
+
+    #[test]
+    pub fn test_stack_desc_rules() {
+        let valid_stack_descs = [
+            "3:bottom->[wA1 bM]<-top\n", 
+            "1:bottom -> [wA1 bM] <- top \n",      
+            "2: [wA1 bM   bQ wB2 ] <-     top ",  // "bottom ->" is optional 
+            "5 : bottom  ->[ bA1 wG3]", // "<- top" is optional
         ];
 
         for stack_desc in valid_stack_descs.iter() {
@@ -294,6 +360,21 @@ mod tests {
     pub fn test_board_rules() {
         let boards = [
             concat!(
+                "  4   *   *   *   * \n",
+                "*   *  bA1 wB1  * \n",
+            ),
+            concat!(
+                "  2   *   *   *   * \n",
+                "*   *  bA1 wB1  * \n",
+                "  *  bA2 wQ   *   * \n",
+            ),
+            concat!(
+                "  1   *   *   *   * \n",
+                "*   *  bA1 wB1  * \n",
+                "  *  bA2 wQ   *   * \n",
+                "*   *  wM   *   * \n",
+            ),
+            concat!(
                 "*   *   *   *   * \n", // starts with standard alignment
                 "  *   *  bQ  wB1  * \n",
                 "*   2  wQ   *   * \n",
@@ -318,7 +399,7 @@ mod tests {
 
 
         for board in boards.iter() {
-            let parsed = BoardParser::parse(Rule::board_desc, board);
+            let parsed = BoardParser::parse(Rule::board_desc_test, board);
             if parsed.is_err() {
                 panic!("Failed to parse board: {:?} {:?}", board, parsed);
             }
@@ -343,7 +424,7 @@ mod tests {
 
 
         for board in malformed_boards.iter() {
-            let parsed = BoardParser::parse(Rule::board_desc, board);
+            let parsed = BoardParser::parse(Rule::board_desc_test, board);
             if parsed.is_ok() {
                 panic!("Expected \n{} to fail. Got {:?}", board, parsed);
             }
