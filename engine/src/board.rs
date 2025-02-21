@@ -89,7 +89,7 @@ impl Board {
                 println!("STUB Position: {} Piece: {} Level: {}", pos, piece, level);
             }
         }
-        
+
         Ok(())
     }
 

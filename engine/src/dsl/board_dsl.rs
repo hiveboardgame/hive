@@ -1,16 +1,15 @@
-use regex::Regex;
-use thiserror::Error;
-use crate::color::Color;
-use crate::bug::Bug;
-use crate::piece::Piece;
 use crate::board::Board;
+use crate::bug::Bug;
+use crate::color::Color;
+use crate::piece::Piece;
 use anyhow::Result;
+use regex::Regex;
 use std::str::FromStr;
+use thiserror::Error;
 
-use pest::{Parser, RuleType};
 use pest::iterators::Pair;
+use pest::{Parser, RuleType};
 use pest_derive::Parser;
-
 
 #[derive(Error, Debug)]
 pub enum ParserError {
@@ -33,35 +32,35 @@ pub enum ParserError {
 ///
 /// ```
 /// board:
-/// 
-///   *   *   *   *   * 
-/// *   *  bQ  wB1  * 
-///   *   2  wQ   *   * 
-/// *   *   1   *   * 
-///   *   *   *   *   * 
-/// 
+///
+///   *   *   *   *   *
+/// *   *  bQ  wB1  *
+///   *   2  wQ   *   *
+/// *   *   1   *   *
+///   *   *   *   *   *
+///
 /// stack:
-/// 
+///
 /// 1: bottom -> [wA1 bM] <- top
 /// 2: bottom -> [bG1 bB2 wB3] <- top
 /// ```
 ///
 ///
 /// The `board:` section specifies visually which pieces are where on the `Board`.
-/// The board section must be staggered such that the rows alternate between 
+/// The board section must be staggered such that the rows alternate between
 /// aligning [`Flush`] with the left side or [`Shifted`] to the right by two spaces.
 /// Each row must contain the same number of space separated tokens.
 ///
-/// The `stack:` section specifies which pieces are in which stacks. 
+/// The `stack:` section specifies which pieces are in which stacks.
 /// Each number is *stack id* (a number 1-7) which corresponds to the stack's
 /// position on the board. This is followed by a space separated *piece list*.
 ///
 /// Comprehensive syntax rules for the DSL can be found in the `dsl/grammar.pest` file.
-/// 
+///
 /// Note: the goal of this DSL is to strike a balance between human readability (so
 /// the DSL is useful for debugging and is easily written by hand) and
 /// brevity.
-/// 
+///
 /// [`Board`]: crate::board::Board
 /// [`Flush`]: crate::Alignment::Flush
 /// [`Shifted`]: crate::Alignment::Shifted
@@ -73,7 +72,7 @@ pub struct BoardParser;
 /// from the board section or stack section of the DSL.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum BoardInput {
-    Star, 
+    Star,
     Piece(Piece),
     StackId(u8),
 }
@@ -104,25 +103,29 @@ impl BoardParser {
                 Rule::piece => {
                     let piece = Piece::from_str(hex.as_str()).unwrap();
                     row.push(BoardInput::Piece(piece));
-                },
+                }
                 Rule::stack_num => {
                     let stack_id = hex.as_str().parse::<u8>().unwrap();
                     row.push(BoardInput::StackId(stack_id));
-                },
-                _ => {panic!("Unexpected rule: {:?}", hex)}
+                }
+                _ => {
+                    panic!("Unexpected rule: {:?}", hex)
+                }
             }
         }
 
         row
     }
 
-    pub fn handle_board_section(pair : Pair<Rule>) -> Vec<Vec<BoardInput>> { 
+    pub fn handle_board_section(pair: Pair<Rule>) -> Vec<Vec<BoardInput>> {
         let mut board = Vec::new();
         for p in pair.into_inner() {
             match p.as_rule() {
                 Rule::aligned_row => board.push(BoardParser::handle_aligned_row(p)),
-                Rule::EOI => {},
-                _ => {panic!("Unexpected rule: {:?}", p)}
+                Rule::EOI => {}
+                _ => {
+                    panic!("Unexpected rule: {:?}", p)
+                }
             }
         }
 
@@ -145,7 +148,7 @@ mod tests {
                 "2: bottom -> [bG1 bB2 wB3] <- top\n",
             ),
             concat!(
-                "board :\n",  // odd rows, starts shifted
+                "board :\n", // odd rows, starts shifted
                 "  1   5   *   *   * \n",
                 "*   *  bA1 wB1  * \n",
                 "  *  bA2 wQ   *   * \n",
@@ -157,12 +160,12 @@ mod tests {
                 "board :\n", // even rows, starts flush, space after board allowed
                 "1   6   *   *   * \n",
                 "  *   *  bA1 wB1  * \n",
-                // stack can be omitted 
+                // stack can be omitted
                 // Note : syntactically correct but not semantically correct,
                 // 1 and 6 stacks are missing
             ),
             concat!(
-                "board:\n", 
+                "board:\n",
                 "*   *  bA1 wB1  * \n",
                 "  1   *   *   *   * \n",
                 "*   *  bA1 wB1  * \n",
@@ -179,21 +182,21 @@ mod tests {
                 "  *  bA2 wQ   *   * \n",
                 "*   *  wM   *   * \n",
                 "  *   *   *   *   * \n",
-                "stack:",  // stack ids can be omitted 
-                           // Note: syntactically correct but not 
-                           // semantically correct, the 2 stack is missing
+                "stack:", // stack ids can be omitted
+                          // Note: syntactically correct but not
+                          // semantically correct, the 2 stack is missing
             ),
             concat!(
                 " \n", // new lines and space before "board:" allowed
-                " board:\n", 
+                " board:\n",
                 "  3   *   *   * \n",
                 "*   *   *   * \n",
                 "  *   *   *   * \n",
                 "*   *   *   *     \n", // trailing spaces allowed
                 "  *   *   *   *\n",
-                "stack: \n",  // stack ids can be omitted Note: 
-                              // syntactically correct but not semantically correct
-                              // the 3 stack is missing
+                "stack: \n", // stack ids can be omitted Note:
+                             // syntactically correct but not semantically correct
+                             // the 3 stack is missing
             ),
             concat!(
                 "\n",
@@ -203,8 +206,8 @@ mod tests {
                 "  *   *   *   * \n",
                 "*   *   *   * \n",
                 "  *   *   *   * \n",
-                "stack: \n",  // stack ids can be omitted (syntactically correct and
-                              // semantically correct, there are no stacks)
+                "stack: \n", // stack ids can be omitted (syntactically correct and
+                             // semantically correct, there are no stacks)
             ),
             concat!(
                 " \n\n",
@@ -216,17 +219,16 @@ mod tests {
                 " \n\n",
                 "board:\n",
                 "  *   *   *   *   * \n",
-                "*   *   *   *   * \n", 
+                "*   *   *   *   * \n",
                 "  *   *          *   *   * \n", // too many intra-row spaces allowed
-                "*   *   * *   * \n", // almost too few intra-row spaces allowed
+                "*   *   * *   * \n",            // almost too few intra-row spaces allowed
                 "  *   *   *   *   * \n",
                 "stack: \n",
             ),
             concat!(
                 "board: \n", // empty board allowed
-                "stack:\n", // empty stack allowed
+                "stack:\n",  // empty stack allowed
             ),
-
         ];
 
         for dsl in dsls.iter() {
@@ -269,18 +271,20 @@ mod tests {
                 "*   *   1   *   * \n",
                 "  *   *   *   *   * \n",
                 "\n\n",
-                "stack :\n", 
+                "stack :\n",
                 "1:bottom->[wA1 bM]<-top\n",
                 "2:bottom->[bG1 bB2 wB3]<-top\n",
             ),
-
             "", // empty string (missing "board:")
         ];
 
         for dsl in invalid_dsls.iter() {
             let parsed = BoardParser::parse(Rule::valid_dsl, dsl);
             if parsed.is_ok() {
-                panic!("Expected\n-----\n{}\n------\n to fail.\nGot {:?}", dsl, parsed);
+                panic!(
+                    "Expected\n-----\n{}\n------\n to fail.\nGot {:?}",
+                    dsl, parsed
+                );
             }
         }
     }
@@ -307,33 +311,33 @@ mod tests {
 
     #[test]
     pub fn test_stack_section_rules() {
-        let valid_stack_section = [
-            concat!(
-                "stack:\n",
-                "\n",
-                "3:bottom->[wA1 bM]<-top\n", 
-                " 1:bottom -> [wA1 bM] <- top \n",      
-                "2: [wA1 bM   bQ wB2 ] <-     top\n",  // "bottom ->" is optional 
-                "5 : bottom  ->[ bA1 wG3]", // "<- top" is optional
-            ),
-        ];
+        let valid_stack_section = [concat!(
+            "stack:\n",
+            "\n",
+            "3:bottom->[wA1 bM]<-top\n",
+            " 1:bottom -> [wA1 bM] <- top \n",
+            "2: [wA1 bM   bQ wB2 ] <-     top\n", // "bottom ->" is optional
+            "5 : bottom  ->[ bA1 wG3]",           // "<- top" is optional
+        )];
 
         for stack_section in valid_stack_section.iter() {
             let parsed = BoardParser::parse(Rule::stack_section, stack_section);
             if parsed.is_err() {
-                panic!("Failed to parse stack_section: {:?} {:?}", stack_section, parsed);
+                panic!(
+                    "Failed to parse stack_section: {:?} {:?}",
+                    stack_section, parsed
+                );
             }
         }
-
     }
 
     #[test]
     pub fn test_stack_desc_rules() {
         let valid_stack_descs = [
-            "3:bottom->[wA1 bM]<-top\n", 
-            "1:bottom -> [wA1 bM] <- top \n",      
-            "2: [wA1 bM   bQ wB2 ] <-     top ",  // "bottom ->" is optional 
-            "5 : bottom  ->[ bA1 wG3]", // "<- top" is optional
+            "3:bottom->[wA1 bM]<-top\n",
+            "1:bottom -> [wA1 bM] <- top \n",
+            "2: [wA1 bM   bQ wB2 ] <-     top ", // "bottom ->" is optional
+            "5 : bottom  ->[ bA1 wG3]",          // "<- top" is optional
         ];
 
         for stack_desc in valid_stack_descs.iter() {
@@ -344,14 +348,14 @@ mod tests {
         }
 
         let invalid_stack_descs = [
-            "3:bottom->[wA1]<-top\n",  // single piece doesn't make sense
-            "1 bottom -> [wA1 bM] <- top\n", // missing colon
-            "6: bottom [wA1 bM] <- top\n", // missing "->"
-            "7: bottom -> [wA1 bM] top\n", // missing "<-"
-            "4: bottom -> [] <- top\n", // empty stack doesn't make sense
+            "3:bottom->[wA1]<-top\n",              // single piece doesn't make sense
+            "1 bottom -> [wA1 bM] <- top\n",       // missing colon
+            "6: bottom [wA1 bM] <- top\n",         // missing "->"
+            "7: bottom -> [wA1 bM] top\n",         // missing "<-"
+            "4: bottom -> [] <- top\n",            // empty stack doesn't make sense
             "2: [wA1 bM   bQ wB2 Bb] <-     top ", // bad piece
-            "5 : bottom  ->[ bA1 wG3] <- ",  // <- missing "top"
-            "8:bottom->[bA1 wA1]<-top\n",  // 8 is out of range
+            "5 : bottom  ->[ bA1 wG3] <- ",        // <- missing "top"
+            "8:bottom->[bA1 wA1]<-top\n",          // 8 is out of range
         ];
 
         for stack_desc in invalid_stack_descs.iter() {
@@ -365,10 +369,7 @@ mod tests {
     #[test]
     pub fn test_board_rules() {
         let boards = [
-            concat!(
-                "  4   *   *   *   * \n",
-                "*   *  bA1 wB1  * \n",
-            ),
+            concat!("  4   *   *   *   * \n", "*   *  bA1 wB1  * \n",),
             concat!(
                 "  2   *   *   *   * \n",
                 "*   *  bA1 wB1  * \n",
@@ -403,13 +404,11 @@ mod tests {
             ),
         ];
 
-
         for board in boards.iter() {
             let parsed = BoardParser::parse(Rule::board_desc_test, board);
             if parsed.is_err() {
                 panic!("Failed to parse board: {:?} {:?}", board, parsed);
             }
-
         }
         let malformed_boards = [
             concat!(
@@ -428,7 +427,6 @@ mod tests {
             ),
         ];
 
-
         for board in malformed_boards.iter() {
             let parsed = BoardParser::parse(Rule::board_desc_test, board);
             if parsed.is_ok() {
@@ -446,7 +444,7 @@ mod tests {
             "  ",
             "  \n",
             "  *",
-            "  *\n***" // trailing characters should be ignored
+            "  *\n***", // trailing characters should be ignored
         ];
 
         for row in shifted_rows.iter() {
@@ -470,7 +468,7 @@ mod tests {
             "\n",
             "bB2",
             "*\n***",
-            "*\n"
+            "*\n",
         ];
 
         for row in shifted_rows_malformed.iter() {
@@ -490,7 +488,7 @@ mod tests {
             "",
             "\n",
             "*",
-            "*\n***" // trailing characters should be ignored
+            "*\n***", // trailing characters should be ignored
         ];
 
         for row in aligned_rows.iter() {
@@ -500,14 +498,7 @@ mod tests {
             }
         }
 
-        let aligned_rows_malformed = [
-            "*  * **  *\n",
-            "**\n",
-            "*****\n",
-            "-",
-            " * * \n",
-            "   *\n"
-        ];
+        let aligned_rows_malformed = ["*  * **  *\n", "**\n", "*****\n", "-", " * * \n", "   *\n"];
 
         for row in aligned_rows_malformed.iter() {
             let parsed = BoardParser::parse(Rule::aligned_row, row);
@@ -518,16 +509,16 @@ mod tests {
     }
 
     #[test]
-    pub fn tests_piece_rule () {
+    pub fn tests_piece_rule() {
         let pieces = vec![
             "wQ",
             "bQ",
             "wM",
             "bS2",
-            "bG3 ", // trailing space should be ignored
-            "wM5", // nonsense after correct bug (wM) shouldn't matter
-            "wA12", // nonsense after correct bug (wA1) shouldn't matter
-            "wQwQ", // nonsense after correct bug (wQ) shouldn't matter
+            "bG3 ",          // trailing space should be ignored
+            "wM5",           // nonsense after correct bug (wM) shouldn't matter
+            "wA12",          // nonsense after correct bug (wA1) shouldn't matter
+            "wQwQ",          // nonsense after correct bug (wQ) shouldn't matter
             "bP3sdfsfssfsf", // nonsense after correct bug (bP) shouldn't matter
         ];
 
@@ -536,21 +527,12 @@ mod tests {
             assert!(parsed.is_ok());
         }
 
-        let malformed_pieces = vec![
-            " wQ",
-            "Q",
-            "BS2",
-            "w A1",
-            "bG 3",
-            "wB",
-            "wA4",
-        ];
+        let malformed_pieces = vec![" wQ", "Q", "BS2", "w A1", "bG 3", "wB", "wA4"];
 
         for piece in malformed_pieces {
             let parsed = BoardParser::parse(Rule::piece, piece);
             println!("Expected {:?} to fail. Got {:?}", piece, parsed);
             assert!(parsed.is_err());
         }
-   }
+    }
 }
-
