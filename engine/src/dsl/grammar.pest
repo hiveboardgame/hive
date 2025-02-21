@@ -1,3 +1,7 @@
+// Special rule so whitespace is ignored unless explicit
+// via atomic or compound atomic markers 
+WHITESPACE = _{ " " }
+
 color = {"b" | "w"}
 order = { "1" | "2" | "3" }
 stack_num = { "1" | "2" | "3" | "4" | "5" | "6" | "7" }
@@ -9,25 +13,37 @@ piece = { piece_no_num | piece_with_num }
 
 star = { "*" }
 hex = { star | stack_num | piece }
-separated_hex = { hex ~ " "+ }
+separated_hex = _{ hex ~ " "+ }
 endline = @{ "\n" | EOI }
-blankline = @{ " "* ~ "\n"}
-aligned_row = { separated_hex* ~ hex? ~ endline }
-shifted_row = { "  " ~ aligned_row }
+blankline = @{ WHITESPACE* ~ "\n"}
 
-board0 = { (shifted_row ~ aligned_row)* ~ shifted_row? ~ endline}
-board1 = { (aligned_row ~ shifted_row)* ~ aligned_row? ~ endline}
-board_desc = { board0 | board1 }
-board_label= { "board" ~ ":" ~ endline}
+aligned_row = ${ separated_hex* ~ hex? ~ WHITESPACE* ~ endline }
+shifted_row = ${ "  " ~ aligned_row }
+
+empty = { blankline* }
+starts_shifted = ${ shifted_row ~ (aligned_row ~ shifted_row)* ~ aligned_row? }
+starts_aligned = ${ aligned_row ~ (shifted_row ~ aligned_row)* ~ shifted_row? }
+board_desc = ${ ( starts_shifted | starts_aligned | empty) }
+board_desc_test = ${ SOI ~ board_desc ~ EOI }
+board_label= !{ "board" ~ ":" ~ "\n"}
 
 stack_label= { "stack" ~ ":" ~ endline}
+stack_end  = { blankline* }
+
 stack_left = { "bottom" ~ "->" }
 stack_right = { "<-" ~ "top" }
 
-piece_list = { (piece ~ " "+) ~ piece }
+piece_list = ${ (piece ~ " "+)+ ~ piece? }
 stack_middle = {  "[" ~ piece_list ~ "]" } 
 stack_id = { stack_num ~ ":" }
 stack_desc = { stack_id ~ stack_left? ~ stack_middle ~ stack_right? ~ endline}
-board_section = { board_label ~ board_desc }
+stack_section = { stack_label ~ stack_desc* }
+board_rows = @{ board_desc ~ blankline* }
+board_section = @{ board_label ~ blankline* ~ board_rows }
 
-valid_dsl = { board_label ~ board_desc ~ stack_label ~ stack_desc? ~ (blankline)*}
+valid_dsl = { SOI ~ 
+              blankline* ~ 
+              board_section ~ 
+              stack_section? ~ 
+              blankline* ~ 
+              EOI }
