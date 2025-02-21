@@ -9,7 +9,6 @@ use crate::{
 use hive_lib::ColorChoice;
 use leptos::{html, prelude::*};
 use leptos_icons::*;
-use leptos_router::hooks::use_navigate;
 use leptos_use::use_window;
 use shared_types::{ChallengeVisibility, TimeInfo};
 
@@ -212,15 +211,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
 
                         <button
                             on:click=move |_| {
-                                match (auth_context.user).get() {
-                                    Some(Ok(_)) => {
-                                        api.get().challenge_accept(challenge().challenge_id);
-                                    }
-                                    _ => {
-                                        let navigate = use_navigate();
-                                        navigate("/login", Default::default());
-                                    }
-                                }
+                                api.get().challenge_accept(challenge().challenge_id);
                             }
 
                             class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
@@ -232,15 +223,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                             view! {
                                 <button
                                     on:click=move |_| {
-                                        match auth_context.user.get() {
-                                            Some(Ok(_)) => {
-                                                api.get().challenge_cancel(challenge().challenge_id);
-                                            }
-                                            _ => {
-                                                let navigate = use_navigate();
-                                                navigate("/login", Default::default());
-                                            }
-                                        }
+                                        api.get().challenge_cancel(challenge().challenge_id);
                                     }
 
                                     class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
@@ -251,7 +234,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                             }
                                 .into_any()
                         } else {
-                            view! { "CMUrio :(" }.into_any()
+                            view! { "" }.into_any()
                         }}
 
                     </Show>
