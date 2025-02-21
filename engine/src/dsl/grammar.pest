@@ -2,6 +2,7 @@
 // via atomic or compound atomic markers 
 WHITESPACE = _{ " " }
 
+
 color = {"b" | "w"}
 order = { "1" | "2" | "3" }
 stack_num = { "1" | "2" | "3" | "4" | "5" | "6" | "7" }
@@ -24,22 +25,26 @@ empty = { blankline* }
 starts_shifted = ${ shifted_row ~ (aligned_row ~ shifted_row)* ~ aligned_row? }
 starts_aligned = ${ aligned_row ~ (shifted_row ~ aligned_row)* ~ shifted_row? }
 board_desc = ${ ( starts_shifted | starts_aligned | empty) }
-board_desc_test = ${ SOI ~ board_desc ~ EOI }
+
 board_label= !{ "board" ~ ":" ~ "\n"}
+stack_label= !{ "stack" ~ ":" ~ "\n"?}
 
-stack_label= { "stack" ~ ":" ~ endline}
+stack_id = !{ stack_num ~ ":" }
+stack_left = !{ "bottom" ~ "->" }
+stack_right = !{ "<-" ~ "top" }
 stack_end  = { blankline* }
-
-stack_left = { "bottom" ~ "->" }
-stack_right = { "<-" ~ "top" }
 
 piece_list = ${ (piece ~ " "+)+ ~ piece? }
 stack_middle = {  "[" ~ piece_list ~ "]" } 
-stack_id = { stack_num ~ ":" }
-stack_desc = { stack_id ~ stack_left? ~ stack_middle ~ stack_right? ~ endline}
-stack_section = { stack_label ~ stack_desc* }
+stack_desc = !{ stack_id ~ stack_left? ~ stack_middle ~ stack_right? ~ endline}
 board_rows = @{ board_desc ~ blankline* }
+
+stack_section = @{ stack_label ~ blankline* ~ stack_desc* }
 board_section = @{ board_label ~ blankline* ~ board_rows }
+
+// Sanity
+board_desc_test = ${ SOI ~ board_desc ~ EOI }
+stack_section_test = { SOI ~ stack_section ~ EOI}
 
 valid_dsl = { SOI ~ 
               blankline* ~ 
