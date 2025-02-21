@@ -1,6 +1,7 @@
 use super::tournament_game_start::TournamentGameStart;
 use super::{messages::MessageDestination, server_handlers::request_handler::RequestHandler};
 use crate::common::{ExternalServerError, ServerResult, WebsocketMessage};
+use crate::websocket::server_handlers::request_handler::RequestHandlerError;
 use crate::websocket::{
     chat::Chats,
     lag_tracking::{Lags, Pings},
@@ -184,6 +185,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                 }
                             }
                             Err(err) => {
+                                let status_code = match err {
+                                    RequestHandlerError::AuthError(_) => http::StatusCode::UNAUTHORIZED,
+                                    _ => http::StatusCode::NOT_IMPLEMENTED,
+                                };
                                 printdoc! {r#"
                                     -----------------ERROR-----------------
                                       Request: {:?}
@@ -197,7 +202,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                     user_id,
                                     field: "foo".to_string(),
                                     reason: format!("{err}"),
-                                    status_code: http::StatusCode::NOT_IMPLEMENTED,
+                                    status_code,
                                 });
                                 let serialized = WebsocketMessage::Server(message);
                                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {

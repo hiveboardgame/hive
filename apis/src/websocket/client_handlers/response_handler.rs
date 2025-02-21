@@ -7,6 +7,7 @@ use super::{
 };
 use crate::common::{ServerMessage::*, ServerResult, WebsocketMessage};
 use leptos::logging::log;
+use leptos_router::hooks::use_navigate;
 
 pub fn handle_response(m: WebsocketMessage) {
     match m {
@@ -27,7 +28,13 @@ pub fn handle_response(m: WebsocketMessage) {
                     log!("Got {todo:?} which is currently still unimplemented");
                 }
             },
-            ServerResult::Err(e) => log!("Got error from server: {e}"),
+            ServerResult::Err(e) => {
+                if e.status_code == http::StatusCode::UNAUTHORIZED {
+                    let navegate = use_navigate();
+                    navegate("/login", Default::default());
+                }
+                log!("Got error from server: {e}");
+            },
         },
         WebsocketMessage::Client(request) => {
             log!("Got a client request: {request:?}")
