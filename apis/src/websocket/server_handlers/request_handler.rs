@@ -16,11 +16,25 @@ use crate::websocket::messages::AuthError;
 use crate::websocket::messages::InternalServerMessage;
 use crate::websocket::messages::WsMessage;
 use crate::websocket::tournament_game_start::TournamentGameStart;
-use anyhow::Result;
 use db_lib::DbPool;
 use shared_types::{ChatDestination, SimpleUser};
+use thiserror::Error;
 use uuid::Uuid;
 
+#[derive(Error, Debug)]
+pub enum RequestHandlerError {
+    InternalError(#[from] anyhow::Error),
+    AuthError(#[from] AuthError),
+}
+
+impl std::fmt::Display for RequestHandlerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RequestHandlerError::InternalError(e) => write!(f,"{}", e),
+            RequestHandlerError::AuthError(e) => write!(f, "{}", e),
+        }
+    }
+}
 pub struct RequestHandler {
     command: ClientRequest,
     chat_storage: actix_web::web::Data<Chats>,
@@ -34,7 +48,7 @@ pub struct RequestHandler {
     authed: bool,
     admin: bool,
 }
-
+type Result<T> = std::result::Result<T, RequestHandlerError>;
 impl RequestHandler {
     pub fn new(
         command: ClientRequest,
