@@ -89,49 +89,76 @@ pub enum Alignment {
 }
 
 impl BoardParser {
-    fn handle_aligned_row(pair: Pair<Rule>) -> Vec<BoardInput> {
-        let mut row = Vec::new();
-        for p in pair.into_inner() {
-            if p.as_rule() == Rule::EOI {
-                continue;
-            }
-            if p.as_rule() != Rule::hex {
-                panic!("Expected hex rule. Got {:?}", p);
-            }
+    // TODO: function to help diagnose parsing errors,
+    // parses section by section until some error is encountered
+    pub fn diagnose() {}
 
-            let hex = p.clone().into_inner().next().unwrap();
+    // Locate and return all instances of the rule within the syntax
+    // tree. Descends in a depth-first manner.
+    fn dig(pair: Pair<Rule>, rule: Rule) -> Vec<Pair<Rule>> {
+        let mut res = Vec::new();
+        if pair.as_rule() == rule {
+            res.push(pair.clone());
+        }
+        for p in pair.into_inner() {
+            let r = BoardParser::dig(p, rule);
+            res.extend(r);
+        }
+        res
+    }
+
+    // Locate and return the first instance of the rule within the syntax
+    // tree. Descends in a depth-first manner.
+    fn find(pair: Pair<Rule>, rule: Rule) -> Option<Pair<Rule>> {
+        if pair.as_rule() == rule {
+            return Some(pair);
+        }
+        for p in pair.into_inner() {
+            let res = BoardParser::find(p, rule);
+            if let Some(r) = res {
+                return Some(r);
+            }
+        }
+        None
+    }
+    fn handle_aligned_row(pair: Pair<Rule>) -> Vec<BoardInput> {
+        assert!(pair.as_rule() == Rule::aligned_row);
+        let mut row = Vec::new();
+        let hexes = BoardParser::dig(pair, Rule::hex);
+        for hex in hexes.into_iter() {
+            let hex = hex.into_inner().next().unwrap();
+
             match hex.as_rule() {
                 Rule::star => row.push(BoardInput::Star),
                 Rule::piece => {
-                    let piece = Piece::from_str(hex.as_str()).unwrap();
+                    let piece = hex.into_inner().next().unwrap();
+                    let piece = Piece::from_str(piece.as_str()).unwrap();
                     row.push(BoardInput::Piece(piece));
                 }
                 Rule::stack_num => {
-                    let stack_id = hex.as_str().parse::<u8>().unwrap();
-                    row.push(BoardInput::StackId(stack_id));
+                    let stack_num = hex.as_str().parse::<u8>().unwrap();
+                    row.push(BoardInput::StackId(stack_num));
                 }
-                _ => {
-                    panic!("Unexpected rule: {:?}", hex)
-                }
+                _ => panic!("Unexpected input: {:?}", hex),
             }
         }
+        println!("{:#?}", row);
 
         row
     }
 
     pub fn handle_board_section(pair: Pair<Rule>) -> Vec<Vec<BoardInput>> {
-        let mut board = Vec::new();
-        for p in pair.into_inner() {
-            match p.as_rule() {
-                Rule::aligned_row => board.push(BoardParser::handle_aligned_row(p)),
-                Rule::EOI => {}
-                _ => {
-                    panic!("Unexpected rule: {:?}", p)
-                }
-            }
+        assert!(pair.as_rule() == Rule::board_section);
+        let board_desc =
+            BoardParser::find(pair, Rule::board_desc).expect("Grammar error: missing board_desc");
+
+        let aligned_rows = BoardParser::dig(board_desc, Rule::aligned_row);
+
+        for row in aligned_rows.into_iter() {
+            let _ = BoardParser::handle_aligned_row(row);
         }
 
-        board
+        Vec::new()
     }
 }
 
@@ -139,6 +166,25 @@ impl BoardParser {
 mod tests {
     use super::*;
 
+    #[test]
+    pub fn test_handle_board_section() {
+        let board = concat!(
+            "board:\n",
+            "  *   *   *   *   * \n",
+            "*   *  bQ  wB1  * \n",
+            "  *   2  wQ   *   * \n",
+            "*   *   1   *   * \n",
+            "  *   *   *   *   * \n",
+            "\n"
+        );
+
+        let pair = BoardParser::parse(Rule::board_section, board)
+            .unwrap()
+            .next()
+            .unwrap();
+
+        let board = BoardParser::handle_board_section(pair);
+    }
     #[test]
     pub fn test_dsl_rules() {
         let dsls = [
@@ -157,7 +203,6 @@ mod tests {
                 "1: bottom -> [wA1 bM] <- top\n",
                 "2: bottom -> [bG1 bB2 wB3] <- top\n",
             ),
-
             concat!(
                 "board:\n",
                 "  *   *   1   2   * \n", // can parse single row
@@ -330,11 +375,7 @@ mod tests {
     #[test]
     pub fn test_stack_section_rules() {
         let valid_stack_section = [
-            concat!(
-                "stack:\n",
-                "\n",
-                "3:bottom->[wA1 bM]<-top\n",
-            ),
+            concat!("stack:\n", "\n", "3:bottom->[wA1 bM]<-top\n",),
             concat!(
                 "stack:\n",
                 "\n",
@@ -347,7 +388,7 @@ mod tests {
                 "3:bottom->[wA1 bM]<-top\n",
                 "1:bottom -> [wA1 bM] <- top \n",
                 "2: [wA1 bM   bQ wB2 ] <-     top\n", // "bottom ->" is optional
-                "5: bottom  ->[ bA1 wG3]",           // "<- top" is optional
+                "5: bottom  ->[ bA1 wG3]",            // "<- top" is optional
             ),
             concat!(
                 "stack:\n",
@@ -356,10 +397,7 @@ mod tests {
                 "2: [wA1 bM   bQ wB2 ] <-     top\n", // "bottom ->" is optional
                 "5 : bottom  ->[ bA1 wG3]",           // "<- top" is optional
             ),
-
-            concat!(
-                "stack:\n",
-            ),
+            concat!("stack:\n",),
         ];
 
         for stack_section in valid_stack_section.iter() {
