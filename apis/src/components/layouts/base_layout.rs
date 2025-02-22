@@ -201,7 +201,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     view! {
         <Title />
         <OG />
-        <Meta name="color-scheme" content=color_scheme_meta />
+        <Meta name="color-scheme" attr:content=color_scheme_meta />
         <Meta
             name="viewport"
             content="width=device-width, initial-scale=1, interactive-widget=resizes-content, user-scalable=no"
@@ -211,7 +211,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         <Meta name="mobile-web-app-capable" content="yes" />
         <Meta name="apple-mobile-web-app-status-bar-style" content="black" />
         <Script src="/assets/js/pwa.js" />
-        <Html prop:class=move || {
+        <Html attr:class=move || {
             match config().prefers_dark {
                 true => "dark",
                 false => "",
