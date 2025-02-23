@@ -21,10 +21,10 @@ blankline = @{ WHITESPACE* ~ "\n"}
 aligned_row = ${ separated_hex* ~ hex? ~ WHITESPACE* ~ endline }
 shifted_row = ${ "  " ~ aligned_row }
 
-empty = { blankline* }
+empty = { "" }
 starts_shifted = ${ shifted_row ~ (aligned_row ~ shifted_row)* ~ aligned_row? }
 starts_aligned = ${ aligned_row ~ (shifted_row ~ aligned_row)* ~ shifted_row? }
-board_desc = ${ ( starts_shifted | starts_aligned | empty) }
+board_desc = ${ starts_shifted | starts_aligned | empty }
 
 board_label= !{ "board" ~ ":" ~ "\n"}
 stack_label= !{ "stack" ~ ":" ~ "\n"?}
@@ -37,10 +37,11 @@ stack_end  = { blankline* }
 piece_list = ${ (piece ~ " "+)+ ~ piece? }
 stack_middle = {  "[" ~ piece_list ~ "]" } 
 stack_desc = !{ stack_id ~ stack_left? ~ stack_middle ~ stack_right? ~ endline}
-board_rows = @{ board_desc ~ blankline* }
+board_rows = @{ blankline* ~ board_desc ~ blankline* }
 
 stack_section = @{ stack_label ~ blankline* ~ stack_desc* }
 board_section = @{ board_label ~ blankline* ~ board_rows }
+board_section_isolated = { SOI ~ board_section ~ EOI}
 
 // Sanity
 board_desc_test = ${ SOI ~ board_desc ~ EOI }

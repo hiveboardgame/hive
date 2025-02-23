@@ -1,28 +1,37 @@
 use crate::board::Board;
 use crate::bug::Bug;
+use itertools::Itertools;
 use crate::color::Color;
 use crate::piece::Piece;
-use anyhow::Result;
 use regex::Regex;
 use std::str::FromStr;
 use thiserror::Error;
+use std::collections::HashMap;
 
 use pest::iterators::Pair;
 use pest::{Parser, RuleType};
 use pest_derive::Parser;
 
+type Result<T> = std::result::Result<T, ParserError>;
+
 #[derive(Error, Debug)]
 pub enum ParserError {
     #[error("Parse error: {0}")]
     ParseError(String),
+    #[error("Duplicate stack id found: {0}")] 
+    DuplicateStackId(u8),
+    #[error("Could not interpret this piece: {0}")] 
+    PieceParse(String),
+    #[error("Rows are not all the same length")]
+    RowWidth,
     #[error("Could not parse board row: {0}")]
-    RowError(String),
+    Row(String),
     #[error("Could not parse start location")]
-    StartSyntaxError,
+    StartSyntax,
     #[error("Could not parse stack line: {0}")]
-    StackLineSyntaxError(String),
+    StackLineSyntax(String),
     #[error("Could not parse stack: {0}")]
-    StackParseError(String),
+    StackParse(String),
 }
 
 /// Domain Specific Language (DSL) parser for the [`Board`] struct.
@@ -93,10 +102,11 @@ impl BoardParser {
     // parses section by section until some error is encountered
     pub fn diagnose() {}
 
-    // Locate and return all instances of the rule within the syntax
-    // tree. Descends in a depth-first manner.
+    /// Locate and return all instances of the rule within the syntax
+    /// tree. Descends in a depth-first manner.
     fn dig(pair: Pair<Rule>, rule: Rule) -> Vec<Pair<Rule>> {
         let mut res = Vec::new();
+
         if pair.as_rule() == rule {
             res.push(pair.clone());
         }
@@ -107,8 +117,8 @@ impl BoardParser {
         res
     }
 
-    // Locate and return the first instance of the rule within the syntax
-    // tree. Descends in a depth-first manner.
+    /// Locate and return the first instance of the rule within the syntax
+    /// tree. Descends in a depth-first manner.
     fn find(pair: Pair<Rule>, rule: Rule) -> Option<Pair<Rule>> {
         if pair.as_rule() == rule {
             return Some(pair);
@@ -121,44 +131,94 @@ impl BoardParser {
         }
         None
     }
+
+
+    fn handle_hex(hex: Pair<Rule>) -> BoardInput {
+        assert!(hex.as_rule() == Rule::hex);
+        let symbol = hex.into_inner().next().unwrap();
+        match symbol.as_rule() {
+            Rule::star => return BoardInput::Star,
+            Rule::piece => {
+                let piece = symbol.into_inner().next().unwrap();
+                let piece = Piece::from_str(piece.as_str()).unwrap();
+                return BoardInput::Piece(piece);
+            }
+            Rule::stack_num => {
+                let stack_num = symbol.as_str().parse::<u8>().unwrap();
+                return BoardInput::StackId(stack_num);
+            }
+            _ => panic!("Unexpected input: {:?}, expected hex symbol", symbol),
+        }
+    }
+
     fn handle_aligned_row(pair: Pair<Rule>) -> Vec<BoardInput> {
         assert!(pair.as_rule() == Rule::aligned_row);
         let mut row = Vec::new();
         let hexes = BoardParser::dig(pair, Rule::hex);
-        for hex in hexes.into_iter() {
-            let hex = hex.into_inner().next().unwrap();
 
-            match hex.as_rule() {
-                Rule::star => row.push(BoardInput::Star),
-                Rule::piece => {
-                    let piece = hex.into_inner().next().unwrap();
-                    let piece = Piece::from_str(piece.as_str()).unwrap();
-                    row.push(BoardInput::Piece(piece));
-                }
-                Rule::stack_num => {
-                    let stack_num = hex.as_str().parse::<u8>().unwrap();
-                    row.push(BoardInput::StackId(stack_num));
-                }
-                _ => panic!("Unexpected input: {:?}", hex),
-            }
+        for hex in hexes.into_iter() {
+            let input = BoardParser::handle_hex(hex);
+            row.push(input)
         }
         println!("{:#?}", row);
 
         row
     }
 
-    pub fn handle_board_section(pair: Pair<Rule>) -> Vec<Vec<BoardInput>> {
+    fn handle_board_section(pair: Pair<Rule>) -> Result<Vec<Vec<BoardInput>>> {
         assert!(pair.as_rule() == Rule::board_section);
         let board_desc =
             BoardParser::find(pair, Rule::board_desc).expect("Grammar error: missing board_desc");
 
         let aligned_rows = BoardParser::dig(board_desc, Rule::aligned_row);
 
+        let mut rows = Vec::new();
         for row in aligned_rows.into_iter() {
-            let _ = BoardParser::handle_aligned_row(row);
+            let inputs = BoardParser::handle_aligned_row(row);
+            rows.push(inputs)
         }
 
-        Vec::new()
+        let rows = rows.into_iter().filter(|row| row.len() > 0).collect_vec();
+        let rows_same_width = rows.iter().map(|row| row.len()).unique().count() <= 1;
+        if !rows_same_width {
+            return Err(ParserError::RowWidth)
+        }
+
+
+        Ok(rows)
+    }
+
+    fn handle_stack_desc(pair: Pair<Rule>) -> Result<(u8, Vec<Piece>)> {
+        assert!(pair.as_rule() == Rule::stack_desc);
+
+        let num = BoardParser::find(pair.clone(), Rule::stack_id).expect("Grammar error missing 'stack_id'"); 
+        let num : u8 = num.as_str().parse::<u8>().unwrap();
+        let pieces = BoardParser::dig(pair, Rule::piece).into_iter().map(|p| p.as_str()).map(|p| (p, Piece::from_str(p)));
+
+        let mut final_pieces = Vec::new();
+        for (string, result) in pieces {
+            if result.is_err() { return Err(ParserError::PieceParse(string.to_owned())) }
+            final_pieces.push(result.unwrap());
+        }
+
+
+        Ok((num, final_pieces))
+    }
+
+    fn handle_stack_section(pair : Pair<Rule>) -> Result<HashMap<u8, Vec<Piece>>> {
+        assert!(pair.as_rule() == Rule::stack_section);
+
+        let descs = BoardParser::dig(pair, Rule::stack_desc);
+        let mut map = HashMap::new();
+        for d in descs {
+            let (id, pieces) = BoardParser::handle_stack_desc(d)?;
+            if map.contains_key(&id) { 
+                return Err(ParserError::DuplicateStackId(id))
+            }
+            map.insert(id, pieces);
+        }
+
+        Ok(map)
     }
 }
 
@@ -167,24 +227,83 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn test_handle_board_section() {
-        let board = concat!(
-            "board:\n",
-            "  *   *   *   *   * \n",
-            "*   *  bQ  wB1  * \n",
-            "  *   2  wQ   *   * \n",
-            "*   *   1   *   * \n",
-            "  *   *   *   *   * \n",
-            "\n"
-        );
+    pub fn test_handle_board_section_syntax_semantics() {
+        // Some syntactically correct boards are incorrect semantically.
+        // They cannot be converted into a fixed-width grid of board inputs
+        // but do not contain missing symbols per se. The BoardParser must 
+        // reject them as some step 
 
-        let pair = BoardParser::parse(Rule::board_section, board)
-            .unwrap()
-            .next()
-            .unwrap();
+        let reject = [
+            concat!(
+                "board:\n",
+                "  *   *   *   *   * \n",
+                "*   *  bQ  wB1  * \n",
+                "  *   2  wQ   *   * \n",
+                "*   *   1   *   * \n",
+                "  *   *   *  *   *   * \n", // extra column here
+                "\n"
+            ),
+        ];
 
-        let board = BoardParser::handle_board_section(pair);
+        for board in reject  {
+
+            
+            let pair = BoardParser::parse(Rule::board_section, board).expect("Board Section did not parse").next().unwrap();
+            let board = BoardParser::handle_board_section(pair);
+            assert!(board.is_err());
+
+        }
     }
+
+    #[test]
+    pub fn test_handle_board_section() {
+        let boards = [
+            (
+                concat!(
+                    "board:\n",
+                    "  *   *   *   *   \n",
+                    "*   *  bQ  wB1   \n",
+                    "  *   2  wQ   *    \n",
+                    ), 3, 4
+            ),
+
+            (
+                concat!(
+                    "board:\n",
+                    "  *   *   *   *   * \n",
+                    "*   *  bQ  wB1  * \n",
+                    "  *   2  wQ   *   * \n",
+                    "*   *   1   *   * \n",
+                    "  *   *   *   *   * \n",
+                    "\n"), 5, 5
+            ),
+
+
+            (
+                concat!(
+                    "board:\n",
+                    "  *   *   *   *   * \n",
+                    "*   *  bQ  wB1  * \n",
+                    "  *   2  wQ   *   * \n",
+                    "*   *   1   *   * \n",
+                    "  *   *   *   *   * \n",
+                    "\n\n"
+                ), 5, 5
+            ),
+        ];
+
+        for (board, rows, cols) in boards {
+            let pair = BoardParser::parse(Rule::board_section, board)
+                .unwrap()
+                .next()
+                .unwrap();
+            let board = BoardParser::handle_board_section(pair);
+            let board = board.expect("Must be able to handle board section");
+            assert!( board.len() == rows );
+            assert!( board[0].len() == cols );
+        }
+    }
+
     #[test]
     pub fn test_dsl_rules() {
         let dsls = [
@@ -369,7 +488,21 @@ mod tests {
             .next()
             .unwrap();
 
-        //let board = BoardParser::handle_board_section(pair);
+        let invalid = concat!(
+            "board:\n",
+            "  *   *   *   *   * \n",
+            "*   *  bQ  wB1  * \n",
+            "\n", // extra section now allowed here
+            "  *   2  wQ   *   * \n", 
+            "*   *   1   *   * \n",
+            "\n",
+        );
+
+        let board = BoardParser::parse(Rule::board_section_isolated, invalid);
+
+        if board.is_ok() {
+            panic!("Expected board parser to fail on syntactically invalid input")
+        }
     }
 
     #[test]
@@ -449,7 +582,9 @@ mod tests {
     #[test]
     pub fn test_board_rules() {
         let boards = [
-            concat!("  4   *   *   *   * \n", "*   *  bA1 wB1  * \n",),
+            concat!(
+                "  4   *   *   *   * \n", "*   *  bA1 wB1  * \n",),
+
             concat!(
                 "  2   *   *   *   * \n",
                 "*   *  bA1 wB1  * \n",
