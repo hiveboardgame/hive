@@ -17,6 +17,7 @@ mod piece;
 mod player;
 mod position;
 mod state;
+mod svg_position;
 mod torus_array;
 mod turn;
 
@@ -36,4 +37,5 @@ pub use piece::Piece;
 pub use player::Player;
 pub use position::Position;
 pub use state::State;
+pub use svg_position::SvgPosition;
 pub use turn::Turn;

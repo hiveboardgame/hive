@@ -1,6 +1,7 @@
 use crate::direction::Direction;
 use crate::hasher::Hasher;
 use crate::position::{CircleIter, Rotation};
+use crate::SvgPosition;
 use crate::{
     bug::Bug, bug_stack::BugStack, color::Color, dfs_info::DfsInfo, game_error::GameError,
     game_result::GameResult, game_type::GameType, piece::Piece, position::Position,
@@ -13,7 +14,10 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{self, Write};
 use std::fs::OpenOptions;
+use std::fs::{self, File};
+use std::io::{BufReader, BufWriter, Write as Writer};
 use std::path::PathBuf;
+use std::process::exit;
 
 pub const BOARD_SIZE: i32 = 32;
 lazy_static! {
@@ -37,10 +41,6 @@ pub struct Board {
     pub last_move: (Option<Position>, Option<Position>),
     pub stunned: Option<Piece>,
     pub positions: [Option<Position>; 48],
-    //   wA1, wA2, wA3, wB1, wB2, ...
-    // [ qr   N     qr  N     N
-    // offset_to_piece
-    // for every piece: bottom?
     pinned: [bool; 48],
     pub played: usize,
     pub hasher: Hasher,
@@ -68,7 +68,6 @@ impl Board {
         }
     }
 
-    /// TODO: insertion point @neal
     pub fn create_svg(&self, mut path: PathBuf) -> Result<()> {
         path.set_extension("svg");
         let file = OpenOptions::new()
@@ -76,20 +75,131 @@ impl Board {
             .write(true) // Required for creation
             .create(true)
             .truncate(true)
-            .open(path)?;
+            .open(&path)?;
+        let mut writer = BufWriter::new(file);
 
-        for (offset, position) in self.positions.iter().enumerate() {
-            // piece type
-            let piece = Self::offset_to_piece(offset);
-            if let Some(pos) = position {
-                // height
-                let level = self
-                    .level_of_piece(piece, *pos)
-                    .expect("TODO get rid of this expect");
-                println!("STUB Position: {} Piece: {} Level: {}", pos, piece, level);
+        let (mut min_x, mut max_x, mut min_y, mut max_y) = (f32::MAX, f32::MIN, f32::MAX, f32::MIN);
+        let mut positions_piece = Vec::new();
+
+        for (offset, maybe_position) in self.positions.iter().enumerate() {
+            if let Some(position) = maybe_position {
+                let piece = Self::offset_to_piece(offset);
+                let level = self.level_of_piece(piece, *position).unwrap_or(0);
+                let center = SvgPosition::center_for_level(*position, level, true);
+                if center.0 < min_x {
+                    min_x = center.0;
+                }
+                if center.0 > max_x {
+                    max_x = center.0;
+                }
+                if center.1 < min_y {
+                    min_y = center.1;
+                }
+                if center.1 > max_y {
+                    max_y = center.1;
+                }
+                positions_piece.push((position, piece));
             }
         }
 
+        positions_piece.sort_by(|(pos_a, piece_a), (pos_b, piece_b)| {
+            let level_a = self.level_of_piece(*piece_a, **pos_a).unwrap_or(0);
+            let level_b = self.level_of_piece(*piece_b, **pos_b).unwrap_or(0);
+            if level_a != level_b {
+                level_a.cmp(&level_b)
+            } else if pos_a.r != pos_b.r {
+                pos_a.r.cmp(&pos_b.r)
+            } else {
+                pos_a.q.cmp(&pos_b.q)
+            }
+        });
+
+        let piece_height = 104.242;
+        let piece_width = 88.338;
+        let space_around = 20.0;
+        let width = max_x - min_x + piece_width + 2.0 * space_around;
+        let height = max_y - min_y + piece_height + 2.0 * space_around;
+
+        writeln!(
+            writer,
+            "<svg width=\"{width}\" height=\"{height}\" xmlns=\"http://www.w3.org/2000/svg\">"
+        )?;
+        let pieces = std::fs::read_to_string("pieces.svg")?;
+        writeln!(writer, "{pieces}")?;
+        writeln!(
+            writer,
+            "<g transform=\"translate({} {})\">",
+            -1.0 * min_x + space_around,
+            -1.0 * min_y + space_around
+        )?;
+
+        for (position, piece) in positions_piece.iter() {
+            let level = self.level_of_piece(*piece, **position).unwrap_or(0);
+            let center = SvgPosition::center_for_level(**position, level, true);
+            // TODO: @leex add dropshadow
+
+            let dot_color = match piece.bug() {
+                Bug::Ant => "#289ee0",
+                Bug::Beetle => "#9a7fc7",
+                Bug::Grasshopper => "#42b23c",
+                Bug::Spider => "#a4572a",
+                _ => "#FF0000",
+            };
+
+            writeln!(writer, "  <g>")?;
+            writeln!(
+                writer,
+                "    <use href=\"#{}\" x=\"{}\" y=\"{}\"></use>",
+                piece.color().name(),
+                center.0,
+                center.1
+            )?;
+            writeln!(
+                writer,
+                "    <use href=\"#{}{}\" x=\"{}\" y=\"{}\"></use>",
+                piece.color().name(),
+                piece.bug().name(),
+                center.0,
+                center.1
+            )?;
+            // dots
+            if piece.order() > 0 {
+                writeln!(writer, "  <g fill=\"{}\">", dot_color)?;
+                writeln!(
+                    writer,
+                    "    <use href=\"#a{}\" x=\"{}\" y=\"{}\"></use>",
+                    piece.order(),
+                    center.0,
+                    center.1
+                )?;
+                writeln!(writer, "  </g>")?;
+            }
+            // writeln!(
+            //     writer,
+            //     "    <use href=\"#shadow\" x=\"{}\" y=\"{}\"></use>",
+            //     center.0, center.1
+            // )?;
+            writeln!(writer, "  </g>")?;
+        }
+        writeln!(writer, "</g>")?;
+        writeln!(writer, "</svg>")?;
+        writer.flush()?;
+
+        let text = fs::read_to_string(&path)?;
+
+        let tree = resvg::usvg::Tree::from_str(&text, &usvg::Options::default())?;
+        let mut pixmap =
+            resvg::tiny_skia::Pixmap::new(tree.size().width() as u32, tree.size().height() as u32)
+                .unwrap();
+        // Render SVG to pixmap
+        resvg::render(
+            &tree,
+            resvg::tiny_skia::Transform::identity(),
+            &mut pixmap.as_mut(),
+        );
+
+        path.set_extension("png");
+        pixmap.save_png(path)?;
         Ok(())
     }
 
