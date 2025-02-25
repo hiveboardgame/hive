@@ -3,7 +3,9 @@
     "style_buttons": {
         "official": "Official",
         "flat": "Flat",
-        "three_d": "ThreeD"
+        "three_d": "ThreeD",
+        "community": "Community",
+        "high_contrast": "HighContrast"
     },
     "rotation": "Rotation",
     "rotation_buttons": {
