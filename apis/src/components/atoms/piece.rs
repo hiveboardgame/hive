@@ -49,6 +49,13 @@ pub fn PieceWithoutOnClick(
             Bug::Spider => "color: #993c1e",
             _ => "color: #FF0000",
         },
+        TileDesign::HighContrast | TileDesign::Community => match bug {
+            Bug::Ant => "color: #3574a5",
+            Bug::Beetle => "color: #ac5bb3",
+            Bug::Grasshopper => "color: #3f9b3a",
+            Bug::Spider => "color: #d66138",
+            _ => "color: #FF0000",
+        },
     };
 
     let top_piece = game_state
@@ -62,9 +69,11 @@ pub fn PieceWithoutOnClick(
     let active_piece = create_read_slice(game_state.signal, |gs| gs.move_info.active);
     let show_ds = move || {
         let shadow = match config().tile_design {
-            TileDesign::Official => "/assets/tiles/common/all.svg#drop_shadow",
-            TileDesign::Flat => "/assets/tiles/common/all.svg#drop_shadow",
             TileDesign::ThreeD => "/assets/tiles/3d/shadow.svg#dshadow",
+            TileDesign::Community
+            | TileDesign::HighContrast
+            | TileDesign::Official
+            | TileDesign::Flat => "/assets/tiles/common/all.svg#drop_shadow",
         };
         if let Some(active) = active_piece() {
             if active == piece {
@@ -94,12 +103,22 @@ pub fn PieceWithoutOnClick(
         TileDesign::Official => format!("/assets/tiles/official/official.svg#{}", bug.name()),
         TileDesign::Flat => format!("/assets/tiles/flat/flat.svg#{}", bug.name()),
         TileDesign::ThreeD => format!("/assets/tiles/3d/3d.svg#{}{}", color.name(), bug.name()),
+        TileDesign::HighContrast => format!(
+            "/assets/tiles/high-contrast/high-contrast.svg#{}",
+            bug.name()
+        ),
+        TileDesign::Community => format!("/assets/tiles/community/community.svg#{}", bug.name()),
     };
 
     let tile_svg = move || match config().tile_design {
         TileDesign::Official => format!("/assets/tiles/official/official.svg#{}", color.name()),
         TileDesign::Flat => format!("/assets/tiles/flat/flat.svg#{}", color.name()),
         TileDesign::ThreeD => format!("/assets/tiles/3d/3d.svg#{}", color.name()),
+        TileDesign::HighContrast => format!(
+            "/assets/tiles/high-contrast/high-contrast.svg#{}",
+            color.name(),
+        ),
+        TileDesign::Community => format!("/assets/tiles/community/community.svg#{}", color.name(),),
     };
 
     view! {
