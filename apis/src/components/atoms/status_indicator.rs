@@ -46,7 +46,7 @@ pub fn StatusIndicator(username: Signal<String>) -> impl IntoView {
     view! {
         <Icon
             icon=icondata::BiCircleSolid
-            prop:class=move || format!("mr-1 pb-[2px] {}", icon_style())
+            attr:class=move || format!("mr-1 pb-[2px] {}", icon_style())
         />
     }
 }

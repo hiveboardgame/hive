@@ -39,7 +39,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             .loaded
             .get()
             .then(|| {
-                let preferred_confirms = config().confirm_mode;
+                let preferred_confirms = config().unwrap_or_default().confirm_mode;
                 game_state
                     .signal
                     .get_untracked()
