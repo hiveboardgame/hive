@@ -76,7 +76,9 @@ pub fn App() -> impl IntoView {
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)
-            .same_site(SameSite::Lax)>
+            .same_site(SameSite::Lax)
+            .path("/")
+            >
             <Stylesheet id="leptos" href="/pkg/HiveGame.css" />
             <Router>
                 <Routes

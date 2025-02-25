@@ -24,7 +24,7 @@ pub fn ThumbnailPieces(game: StoredValue<GameResponse>) -> impl IntoView {
     };
 
     let config = expect_context::<Config>().0;
-    let straight = move || config().tile_design == TileDesign::ThreeD;
+    let straight = move || config().unwrap_or_default().tile_design == TileDesign::ThreeD;
 
     let (width, height) = (400.0_f32, 510.0_f32);
     // TODO: because Thumbnail pieces is used in two places, this leads to weirdness in the TV

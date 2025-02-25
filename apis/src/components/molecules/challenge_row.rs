@@ -25,7 +25,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
             view! { <Icon icon=icondata::BsHexagonHalf attr:class="pb-[2px]" /> }.into_any()
         }
         ColorChoice::White => {
-            if config().prefers_dark {
+            if config().unwrap_or_default().prefers_dark {
                 view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-white pb-[2px]" /> }
                     .into_any()
             } else {
@@ -34,7 +34,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
             }
         }
         ColorChoice::Black => {
-            if config().prefers_dark {
+            if config().unwrap_or_default().prefers_dark {
                 view! { <Icon icon=icondata::BsHexagon attr:class="stroke-white pb-[2px]" /> }
                     .into_any()
             } else {

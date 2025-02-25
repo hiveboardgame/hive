@@ -39,10 +39,9 @@ pub fn TileDesignToggle() -> impl IntoView {
 pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
     let i18n = use_i18n();
     let tile_design = Signal::derive(move || tile_design.clone());
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let Config(config, set_cookie) = expect_context();
     let is_active = move || {
-        if config().tile_design == tile_design() {
+        if config().unwrap_or_default().tile_design == tile_design() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
