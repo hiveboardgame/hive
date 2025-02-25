@@ -4,10 +4,9 @@ use leptos_icons::Icon;
 
 #[component]
 pub fn SoundToggle() -> impl IntoView {
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let Config(config, set_cookie) = expect_context();
     let icon = move || {
-        let icon = if config().prefers_sound {
+        let icon = if config().unwrap_or_default().prefers_sound {
             icondata::BiVolumeFullRegular
         } else {
             icondata::BiVolumeMuteRegular
@@ -22,7 +21,7 @@ pub fn SoundToggle() -> impl IntoView {
                     set_cookie
                         .update(|c| {
                             if let Some(cookie) = c {
-                                cookie.prefers_sound = !config().prefers_sound;
+                                cookie.prefers_sound = !cookie.prefers_sound;
                             }
                         });
                 }

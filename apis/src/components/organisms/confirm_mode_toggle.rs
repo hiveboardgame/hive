@@ -22,8 +22,7 @@ pub fn ConfirmModeToggle(game_speed: GameSpeed) -> impl IntoView {
 pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> impl IntoView {
     let move_confirm = Signal::derive(move || move_confirm.clone());
     let game_speed = Signal::derive(move || game_speed.clone());
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let Config(config, set_cookie) = expect_context();
     let (title, icon) = match move_confirm() {
         MoveConfirm::Clock => ("Click on your clock", icondata::BiStopwatchRegular),
         MoveConfirm::Double => ("Double click", icondata::TbHandTwoFingers),
@@ -31,7 +30,7 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> im
     };
     let is_active = move || {
         let inactive_class = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal";
-        config()
+        config().unwrap_or_default()
             .confirm_mode
             .get(&game_speed())
             .map_or(inactive_class, |preferred| {

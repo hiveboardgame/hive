@@ -18,10 +18,9 @@ pub fn TileRotationToggle() -> impl IntoView {
 pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
     let i18n = use_i18n();
     let tile_rotation = StoredValue::new(tile_rotation);
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let Config(config, set_cookie) = expect_context();
     let is_active = move || {
-        if config().tile_rotation == tile_rotation.get_value() {
+        if config().unwrap_or_default().tile_rotation == tile_rotation.get_value() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
