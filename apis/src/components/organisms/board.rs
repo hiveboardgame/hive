@@ -62,6 +62,7 @@ pub fn Board(
 ) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
     let target_stack = expect_context::<TargetStack>().0;
+    let config = expect_context::<Config>().0;
     let is_panning = RwSignal::new(false);
     let has_zoomed = RwSignal::new(false);
     let viewbox_signal = RwSignal::new(ViewBoxControls::new());
@@ -116,8 +117,7 @@ pub fn Board(
     };
 
     let straight = {
-        let config = expect_context::<Config>().0;
-        config().tile_design == TileDesign::ThreeD
+        config().unwrap_or_default().tile_design == TileDesign::ThreeD
     };
 
     let update_once = Effect::new(move |_| {
@@ -143,7 +143,7 @@ pub fn Board(
 
     let straight = {
         let config = expect_context::<Config>().0;
-        config().tile_design == TileDesign::ThreeD
+        config().unwrap_or_default().tile_design == TileDesign::ThreeD
     };
 
     //This handles board resizes

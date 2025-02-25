@@ -18,10 +18,9 @@ pub fn TileDotsToggle() -> impl IntoView {
 pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
     let i18n = use_i18n();
     let tile_dots = Signal::derive(move || tile_dots.clone());
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let Config(config, set_cookie) = expect_context();
     let is_active = move || {
-        if config().tile_dots == tile_dots() {
+        if config().unwrap_or_default().tile_dots == tile_dots() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"

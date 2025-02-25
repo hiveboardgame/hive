@@ -27,7 +27,7 @@ pub struct Sounds {
 impl Sounds {
     pub fn play_sound(&self, kind: SoundType) {
         let config = expect_context::<Config>().0;
-        if !config().prefers_sound {
+        if !config().unwrap_or_default().prefers_sound {
             return;
         };
         if let Some(Ok(s)) = self.client_data.get().as_deref() {

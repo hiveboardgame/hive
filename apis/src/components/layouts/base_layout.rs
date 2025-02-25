@@ -65,6 +65,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let is_tall = use_media_query("(min-height: 100vw)");
     let chat_dropdown_open = RwSignal::new(false);
     let orientation_vertical = Signal::derive(move || is_tall() || chat_dropdown_open());
+    let mut navi = expect_context::<NavigationControllerSignal>();
     provide_context(OrientationSignal {
         is_tall,
         chat_dropdown_open,
@@ -93,7 +94,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     }
 
     let color_scheme_meta = move || {
-        if config().prefers_dark {
+        if config().unwrap_or_default().prefers_dark {
             "dark".to_string()
         } else {
             "light".to_string()
@@ -129,7 +130,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
     Effect::new(move |_| {
         let location = use_location();
-        let mut navi = expect_context::<NavigationControllerSignal>();
         let pathname = (location.pathname)();
 
         let game_id = if let Some(caps) = GAME_NANOID.captures(&pathname) {
@@ -212,7 +212,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         <Meta name="apple-mobile-web-app-status-bar-style" content="black" />
         <Script src="/assets/js/pwa.js" />
         <Html attr:class=move || {
-            match config().prefers_dark {
+            match config().unwrap_or_default().prefers_dark {
                 true => "dark",
                 false => "",
             }
