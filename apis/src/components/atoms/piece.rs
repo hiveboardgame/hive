@@ -1,5 +1,6 @@
 use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
 use crate::common::{PieceType, SvgPos};
+use crate::components::organisms::analysis::AnalysisSignal;
 //use crate::components::organisms::analysis::AnalysisSignal;
 use crate::pages::play::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
@@ -158,11 +159,9 @@ pub fn PieceWithOnClick(
 ) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
-    // TODO: FIX ANALYSIS
-    //let analysis = use_context::<AnalysisSignal>()
-    //    .unwrap_or(AnalysisSignal(RwSignal::new(None)))
-    //    .0;
-    //
+    let analysis = use_context::<AnalysisSignal>()
+        .unwrap_or(AnalysisSignal(RwSignal::new(None)))
+        .0;
     let sepia = if piece_type == PieceType::Inactive {
         "sepia-[.75]"
     } else {
@@ -171,9 +170,7 @@ pub fn PieceWithOnClick(
 
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
-        // TODO: FIX ANALYSIS
-        // let in_analysis = analysis.get_untracked().is_some();
-        let in_analysis = false;
+        let in_analysis = analysis.get().is_some();
         let is_finished = matches!(
             game_state.signal.get_untracked().state.game_status,
             GameStatus::Finished(_)

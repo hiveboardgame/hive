@@ -5,22 +5,22 @@ use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, vec};
 use tree_ds::prelude::{Node, Tree};
+use send_wrapper::SendWrapper;
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct TreeNode {
     pub turn: usize,
     pub piece: String,
     pub position: String,
 }
-
 #[derive(Clone)]
-pub struct AnalysisSignal(pub RwSignal<Option<AnalysisTree>>);
+pub struct AnalysisSignal(pub RwSignal<Option<SendWrapper<AnalysisTree>>>);
 
 #[derive(Clone)]
 pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct AnalysisTree {
-    pub current_node: Option<(i32, TreeNode)>,
+    pub current_node: Option<Node<i32, TreeNode>>,
     pub tree: Tree<i32, TreeNode>,
     pub hashes: BiMap<u64, i32>,
     pub game_type: GameType,
