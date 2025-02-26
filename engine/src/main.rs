@@ -3,7 +3,6 @@ use hive_lib::{Color, GameError, GameResult, GameStatus, GameType, History, Stat
 use std::path::PathBuf;
 
 fn print_game_from_file(file: PathBuf, turn: usize) -> Result<(), GameError> {
-    println!("Printing for turn: {}", turn);
     let history = History::from_filepath(file.clone())?;
     State::print_turn_from_history(&history, turn, file)?;
     Ok(())
