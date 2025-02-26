@@ -72,6 +72,6 @@ async fn load_client_data() -> Result<ClientData, JsValue> {
 
 pub fn provide_sounds() {
     provide_context(Sounds {
-        client_data: LocalResource::new(|| load_client_data()),
+        client_data: LocalResource::new(load_client_data),
     });
 }

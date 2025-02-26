@@ -49,32 +49,32 @@ pub fn Config() -> impl IntoView {
                         <SelectOption
                             value=game_speed
                             is="Bullet"
-                            //text=t!(i18n, game.speeds.bullet)
+                            text=t_string!(i18n, game.speeds.bullet).into()
                         />
                         <SelectOption
                             value=game_speed
                             is="Blitz"
-                            //text=t!(i18n, game.speeds.blitz).into_any().into()
+                            text=t_string!(i18n, game.speeds.blitz).into()
                         />
                         <SelectOption
                             value=game_speed
                             is="Rapid"
-                            //text=t!(i18n, game.speeds.rapid).into_any().into()
+                            text=t_string!(i18n, game.speeds.rapid).into()
                         />
                         <SelectOption
                             value=game_speed
                             is="Classic"
-                            //text=t!(i18n, game.speeds.classic).into_any().into()
+                            text=t_string!(i18n, game.speeds.classic).into()
                         />
                         <SelectOption
                             value=game_speed
                             is="Correspondence"
-                            //text=t!(i18n, game.speeds.correspondence).into_any()
-                        />
+                            text=t_string!(i18n, game.speeds.correspondence).into()
+                        />  
                         <SelectOption
                             value=game_speed
                             is="Untimed"
-                            //text=t!(i18n, game.speeds.untimed).into_any()
+                            text=t_string!(i18n, game.speeds.untimed).into()
                         />
                     </select>
                 </label>
