@@ -76,10 +76,10 @@ pub fn TimeSelect(
                     <div class="flex flex-col justify-center">
                         <label class="flex-col items-center">
                             <div>
-                                //{t!(
-                                //    i18n, home.custom_game.mode.real_time.minutes_per_side, count = move ||
-                                //    time_signals.total_seconds.get() / 60
-                                //)}
+                                {t!(
+                                    i18n, home.custom_game.mode.real_time.minutes_per_side, count = move ||
+                                    time_signals.total_seconds.get() / 60
+                                )}
 
                             </div>
                             <InputSlider
@@ -92,10 +92,10 @@ pub fn TimeSelect(
                         </label>
                         <label class="flex-col items-center">
                             <div>
-                                //{t!(
-                                //    i18n, home.custom_game.mode.real_time.increment_in_seconds, count = move
-                                //    || time_signals.sec_per_move.get()
-                                //)}
+                                {t!(
+                                    i18n, home.custom_game.mode.real_time.increment_in_seconds, count = move
+                                    || time_signals.sec_per_move.get()
+                                )}
 
                             </div>
                             <InputSlider

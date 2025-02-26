@@ -27,7 +27,7 @@ pub fn Donate() -> impl IntoView {
             <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
                 <Banner
                     title=t!(i18n, donate.title).into_any()
-                    //text=t!(i18n, donate.subtitle)
+                    text=t_string!(i18n, donate.subtitle).into()
                 />
                 <p class="my-4 text-lg text-center">{t!(i18n, donate.about)}</p>
                 <div class="flex justify-center items-center my-4">

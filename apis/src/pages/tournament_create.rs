@@ -327,11 +327,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="DoubleRoundRobin"
-                                //TODO: add code back in
-                                //text=TournamentMode::DoubleRoundRobin
-                                //    .pretty_string()
-                                //    .into_view()
-                                //    .into()
+                                text=TournamentMode::DoubleRoundRobin.pretty_string().into()
                             />
 
                         </select>
@@ -346,7 +342,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="Game"
-                                //text=ScoringMode::Game.pretty_string().into_view().into()
+                                text=ScoringMode::Game.pretty_string().into()
                             />
 
                         </select>

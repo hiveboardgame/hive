@@ -3,7 +3,7 @@ use leptos::prelude::*;
 #[component]
 pub fn SelectOption<T: ToString + Clone + 'static + Send + Sync>(
     is: &'static str,
-    #[prop(optional)] text: MaybeProp<T>,
+    #[prop(optional)] text: MaybeProp<String>,
     value: RwSignal<T>,
 ) -> impl IntoView {
     let show = if let Some(text) = text.get() {
