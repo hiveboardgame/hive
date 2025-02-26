@@ -1,4 +1,3 @@
-use leptix_primitives::components::slider::{SliderRange, SliderRoot, SliderThumb, SliderTrack};
 use leptos::prelude::*;
 use leptos::callback::Callback;
 #[component]

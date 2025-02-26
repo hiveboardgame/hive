@@ -32,7 +32,6 @@ http-serde = { workspace = true }
 icondata = { workspace = true }
 indoc = { workspace = true }
 lazy_static = { workspace = true }
-leptix_primitives = {workspace = true}
 leptos = { workspace = true }
 leptos-use = { workspace = true }
 leptos_actix = { workspace = true, optional = true }

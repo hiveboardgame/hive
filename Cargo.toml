@@ -36,7 +36,6 @@ icondata = {version = "0.5"}
 indoc = "2"
 itertools = "0.14.0"
 lazy_static = "1.5"
-leptix_primitives = { git="https://github.com/IongIer/leptix.git", branch="leptos-0.7-support-updated" }
 leptos = { version = "0.7", features = ["nightly"] }
 leptos-use = { version = "0.15" }
 leptos_actix =  { version = "0.7" }
