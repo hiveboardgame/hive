@@ -54,11 +54,12 @@ serde = { version = "1" }
 serde_json = { version = "1" }
 serde_with = { version = "3.9" }
 sha2 = "0.10"
+send_wrapper = "0.6"
 simple_logger = "5.0"
 skillratings = "0.27"
 thiserror = "1"
 tokio = { version = "1.39.2", features = ["full"] }
-tree-ds = {version = "0.1.5", features = ["serde", "compact_serde", "async"] }
+tree-ds = {version = "0.1.6", features = ["serde", "compact_serde"] }
 uuid = { version = "1.10", features = ["v4", "js", "serde"] }
 walkdir = "2.5"
 wasm-bindgen = "0.2.95"
