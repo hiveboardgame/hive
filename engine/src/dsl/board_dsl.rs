@@ -132,7 +132,6 @@ impl BoardParser {
         None
     }
 
-
     fn handle_hex(hex: Pair<Rule>) -> BoardInput {
         assert!(hex.as_rule() == Rule::hex);
         let symbol = hex.into_inner().next().unwrap();
@@ -151,6 +150,7 @@ impl BoardParser {
         }
     }
 
+
     fn handle_aligned_row(pair: Pair<Rule>) -> Vec<BoardInput> {
         assert!(pair.as_rule() == Rule::aligned_row);
         let mut row = Vec::new();
@@ -165,12 +165,10 @@ impl BoardParser {
         row
     }
 
-    fn handle_board_section(pair: Pair<Rule>) -> Result<Vec<Vec<BoardInput>>> {
-        assert!(pair.as_rule() == Rule::board_section);
-        let board_desc =
-            BoardParser::find(pair, Rule::board_desc).expect("Grammar error: missing board_desc");
+    fn handle_rows_start_aligned(pair : Pair<Rule>) -> Vec<Vec<BoardInput>> {
+        assert!(pair.as_rule() == Rule::starts_aligned);
 
-        let aligned_rows = BoardParser::dig(board_desc, Rule::aligned_row);
+        let aligned_rows = BoardParser::dig(pair.clone(), Rule::aligned_row);
 
         let mut rows = Vec::new();
         for row in aligned_rows.into_iter() {
@@ -178,14 +176,72 @@ impl BoardParser {
             rows.push(inputs)
         }
 
+        rows
+    }
+
+    fn star_inserted_left(row : Vec<BoardInput>) -> Vec<BoardInput> {
+        let mut new_row = Vec::new();
+        new_row.push(BoardInput::Star);
+        new_row.extend(row);
+        new_row
+    }
+
+    fn handle_rows_start_shifted(pair : Pair<Rule>) -> Vec<Vec<BoardInput>> {
+        assert!(pair.as_rule() == Rule::starts_shifted);
+
+        let aligned_rows = BoardParser::dig(pair.clone(), Rule::aligned_row);
+
+        let mut rows = Vec::new();
+        for row in aligned_rows.into_iter() {
+            let inputs = BoardParser::handle_aligned_row(row);
+            rows.push(inputs)
+        }
+
+        rows.into_iter().enumerate().map(|(i, row)| {
+            match i {
+                i if i % 2 == 0 => row,
+                _ => BoardParser::star_inserted_left(row)
+            }
+        }).collect()
+    }
+
+    fn handle_rows_empty(pair : Pair<Rule>) -> Vec<Vec<BoardInput>> {
+        Vec::new()
+    }
+
+    fn board_from_inputs(inputs : Vec<Vec<BoardInput>>) -> Board {
+        todo!()
+    }
+
+    fn handle_board_section(pair: Pair<Rule>) -> Result<Board> {
+        assert!(pair.as_rule() == Rule::board_section);
+
+        let result = BoardParser::find(pair, Rule::board_desc);
+        let board_desc = result.expect("Grammar error: missing board_desc");
+
+        let starts_shifted = BoardParser::find(board_desc.clone(), Rule::starts_shifted);
+        let starts_aligned = BoardParser::find(board_desc.clone(), Rule::starts_aligned);
+        let empty = BoardParser::find(board_desc, Rule::empty);
+
+        let rows = match (starts_shifted, starts_aligned, empty) {
+            (Some(pair), None, None) => BoardParser::handle_rows_start_shifted(pair),
+            (None, Some(pair), None) => BoardParser::handle_rows_start_aligned(pair),
+            (None, None, Some(pair)) => BoardParser::handle_rows_empty(pair),
+            _ => panic!("Grammar error: unexpected board_desc"),
+        };
+
+        // Filter out extraneous empty rows 
         let rows = rows.into_iter().filter(|row| row.len() > 0).collect_vec();
+
+        // Ensure all remaining rows are the same width or there are 
+        // no remaining rows
         let rows_same_width = rows.iter().map(|row| row.len()).unique().count() <= 1;
         if !rows_same_width {
             return Err(ParserError::RowWidth)
         }
 
-
-        Ok(rows)
+        let board = BoardParser::board_from_inputs(rows);
+        Ok(board)
     }
 
     fn handle_stack_desc(pair: Pair<Rule>) -> Result<(u8, Vec<Piece>)> {
@@ -210,6 +266,7 @@ impl BoardParser {
 
         let descs = BoardParser::dig(pair, Rule::stack_desc);
         let mut map = HashMap::new();
+
         for d in descs {
             let (id, pieces) = BoardParser::handle_stack_desc(d)?;
             if map.contains_key(&id) { 
@@ -219,6 +276,12 @@ impl BoardParser {
         }
 
         Ok(map)
+    }
+
+    fn parse_board( input : &str ) -> Result<Board> {
+
+        let mut board = Board::new(); 
+        todo!()
     }
 }
 
