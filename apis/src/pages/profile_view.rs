@@ -13,10 +13,6 @@ use crate::{
 };
 use hive_lib::Color;
 use hooks::use_params;
-use leptix_primitives::{
-    radio_group::{RadioGroupItem, RadioGroupRoot},
-    toggle_group::{ToggleGroupItem, ToggleGroupKind, ToggleGroupMultiple, ToggleGroupRoot},
-};
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::{params::Params, *};
@@ -25,7 +21,6 @@ use leptos_use::{
     UseInfiniteScrollOptions,
 };
 use shared_types::{GameProgress, GameSpeed, GamesContextToUpdate, GamesQueryOptions, ResultType};
-use std::str::FromStr;
 
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
@@ -50,151 +45,104 @@ fn Controls(username: Signal<String>) -> impl IntoView {
     let ctx = expect_context::<ProfileGamesContext>();
     let controls = ctx.controls;
     let i18n = use_i18n();
-    let toggle_classes = "flex hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-3 rounded bg-button-dawn dark:bg-button-twilight data-[state=on]:bg-pillbug-teal";
-    let radio_classes = "hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded bg-button-dawn dark:bg-button-twilight data-[state=checked]:bg-pillbug-teal";
+    let toggle_classes = |active| format!("flex hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-3 rounded bg-button-dawn dark:bg-button-twilight {}", if active { "bg-pillbug-teal" } else { "" });
+    let radio_classes = |active| format!("hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded bg-button-dawn dark:bg-button-twilight {}", if active { "bg-pillbug-teal" } else { "" });
     let delay = 250.0;
-    // WHY CAN'T COMPILER FIGURE OUT THE TYPES IN THE VIEW MACRO?
-    let controls_string: Signal<String> = signal_debounced(
-        Signal::derive(move || controls().tab_view.to_string()),
-        delay,
-    );
-    let color_string: Signal<String> = signal_debounced(
-        Signal::derive(move || {
-            controls()
-                .color
-                .map_or("Both".to_string(), |c| c.to_string())
-        }),
-        delay,
-    );
-    let results_string: Signal<String> = signal_debounced(
-        Signal::derive(move || {
-            controls()
-                .result
-                .map_or("All".to_string(), |c| c.to_string())
-        }),
-        delay,
-    );
-    let speeds_strings: Signal<Vec<String>> = signal_debounced(
-        Signal::derive(move || {
-            controls()
-                .speeds
-                .iter()
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>()
-        }),
-        delay,
-    );
+    let toggle_speeds = move |speed| {
+        controls.update(|c| {
+            if c.speeds.contains(&speed) {
+                c.speeds.retain(|s| s != &speed);
+            } else {
+                c.speeds.push(speed);
+            }
+        }); 
+        first_batch(username(), controls());
+    };
     view! {
         <div class="flex flex-col m-1 text-md sm:text-lg">
-            <RadioGroupRoot
-                attr:class="flex gap-1"
-                value=controls_string
+            <div
+                class="flex gap-1"
             >
+                <a href=format!("/@/{}/unstarted",username()) class=move || radio_classes(controls().tab_view == GameProgress::Unstarted) >{t!(i18n, profile.game_buttons.unstarted)}</a>
+                <a href=format!("/@/{}/playing",username()) class=move || radio_classes(controls().tab_view == GameProgress::Playing)>{t!(i18n, profile.game_buttons.playing)}</a>
+                <a href=format!("/@/{}/finished",username()) class=move || radio_classes(controls().tab_view == GameProgress::Finished)>{t!(i18n, profile.game_buttons.finished)}</a>
 
-                <RadioGroupItem value="Unstarted" attr:class=radio_classes>
-                    <a href="unstarted">{t!(i18n, profile.game_buttons.unstarted)}</a>
-                </RadioGroupItem>
-                <RadioGroupItem value="Playing" attr:class=radio_classes>
-                    <a href="playing">{t!(i18n, profile.game_buttons.playing)}</a>
-                </RadioGroupItem>
-                <RadioGroupItem value="Finished" attr:class=radio_classes>
-                    <a href="finished">{t!(i18n, profile.game_buttons.finished)}</a>
-                </RadioGroupItem>
-            </RadioGroupRoot>
+            </div>
             <div class="font-bold text-md">{t!(i18n, profile.player_color)}</div>
-            <RadioGroupRoot
-                attr:class="flex gap-1"
-                value=color_string
-
-                on_value_change=Callback::new(move |v: String| {
-                    controls
-                        .update(|c| {
-                            c.color = Color::from_str(v.as_str()).ok();
-                        });
-                    first_batch(username(), controls());
-                })
-            >
-
-                <RadioGroupItem value="b" attr:class=radio_classes>
+            <div class="flex gap-1">
+                <button
+                on:click=move |_| {controls.update(|c| c.color = Some(Color::Black)); first_batch(username(), controls());}
+                class=move || radio_classes(controls().color == Some(Color::Black))>
                     {t!(i18n, profile.color_buttons.black)}
-                </RadioGroupItem>
-                <RadioGroupItem value="w" attr:class=radio_classes>
+                </button>
+                <button
+                on:click=move |_| {controls.update(|c| c.color = Some(Color::White)); first_batch(username(), controls());}
+                class=move || radio_classes(controls().color == Some(Color::White))>
                     {t!(i18n, profile.color_buttons.white)}
-                </RadioGroupItem>
-                <RadioGroupItem value="Both" attr:class=radio_classes>
+                </button>
+                <button
+                on:click=move |_| {controls.update(|c| c.color = None); first_batch(username(), controls());}
+                class=move || radio_classes(controls().color.is_none())>
                     {t!(i18n, profile.color_buttons.both)}
-                </RadioGroupItem>
-            </RadioGroupRoot>
+                </button>
+            </div>
             <Show when=move || controls().tab_view == GameProgress::Finished>
                 <div class="font-bold text-md">{t!(i18n, profile.game_result)}</div>
-                <RadioGroupRoot
-                    attr:class="flex gap-1"
-                    value=results_string
-
-                    on_value_change=Callback::new(move |v: String| {
-                        controls
-                            .update(|c| {
-                                c.result = ResultType::from_str(v.as_str()).ok();
-                            });
-                        first_batch(username(), controls());
-                    })
-                >
-
-                    <RadioGroupItem value="Win" attr:class=radio_classes>
+                <div class="flex gap-1">
+                    <button class=move || radio_classes(controls().result == Some(ResultType::Win))
+                    on:click=move |_| {controls.update(|c| c.result = Some(ResultType::Win)); first_batch(username(), controls());}>
                         {t!(i18n, profile.result_buttons.win)}
-                    </RadioGroupItem>
-                    <RadioGroupItem value="Loss" attr:class=radio_classes>
+                    </button>
+                    <button 
+                    on:click=move |_| {controls.update(|c| c.result = Some(ResultType::Loss)); first_batch(username(), controls());}
+                    class=move || radio_classes(controls().result == Some(ResultType::Loss))>
                         {t!(i18n, profile.result_buttons.loss)}
-                    </RadioGroupItem>
-                    <RadioGroupItem value="Draw" attr:class=radio_classes>
+                    </button>
+                    <button
+                    on:click=move |_| {controls.update(|c| c.result = Some(ResultType::Draw)); first_batch(username(), controls());}
+                     class=move || radio_classes(controls().result == Some(ResultType::Draw))>
                         {t!(i18n, profile.result_buttons.draw)}
-                    </RadioGroupItem>
-                    <RadioGroupItem value="All" attr:class=radio_classes>
+                    </button>
+                    <button
+                    on:click=move |_| {controls.update(|c| c.result = None); first_batch(username(), controls());}
+                     class=move || radio_classes(controls().result.is_none())>
                         {t!(i18n, profile.result_buttons.all)}
-                    </RadioGroupItem>
-                </RadioGroupRoot>
+                    </button>
+                </div>
             </Show>
             <div class="font-bold text-md">{t!(i18n, profile.include_speeds)}</div>
-            <ToggleGroupRoot
-                attr:class="flex gap-1 mb-1"
-                kind=ToggleGroupKind::Multiple {
-                    value: speeds_strings
-                        .into(),
-                    default_value: ToggleGroupMultiple::none().into(),
-                    on_value_change: Some(
-                        Callback::new(move |v: Vec<String>| {
-                            controls
-                                .update(|c| {
-                                    c.speeds = v
-                                        .iter()
-                                        .map(|s| GameSpeed::from_str(s).unwrap())
-                                        .collect();
-                                });
-                            first_batch(username(), controls());
-                        }),
-                    ),
-                }
-            >
-
-                <ToggleGroupItem value="Bullet" attr:class=toggle_classes>
+            <div class="flex gap-1 mb-1">
+                <button
+                on:click=move |_| { toggle_speeds(GameSpeed::Bullet); }
+                class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Bullet))>
                     <Icon icon=icon_for_speed(&GameSpeed::Bullet) />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="Blitz" attr:class=toggle_classes>
+                </button>
+                <button
+                on:click=move |_| { toggle_speeds(GameSpeed::Blitz); }
+                class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Blitz))>
                     <Icon icon=icon_for_speed(&GameSpeed::Blitz) />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="Rapid" attr:class=toggle_classes>
+                </button>
+                <button
+                on:click=move |_| { toggle_speeds(GameSpeed::Rapid); }
+                class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Rapid))>
                     <Icon icon=icon_for_speed(&GameSpeed::Rapid) />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="Classic" attr:class=toggle_classes>
+                </button>
+                <button
+                on:click=move |_| { toggle_speeds(GameSpeed::Classic); }
+                class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Classic))>
                     <Icon icon=icon_for_speed(&GameSpeed::Classic) />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="Correspondence" attr:class=toggle_classes>
+                </button>
+                <button
+                on:click=move |_| { toggle_speeds(GameSpeed::Correspondence); }
+                class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Correspondence))>
                     <Icon icon=icon_for_speed(&GameSpeed::Correspondence) />
-                </ToggleGroupItem>
-                <ToggleGroupItem value="Untimed" attr:class=toggle_classes>
+                </button>
+                <button
+                on:click=move |_| { toggle_speeds(GameSpeed::Untimed); }
+                class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Untimed))>
                     <Icon icon=icon_for_speed(&GameSpeed::Untimed) />
-                </ToggleGroupItem>
-            </ToggleGroupRoot>
+                </button>
+            </div>
         </div>
     }
 }
@@ -203,9 +151,9 @@ fn Controls(username: Signal<String>) -> impl IntoView {
 pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let ctx = expect_context::<ProfileGamesContext>();
     let navi = expect_context::<NavigationControllerSignal>();
-    let params = use_params::<UsernameParams>();
     let ws = expect_context::<WebsocketContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
+    let params = use_params::<UsernameParams>();
     let username = Signal::derive(move || {
         params.with(|p| {
             p.as_ref()
