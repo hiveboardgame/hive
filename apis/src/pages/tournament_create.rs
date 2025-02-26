@@ -202,10 +202,8 @@ pub fn TournamentCreate() -> impl IntoView {
             navigate("/tournaments", Default::default());
         }
     };
-    let on_value_change = Callback::new(move |string: String| {
-        if let Ok(new_value) = TimeMode::from_str(&string) {
-            time_signals.time_mode.update(|v| *v = new_value);
-        };
+    let on_value_change = Callback::new(move |t: TimeMode| {
+        time_signals.time_mode.update(|v| *v = t);
     });
     let allowed_values = vec![TimeMode::RealTime, TimeMode::Correspondence];
     let tournament_length = move || {

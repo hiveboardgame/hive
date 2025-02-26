@@ -17,7 +17,7 @@ pub fn InputSlider(
         signal_to_update.update(|v| *v = val[0] as i32);
     });
     view! {
-        <SliderRoot
+        /*<SliderRoot
             min
             max
             step
@@ -35,5 +35,7 @@ pub fn InputSlider(
         {().into_view()}
     </SliderThumb>
         </SliderRoot>
+        */
+        "FIX SLIDERS"
     }
 }
