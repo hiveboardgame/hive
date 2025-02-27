@@ -228,6 +228,17 @@ impl User {
             .execute(conn)
             .await?)
     }
+    pub async fn get_ongoing_games(
+        &self,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        Ok(GameUser::belonging_to(self)
+            .inner_join(games::table)
+            .select(Game::as_select())
+            .filter(finished.eq(false))
+            .get_results(conn)
+            .await?)
+    }
 
     pub async fn get_games_with_notifications(
         &self,

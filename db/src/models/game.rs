@@ -13,7 +13,7 @@ use ::nanoid::nanoid;
 use chrono::{DateTime, Utc};
 use diesel::{prelude::*, ExpressionMethods, Insertable};
 use diesel_async::RunQueryDsl;
-use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
+use hive_lib::{Color, GameControl, GameError, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{
     ChallengeId, Conclusion, GameId, GameProgress, GameSpeed, GameStart, GamesQueryOptions,
