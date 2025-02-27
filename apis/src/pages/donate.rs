@@ -32,7 +32,13 @@ pub fn Donate() -> impl IntoView {
                 <p class="my-4 text-lg text-center">{t!(i18n, donate.about)}</p>
                 <div class="flex justify-center items-center my-4">
                     //{t!(i18n, donate.kofi_button, < kofi_button >)}
-                    //{t!(i18n, donate.patreon_button, < patreon_button >)}
+                    {t!(i18n, donate.patreon_button, < patreon_button > = |children: ChildrenFn| {
+                        view! {
+                            <a href="https://www.patreon.com/HiveDevs" class=COMMON_LINK_STYLE>
+                                {children()}
+                            </a>
+                        }
+                    })}
                 </div>
 
                 <div class="p-3">
