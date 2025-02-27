@@ -1251,4 +1251,25 @@ impl Game {
             .get_result(conn)
             .await?)
     }
+
+    pub fn str_time_left_for_player(&self, player: Uuid) -> String {
+        if let Some(color) = self.user_color(player) {
+            if let Ok(time) = match color {
+                Color::White => self.white_time_left_duration(),
+                Color::Black => self.black_time_left_duration(),
+            } {
+                if let Ok(mode) = TimeMode::from_str(&self.time_mode) {
+                    return mode.time_remaining(time);
+                }
+            }
+        }
+        String::new()
+    }
+
+    pub fn not_current_player_id(&self) -> Uuid {
+        if self.black_id == self.current_player_id {
+            return self.white_id;
+        }
+        self.black_id
+    }
 }
