@@ -13,16 +13,6 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
-    //let register_link = |children| {
-    //    view! {
-    //        <a
-    //            class="text-blue-500 transition-transform duration-300 transform hover:underline"
-    //            href="/register"
-    //        >
-    //            {children}
-    //        </a>
-    //    }
-    //};
     view! {
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
@@ -70,7 +60,10 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 />
             </ActionForm>
             <p class="text-xs text-center text-gray-500">
-                //{t!(i18n, user_config.login.no_account_prompt, < register_link >)}
+                {t!(i18n, user_config.login.no_account_prompt, 
+                    < register_link > =
+                    <a class="text-blue-500 transition-transform duration-300 transform hover:underline" href="/register"/>
+                )}
                             <a
                 class="text-blue-500 transition-transform duration-300 transform hover:underline"
                 href="/register"

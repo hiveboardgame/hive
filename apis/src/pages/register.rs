@@ -23,16 +23,6 @@ lazy_static! {
 
 #[component]
 pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    //let login_link = |children| {
-    //    view! {
-    //        <a
-    //            class="text-blue-500 transition-transform duration-300 transform hover:underline"
-    //            href="/login"
-    //        >
-    //            {children}
-    //        </a>
-    //    }
-    //};
     let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let username_taken = ServerAction::<UsernameTaken>::new();
@@ -219,7 +209,10 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                </ActionForm>
 
             <p class="text-xs text-center text-gray-500">
-                //{t!(i18n, user_config.create_account.existing_account_prompt, < login_link >)}
+                {t!(i18n, user_config.create_account.existing_account_prompt, 
+                    < login_link > =
+                    <a class="text-blue-500 transition-transform duration-300 transform hover:underline" href="/login"/>
+                )}
             </p>
         </div>
     }
