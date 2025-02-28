@@ -1,4 +1,4 @@
-use crate::components::{atoms::simple_link::SimpleLink, molecules::banner::Banner};
+use crate::components::molecules::banner::Banner;
 use crate::i18n::*;
 use leptos::prelude::*;
 
@@ -8,26 +8,10 @@ pub fn Faq() -> impl IntoView {
     let header_class = "text-lg leading-6 font-medium";
     let paragraph_class = "mt-2 text-base";
     let div_class = "p-3";
-    let source_link = |children| {
-        view! { <SimpleLink link="https://github.com/hiveboardgame/hive" children /> }
-    };
-    let discord_link = |children| {
-        view! { <SimpleLink link="https://discord.gg/jNTjr5vj9Z" children /> }
-    };
-    let donate_link = |children| {
-        view! { <SimpleLink link="/donate" children=children /> }
-    };
-    let gen42_link = |children| {
-        view! { <SimpleLink link="https://www.gen42.com/" children /> }
-    };
-    let glicko2_link = |children| {
-        view! { <SimpleLink link="https://en.wikipedia.org/wiki/Glicko-2" children /> }
-    };
-    let resources_link = |children| {
-        view! { <SimpleLink link="/resources" children=children /> }
-    };
-    // TODO: figure out why interpolation doesn't work
-
+    //Helpers for links
+    let rel = "external";
+    let target = "_blank";
+    let class = "text-blue-500 hover:underline";
     view! {
         <div class="pt-20">
             <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
@@ -42,9 +26,17 @@ pub fn Faq() -> impl IntoView {
                         <h3 class=header_class>{t!(i18n, faq.how_to_help.question)}</h3>
                         <p class=paragraph_class>
                             <ul class="mt-2 list-disc list-inside">
-                                //<li>{t!(i18n, faq.how_to_help.answers.item1, < source_link >)}</li>
-                                //<li>{t!(i18n, faq.how_to_help.answers.item2, < discord_link >)}</li>
-                                //<li>{t!(i18n, faq.how_to_help.answers.item3, < donate_link >)}</li>
+                                <li>{t!(i18n, faq.how_to_help.answers.item1, 
+                                    < source_link > = 
+                                    <a href="https://github.com/hiveboardgame/hive" rel=rel target=target class=class/>
+                                )}</li>
+                                <li>{t!(i18n, faq.how_to_help.answers.item2,
+                                     < discord_link > = 
+                                     <a href="https://discord.gg/jNTjr5vj9Z" rel=rel target=target class=class/>
+                                )}</li>
+                                <li>{t!(i18n, faq.how_to_help.answers.item3, 
+                                    < donate_link > = <a href="/donate" rel=rel target=target class=class/>
+                                )}</li>
                             </ul>
                         </p>
                     </div>
@@ -59,7 +51,10 @@ pub fn Faq() -> impl IntoView {
                     <div class=div_class>
                         <h3 class=header_class>{t!(i18n, faq.what_is_hive.question)}</h3>
                         <p class=paragraph_class>
-                            //{t!(i18n, faq.what_is_hive.answer, < gen42_link >)}
+                            {t!(i18n, faq.what_is_hive.answer, 
+                                < gen42_link > = 
+                                <a href="https://www.gen42.com/" rel=rel target=target class=class/>
+                            )}
                         </p>
                     </div>
                     <div class=div_class>
@@ -106,7 +101,10 @@ pub fn Faq() -> impl IntoView {
                         <h3 class=header_class>{t!(i18n, faq.what_rating_system.question)}</h3>
                         <p class=paragraph_class>
 
-                            //{t!(i18n, faq.what_rating_system.answer, < glicko2_link >)}
+                            {t!(i18n, faq.what_rating_system.answer, 
+                                < glicko2_link > =
+                                <a href="https://wikipedia.org/wiki/Glicko-2" rel=rel target=target class=class/>
+                            )}
                         </p>
                     </div>
                     <div class=div_class>
@@ -133,7 +131,10 @@ pub fn Faq() -> impl IntoView {
                             {t!(i18n, faq.where_to_meet_other_players.question)}
                         </h3>
                         <p class=paragraph_class>
-                            //{t!(i18n, faq.where_to_meet_other_players.answer, < resources_link >)}
+                            {t!(i18n, faq.where_to_meet_other_players.answer, 
+                                < resources_link >
+                                = <a href="/resources" rel=rel target=target class=class/>
+                            )}
                         </p>
                     </div>
                     <div class=div_class>
@@ -153,7 +154,10 @@ pub fn Faq() -> impl IntoView {
                     <div class=div_class>
                         <h3 class=header_class>{t!(i18n, faq.where_to_learn_more.question)}</h3>
                         <p class=paragraph_class>
-                            //{t!(i18n, faq.where_to_learn_more.answer, < resources_link >)}
+                            {t!(i18n, faq.where_to_learn_more.answer, 
+                                < resources_link > =
+                                <a href="/resources" rel=rel target=target class=class/>
+                            )}
                         </p>
                     </div>
                     <div class=div_class>
