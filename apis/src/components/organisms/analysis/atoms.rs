@@ -3,7 +3,6 @@ use crate::components::organisms::analysis::{AnalysisSignal, ToggleStates};
 use crate::providers::game_state::GameStateSignal;
 use leptos::{html, prelude::*};
 use leptos_icons::Icon;
-use send_wrapper::SendWrapper;
 use tree_ds::prelude::Node;
 
 #[component]

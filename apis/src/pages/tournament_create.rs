@@ -1,13 +1,10 @@
 use crate::common::{markdown_to_html, TimeSignals, TournamentAction};
 use crate::components::organisms::time_select::TimeSelect;
 use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
-use crate::providers::ApiRequestsProvider;
-use crate::{
-    components::atoms::{
-        date_time_picker::DateTimePicker, input_slider::InputSlider, select_options::SelectOption,
-        simple_switch::SimpleSwitch,
-    },
-    providers::{AuthContext},
+use crate::providers::{ApiRequestsProvider, AuthContext};
+use crate::components::atoms::{
+    date_time_picker::DateTimePicker, input_slider::InputSlider, select_options::SelectOption,
+    simple_switch::SimpleSwitch,
 };
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
@@ -17,7 +14,6 @@ use shared_types::{
     CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
     TournamentMode,
 };
-use std::str::FromStr;
 use uuid::Uuid;
 
 const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -89,6 +85,7 @@ pub fn TournamentCreate() -> impl IntoView {
     let organizer_start = RwSignal::new(true);
     let fixed_round_duration = RwSignal::new(false);
     let api = expect_context::<ApiRequestsProvider>().0;
+    let auth_context = expect_context::<AuthContext>();
     let rating_string = move || {
         format!(
             "Min Rating: {}/ Max Rating: {}",
@@ -108,7 +105,6 @@ pub fn TournamentCreate() -> impl IntoView {
         move || tournament.name.get().len() < 4 || tournament.description.get().len() < 50;
 
     let create = move |_| {
-        let auth_context = expect_context::<AuthContext>();
         let account = match auth_context.user.get() {
             Some(Ok(account)) => Some(account),
             _ => None,
@@ -218,21 +214,7 @@ pub fn TournamentCreate() -> impl IntoView {
     };
     let is_not_preview_desc = RwSignal::new(true);
     let markdown_desc = move || markdown_to_html(&tournament.description.get());
-    //let unused = move || {
-    //    view! {
-
-    //        <div class="p-1">
-    //            Number of rounds:
-    //            <InputSlider
-    //                signal_to_update=tournament.rounds
-    //                name="Rounds"
-    //                min=1
-    //                max=12
-    //                step=1
-    //            /> {tournament.rounds}
-    //        </div>
-    //    </div>}
-    //};
+    
     view! {
         <div class="flex justify-center items-center pt-10">
             <div class="container flex flex-col justify-between p-2 md:flex-row md:flex-wrap">

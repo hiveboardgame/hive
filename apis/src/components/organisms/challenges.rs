@@ -1,7 +1,6 @@
 use crate::common::UserStatus;
 use crate::i18n::*;
 use crate::providers::online_users::{OnlineUsersSignal, OnlineUsersState};
-use crate::providers::ApiRequestsProvider;
 use crate::{
     components::molecules::challenge_row::ChallengeRow,
     providers::{challenges::ChallengeStateSignal, AuthContext},

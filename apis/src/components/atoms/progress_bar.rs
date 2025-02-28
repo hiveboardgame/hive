@@ -28,6 +28,13 @@ pub fn ProgressBar(current: Signal<usize>, total: usize) -> impl IntoView {
                             attr:style=indicator_style
                         />
                     </ProgressRoot>*/
+                
+
+<div class="w-full h-2.5 bg-gray-200 rounded-full dark:bg-gray-700">
+<div class="h-2.5 bg-blue-600 rounded-full" style="width: 45%"></div>
+</div>
+
+
                     "FIX PROGRESS BAR"
                 </div>
             </div>

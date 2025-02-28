@@ -257,7 +257,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
                 <div class=INFO_STYLE>Tournament Info</div>
                 <div class="flex gap-1 m-2">
                     <span class="font-bold">"Time control: "</span>
-                    <TimeRow time_info=time_info.into() />
+                    <TimeRow time_info=time_info />
                 </div>
                 <div class="m-2">
                     <span class="font-bold">"Players: "</span>
@@ -366,7 +366,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
 
                         <UnplayedGameRow
                             game
-                            user_is_organizer=user_is_organizer.into()
+                            user_is_organizer=user_is_organizer
                             tournament_finished=finished.into()
                         />
 

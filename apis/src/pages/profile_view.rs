@@ -17,7 +17,7 @@ use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::{params::Params, *};
 use leptos_use::{
-    core::ConnectionReadyState, signal_debounced, use_infinite_scroll_with_options,
+    core::ConnectionReadyState, use_infinite_scroll_with_options,
     UseInfiniteScrollOptions,
 };
 use shared_types::{GameProgress, GameSpeed, GamesContextToUpdate, GamesQueryOptions, ResultType};

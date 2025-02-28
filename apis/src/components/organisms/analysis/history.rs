@@ -1,4 +1,4 @@
-use crate::components::organisms::analysis::{self, AnalysisTree};
+use crate::components::organisms::analysis::AnalysisTree;
 use crate::components::organisms::analysis::atoms::{
     CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation,
 };
