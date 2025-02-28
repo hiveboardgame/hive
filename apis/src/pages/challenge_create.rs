@@ -13,7 +13,6 @@ use crate::{
 use hive_lib::{ColorChoice, GameType};
 use leptos::prelude::*;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
-use std::str::FromStr;
 
 #[component]
 pub fn ChallengeCreate(
