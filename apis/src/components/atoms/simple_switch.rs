@@ -6,21 +6,17 @@ pub fn SimpleSwitch(
     #[prop(optional)] disabled: Signal<bool>,
     #[prop(optional)] optional_action: Option<Callback<()>>,
 ) -> impl IntoView {
-    let on_checked_change = Callback::new(move |_: bool| {
+    let on_checked_change = move |_| {
         checked.update(|b| *b = !*b);
         if let Some(optional) = optional_action {
             optional.run(())
         };
-    });
+    };
     view! {
-        /*<SwitchRoot
-            checked
-            on_checked_change
-            attr:disabled=disabled
-            attr:class="disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent items-center transition w-8 h-4 bg-white rounded-full relative focus:shadow-black data-[state=checked]:bg-orange-twilight outline-none cursor-default"
-        >
-            <SwitchThumb attr:class="hover:bg-pillbug-teal bg-button-dawn dark:bg-button-twilight block w-4 h-4 rounded-full shadow-md transition-transform duration-100 translate-x-0.5 will-change-transform data-[state=checked]:translate-x-[19px]" />
-        </SwitchRoot>*/
-        "FIX SWITCH"
+        <label class="inline-flex relative items-center cursor-pointer">
+            <input on:change = on_checked_change prop:disabled=disabled
+            type="checkbox" value="" class="sr-only peer" prop:checked=checked />
+            <div class="w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-twilight"></div>
+        </label>
     }
 }
