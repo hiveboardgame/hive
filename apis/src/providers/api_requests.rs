@@ -1,6 +1,6 @@
 use super::challenges::ChallengeStateSignal;
 use super::games::GamesSignal;
-use super::{auth_context, websocket, AuthContext};
+use super::{auth_context, websocket};
 use crate::common::{ChallengeAction, ScheduleAction, TournamentAction};
 use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
@@ -15,7 +15,6 @@ use shared_types::{
 #[derive(Clone)]
 pub struct ApiRequests {
     websocket: WebsocketContext,
-    games: GamesSignal,
     auth_context: auth_context::AuthContext,
     pub challenges: ChallengeStateSignal
 }
@@ -24,8 +23,8 @@ pub struct ApiRequests {
 pub struct ApiRequestsProvider(pub Signal<ApiRequests>);
 
 impl ApiRequests {
-    pub fn new(websocket: websocket::WebsocketContext, games: GamesSignal, auth_context: auth_context::AuthContext, challenges: ChallengeStateSignal) -> Self {
-        Self { websocket, games, auth_context, challenges }
+    pub fn new(websocket: websocket::WebsocketContext, auth_context: auth_context::AuthContext, challenges: ChallengeStateSignal) -> Self {
+        Self { websocket, auth_context, challenges }
     }
 
     pub fn turn(&self, game_id: GameId, turn: Turn) {
@@ -171,9 +170,8 @@ impl ApiRequests {
 }
 
 pub fn provide_api_requests(ws: websocket::WebsocketContext) {
-    let games = expect_context::<GamesSignal>();
     let auth_context = expect_context::<auth_context::AuthContext>();
     let challenges = expect_context::<ChallengeStateSignal>();
-    let api_requests = ApiRequests::new(ws, games, auth_context, challenges);
+    let api_requests = ApiRequests::new(ws, auth_context, challenges);
     provide_context(ApiRequestsProvider(Signal::derive( move || api_requests.clone())));
 }

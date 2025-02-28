@@ -1,17 +1,14 @@
-use core::str;
-use cookie::time::ext;
 use hive_lib::History;
 use leptos::{html, logging, prelude::*};
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::{js_sys::Array, Blob, Url};
-
 use super::AnalysisTree;
 use crate::{
-    components::organisms::analysis::AnalysisSignal, i18n::namespaces::ns_game::game, providers::game_state::GameStateSignal
+    components::organisms::analysis::AnalysisSignal, providers::game_state::GameStateSignal
 };
 use std::path::Path;
-use wasm_bindgen::closure::Closure;
+
 #[component]
 pub fn DownloadTree(tree: String) -> impl IntoView {
     let download = move |_| {

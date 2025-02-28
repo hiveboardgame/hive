@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::i18n::*;
 use crate::providers::{ApiRequestsProvider, AuthContext};
 use leptos::prelude::*;

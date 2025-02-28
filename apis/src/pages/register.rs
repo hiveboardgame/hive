@@ -1,4 +1,3 @@
-use crate::functions;
 use crate::functions::users::get::UsernameTaken;
 use crate::i18n::*;
 use crate::{

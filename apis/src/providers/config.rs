@@ -1,12 +1,10 @@
 use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
-use chrono::Utc;
-use codee::{binary::MsgpackSerdeCodec, string::Base64, string::FromToStringCodec};
+use codee::{binary::MsgpackSerdeCodec, string::Base64};
 use leptos::prelude::*;
-use leptos_use::{use_cookie, use_cookie_with_options, SameSite, UseCookieOptions};
+use leptos_use::{use_cookie_with_options, SameSite, UseCookieOptions};
 use serde::{Deserialize, Serialize};
 use shared_types::GameSpeed;
 use std::collections::HashMap;
-use std::str::FromStr;
 
 const USER_CONFIG_COOKIE: &str = "user_config";
 
