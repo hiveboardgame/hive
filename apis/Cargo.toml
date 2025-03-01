@@ -85,6 +85,7 @@ ssr = [
 
 [package.metadata.leptos-i18n]
 default = "en"
+#Commented out very incomplete locales (< 30% translated)
 locales = [
   "ca", 
   "de",
@@ -95,7 +96,11 @@ locales = [
   "it", 
   "pt",
   "ro", 
-  "ru" 
+  "ru" ,
+  #cs,
+  #ja,
+  #nl,
+  #sv
 ]
 namespaces = [
   "header", 
