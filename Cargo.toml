@@ -39,7 +39,7 @@ lazy_static = "1.5"
 leptos = { version = "0.7", features = ["nightly"] }
 leptos-use = { version = "0.15" }
 leptos_actix =  { version = "0.7" }
-leptos_i18n = { version="0.5", features = ["suppress_key_warnings", "plurals", "interpolate_display"] }
+leptos_i18n = { git="https://github.com/Baptistemontan/leptos_i18n.git", branch="fix_defaulted_subkeys", features = ["suppress_key_warnings", "plurals", "interpolate_display"] }
 leptos_icons = { version = "0.5"}
 leptos_meta =  { version = "0.7"}
 leptos_router =  { version = "0.7", features = ["nightly"] }
