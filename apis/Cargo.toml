@@ -91,10 +91,10 @@ locales = [
   "de",
   "en", 
   "es", 
-#  "fr",
+  "fr",
   "hu",
-#  "it", 
-#  "pt",
+  "it", 
+  "pt",
   "ro", 
   "ru" 
 ]
