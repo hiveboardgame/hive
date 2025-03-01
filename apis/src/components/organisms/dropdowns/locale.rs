@@ -5,24 +5,6 @@ use leptos::prelude::*;
 
 const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md left-34 p-2";
 
-// Commented out very incomplete locales (< 30% translated)
-const ALL_LOCALES: [Locale; 10] = [
-    Locale::ca,
-    //very inc Locale::cs,
-    Locale::de,
-    Locale::en,
-    Locale::es,
-    Locale::fr,
-    Locale::hu,
-    Locale::it,
-    //very inc Locale::ja,
-    //very inc Locale::nl,
-    Locale::pt,
-    Locale::ro,
-    Locale::ru,
-    //very inc Locale::sv,
-];
-
 #[component]
 pub fn LocaleDropdown() -> impl IntoView {
     let hamburger_show = RwSignal::new(false);
@@ -39,8 +21,8 @@ pub fn LocaleDropdown() -> impl IntoView {
             id="locale_dropdown"
             content=move || i18n.get_locale().to_string()
         >
-            <For each=move || ALL_LOCALES key=move |locale| (locale.to_string()) let:locale>
-                <a class=COMMON_LINK_STYLE on:click=move |_| onclick_close(locale)>
+            <For each=Locale::get_all key=move |locale| (locale.to_string()) let:locale>
+                <a class=COMMON_LINK_STYLE on:click=move |_| onclick_close(*locale)>
                     {locale.to_string()}
                 </a>
             </For>
