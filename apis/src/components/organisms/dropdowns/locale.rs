@@ -6,18 +6,18 @@ use leptos::prelude::*;
 const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md left-34 p-2";
 
 // Commented out very incomplete locales (< 30% translated)
-const ALL_LOCALES: [Locale; 7] = [
+const ALL_LOCALES: [Locale; 10] = [
     Locale::ca,
     //very inc Locale::cs,
     Locale::de,
     Locale::en,
     Locale::es,
-    //Locale::fr,
+    Locale::fr,
     Locale::hu,
-    //Locale::it,
+    Locale::it,
     //very inc Locale::ja,
     //very inc Locale::nl,
-    //Locale::pt,
+    Locale::pt,
     Locale::ro,
     Locale::ru,
     //very inc Locale::sv,
