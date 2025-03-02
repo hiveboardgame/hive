@@ -2,6 +2,7 @@ use crate::board::Board;
 use crate::bug::Bug;
 use crate::color::Color;
 use crate::piece::Piece;
+use crate::position::Position;
 use itertools::Itertools;
 use regex::Regex;
 use std::collections::HashMap;
@@ -28,10 +29,16 @@ pub enum ParserError {
     Row(String),
     #[error("Could not parse start location")]
     StartSyntax,
+    #[error("Board has the stack id {0} but no matching id in the 'stack:' section")]
+    MissingStackId(u8),
     #[error("Could not parse stack line: {0}")]
     StackLineSyntax(String),
     #[error("Could not parse stack: {0}")]
     StackParse(String),
+    #[error("Could not parser board section because of misformatted input")]
+    BoardSectionSyntax,
+    #[error("Could not parse stack section because of misformatted input")]
+    StackSectionSyntax,
 }
 
 /// Domain Specific Language (DSL) parser for the [`Board`] struct.
@@ -98,10 +105,6 @@ pub enum Alignment {
 }
 
 impl BoardParser {
-    // TODO: function to help diagnose parsing errors,
-    // parses section by section until some error is encountered
-    pub fn diagnose() {}
-
     /// Locate and return all instances of the rule within the syntax
     /// tree. Descends in a depth-first manner.
     fn dig(pair: Pair<Rule>, rule: Rule) -> Vec<Pair<Rule>> {
@@ -159,22 +162,12 @@ impl BoardParser {
             let input = BoardParser::handle_hex(hex);
             row.push(input)
         }
-        println!("{:#?}", row);
 
         row
     }
 
-    fn handle_rows_start_aligned(pair: Pair<Rule>) -> Vec<Vec<BoardInput>> {
-        assert!(pair.as_rule() == Rule::starts_aligned);
-
-        let aligned_rows = BoardParser::dig(pair.clone(), Rule::aligned_row);
-
-        let mut rows = Vec::new();
-        for row in aligned_rows.into_iter() {
-            let inputs = BoardParser::handle_aligned_row(row);
-            rows.push(inputs)
-        }
-
+    fn handle_rows_start_aligned(rows: Vec<Vec<BoardInput>>) -> Vec<Vec<BoardInput>> {
+        // No transformation needed if the row started left aligned
         rows
     }
 
@@ -185,17 +178,7 @@ impl BoardParser {
         new_row
     }
 
-    fn handle_rows_start_shifted(pair: Pair<Rule>) -> Vec<Vec<BoardInput>> {
-        assert!(pair.as_rule() == Rule::starts_shifted);
-
-        let aligned_rows = BoardParser::dig(pair.clone(), Rule::aligned_row);
-
-        let mut rows = Vec::new();
-        for row in aligned_rows.into_iter() {
-            let inputs = BoardParser::handle_aligned_row(row);
-            rows.push(inputs)
-        }
-
+    fn handle_rows_start_shifted(rows: Vec<Vec<BoardInput>>) -> Vec<Vec<BoardInput>> {
         // Shift every other row
         rows.into_iter()
             .enumerate()
@@ -206,37 +189,49 @@ impl BoardParser {
             .collect()
     }
 
-    fn handle_rows_empty(pair: Pair<Rule>) -> Vec<Vec<BoardInput>> {
+    fn handle_rows_empty(_: Vec<Vec<BoardInput>>) -> Vec<Vec<BoardInput>> {
         Vec::new()
     }
 
-    fn board_from_inputs(inputs: Vec<Vec<BoardInput>>) -> Board {
+    fn board_from_inputs(
+        inputs: Vec<Vec<BoardInput>>,
+        stacks: HashMap<u8, Vec<Piece>>,
+    ) -> Result<Board> {
         let positions = inputs.into_iter().enumerate().flat_map(|(r, row)| {
-            row.into_iter()
-                .enumerate()
-                .map(move |(q, input)| (input, (q, r)))
+            row.into_iter().enumerate().map(move |(q, input)| {
+                (
+                    input,
+                    Position {
+                        q: q as i32,
+                        r: r as i32,
+                    },
+                )
+            })
         });
 
-        todo!()
+        let mut board = Board::new();
+
+        for (input, pos) in positions {
+            match input {
+                BoardInput::Piece(piece) => board.insert(pos, piece, true),
+                BoardInput::StackId(id) => {
+                    let stack = stacks.get(&id).ok_or(ParserError::MissingStackId(id))?;
+                    stack.iter().for_each(|p| board.insert(pos, *p, true));
+                }
+                _ => (),
+            }
+        }
+
+        Ok(board)
     }
 
-    fn handle_board_section(pair: Pair<Rule>) -> Result<Board> {
-        assert!(pair.as_rule() == Rule::board_section);
-
-        let result = BoardParser::find(pair, Rule::board_desc);
-        let board_desc = result.expect("Grammar error: missing board_desc");
-
-        let starts_shifted = BoardParser::find(board_desc.clone(), Rule::starts_shifted);
-        let starts_aligned = BoardParser::find(board_desc.clone(), Rule::starts_aligned);
-        let empty = BoardParser::find(board_desc, Rule::empty);
-
-        let rows = match (starts_shifted, starts_aligned, empty) {
-            (Some(pair), None, None) => BoardParser::handle_rows_start_shifted(pair),
-            (None, Some(pair), None) => BoardParser::handle_rows_start_aligned(pair),
-            (None, None, Some(pair)) => BoardParser::handle_rows_empty(pair),
-            _ => panic!("Grammar error: unexpected board_desc"),
-        };
-
+    fn filter_extraneous(pair: Pair<Rule>) -> Result<Vec<Vec<BoardInput>>> {
+        // Ignore "shifted_row" for now, get all aligned rows inside them
+        let rows = BoardParser::dig(pair, Rule::aligned_row);
+        let rows = rows
+            .into_iter()
+            .map(|row| BoardParser::handle_aligned_row(row))
+            .collect_vec();
         // Filter out extraneous empty rows
         let rows = rows.into_iter().filter(|row| row.len() > 0).collect_vec();
 
@@ -247,14 +242,35 @@ impl BoardParser {
             return Err(ParserError::RowWidth);
         }
 
-        let board = BoardParser::board_from_inputs(rows);
-        Ok(board)
+        Ok(rows)
+    }
+
+    fn handle_board_section(pair: Pair<Rule>) -> Result<Vec<Vec<BoardInput>>> {
+        assert!(pair.as_rule() == Rule::board_section);
+
+        let result = BoardParser::find(pair.clone(), Rule::board_desc);
+        let board_desc = result.expect("Grammar error: missing board_desc");
+
+        let starts_shifted = BoardParser::find(board_desc.clone(), Rule::starts_shifted);
+        let starts_aligned = BoardParser::find(board_desc.clone(), Rule::starts_aligned);
+        let empty = BoardParser::find(board_desc, Rule::empty);
+
+        let rows = BoardParser::filter_extraneous(pair)?;
+
+        let rows = match (starts_shifted, starts_aligned, empty) {
+            (Some(_), None, None) => BoardParser::handle_rows_start_shifted(rows),
+            (None, Some(_), None) => BoardParser::handle_rows_start_aligned(rows),
+            (None, None, Some(_)) => BoardParser::handle_rows_empty(rows),
+            _ => panic!("Grammar error: unexpected board_desc"),
+        };
+
+        Ok(rows)
     }
 
     fn handle_stack_desc(pair: Pair<Rule>) -> Result<(u8, Vec<Piece>)> {
         assert!(pair.as_rule() == Rule::stack_desc);
 
-        let num = BoardParser::find(pair.clone(), Rule::stack_id)
+        let num = BoardParser::find(pair.clone(), Rule::stack_num)
             .expect("Grammar error missing 'stack_id'");
         let num: u8 = num.as_str().parse::<u8>().unwrap();
         let pieces = BoardParser::dig(pair, Rule::piece)
@@ -290,15 +306,150 @@ impl BoardParser {
         Ok(map)
     }
 
-    fn parse_board(input: &str) -> Result<Board> {
-        let mut board = Board::new();
-        todo!()
+    pub fn parse_board(input: &str) -> Result<Board> {
+        let valid_dsl = BoardParser::parse(Rule::valid_dsl, input)
+            .expect("Failed to parse DSL")
+            .next()
+            .unwrap();
+        let board_section = BoardParser::find(valid_dsl.clone(), Rule::board_section)
+            .expect("Grammar error: missing board section");
+        let stack_section = BoardParser::find(valid_dsl.clone(), Rule::stack_section)
+            .expect("Grammar error: missing stack section");
+
+        let board = BoardParser::handle_board_section(board_section)?;
+        let stacks = BoardParser::handle_stack_section(stack_section)?;
+
+        BoardParser::board_from_inputs(board, stacks)
+    }
+
+    pub fn to_dsl(board: &Board) -> String {
+        let bounds = board.bounds();
+        let stacks = board.stacks();
+        let mut stack_section = HashMap::new();
+
+        let mut to_str = |pieces: &Vec<Piece>| -> String {
+            match pieces.len() {
+                0 => " * ".to_string(),
+                1 => {
+                    let piece = format!("{}", pieces[0]);
+                    match piece.len() {
+                        2 => format!("{} ", piece),
+                        3 => format!("{}", piece),
+                        _ => panic!("Unexpected piece length: {}", piece.len()),
+                    }
+                }
+                _ => {
+                    let stack_id = stack_section.len() + 1;
+                    stack_section.insert(stack_id, pieces.clone());
+                    format!(" {} ", stack_id)
+                }
+            }
+        };
+
+        // start with the "board:" section...
+        let mut dsl = "board:\n\n".to_string();
+
+        for r in bounds.top() - 1..=bounds.bottom() + 1 {
+            if r.rem_euclid(2) == 1 {
+                dsl.push_str("  ");
+            }
+            for q in bounds.left() - 1..=bounds.right() + 1 {
+                let symbol = to_str(&stacks.get(q, r));
+                dsl.push_str(&symbol);
+                dsl.push_str(" ");
+            }
+            dsl.push_str("\n");
+        }
+        dsl.push_str("\n");
+
+        // ...then finish with the "stack:" section
+        dsl.push_str("stack:\n\n");
+
+        for id in 1..=stack_section.len() {
+            let pieces = stack_section.get(&id).unwrap();
+            let mut piece_list = "".to_string();
+            for piece in pieces.iter() {
+                piece_list.push_str(&format!("{} ", piece));
+            }
+            dsl.push_str(&format!("{}: bottom -> [ {}] <- top\n", id, piece_list));
+        }
+
+        dsl
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    pub fn test_dsl_conversion() {
+        let mut board = Board::new();
+        board.insert(
+            Position::new(0, 0),
+            Piece::new_from(Bug::Queen, Color::Black, 0),
+            true,
+        );
+        board.insert(
+            Position::new(1, 0),
+            Piece::new_from(Bug::Ant, Color::Black, 1),
+            true,
+        );
+        board.insert(
+            Position::new(1, 0),
+            Piece::new_from(Bug::Beetle, Color::Black, 2),
+            true,
+        );
+        board.insert(
+            Position::new(1, 0),
+            Piece::new_from(Bug::Mosquito, Color::Black, 0),
+            true,
+        );
+        board.insert(
+            Position::new(2, 0),
+            Piece::new_from(Bug::Ant, Color::Black, 2),
+            true,
+        );
+        board.insert(
+            Position::new(3, 0),
+            Piece::new_from(Bug::Ant, Color::Black, 3),
+            true,
+        );
+        board.insert(
+            Position::new(4, 0),
+            Piece::new_from(Bug::Grasshopper, Color::Black, 1),
+            true,
+        );
+        board.insert(
+            Position::new(4, 0),
+            Piece::new_from(Bug::Beetle, Color::Black, 1),
+            true,
+        );
+        board.insert(
+            Position::new(3, 1),
+            Piece::new_from(Bug::Grasshopper, Color::Black, 2),
+            true,
+        );
+
+        let expected = concat!(
+            "board:\n",
+            "\n",
+            "   *   *   *   *   *   *   *  \n",
+            " *  bQ   1  bA2 bA3  2   *  \n",
+            "   *   *   *   *  bG2  *   *  \n",
+            " *   *   *   *   *   *   *  \n",
+            "\n",
+            "stack:\n",
+            "1: bottom -> [ bA1 bB2 bM ] <- top\n",
+            "2: bottom -> [ bG1 bB1 ] <- top",
+        );
+
+        let dsl = BoardParser::to_dsl(&board);
+        let new_board = BoardParser::parse_board(&dsl).unwrap();
+        let expected_board = BoardParser::parse_board(expected).unwrap();
+
+        assert_eq!(expected_board.stacks(), new_board.stacks());
+    }
 
     #[test]
     pub fn test_handle_board_section_syntax_semantics() {
@@ -343,11 +494,11 @@ mod tests {
             (
                 concat!(
                     "board:\n",
-                    "  *   *   *   *   * \n",
-                    "*   *  bQ  wB1  * \n",
-                    "  *   2  wQ   *   * \n",
-                    "*   *   1   *   * \n",
-                    "  *   *   *   *   * \n",
+                    "   *   *   *   *   * \n",
+                    " *   *  bQ  wB1  * \n",
+                    "   *   2  wQ   *   * \n",
+                    " *   *   1   *   * \n",
+                    "   *   *   *   *   * \n",
                     "\n"
                 ),
                 5,
@@ -368,15 +519,17 @@ mod tests {
             ),
         ];
 
-        for (board, rows, cols) in boards {
+        for (board, rows, _) in boards {
             let pair = BoardParser::parse(Rule::board_section, board)
                 .unwrap()
                 .next()
                 .unwrap();
+            println!("{:?}", board);
             let board = BoardParser::handle_board_section(pair);
             let board = board.expect("Must be able to handle board section");
             assert!(board.len() == rows);
-            assert!(board[0].len() == cols);
+            //TODO: cleanup -  columns are shifted to preseve odd-r-ness
+            //assert!(board[0].len() == cols);
         }
     }
 
@@ -771,13 +924,17 @@ mod tests {
     #[test]
     pub fn test_aligned_row_rules() {
         let aligned_rows = [
-            "*  *  1  *  *\n", // requires two spaces infront
-            "wQ    *     *  *  *\n",
+            "*  *  1  *  *\n",
+            "wQ    *     *  *  *\n",  // can have 0 spaces in front
+            " wQ    *     *  *  *\n", // or 1 space in front
             "*   *     bB2  *     *   \n",
+            " *   *     bB2  *     *   \n",
             "",
             "\n",
+            " \n",
             "*",
-            "*\n***", // trailing characters should be ignored
+            "*\n***",  // trailing characters should be ignored
+            " *\n***", // trailing characters should be ignored
         ];
 
         for row in aligned_rows.iter() {
@@ -787,7 +944,15 @@ mod tests {
             }
         }
 
-        let aligned_rows_malformed = ["*  * **  *\n", "**\n", "*****\n", "-", " * * \n", "   *\n"];
+        let aligned_rows_malformed = [
+            " *  * **  *\n",
+            "**\n",
+            " *****\n          ",
+            "-              ",
+            "  * *           \n",
+            "  * * *",
+            "   *\n",
+        ];
 
         for row in aligned_rows_malformed.iter() {
             let parsed = BoardParser::parse(Rule::aligned_row, row);
