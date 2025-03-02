@@ -1,16 +1,13 @@
-use crate::board::Board;
-use crate::bug::Bug;
-use crate::color::Color;
+use crate::board::{Board, Bounds};
 use crate::piece::Piece;
 use crate::position::Position;
 use itertools::Itertools;
-use regex::Regex;
 use std::collections::HashMap;
 use std::str::FromStr;
 use thiserror::Error;
 
 use pest::iterators::Pair;
-use pest::{Parser, RuleType};
+use pest::Parser;
 use pest_derive::Parser;
 
 type Result<T> = std::result::Result<T, ParserError>;
@@ -323,7 +320,7 @@ impl BoardParser {
     }
 
     pub fn to_dsl(board: &Board) -> String {
-        let bounds = board.bounds();
+        let bounds = board.bounds().unwrap_or(Bounds::default());
         let stacks = board.stacks();
         let mut stack_section = HashMap::new();
 
@@ -381,6 +378,8 @@ impl BoardParser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::color::Color;
+    use crate::bug::Bug;
 
     #[test]
     pub fn test_dsl_conversion() {
