@@ -23,6 +23,47 @@ lazy_static! {
     static ref WHITE_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::White, 0);
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Stacks {
+    positions: HashMap<Position, Vec<Piece>>,
+}
+
+impl Stacks {
+    pub fn new() -> Self {
+        Self {
+            positions: HashMap::new(),
+        }
+    }
+    pub fn get(&self, q: i32, r: i32) -> Vec<Piece> {
+        let position = Position { q, r };
+        self.positions.get(&position).unwrap_or(&Vec::new()).clone()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Bounds {
+    top_left: Position,
+    bottom_right: Position,
+}
+
+impl Bounds {
+    pub fn top(&self) -> i32 {
+        self.top_left.r
+    }
+
+    pub fn bottom(&self) -> i32 {
+        self.bottom_right.r
+    }
+
+    pub fn left(&self) -> i32 {
+        self.top_left.q
+    }
+
+    pub fn right(&self) -> i32 {
+        self.bottom_right.q
+    }
+}
+
 impl Default for Board {
     fn default() -> Self {
         Self::new()
@@ -40,6 +81,7 @@ pub struct Board {
     pub stunned: Option<Piece>,
     pub positions: [Option<Position>; 48],
     pinned: [bool; 48],
+    // number of pieces present on the board
     pub played: usize,
     pub hasher: Hasher,
     pub smallest: Option<(Piece, Position)>,
@@ -952,6 +994,53 @@ impl Board {
         (0..BOARD_SIZE)
             .cartesian_product(0..BOARD_SIZE)
             .map(|(q, r)| Position { q, r })
+    }
+
+    pub fn bounds(&self) -> Bounds {
+        if self.played == 0 {
+            return Bounds {
+                top_left: Position::new(0, 0),
+                bottom_right: Position::new(0, 0),
+            };
+        }
+
+        let top_left =
+            self.all_taken_positions()
+                .fold(Position::new(BOARD_SIZE, BOARD_SIZE), |acc, pos| Position {
+                    q: acc.q.min(pos.q),
+                    r: acc.r.min(pos.r),
+                });
+
+        let bottom_right = self
+            .all_taken_positions()
+            .fold(Position::new(0, 0), |acc, pos| Position {
+                q: acc.q.max(pos.q),
+                r: acc.r.max(pos.r),
+            });
+
+        Bounds {
+            top_left,
+            bottom_right,
+        }
+    }
+
+    // abstract away the whole "offset_to_piece" business
+    pub fn stacks(&self) -> Stacks {
+        let mut stacks = Stacks::new();
+        for (i, maybe_pos) in self.positions.iter().enumerate() {
+            if let Some(pos) = maybe_pos {
+                let entry = stacks.positions.entry(*pos).or_insert_with(|| vec![]);
+                entry.push(Self::offset_to_piece(i));
+            }
+        }
+
+        for (pos, pieces) in stacks.positions.iter_mut() {
+            pieces.sort_by(|a, b| {
+                self.level_of_piece(*a, *pos)
+                    .cmp(&self.level_of_piece(*b, *pos))
+            });
+        }
+        stacks
     }
 }
 

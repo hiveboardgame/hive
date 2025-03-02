@@ -18,7 +18,7 @@ separated_hex = _{ hex ~ " "+ }
 endline = @{ "\n" | EOI }
 blankline = @{ WHITESPACE* ~ "\n"}
 
-aligned_row = ${ separated_hex* ~ hex? ~ WHITESPACE* ~ endline }
+aligned_row = ${ " "? ~ separated_hex* ~ hex? ~ WHITESPACE* ~ endline }
 shifted_row = ${ "  " ~ aligned_row }
 
 empty = { "" }
