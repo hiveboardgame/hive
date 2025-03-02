@@ -25,6 +25,9 @@ lazy_static! {
     static ref WHITE_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::White, 0);
 }
 
+/// Acts as a more transparent representation of
+/// locations and stacks pieces on the board. 
+/// Each stack is arranged from lowest to highest.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Stacks {
     positions: HashMap<Position, Vec<Piece>>,
@@ -36,6 +39,11 @@ impl Stacks {
             positions: HashMap::new(),
         }
     }
+    /// Given an odd-r offset coordinate, return the pieces (if any) 
+    /// at that location.
+    ///
+    /// The vector of pieces returned represents a Hive stack arranged from 
+    /// lowest (first element) to highest.
     pub fn get(&self, q: i32, r: i32) -> Vec<Piece> {
         let position = Position { q, r };
         self.positions.get(&position).unwrap_or(&Vec::new()).clone()
@@ -46,6 +54,15 @@ impl Stacks {
 pub struct Bounds {
     top_left: Position,
     bottom_right: Position,
+}
+
+impl Default for Bounds {
+    fn default() -> Self {
+        Self {
+            top_left: Position::new(0, 0),
+            bottom_right: Position::new(0, 0),
+        }
+    }
 }
 
 impl Bounds {
@@ -998,12 +1015,9 @@ impl Board {
             .map(|(q, r)| Position { q, r })
     }
 
-    pub fn bounds(&self) -> Bounds {
+    pub fn bounds(&self) -> Option<Bounds> {
         if self.played == 0 {
-            return Bounds {
-                top_left: Position::new(0, 0),
-                bottom_right: Position::new(0, 0),
-            };
+            return None
         }
 
         let top_left =
@@ -1020,13 +1034,12 @@ impl Board {
                 r: acc.r.max(pos.r),
             });
 
-        Bounds {
+        Some(Bounds {
             top_left,
             bottom_right,
-        }
+        })
     }
 
-    // abstract away the whole "offset_to_piece" business
     pub fn stacks(&self) -> Stacks {
         let mut stacks = Stacks::new();
         for (i, maybe_pos) in self.positions.iter().enumerate() {
