@@ -127,7 +127,8 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     );
 
     view! {
-        <div class=move || {
+        <div id="timer"
+            class=move || {
             format!(
                 "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
                 if time_is_zero() { "bg-ladybug-red" } else { "" },
