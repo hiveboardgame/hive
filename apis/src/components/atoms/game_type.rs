@@ -1,13 +1,13 @@
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 
 #[component]
 pub fn GameType(game_type: String) -> impl IntoView {
     view! {
         <div class="flex justify-center">
             {if game_type == "Base" {
-                view! { "—" }.into_any()
+                Either::Left(view! { "—" })
             } else {
-                view! {
+                Either::Right(view! {
                     <img
                         width="100%"
                         height="100%"
@@ -15,8 +15,8 @@ pub fn GameType(game_type: String) -> impl IntoView {
                         alt="plm"
                         class="w-14 lg:w-20"
                     />
-                }
-                    .into_any()
+                })
+                  
             }}
 
         </div>

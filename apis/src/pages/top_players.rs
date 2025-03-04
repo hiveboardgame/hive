@@ -13,7 +13,7 @@ pub fn TopPlayers() -> impl IntoView {
         .collect_view();
     view! {
         <div class="flex flex-col items-center pt-20">
-            <Banner title="Top Rated Players".into_any() extend_tw_classes="w-10/12" />
+            <Banner title="Top Rated Players" extend_tw_classes="w-10/12" />
             <div class="flex flex-col flex-wrap gap-1 justify-center items-center w-full md:flex-row">
                 {leaderboards}
             </div>
