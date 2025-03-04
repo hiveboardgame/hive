@@ -1,3 +1,4 @@
+pub mod api;
 pub mod common;
 pub mod functions;
 pub mod jobs;
@@ -13,6 +14,11 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::api_play, challenges::{api_accept_challenge, api_get_challenges}};
+    use api::v1::auth::get_token_handler::get_token;
+    use api::v1::auth::get_identity_handler::get_identity;
+    use api::v1::auth::jwt_secret::JwtSecret;
+    use api::v1::bot::users::api_get_user;
     use crate::websocket::{Chats, start_connection, WsServer};
     use actix::Actor;
     use actix_files::Files;
@@ -50,6 +56,8 @@ async fn main() -> std::io::Result<()> {
     let pool = get_pool(&config.database_url)
         .await
         .expect("Failed to get pool");
+    let jwt_secret = JwtSecret::new(config.jwt_secret);
+    let jwt_key = Data::new(jwt_secret);
     let chat_history = Data::new(Chats::new());
     let pings = Data::new(Pings::new());
     let lags = Data::new(Lags::new());
@@ -73,6 +81,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::clone(&tournament_game_start))
             .app_data(Data::clone(&pings))
             .app_data(Data::clone(&lags))
+            .app_data(Data::clone(&jwt_key))
             .app_data(Data::new(site_root.to_string()))
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
@@ -83,6 +92,16 @@ async fn main() -> std::io::Result<()> {
             .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::oauth::callback)
+            .service(get_token)
+            .service(get_identity)
+            .service(api_play)
+            .service(api_get_game)
+            .service(api_get_ongoing_games)
+            .service(api_get_pending_games)
+            .service(api_get_user)
+            .service(api_get_challenges)
+            .service(api_accept_challenge)
+
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(
                 leptos_options.to_owned(),
