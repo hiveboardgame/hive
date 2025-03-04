@@ -8,7 +8,7 @@ pub async fn get_identity(Auth(email): Auth) -> HttpResponse {
     HttpResponse::Ok().json(json!({
       "success": true,
       "data": {
-        "user": email,
+        "bot": email,
       }
     }))
 }

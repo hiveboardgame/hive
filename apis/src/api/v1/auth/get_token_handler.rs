@@ -3,6 +3,7 @@ use super::jwt_secret::JwtSecret;
 use actix_web::post;
 use actix_web::web::{Data, Json};
 use actix_web::HttpResponse;
+use anyhow::{anyhow, Result};
 use argon2::{
     password_hash::{PasswordHash, PasswordVerifier},
     Argon2,
@@ -17,62 +18,40 @@ pub async fn get_token(
     pool: Data<DbPool>,
     jwt_secret: Data<JwtSecret>,
 ) -> HttpResponse {
-    let mut conn = match get_conn(&pool).await {
-        Ok(conn) => conn,
-        Err(e) => {
-            return HttpResponse::InternalServerError().json(json!({
+    match get_token_helper(bot, jwt_secret, pool).await {
+        Ok(token) => HttpResponse::Ok().json(json!({
+            "success": true,
+            "data": {
+                "token": token
+            }
+        })),
+        Err(e) => HttpResponse::BadRequest().json(json!({
             "success": false,
             "data": {
-              "message": "Internal server error",
-            }}))
-        }
-    };
-    let user = match User::find_by_email(&bot.email, &mut conn).await {
-        Ok(user) => user,
-        Err(e) => {
-            return HttpResponse::NotFound().json(json!({
-              "success": false,
-              "data": {
-                "message": "No user found by that email address",
-              }
-            }))
-        }
-    };
+                "message": e.to_string(),
+            }
+        })),
+    }
+}
+
+async fn get_token_helper(
+    bot: Bot,
+    jwt_secret: Data<JwtSecret>,
+    pool: Data<DbPool>,
+) -> Result<String> {
+    let mut conn = get_conn(&pool).await?;
+    let user = User::find_by_email(&bot.email, &mut conn).await?;
+    if !user.bot {
+        return Err(anyhow!("Not a bot"));
+    }
     let argon2 = Argon2::default();
-    let stored_pw = match PasswordHash::new(&user.password) {
-        Ok(pw) => pw,
-        Err(e) => {
-            return HttpResponse::InternalServerError().json(json!({
-            "success": false,
-            "data": {
-              "message": "Internal server error",
-            }}))
-        }
-    };
+    let stored_pw = PasswordHash::new(&user.password).map_err(|e| anyhow!(e.to_string()))?;
 
     if argon2
         .verify_password(bot.password.as_bytes(), &stored_pw)
         .is_err()
     {
-        return HttpResponse::BadRequest().json(json!({
-          "success": false,
-          "data": {
-            "message": "Password does not match"
-          }
-        }));
+        return Err(anyhow!("Password does not match"));
     }
-
-    match jwt_encode(bot, &jwt_secret.encoding) {
-        Ok(token) => HttpResponse::Ok().json(json!({
-          "success": true,
-          "data": {
-            "token": token
-          }
-        })),
-        Err(e) => HttpResponse::InternalServerError().json(json!({
-        "success": false,
-        "data": {
-          "message": "Internal server error",
-        }})),
-    }
+    jwt_encode(bot, &jwt_secret.encoding)
 }
