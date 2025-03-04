@@ -47,9 +47,7 @@ pub fn Tournament() -> impl IntoView {
         <div class="flex flex-col justify-center items-center pt-20 w-full">
             <div class="container flex flex-col items-center w-full">
                 <Show when=move || current_tournament().is_some()>
-                    <LoadedTournament tournament=Signal::derive(move || {
-                        current_tournament().expect("Current tournament is some")
-                    }) />
+                    <LoadedTournament tournament=current_tournament().expect("Current tournament is some") />
                 </Show>
             </div>
         </div>
@@ -57,7 +55,8 @@ pub fn Tournament() -> impl IntoView {
 }
 
 #[component]
-fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
+fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
+    let tournament = Signal::derive(move || tournament.clone());
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let account = move || match auth_context.user.get() {
