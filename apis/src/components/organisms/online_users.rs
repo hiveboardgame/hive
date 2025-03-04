@@ -39,7 +39,7 @@ pub fn OnlineUsers() -> impl IntoView {
                 class="p-1 w-64"
                 type="text"
                 on:input=debounced_search
-                placeholder={t_string!(i18n, home.search_players)}
+                placeholder={move || t_string!(i18n, home.search_players)}
                 value=pattern
                 maxlength="20"
             />
