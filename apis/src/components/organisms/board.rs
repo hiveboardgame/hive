@@ -16,6 +16,7 @@ use leptos::{
     prelude::*,
     svg::{self, Svg},
 };
+use leptos_use::on_click_outside;
 use leptos_use::{
     use_event_listener, use_event_listener_with_options, use_intersection_observer_with_options,
     use_resize_observer, use_throttle_fn_with_arg, UseEventListenerOptions,
@@ -326,7 +327,17 @@ pub fn Board(
     _ = use_event_listener(viewbox_ref, contextmenu, move |evt| {
         evt.prevent_default();
     });
-
+    #[allow(unused)]
+    on_click_outside(g_ref,
+        move |event| { 
+        let clicked_timer = event.target().map(|t|
+            t.dyn_ref::<web_sys::HtmlElement>().map(|t| t.id())).map(|id| {
+                id.is_some_and(|id| id == "timer")
+            });
+        if !clicked_timer.unwrap_or_default() {
+            game_state.reset();
+        }
+    });
     view! {
         <div
             node_ref=div_ref
@@ -344,7 +355,6 @@ pub fn Board(
                 class=move || format!("touch-none duration-300 {}", history_style())
                 node_ref=viewbox_ref
                 xmlns="http://www.w3.org/2000/svg"
-                on:click=move |_| { game_state.reset() }
             >
                 <g transform=transform node_ref=g_ref>
                     <Show
