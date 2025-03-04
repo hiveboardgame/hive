@@ -1,6 +1,7 @@
 use crate::i18n::*;
 use crate::{components::molecules::time_row::TimeRow, providers::game_state::GameStateSignal};
 use hive_lib::{Color, GameResult, GameStatus};
+use leptos::either::Either;
 use leptos::prelude::*;
 use shared_types::{Conclusion, PrettyString, TimeInfo, TournamentGameResult, TournamentId};
 
@@ -105,9 +106,9 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             (game_info(), tournament_info())
         {
             let rated = if rated {
-                t!(i18n, game.rated).into_any()
+                Either::Left(t!(i18n, game.rated))
             } else {
-                t!(i18n, game.casual).into_any()
+                Either::Right(t!(i18n, game.casual))
             };
             let name = Signal::derive(move || name.clone());
             let name = move || {
@@ -125,7 +126,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     String::new()
                 }
             };
-            view! {
+            Either::Left(view! {
                 <div class=extend_tw_classes>
                     <div class="flex gap-1 items-center">
                         <TimeRow time_info=time_info.into() extend_tw_classes="whitespace-nowrap" />
@@ -141,10 +142,9 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         </Show>
                     </div>
                 </div>
-            }
-            .into_any()
+            })
         } else {
-            view! { "" }.into_any()
+            Either::Right(view! { "" })
         }
     }
 }

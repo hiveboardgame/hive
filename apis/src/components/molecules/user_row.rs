@@ -7,7 +7,7 @@ use crate::{
     },
     responses::UserResponse,
 };
-use leptos::prelude::*;
+use leptos::{either::EitherOf4, prelude::*};
 use shared_types::GameSpeed;
 
 #[component]
@@ -57,16 +57,16 @@ pub fn UserRow(
         for action in actions {
             match action {
                 UserAction::Challenge => {
-                    views.push(view! { <DirectChallengeButton user=user() /> }.into_any());
+                    views.push(EitherOf4::A(view! { <DirectChallengeButton user=user() /> }));
                 }
                 UserAction::Invite(tournament_id) => {
-                    views.push(view! { <InviteButton user=user() tournament_id /> }.into_any());
+                    views.push(EitherOf4::B(view! { <InviteButton user=user() tournament_id /> }));
                 }
                 UserAction::Uninvite(tournament_id) => {
-                    views.push(view! { <UninviteButton user=user() tournament_id /> }.into_any());
+                    views.push(EitherOf4::C(view! { <UninviteButton user=user() tournament_id /> }));
                 }
                 UserAction::Kick(tournament) => {
-                    views.push(view! { <KickButton user=user() tournament=*tournament /> }.into_any());
+                    views.push(EitherOf4::D(view! { <KickButton user=user() tournament=*tournament /> }));
                 }
                 _ => {}
             };

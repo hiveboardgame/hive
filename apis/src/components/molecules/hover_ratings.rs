@@ -1,5 +1,6 @@
 use crate::components::atoms::rating::RatingWithIcon;
 use crate::responses::UserResponse;
+use leptos::either::Either;
 use leptos::prelude::*;
 use shared_types::GameSpeed;
 
@@ -9,9 +10,9 @@ pub fn HoverRating(user: UserResponse) -> impl IntoView {
         .iter()
         .map(|speed| {
             if let Some(rating) = user.ratings.get(speed) {
-                view! { <RatingWithIcon rating=StoredValue::new(rating.clone()) /> }.into_any()
+                Either::Left(view! { <RatingWithIcon rating=StoredValue::new(rating.clone()) /> })
             } else {
-                "".into_any()
+                Either::Right("")
             }
         })
         .collect_view();

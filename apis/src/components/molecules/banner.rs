@@ -4,8 +4,8 @@ use leptos::{
 };
 
 #[component]
-pub fn Banner(
-    title: AnyView,
+pub fn Banner<T: IntoView+'static>(
+    title: T,
     #[prop(optional)] text: MaybeProp<String>,
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] logo: Option<HtmlElement<Img, (), ()>>,

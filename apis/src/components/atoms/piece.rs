@@ -6,6 +6,7 @@ use crate::pages::play::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
 use hive_lib::{Bug, GameStatus, Piece, Position};
+use leptos::either::Either;
 use leptos::prelude::*;
 use web_sys::MouseEvent;
 
@@ -212,7 +213,7 @@ pub fn Piece(
     // TODO: hand in tile_design and don't get it all the time from config
 ) -> impl IntoView {
     if simple {
-        return view! { <PieceWithoutOnClick piece position level /> }.into_any();
+        return Either::Left(view! { <PieceWithoutOnClick piece position level /> });
     }
-    view! { <PieceWithOnClick piece position level piece_type /> }.into_any()
+    Either::Right(view! { <PieceWithOnClick piece position level piece_type /> })
 }

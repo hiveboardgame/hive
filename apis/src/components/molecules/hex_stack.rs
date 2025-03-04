@@ -5,6 +5,7 @@ use crate::{
     common::{ActiveState, HexStack},
     components::atoms::hex::Hex,
 };
+use leptos::either::Either;
 use leptos::prelude::*;
 use leptos::{
     ev::{pointerup, touchend, touchstart},
@@ -77,14 +78,13 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
                 _ => false,
             };
             if is_expandable {
-                view! {
+                Either::Left(view! {
                     <g node_ref=g_ref>
                         <Hex hex=hex on:pointerdown=rightclick_expand />
                     </g>
-                }
-                .into_any()
+                })
             } else {
-                view! { <Hex hex=hex /> }.into_any()
+                Either::Right(view! { <Hex hex=hex /> })
             }
         })
         .collect_view()

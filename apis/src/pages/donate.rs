@@ -10,7 +10,7 @@ pub fn Donate() -> impl IntoView {
         <div class="pt-20">
             <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
                 <Banner
-                    title=t!(i18n, donate.title).into_any()
+                    title=t!(i18n, donate.title)
                     text=t_string!(i18n, donate.subtitle).into()
                 />
                 <p class="my-4 text-lg text-center">{t!(i18n, donate.about)}</p>

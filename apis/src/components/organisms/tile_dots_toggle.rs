@@ -1,5 +1,6 @@
 use crate::i18n::*;
 use crate::{common::TileDots, providers::Config};
+use leptos::either::EitherOf3;
 use leptos::prelude::*;
 #[component]
 pub fn TileDotsToggle() -> impl IntoView {
@@ -48,9 +49,9 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
             >
 
                 {match tile_dots() {
-                    TileDots::No => t!(i18n, user_config.dots_buttons.no).into_any(),
-                    TileDots::Angled => t!(i18n, user_config.dots_buttons.angled).into_any(),
-                    TileDots::Vertical => t!(i18n, user_config.dots_buttons.vertical).into_any(),
+                    TileDots::No => EitherOf3::A(t!(i18n, user_config.dots_buttons.no)),
+                    TileDots::Angled => EitherOf3::B(t!(i18n, user_config.dots_buttons.angled)),
+                    TileDots::Vertical => EitherOf3::C(t!(i18n, user_config.dots_buttons.vertical)),
                 }}
 
             </button>

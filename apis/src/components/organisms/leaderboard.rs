@@ -1,6 +1,7 @@
 use crate::common::UserAction;
 use crate::components::atoms::rating::icon_for_speed;
 use crate::{components::molecules::user_row::UserRow, functions::users::get::get_top_users};
+use leptos::either::Either;
 use leptos::logging::log;
 use leptos::prelude::*;
 use leptos_icons::Icon;
@@ -17,13 +18,12 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                     .map(|data| match data {
                         Err(e) => {
                             log!("Error is: {:?}", e);
-                            view! { <pre class="m-2 h-6">"Couldn't fetch top users"</pre> }
-                                .into_any()
+                            Either::Left(view! { <pre class="m-2 h-6">"Couldn't fetch top users"</pre> })
                         }
                         Ok(users) => {
                             let users = StoredValue::new(users);
                             let is_empty = move || users.get_value().is_empty();
-                            view! {
+                            Either::Right(view! {
                                 <div class="flex flex-col m-2 w-fit">
                                     <div class="flex gap-1 items-center">
                                         <Icon icon=icon_for_speed(&speed()) />
@@ -51,8 +51,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                         </For>
                                     </div>
                                 </div>
-                            }
-                                .into_any()
+                            })
                         }
                     })
             }}

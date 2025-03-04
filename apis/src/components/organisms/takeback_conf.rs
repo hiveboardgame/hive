@@ -1,5 +1,6 @@
 use crate::i18n::*;
 use crate::providers::{ApiRequestsProvider, AuthContext};
+use leptos::either::EitherOf3;
 use leptos::prelude::*;
 use shared_types::Takeback;
 
@@ -51,13 +52,13 @@ fn Button(takeback: Takeback) -> impl IntoView {
 
                 {match takeback.get_value() {
                     Takeback::Always => {
-                        t!(i18n, user_config.allow_takeback_buttons.always).into_any()
+                        EitherOf3::A(t!(i18n, user_config.allow_takeback_buttons.always))
                     }
                     Takeback::CasualOnly => {
-                        t!(i18n, user_config.allow_takeback_buttons.casual_only).into_any()
+                        EitherOf3::B(t!(i18n, user_config.allow_takeback_buttons.casual_only))
                     }
                     Takeback::Never => {
-                        t!(i18n, user_config.allow_takeback_buttons.never).into_any()
+                        EitherOf3::C(t!(i18n, user_config.allow_takeback_buttons.never))
                     }
                 }}
 
