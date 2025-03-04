@@ -14,6 +14,7 @@ use crate::{
 };
 use chrono::Utc;
 use hive_lib::{Color, GameResult, GameStatus};
+use leptos::either::{Either, EitherOf10};
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{GameStart, PrettyString, TimeInfo};
@@ -23,26 +24,26 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     let game = Signal::derive(move || game.get_value().clone());
     let i18n = use_i18n();
     let rated_string = if game().rated {
-        t!(i18n, game.rated).into_any()
+        Either::Left(t!(i18n, game.rated))
     } else {
-        t!(i18n, game.casual).into_any()
+        Either::Right(t!(i18n, game.casual))
     };
 
     let result_string = match game().game_status {
         GameStatus::NotStarted => {
             if game().finished {
-                game().tournament_game_result.to_string().into_any()
+                Either::Left(game().tournament_game_result.to_string())
             } else if game().game_start == GameStart::Ready {
-                t!(i18n, game.start_when.both_agree).into_any()
+                Either::Right(t!(i18n, game.start_when.both_agree))
             } else {
-                "Not started".into_any()
+                Either::Left("Not started".to_string())
             }
         }
-        GameStatus::InProgress => "Playing now".into_any(),
+        GameStatus::InProgress => Either::Left("Playing now".to_string()),
         GameStatus::Finished(res) => match res {
-            GameResult::Winner(c) => GameResult::Winner(c).to_string().into_any(),
-            GameResult::Draw => GameResult::Draw.to_string().into_any(),
-            _ => game().conclusion.to_string().into_any(),
+            GameResult::Winner(c) => Either::Left(GameResult::Winner(c).to_string()),
+            GameResult::Draw => Either::Left(GameResult::Draw.to_string()),
+            _ => Either::Left(game().conclusion.to_string()),
         },
     };
 
@@ -51,70 +52,63 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
         if game().finished {
             let time = Utc::now().signed_duration_since(game().updated_at);
             if time.num_weeks() >= 1 {
-                t!(
+                EitherOf10::A(t!(
                     i18n,
                     game.finished_ago.weeks,
                     count = move || time.num_weeks()
-                )
-                .into_any()
+                ))
             } else if time.num_days() >= 1 {
-                t!(
+                EitherOf10::B(t!(
                     i18n,
                     game.finished_ago.days,
                     count = move || time.num_days()
-                )
-                .into_any()
+                ))
             } else if time.num_hours() >= 1 {
-                t!(
+                EitherOf10::C(t!(
                     i18n,
                     game.finished_ago.hours,
                     count = move || time.num_hours()
-                )
-                .into_any()
+                ))
             } else if time.num_minutes() >= 1 {
-                t!(
+                EitherOf10::D(t!(
                     i18n,
                     game.finished_ago.minutes,
                     count = move || time.num_minutes()
-                )
-                .into_any()
+                ))
             } else {
-                t!(i18n, game.finished_ago.less_than_minute).into_any()
+                EitherOf10::E(t!(i18n, game.finished_ago.less_than_minute))
             }
         } else {
             let time = Utc::now().signed_duration_since(game().created_at);
             if time.num_weeks() >= 1 {
-                t!(
+                EitherOf10::F(t!(
                     i18n,
                     game.created_ago.weeks,
                     count = move || time.num_weeks()
-                )
-                .into_any()
+                ))
             } else if time.num_days() >= 1 {
-                t!(i18n, game.created_ago.days, count = move || time.num_days()).into_any()
+                EitherOf10::G(t!(i18n, game.created_ago.days, count = move || time.num_days()))
             } else if time.num_hours() >= 1 {
-                t!(
+                EitherOf10::H(t!(
                     i18n,
                     game.created_ago.hours,
                     count = move || time.num_hours()
-                )
-                .into_any()
+                ))
             } else if time.num_minutes() >= 1 {
-                t!(
+                EitherOf10::I(t!(
                     i18n,
                     game.created_ago.minutes,
                     count = move || time.num_minutes()
-                )
-                .into_any()
+                ))
             } else {
-                t!(i18n, game.created_ago.less_than_minute).into_any()
+                EitherOf10::J(t!(i18n, game.created_ago.less_than_minute))
             }
         }
     };
     let history = game().history;
     let history_string = match history.len() {
-        0 => t!(i18n, game.no_moves_played).into_any(),
-        _ => history
+        0 => Either::Left(t!(i18n, game.no_moves_played)),
+        _ => Either::Right(history
             .iter()
             .take(6)
             .enumerate()
@@ -124,8 +118,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
             } else {
                 None
             })
-            .collect::<String>()
-            .into_any(),
+            .collect::<String>()),
     };
     let conclusion = move || game().conclusion.pretty_string();
     let ratings = StoredValue::new(RatingChangeInfo::from_game_response(&game()));

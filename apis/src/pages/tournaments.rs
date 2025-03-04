@@ -6,6 +6,7 @@ use crate::{
     components::molecules::tournament_row::TournamentRow,
     providers::{tournaments::TournamentStateContext, websocket::WebsocketContext},
 };
+use leptos::either::Either;
 use leptos::prelude::*;
 use leptos_use::core::ConnectionReadyState;
 use shared_types::{TournamentSortOrder, TournamentStatus};
@@ -116,9 +117,9 @@ pub fn Tournaments() -> impl IntoView {
                         if search().is_empty()
                             || tournament.name.to_lowercase().contains(&search().to_lowercase())
                         {
-                            view! { <TournamentRow tournament=tournament.clone() /> }.into_any()
+                            Either::Left(view! { <TournamentRow tournament=tournament.clone() /> })
                         } else {
-                            "".into_any()
+                            Either::Right("")
                         }
                     }
                 />

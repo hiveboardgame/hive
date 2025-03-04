@@ -7,6 +7,7 @@ use crate::{
     functions::hostname::hostname_and_port, providers::AuthContext, responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
+use leptos::either::Either;
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_use::use_window;
@@ -22,24 +23,24 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
     let challenge = Signal::derive(move || challenge.clone());
     let icon = move || match challenge().color_choice {
         ColorChoice::Random => {
-            view! { <Icon icon=icondata::BsHexagonHalf attr:class="pb-[2px]" /> }.into_any()
+            view! { <Icon icon=icondata::BsHexagonHalf attr:class="pb-[2px]" /> }
         }
         ColorChoice::White => {
             if config().unwrap_or_default().prefers_dark {
                 view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-white pb-[2px]" /> }
-                    .into_any()
+                    
             } else {
                 view! { <Icon icon=icondata::BsHexagon attr:class="stroke-black pb-[2px]" /> }
-                    .into_any()
+                   
             }
         }
         ColorChoice::Black => {
             if config().unwrap_or_default().prefers_dark {
                 view! { <Icon icon=icondata::BsHexagon attr:class="stroke-white pb-[2px]" /> }
-                    .into_any()
+                    
             } else {
                 view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-black pb-[2px]" /> }
-                    .into_any()
+                    
             }
         }
     };
@@ -166,9 +167,9 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                 <div class="flex justify-center items-center">
                     <span class="font-bold">
                         {if challenge().rated {
-                            t!(i18n, home.challenge_details.rated.yes).into_any()
+                            Either::Left(t!(i18n, home.challenge_details.rated.yes))
                         } else {
-                            t!(i18n, home.challenge_details.rated.no).into_any()
+                            Either::Right(t!(i18n, home.challenge_details.rated.no))
                         }}
 
                     </span>
@@ -220,7 +221,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
 
                         </button>
                         {if challenge().opponent.is_some() {
-                            view! {
+                            Either::Left(view! {
                                 <button
                                     on:click=move |_| {
                                         api.get().challenge_cancel(challenge().challenge_id);
@@ -231,10 +232,9 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                                     <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
 
                                 </button>
-                            }
-                                .into_any()
+                            })
                         } else {
-                            view! { "" }.into_any()
+                            Either::Right(view! { "" })
                         }}
 
                     </Show>

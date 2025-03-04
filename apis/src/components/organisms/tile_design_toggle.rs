@@ -1,6 +1,7 @@
 use crate::i18n::*;
 use crate::{common::TileDesign, providers::Config};
 use lazy_static::lazy_static;
+use leptos::either::EitherOf3;
 use leptos::prelude::*;
 use leptos_use::use_window;
 
@@ -67,9 +68,9 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
             >
 
                 {match tile_design() {
-                    TileDesign::Official => t!(i18n, user_config.style_buttons.official).into_any(),
-                    TileDesign::Flat => t!(i18n, user_config.style_buttons.flat).into_any(),
-                    TileDesign::ThreeD => t!(i18n, user_config.style_buttons.three_d).into_any(),
+                    TileDesign::Official => EitherOf3::A(t!(i18n, user_config.style_buttons.official)),
+                    TileDesign::Flat => EitherOf3::B(t!(i18n, user_config.style_buttons.flat)),
+                    TileDesign::ThreeD => EitherOf3::C(t!(i18n, user_config.style_buttons.three_d)),
                 }}
 
             </button>

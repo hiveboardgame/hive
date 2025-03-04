@@ -3,6 +3,7 @@ use crate::{
     common::TimeSignals,
     components::atoms::{input_slider::InputSlider, rating::icon_for_speed},
 };
+use leptos::either::Either;
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{CorrespondenceMode, GameSpeed, TimeMode};
@@ -16,9 +17,9 @@ pub fn TimeSelect(
 ) -> impl IntoView {
     let i18n = use_i18n();
     let title = if is_tournament {
-        "Match settings:".into_any()
+        Either::Left("Match settings:")
     } else {
-        t!(i18n, home.custom_game.title).into_any()
+        Either::Right(t!(i18n, home.custom_game.title))
     };
     let time_mode = move || time_signals.time_mode.get();
     let corr_mode = move || time_signals.corr_mode.get();

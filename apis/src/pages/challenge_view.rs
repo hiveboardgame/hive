@@ -1,6 +1,7 @@
 use crate::components::molecules::challenge_row::ChallengeRow;
 use crate::functions::{challenges::get::get_challenge, hostname::hostname_and_port};
 use crate::providers::AuthContext;
+use leptos::either::Either;
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::hooks::use_params;
@@ -63,14 +64,14 @@ pub fn ChallengeView() -> impl IntoView {
                     challenge.get()
                         .map(|data| match data {
                             Err(_) => {
-                                view! { <pre>"Challenge doesn't seem to exist"</pre> }.into_any()
+                                Either::Left(view! { <pre>"Challenge doesn't seem to exist"</pre> })
                             }
                             Ok(challenge) => {
                                 let user = move || match auth_context.user.get() {
                                     Some(Ok(user)) => Some(user),
                                     _ => None,
                                 };
-                                view! {
+                                Either::Right(view! {
                                     <Show when=move || {
                                         user()
                                             .is_some_and(|user| user.id == challenge.challenger.uid)
@@ -98,8 +99,7 @@ pub fn ChallengeView() -> impl IntoView {
                                         </p>
                                     </Show>
                                     <ChallengeRow challenge=challenge single=true />
-                                }
-                                    .into_any()
+                                })
                             }
                         })
                 }}
