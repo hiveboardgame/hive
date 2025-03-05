@@ -4,6 +4,5 @@ pub mod game;
 pub mod ping;
 pub mod response_handler;
 pub mod schedule;
-pub mod server_user_conf;
 pub mod tournament;
 pub mod user_status;

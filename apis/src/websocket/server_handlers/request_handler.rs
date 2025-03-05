@@ -3,7 +3,6 @@ use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
 use super::pong::handler::PongHandler;
 use super::schedules::ScheduleHandler;
-use super::set_userconf::ServerUserConfHandler;
 use super::tournaments::handler::TournamentHandler;
 use super::user_status::handler::UserStatusHandler;
 use crate::common::{ClientRequest, GameAction};
@@ -151,13 +150,6 @@ impl RequestHandler {
                     _ => self.ensure_auth()?,
                 }
                 ScheduleHandler::new(self.user_id, action, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            ClientRequest::SetServerUserConf(takeback) => {
-                self.ensure_auth()?;
-                ServerUserConfHandler::new(self.user_id, takeback, &self.pool)
                     .await?
                     .handle()
                     .await?

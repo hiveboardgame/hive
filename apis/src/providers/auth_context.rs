@@ -8,7 +8,7 @@ pub struct AuthContext {
     pub login: ServerAction<Login>,
     pub logout: ServerAction<Logout>,
     pub register: ServerAction<Register>,
-    pub user: Signal<Option<Result<AccountResponse, ServerFnError>>>,
+    pub user: RwSignal<Option<Result<AccountResponse, ServerFnError>>>,
     pub action: Action<(), Result<AccountResponse, ServerFnError>>,
 }
 
@@ -23,9 +23,7 @@ pub fn provide_auth(websocket_context: WebsocketContext) {
                 get_account().await
             }
         });
-    let user = Signal::derive(move || {
-        action.value().get()
-    });
+    let user = action.value();
     Effect::watch(
         move || {
             (

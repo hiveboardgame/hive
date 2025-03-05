@@ -17,11 +17,11 @@ pub struct GamesSignal {
     pub own: RwSignal<OwnGames>,
     pub live: RwSignal<LiveGames>,
     navigation_controller: NavigationControllerSignal,
-    user: Signal<Option<Result<AccountResponse, ServerFnError>>>,
+    user: RwSignal<Option<Result<AccountResponse, ServerFnError>>>,
 }
 
 impl GamesSignal {
-    pub fn new(navigation_controller: NavigationControllerSignal, user: Signal<Option<Result<AccountResponse, ServerFnError>>>) -> Self {
+    pub fn new(navigation_controller: NavigationControllerSignal, user: RwSignal<Option<Result<AccountResponse, ServerFnError>>>) -> Self {
         Self {
             own: RwSignal::new(OwnGames::new()),
             live: RwSignal::new(LiveGames::new()),
@@ -338,6 +338,6 @@ impl Default for LiveGames {
     }
 }
 
-pub fn provide_games(navigation_controller: NavigationControllerSignal, user: Signal<Option<Result<AccountResponse, ServerFnError>>>) {
+pub fn provide_games(navigation_controller: NavigationControllerSignal, user: RwSignal<Option<Result<AccountResponse, ServerFnError>>>) {
     provide_context(GamesSignal::new(navigation_controller, user))
 }

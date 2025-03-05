@@ -1,5 +1,6 @@
+use crate::functions::accounts::edit::edit_config;
 use crate::i18n::*;
-use crate::providers::{ApiRequestsProvider, AuthContext};
+use crate::providers::AuthContext;
 use leptos::either::EitherOf3;
 use leptos::prelude::*;
 use shared_types::Takeback;
@@ -7,19 +8,33 @@ use shared_types::Takeback;
 #[component]
 pub fn TakebackConf() -> impl IntoView {
     let i18n = use_i18n();
+    let auth_context = expect_context::<AuthContext>();
+    let action = Action::new(move |takeback: &Takeback| {
+        let takeback = takeback.clone();
+        let auth_context = auth_context.clone();
+        async move { 
+            if let Some(Ok(_)) = auth_context.action.value().get() {    
+                let result = edit_config(takeback).await;
+                if result.is_ok() {
+                    auth_context.action.dispatch(());
+                }
+                
+            }
+            
+         }
+     });
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config. allow_takeback)}</p>
         <div class="flex">
-            <Button takeback=Takeback::Always />
-            <Button takeback=Takeback::CasualOnly />
-            <Button takeback=Takeback::Never />
+            <Button takeback=Takeback::Always action=action />
+            <Button takeback=Takeback::CasualOnly action=action />
+            <Button takeback=Takeback::Never action=action />
         </div>
     }
 }
 
 #[component]
-fn Button(takeback: Takeback) -> impl IntoView {
-    let api = expect_context::<ApiRequestsProvider>().0.get();
+fn Button(takeback: Takeback, action: Action<Takeback,()>) -> impl IntoView {
     let i18n = use_i18n();
     let takeback = StoredValue::new(takeback);
     let auth_context = expect_context::<AuthContext>();
@@ -34,7 +49,7 @@ fn Button(takeback: Takeback) -> impl IntoView {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
         }
     };
-
+     
     view! {
         <div class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer">
             <button
@@ -46,7 +61,7 @@ fn Button(takeback: Takeback) -> impl IntoView {
                 }
 
                 on:click=move |_| {
-                    api.set_server_user_conf(takeback.get_value());
+                    action.dispatch(takeback.get_value());
                 }
             >
 
