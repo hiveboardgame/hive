@@ -48,10 +48,6 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
             let t = tournaments.into_iter().map(|t| *t).collect();
             tournaments_signal.add_full(t);
         }
-        TournamentUpdate::AbstractTournaments(tournaments) => {
-            let mut tournaments_signal = expect_context::<TournamentStateContext>();
-            tournaments_signal.add_abstract(tournaments);
-        }
         TournamentUpdate::Deleted(t_id) => {
             let mut tournaments_signal = expect_context::<TournamentStateContext>();
             let notifications = expect_context::<NotificationContext>();

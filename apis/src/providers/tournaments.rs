@@ -40,15 +40,6 @@ impl TournamentStateContext {
             }
         })
     }
-
-    pub fn add_abstract(&mut self, tournaments: Vec<TournamentAbstractResponse>) {
-        self.summary.update(|s| {
-            for tournament in tournaments {
-                s.tournaments
-                    .insert(tournament.tournament_id.to_owned(), tournament);
-            }
-        })
-    }
 }
 
 #[derive(Clone, Debug)]
