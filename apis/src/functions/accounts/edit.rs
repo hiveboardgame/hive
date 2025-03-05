@@ -1,5 +1,7 @@
 use crate::responses::AccountResponse;
 use leptos::prelude::*;
+use shared_types::Takeback;
+use crate::functions::accounts::edit::server_fn::codec;
 
 #[server]
 pub async fn edit_account(
@@ -45,4 +47,17 @@ pub async fn edit_account(
     user.edit(&hashed_password, &new_email, &mut conn).await?;
     leptos_actix::redirect(&pathname);
     AccountResponse::from_uuid(&user.id, &mut conn).await
+}
+
+#[server(input = codec::Json)]
+pub async fn edit_config(takeback: Takeback)  -> Result<(),ServerFnError> {
+    use db_lib::models::User;
+    use db_lib::get_conn;
+    use crate::functions::db::pool;
+    use crate::functions::auth::identity::uuid;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    let user = User::find_by_uuid(&uuid().await?, &mut conn).await?;
+    user.set_takeback(takeback.clone(), &mut conn).await?;
+    Ok(())
 }

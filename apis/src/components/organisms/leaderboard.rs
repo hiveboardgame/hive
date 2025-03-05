@@ -1,6 +1,6 @@
 use crate::common::UserAction;
 use crate::components::atoms::rating::icon_for_speed;
-use crate::{components::molecules::user_row::UserRow, functions::users::get::get_top_users};
+use crate::{components::molecules::user_row::UserRow, functions::users::get_top_users};
 use leptos::either::Either;
 use leptos::logging::log;
 use leptos::prelude::*;

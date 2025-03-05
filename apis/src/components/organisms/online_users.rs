@@ -1,4 +1,4 @@
-use crate::functions::users::get::search_users;
+use crate::functions::users::search_users;
 use crate::i18n::*;
 use crate::{
     common::UserAction,

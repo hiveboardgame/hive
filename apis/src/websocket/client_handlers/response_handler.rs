@@ -1,7 +1,6 @@
 use super::{
     challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
-    ping::handle::handle_ping, schedule::handler::handle_schedule,
-    server_user_conf::handle_server_user_conf, tournament::handler::handle_tournament,
+    ping::handle::handle_ping, schedule::handler::handle_schedule, tournament::handler::handle_tournament,
     user_status::handle::handle_user_status,
 };
 use crate::common::{ServerMessage::*, ServerResult, WebsocketMessage};
@@ -20,7 +19,6 @@ pub fn handle_response(m: WebsocketMessage) {
                 RedirectLink(link) => handle_oauth(link),
                 Tournament(tournament_update) => handle_tournament(tournament_update),
                 Schedule(schedule_update) => handle_schedule(schedule_update),
-                CouldSetUserConf(success) => handle_server_user_conf(success),
                 todo => {
                     log!("Got {todo:?} which is currently still unimplemented");
                 }
