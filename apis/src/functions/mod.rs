@@ -1,6 +1,7 @@
 pub mod accounts;
 pub mod auth;
 pub mod challenges;
+pub mod tournaments;
 #[cfg(feature = "ssr")]
 pub mod db;
 pub mod games;

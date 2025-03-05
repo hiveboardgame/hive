@@ -60,7 +60,6 @@ pub enum ServerMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TournamentUpdate {
-    AbstractTournaments(Vec<TournamentAbstractResponse>),
     Adjudicated(Box<TournamentResponse>),
     Created(Box<TournamentResponse>),
     Declined(Box<TournamentResponse>),
