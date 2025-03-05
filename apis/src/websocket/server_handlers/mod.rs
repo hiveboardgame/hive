@@ -5,7 +5,6 @@ pub mod oauth;
 pub mod pong;
 pub mod request_handler;
 pub mod schedules;
-pub mod search;
 pub mod set_userconf;
 pub mod tournaments;
 pub mod user_status;

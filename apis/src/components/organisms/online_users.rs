@@ -1,35 +1,40 @@
+use crate::functions::users::get::search_users;
 use crate::i18n::*;
-use crate::providers::ApiRequestsProvider;
 use crate::{
     common::UserAction,
     components::molecules::user_row::UserRow,
-    providers::{online_users::OnlineUsersSignal, user_search::UserSearchSignal},
+    providers::online_users::OnlineUsersSignal,
 };
 use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::prelude::*;
+use std::collections::BTreeMap;
 use std::time::Duration;
 #[component]
 pub fn OnlineUsers() -> impl IntoView {
     let i18n = use_i18n();
-    let user_search = expect_context::<UserSearchSignal>();
     let online_users = expect_context::<OnlineUsersSignal>();
-    let api = expect_context::<ApiRequestsProvider>().0;
     let pattern = RwSignal::new(String::new());
-    let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
-        pattern.set(event_target_value(&ev));
-        if pattern().is_empty() {
-            user_search.signal.update(|s| s.clear());
+    let user_search = Resource::new(pattern, async move |pattern| {
+        if pattern.is_empty() {
+            BTreeMap::new()
         } else {
-            let api = api.get();
-            api.search_user(pattern());
+            let user_search = search_users(pattern).await;
+            let mut btree = BTreeMap::new();
+            for user in user_search.unwrap_or_default() {
+                btree.insert(user.username.clone(), user);
+            }
+            btree
         }
     });
+    let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
+        pattern.set(event_target_value(&ev));
+    });    
     let users = move || {
         if pattern().is_empty() {
             online_users.signal.get().username_user
         } else {
-            user_search.signal.get()
+            user_search.get().unwrap_or_default()
         }
     };
     let num = move || online_users.signal.get().username_user.len();

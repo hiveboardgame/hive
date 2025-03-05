@@ -143,13 +143,6 @@ impl ApiRequests {
         self.websocket.send(&msg);
     }
 
-    pub fn search_user(&self, pattern: String) {
-        if !pattern.is_empty() {
-            let msg = ClientRequest::UserSearch(pattern);
-            self.websocket.send(&msg);
-        }
-    }
-
     pub fn schedule_action(&self, action: ScheduleAction) {
         let msg = ClientRequest::Schedule(action);
         self.websocket.send(&msg);
