@@ -1,5 +1,5 @@
 use crate::{
-    common::UserAction, components::molecules::user_row::UserRow, functions::users::get::search_users, responses::TournamentResponse,
+    common::UserAction, components::molecules::user_row::UserRow, functions::users::search_users, responses::TournamentResponse,
 };
 use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;

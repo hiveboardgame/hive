@@ -20,7 +20,6 @@ pub fn handle_response(m: WebsocketMessage) {
                 RedirectLink(link) => handle_oauth(link),
                 Tournament(tournament_update) => handle_tournament(tournament_update),
                 Schedule(schedule_update) => handle_schedule(schedule_update),
-                CouldSetUserConf(success) => handle_server_user_conf(success),
                 todo => {
                     log!("Got {todo:?} which is currently still unimplemented");
                 }

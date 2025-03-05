@@ -48,7 +48,6 @@ pub enum ServerMessage {
     Challenge(ChallengeUpdate),
     Chat(Vec<ChatMessageContainer>),
     ConnectionUpdated(Uuid, String),
-    CouldSetUserConf(bool),
     Error(String),
     Game(Box<GameUpdate>),
     // sent to everyone in the game when a user joins the game

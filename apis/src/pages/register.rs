@@ -1,4 +1,4 @@
-use crate::functions::users::get::UsernameTaken;
+use crate::functions::users::UsernameTaken;
 use crate::i18n::*;
 use crate::{
     components::{organisms::header::Redirect, update_from_event::update_from_input},
