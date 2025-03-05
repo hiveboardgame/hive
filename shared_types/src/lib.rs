@@ -27,7 +27,7 @@ pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
 pub use games_query_options::{
-    BatchInfo, GameProgress, GamesContextToUpdate, GamesQueryOptions, ResultType,
+    BatchInfo, GameProgress, GamesQueryOptions, ResultType,
 };
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use pretty_string::PrettyString;

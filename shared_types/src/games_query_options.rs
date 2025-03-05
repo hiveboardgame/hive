@@ -77,12 +77,7 @@ pub struct BatchInfo {
 pub struct GamesQueryOptions {
     pub players: Vec<(String, Option<Color>, Option<ResultType>)>,
     pub speeds: Vec<GameSpeed>,
-    pub ctx_to_update: GamesContextToUpdate,
     pub current_batch: Option<BatchInfo>,
     pub batch_size: Option<usize>,
     pub game_progress: GameProgress,
-}
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum GamesContextToUpdate {
-    Profile(String),
 }
