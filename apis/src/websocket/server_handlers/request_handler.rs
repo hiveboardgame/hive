@@ -1,14 +1,12 @@
 use super::challenges::handler::ChallengeHandler;
 use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
-use super::games_search::GamesSearchHandler;
 use super::oauth::handler::OauthHandler;
 use super::pong::handler::PongHandler;
 use super::schedules::ScheduleHandler;
 use super::search::handler::UserSearchHandler;
 use super::set_userconf::ServerUserConfHandler;
 use super::tournaments::handler::TournamentHandler;
-use super::user_profile::UserProfileHandler;
 use super::user_status::handler::UserStatusHandler;
 use crate::common::{ClientRequest, GameAction};
 use crate::websocket::chat::Chats;
@@ -161,18 +159,6 @@ impl RequestHandler {
                     _ => self.ensure_auth()?,
                 }
                 ScheduleHandler::new(self.user_id, action, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            ClientRequest::GamesSearch(options) => {
-                GamesSearchHandler::new(self.user_id, options, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            ClientRequest::UserProfile(username) => {
-                UserProfileHandler::new(self.user_id, username, &self.pool)
                     .await?
                     .handle()
                     .await?

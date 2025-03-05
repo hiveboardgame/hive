@@ -1,7 +1,6 @@
 pub mod challenges;
 pub mod chat;
 pub mod game;
-pub mod games_search;
 pub mod oauth;
 pub mod pong;
 pub mod request_handler;
@@ -9,5 +8,4 @@ pub mod schedules;
 pub mod search;
 pub mod set_userconf;
 pub mod tournaments;
-pub mod user_profile;
 pub mod user_status;

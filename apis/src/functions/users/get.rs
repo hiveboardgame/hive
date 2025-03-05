@@ -45,3 +45,14 @@ pub async fn get_top_users(
     }
     Ok(results)
 }
+
+#[server]
+pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::get_conn;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    UserResponse::from_username(&username, &mut conn)
+        .await
+        .map_err(ServerFnError::new)
+}
