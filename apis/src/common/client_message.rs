@@ -1,7 +1,7 @@
 use super::game_action::GameAction;
 use super::{challenge_action::ChallengeAction, ScheduleAction, TournamentAction};
 use serde::{Deserialize, Serialize};
-use shared_types::{ChatMessageContainer, GameId, Takeback};
+use shared_types::{ChatMessageContainer, GameId, GamesQueryOptions, Takeback};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClientRequest {
