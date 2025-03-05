@@ -3,7 +3,6 @@ use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
 use super::pong::handler::PongHandler;
 use super::schedules::ScheduleHandler;
-use super::search::handler::UserSearchHandler;
 use super::set_userconf::ServerUserConfHandler;
 use super::tournaments::handler::TournamentHandler;
 use super::user_status::handler::UserStatusHandler;
@@ -89,11 +88,6 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
-            ClientRequest::UserSearch(pattern) => {
-                UserSearchHandler::new(self.user_id, pattern, &self.pool)
-                    .handle()
-                    .await?
-            }
             ClientRequest::Chat(message_container) => {
                 self.ensure_auth()?;
                 if self.user_id != message_container.message.user_id {
