@@ -1,52 +1,51 @@
 use crate::common::UserAction;
 use crate::components::atoms::rating::icon_for_speed;
 use crate::components::molecules::user_row::UserRow;
+use crate::functions::games::get::get_batch_from_options;
+use crate::functions::users::get::get_profile;
 use crate::i18n::*;
-use crate::providers::ApiRequestsProvider;
-use crate::{
-    components::{molecules::game_row::GameRow, organisms::display_profile::DisplayProfile},
-    providers::{
-        games_search::{ProfileControls, ProfileGamesContext},
-        navigation_controller::{NavigationControllerSignal, ProfileNavigationControllerState},
-        websocket::WebsocketContext,
-    },
-};
+use crate::responses::GameResponse;
+use crate::components::{molecules::game_row::GameRow, organisms::display_profile::DisplayProfile};
 use hive_lib::Color;
 use hooks::use_params;
+use leptos::either::Either;
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::{params::Params, *};
-use leptos_use::{
-    core::ConnectionReadyState, use_infinite_scroll_with_options,
-    UseInfiniteScrollOptions,
-};
-use shared_types::{GameProgress, GameSpeed, GamesContextToUpdate, GamesQueryOptions, ResultType};
+use leptos_use::{use_infinite_scroll_with_options, UseInfiniteScrollOptions,};
+use shared_types::{BatchInfo, GameProgress, GameSpeed, GamesQueryOptions, ResultType};
+
+
+#[derive(Debug, Clone, Default)]
+struct ProfileControls {
+    pub color: Option<Color>,
+    pub result: Option<ResultType>,
+    pub speeds: Vec<GameSpeed>,
+    pub tab_view: GameProgress,
+}
+
+#[derive(Debug, Clone)]
+struct ProfileGamesContext {
+    pub games: RwSignal<Vec<GameResponse>>,
+    pub controls: RwSignal<ProfileControls>,
+}
 
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
     username: String,
 }
 
-fn first_batch(user: String, c: ProfileControls) {
-    let api = expect_context::<ApiRequestsProvider>().0.get();
-
-    api.games_search(GamesQueryOptions {
-        players: vec![(user.clone(), c.color, c.result)],
-        speeds: c.speeds,
-        ctx_to_update: GamesContextToUpdate::Profile(user),
-        current_batch: None,
-        batch_size: Some(6),
-        game_progress: c.tab_view,
-    });
-}
-
 #[component]
-fn Controls(username: Signal<String>) -> impl IntoView {
-    let ctx = expect_context::<ProfileGamesContext>();
+fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
+    let username = Signal::derive(move || username.clone());
     let controls = ctx.controls;
     let i18n = use_i18n();
-    let toggle_classes = |active| format!("flex hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-3 rounded bg-button-dawn dark:bg-button-twilight {}", if active { "bg-pillbug-teal" } else { "" });
-    let radio_classes = |active| format!("hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded bg-button-dawn dark:bg-button-twilight {}", if active { "bg-pillbug-teal" } else { "" });
+    let toggle_classes = |active| {
+        format!("flex hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-3 rounded bg-button-dawn dark:bg-button-twilight {}", if active { "bg-pillbug-teal" } else { "" })
+    };
+    let radio_classes = |active| {
+        format!("hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded bg-button-dawn dark:bg-button-twilight {}", if active { "bg-pillbug-teal" } else { "" })
+    };
     let delay = 250.0;
     let toggle_speeds = move |speed| {
         controls.update(|c| {
@@ -55,8 +54,8 @@ fn Controls(username: Signal<String>) -> impl IntoView {
             } else {
                 c.speeds.push(speed);
             }
-        }); 
-        first_batch(username(), controls());
+        });
+        ctx.games.set(Vec::new());
     };
     view! {
         <div class="flex flex-col m-1 text-md sm:text-lg">
@@ -71,17 +70,17 @@ fn Controls(username: Signal<String>) -> impl IntoView {
             <div class="font-bold text-md">{t!(i18n, profile.player_color)}</div>
             <div class="flex gap-1">
                 <button
-                on:click=move |_| {controls.update(|c| c.color = Some(Color::Black)); first_batch(username(), controls());}
+                on:click=move |_| {controls.update(|c| c.color = Some(Color::Black)); ctx.games.set(Vec::new());}
                 class=move || radio_classes(controls().color == Some(Color::Black))>
                     {t!(i18n, profile.color_buttons.black)}
                 </button>
                 <button
-                on:click=move |_| {controls.update(|c| c.color = Some(Color::White)); first_batch(username(), controls());}
+                on:click=move |_| {controls.update(|c| c.color = Some(Color::White)); ctx.games.set(Vec::new());}
                 class=move || radio_classes(controls().color == Some(Color::White))>
                     {t!(i18n, profile.color_buttons.white)}
                 </button>
                 <button
-                on:click=move |_| {controls.update(|c| c.color = None); first_batch(username(), controls());}
+                on:click=move |_| {controls.update(|c| c.color = None); ctx.games.set(Vec::new());}
                 class=move || radio_classes(controls().color.is_none())>
                     {t!(i18n, profile.color_buttons.both)}
                 </button>
@@ -90,21 +89,21 @@ fn Controls(username: Signal<String>) -> impl IntoView {
                 <div class="font-bold text-md">{t!(i18n, profile.game_result)}</div>
                 <div class="flex gap-1">
                     <button class=move || radio_classes(controls().result == Some(ResultType::Win))
-                    on:click=move |_| {controls.update(|c| c.result = Some(ResultType::Win)); first_batch(username(), controls());}>
+                    on:click=move |_| {controls.update(|c| c.result = Some(ResultType::Win)); ctx.games.set(Vec::new());}>
                         {t!(i18n, profile.result_buttons.win)}
                     </button>
-                    <button 
-                    on:click=move |_| {controls.update(|c| c.result = Some(ResultType::Loss)); first_batch(username(), controls());}
+                    <button
+                    on:click=move |_| {controls.update(|c| c.result = Some(ResultType::Loss)); ctx.games.set(Vec::new());}
                     class=move || radio_classes(controls().result == Some(ResultType::Loss))>
                         {t!(i18n, profile.result_buttons.loss)}
                     </button>
                     <button
-                    on:click=move |_| {controls.update(|c| c.result = Some(ResultType::Draw)); first_batch(username(), controls());}
+                    on:click=move |_| {controls.update(|c| c.result = Some(ResultType::Draw)); ctx.games.set(Vec::new());}
                      class=move || radio_classes(controls().result == Some(ResultType::Draw))>
                         {t!(i18n, profile.result_buttons.draw)}
                     </button>
                     <button
-                    on:click=move |_| {controls.update(|c| c.result = None); first_batch(username(), controls());}
+                    on:click=move |_| {controls.update(|c| c.result = None); ctx.games.set(Vec::new());}
                      class=move || radio_classes(controls().result.is_none())>
                         {t!(i18n, profile.result_buttons.all)}
                     </button>
@@ -149,58 +148,56 @@ fn Controls(username: Signal<String>) -> impl IntoView {
 
 #[component]
 pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
-    let ctx = expect_context::<ProfileGamesContext>();
-    let navi = expect_context::<NavigationControllerSignal>();
-    let ws = expect_context::<WebsocketContext>();
-    let api = expect_context::<ApiRequestsProvider>().0;
     let params = use_params::<UsernameParams>();
-    let username = Signal::derive(move || {
-        params.with(|p| {
-            p.as_ref()
-                .ok()
-                .map(|p| p.username.clone())
-                .map_or(String::new(), |user| user)
-        })
-    });
-    Effect::new(move |_| {
-        if ws.ready_state.get() == ConnectionReadyState::Open {
-            let api = api.get();
-            navi.profile_signal.update(|v| {
-                *v = ProfileNavigationControllerState {
-                    username: Some(username()),
-                }
-            });
-            ctx.controls.update(|c| {
-                c.speeds = vec![
+    let username = move || params.with(|p| p.as_ref().map(|p| p.username.clone()).unwrap_or_default());
+    let user = LocalResource::new(move || get_profile(username()));
+    provide_context(
+        ProfileGamesContext {
+            controls: RwSignal::new(ProfileControls {
+                speeds:vec![
                     GameSpeed::Bullet,
                     GameSpeed::Blitz,
                     GameSpeed::Rapid,
                     GameSpeed::Classic,
                     GameSpeed::Correspondence,
                     GameSpeed::Untimed,
-                ];
-            });
-            api.user_profile(username.get_untracked());
+                ],
+                ..Default::default()
+            }),
+            games: RwSignal::new(Vec::new()),
         }
-    });
+    );
+    let ctx = expect_context::<ProfileGamesContext>();
     view! {
         <div class="flex flex-col pt-12 mx-3 bg-light dark:bg-gray-950">
-            <Show when=move || ctx.user.get().is_some()>
-                <div class="flex justify-center w-full text-lg sm:text-xl">
-                    <UserRow
-                        actions=vec![UserAction::Challenge]
-                        user=StoredValue::new(ctx.user.get().unwrap())
-                        on_profile=true
-                    />
-                </div>
-                <div class="flex flex-col-reverse m-1 w-full sm:flex-row">
-                    <Controls username />
-                    <div class="text-md sm:w-2/3 sm:text-lg">
-                        <DisplayProfile user=ctx.user.get().unwrap() />
-                    </div>
-                </div>
-                {children()}
-            </Show>
+        <Suspense
+        fallback=move || view! { <p>"Loading Profile..."</p> }
+    >
+    {move ||
+        user.get().as_deref().map(|user| {
+            if let Ok(user) = user {
+                Either::Left(view! {
+                    <div class="flex justify-center w-full text-lg sm:text-xl">
+            <UserRow
+                actions=vec![UserAction::Challenge]
+                user=StoredValue::new(user.clone())
+                on_profile=true
+            />
+        </div>
+        <div class="flex flex-col-reverse m-1 w-full sm:flex-row">
+        <Controls username=user.username.clone() ctx=ctx.clone() />
+        <div class="text-md sm:w-2/3 sm:text-lg">
+            <DisplayProfile user=user.clone() />
+        </div>
+    </div>
+        {children()}
+                })
+            } else {
+                Either::Right(view! { <p>"User not found"</p> })
+            }
+        })
+    }
+    </Suspense>
         </div>
     }
 }
@@ -209,16 +206,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
 pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     let ctx = expect_context::<ProfileGamesContext>();
     let params = use_params::<UsernameParams>();
-    let api = expect_context::<ApiRequestsProvider>().0;
-    let username = Signal::derive(move || {
-        params.with(|p| {
-            p.as_ref()
-                .ok()
-                .map(|p| p.username.clone())
-                .map_or(String::new(), |user| user)
-        })
-    });
-    let user_info = create_read_slice(ctx.controls, move |c| (username(), c.color, c.result));
+    let username = move || params.with(|p| p.as_ref().map(|p| p.username.clone()).unwrap_or_default());
     let el = NodeRef::<html::Div>::new();
     el.on_load(move |_| {
         ctx.controls.update(|c| {
@@ -227,24 +215,29 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 c.result = None;
             };
         });
-        first_batch(username(), ctx.controls.get_untracked());
+        ctx.games.set(Vec::new());
     });
-
     let _ = use_infinite_scroll_with_options(
         el,
         move |_| async move {
-            let api = api.get();
+            let batch_info = ctx.games.get().last().map(|game| BatchInfo {
+                id: game.uuid,
+                timestamp: game.updated_at,
+            });
+            let controls = ctx.controls.get();
+            let user_info =  (username(), controls.color, controls.result);
 
-            if ctx.more_games.get() {
-                let controls = ctx.controls.get();
-                api.games_search(GamesQueryOptions {
-                    players: vec![user_info()],
-                    speeds: controls.speeds,
-                    current_batch: ctx.batch_info.get(),
-                    batch_size: Some(4),
-                    ctx_to_update: GamesContextToUpdate::Profile(username()),
-                    game_progress: controls.tab_view,
-                });
+            let batch_size = if batch_info.is_some() { Some(4) } else { Some(6) };
+            let options = GamesQueryOptions {
+                players: vec![user_info],
+                speeds: controls.speeds,
+                current_batch: batch_info,
+                batch_size,
+                game_progress: tab_view,
+            };
+            let next_batch = get_batch_from_options(options).await;
+            if let Ok(next_batch) = next_batch {
+                ctx.games.update(|games| games.extend(next_batch));
             }
         },
         UseInfiniteScrollOptions::default()
@@ -252,6 +245,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
             .interval(300.0),
     );
     view! {
+
         <div
             node_ref=el
             class="overflow-x-hidden items-center sm:grid sm:grid-cols-2 sm:gap-1 h-[53vh] sm:h-[66vh]"
