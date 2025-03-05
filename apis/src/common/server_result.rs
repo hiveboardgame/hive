@@ -56,7 +56,6 @@ pub enum ServerMessage {
     Ping { nonce: u64, value: f64 },
     Schedule(ScheduleUpdate),
     Tournament(TournamentUpdate),
-    UserSearch(Vec<UserResponse>),
     UserStatus(UserUpdate),
 }
 

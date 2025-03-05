@@ -56,3 +56,14 @@ pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError
         .await
         .map_err(ServerFnError::new)
 }
+
+#[server]
+pub async fn search_users(pattern: String) -> Result<Vec<UserResponse>, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::get_conn;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    UserResponse::search_usernames(&pattern, &mut conn)
+        .await
+        .map_err(ServerFnError::new)
+}

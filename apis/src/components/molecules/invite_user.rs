@@ -1,33 +1,31 @@
 use crate::{
-    common::UserAction,
-    components::molecules::user_row::UserRow,
-    providers::{user_search::UserSearchSignal, ApiRequestsProvider},
-    responses::TournamentResponse,
+    common::UserAction, components::molecules::user_row::UserRow, functions::users::get::search_users, responses::TournamentResponse,
 };
 use leptos::ev::Event;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::prelude::*;
-use std::time::Duration;
+use std::{collections::BTreeMap, time::Duration};
 
 #[component]
 pub fn InviteUser(tournament: TournamentResponse) -> impl IntoView {
-    let user_search = expect_context::<UserSearchSignal>();
-    let api = expect_context::<ApiRequestsProvider>().0;
     let pattern = RwSignal::new(String::new());
-    let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
-        pattern.set(event_target_value(&ev));
-        if pattern().is_empty() {
-            user_search.signal.update(|s| s.clear());
+    let user_search = Resource::new(pattern, async move |pattern| {
+        if pattern.is_empty() {
+            BTreeMap::new()
         } else {
-            let api = api.get();
-            api.search_user(pattern());
+            let user_search = search_users(pattern).await;
+            let mut btree = BTreeMap::new();
+            for user in user_search.unwrap_or_default() {
+                btree.insert(user.username.clone(), user);
+            }
+            btree
         }
     });
+    let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
+        pattern.set(event_target_value(&ev));
+    });
     let users = move || {
-        if pattern().is_empty() {
-            user_search.signal.update(|s| s.clear());
-        }
-        let mut search_results = user_search.signal.get();
+        let mut search_results = user_search.get().unwrap_or_default();
         for (_, user) in tournament.players.iter() {
             search_results.remove(&user.username);
         }

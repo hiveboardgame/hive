@@ -2,7 +2,7 @@ use super::{
     challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
     ping::handle::handle_ping, schedule::handler::handle_schedule,
     server_user_conf::handle_server_user_conf, tournament::handler::handle_tournament,
-    user_search::handle::handle_user_search, user_status::handle::handle_user_status,
+    user_status::handle::handle_user_status,
 };
 use crate::common::{ServerMessage::*, ServerResult, WebsocketMessage};
 use leptos::logging::log;
@@ -17,7 +17,6 @@ pub fn handle_response(m: WebsocketMessage) {
                 Game(game_update) => handle_game(*game_update),
                 Challenge(challenge) => handle_challenge(challenge),
                 Chat(message) => handle_chat(message),
-                UserSearch(results) => handle_user_search(results),
                 Tournament(tournament_update) => handle_tournament(tournament_update),
                 Schedule(schedule_update) => handle_schedule(schedule_update),
                 CouldSetUserConf(success) => handle_server_user_conf(success),
