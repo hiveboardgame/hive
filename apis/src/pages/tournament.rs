@@ -10,16 +10,15 @@ use crate::components::{
     },
 };
 use crate::providers::ApiRequestsProvider;
-use crate::providers::{
-    navigation_controller::NavigationControllerSignal, tournaments::TournamentStateContext, AuthContext,
+use crate::providers::{tournaments::TournamentStateContext, AuthContext,
 };
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
 use leptos::prelude::*;
-use leptos_router::hooks::use_navigate;
+use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{
-    Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentStatus,
+    Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentStatus, TournamentId
 };
 use std::collections::HashMap;
 
@@ -29,9 +28,9 @@ pub const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-
 
 #[component]
 pub fn Tournament() -> impl IntoView {
-    let navi = expect_context::<NavigationControllerSignal>();
+    let use_params = use_params_map();
     let tournaments = expect_context::<TournamentStateContext>();
-    let tournament_id = move || navi.tournament_signal.get().tournament_id;
+    let tournament_id = move || use_params.get().get("nanoid").map(|s| TournamentId(s.to_string()));
     let current_tournament = move || {
         tournament_id().and_then(|tournament_id| {
             tournaments
