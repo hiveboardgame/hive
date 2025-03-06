@@ -143,7 +143,6 @@ pub fn Board(
     });
 
     let straight = {
-        let config = expect_context::<Config>().0;
         config().unwrap_or_default().tile_design == TileDesign::ThreeD
     };
 

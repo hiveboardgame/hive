@@ -307,7 +307,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="DoubleRoundRobin"
-                                text=TournamentMode::DoubleRoundRobin.pretty_string().into()
+                                text=TournamentMode::DoubleRoundRobin.pretty_string()
                             />
 
                         </select>
@@ -322,7 +322,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="Game"
-                                text=ScoringMode::Game.pretty_string().into()
+                                text=ScoringMode::Game.pretty_string()
                             />
 
                         </select>

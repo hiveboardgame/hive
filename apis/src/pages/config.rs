@@ -8,7 +8,7 @@ use crate::components::{
     },
 };
 use crate::i18n::*;
-use leptos::{prelude::*, text_prop::TextProp};
+use leptos::prelude::*;
 use leptos_icons::Icon;
 use shared_types::GameSpeed;
 use std::str::FromStr;
@@ -49,32 +49,32 @@ pub fn Config() -> impl IntoView {
                         <SelectOption
                             value=game_speed
                             is="Bullet"
-                            text=TextProp::from(move || t_string!(i18n, game.speeds.bullet))
+                            text=t!(i18n, game.speeds.bullet)
                         />
                         <SelectOption
                             value=game_speed
                             is="Blitz"
-                            text=TextProp::from(move || t_string!(i18n, game.speeds.blitz))
+                            text=t!(i18n, game.speeds.blitz)
                         />
                         <SelectOption
                             value=game_speed
                             is="Rapid"
-                            text=TextProp::from(move || t_string!(i18n, game.speeds.rapid))
+                            text=t!(i18n, game.speeds.rapid)
                         />
                         <SelectOption
                             value=game_speed
                             is="Classic"
-                            text=TextProp::from(move || t_string!(i18n, game.speeds.classic))
+                            text= t!(i18n, game.speeds.classic)
                         />
                         <SelectOption
                             value=game_speed
                             is="Correspondence"
-                            text=TextProp::from(move || t_string!(i18n, game.speeds.correspondence))
+                            text=t!(i18n, game.speeds.correspondence)
                         />  
                         <SelectOption
                             value=game_speed
                             is="Untimed"
-                            text=TextProp::from(move || t_string!(i18n, game.speeds.untimed))
+                            text=t!(i18n, game.speeds.untimed)
                         />
                     </select>
                 </label>
