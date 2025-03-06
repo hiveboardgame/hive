@@ -29,7 +29,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         type="email"
                         inputmode="email"
                         autocomplete="email"
-                        placeholder=t_string!(i18n, user_config.login.email)
+                        placeholder=move || t_string!(i18n, user_config.login.email)
                     />
                 </label>
                 <label class="block font-bold" for="password">

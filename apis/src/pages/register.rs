@@ -102,7 +102,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         type="text"
                         prop:value=username
                         autocomplete="username"
-                        placeholder=t_string!(i18n, user_config.create_account.username.title)
+                        placeholder=move ||t_string!(i18n, user_config.create_account.username.title)
                         minlength="2"
                         maxlength="20"
                     />
@@ -136,7 +136,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         inputmode="email"
                         prop:value=email
                         autocomplete="email"
-                        placeholder=t_string!(i18n, user_config.create_account.email.description)
+                        placeholder=move || t_string!(i18n, user_config.create_account.email.description)
                     />
                        <Show when=is_invalid_email>
                         <small class="text-ladybug-red">
@@ -155,7 +155,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         type="password"
                         prop:value=pw
                         autocomplete="new-password"
-                        placeholder=t_string!(i18n, user_config.create_account.password)
+                        placeholder=move || t_string!(i18n, user_config.create_account.password)
                         minlength="8"
                         maxlength="128"
                     />
@@ -170,7 +170,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         type="password"
                         prop:value=pw_confirm
                         autocomplete="new-password"
-                        placeholder=t_string!(i18n, user_config.create_account.password)
+                        placeholder=move || t_string!(i18n, user_config.create_account.password)
                         minlength="8"
                         maxlength="128"
                     />
@@ -199,7 +199,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     type="submit"
                     disabled=conditionally_disable
                     class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                    value=t_string!(i18n, user_config.create_account.signup_button)
+                    value=move || t_string!(i18n, user_config.create_account.signup_button)
                 />
                 <Show when=display_register_error>
                     <small class="text-ladybug-red">
