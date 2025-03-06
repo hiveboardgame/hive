@@ -1,4 +1,4 @@
-use crate::functions::users::UsernameTaken;
+use crate::functions::users::username_taken;
 use crate::i18n::*;
 use crate::{
     components::{organisms::header::Redirect, update_from_event::update_from_input},
@@ -24,7 +24,10 @@ lazy_static! {
 pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
-    let username_taken = ServerAction::<UsernameTaken>::new();
+    let username_taken = Action::new(|user: &String| {
+        let user = user.clone();
+        async move { username_taken(user).await}
+    });
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
     let my_input = NodeRef::<html::Input>::new();
@@ -54,9 +57,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     has_invalid_char.set(false);
                     username.update(|v| v.clone_from(&potential_username));
                     if potential_username.len() > 1 {
-                        //username_taken.dispatch(functions::users::get::UsernameTaken {
-                        //    username: potential_username,
-                        //})
+                        username_taken.dispatch(potential_username);
                     }
                 }
             })(evt);
