@@ -2,7 +2,7 @@ use super::game_reaction::GameReaction;
 use super::ClientRequest;
 use crate::responses::{
     ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse,
-    TournamentAbstractResponse, TournamentResponse, UserResponse,
+    TournamentResponse, UserResponse,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
