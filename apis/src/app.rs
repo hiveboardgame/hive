@@ -26,7 +26,21 @@ use crate::{
         tutorial::Tutorial,
     },
     providers::{
-        challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state, games::provide_games, navigation_controller::{provide_navigation_controller, NavigationControllerSignal}, online_users::provide_users, provide_alerts, provide_api_requests, provide_auth, provide_challenge_params, provide_config, provide_notifications, provide_ping, provide_sounds, refocus::provide_refocus, schedules::provide_schedules, timer::provide_timer, tournament_ready::provide_tournament_ready, tournaments::provide_tournaments, websocket::{provide_websocket, WebsocketContext}, AuthContext
+        challenges::provide_challenges,
+        chat::provide_chat,
+        game_state::provide_game_state,
+        games::provide_games,
+        navigation_controller::{provide_navigation_controller, NavigationControllerSignal},
+        online_users::provide_users,
+        provide_alerts, provide_api_requests, provide_auth, provide_challenge_params,
+        provide_config, provide_notifications, provide_ping, provide_sounds,
+        refocus::provide_refocus,
+        schedules::provide_schedules,
+        timer::provide_timer,
+        tournament_ready::provide_tournament_ready,
+        tournaments::provide_tournaments,
+        websocket::{provide_websocket, WebsocketContext},
+        AuthContext,
     },
 };
 use leptos::prelude::*;
@@ -77,7 +91,6 @@ pub fn App() -> impl IntoView {
             .same_site(SameSite::Lax)
             .path("/")
             >
-            <Stylesheet id="leptos" href="/pkg/HiveGame.css" />
             <Router>
                 <Routes
                 fallback = || "404 Not Found"

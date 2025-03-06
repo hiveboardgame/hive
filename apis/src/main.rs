@@ -7,7 +7,7 @@ pub mod websocket;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
 use actix_web::middleware::Compress;
-use leptos_meta::MetaTags;
+use leptos_meta::{HashedStylesheet, MetaTags};
 use websocket::{Lags, Pings, TournamentGameStart};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
@@ -99,6 +99,7 @@ async fn main() -> std::io::Result<()> {
                                 <AutoReload options=leptos_options.clone() />
                                 <HydrationScripts options=leptos_options.clone()/>
                                 <MetaTags/>
+                                <HashedStylesheet options=leptos_options.clone() id="leptos"/>
                             </head>
                             <body>
                                 <App/>
