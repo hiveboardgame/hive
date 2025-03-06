@@ -89,10 +89,10 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
                 action=auth_context.register
-                //attr:class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
+                attr:class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
             >
                 <label class="block mb-2">
-                    //<p class="font-bold">{t!(i18n, user_config.create_account.username.title)}</p>
+                    <p class="font-bold">{t!(i18n, user_config.create_account.username.title)}</p>
                     <input
                         on:input=validate_username
                         node_ref=my_input
