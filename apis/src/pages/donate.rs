@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use leptos::text_prop::TextProp;
 
 use crate::components::{layouts::base_layout::COMMON_LINK_STYLE, molecules::banner::Banner};
 use crate::i18n::*;
@@ -11,7 +12,7 @@ pub fn Donate() -> impl IntoView {
             <div class="px-4 mx-auto max-w-4xl sm:px-6 lg:px-8">
                 <Banner
                     title=t!(i18n, donate.title)
-                    text=t_string!(i18n, donate.subtitle).into()
+                    text=TextProp::from(move || t_string!(i18n, donate.subtitle))
                 />
                 <p class="my-4 text-lg text-center">{t!(i18n, donate.about)}</p>
                 <div class="flex justify-center items-center my-4">

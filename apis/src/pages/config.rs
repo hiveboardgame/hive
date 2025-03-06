@@ -8,7 +8,7 @@ use crate::components::{
     },
 };
 use crate::i18n::*;
-use leptos::prelude::*;
+use leptos::{prelude::*, text_prop::TextProp};
 use leptos_icons::Icon;
 use shared_types::GameSpeed;
 use std::str::FromStr;
@@ -49,32 +49,32 @@ pub fn Config() -> impl IntoView {
                         <SelectOption
                             value=game_speed
                             is="Bullet"
-                            text=t_string!(i18n, game.speeds.bullet).into()
+                            text=TextProp::from(move || t_string!(i18n, game.speeds.bullet))
                         />
                         <SelectOption
                             value=game_speed
                             is="Blitz"
-                            text=t_string!(i18n, game.speeds.blitz).into()
+                            text=TextProp::from(move || t_string!(i18n, game.speeds.blitz))
                         />
                         <SelectOption
                             value=game_speed
                             is="Rapid"
-                            text=t_string!(i18n, game.speeds.rapid).into()
+                            text=TextProp::from(move || t_string!(i18n, game.speeds.rapid))
                         />
                         <SelectOption
                             value=game_speed
                             is="Classic"
-                            text=t_string!(i18n, game.speeds.classic).into()
+                            text=TextProp::from(move || t_string!(i18n, game.speeds.classic))
                         />
                         <SelectOption
                             value=game_speed
                             is="Correspondence"
-                            text=t_string!(i18n, game.speeds.correspondence).into()
+                            text=TextProp::from(move || t_string!(i18n, game.speeds.correspondence))
                         />  
                         <SelectOption
                             value=game_speed
                             is="Untimed"
-                            text=t_string!(i18n, game.speeds.untimed).into()
+                            text=TextProp::from(move || t_string!(i18n, game.speeds.untimed))
                         />
                     </select>
                 </label>
