@@ -42,9 +42,9 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 .get()
                 .get_game_speed()
                 .and_then(|game_speed| preferred_confirms.get(&game_speed).cloned())
-                .unwrap_or(MoveConfirm::Single)
+                .unwrap_or_default()
          } else { 
-            MoveConfirm::Single 
+            MoveConfirm::default()
         }
     });
     provide_context(CurrentConfirm(current_confirm));
