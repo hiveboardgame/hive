@@ -1,15 +1,15 @@
-use leptos::{prelude::*, text_prop::TextProp};
+use leptos::{either::Either, prelude::*};
 
 #[component]
-pub fn SelectOption<T: ToString + Clone + 'static + Send + Sync>(
+pub fn SelectOption<T: ToString + Clone + 'static + Send + Sync, S: IntoView + 'static>(
     is: &'static str,
-    #[prop(optional)] text: Option<TextProp>,
+    #[prop(optional)] text: Option<S>,
     value: RwSignal<T>,
 ) -> impl IntoView {
     let show = if let Some(text) = text {
-        text.get()
+        Either::Left(text.into_view())
     } else {
-        Oco::Borrowed(is)
+        Either::Right(is.into_view())
     };
     view! {
         <option value=is selected=move || value.get().to_string() == is>

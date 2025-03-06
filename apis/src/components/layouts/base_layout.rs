@@ -201,7 +201,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     view! {
         <Title />
         <OG />
-        <Meta name="color-scheme" attr:content=color_scheme_meta />
+        <Meta name="color-scheme" content=color_scheme_meta />
         <Meta
             name="viewport"
             content="width=device-width, initial-scale=1, interactive-widget=resizes-content, user-scalable=no"
