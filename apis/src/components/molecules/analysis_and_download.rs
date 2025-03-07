@@ -6,9 +6,8 @@ use shared_types::GameSpeed;
 
 #[component]
 pub fn AnalysisAndDownload() -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let mut game_state = expect_context::<GameStateSignal>();
     let analysis_setup = move |_| {
-        let mut game_state = expect_context::<GameStateSignal>();
         game_state.do_analysis();
     };
     let correspondence = create_read_slice(game_state.signal, |gs| {

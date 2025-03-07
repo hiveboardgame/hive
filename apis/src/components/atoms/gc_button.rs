@@ -13,6 +13,7 @@ pub fn AcceptDenyGc(
     user_id: Uuid,
     #[prop(optional, into)] hidden: Signal<String>,
 ) -> impl IntoView {
+    let game_state = expect_context::<GameStateSignal>();
     let (icon, title) = get_icon_and_title(game_control.get_value());
 
     let button_style = move || match game_control.get_value() {
@@ -23,7 +24,6 @@ pub fn AcceptDenyGc(
     };
 
     let on_click = move |_| {
-        let game_state = expect_context::<GameStateSignal>();
         game_state.send_game_control(game_control.get_value(), user_id);
     };
     view! {

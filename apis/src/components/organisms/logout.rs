@@ -6,13 +6,13 @@ use leptos::prelude::*;
 #[component]
 pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
+    let mut online_users = expect_context::<OnlineUsersSignal>();
     let i18n = use_i18n();
     view! {
         <ActionForm action=auth_context.logout prop:class=format!("flex m-1 {extend_tw_classes}")>
 
             <button
                 on:click=move |_| {
-                    let mut online_users = expect_context::<OnlineUsersSignal>();
                     if let Some(Ok(user)) = auth_context.user.get() {
                         online_users.remove(user.username);
                     }
