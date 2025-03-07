@@ -8,10 +8,15 @@ pub struct AuthContext {
     pub login: ServerAction<Login>,
     pub logout: ServerAction<Logout>,
     pub register: ServerAction<Register>,
-    pub user: RwSignal<Option<Result<AccountResponse, ServerFnError>>>,
-    pub action: Action<(), Result<AccountResponse, ServerFnError>>,
+    pub user: ReadSignal<Option<Result<AccountResponse, ServerFnError>>>,
+    action: Action<(), Result<AccountResponse, ServerFnError>>,
 }
 
+impl AuthContext {
+    pub fn refresh(&self) {
+        self.action.dispatch(());
+    }
+}
 /// Get the current user and place it in Context
 pub fn provide_auth(websocket_context: WebsocketContext) {
     let login = ServerAction::<Login>::new();
@@ -23,7 +28,6 @@ pub fn provide_auth(websocket_context: WebsocketContext) {
                 get_account().await
             }
         });
-    let user = action.value();
     Effect::watch(
         move || {
             (
@@ -38,14 +42,15 @@ pub fn provide_auth(websocket_context: WebsocketContext) {
         true,
     );
     Effect::watch(
-        move || logout.version().get(),
+        move || action.version().get(),
         move |_, _, _| {
             websocket_context.close();
+            websocket_context.open();
         },
         true,
     );
     provide_context(AuthContext {
-        user,
+        user: action.value().read_only(),
         login,
         logout,
         register,
