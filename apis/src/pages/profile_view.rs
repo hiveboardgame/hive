@@ -53,6 +53,8 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
                 let first_batch = get_batch_from_options(options).await;
                 if let Ok(first_batch) = first_batch {
                     ctx.games.set(first_batch);
+                } else {
+                    ctx.games.set(vec![]);
                 }
             }
         );
