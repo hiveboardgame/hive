@@ -2,7 +2,8 @@ use crate::{
     common::ChallengeAction,
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
     providers::{
-        challenges::ChallengeStateSignal, game_state::GameStateSignal, ApiRequestsProvider, AuthContext
+        challenges::ChallengeStateSignal, game_state::GameStateSignal, ApiRequestsProvider,
+        AuthContext,
     },
 };
 use hive_lib::{ColorChoice, GameControl};
@@ -19,7 +20,8 @@ pub fn ControlButtons() -> impl IntoView {
         auth_context
             .user
             .get_untracked()
-            .and_then(|result| result.ok()).map(|account| account.id)
+            .and_then(|result| result.ok())
+            .map(|account| account.id)
             .expect("Control buttons show only for logged in players")
     };
 
@@ -36,6 +38,7 @@ pub fn ControlButtons() -> impl IntoView {
             .is_some_and(|gr| gr.tournament.is_none())
     });
     let takeback_allowed = create_read_slice(game_state.signal, |gs| gs.takeback_allowed());
+    //TODO: Check whether this button works as intended
     let navigate_to_tournament = move |_| {
         let navigate = use_navigate();
         navigate(
@@ -67,8 +70,6 @@ pub fn ControlButtons() -> impl IntoView {
     };
 
     let new_opponent = move |_| {
-        let game_state = expect_context::<GameStateSignal>();
-
         if let Some(game) = game_state.signal.get_untracked().game_response {
             let details = ChallengeDetails {
                 rated: game.rated,
@@ -150,35 +151,31 @@ pub fn ControlButtons() -> impl IntoView {
         if let Some(challenge) = rematch_present() {
             let api = api.get();
             api.challenge_accept(challenge.challenge_id);
-        } else {
-            let game_state = expect_context::<GameStateSignal>();
-            let auth_context = expect_context::<AuthContext>();
-            if let Some(Ok(user)) = auth_context.user.get() {
-                if let Some(game) = game_state.signal.get_untracked().game_response {
-                    // TODO: color and opponent
-                    let (color_choice, opponent) = if user.id == game.black_player.uid {
-                        (ColorChoice::White, Some(game.white_player.username))
-                    } else if user.id == game.white_player.uid {
-                        (ColorChoice::Black, Some(game.black_player.username))
-                    } else {
-                        unreachable!();
-                    };
-                    let details = ChallengeDetails {
-                        rated: game.rated,
-                        game_type: game.game_type,
-                        visibility: ChallengeVisibility::Direct,
-                        opponent,
-                        color_choice,
-                        time_mode: game.time_mode,
-                        time_base: game.time_base,
-                        time_increment: game.time_increment,
-                        band_upper: None,
-                        band_lower: None,
-                    };
-                    let challenge_action = ChallengeAction::Create(details);
-                    let api = api.get();
-                    api.challenge(challenge_action);
-                }
+        } else if let Some(Ok(user)) = auth_context.user.get() {
+            if let Some(game) = game_state.signal.get_untracked().game_response {
+                // TODO: color and opponent
+                let (color_choice, opponent) = if user.id == game.black_player.uid {
+                    (ColorChoice::White, Some(game.white_player.username))
+                } else if user.id == game.white_player.uid {
+                    (ColorChoice::Black, Some(game.black_player.username))
+                } else {
+                    unreachable!();
+                };
+                let details = ChallengeDetails {
+                    rated: game.rated,
+                    game_type: game.game_type,
+                    visibility: ChallengeVisibility::Direct,
+                    opponent,
+                    color_choice,
+                    time_mode: game.time_mode,
+                    time_base: game.time_base,
+                    time_increment: game.time_increment,
+                    band_upper: None,
+                    band_lower: None,
+                };
+                let challenge_action = ChallengeAction::Create(details);
+                let api = api.get();
+                api.challenge(challenge_action);
             }
         }
     };

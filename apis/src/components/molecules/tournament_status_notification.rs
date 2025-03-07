@@ -6,10 +6,11 @@ use shared_types::TournamentStatus;
 
 #[component]
 pub fn TournamentStatusNotification(tournament: StoredValue<TournamentResponse>) -> impl IntoView {
+    let notifications = expect_context::<NotificationContext>();
     let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let tournament = tournament.get_value();
     let started = tournament.status == TournamentStatus::InProgress;
-    let tournament_id =Signal::derive(move || tournament.tournament_id.clone());
+    let tournament_id = Signal::derive(move || tournament.tournament_id.clone());
     let notification_text = move || {
         format!(
             "Tournament: {} {}",
@@ -18,7 +19,6 @@ pub fn TournamentStatusNotification(tournament: StoredValue<TournamentResponse>)
         )
     };
     let dismiss = move |_| {
-        let notifications = expect_context::<NotificationContext>();
         if started {
             notifications.tournament_started.update(|t| {
                 t.remove(&tournament_id());
