@@ -11,8 +11,7 @@ const USER_CONFIG_COOKIE: &str = "user_config";
 // 1 year in milliseconds
 const CONF_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
 
-
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct ConfigOpts {
     pub confirm_mode: HashMap<GameSpeed, MoveConfirm>,
     pub tile_design: TileDesign,
@@ -22,7 +21,10 @@ pub struct ConfigOpts {
     pub prefers_dark: bool,
 }
 #[derive(Clone, Debug)]
-pub struct Config(pub Signal<Option<ConfigOpts>>, pub WriteSignal<Option<ConfigOpts>>);
+pub struct Config(
+    pub Signal<Option<ConfigOpts>>,
+    pub WriteSignal<Option<ConfigOpts>>,
+);
 
 impl Default for Config {
     fn default() -> Self {
@@ -32,7 +34,13 @@ impl Default for Config {
                 .same_site(SameSite::Lax)
                 .secure(true)
                 .max_age(CONF_MAX_AGE)
-                .path("/"));
+                .path("/"),
+        );
+        set_cookie.update(|v| {
+            if v.is_none() {
+                *v = Some(ConfigOpts::default())
+            }
+        });
         Self(cookie, set_cookie)
     }
 }
