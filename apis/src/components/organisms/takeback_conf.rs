@@ -13,10 +13,10 @@ pub fn TakebackConf() -> impl IntoView {
         let takeback = takeback.clone();
         let auth_context = auth_context.clone();
         async move { 
-            if let Some(Ok(_)) = auth_context.action.value().get() {    
+            if auth_context.user.get().is_some() {    
                 let result = edit_config(takeback).await;
                 if result.is_ok() {
-                    auth_context.action.dispatch(());
+                    auth_context.refresh();
                 }
                 
             }
