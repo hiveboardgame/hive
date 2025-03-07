@@ -103,12 +103,6 @@ pub fn ChatWindow(
 
     let navi = expect_context::<NavigationControllerSignal>();
     let game_id = Signal::derive(move || navi.game_signal.get().game_id.unwrap_or_default());
-    let tournament_id = Signal::derive(move || {
-        navi.tournament_signal
-            .get()
-            .tournament_id
-            .unwrap_or_default()
-    });
     let correspondant_id = Signal::derive(move || correspondant_id.map_or(Uuid::new_v4(), |id| id));
     let correspondant_username = Signal::derive(move || correspondant_username.clone());
     let div = NodeRef::<html::Div>::new();
@@ -125,7 +119,7 @@ pub fn ChatWindow(
             .attributes(true),
     );
 
-    let actual_destination = Signal::derive(move || match destination {
+    let actual_destination = Signal::derive(move || match destination.clone() {
         SimpleDestination::Game => {
             if game_state.signal.get().uid_is_player(uid) {
                 ChatDestination::GamePlayers(game_id(), white_id(), black_id())
@@ -137,7 +131,7 @@ pub fn ChatWindow(
             ChatDestination::User((correspondant_id(), correspondant_username()))
         }
         SimpleDestination::Global => ChatDestination::Global,
-        SimpleDestination::Tournament => ChatDestination::TournamentLobby(tournament_id()),
+        SimpleDestination::Tournament(tournament_id) => ChatDestination::TournamentLobby(tournament_id),
     });
     let messages = move || match actual_destination() {
         ChatDestination::TournamentLobby(tournament) => (chat.tournament_lobby_messages)()

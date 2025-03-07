@@ -10,7 +10,7 @@ const MAX_MESSAGE_LENGTH: usize = 1000;
 pub enum SimpleDestination {
     User,
     Game,
-    Tournament,
+    Tournament(TournamentId),
     Global,
 }
 

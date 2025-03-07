@@ -380,7 +380,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         </div>
         <Show when=move || user_is_organizer() || user_joined()>
             <div class="p-3 m-2 w-full max-w-full h-60 whitespace-normal break-words sm:w-2/3 bg-even-light dark:bg-even-dark">
-                <ChatWindow destination=shared_types::SimpleDestination::Tournament />
+                <ChatWindow destination=shared_types::SimpleDestination::Tournament(tournament().tournament_id) />
             </div>
         </Show>
     }

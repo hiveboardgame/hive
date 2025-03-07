@@ -10,8 +10,6 @@ use super::ApiRequestsProvider;
 #[derive(Clone, Debug, Copy)]
 pub struct NavigationControllerSignal {
     pub game_signal: RwSignal<GameNavigationControllerState>,
-    pub tournament_signal: RwSignal<TournamentNavigationControllerState>,
-    pub profile_signal: RwSignal<ProfileNavigationControllerState>,
 }
 
 impl Default for NavigationControllerSignal {
@@ -24,8 +22,6 @@ impl NavigationControllerSignal {
     pub fn new() -> Self {
         Self {
             game_signal: RwSignal::new(GameNavigationControllerState::new()),
-            tournament_signal: RwSignal::new(TournamentNavigationControllerState::new()),
-            profile_signal: RwSignal::new(ProfileNavigationControllerState::new()),
         }
     }
 
@@ -36,8 +32,6 @@ impl NavigationControllerSignal {
 
             self.game_signal
                 .update(|s| game_id.clone_into(&mut s.game_id));
-            self.tournament_signal
-                .update(|s| tournament_id.clone_into(&mut s.tournament_id));
             if let Some(game_id) = game_id {
 
                 game_state.set_game_id(game_id.to_owned());
@@ -48,25 +42,6 @@ impl NavigationControllerSignal {
                 api.tournament(TournamentAction::Get(tournament_id, Full));
                 chat.typed_message.update(|s| s.clear());
             }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct TournamentNavigationControllerState {
-    pub tournament_id: Option<TournamentId>,
-}
-
-impl TournamentNavigationControllerState {
-    pub fn new() -> Self {
-        Self {
-            tournament_id: None,
-        }
-    }
-}
-
-impl Default for TournamentNavigationControllerState {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -82,23 +57,6 @@ impl GameNavigationControllerState {
 }
 
 impl Default for GameNavigationControllerState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct ProfileNavigationControllerState {
-    pub username: Option<String>,
-}
-
-impl ProfileNavigationControllerState {
-    pub fn new() -> Self {
-        Self { username: None }
-    }
-}
-
-impl Default for ProfileNavigationControllerState {
     fn default() -> Self {
         Self::new()
     }
