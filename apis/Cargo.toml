@@ -46,6 +46,7 @@ rand_core = { workspace = true }
 regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+server_fn = { workspace = true }
 send_wrapper = { workspace = true }
 sha2 = { workspace = true }
 shared_types = { path = "../shared_types" }
