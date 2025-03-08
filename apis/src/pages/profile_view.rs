@@ -28,6 +28,7 @@ struct ProfileControls {
 struct ProfileGamesContext {
     pub games: RwSignal<Vec<GameResponse>>,
     pub controls: RwSignal<ProfileControls>,
+    pub has_more: RwSignal<bool>,
 }
 
 #[derive(Params, PartialEq, Eq)]
@@ -49,6 +50,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
     let set_first_batch = move || {
         spawn_local(
             async move {
+                ctx.has_more.set(true);
                 let options = build_options(ctx.controls.get(), None, username());
                 let first_batch = get_batch_from_options(options).await;
                 if let Ok(first_batch) = first_batch {
@@ -241,6 +243,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
             ..Default::default()
         }),
         games: RwSignal::new(Vec::new()),
+        has_more: RwSignal::new(true),
     });
     let ctx = expect_context::<ProfileGamesContext>();
     view! {
@@ -297,6 +300,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
             };
         });
         ctx.games.set(Vec::new());
+        ctx.has_more.set(true);
     });
     let _ = use_infinite_scroll_with_options(
         el,
@@ -308,10 +312,16 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 timestamp: game.updated_at,
             });
             async move {
+            if !ctx.has_more.get() {
+                return;
+            }
             let options = build_options(controls, batch_info, username);
             let next_batch = get_batch_from_options(options).await;
             if let Ok(next_batch) = next_batch {
+                ctx.has_more.set(next_batch.is_empty());
                 ctx.games.update(|games| games.extend(next_batch));
+            } else {
+                ctx.has_more.set(false);
             }
         }},
         UseInfiniteScrollOptions::default()
