@@ -2,8 +2,9 @@ use crate::responses::UserResponse;
 use leptos::prelude::*;
 use shared_types::GameSpeed;
 use uuid::Uuid;
+use server_fn::codec;
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
@@ -14,7 +15,7 @@ pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError>
         .map_err(ServerFnError::new)
 }
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
@@ -24,7 +25,7 @@ pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
     Ok(User::username_exists(&username, &mut conn).await?)
 }
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_top_users(
     game_speed: GameSpeed,
     limit: i64,
@@ -46,7 +47,7 @@ pub async fn get_top_users(
     Ok(results)
 }
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
@@ -57,7 +58,7 @@ pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError
         .map_err(ServerFnError::new)
 }
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn search_users(pattern: String) -> Result<Vec<UserResponse>, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;

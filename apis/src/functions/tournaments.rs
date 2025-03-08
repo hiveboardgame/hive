@@ -2,8 +2,9 @@ use leptos::prelude::*;
 use shared_types::TournamentSortOrder;
 
 use crate::responses::{TournamentAbstractResponse, TournamentResponse};
+use server_fn::codec;
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_all_abstract(sort_order: TournamentSortOrder) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
@@ -18,7 +19,7 @@ pub async fn get_all_abstract(sort_order: TournamentSortOrder) -> Result<Vec<Tou
     Ok(result)
 }
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_complete(tournament_id: String) -> Result<TournamentResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;

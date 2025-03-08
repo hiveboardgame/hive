@@ -53,6 +53,7 @@ reqwest = { version = "0.12.12", features = ["json"] }
 serde = { version = "1" }
 serde_json = { version = "1" }
 serde_with = { version = "3.9" }
+server_fn = { version = "0.7", features = ["cbor"] }
 sha2 = "0.10"
 send_wrapper = "0.6"
 simple_logger = "5.0"

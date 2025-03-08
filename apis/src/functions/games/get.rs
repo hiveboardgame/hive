@@ -4,7 +4,7 @@ use shared_types::{GameId, GamesQueryOptions};
 use uuid::Uuid;
 use crate::functions::games::get::server_fn::codec;
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_game_from_uuid(game_id: Uuid) -> Result<GameResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
@@ -15,7 +15,7 @@ pub async fn get_game_from_uuid(game_id: Uuid) -> Result<GameResponse, ServerFnE
         .map_err(ServerFnError::new)
 }
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_game_from_nanoid(game_id: GameId) -> Result<GameResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
@@ -26,7 +26,7 @@ pub async fn get_game_from_nanoid(game_id: GameId) -> Result<GameResponse, Serve
         .map_err(ServerFnError::new)
 }
 
-#[server(input = codec::Json,)]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_batch_from_options(options: GamesQueryOptions) -> Result<Vec<GameResponse>, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
