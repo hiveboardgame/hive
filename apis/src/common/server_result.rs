@@ -1,8 +1,7 @@
 use super::game_reaction::GameReaction;
 use super::ClientRequest;
 use crate::responses::{
-    ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse,
-    TournamentResponse, UserResponse,
+    ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse, UserResponse,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -60,18 +59,17 @@ pub enum ServerMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TournamentUpdate {
-    Adjudicated(Box<TournamentResponse>),
-    Created(Box<TournamentResponse>),
-    Declined(Box<TournamentResponse>),
+    Adjudicated(TournamentId),
+    Created(TournamentId),
+    Declined(TournamentId),
     Deleted(TournamentId),
-    Finished(Box<TournamentResponse>),
-    Invited(Box<TournamentResponse>),
-    Joined(Box<TournamentResponse>),
-    Left(Box<TournamentResponse>),
-    Modified(Box<TournamentResponse>),
-    Started(Box<TournamentResponse>),
-    Tournaments(Vec<Box<TournamentResponse>>),
-    Uninvited(Box<TournamentResponse>),
+    Finished(TournamentId),
+    Invited(TournamentId),
+    Joined(TournamentId),
+    Left(TournamentId),
+    Modified(TournamentId),
+    Started(TournamentId),
+    Uninvited(TournamentId),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
