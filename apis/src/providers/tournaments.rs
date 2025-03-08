@@ -1,30 +1,20 @@
+use std::collections::HashSet;
 use leptos::prelude::*;
 use shared_types::TournamentId;
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Default)]
 pub struct TournamentStateContext {
-    pub needs_update: RwSignal<Vec<TournamentId>>,
-}
-
-impl Default for TournamentStateContext {
-    fn default() -> Self {
-        Self::new()
-    }
+    pub needs_update: RwSignal<HashSet<TournamentId>>,
 }
 
 impl TournamentStateContext {
-    pub fn new() -> Self {
-        Self {
-            needs_update: RwSignal::new(Vec::new()),
-        }
-    }
     pub fn add_full(&mut self, tournament: TournamentId) {
         self.needs_update.update(|s| {
-            s.push(tournament.to_owned());
+            s.insert(tournament.to_owned());
         });
     }
 }
 
 pub fn provide_tournaments() {
-    provide_context(TournamentStateContext::new())
+    provide_context(TournamentStateContext::default())
 }
