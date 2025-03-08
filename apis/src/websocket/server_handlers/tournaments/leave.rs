@@ -1,6 +1,5 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    responses::TournamentResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -35,10 +34,11 @@ impl LeaveHandler {
                 async move { Ok(tournament.leave(&self.user_id, tc).await?) }.scope_boxed()
             })
             .await?;
-        let response = TournamentResponse::from_model(&tournament, &mut conn).await?;
         Ok(vec![InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Left(response)),
+            message: ServerMessage::Tournament(TournamentUpdate::Left(
+                TournamentId(tournament.nanoid.clone()),
+            )),
         }])
     }
 }

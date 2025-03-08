@@ -1,6 +1,5 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    responses::TournamentResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -42,10 +41,9 @@ impl KickHandler {
                     .scope_boxed()
             })
             .await?;
-        let response = TournamentResponse::from_model(&tournament, &mut conn).await?;
         Ok(vec![InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Modified(response)),
+            message: ServerMessage::Tournament(TournamentUpdate::Modified(TournamentId(tournament.nanoid.clone()))),
         }])
     }
 }
