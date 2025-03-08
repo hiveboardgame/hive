@@ -1,7 +1,8 @@
 use crate::responses::AccountResponse;
 use leptos::prelude::*;
+use server_fn::codec;
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_account() -> Result<AccountResponse, ServerFnError> {
     use crate::functions::auth::identity::uuid;
     use crate::functions::db::pool;

@@ -1,6 +1,7 @@
 use leptos::prelude::*;
+use server_fn::codec;
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn delete_account() -> Result<(), ServerFnError> {
     use crate::functions::auth::{identity::uuid, logout::logout};
     use crate::functions::db::pool;

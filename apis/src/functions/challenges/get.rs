@@ -2,8 +2,9 @@ use crate::responses::ChallengeResponse;
 use leptos::prelude::*;
 use shared_types::ChallengeId;
 use uuid::Uuid;
+use server_fn::codec;
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
@@ -16,7 +17,7 @@ pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, Server
         .map_err(ServerFnError::new)
 }
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_challenge(challenge_id: ChallengeId) -> Result<ChallengeResponse, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
