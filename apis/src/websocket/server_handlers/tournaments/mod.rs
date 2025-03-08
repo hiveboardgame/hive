@@ -3,7 +3,6 @@ pub mod adjudicate_result;
 pub mod create;
 pub mod delete;
 pub mod finish;
-pub mod get;
 pub mod handler;
 pub mod invitation_accept;
 pub mod invitation_create;

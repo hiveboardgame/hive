@@ -1,14 +1,17 @@
+use std::collections::HashMap;
+
 use crate::components::molecules::{
     challenge_row::ChallengeRow, hamburger::Hamburger,
     tournament_invitation_notification::TournamentInvitationNotification,
     tournament_status_notification::TournamentStatusNotification,
 };
 use crate::providers::challenges::ChallengeStateSignal;
-use crate::providers::tournaments::TournamentStateContext;
 use crate::providers::NotificationContext;
-use crate::responses::TournamentResponse;
+use crate::responses::TournamentAbstractResponse;
 use leptos::prelude::*;
 use leptos_icons::*;
+use shared_types::TournamentSortOrder;
+use crate::functions::tournaments::get_all_abstract;
 
 #[component]
 pub fn NotificationDropdown() -> impl IntoView {
@@ -16,7 +19,6 @@ pub fn NotificationDropdown() -> impl IntoView {
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
     let notifications_context = Signal::derive(move || expect_context::<NotificationContext>());
     let challenges = expect_context::<ChallengeStateSignal>();
-    let tournaments = expect_context::<TournamentStateContext>();
     let has_notifications = move || !notifications_context().is_empty();
     let icon_style = move || {
         if has_notifications() {
@@ -25,21 +27,26 @@ pub fn NotificationDropdown() -> impl IntoView {
             "w-4 h-4"
         }
     };
+    let tournaments = LocalResource::new(move || async move {
+        let vec = get_all_abstract(TournamentSortOrder::CreatedAtDesc).await.unwrap_or_default();
+        let mut map = HashMap::new();
+        for t in vec {
+            map.insert(t.tournament_id.clone(), t);
+        }
+        map
+    });
     let each_tournament = move || {
         notifications_context()
             .tournament_invitations
             .get()
             .iter()
-            .map(move |id| {
+            .filter_map(move |id| {
                 tournaments
-                    .full
                     .get()
-                    .tournaments
-                    .get(id)
-                    .expect("Tournament exists")
-                    .clone()
+                    
+                    .map(|t| t.get(id).expect("Tournament exists").clone())
             })
-            .collect::<Vec<TournamentResponse>>()
+            .collect::<Vec<TournamentAbstractResponse>>()
     };
     view! {
         <Hamburger
@@ -91,9 +98,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                     <div on:click=onclick_close>
                         <TournamentStatusNotification tournament=StoredValue::new(
                             tournaments
-                                .full
-                                .get_untracked()
-                                .tournaments
+                                .get().expect("Loaded")
                                 .get(&tournament_id)
                                 .expect("Tournament exists")
                                 .clone(),
@@ -108,10 +113,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                 >
                     <div on:click=onclick_close>
                         <TournamentStatusNotification tournament=StoredValue::new(
-                            tournaments
-                                .full
-                                .get_untracked()
-                                .tournaments
+                            tournaments.get().expect("Loaded")
                                 .get(&tournament_id)
                                 .expect("Tournament exists")
                                 .clone(),
