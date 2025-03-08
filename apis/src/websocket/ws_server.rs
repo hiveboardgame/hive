@@ -298,7 +298,9 @@ impl Handler<Connect> for WsServer {
                                     .await
                             {
                                 let message = ServerResult::Ok(Box::new(
-                                    ServerMessage::Tournament(TournamentUpdate::Invited(response)),
+                                    ServerMessage::Tournament(TournamentUpdate::Invited(
+                                        response.tournament_id.clone(),
+                                    )),
                                 ));
                                 let serialized = WebsocketMessage::Server(message);
                                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {

@@ -1,6 +1,5 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    responses::TournamentResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -34,11 +33,12 @@ impl FinishHandler {
                 async move { tournament.finish(&self.user_id, tc).await }.scope_boxed()
             })
             .await?;
-        let tournament_response = TournamentResponse::from_model(&tournament, &mut conn).await?;
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Finished(tournament_response)),
+            message: ServerMessage::Tournament(TournamentUpdate::Finished(
+                TournamentId(tournament.nanoid.clone()),
+            )),
         });
 
         Ok(messages)

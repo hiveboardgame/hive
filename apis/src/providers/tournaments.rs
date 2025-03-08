@@ -1,12 +1,9 @@
-use crate::responses::{TournamentAbstractResponse, TournamentResponse};
 use leptos::prelude::*;
 use shared_types::TournamentId;
-use std::collections::HashMap;
 
 #[derive(Clone, Debug, Copy)]
 pub struct TournamentStateContext {
-    pub full: RwSignal<TournamentState>,
-    pub summary: RwSignal<TournamentAbstractState>,
+    pub needs_update: RwSignal<Vec<TournamentId>>,
 }
 
 impl Default for TournamentStateContext {
@@ -18,67 +15,16 @@ impl Default for TournamentStateContext {
 impl TournamentStateContext {
     pub fn new() -> Self {
         Self {
-            full: RwSignal::new(TournamentState::new()),
-            summary: RwSignal::new(TournamentAbstractState::new()),
+            needs_update: RwSignal::new(Vec::new()),
         }
     }
-
-    pub fn remove(&mut self, tournament_id: TournamentId) {
-        self.full.update(|s| {
-            s.tournaments.remove(&tournament_id);
-        });
-        self.summary.update(|s| {
-            s.tournaments.remove(&tournament_id);
+    pub fn add_full(&mut self, tournament: TournamentId) {
+        self.needs_update.update(|s| {
+            s.push(tournament.to_owned());
         });
     }
-
-    pub fn add_full(&mut self, tournaments: Vec<TournamentResponse>) {
-        self.full.update(|s| {
-            for tournament in tournaments {
-                s.tournaments
-                    .insert(tournament.tournament_id.to_owned(), tournament);
-            }
-        })
-    }
 }
 
-#[derive(Clone, Debug)]
-pub struct TournamentState {
-    pub tournaments: HashMap<TournamentId, TournamentResponse>,
-}
-
-impl TournamentState {
-    pub fn new() -> Self {
-        Self {
-            tournaments: HashMap::new(),
-        }
-    }
-}
-
-impl Default for TournamentState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct TournamentAbstractState {
-    pub tournaments: HashMap<TournamentId, TournamentAbstractResponse>,
-}
-
-impl TournamentAbstractState {
-    pub fn new() -> Self {
-        Self {
-            tournaments: HashMap::new(),
-        }
-    }
-}
-
-impl Default for TournamentAbstractState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 pub fn provide_tournaments() {
     provide_context(TournamentStateContext::new())
 }

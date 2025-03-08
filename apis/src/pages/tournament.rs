@@ -9,6 +9,7 @@ use crate::components::{
         chat::ChatWindow, standings::Standings, tournament_admin::TournamentAdminControls,
     },
 };
+use crate::functions::tournaments::get_complete;
 use crate::providers::ApiRequestsProvider;
 use crate::providers::{tournaments::TournamentStateContext, AuthContext,
 };
@@ -31,22 +32,24 @@ pub fn Tournament() -> impl IntoView {
     let use_params = use_params_map();
     let tournaments = expect_context::<TournamentStateContext>();
     let tournament_id = move || use_params.get().get("nanoid").map(|s| TournamentId(s.to_string()));
-    let current_tournament = move || {
-        tournament_id().and_then(|tournament_id| {
-            tournaments
-                .full
-                .get()
-                .tournaments
-                .get(&tournament_id)
-                .cloned()
-        })
-    };
-
+    let current_tournament = Action::new(move |_: &()| {
+        async move {
+            get_complete(tournament_id().unwrap().to_string()).await.ok()
+        }
+    });
+    Effect::watch(tournaments.needs_update, move |_,_,_| {
+        if tournaments.needs_update.get().contains(&tournament_id().unwrap()) {
+            current_tournament.dispatch(());
+        }
+    }, true);
+    Effect::new(move |_| {
+        current_tournament.dispatch(());
+    });
     view! {
         <div class="flex flex-col justify-center items-center pt-20 w-full">
             <div class="container flex flex-col items-center w-full">
-                <Show when=move || current_tournament().is_some()>
-                    <LoadedTournament tournament=current_tournament().expect("Current tournament is some") />
+                <Show when=move || current_tournament.value().get().is_some()>
+                    <LoadedTournament tournament=current_tournament.value().get().flatten().expect("Current tournament is some") />
                 </Show>
             </div>
         </div>

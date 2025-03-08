@@ -17,7 +17,7 @@ use leptos_use::core::ConnectionReadyState;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
 use regex::Regex;
-use shared_types::{GameId, TournamentId};
+use shared_types::GameId;
 
 cfg_if! { if #[cfg(not(feature = "ssr"))] {
     use leptos_use::utils::IS_IOS;
@@ -137,15 +137,8 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         } else {
             None
         };
-        let tournament_id = if let Some(caps) = TOURNAMENT_NANOID.captures(&pathname) {
-            caps.name("nanoid")
-                .map(|m| TournamentId(m.as_str().to_string()))
-        } else {
-            None
-        };
-
         if ws_ready() == ConnectionReadyState::Open {
-            navi.update_ids(game_id, tournament_id);
+            navi.update_id(game_id);
         };
     });
 

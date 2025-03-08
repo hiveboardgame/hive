@@ -1,6 +1,6 @@
 use super::{
     abandon::AbandonHandler, adjudicate_result::AdjudicateResultHandler, create::CreateHandler,
-    delete::DeleteHandler, finish::FinishHandler, get::GetHandler,
+    delete::DeleteHandler, finish::FinishHandler,
     invitation_accept::InvitationAccept, invitation_create::InvitationCreate,
     invitation_decline::InvitationDecline, invitation_retract::InvitationRetract,
     join::JoinHandler, kick::KickHandler, leave::LeaveHandler, start::StartHandler,
@@ -51,17 +51,6 @@ impl TournamentHandler {
                     .await?
                     .handle()
                     .await?
-            }
-            TournamentAction::Get(tournament_id, _depth) => {
-                GetHandler::new(
-                    tournament_id,
-                    self.user_id,
-                    self.chat_storage.clone(),
-                    &self.pool,
-                )
-                .await?
-                .handle()
-                .await?
             }
             TournamentAction::Leave(tournament_id) => {
                 LeaveHandler::new(tournament_id, self.user_id, &self.pool)
