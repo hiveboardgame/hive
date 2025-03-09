@@ -8,11 +8,9 @@ use leptos::prelude::*;
 
 pub fn handle_join(gar: GameActionResponse) {
     let game_state = expect_context::<GameStateSignal>();
-    game_state.loaded.set(false);
     reset_game_state(&gar.game);
     let timer = expect_context::<TimerSignal>();
     timer.update_from(&gar.game);
-    game_state.loaded.set(true);
     if let Some((_turn, gc)) = gar.game.game_control_history.last() {
         match gc {
             GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {

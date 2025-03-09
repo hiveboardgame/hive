@@ -121,26 +121,19 @@ pub fn Board(
         config().unwrap_or_default().tile_design == TileDesign::ThreeD
     };
 
-    let update_once = Effect::new(move |_| {
-        if game_state.loaded.get() {
-            let div = div_ref.get_untracked().expect("it exists");
-            let rect = div.get_bounding_client_rect();
-            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight);
-            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                viewbox_controls.x = 0.0;
-                viewbox_controls.y = 0.0;
-                viewbox_controls.width = rect.width() as f32;
-                viewbox_controls.height = rect.height() as f32;
-                viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
-                viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
-            });
-        };
-    });
-    Effect::new(move |_| {
-        if game_state.loaded.get() {
-            update_once.dispose();
-        }
-    });
+    Effect::watch(move ||(), move |_,_,_| {
+        let div = div_ref.get_untracked().expect("it exists");
+        let rect = div.get_bounding_client_rect();
+        let svg_pos = SvgPos::center_for_level(current_center(), 0, straight);
+        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+            viewbox_controls.x = 0.0;
+            viewbox_controls.y = 0.0;
+            viewbox_controls.width = rect.width() as f32;
+            viewbox_controls.height = rect.height() as f32;
+            viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
+            viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
+         });
+    },true );
 
     let straight = {
         config().unwrap_or_default().tile_design == TileDesign::ThreeD
