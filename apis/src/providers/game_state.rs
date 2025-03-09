@@ -13,7 +13,6 @@ use super::{auth_context::AuthContext, ApiRequestsProvider};
 #[derive(Clone, Debug, Copy)]
 pub struct GameStateSignal {
     pub signal: RwSignal<GameState>,
-    pub loaded: RwSignal<bool>,
 }
 
 impl Default for GameStateSignal {
@@ -26,7 +25,6 @@ impl GameStateSignal {
     pub fn new() -> Self {
         Self {
             signal: RwSignal::new(GameState::new()),
-            loaded: RwSignal::new(false),
         }
     }
 
