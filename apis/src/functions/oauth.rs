@@ -31,7 +31,7 @@ pub async fn get_discord_handle() -> Result<String, ServerFnError> {
 
     use serde_json::Value;
 
-    if let Ok(uuid) = uuid() {
+    if let Ok(uuid) = uuid().await {
         let url = format!("http://localhost:8080/discord/{}", uuid);
         let client = reqwest::Client::new();
         let response = client.get(url).send().await?;

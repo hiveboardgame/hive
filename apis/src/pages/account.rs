@@ -1,10 +1,6 @@
-use crate::functions;
-use crate::functions::oauth::GetDiscordHandle;
+use crate::functions::oauth::get_discord_handle;
 use crate::{components::organisms::header::Redirect, functions::accounts::edit::EditAccount};
-use crate::{
-    components::organisms::header::Redirect, functions::accounts::edit::EditAccount,
-    providers::ApiRequestsProvider, providers::AuthContext,
-};
+use crate::{providers::ApiRequestsProvider, providers::AuthContext};
 use leptos::form::ActionForm;
 use leptos::*;
 use leptos::{html, prelude::*};
@@ -26,24 +22,28 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         api.link_discord();
     };
     let auth_context = expect_context::<AuthContext>();
-    let discord_name = create_server_action::<GetDiscordHandle>();
-    discord_name.dispatch(functions::oauth::GetDiscordHandle {});
+    let discord_name = Action::new(move |_: &()| async { get_discord_handle().await });
+    Effect::new(move |_| {
+        discord_name.dispatch(());
+    });
 
     view! {
         <div class=format!("mx-auto max-w-xs pt-20 {extend_tw_classes}")>
-            <div class="bg-inherit shadow-md rounded px-8 pt-6 pb-8 mb-4 bg-stone-300 dark:bg-slate-800">
+            <div class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800">
                 <div>
-                    <div class="block font-bold mb-2">Linked Discord account</div>
-                    <div class="block font-bold mb-2">
+                    <div class="block mb-2 font-bold">Linked Discord account</div>
+                    <div class="block mb-2 font-bold">
                         <Show when=move || {
                             matches!(auth_context.user.get(), Some(Ok(_account)))
-                        }>{move || { discord_name.value().get() }}</Show>
+                        }>
+                        {move || { discord_name.value().get() }}
+                        </Show>
 
                     </div>
                 </div>
                 <div>
                     <button
-                        class="bg-button-dawn dark:bg-button-twilight transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer"
+                        class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight active:scale-95 hover:bg-pillbug-teal focus:outline-none"
                         on:click=oauth
                     >
                         Link Discord

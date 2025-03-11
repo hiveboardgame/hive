@@ -12,66 +12,6 @@ pub fn Resources() -> impl IntoView {
     let target = "_blank";
     let class = "text-blue-500 hover:underline";
 
-    let tournaments_site =
-        |children| view! { <SimpleLink link="https://www.worldhivetournaments.com/" children /> };
-    let entomology_link =
-        |children| view! { <SimpleLink link="https://entomology.gitlab.io/ " children /> };
-    let explorer_link = |children| view! { <SimpleLink link="https://hive.bot.nu/" children /> };
-    let hexketch_link = |children| view! { <SimpleLink link="https://hextech.net/" children /> };
-    let mzinga_link =
-        |children| view! { <SimpleLink link="https://github.com/jonthysell/Mzinga" children /> };
-    let nokamute_link =
-        |children| view! { <SimpleLink link="https://github.com/edre/nokamute" children /> };
-    let bga_downloader_link =
-        |children| view! { <SimpleLink link="https://github.com/DavidEGx/Hive-bga2bs" children /> };
-    let discord_link =
-        |children| view! { <SimpleLink link="https://discord.gg/djdQZPFa7E" children /> };
-    let reddit_link =
-        |children| view! { <SimpleLink link="https://www.reddit.com/r/hive/" children /> };
-    let facebook_link = |children| {
-        view! { <SimpleLink link="https://www.facebook.com/groups/hivetheboardlessgame" children /> }
-    };
-    let instagram_link = |children: ChildrenFn| {
-        view! { <SimpleLink link="https://www.instagram.com/world_hive_community/" children=children /> }
-    };
-    let hive_champion_link = |children| {
-        view! { <SimpleLink link="https://sites.google.com/site/playhivelikeachampion/home" children /> }
-    };
-    let hive_canon_link = |children| {
-        view! {
-            <SimpleLink
-                link="https://www.lulu.com/de/shop/joe-schultz/the-canon-of-hive/ebook/product-1pgjmv8d.html"
-                children
-            />
-        }
-    };
-    let hive_puzzles_link = |children| {
-        view! { <SimpleLink link="https://gripot.se/hive/HivePuzzles_vol1.pdf" children /> }
-    };
-    let frasco_link = |children| {
-        view! { <SimpleLink link="https://www.youtube.com/@FrascoAdAbstra" children /> }
-    };
-    let ringersol_link = |children| {
-        view! { <SimpleLink link="https://www.youtube.com/playhivelikeachampion" children /> }
-    };
-    let ordep_cubik_link = |children| {
-        view! { <SimpleLink link="https://www.youtube.com/@OrdepCubik" children /> }
-    };
-    let cavaliers16_link = |children| {
-        view! { <SimpleLink link="https://www.twitch.tv/cavaliers16" children /> }
-    };
-    let gen42_link = |children| {
-        view! { <SimpleLink link="https://www.gen42.com/" children /> }
-    };
-    let facebook_gen42_link = |children| {
-        view! { <SimpleLink link="https://www.facebook.com/HiveGen42Games" children /> }
-    };
-    let instagram_gen42_link = |children| {
-        view! { <SimpleLink link="https://www.instagram.com/gen42games/" children=children /> }
-    };
-    let youtube_gen42_link = |children| {
-        view! { <SimpleLink link="https://www.youtube.com/@Gen42games" children=children /> }
-    };
     view! {
         <div class="px-4 pt-20">
             <div class="container px-4 mx-auto">
