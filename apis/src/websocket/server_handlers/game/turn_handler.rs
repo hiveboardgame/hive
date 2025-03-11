@@ -9,14 +9,17 @@ use crate::{
 use anyhow::Result;
 use db_lib::{
     get_conn,
-    models::{Game, User},
+    models::{Game, Tournament, User},
     DbPool,
 };
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use hive_lib::{GameError, State, Turn};
 use shared_types::{GameId, TimeMode};
+use std::collections::HashMap;
+use std::str::FromStr;
 use uuid::Uuid;
+use crate::websocket::busybee::Busybee;
 
 pub struct TurnHandler {
     turn: Turn,
@@ -85,6 +88,29 @@ impl TurnHandler {
                 async move { Ok(self.game.update_gamestate(&state, comp, tc).await?) }.scope_boxed()
             })
             .await?;
+
+        match TimeMode::from_str(&game.time_mode) {
+            Ok(TimeMode::RealTime) | Err(_) => {}
+            _ => {
+                let opponent_id = game.not_current_player_id();
+                let opponent = User::find_by_uuid(&opponent_id, &mut conn).await?;
+                let tournament_name = if let Some(id) = game.tournament_id {
+                    let tournament = Tournament::find_by_uuid(id, &mut conn).await?;
+                    format!(" (Tournament: {})", tournament.name)
+                } else {
+                    String::new()
+                };
+
+                let msg = format!("[Your turn](<https://hivegame.com/game/{}>) in your game vs {}{}.\nYou have {} to play.",
+                    game.nanoid,
+                    opponent.username,
+                    tournament_name,
+                    game.str_time_left_for_player(game.current_player_id),
+                );
+                println!("{}", msg);
+                Busybee::msg(game.current_player_id, msg).await?;
+            }
+        }
 
         let mut messages = Vec::new();
         let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;

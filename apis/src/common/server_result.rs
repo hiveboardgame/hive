@@ -55,6 +55,7 @@ pub enum ServerMessage {
     Schedule(ScheduleUpdate),
     Tournament(TournamentUpdate),
     UserStatus(UserUpdate),
+    RedirectLink(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

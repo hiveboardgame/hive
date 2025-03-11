@@ -68,6 +68,8 @@ pub enum TileDesign {
     Official,
     Flat,
     ThreeD,
+    HighContrast,
+    Community,
 }
 
 impl fmt::Display for TileDesign {
@@ -76,6 +78,8 @@ impl fmt::Display for TileDesign {
             TileDesign::Official => "Official",
             TileDesign::Flat => "Flat",
             TileDesign::ThreeD => "ThreeD",
+            TileDesign::HighContrast => "HighContrast",
+            TileDesign::Community => "Community",
         };
         write!(f, "{}", name)
     }
@@ -89,6 +93,8 @@ impl FromStr for TileDesign {
             "Official" => Ok(TileDesign::Official),
             "Flat" => Ok(TileDesign::Flat),
             "ThreeD" => Ok(TileDesign::ThreeD),
+            "HighContrast" => Ok(TileDesign::HighContrast),
+            "Community" => Ok(TileDesign::Community),
             _ => Err(()),
         }
     }

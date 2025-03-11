@@ -38,18 +38,22 @@ impl StartHandler {
         for uuid in deleted_invitations {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::User(uuid),
-                message: ServerMessage::Tournament(TournamentUpdate::Uninvited(
-                    TournamentId(tournament.nanoid.clone()),
-                )),
+                message: ServerMessage::Tournament(TournamentUpdate::Uninvited(TournamentId(
+                    tournament.nanoid.clone(),
+                ))),
             });
         }
 
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Started(TournamentId(
-                tournament.nanoid.clone(),
-            )))
-        });
+        let players = tournament.players(&mut conn).await?;
+
+        for player in players {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::User(player.id),
+                message: ServerMessage::Tournament(TournamentUpdate::Started(
+                    tournament_response.clone(),
+                )),
+            });
+        }
 
         for game in games {
             let game_response = GameResponse::from_model(&game, &mut conn).await?;

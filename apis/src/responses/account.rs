@@ -17,6 +17,7 @@ use db_lib::{
     DbConn,
 };
 use leptos::prelude::*;
+
 impl AccountResponse {
     pub async fn from_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self, ServerFnError> {
         let user = User::find_by_uuid(id, conn).await?;

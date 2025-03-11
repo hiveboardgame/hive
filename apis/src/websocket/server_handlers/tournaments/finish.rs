@@ -34,12 +34,15 @@ impl FinishHandler {
             })
             .await?;
 
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Finished(
-                TournamentId(tournament.nanoid.clone()),
-            )),
-        });
+        let players = tournament.players(&mut conn).await?;
+        for player in players {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::User(player.id),
+                message: ServerMessage::Tournament(TournamentUpdate::Finished(
+                    tournament_response.clone(),
+                )),
+            });
+        }
 
         Ok(messages)
     }

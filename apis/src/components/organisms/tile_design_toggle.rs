@@ -1,7 +1,7 @@
 use crate::i18n::*;
 use crate::{common::TileDesign, providers::Config};
 use lazy_static::lazy_static;
-use leptos::either::EitherOf3;
+use leptos::either::EitherOf5;
 use leptos::prelude::*;
 use leptos_use::use_window;
 
@@ -30,6 +30,8 @@ pub fn TileDesignToggle() -> impl IntoView {
             <Show when=good_software>
                 <TileDesignButton tile_design=TileDesign::ThreeD />
             </Show>
+            <TileDesignButton tile_design=TileDesign::HighContrast />
+            <TileDesignButton tile_design=TileDesign::Community />
         </div>
     }
 }
@@ -68,9 +70,11 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
             >
 
                 {match tile_design() {
-                    TileDesign::Official => EitherOf3::A(t!(i18n, user_config.style_buttons.official)),
-                    TileDesign::Flat => EitherOf3::B(t!(i18n, user_config.style_buttons.flat)),
-                    TileDesign::ThreeD => EitherOf3::C(t!(i18n, user_config.style_buttons.three_d)),
+                    TileDesign::Official => EitherOf5::A(t!(i18n, user_config.style_buttons.official)),
+                    TileDesign::Flat => EitherOf5::B(t!(i18n, user_config.style_buttons.flat)),
+                    TileDesign::ThreeD => EitherOf5::C(t!(i18n, user_config.style_buttons.three_d)),
+                    TileDesign::HighContrast => EitherOf5::D(t!(i18n, user_config.style_buttons.high_contrast)),
+                    TileDesign::Community => EitherOf5::E(t!(i18n, user_config.style_buttons.community)),
                 }}
 
             </button>
