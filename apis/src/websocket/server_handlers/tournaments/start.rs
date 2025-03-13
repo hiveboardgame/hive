@@ -38,9 +38,9 @@ impl StartHandler {
         for uuid in deleted_invitations {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::User(uuid),
-                message: ServerMessage::Tournament(TournamentUpdate::Uninvited(
-                    TournamentId(tournament.nanoid.clone()),
-                )),
+                message: ServerMessage::Tournament(TournamentUpdate::Uninvited(TournamentId(
+                    tournament.nanoid.clone(),
+                ))),
             });
         }
 
@@ -48,7 +48,7 @@ impl StartHandler {
             destination: MessageDestination::Global,
             message: ServerMessage::Tournament(TournamentUpdate::Started(TournamentId(
                 tournament.nanoid.clone(),
-            )))
+            ))),
         });
 
         for game in games {

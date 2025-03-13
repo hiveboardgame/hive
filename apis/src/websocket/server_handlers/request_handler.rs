@@ -1,6 +1,7 @@
 use super::challenges::handler::ChallengeHandler;
 use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
+use super::oauth::handler::OauthHandler;
 use super::pong::handler::PongHandler;
 use super::schedules::ScheduleHandler;
 use super::tournaments::handler::TournamentHandler;
@@ -26,7 +27,7 @@ pub enum RequestHandlerError {
 impl std::fmt::Display for RequestHandlerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RequestHandlerError::InternalError(e) => write!(f,"{}", e),
+            RequestHandlerError::InternalError(e) => write!(f, "{}", e),
             RequestHandlerError::AuthError(e) => write!(f, "{}", e),
         }
     }
@@ -87,6 +88,7 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
+            ClientRequest::LinkDiscord => OauthHandler::new(self.user_id).handle().await?,
             ClientRequest::Chat(message_container) => {
                 self.ensure_auth()?;
                 if self.user_id != message_container.message.user_id {

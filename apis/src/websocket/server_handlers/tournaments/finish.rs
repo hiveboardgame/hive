@@ -36,9 +36,9 @@ impl FinishHandler {
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Finished(
-                TournamentId(tournament.nanoid.clone()),
-            )),
+            message: ServerMessage::Tournament(TournamentUpdate::Finished(TournamentId(
+                tournament.nanoid.clone(),
+            ))),
         });
 
         Ok(messages)

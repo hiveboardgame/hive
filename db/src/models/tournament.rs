@@ -420,6 +420,10 @@ impl Tournament {
         Ok(tournaments::table.find(uuid).first(conn).await?)
     }
 
+    pub async fn find_by_uuid(uuid: Uuid, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
+        Ok(tournaments::table.find(uuid).first(conn).await?)
+    }
+
     pub async fn from_nanoid(nano: &str, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
         Ok(tournaments::table
             .filter(nanoid_field.eq(nano))

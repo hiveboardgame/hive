@@ -183,6 +183,7 @@ impl User {
             .await?;
         Ok(())
     }
+
     pub async fn find_by_uuid(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         Ok(users_table.find(uuid).first(conn).await?)
     }

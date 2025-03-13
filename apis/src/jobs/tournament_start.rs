@@ -41,12 +41,17 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                         });
                                     }
 
-                                    messages.push(InternalServerMessage {
-                                        destination: MessageDestination::Global,
-                                        message: ServerMessage::Tournament(
-                                            TournamentUpdate::Started(tournament_response),
-                                        ),
-                                    });
+                                    let players = tournament.players(tc).await?;
+                                    for player in players {
+                                        messages.push(InternalServerMessage {
+                                            destination: MessageDestination::User(player.id),
+                                            message: ServerMessage::Tournament(
+                                                TournamentUpdate::Started(
+                                                    tournament_response.clone(),
+                                                ),
+                                            ),
+                                        });
+                                    }
 
                                     for game in games {
                                         let game_response =

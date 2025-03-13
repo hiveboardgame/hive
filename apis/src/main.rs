@@ -83,6 +83,7 @@ async fn main() -> std::io::Result<()> {
             .service(favicon)
             .service(start_connection)
             .service(functions::pwa::cache)
+            .service(functions::oauth::callback)
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(routes.to_owned(), {
                 let leptos_options = leptos_options.clone();

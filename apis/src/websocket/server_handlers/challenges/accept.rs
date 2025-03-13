@@ -1,3 +1,4 @@
+use crate::websocket::busybee::Busybee;
 use crate::{
     common::{ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
@@ -6,7 +7,7 @@ use crate::{
 use anyhow::Result;
 use db_lib::{
     get_conn,
-    models::{Challenge, Game, NewGame, Rating},
+    models::{Challenge, Game, NewGame, Rating, User},
     DbPool,
 };
 use diesel_async::scoped_futures::ScopedFutureExt;
@@ -90,6 +91,29 @@ impl AcceptHandler {
                 .scope_boxed()
             })
             .await?;
+
+        match speed {
+            GameSpeed::Correspondence | GameSpeed::Untimed => {
+                let white_id = game.white_id;
+                let black_id = game.black_id;
+                let black = User::find_by_uuid(&black_id, &mut conn).await?;
+                let white = User::find_by_uuid(&white_id, &mut conn).await?;
+                let msg = format!(
+                    "[Your game](<https://hivegame.com/game/{}>) vs {} started.\nYou have {} time left.",
+                    game.nanoid,
+                    black.username,
+                    game.str_time_left_for_player(white_id),
+                );
+                let _ = Busybee::msg(white_id, msg).await;
+                let msg = format!(
+                    "[Your game](<https://hivegame.com/game/{}>) vs {} started.",
+                    game.nanoid,
+                    white.username
+                );
+                let _ = Busybee::msg(black_id, msg).await;
+            }
+            _ => {}
+        }
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.white_id),
