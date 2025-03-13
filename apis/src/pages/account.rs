@@ -1,11 +1,9 @@
-use crate::functions;
-use crate::functions::oauth::GetDiscordHandle;
-use crate::{
-    components::organisms::header::Redirect, functions::accounts::edit::EditAccount,
-    providers::ApiRequests, providers::AuthContext,
-};
+use crate::functions::oauth::get_discord_handle;
+use crate::{components::organisms::header::Redirect, functions::accounts::edit::EditAccount};
+use crate::{providers::ApiRequestsProvider, providers::AuthContext};
+use leptos::form::ActionForm;
 use leptos::*;
-use leptos_router::ActionForm;
+use leptos::{html, prelude::*};
 
 #[component]
 pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
@@ -18,13 +16,16 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
 
+    let api = expect_context::<ApiRequestsProvider>().0.get();
+
     let oauth = move |_| {
-        let api = ApiRequests::new();
         api.link_discord();
     };
     let auth_context = expect_context::<AuthContext>();
-    let discord_name = create_server_action::<GetDiscordHandle>();
-    discord_name.dispatch(functions::oauth::GetDiscordHandle {});
+    let discord_name = Action::new(move |_: &()| async { get_discord_handle().await });
+    Effect::new(move |_| {
+        discord_name.dispatch(());
+    });
 
     view! {
         <div class=format!("mx-auto max-w-xs pt-20 {extend_tw_classes}")>
@@ -33,8 +34,10 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <div class="block mb-2 font-bold">Linked Discord account</div>
                     <div class="block mb-2 font-bold">
                         <Show when=move || {
-                            matches!((auth_context.user)(), Some(Ok(Some(_account))))
-                        }>{move || { discord_name.value().get() }}</Show>
+                            matches!(auth_context.user.get(), Some(Ok(_account)))
+                        }>
+                        {move || { discord_name.value().get() }}
+                        </Show>
 
                     </div>
                 </div>

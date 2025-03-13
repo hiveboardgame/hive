@@ -27,7 +27,7 @@ pub enum RequestHandlerError {
 impl std::fmt::Display for RequestHandlerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RequestHandlerError::InternalError(e) => write!(f,"{}", e),
+            RequestHandlerError::InternalError(e) => write!(f, "{}", e),
             RequestHandlerError::AuthError(e) => write!(f, "{}", e),
         }
     }

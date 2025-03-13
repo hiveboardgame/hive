@@ -1,14 +1,13 @@
 use super::game_action::GameAction;
 use super::{challenge_action::ChallengeAction, ScheduleAction, TournamentAction};
 use serde::{Deserialize, Serialize};
-use shared_types::{ChatMessageContainer, GameId,};
+use shared_types::{ChatMessageContainer, GameId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClientRequest {
     Challenge(ChallengeAction),
     Chat(ChatMessageContainer),
     Game { game_id: GameId, action: GameAction },
-    GamesSearch(GamesQueryOptions),
     LinkDiscord,
     Pong(u64),
     Schedule(ScheduleAction),

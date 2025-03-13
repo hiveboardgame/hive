@@ -71,8 +71,6 @@ pub fn PieceWithoutOnClick(
     let active_piece = create_read_slice(game_state.signal, |gs| gs.move_info.active);
     let show_ds = move || {
         let shadow = match config().unwrap_or_default().tile_design {
-            TileDesign::Official => "/assets/tiles/common/all.svg#drop_shadow",
-            TileDesign::Flat => "/assets/tiles/common/all.svg#drop_shadow",
             TileDesign::ThreeD => "/assets/tiles/3d/shadow.svg#dshadow",
             TileDesign::Community
             | TileDesign::HighContrast

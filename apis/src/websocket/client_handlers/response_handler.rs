@@ -1,7 +1,7 @@
 use super::{
     challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
-    ping::handle::handle_ping, schedule::handler::handle_schedule, tournament::handler::handle_tournament,
-    user_status::handle::handle_user_status,
+    oauth::handle::handle_oauth, ping::handle::handle_ping, schedule::handler::handle_schedule,
+    tournament::handler::handle_tournament, user_status::handle::handle_user_status,
 };
 use crate::common::{ServerMessage::*, ServerResult, WebsocketMessage};
 use leptos::logging::log;
@@ -29,7 +29,7 @@ pub fn handle_response(m: WebsocketMessage) {
                     navegate("/login", Default::default());
                 }
                 log!("Got error from server: {e}");
-            },
+            }
         },
         WebsocketMessage::Client(request) => {
             log!("Got a client request: {request:?}")
