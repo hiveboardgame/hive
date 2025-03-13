@@ -17,10 +17,8 @@ use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use hive_lib::{GameError, State, Turn};
 use shared_types::{GameId, TimeMode};
-use std::collections::HashMap;
 use std::str::FromStr;
 use uuid::Uuid;
-use crate::websocket::busybee::Busybee;
 
 pub struct TurnHandler {
     turn: Turn,
