@@ -140,6 +140,8 @@ diesel::table! {
         series -> Nullable<Uuid>,
         bye -> Array<Nullable<Uuid>>,
         current_round -> Int4,
+        initial_seeding -> Array<Nullable<Uuid>>,
+        seeding_mode -> Varchar,
     }
 }
 
