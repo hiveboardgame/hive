@@ -32,3 +32,4 @@ skillratings = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
+rand = "0.8"

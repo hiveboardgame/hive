@@ -1100,6 +1100,7 @@ dependencies = [
  "itertools 0.13.0",
  "lazy_static",
  "nanoid",
+ "rand",
  "regex",
  "serde",
  "serde_with",

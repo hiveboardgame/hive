@@ -66,6 +66,9 @@ impl Standings {
                 Tiebreaker::SonnebornBerger => self.sonneborn_berger(),
                 Tiebreaker::WinsAsBlack => self.wins_as_black(),
                 Tiebreaker::HeadToHead => self.head_to_head(),
+                Tiebreaker::Buchholz => self.buchholz(),
+                Tiebreaker::BuchholzCut1 => self.buchholz_cut1(),
+                Tiebreaker::DirectEncounter => self.direct_encounter(),
             }
         }
         self.update_standings();
@@ -140,6 +143,10 @@ impl Standings {
                     TournamentGameResult::Winner(Color::Black) if pairing.black_uuid == player => {
                         points += opponent_points;
                     }
+                    TournamentGameResult::Bye if pairing.white_uuid == player => {
+                        // For a bye, we don't count it in Sonneborn-Berger
+                        // as it's not a real opponent
+                    }
                     _ => {}
                 }
             }
@@ -201,6 +208,10 @@ impl Standings {
                 TournamentGameResult::Winner(Color::Black) => {
                     *results.entry(pairing.black_uuid).or_default() += 1.0;
                 }
+                TournamentGameResult::Bye => {
+                    // TODO: @leex maybe we need to add 2.0 instead of 1.0?
+                    *results.entry(pairing.white_uuid).or_default() += 1.0;
+                }
             }
         }
         (
@@ -248,6 +259,11 @@ impl Standings {
                     }
                     TournamentGameResult::Winner(Color::Black) => {
                         if pairing.black_uuid == player {
+                            points += 1.0;
+                        }
+                    }
+                    TournamentGameResult::Bye => {
+                        if pairing.white_uuid == player {
                             points += 1.0;
                         }
                     }
@@ -343,6 +359,115 @@ impl Standings {
                     .collect()
             })
             .collect()
+    }
+
+    pub fn buchholz(&mut self) {
+        for player in &self.players {
+            let score = self.get_buchholz(*player);
+            self.players_scores
+                .entry(*player)
+                .or_default()
+                .entry(Tiebreaker::Buchholz)
+                .and_modify(|w| *w = score)
+                .or_insert(score);
+        }
+    }
+
+    fn get_buchholz(&self, player: Uuid) -> f32 {
+        let mut points = 0.0;
+        if let Some(pairings) = self.pairings.get(&player) {
+            for pairing in pairings {
+                if pairing.white_uuid == player && pairing.black_uuid != player {
+                    if let Some(scores) = self.players_scores.get(&pairing.black_uuid) {
+                        if let Some(op) = scores.get(&Tiebreaker::RawPoints) {
+                            points += *op;
+                        }
+                    }
+                } else if pairing.black_uuid == player && pairing.white_uuid != player {
+                    if let Some(scores) = self.players_scores.get(&pairing.white_uuid) {
+                        if let Some(op) = scores.get(&Tiebreaker::RawPoints) {
+                            points += *op;
+                        }
+                    }
+                }
+            }
+        }
+        points
+    }
+
+    pub fn buchholz_cut1(&mut self) {
+        for player in &self.players {
+            let score = self.get_buchholz_cut1(*player);
+            self.players_scores
+                .entry(*player)
+                .or_default()
+                .entry(Tiebreaker::BuchholzCut1)
+                .and_modify(|w| *w = score)
+                .or_insert(score);
+        }
+    }
+
+    fn get_buchholz_cut1(&self, player: Uuid) -> f32 {
+        let mut opponent_scores = Vec::new();
+        if let Some(pairings) = self.pairings.get(&player) {
+            for pairing in pairings {
+                if pairing.white_uuid == player && pairing.black_uuid != player {
+                    if let Some(scores) = self.players_scores.get(&pairing.black_uuid) {
+                        if let Some(op) = scores.get(&Tiebreaker::RawPoints) {
+                            opponent_scores.push(*op);
+                        }
+                    }
+                } else if pairing.black_uuid == player && pairing.white_uuid != player {
+                    if let Some(scores) = self.players_scores.get(&pairing.white_uuid) {
+                        if let Some(op) = scores.get(&Tiebreaker::RawPoints) {
+                            opponent_scores.push(*op);
+                        }
+                    }
+                }
+            }
+        }
+        
+        if opponent_scores.len() <= 1 {
+            return 0.0;
+        }
+        
+        opponent_scores.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        opponent_scores[1..].iter().sum()
+    }
+
+    pub fn direct_encounter(&mut self) {
+        for player in &self.players {
+            let score = self.get_direct_encounter(*player);
+            self.players_scores
+                .entry(*player)
+                .or_default()
+                .entry(Tiebreaker::DirectEncounter)
+                .and_modify(|w| *w = score)
+                .or_insert(score);
+        }
+    }
+
+    fn get_direct_encounter(&self, player: Uuid) -> f32 {
+        let mut score = 0.0;
+        if let Some(pairings) = self.pairings.get(&player) {
+            for pairing in pairings {
+                if pairing.white_uuid == player {
+                    match pairing.result {
+                        TournamentGameResult::Winner(Color::White) => score += 1.0,
+                        TournamentGameResult::Draw => score += 0.5,
+                        TournamentGameResult::Bye => score += 1.0,
+                        _ => {}
+                    }
+                } else if pairing.black_uuid == player {
+                    match pairing.result {
+                        TournamentGameResult::Winner(Color::Black) => score += 1.0,
+                        TournamentGameResult::Draw => score += 0.5,
+                        _ => {}
+                    }
+                }
+            }
+        }
+        score
     }
 }
 
@@ -613,5 +738,175 @@ mod tests {
                 .unwrap(),
             1.0
         );
+    }
+
+    #[test]
+    fn tests_new_buchholz() {
+        let mut s = Standings::new();
+        s.add_tiebreaker(Tiebreaker::Buchholz);
+        
+        let one = Uuid::new_v4();
+        let two = Uuid::new_v4();
+        let three = Uuid::new_v4();
+        
+        // First set up some results to establish raw points
+        s.add_result(one, two, 100.0, 200.0, TournamentGameResult::Winner(Color::White));
+        s.add_result(two, three, 200.0, 300.0, TournamentGameResult::Winner(Color::White));
+        s.add_result(three, one, 300.0, 100.0, TournamentGameResult::Draw);
+        
+        // Calculate raw points first
+        s.raw_points();
+        
+        // Now calculate Buchholz
+        s.buchholz();
+        
+        // Verify Buchholz scores
+        let one_buchholz = s.players_scores.get(&one).unwrap().get(&Tiebreaker::Buchholz).unwrap();
+        let two_buchholz = s.players_scores.get(&two).unwrap().get(&Tiebreaker::Buchholz).unwrap();
+        let three_buchholz = s.players_scores.get(&three).unwrap().get(&Tiebreaker::Buchholz).unwrap();
+        
+        // Player one: 1.0 (win) + 0.5 (draw) = 1.5 points
+        // Player two: 1.0 (win) + 0.0 (loss) = 1.0 points
+        // Player three: 0.5 (draw) + 0.0 (loss) = 0.5 points
+        
+        // Buchholz for player one: 1.0 (two's points) + 0.5 (three's points) = 1.5
+        assert_eq!(*one_buchholz, 1.5);
+        // Buchholz for player two: 1.5 (one's points) + 0.5 (three's points) = 2.0
+        assert_eq!(*two_buchholz, 2.0);
+        // Buchholz for player three: 1.5 (one's points) + 1.0 (two's points) = 2.5
+        assert_eq!(*three_buchholz, 2.5);
+    }
+
+    #[test]
+    fn tests_new_buchholz_cut1() {
+        let mut s = Standings::new();
+        s.add_tiebreaker(Tiebreaker::BuchholzCut1);
+        
+        let one = Uuid::new_v4();
+        let two = Uuid::new_v4();
+        let three = Uuid::new_v4();
+        let four = Uuid::new_v4();
+        
+        // Set up results to establish raw points
+        s.add_result(one, two, 100.0, 200.0, TournamentGameResult::Winner(Color::White));
+        s.add_result(two, three, 200.0, 300.0, TournamentGameResult::Winner(Color::White));
+        s.add_result(three, one, 300.0, 100.0, TournamentGameResult::Draw);
+        s.add_result(four, one, 400.0, 100.0, TournamentGameResult::Winner(Color::White));
+        
+        // Calculate raw points first
+        s.raw_points();
+        
+        // Now calculate Buchholz Cut 1
+        s.buchholz_cut1();
+        
+        // Verify Buchholz Cut 1 scores
+        let one_buchholz_cut1 = s.players_scores.get(&one).unwrap().get(&Tiebreaker::BuchholzCut1).unwrap();
+        let two_buchholz_cut1 = s.players_scores.get(&two).unwrap().get(&Tiebreaker::BuchholzCut1).unwrap();
+        let three_buchholz_cut1 = s.players_scores.get(&three).unwrap().get(&Tiebreaker::BuchholzCut1).unwrap();
+        let four_buchholz_cut1 = s.players_scores.get(&four).unwrap().get(&Tiebreaker::BuchholzCut1).unwrap();
+        
+        // Player one: 1.0 (two's points) + 0.5 (three's points) + 0.0 (four's points)
+        // Cut 1: 1.0 + 0.5 = 1.5 (excluding four's 0.0)
+        assert_eq!(*one_buchholz_cut1, 1.5);
+        
+        // Player two: 1.5 (one's points) + 0.5 (three's points)
+        // Cut 1: 1.5 (excluding three's 0.5)
+        assert_eq!(*two_buchholz_cut1, 1.5);
+        
+        // Player three: 1.5 (one's points) + 1.0 (two's points)
+        // Cut 1: 1.5 (excluding two's 1.0)
+        assert_eq!(*three_buchholz_cut1, 1.5);
+        
+        // Player four: 1.5 (one's points)
+        // Cut 1: 0.0 (only one opponent, so no cut)
+        assert_eq!(*four_buchholz_cut1, 0.0);
+    }
+
+    #[test]
+    fn tests_new_direct_encounter() {
+        let mut s = Standings::new();
+        s.add_tiebreaker(Tiebreaker::DirectEncounter);
+        
+        let one = Uuid::new_v4();
+        let two = Uuid::new_v4();
+        let three = Uuid::new_v4();
+        
+        // Set up results between players
+        s.add_result(one, two, 100.0, 200.0, TournamentGameResult::Winner(Color::White));
+        s.add_result(two, three, 200.0, 300.0, TournamentGameResult::Winner(Color::White));
+        s.add_result(three, one, 300.0, 100.0, TournamentGameResult::Draw);
+        
+        // Calculate direct encounter scores
+        s.direct_encounter();
+        
+        // Verify direct encounter scores
+        let one_direct = s.players_scores.get(&one).unwrap().get(&Tiebreaker::DirectEncounter).unwrap();
+        let two_direct = s.players_scores.get(&two).unwrap().get(&Tiebreaker::DirectEncounter).unwrap();
+        let three_direct = s.players_scores.get(&three).unwrap().get(&Tiebreaker::DirectEncounter).unwrap();
+        
+        // Player one: 1.0 (win vs two) + 0.5 (draw vs three) = 1.5
+        assert_eq!(*one_direct, 1.5);
+        
+        // Player two: 0.0 (loss vs one) + 1.0 (win vs three) = 1.0
+        assert_eq!(*two_direct, 1.0);
+        
+        // Player three: 0.5 (draw vs one) + 0.0 (loss vs two) = 0.5
+        assert_eq!(*three_direct, 0.5);
+    }
+
+    #[test]
+    fn tests_all_tiebreakers_including_new() {
+        let mut s = Standings::new();
+        s.add_tiebreaker(Tiebreaker::RawPoints);
+        s.add_tiebreaker(Tiebreaker::HeadToHead);
+        s.add_tiebreaker(Tiebreaker::WinsAsBlack);
+        s.add_tiebreaker(Tiebreaker::SonnebornBerger);
+        s.add_tiebreaker(Tiebreaker::Buchholz);
+        s.add_tiebreaker(Tiebreaker::BuchholzCut1);
+        s.add_tiebreaker(Tiebreaker::DirectEncounter);
+        
+        let one = Uuid::new_v4();
+        let one_elo = 100.0;
+        let two = Uuid::new_v4();
+        let two_elo = 200.0;
+        
+        // Add some results
+        s.add_result(
+            one,
+            two,
+            one_elo,
+            two_elo,
+            TournamentGameResult::Winner(Color::Black),
+        );
+        s.add_result(
+            two,
+            one,
+            two_elo,
+            one_elo,
+            TournamentGameResult::Winner(Color::Black),
+        );
+        
+        // Enforce all tiebreakers
+        s.enforce_tiebreakers();
+        
+        // Verify all tiebreakers are calculated
+        let one_scores = s.players_scores.get(&one).unwrap();
+        let two_scores = s.players_scores.get(&two).unwrap();
+        
+        assert!(one_scores.contains_key(&Tiebreaker::RawPoints));
+        assert!(one_scores.contains_key(&Tiebreaker::HeadToHead));
+        assert!(one_scores.contains_key(&Tiebreaker::WinsAsBlack));
+        assert!(one_scores.contains_key(&Tiebreaker::SonnebornBerger));
+        assert!(one_scores.contains_key(&Tiebreaker::Buchholz));
+        assert!(one_scores.contains_key(&Tiebreaker::BuchholzCut1));
+        assert!(one_scores.contains_key(&Tiebreaker::DirectEncounter));
+        
+        assert!(two_scores.contains_key(&Tiebreaker::RawPoints));
+        assert!(two_scores.contains_key(&Tiebreaker::HeadToHead));
+        assert!(two_scores.contains_key(&Tiebreaker::WinsAsBlack));
+        assert!(two_scores.contains_key(&Tiebreaker::SonnebornBerger));
+        assert!(two_scores.contains_key(&Tiebreaker::Buchholz));
+        assert!(two_scores.contains_key(&Tiebreaker::BuchholzCut1));
+        assert!(two_scores.contains_key(&Tiebreaker::DirectEncounter));
     }
 }
