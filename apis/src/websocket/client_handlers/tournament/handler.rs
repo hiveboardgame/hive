@@ -1,6 +1,6 @@
 use crate::{
     common::TournamentUpdate,
-    providers::{tournaments::TournamentStateContext,NotificationContext},
+    providers::{tournaments::TournamentStateContext, NotificationContext},
 };
 use leptos::prelude::*;
 
@@ -15,8 +15,8 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
         | TournamentUpdate::Modified(tournament_id) => {
             tournaments_signal.add_full(tournament_id);
         }
-        TournamentUpdate::Declined(tournament_id) 
-        | TournamentUpdate::Joined(tournament_id) 
+        TournamentUpdate::Declined(tournament_id)
+        | TournamentUpdate::Joined(tournament_id)
         | TournamentUpdate::Uninvited(tournament_id) => {
             notifications.tournament_invitations.update(|invitations| {
                 invitations.remove(&tournament_id);

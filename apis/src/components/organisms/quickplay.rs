@@ -4,7 +4,7 @@ use crate::{
     common::ChallengeAction,
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
     pages::challenge_create::ChallengeCreate,
-    providers::{AuthContext},
+    providers::AuthContext,
 };
 use core::panic;
 use hive_lib::{ColorChoice, GameType};

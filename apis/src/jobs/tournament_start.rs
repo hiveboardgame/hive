@@ -28,7 +28,7 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                 let mut messages = Vec::new();
                                 for (tournament, games, deleted_invitations) in tournament_infos {
                                     let tournament_response =
-                                    TournamentId(tournament.nanoid.clone());
+                                        TournamentId(tournament.nanoid.clone());
 
                                     for uuid in deleted_invitations {
                                         messages.push(InternalServerMessage {

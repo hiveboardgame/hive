@@ -1,8 +1,7 @@
 use crate::functions::users::search_users;
 use crate::i18n::*;
 use crate::{
-    common::UserAction,
-    components::molecules::user_row::UserRow,
+    common::UserAction, components::molecules::user_row::UserRow,
     providers::online_users::OnlineUsersSignal,
 };
 use leptos::ev::Event;
@@ -29,7 +28,7 @@ pub fn OnlineUsers() -> impl IntoView {
     });
     let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
         pattern.set(event_target_value(&ev));
-    });    
+    });
     let users = move || {
         if pattern().is_empty() {
             online_users.signal.get().username_user
@@ -44,7 +43,7 @@ pub fn OnlineUsers() -> impl IntoView {
                 class="p-1 w-64"
                 type="text"
                 on:input=debounced_search
-                placeholder={move || t_string!(i18n, home.search_players)}
+                placeholder=move || t_string!(i18n, home.search_players)
                 value=pattern
                 maxlength="20"
             />

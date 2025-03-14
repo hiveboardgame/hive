@@ -12,17 +12,15 @@ pub fn TakebackConf() -> impl IntoView {
     let action = Action::new(move |takeback: &Takeback| {
         let takeback = takeback.clone();
         let auth_context = auth_context.clone();
-        async move { 
-            if auth_context.user.get().is_some() {    
+        async move {
+            if auth_context.user.get().is_some() {
                 let result = edit_config(takeback).await;
                 if result.is_ok() {
                     auth_context.refresh();
                 }
-                
             }
-            
-         }
-     });
+        }
+    });
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config. allow_takeback)}</p>
         <div class="flex">
@@ -34,7 +32,7 @@ pub fn TakebackConf() -> impl IntoView {
 }
 
 #[component]
-fn Button(takeback: Takeback, action: Action<Takeback,()>) -> impl IntoView {
+fn Button(takeback: Takeback, action: Action<Takeback, ()>) -> impl IntoView {
     let i18n = use_i18n();
     let takeback = StoredValue::new(takeback);
     let auth_context = expect_context::<AuthContext>();
@@ -49,7 +47,7 @@ fn Button(takeback: Takeback, action: Action<Takeback,()>) -> impl IntoView {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
         }
     };
-     
+
     view! {
         <div class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer">
             <button

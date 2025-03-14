@@ -26,7 +26,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let auth_context = expect_context::<AuthContext>();
     let username_taken = Action::new(|user: &String| {
         let user = user.clone();
-        async move { username_taken(user).await}
+        async move { username_taken(user).await }
     });
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
@@ -102,11 +102,13 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         type="text"
                         prop:value=username
                         autocomplete="username"
-                        placeholder=move ||t_string!(i18n, user_config.create_account.username.title)
+                        placeholder=move || {
+                            t_string!(i18n, user_config.create_account.username.title)
+                        }
                         minlength="2"
                         maxlength="20"
                     />
-                       <Show when=username_exists>
+                    <Show when=username_exists>
                         <small class="text-ladybug-red">
                             {t!(i18n, user_config.create_account.username.error.taken)}
                         </small>
@@ -123,22 +125,24 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <p class="font-bold">Email</p>
                     <input
                         on:input=debounce(Duration::from_millis(350), update_from_input(email))
-                           on:change=move |evt| {
+                        on:change=move |evt| {
                             if invalid_email(&event_target_value(&evt)) {
                                 is_invalid_email.set(true)
                             } else {
                                 is_invalid_email.set(false)
                             }
                         }
-                           class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
+                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="email"
                         type="email"
                         inputmode="email"
                         prop:value=email
                         autocomplete="email"
-                        placeholder=move || t_string!(i18n, user_config.create_account.email.description)
+                        placeholder=move || {
+                            t_string!(i18n, user_config.create_account.email.description)
+                        }
                     />
-                       <Show when=is_invalid_email>
+                    <Show when=is_invalid_email>
                         <small class="text-ladybug-red">
                             {t!(i18n, user_config.create_account.email.error.invalid)}
                         </small>
@@ -150,7 +154,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <p class="font-bold">{t!(i18n, user_config.create_account.password)}</p>
                     <input
                         on:input=debounce(Duration::from_millis(350), update_from_input(pw))
-                           class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
+                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="password"
                         type="password"
                         prop:value=pw
@@ -175,12 +179,12 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         maxlength="128"
                     />
                 </label>
-                   <Show when=move || pw_invalid() && (!pw().is_empty())>
+                <Show when=move || pw_invalid() && (!pw().is_empty())>
                     <small class="text-ladybug-red">
                         {t!(i18n, user_config.create_account.password_error)}
                     </small>
                 </Show>
-                   <input type="hidden" name="pathname" value=pathname().0 />
+                <input type="hidden" name="pathname" value=pathname().0 />
                 <div class="flex items-center mb-2">
                     <input
                         on:change=move |_| agree.update(|b| *b = !*b)
@@ -206,10 +210,11 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         {t!(i18n, user_config.create_account.registration_error)}
                     </small>
                 </Show>
-               </ActionForm>
+            </ActionForm>
 
             <p class="text-xs text-center text-gray-500">
-                {t!(i18n, user_config.create_account.existing_account_prompt, 
+                {t!(
+                    i18n, user_config.create_account.existing_account_prompt,
                     < login_link > =
                     <a class="text-blue-500 transition-transform duration-300 transform hover:underline" href="/login"/>
                 )}

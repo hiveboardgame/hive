@@ -40,7 +40,9 @@ impl CreateHandler {
 
         Ok(vec![InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Created(TournamentId(tournament.nanoid.clone()))),
+            message: ServerMessage::Tournament(TournamentUpdate::Created(TournamentId(
+                tournament.nanoid.clone(),
+            ))),
         }])
     }
 }

@@ -12,7 +12,6 @@ use crate::components::organisms::{
 use crate::i18n::*;
 use crate::providers::AuthContext;
 use leptos::prelude::*;
-use leptos_router::hooks::use_location;
 use shared_types::TimeMode;
 
 #[derive(Clone)]
@@ -87,8 +86,8 @@ fn GuestActions() -> impl IntoView {
             <a
                 class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                 href="/login"
-                //on:focus=move |_| set_redirect()
             >
+                // on:focus=move |_| set_redirect()
                 Login
             </a>
         </div>

@@ -89,12 +89,9 @@ pub fn App() -> impl IntoView {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)
             .same_site(SameSite::Lax)
-            .path("/")
-            >
+            .path("/")>
             <Router>
-                <Routes
-                fallback = || "404 Not Found"
-                >
+                <Routes fallback=|| "404 Not Found">
                     <ParentRoute
                         path=path!("")
                         view=|| {
@@ -139,11 +136,17 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/top_players") view=|| view! { <TopPlayers /> } />
                         <Route path=path!("/login") view=|| view! { <Login /> } />
                         <Route path=path!("/account") view=|| view! { <Account /> } />
-                        <Route path=path!("/challenge/:nanoid") view=|| view! { <ChallengeView /> } />
+                        <Route
+                            path=path!("/challenge/:nanoid")
+                            view=|| view! { <ChallengeView /> }
+                        />
                         <Route path=path!("/analysis") view=|| view! { <Analysis /> } />
                         <Route path=path!("/config") view=|| view! { <Config /> } />
                         <Route path=path!("/tournament/:nanoid") view=|| view! { <Tournament /> } />
-                        <Route path=path!("/tournaments/create") view=|| view! { <TournamentCreate /> } />
+                        <Route
+                            path=path!("/tournaments/create")
+                            view=|| view! { <TournamentCreate /> }
+                        />
                         <Route path=path!("/tournaments") view=|| view! { <Tournaments /> } />
                         <Route path=path!("/donate") view=|| view! { <Donate /> } />
                         <Route path=path!("/faq") view=|| view! { <Faq /> } />

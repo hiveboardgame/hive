@@ -23,7 +23,6 @@ pub async fn login(
     let parsed_hash = PasswordHash::new(&user.password).map_err(ServerFnError::new)?;
     match argon2.verify_password(password.as_bytes(), &parsed_hash) {
         Ok(_) => {
-
             let req: actix_web::HttpRequest = leptos_actix::extract().await?;
             Identity::login(&req.extensions(), user.id.to_string())?;
             leptos_actix::redirect(&pathname);

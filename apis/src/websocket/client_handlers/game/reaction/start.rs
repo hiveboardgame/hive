@@ -1,9 +1,9 @@
 use super::handler::reset_game_state;
 use crate::{
     common::GameActionResponse,
-    providers::{ 
-        navigation_controller::NavigationControllerSignal,
-        timer::TimerSignal, tournament_ready::TournamentReadySignal,
+    providers::{
+        navigation_controller::NavigationControllerSignal, timer::TimerSignal,
+        tournament_ready::TournamentReadySignal,
     },
 };
 use leptos::prelude::*;

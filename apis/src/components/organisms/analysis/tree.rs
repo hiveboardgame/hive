@@ -2,10 +2,10 @@ use crate::providers::game_state::{GameState, GameStateSignal};
 use bimap::BiMap;
 use hive_lib::{GameType, History, State};
 use leptos::prelude::*;
+use send_wrapper::SendWrapper;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, vec};
 use tree_ds::prelude::{Node, Tree};
-use send_wrapper::SendWrapper;
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct TreeNode {
     pub turn: usize,

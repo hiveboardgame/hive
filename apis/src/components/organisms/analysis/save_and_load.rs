@@ -1,13 +1,13 @@
+use super::AnalysisTree;
+use crate::{
+    components::organisms::analysis::AnalysisSignal, providers::game_state::GameStateSignal,
+};
 use hive_lib::History;
 use leptos::{html, logging, prelude::*};
+use std::path::Path;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::{js_sys::Array, Blob, Url};
-use super::AnalysisTree;
-use crate::{
-    components::organisms::analysis::AnalysisSignal, providers::game_state::GameStateSignal
-};
-use std::path::Path;
 
 #[component]
 pub fn DownloadTree(tree: String) -> impl IntoView {
@@ -60,7 +60,7 @@ pub fn LoadTree() -> impl IntoView {
     let from_pgn = move |string: JsValue| {
         string
             .as_string()
-            .and_then(|string| { History::from_pgn_str(string).ok() })
+            .and_then(|string| History::from_pgn_str(string).ok())
             .and_then(|history| hive_lib::State::new_from_history(&history).ok())
             .and_then(|state| {
                 game_state.signal.update(|gs| gs.state = state);
@@ -89,48 +89,41 @@ pub fn LoadTree() -> impl IntoView {
             .unwrap()
             .get(0)
             .unwrap();
-        Path::new(&file.name()).extension()
-            .map_or_else(
-                || logging::log!("Couldn't open file"),
-                |ext| {
-                    if ext == "json" {
-                        spawn_local(async move {
-                            let res = JsFuture::from(file.text())
-                            .await
-                            .ok()
-                            .and_then(from_hat);
-                            if res.is_none() {
-                                logging::log!("Couldn't open file");
-                            }
-                        });
-                    } else if ext == "pgn" {
-                        spawn_local(async move {
-                            let res = JsFuture::from(file.text())
-                            .await
-                            .ok()
-                            .and_then(from_pgn);
-                            if res.is_none() {
-                                logging::log!("Couldn't open file");
-                            }
-                        });
-                    } else {
-                        logging::log!("Unsupported file type");
-                    }
-                    }
-            );
+        Path::new(&file.name()).extension().map_or_else(
+            || logging::log!("Couldn't open file"),
+            |ext| {
+                if ext == "json" {
+                    spawn_local(async move {
+                        let res = JsFuture::from(file.text()).await.ok().and_then(from_hat);
+                        if res.is_none() {
+                            logging::log!("Couldn't open file");
+                        }
+                    });
+                } else if ext == "pgn" {
+                    spawn_local(async move {
+                        let res = JsFuture::from(file.text()).await.ok().and_then(from_pgn);
+                        if res.is_none() {
+                            logging::log!("Couldn't open file");
+                        }
+                    });
+                } else {
+                    logging::log!("Unsupported file type");
+                }
+            },
+        );
     };
     view! {
         <form>
             <label class="flex z-20 justify-center items-center w-full h-full text-white break-words rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95">
                 "Load"
-            <input
-                node_ref=input_ref
-                on:input=oninput
-                type="file"
-                id="load-analysis"
-                class="hidden"
-                accept=".json,.pgn"
-            />
+                <input
+                    node_ref=input_ref
+                    on:input=oninput
+                    type="file"
+                    id="load-analysis"
+                    class="hidden"
+                    accept=".json,.pgn"
+                />
             </label>
         </form>
     }

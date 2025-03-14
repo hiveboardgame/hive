@@ -9,9 +9,9 @@ use tree_ds::prelude::Node;
 pub fn UndoButton() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
     let is_disabled = move || {
-            analysis
-                .get()
-                .is_none_or(|analysis| analysis.current_node.is_none())
+        analysis
+            .get()
+            .is_none_or(|analysis| analysis.current_node.is_none())
     };
     let undo = move |_| {
         analysis.update(|a| {
@@ -73,11 +73,11 @@ pub fn HistoryButton(
 
     let is_disabled = move || {
         analysis.with(|analysis| {
-            if let Some(analysis) = analysis  {
-                if let Some(n) = &analysis.current_node{
+            if let Some(analysis) = analysis {
+                if let Some(n) = &analysis.current_node {
                     match cloned_action {
-                    HistoryNavigation::Next => n.get_children_ids().is_empty(),
-                    HistoryNavigation::Previous => n.get_parent_id().is_none(),
+                        HistoryNavigation::Next => n.get_children_ids().is_empty(),
+                        HistoryNavigation::Previous => n.get_parent_id().is_none(),
                     }
                 } else {
                     false
@@ -137,7 +137,7 @@ pub fn HistoryMove(node: Node<i32, TreeNode>, current_path: Memo<Vec<i32>>) -> i
             if let Some(a) = a {
                 a.update_node(node_id);
             }
-    });
+        });
     };
     let history_index = value.turn - 1;
     let game_state = expect_context::<GameStateSignal>();
@@ -173,33 +173,33 @@ pub fn CollapsibleMove(
                 t.remove(&node_id);
             } else {
                 t.insert(node_id);
-           }
+            }
         });
         set_open(s);
     };
     view! {
         <div class="flex">
-                <button on:click=onclick>
-                    <svg
-                        width="15"
-                        height="15"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    >
-                        <polyline points=move || {
-                            if open() { "19 12 12 19 5 12" } else { "12 5 19 12 12 19" }
-                        }></polyline>
-                    </svg>
-                </button>
+            <button on:click=onclick>
+                <svg
+                    width="15"
+                    height="15"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <polyline points=move || {
+                        if open() { "19 12 12 19 5 12" } else { "12 5 19 12 12 19" }
+                    }></polyline>
+                </svg>
+            </button>
             <HistoryMove current_path node=node.clone() />
         </div>
-        <div class= move || format!("nested-content {}", if open() { "" } else { "hidden" })>
-            {inner}
-        </div>
+        <div class=move || {
+            format!("nested-content {}", if open() { "" } else { "hidden" })
+        }>{inner}</div>
     }
 }

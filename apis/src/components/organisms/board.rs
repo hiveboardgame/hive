@@ -117,27 +117,27 @@ pub fn Board(
             .center_coordinates()
     };
 
-    let straight = {
-        config().unwrap_or_default().tile_design == TileDesign::ThreeD
-    };
+    let straight = { config().unwrap_or_default().tile_design == TileDesign::ThreeD };
 
-    Effect::watch(move ||(), move |_,_,_| {
-        let div = div_ref.get_untracked().expect("it exists");
-        let rect = div.get_bounding_client_rect();
-        let svg_pos = SvgPos::center_for_level(current_center(), 0, straight);
-        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-            viewbox_controls.x = 0.0;
-            viewbox_controls.y = 0.0;
-            viewbox_controls.width = rect.width() as f32;
-            viewbox_controls.height = rect.height() as f32;
-            viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
-            viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
-         });
-    },true );
+    Effect::watch(
+        move || (),
+        move |_, _, _| {
+            let div = div_ref.get_untracked().expect("it exists");
+            let rect = div.get_bounding_client_rect();
+            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight);
+            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                viewbox_controls.x = 0.0;
+                viewbox_controls.y = 0.0;
+                viewbox_controls.width = rect.width() as f32;
+                viewbox_controls.height = rect.height() as f32;
+                viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
+                viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
+            });
+        },
+        true,
+    );
 
-    let straight = {
-        config().unwrap_or_default().tile_design == TileDesign::ThreeD
-    };
+    let straight = { config().unwrap_or_default().tile_design == TileDesign::ThreeD };
 
     //This handles board resizes
     let throttled_resize = use_throttle_fn_with_arg(
@@ -320,12 +320,11 @@ pub fn Board(
         evt.prevent_default();
     });
     #[allow(unused)]
-    on_click_outside(g_ref,
-        move |event| { 
-        let clicked_timer = event.target().map(|t|
-            t.dyn_ref::<web_sys::HtmlElement>().map(|t| t.id())).map(|id| {
-                id.is_some_and(|id| id == "timer")
-            });
+    on_click_outside(g_ref, move |event| {
+        let clicked_timer = event
+            .target()
+            .map(|t| t.dyn_ref::<web_sys::HtmlElement>().map(|t| t.id()))
+            .map(|id| id.is_some_and(|id| id == "timer"));
         if !clicked_timer.unwrap_or_default() {
             game_state.reset();
         }

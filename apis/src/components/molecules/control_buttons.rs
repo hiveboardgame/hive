@@ -230,18 +230,24 @@ pub fn ControlButtons() -> impl IntoView {
                                 </Show>
                                 <div class="relative">
                                     <ConfirmButton
-                                        game_control=StoredValue::new(GameControl::DrawOffer(color()))
+                                        game_control=StoredValue::new(
+                                            GameControl::DrawOffer(color()),
+                                        )
                                         user_id=user_id()
                                         hidden=memo_for_hidden_class(pending_draw)
                                     />
 
                                     <AcceptDenyGc
-                                        game_control=StoredValue::new(GameControl::DrawAccept(color()))
+                                        game_control=StoredValue::new(
+                                            GameControl::DrawAccept(color()),
+                                        )
                                         user_id=user_id()
                                         hidden=memo_for_hidden_class(move || !pending_draw())
                                     />
                                     <AcceptDenyGc
-                                        game_control=StoredValue::new(GameControl::DrawReject(color()))
+                                        game_control=StoredValue::new(
+                                            GameControl::DrawReject(color()),
+                                        )
                                         user_id=user_id()
                                         hidden=memo_for_hidden_class(move || !pending_draw())
                                     />

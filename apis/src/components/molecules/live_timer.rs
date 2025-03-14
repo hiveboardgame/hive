@@ -1,5 +1,6 @@
 use crate::providers::{
-    game_state::GameStateSignal, timer::TimerSignal, ApiRequestsProvider, AuthContext, SoundType, Sounds
+    game_state::GameStateSignal, timer::TimerSignal, ApiRequestsProvider, AuthContext, SoundType,
+    Sounds,
 };
 use hive_lib::{Color, GameStatus};
 use lazy_static::lazy_static;
@@ -127,13 +128,15 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     );
 
     view! {
-        <div id="timer"
+        <div
+            id="timer"
             class=move || {
-            format!(
-                "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
-                if time_is_zero() { "bg-ladybug-red" } else { "" },
-            )
-        }>
+                format!(
+                    "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
+                    if time_is_zero() { "bg-ladybug-red" } else { "" },
+                )
+            }
+        >
             {move || {
                 let timer = timer();
                 let time_left = timer.time_left(side());

@@ -3,7 +3,9 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{Conclusion, GameId, GameSpeed, GameStart, GamesQueryOptions, TimeMode, TournamentGameResult};
+use shared_types::{
+    Conclusion, GameId, GameSpeed, GameStart, GamesQueryOptions, TimeMode, TournamentGameResult,
+};
 use std::cmp::Ordering;
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
@@ -176,7 +178,7 @@ impl GameResponse {
         let state = Box::new(State::new_from_history(&history)?);
         GameResponse::new_from(game, state, conn).await
     }
-    
+
     pub async fn vec_from_options(options: GamesQueryOptions, conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
         let games = Game::get_rows_from_options(&options, conn).await?;
         let mut vec = Vec::new();
@@ -184,7 +186,7 @@ impl GameResponse {
             vec.push(GameResponse::from_model(&game, conn).await?);
         }
         Ok(vec)
-    } 
+    }
 
     async fn new_from(
         game: &Game,

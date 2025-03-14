@@ -70,11 +70,17 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
             >
 
                 {match tile_design() {
-                    TileDesign::Official => EitherOf5::A(t!(i18n, user_config.style_buttons.official)),
+                    TileDesign::Official => {
+                        EitherOf5::A(t!(i18n, user_config.style_buttons.official))
+                    }
                     TileDesign::Flat => EitherOf5::B(t!(i18n, user_config.style_buttons.flat)),
                     TileDesign::ThreeD => EitherOf5::C(t!(i18n, user_config.style_buttons.three_d)),
-                    TileDesign::HighContrast => EitherOf5::D(t!(i18n, user_config.style_buttons.high_contrast)),
-                    TileDesign::Community => EitherOf5::E(t!(i18n, user_config.style_buttons.community)),
+                    TileDesign::HighContrast => {
+                        EitherOf5::D(t!(i18n, user_config.style_buttons.high_contrast))
+                    }
+                    TileDesign::Community => {
+                        EitherOf5::E(t!(i18n, user_config.style_buttons.community))
+                    }
                 }}
 
             </button>

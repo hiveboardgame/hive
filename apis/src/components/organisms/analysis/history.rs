@@ -1,7 +1,7 @@
-use crate::components::organisms::analysis::AnalysisTree;
 use crate::components::organisms::analysis::atoms::{
     CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation,
 };
+use crate::components::organisms::analysis::AnalysisTree;
 use crate::components::organisms::{
     analysis::{AnalysisSignal, DownloadTree, LoadTree, UndoButton},
     reserve::{Alignment, Reserve},
@@ -15,9 +15,7 @@ use tree_ds::prelude::*;
 #[component]
 pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let current_node = move || {
-        analysis.get().and_then(|a| a.current_node.clone())
-    };
+    let current_node = move || analysis.get().and_then(|a| a.current_node.clone());
     let get_tree = move || {
         let t = analysis.get().unwrap();
         let out = AnalysisTree {
@@ -62,9 +60,11 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         None
     } else {
         Some(Callback::new(move |()| {
-            let active =         use_window()
-            .as_ref().and_then(|w| w.document())
-            .and_then(|d| d.query_selector(".bg-orange-twilight").ok()).flatten();
+            let active = use_window()
+                .as_ref()
+                .and_then(|w| w.document())
+                .and_then(|d| d.query_selector(".bg-orange-twilight").ok())
+                .flatten();
             if let Some(elem) = active {
                 elem.scroll_into_view_with_bool(false);
             }
@@ -91,16 +91,17 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 and place them inside a collapsible
                 then place the first child (main variation) at the same level as the parent
                 */
-                let inner = 
-                    children_ids
-                        .iter()
-                        .skip(1)
-                        .map(|c| branches.remove(c))
-                        .collect::<Vec<_>>().into_any();
+                let inner = children_ids
+                    .iter()
+                    .skip(1)
+                    .map(|c| branches.remove(c))
+                    .collect::<Vec<_>>()
+                    .into_any();
                 view! {
-                    <CollapsibleMove current_path node inner/>
+                    <CollapsibleMove current_path node inner />
                     {branches.remove(&children_ids[0])}
-                }.into_any()
+                }
+                .into_any()
             } else if parent_deg > 2 && not_first_sibling && children_ids.len() == 1 {
                 /* We make a colapsible for nodes with one child
                 for aesthetic reasons, to hide its content.
@@ -109,17 +110,15 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 and this must not be the "main variation" (first child)
                 */
                 //let static_cont = StoredValue::new(content);
-                view! {
-                    <CollapsibleMove current_path node inner=content/>
-                }
-                .into_any()
+                view! { <CollapsibleMove current_path node inner=content /> }.into_any()
             } else {
                 /* All other nodes are placed at the same level as the parent
                 in a regular HistoryMove node */
                 view! {
                     <HistoryMove current_path node />
                     {content}
-                }.into_any()
+                }
+                .into_any()
             };
             /* We are start of a new branch so clear the content
             to process either the next sibling or tho parent */
@@ -164,10 +163,10 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                         analysis=true
                     />
                 </div>
-            </Show> 
+            </Show>
             <div class="flex justify-between w-full">
                 <Show when=move || walk_tree().is_some()>
-                    <DownloadTree tree=get_tree()/>
+                    <DownloadTree tree=get_tree() />
                 </Show>
                 <LoadTree />
             </div>

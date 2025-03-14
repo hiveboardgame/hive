@@ -7,7 +7,7 @@ use shared_types::GameSpeed;
 #[component]
 pub fn ConfirmModeToggle(game_speed: GameSpeed) -> impl IntoView {
     let i18n = use_i18n();
-    let game_speed = Signal::derive( move || game_speed.clone());
+    let game_speed = Signal::derive(move || game_speed.clone());
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.move_confirm)}</p>
         <div class="flex">
@@ -30,7 +30,8 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> im
     };
     let is_active = move || {
         let inactive_class = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal";
-        config().unwrap_or_default()
+        config()
+            .unwrap_or_default()
             .confirm_mode
             .get(&game_speed())
             .map_or(inactive_class, |preferred| {

@@ -57,16 +57,24 @@ pub fn UserRow(
         for action in actions {
             match action {
                 UserAction::Challenge => {
-                    views.push(EitherOf4::A(view! { <DirectChallengeButton user=user() /> }));
+                    views.push(EitherOf4::A(
+                        view! { <DirectChallengeButton user=user() /> },
+                    ));
                 }
                 UserAction::Invite(tournament_id) => {
-                    views.push(EitherOf4::B(view! { <InviteButton user=user() tournament_id /> }));
+                    views.push(EitherOf4::B(
+                        view! { <InviteButton user=user() tournament_id /> },
+                    ));
                 }
                 UserAction::Uninvite(tournament_id) => {
-                    views.push(EitherOf4::C(view! { <UninviteButton user=user() tournament_id /> }));
+                    views.push(EitherOf4::C(
+                        view! { <UninviteButton user=user() tournament_id /> },
+                    ));
                 }
                 UserAction::Kick(tournament) => {
-                    views.push(EitherOf4::D(view! { <KickButton user=user() tournament=*tournament /> }));
+                    views.push(EitherOf4::D(
+                        view! { <KickButton user=user() tournament=*tournament /> },
+                    ));
                 }
                 _ => {}
             };
@@ -78,7 +86,7 @@ pub fn UserRow(
         <div class=format!("flex p-1 items-center justify-between h-10 w-64 {color}")>
             <div class="flex justify-between mr-2 w-48">
                 <div class="flex items-center">
-                    <StatusIndicator username=Signal::derive(move ||user().username) />
+                    <StatusIndicator username=Signal::derive(move || user().username) />
                     {profile_link()}
                 </div>
                 <Show when=move || { rating().is_some() }>

@@ -26,17 +26,26 @@ pub fn Faq() -> impl IntoView {
                         <h3 class=header_class>{t!(i18n, faq.how_to_help.question)}</h3>
                         <p class=paragraph_class>
                             <ul class="mt-2 list-disc list-inside">
-                                <li>{t!(i18n, faq.how_to_help.answers.item1, 
-                                    < source_link > = 
+                                <li>
+                                    {t!(
+                                        i18n, faq.how_to_help.answers.item1,
+                                    < source_link > =
                                     <a href="https://github.com/hiveboardgame/hive" rel=rel target=target class=class/>
-                                )}</li>
-                                <li>{t!(i18n, faq.how_to_help.answers.item2,
-                                     < discord_link > = 
+                                    )}
+                                </li>
+                                <li>
+                                    {t!(
+                                        i18n, faq.how_to_help.answers.item2,
+                                     < discord_link > =
                                      <a href="https://discord.gg/jNTjr5vj9Z" rel=rel target=target class=class/>
-                                )}</li>
-                                <li>{t!(i18n, faq.how_to_help.answers.item3, 
+                                    )}
+                                </li>
+                                <li>
+                                    {t!(
+                                        i18n, faq.how_to_help.answers.item3,
                                     < donate_link > = <a href="/donate" rel=rel target=target class=class/>
-                                )}</li>
+                                    )}
+                                </li>
                             </ul>
                         </p>
                     </div>
@@ -51,8 +60,9 @@ pub fn Faq() -> impl IntoView {
                     <div class=div_class>
                         <h3 class=header_class>{t!(i18n, faq.what_is_hive.question)}</h3>
                         <p class=paragraph_class>
-                            {t!(i18n, faq.what_is_hive.answer, 
-                                < gen42_link > = 
+                            {t!(
+                                i18n, faq.what_is_hive.answer,
+                                < gen42_link > =
                                 <a href="https://www.gen42.com/" rel=rel target=target class=class/>
                             )}
                         </p>
@@ -101,7 +111,8 @@ pub fn Faq() -> impl IntoView {
                         <h3 class=header_class>{t!(i18n, faq.what_rating_system.question)}</h3>
                         <p class=paragraph_class>
 
-                            {t!(i18n, faq.what_rating_system.answer, 
+                            {t!(
+                                i18n, faq.what_rating_system.answer,
                                 < glicko2_link > =
                                 <a href="https://wikipedia.org/wiki/Glicko-2" rel=rel target=target class=class/>
                             )}
@@ -131,7 +142,8 @@ pub fn Faq() -> impl IntoView {
                             {t!(i18n, faq.where_to_meet_other_players.question)}
                         </h3>
                         <p class=paragraph_class>
-                            {t!(i18n, faq.where_to_meet_other_players.answer, 
+                            {t!(
+                                i18n, faq.where_to_meet_other_players.answer,
                                 < resources_link >
                                 = <a href="/resources" rel=rel target=target class=class/>
                             )}
@@ -154,7 +166,8 @@ pub fn Faq() -> impl IntoView {
                     <div class=div_class>
                         <h3 class=header_class>{t!(i18n, faq.where_to_learn_more.question)}</h3>
                         <p class=paragraph_class>
-                            {t!(i18n, faq.where_to_learn_more.answer, 
+                            {t!(
+                                i18n, faq.where_to_learn_more.answer,
                                 < resources_link > =
                                 <a href="/resources" rel=rel target=target class=class/>
                             )}

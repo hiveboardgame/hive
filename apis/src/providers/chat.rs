@@ -1,5 +1,7 @@
-use super::{ auth_context::AuthContext, game_state::GameStateSignal,
-    navigation_controller::NavigationControllerSignal, AlertType, AlertsContext, ApiRequestsProvider,
+use super::{
+    auth_context::AuthContext, game_state::GameStateSignal,
+    navigation_controller::NavigationControllerSignal, AlertType, AlertsContext,
+    ApiRequestsProvider,
 };
 use leptos::prelude::*;
 use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId, TournamentId};

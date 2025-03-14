@@ -22,12 +22,7 @@ pub fn provide_auth(websocket_context: WebsocketContext) {
     let login = ServerAction::<Login>::new();
     let logout = ServerAction::<Logout>::new();
     let register = ServerAction::<Register>::new();
-    let action = Action::new(
-        move |_: &()| {
-            async {
-                get_account().await
-            }
-        });
+    let action = Action::new(move |_: &()| async { get_account().await });
     Effect::watch(
         move || {
             (

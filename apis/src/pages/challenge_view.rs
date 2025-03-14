@@ -61,7 +61,8 @@ pub fn ChallengeView() -> impl IntoView {
         <div class="flex flex-col items-center pt-20 mx-auto">
             <Transition>
                 {move || {
-                    challenge.get()
+                    challenge
+                        .get()
                         .map(|data| match data {
                             Err(_) => {
                                 Either::Left(view! { <pre>"Challenge doesn't seem to exist"</pre> })
@@ -71,35 +72,37 @@ pub fn ChallengeView() -> impl IntoView {
                                     Some(Ok(user)) => Some(user),
                                     _ => None,
                                 };
-                                Either::Right(view! {
-                                    <Show when=move || {
-                                        user()
-                                            .is_some_and(|user| user.id == challenge.challenger.uid)
-                                    }>
-                                        <p>"To invite someone to play, give this URL:"</p>
-                                        <div class="flex">
-                                            <input
-                                                id="challenge_link"
-                                                type="text"
-                                                class="w-[50ch]"
-                                                value=challenge_address
-                                                readonly
-                                            />
-                                            <button
-                                                title="Copy link"
-                                                node_ref=button_ref
-                                                on:click=copy
-                                                class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
-                                            >
-                                                <Icon icon=icondata::AiCopyOutlined attr:class="w-6 h-6" />
-                                            </button>
-                                        </div>
-                                        <p>
-                                            "The first person to come to this URL will play with you."
-                                        </p>
-                                    </Show>
-                                    <ChallengeRow challenge=challenge single=true />
-                                })
+                                Either::Right(
+                                    view! {
+                                        <Show when=move || {
+                                            user()
+                                                .is_some_and(|user| user.id == challenge.challenger.uid)
+                                        }>
+                                            <p>"To invite someone to play, give this URL:"</p>
+                                            <div class="flex">
+                                                <input
+                                                    id="challenge_link"
+                                                    type="text"
+                                                    class="w-[50ch]"
+                                                    value=challenge_address
+                                                    readonly
+                                                />
+                                                <button
+                                                    title="Copy link"
+                                                    node_ref=button_ref
+                                                    on:click=copy
+                                                    class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
+                                                >
+                                                    <Icon icon=icondata::AiCopyOutlined attr:class="w-6 h-6" />
+                                                </button>
+                                            </div>
+                                            <p>
+                                                "The first person to come to this URL will play with you."
+                                            </p>
+                                        </Show>
+                                        <ChallengeRow challenge=challenge single=true />
+                                    },
+                                )
                             }
                         })
                 }}

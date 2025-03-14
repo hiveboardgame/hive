@@ -1,6 +1,6 @@
+use crate::components::molecules::tournament_row::TournamentRow;
 use crate::functions::tournaments::get_all_abstract;
 use crate::pages::tournament::BUTTON_STYLE;
-use crate::components::molecules::tournament_row::TournamentRow;
 use leptos::either::Either;
 use leptos::prelude::*;
 use shared_types::{TournamentSortOrder, TournamentStatus};
@@ -24,11 +24,10 @@ fn get_button_classes(current: TournamentFilter, selected: TournamentFilter) -> 
 pub fn Tournaments() -> impl IntoView {
     let filter = RwSignal::new(TournamentFilter::Status(TournamentStatus::NotStarted));
     let search = RwSignal::new("".to_string());
-    let tournament_resource = OnceResource::new(
-        async move {
-            get_all_abstract(TournamentSortOrder::CreatedAtDesc).await
-        }
-    );
+    let tournament_resource =
+        OnceResource::new(
+            async move { get_all_abstract(TournamentSortOrder::CreatedAtDesc).await },
+        );
     view! {
         <div class="pt-10">
             <div class="container px-4 mx-auto">
@@ -80,46 +79,62 @@ pub fn Tournaments() -> impl IntoView {
                         "Completed"
                     </button>
                 </div>
-                <Suspense fallback=move || view! { <div class="flex justify-center">"Loading tournaments..."</div> }>
-                {move ||
-                    tournament_resource.get().map(
-                        |tournaments| {
-                            if let Ok(tournaments) = tournaments {
-                                Either::Left(view! {
-                                    <For
-                                    each=move || {
-                                        let mut v: Vec<_> = tournaments.clone()
-                                            .into_iter()
-                                            .filter(|t| {
-                                                match filter.get() {
-                                                    TournamentFilter::All => true,
-                                                    TournamentFilter::Status(status) => t.status == status,
+                <Suspense fallback=move || {
+                    view! { <div class="flex justify-center">"Loading tournaments..."</div> }
+                }>
+                    {move || {
+                        tournament_resource
+                            .get()
+                            .map(|tournaments| {
+                                if let Ok(tournaments) = tournaments {
+                                    Either::Left(
+                                        view! {
+                                            <For
+                                                each=move || {
+                                                    let mut v: Vec<_> = tournaments
+                                                        .clone()
+                                                        .into_iter()
+                                                        .filter(|t| {
+                                                            match filter.get() {
+                                                                TournamentFilter::All => true,
+                                                                TournamentFilter::Status(status) => t.status == status,
+                                                            }
+                                                        })
+                                                        .collect();
+                                                    v.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+                                                    v
                                                 }
-                                            })
-                                            .collect();
-                                        v.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-                                        v
-                                    }
-                                    key=move |tournament| {
-                                        (tournament.updated_at, search(), filter.get())
-                                    }
-                                    children=move |tournament| {
-                                        if search().is_empty()
-                                            || tournament.name.to_lowercase().contains(&search().to_lowercase())
-                                        {
-                                            Either::Left(view! { <TournamentRow tournament=tournament.clone() /> })
-                                        } else {
-                                            Either::Right("")
-                                        }
-                                    }
-                                />
-                                })
-                            } else {
-                                Either::Right(view! { <div class="flex justify-center">{"Error loading tournaments"}</div> })
-                            }
-                        }
-                    )
-                }
+                                                key=move |tournament| {
+                                                    (tournament.updated_at, search(), filter.get())
+                                                }
+                                                children=move |tournament| {
+                                                    if search().is_empty()
+                                                        || tournament
+                                                            .name
+                                                            .to_lowercase()
+                                                            .contains(&search().to_lowercase())
+                                                    {
+                                                        Either::Left(
+                                                            view! { <TournamentRow tournament=tournament.clone() /> },
+                                                        )
+                                                    } else {
+                                                        Either::Right("")
+                                                    }
+                                                }
+                                            />
+                                        },
+                                    )
+                                } else {
+                                    Either::Right(
+                                        view! {
+                                            <div class="flex justify-center">
+                                                {"Error loading tournaments"}
+                                            </div>
+                                        },
+                                    )
+                                }
+                            })
+                    }}
                 </Suspense>
             </div>
         </div>

@@ -5,7 +5,9 @@ use leptos_icons::*;
 use shared_types::TournamentStatus;
 
 #[component]
-pub fn TournamentStatusNotification(tournament: StoredValue<TournamentAbstractResponse>) -> impl IntoView {
+pub fn TournamentStatusNotification(
+    tournament: StoredValue<TournamentAbstractResponse>,
+) -> impl IntoView {
     let notifications = expect_context::<NotificationContext>();
     let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let tournament = tournament.get_value();

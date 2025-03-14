@@ -48,18 +48,16 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
         format!("hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded {}", if active { "bg-pillbug-teal" } else { "bg-button-dawn dark:bg-button-twilight" })
     };
     let set_first_batch = move || {
-        spawn_local(
-            async move {
-                ctx.has_more.set(true);
-                let options = build_options(ctx.controls.get(), None, username());
-                let first_batch = get_batch_from_options(options).await;
-                if let Ok(first_batch) = first_batch {
-                    ctx.games.set(first_batch);
-                } else {
-                    ctx.games.set(vec![]);
-                }
+        spawn_local(async move {
+            ctx.has_more.set(true);
+            let options = build_options(ctx.controls.get(), None, username());
+            let first_batch = get_batch_from_options(options).await;
+            if let Ok(first_batch) = first_batch {
+                ctx.games.set(first_batch);
+            } else {
+                ctx.games.set(vec![]);
             }
-        );
+        });
     };
     let delay = 250.0;
     let toggle_speeds = move |speed| {
@@ -159,7 +157,6 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
                         on:click=move |_| {
                             controls.update(|c| c.result = None);
                             set_first_batch();
-
                         }
                         class=move || radio_classes(controls().result.is_none())
                     >
@@ -252,8 +249,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                 view! { <p>"Loading Profile..."</p> }
             }>
                 {move || {
-                    user
-                        .get()
+                    user.get()
                         .as_deref()
                         .map(|user| {
                             if let Ok(user) = user {
@@ -312,18 +308,19 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 timestamp: game.updated_at,
             });
             async move {
-            if !ctx.has_more.get() {
-                return;
+                if !ctx.has_more.get() {
+                    return;
+                }
+                let options = build_options(controls, batch_info, username);
+                let next_batch = get_batch_from_options(options).await;
+                if let Ok(next_batch) = next_batch {
+                    ctx.has_more.set(!next_batch.is_empty());
+                    ctx.games.update(|games| games.extend(next_batch));
+                } else {
+                    ctx.has_more.set(false);
+                }
             }
-            let options = build_options(controls, batch_info, username);
-            let next_batch = get_batch_from_options(options).await;
-            if let Ok(next_batch) = next_batch {
-                ctx.has_more.set(!next_batch.is_empty());
-                ctx.games.update(|games| games.extend(next_batch));
-            } else {
-                ctx.has_more.set(false);
-            }
-        }},
+        },
         UseInfiniteScrollOptions::default()
             .distance(10.0)
             .interval(300.0),
@@ -340,7 +337,11 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     }
 }
 
-fn build_options(controls: ProfileControls, batch_info: Option<BatchInfo>, username: String) -> GamesQueryOptions {
+fn build_options(
+    controls: ProfileControls,
+    batch_info: Option<BatchInfo>,
+    username: String,
+) -> GamesQueryOptions {
     let user_info = (username, controls.color, controls.result);
     let batch_size = if batch_info.is_none() {
         Some(6)

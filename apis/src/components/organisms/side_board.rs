@@ -49,7 +49,8 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
                         "bg-inherit"
                     },
                 )
-            }>
+            }
+        >
             {string.clone()}
         </div>
     }
@@ -60,13 +61,11 @@ pub fn SideboardTabs(
     player_color: Memo<Color>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let tab= RwSignal::new(TabView::Reserve);
+    let tab = RwSignal::new(TabView::Reserve);
     view! {
-        <div
-            class=format!(
-                "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",
-            )
-        >
+        <div class=format!(
+            "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",
+        )>
 
             <div>
                 <div class="z-10 border-b-2 border-black dark:border-white flex justify-between [&>*]:grow sticky top-0 bg-inherit">
@@ -94,12 +93,15 @@ pub fn SideboardTabs(
 }
 
 #[component]
-fn TabsContent(tab: RwSignal<TabView>, value: TabView, class: &'static str ,children: ChildrenFn) -> impl IntoView {
+fn TabsContent(
+    tab: RwSignal<TabView>,
+    value: TabView,
+    class: &'static str,
+    children: ChildrenFn,
+) -> impl IntoView {
     view! {
         <Show when=move || tab() == value>
-            <div class=class>
-                {children()}
-            </div>
+            <div class=class>{children()}</div>
         </Show>
     }
 }

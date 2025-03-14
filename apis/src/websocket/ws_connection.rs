@@ -186,7 +186,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                             }
                             Err(err) => {
                                 let status_code = match err {
-                                    RequestHandlerError::AuthError(_) => http::StatusCode::UNAUTHORIZED,
+                                    RequestHandlerError::AuthError(_) => {
+                                        http::StatusCode::UNAUTHORIZED
+                                    }
                                     _ => http::StatusCode::NOT_IMPLEMENTED,
                                 };
                                 printdoc! {r#"

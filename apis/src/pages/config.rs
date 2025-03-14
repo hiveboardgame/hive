@@ -64,13 +64,13 @@ pub fn Config() -> impl IntoView {
                         <SelectOption
                             value=game_speed
                             is="Classic"
-                            text= t!(i18n, game.speeds.classic)
+                            text=t!(i18n, game.speeds.classic)
                         />
                         <SelectOption
                             value=game_speed
                             is="Correspondence"
                             text=t!(i18n, game.speeds.correspondence)
-                        />  
+                        />
                         <SelectOption
                             value=game_speed
                             is="Untimed"

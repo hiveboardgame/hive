@@ -1,10 +1,11 @@
 use leptos::{
     html::{HtmlElement, Img},
-    prelude::*, text_prop::TextProp,
+    prelude::*,
+    text_prop::TextProp,
 };
 
 #[component]
-pub fn Banner<T: IntoView+'static>(
+pub fn Banner<T: IntoView + 'static>(
     title: T,
     #[prop(optional)] text: Option<TextProp>,
     #[prop(optional)] extend_tw_classes: &'static str,
@@ -12,11 +13,7 @@ pub fn Banner<T: IntoView+'static>(
 ) -> impl IntoView {
     let text_class = format!(
         "text-xl text-center mb-4 {}",
-        if text.is_none() {
-            "hidden"
-        } else {
-            "block"
-        }
+        if text.is_none() { "hidden" } else { "block" }
     );
     view! {
         <div class=format!(

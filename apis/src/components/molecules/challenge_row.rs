@@ -28,19 +28,15 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
         ColorChoice::White => {
             if config().unwrap_or_default().prefers_dark {
                 view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-white pb-[2px]" /> }
-                    
             } else {
                 view! { <Icon icon=icondata::BsHexagon attr:class="stroke-black pb-[2px]" /> }
-                   
             }
         }
         ColorChoice::Black => {
             if config().unwrap_or_default().prefers_dark {
                 view! { <Icon icon=icondata::BsHexagon attr:class="stroke-white pb-[2px]" /> }
-                    
             } else {
                 view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-black pb-[2px]" /> }
-                    
             }
         }
     };
@@ -110,7 +106,9 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
         } else {
             view! {
                 <div class="flex items-center">
-                    <StatusIndicator username=Signal::derive( move || challenge().challenger.username) />
+                    <StatusIndicator username=Signal::derive(move || {
+                        challenge().challenger.username
+                    }) />
                     <ProfileLink
                         username=challenge().challenger.username
                         patreon=challenge().challenger.patreon
@@ -221,18 +219,20 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
 
                         </button>
                         {if challenge().opponent.is_some() {
-                            Either::Left(view! {
-                                <button
-                                    on:click=move |_| {
-                                        api.get().challenge_cancel(challenge().challenge_id);
-                                    }
+                            Either::Left(
+                                view! {
+                                    <button
+                                        on:click=move |_| {
+                                            api.get().challenge_cancel(challenge().challenge_id);
+                                        }
 
-                                    class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
-                                >
-                                    <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
+                                        class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
+                                    >
+                                        <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
 
-                                </button>
-                            })
+                                    </button>
+                                },
+                            )
                         } else {
                             Either::Right(view! { "" })
                         }}

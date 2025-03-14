@@ -5,7 +5,9 @@ use crate::responses::{TournamentAbstractResponse, TournamentResponse};
 use server_fn::codec;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
-pub async fn get_all_abstract(sort_order: TournamentSortOrder) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
+pub async fn get_all_abstract(
+    sort_order: TournamentSortOrder,
+) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
     use db_lib::models::Tournament;
@@ -14,7 +16,11 @@ pub async fn get_all_abstract(sort_order: TournamentSortOrder) -> Result<Vec<Tou
     let tournaments = Tournament::get_all(sort_order, &mut conn).await?;
     let mut result = Vec::new();
     for tournament in tournaments {
-        result.push(TournamentAbstractResponse::from_model(&tournament, &mut conn).await.map_err(ServerFnError::new)?);
+        result.push(
+            TournamentAbstractResponse::from_model(&tournament, &mut conn)
+                .await
+                .map_err(ServerFnError::new)?,
+        );
     }
     Ok(result)
 }

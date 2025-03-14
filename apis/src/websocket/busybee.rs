@@ -4,7 +4,7 @@ use uuid::Uuid;
 pub struct Busybee {}
 
 impl Busybee {
-    pub async fn msg(to: Uuid, msg: String) -> Result<reqwest::Response, reqwest::Error>{
+    pub async fn msg(to: Uuid, msg: String) -> Result<reqwest::Response, reqwest::Error> {
         let url = format!("http://localhost:8080/msg/{}", to);
         let mut json = HashMap::new();
         json.insert("content", msg);

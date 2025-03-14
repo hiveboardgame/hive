@@ -40,7 +40,11 @@ pub fn Standings(tournament: Signal<TournamentResponse>) -> impl IntoView {
                         let (uuid, position, finished, hash) = player_at_position;
                         let uuid = StoredValue::new(uuid);
                         let user = StoredValue::new(
-                            tournament().players.get(&uuid.get_value()).expect("User in tournament").clone(),
+                            tournament()
+                                .players
+                                .get(&uuid.get_value())
+                                .expect("User in tournament")
+                                .clone(),
                         );
                         view! {
                             <ScoreRow

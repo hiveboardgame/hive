@@ -1,11 +1,11 @@
 use crate::common::{markdown_to_html, TimeSignals, TournamentAction};
-use crate::components::organisms::time_select::TimeSelect;
-use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
-use crate::providers::{ApiRequestsProvider, AuthContext};
 use crate::components::atoms::{
     date_time_picker::DateTimePicker, input_slider::InputSlider, select_options::SelectOption,
     simple_switch::SimpleSwitch,
 };
+use crate::components::organisms::time_select::TimeSelect;
+use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
+use crate::providers::{ApiRequestsProvider, AuthContext};
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
@@ -214,7 +214,7 @@ pub fn TournamentCreate() -> impl IntoView {
     };
     let is_not_preview_desc = RwSignal::new(true);
     let markdown_desc = move || markdown_to_html(&tournament.description.get());
-    
+
     view! {
         <div class="flex justify-center items-center pt-10">
             <div class="container flex flex-col justify-between p-2 md:flex-row md:flex-wrap">

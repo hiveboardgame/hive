@@ -7,16 +7,17 @@ pub fn GameType(game_type: String) -> impl IntoView {
             {if game_type == "Base" {
                 Either::Left(view! { "—" })
             } else {
-                Either::Right(view! {
-                    <img
-                        width="100%"
-                        height="100%"
-                        src="/assets/plm.svg"
-                        alt="plm"
-                        class="w-14 lg:w-20"
-                    />
-                })
-                  
+                Either::Right(
+                    view! {
+                        <img
+                            width="100%"
+                            height="100%"
+                            src="/assets/plm.svg"
+                            alt="plm"
+                            class="w-14 lg:w-20"
+                        />
+                    },
+                )
             }}
 
         </div>

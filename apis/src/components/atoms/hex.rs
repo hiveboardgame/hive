@@ -47,27 +47,31 @@ pub fn Hex(hex: Hex) -> impl IntoView {
             }
         }
         HexType::Tile(piece, piece_type) => match piece_type {
-            PieceType::Board | PieceType::Covered | PieceType::History => {
-                EitherOf4::C(view! { <Piece piece=piece position=hex.position level=expanded_level piece_type=piece_type /> })
-            }
-            PieceType::Move => {
-                EitherOf4::C(view! { <Piece piece=piece position=hex.position level=expanded_sublevel piece_type=piece_type /> })
-            }
-            PieceType::Spawn => {
-                EitherOf4::C(view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> })
-            }
-            _ => {
-                EitherOf4::C(view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> })
-            }
+            PieceType::Board | PieceType::Covered | PieceType::History => EitherOf4::C(
+                view! { <Piece piece=piece position=hex.position level=expanded_level piece_type=piece_type /> },
+            ),
+            PieceType::Move => EitherOf4::C(
+                view! { <Piece piece=piece position=hex.position level=expanded_sublevel piece_type=piece_type /> },
+            ),
+            PieceType::Spawn => EitherOf4::C(
+                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> },
+            ),
+            _ => EitherOf4::C(
+                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> },
+            ),
         },
-        HexType::LastMove(Direction::To) => {
-            EitherOf4::D(view! { <LastMove position=hex.position level=expanded_level direction=Direction::To /> })
-        }
+        HexType::LastMove(Direction::To) => EitherOf4::D(
+            view! { <LastMove position=hex.position level=expanded_level direction=Direction::To /> },
+        ),
         HexType::LastMove(Direction::From) => {
             if hex.level == 0 {
-                EitherOf4::D(view! { <LastMove position=hex.position level=hex.level direction=Direction::From /> })
+                EitherOf4::D(
+                    view! { <LastMove position=hex.position level=hex.level direction=Direction::From /> },
+                )
             } else {
-                EitherOf4::D(view! { <LastMove position=hex.position level=expanded_sublevel direction=Direction::From /> })
+                EitherOf4::D(
+                    view! { <LastMove position=hex.position level=expanded_sublevel direction=Direction::From /> },
+                )
             }
         }
     }

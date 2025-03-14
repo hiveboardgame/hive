@@ -11,8 +11,8 @@ pub fn InputSlider(
     step: i32,
 ) -> impl IntoView {
     view! {
-        <input  
-            type="range" 
+        <input
+            type="range"
             class=STYLE
             name=name
             min=min
@@ -23,6 +23,6 @@ pub fn InputSlider(
                 let val = ev.target().value().parse::<i32>().unwrap();
                 signal_to_update.set(val);
             }
-            />
+        />
     }
 }

@@ -131,7 +131,9 @@ pub fn ChatWindow(
             ChatDestination::User((correspondant_id(), correspondant_username()))
         }
         SimpleDestination::Global => ChatDestination::Global,
-        SimpleDestination::Tournament(tournament_id) => ChatDestination::TournamentLobby(tournament_id),
+        SimpleDestination::Tournament(tournament_id) => {
+            ChatDestination::TournamentLobby(tournament_id)
+        }
     });
     let messages = move || match actual_destination() {
         ChatDestination::TournamentLobby(tournament) => (chat.tournament_lobby_messages)()

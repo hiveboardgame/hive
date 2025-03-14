@@ -87,7 +87,11 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     count = move || time.num_weeks()
                 ))
             } else if time.num_days() >= 1 {
-                EitherOf10::G(t!(i18n, game.created_ago.days, count = move || time.num_days()))
+                EitherOf10::G(t!(
+                    i18n,
+                    game.created_ago.days,
+                    count = move || time.num_days()
+                ))
             } else if time.num_hours() >= 1 {
                 EitherOf10::H(t!(
                     i18n,
@@ -108,17 +112,19 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
     let history = game().history;
     let history_string = match history.len() {
         0 => Either::Left(t!(i18n, game.no_moves_played)),
-        _ => Either::Right(history
-            .iter()
-            .take(6)
-            .enumerate()
-            .map(|(i, (piece, dest))| format!("{}. {} {} ", i + 1, piece, dest))
-            .chain(if history.len() > 6 {
-                Some(String::from("⋯"))
-            } else {
-                None
-            })
-            .collect::<String>()),
+        _ => Either::Right(
+            history
+                .iter()
+                .take(6)
+                .enumerate()
+                .map(|(i, (piece, dest))| format!("{}. {} {} ", i + 1, piece, dest))
+                .chain(if history.len() > 6 {
+                    Some(String::from("⋯"))
+                } else {
+                    None
+                })
+                .collect::<String>(),
+        ),
     };
     let conclusion = move || game().conclusion.pretty_string();
     let ratings = StoredValue::new(RatingChangeInfo::from_game_response(&game()));

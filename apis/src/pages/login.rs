@@ -60,7 +60,8 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 />
             </ActionForm>
             <p class="text-xs text-center text-gray-500">
-                {t!(i18n, user_config.login.no_account_prompt,
+                {t!(
+                    i18n, user_config.login.no_account_prompt,
                     < register_link > =
                     <a class="text-blue-500 transition-transform duration-300 transform hover:underline" href="/register"/>
                 )}

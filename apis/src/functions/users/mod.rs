@@ -1,8 +1,8 @@
 use crate::responses::UserResponse;
 use leptos::prelude::*;
+use server_fn::codec;
 use shared_types::GameSpeed;
 use uuid::Uuid;
-use server_fn::codec;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError> {

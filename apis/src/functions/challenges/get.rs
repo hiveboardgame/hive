@@ -1,8 +1,8 @@
 use crate::responses::ChallengeResponse;
 use leptos::prelude::*;
+use server_fn::codec;
 use shared_types::ChallengeId;
 use uuid::Uuid;
-use server_fn::codec;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_challenge_by_uuid(id: Uuid) -> Result<ChallengeResponse, ServerFnError> {

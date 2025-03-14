@@ -30,7 +30,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             <a
                 class=COMMON_LINK_STYLE
                 href="/account"
-                //on:focus=move |_| set_redirect()
+                // on:focus=move |_| set_redirect()
                 on:click=move |_| onclick_close()
             >
                 {t!(i18n, header.user_menu.edit_account)}
@@ -38,7 +38,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             <a
                 class=COMMON_LINK_STYLE
                 href="/config"
-                //on:focus=move |_| set_redirect()
+                // on:focus=move |_| set_redirect()
                 on:click=move |_| onclick_close()
             >
                 {t!(i18n, header.user_menu.config)}

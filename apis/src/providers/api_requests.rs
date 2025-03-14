@@ -7,24 +7,29 @@ use crate::providers::websocket::WebsocketContext;
 use crate::responses::create_challenge_handler;
 use hive_lib::{GameControl, Turn};
 use leptos::prelude::*;
-use shared_types::{
-    ChallengeId, ChatMessageContainer, GameId, TournamentGameResult,
-    TournamentId,
-};
+use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResult, TournamentId};
 
 #[derive(Clone)]
 pub struct ApiRequests {
     websocket: WebsocketContext,
     auth_context: auth_context::AuthContext,
-    pub challenges: ChallengeStateSignal
+    pub challenges: ChallengeStateSignal,
 }
 
 #[derive(Clone)]
 pub struct ApiRequestsProvider(pub Signal<ApiRequests>);
 
 impl ApiRequests {
-    pub fn new(websocket: websocket::WebsocketContext, auth_context: auth_context::AuthContext, challenges: ChallengeStateSignal) -> Self {
-        Self { websocket, auth_context, challenges }
+    pub fn new(
+        websocket: websocket::WebsocketContext,
+        auth_context: auth_context::AuthContext,
+        challenges: ChallengeStateSignal,
+    ) -> Self {
+        Self {
+            websocket,
+            auth_context,
+            challenges,
+        }
     }
 
     pub fn turn(&self, game_id: GameId, turn: Turn) {
@@ -147,12 +152,13 @@ impl ApiRequests {
         let msg = ClientRequest::Schedule(action);
         self.websocket.send(&msg);
     }
-
 }
 
 pub fn provide_api_requests(ws: websocket::WebsocketContext) {
     let auth_context = expect_context::<auth_context::AuthContext>();
     let challenges = expect_context::<ChallengeStateSignal>();
     let api_requests = ApiRequests::new(ws, auth_context, challenges);
-    provide_context(ApiRequestsProvider(Signal::derive( move || api_requests.clone())));
+    provide_context(ApiRequestsProvider(Signal::derive(move || {
+        api_requests.clone()
+    })));
 }

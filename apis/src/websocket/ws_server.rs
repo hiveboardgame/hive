@@ -297,11 +297,10 @@ impl Handler<Connect> for WsServer {
                                 TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn)
                                     .await
                             {
-                                let message = ServerResult::Ok(Box::new(
-                                    ServerMessage::Tournament(TournamentUpdate::Invited(
-                                        response.tournament_id.clone(),
-                                    )),
-                                ));
+                                let message =
+                                    ServerResult::Ok(Box::new(ServerMessage::Tournament(
+                                        TournamentUpdate::Invited(response.tournament_id.clone()),
+                                    )));
                                 let serialized = WebsocketMessage::Server(message);
                                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
                                     let cam = ClientActorMessage {

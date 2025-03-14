@@ -1,8 +1,6 @@
 use crate::i18n::*;
 use crate::providers::ApiRequestsProvider;
-use crate::providers::{
-    game_state::GameStateSignal, tournament_ready::TournamentReadySignal,
-};
+use crate::providers::{game_state::GameStateSignal, tournament_ready::TournamentReadySignal};
 use leptos::prelude::*;
 use leptos_icons::*;
 use uuid::Uuid;

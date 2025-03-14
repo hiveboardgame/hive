@@ -17,7 +17,9 @@ pub fn Ping() -> impl IntoView {
             .num_seconds()
             >= 5
         {
-            EitherOf3::A(view! { <Icon attr:class="fill-ladybug-red" icon=icondata::BiNoSignalRegular /> })
+            EitherOf3::A(
+                view! { <Icon attr:class="fill-ladybug-red" icon=icondata::BiNoSignalRegular /> },
+            )
         } else {
             match websocket.ready_state.get() {
                 ConnectionReadyState::Open => EitherOf3::B(view! {
@@ -26,7 +28,9 @@ pub fn Ping() -> impl IntoView {
                         {move || { format!("{:.0}ms", ping.ping.get()) }}
                     </div>
                 }),
-                _ => EitherOf3::C(view! { <Icon attr:class="fill-ladybug-red" icon=icondata::BiNoSignalRegular /> }),
+                _ => EitherOf3::C(
+                    view! { <Icon attr:class="fill-ladybug-red" icon=icondata::BiNoSignalRegular /> },
+                ),
             }
         }
     };

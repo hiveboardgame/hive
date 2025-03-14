@@ -23,17 +23,17 @@ impl NavigationControllerSignal {
     }
 
     pub fn update_id(&mut self, game_id: Option<GameId>) {
-            let api = expect_context::<ApiRequestsProvider>().0.get();
-            let mut game_state = expect_context::<GameStateSignal>();
-            let chat = expect_context::<Chat>();
+        let api = expect_context::<ApiRequestsProvider>().0.get();
+        let mut game_state = expect_context::<GameStateSignal>();
+        let chat = expect_context::<Chat>();
 
-            self.game_signal
-                .update(|s| game_id.clone_into(&mut s.game_id));
-            if let Some(game_id) = game_id {
-                game_state.set_game_id(game_id.to_owned());
-                api.join(game_id);
-                chat.typed_message.update(|s| s.clear());
-            }
+        self.game_signal
+            .update(|s| game_id.clone_into(&mut s.game_id));
+        if let Some(game_id) = game_id {
+            game_state.set_game_id(game_id.to_owned());
+            api.join(game_id);
+            chat.typed_message.update(|s| s.clear());
+        }
     }
 }
 

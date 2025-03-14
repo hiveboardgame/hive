@@ -11,15 +11,15 @@ use crate::components::{
 };
 use crate::functions::tournaments::get_complete;
 use crate::providers::ApiRequestsProvider;
-use crate::providers::{tournaments::TournamentStateContext, AuthContext,
-};
+use crate::providers::{tournaments::TournamentStateContext, AuthContext};
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{
-    Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentStatus, TournamentId
+    Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentId,
+    TournamentStatus,
 };
 use std::collections::HashMap;
 
@@ -31,17 +31,30 @@ pub const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-
 pub fn Tournament() -> impl IntoView {
     let use_params = use_params_map();
     let tournaments = expect_context::<TournamentStateContext>();
-    let tournament_id = move || use_params.get().get("nanoid").map(|s| TournamentId(s.to_string()));
-    let current_tournament = Action::new(move |_: &()| {
-        async move {
-            get_complete(tournament_id().unwrap().to_string()).await.ok()
-        }
+    let tournament_id = move || {
+        use_params
+            .get()
+            .get("nanoid")
+            .map(|s| TournamentId(s.to_string()))
+    };
+    let current_tournament = Action::new(move |_: &()| async move {
+        get_complete(tournament_id().unwrap().to_string())
+            .await
+            .ok()
     });
-    Effect::watch(tournaments.needs_update, move |_,_,_| {
-        if tournaments.needs_update.get().contains(&tournament_id().unwrap()) {
-            current_tournament.dispatch(());
-        }
-    }, true);
+    Effect::watch(
+        tournaments.needs_update,
+        move |_, _, _| {
+            if tournaments
+                .needs_update
+                .get()
+                .contains(&tournament_id().unwrap())
+            {
+                current_tournament.dispatch(());
+            }
+        },
+        true,
+    );
     Effect::new(move |_| {
         current_tournament.dispatch(());
     });
@@ -49,7 +62,11 @@ pub fn Tournament() -> impl IntoView {
         <div class="flex flex-col justify-center items-center pt-20 w-full">
             <div class="container flex flex-col items-center w-full">
                 <Show when=move || current_tournament.value().get().is_some()>
-                    <LoadedTournament tournament=current_tournament.value().get().flatten().expect("Current tournament is some") />
+                    <LoadedTournament tournament=current_tournament
+                        .value()
+                        .get()
+                        .flatten()
+                        .expect("Current tournament is some") />
                 </Show>
             </div>
         </div>
@@ -383,7 +400,9 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         </div>
         <Show when=move || user_is_organizer() || user_joined()>
             <div class="p-3 m-2 w-full max-w-full h-60 whitespace-normal break-words sm:w-2/3 bg-even-light dark:bg-even-dark">
-                <ChatWindow destination=shared_types::SimpleDestination::Tournament(tournament().tournament_id) />
+                <ChatWindow destination=shared_types::SimpleDestination::Tournament(
+                    tournament().tournament_id,
+                ) />
             </div>
         </Show>
     }

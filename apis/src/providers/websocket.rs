@@ -78,7 +78,7 @@ fn fix_wss(url: &str) -> String {
 
 pub fn provide_websocket(url: &str) {
     let url = fix_wss(url);
-   // log!("Establishing new websocket connection");
+    // log!("Establishing new websocket connection");
     let UseWebSocketReturn {
         message,
         send,

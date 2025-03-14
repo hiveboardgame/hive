@@ -39,15 +39,10 @@ pub fn CreateChallengeButton(
 
             on:click=move |_| { create_challenge.run(color_choice.get_value()) }
         >
-        {
-            let (icon, class) = icon_data(color_choice.get_value());
-            view! {
-                <Icon
-                    icon
-                    attr:class=class
-                />
+            {
+                let (icon, class) = icon_data(color_choice.get_value());
+                view! { <Icon icon attr:class=class /> }
             }
-        }
         </button>
     }
 }

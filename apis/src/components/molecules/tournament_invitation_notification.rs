@@ -7,7 +7,9 @@ use leptos_icons::*;
 use shared_types::TimeInfo;
 
 #[component]
-pub fn TournamentInvitationNotification(tournament: RwSignal<TournamentAbstractResponse>) -> impl IntoView {
+pub fn TournamentInvitationNotification(
+    tournament: RwSignal<TournamentAbstractResponse>,
+) -> impl IntoView {
     let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let api = expect_context::<ApiRequestsProvider>().0;
     let seats_taken = format!("{}/{}", tournament().players, tournament().seats);

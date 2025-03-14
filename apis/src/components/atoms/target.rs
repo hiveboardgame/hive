@@ -40,8 +40,7 @@ pub fn Target(
                     let last_index = moves.len() - 1;
                     if moves[last_index].0 == "pass" {
                         //if move is pass, add prev move
-                        analysis
-                            .add_node(moves[last_index - 1].clone(), hashes[last_index - 1]);
+                        analysis.add_node(moves[last_index - 1].clone(), hashes[last_index - 1]);
                     }
                     analysis.add_node(moves[last_index].clone(), hashes[last_index]);
                 }

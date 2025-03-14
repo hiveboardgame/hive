@@ -20,7 +20,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     game_state.do_analysis();
     provide_context(TargetStack(RwSignal::new(None)));
     provide_context(AnalysisSignal(RwSignal::new(Some(LocalStorage::wrap(
-        AnalysisTree::from_state(game_state).unwrap_or_default()
+        AnalysisTree::from_state(game_state).unwrap_or_default(),
     )))));
     provide_context(ToggleStates(RwSignal::new(HashSet::new())));
     provide_context(CurrentConfirm(Memo::new(move |_| MoveConfirm::Single)));
@@ -76,4 +76,3 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         </div>
     }
 }
-

@@ -54,7 +54,7 @@ impl AdjudicateResultHandler {
             destination: MessageDestination::Global,
             message: ServerMessage::Tournament(TournamentUpdate::Adjudicated(TournamentId(
                 tournament.nanoid.clone(),
-            )))
+            ))),
         }])
     }
 }

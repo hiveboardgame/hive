@@ -78,7 +78,7 @@ fn MySchedulesInner(
 
                 {
                     let (gr, _) = game;
-                    let game_id = Signal::derive( move || gr.game_id.clone());
+                    let game_id = Signal::derive(move || gr.game_id.clone());
                     let white_username = gr.white_player.username;
                     let black_username = gr.black_player.username;
                     let white_patreon = gr.white_player.patreon;
