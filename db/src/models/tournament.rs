@@ -1,4 +1,5 @@
-use super::{Game, NewGame, TournamentInvitation};
+use super::{Game, NewGame, Rating, TournamentInvitation};
+use crate::{config::DbConfig, get_conn, get_pool};
 use crate::{
     db_error::DbError,
     models::{
@@ -6,16 +7,19 @@ use crate::{
     },
     schema::{
         games::{self, tournament_id as tournament_id_column},
+        ratings,
         tournaments::{
-            self, ends_at, nanoid as nanoid_field, series as series_column, started_at, starts_at,
-            status as status_column, updated_at,
+            self, bye, current_round, ends_at, nanoid as nanoid_field, series as series_column,
+            started_at, starts_at, status as status_column, updated_at,
         },
         tournaments_organizers, users,
     },
     DbConn,
 };
 use chrono::{prelude::*, TimeDelta};
+use diesel::deserialize::{FromSql, FromSqlRow};
 use diesel::prelude::*;
+use diesel::serialize::{Output, ToSql};
 use diesel_async::RunQueryDsl;
 use hive_lib::Color;
 use itertools::Itertools;
@@ -30,7 +34,6 @@ use shared_types::{
 use std::collections::VecDeque;
 use std::str::FromStr;
 use uuid::Uuid;
-
 #[derive(Insertable, Debug)]
 #[diesel(table_name = tournaments)]
 pub struct NewTournament {
@@ -58,6 +61,9 @@ pub struct NewTournament {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub series: Option<Uuid>,
+    // Vector of player_id for byes, None says no skipped player at round i
+    pub bye: Vec<Option<Uuid>>, 
+    pub current_round: i32,
 }
 
 impl NewTournament {
@@ -130,13 +136,13 @@ impl NewTournament {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             series: details.series,
+            bye: Vec::new(),
+            current_round: 1,
         })
     }
 }
 
-#[derive(
-    Queryable, Identifiable, Serialize, Clone, Deserialize, Debug, AsChangeset, Selectable,
-)]
+#[derive(Queryable, Identifiable, Serialize, Clone, Deserialize, Debug, AsChangeset, Selectable)]
 #[diesel(primary_key(id))]
 #[diesel(table_name = tournaments)]
 pub struct Tournament {
@@ -165,6 +171,8 @@ pub struct Tournament {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub series: Option<Uuid>,
+    pub bye: Vec<Option<Uuid>>, // Vector of (player_id, round_number) tuples for byes
+    pub current_round: i32,
 }
 
 impl Tournament {
@@ -186,7 +194,11 @@ impl Tournament {
         Ok(tournament)
     }
 
-    pub async fn delete(&mut self, user_id: Uuid, conn: &mut DbConn<'_>) -> Result<(), DbError> {
+    pub async fn delete(
+        &mut self,
+        user_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
         self.ensure_not_started()?;
         self.ensure_user_is_organizer_or_admin(&user_id, conn)
             .await?;
@@ -380,7 +392,11 @@ impl Tournament {
             .await?)
     }
 
-    pub async fn join(&self, user_id: &Uuid, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
+    pub async fn join(
+        &self,
+        user_id: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Tournament, DbError> {
         self.ensure_not_started()?;
         self.ensure_not_full(conn).await?;
         self.ensure_not_invite_only(user_id, conn).await?;
@@ -449,7 +465,10 @@ impl Tournament {
         Ok(tournaments::table.find(uuid).first(conn).await?)
     }
 
-    pub async fn find_by_uuid(uuid: Uuid, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
+    pub async fn find_by_uuid(
+        uuid: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Tournament, DbError> {
         Ok(tournaments::table.find(uuid).first(conn).await?)
     }
 
@@ -529,6 +548,63 @@ impl Tournament {
             .await?)
     }
 
+    pub async fn get_standings(&self, conn: &mut DbConn<'_>) -> Result<Standings, DbError> {
+        let players = self.players(conn).await?;
+        let games = self.games(conn).await?;
+        let mut standings = Standings::new();
+
+        // Add tiebreakers from tournament configuration
+        for tiebreaker in self.tiebreaker.iter().flatten() {
+            standings.add_tiebreaker(Tiebreaker::from_str(tiebreaker).map_err(|e| {
+                DbError::InvalidInput {
+                    info: String::from("Invalid tiebreaker"),
+                    error: e.to_string(),
+                }
+            })?);
+        }
+
+        // Add all games to standings
+        for game in games.iter() {
+            standings.add_result(
+                game.white_id,
+                game.black_id,
+                game.white_rating.unwrap_or(0.0),
+                game.black_rating.unwrap_or(0.0),
+                TournamentGameResult::from_str(&game.tournament_game_result).map_err(|e| {
+                    DbError::InvalidInput {
+                        info: String::from("Invalid game result"),
+                        error: e.to_string(),
+                    }
+                })?,
+            );
+        }
+
+        // Handle byes (players who didn't play in any games)
+        let players_with_games: HashSet<Uuid> = games
+            .iter()
+            .flat_map(|g| [g.white_id, g.black_id])
+            .collect();
+
+        for player in &players {
+            if !players_with_games.contains(&player.id) {
+                println!("Adding bye for player {}", player.username);
+                // Add a bye as an automatic win
+                standings.add_result(
+                    player.id,
+                    player.id, // Self-play indicates a bye
+                    0.0,       // Rating doesn't matter for byes
+                    0.0,
+                    TournamentGameResult::Bye,
+                );
+            }
+        }
+
+        // Calculate all tiebreakers
+        standings.enforce_tiebreakers();
+
+        Ok(standings)
+    }
+
     pub async fn start_by_organizer(
         &self,
         organizer: &Uuid,
@@ -543,16 +619,22 @@ impl Tournament {
         &self,
         conn: &mut DbConn<'_>,
     ) -> Result<(Tournament, Vec<Game>, Vec<Uuid>), DbError> {
+        println!("Starting tournament {} ({})", self.name, self.id);
         self.ensure_not_started()?;
         if !self.has_enough_players(conn).await? {
+            println!("Not enough players to start tournament");
             return Err(DbError::NotEnoughPlayers);
         }
+        println!("Tournament has enough players, proceeding with start");
+
         let ends = if let Some(days) = self.round_duration {
             let days = TimeDelta::days(days as i64);
             Some(Utc::now() + days)
         } else {
             None
         };
+        println!("Tournament end time: {:?}", ends);
+
         // Make sure all the conditions have been met
         // and then call different starts for different tournament types
         let mut deleted_invitees = Vec::new();
@@ -570,16 +652,25 @@ impl Tournament {
                 status_column.eq(TournamentStatus::InProgress.to_string()),
                 started_at.eq(Utc::now()),
                 ends_at.eq(ends),
+                current_round.eq(1),
             ))
             .get_result(conn)
             .await?;
+        println!("Tournament status updated to InProgress");
+
         let invitations: Vec<TournamentInvitation> = TournamentInvitation::belonging_to(self)
             .get_results(conn)
             .await?;
+        println!(
+            "Found {} pending invitations to clean up",
+            invitations.len()
+        );
         for invitation in invitations.iter() {
             deleted_invitees.push(invitation.invitee_id);
             invitation.delete(conn).await?;
         }
+        println!("Cleaned up all pending invitations");
+
         Ok((tournament, games, deleted_invitees))
     }
 
