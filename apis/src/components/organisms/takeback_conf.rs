@@ -1,4 +1,4 @@
-use crate::functions::accounts::edit::edit_config;
+use crate::functions::accounts::edit::EditConfig;
 use crate::i18n::*;
 use crate::providers::AuthContext;
 use leptos::either::EitherOf3;
@@ -8,31 +8,26 @@ use shared_types::Takeback;
 #[component]
 pub fn TakebackConf() -> impl IntoView {
     let i18n = use_i18n();
+    let action = ServerAction::<EditConfig>::new();
     let auth_context = expect_context::<AuthContext>();
-    let action = Action::new(move |takeback: &Takeback| {
-        let takeback = takeback.clone();
-        let auth_context = auth_context.clone();
-        async move {
-            if auth_context.user.get().is_some() {
-                let result = edit_config(takeback).await;
-                if result.is_ok() {
-                    auth_context.refresh();
-                }
-            }
-        }
-    });
+    Effect::watch(
+        action.version()
+        , move |_,_,_| auth_context.refresh(), 
+    false);
     view! {
-        <p class="m-1 text-black dark:text-white">{t!(i18n, user_config. allow_takeback)}</p>
-        <div class="flex">
-            <Button takeback=Takeback::Always action=action />
-            <Button takeback=Takeback::CasualOnly action=action />
-            <Button takeback=Takeback::Never action=action />
-        </div>
+        <ActionForm action=action>
+            <p class="m-1 text-black dark:text-white">{t!(i18n, user_config. allow_takeback)}</p>
+            <div class="flex">
+                <Button takeback=Takeback::Always  />
+                <Button takeback=Takeback::CasualOnly  />
+                <Button takeback=Takeback::Never />
+            </div>
+        </ActionForm>
     }
 }
 
 #[component]
-fn Button(takeback: Takeback, action: Action<Takeback, ()>) -> impl IntoView {
+fn Button(takeback: Takeback) -> impl IntoView {
     let i18n = use_i18n();
     let takeback = StoredValue::new(takeback);
     let auth_context = expect_context::<AuthContext>();
@@ -47,7 +42,11 @@ fn Button(takeback: Takeback, action: Action<Takeback, ()>) -> impl IntoView {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
         }
     };
-
+    let value = match takeback.get_value() {
+        Takeback::Always => "Always",
+        Takeback::CasualOnly => "CasualOnly",
+        Takeback::Never => "Never"
+    };
     view! {
         <div class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer">
             <button
@@ -57,10 +56,9 @@ fn Button(takeback: Takeback, action: Action<Takeback, ()>) -> impl IntoView {
                         is_active(),
                     )
                 }
-
-                on:click=move |_| {
-                    action.dispatch(takeback.get_value());
-                }
+                type="submit"
+                name="takeback"
+                value = value
             >
 
                 {match takeback.get_value() {

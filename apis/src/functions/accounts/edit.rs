@@ -1,11 +1,9 @@
-use crate::functions::accounts::edit::server_fn::codec;
 use crate::responses::AccountResponse;
 use leptos::prelude::*;
 use shared_types::Takeback;
 
 #[server]
 pub async fn edit_account(
-    new_email: String,
     new_password: String,
     new_password_confirmation: String,
     password: String,
@@ -44,12 +42,12 @@ pub async fn edit_account(
         .map_err(ServerFnError::new)?
         .to_string();
 
-    user.edit(&hashed_password, &new_email, &mut conn).await?;
+    user.edit(&hashed_password, "", &mut conn).await?;
     leptos_actix::redirect(&pathname);
     AccountResponse::from_uuid(&user.id, &mut conn).await
 }
 
-#[server(input = codec::Json)]
+#[server]
 pub async fn edit_config(takeback: Takeback) -> Result<(), ServerFnError> {
     use crate::functions::auth::identity::uuid;
     use crate::functions::db::pool;
