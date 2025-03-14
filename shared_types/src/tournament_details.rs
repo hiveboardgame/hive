@@ -1,4 +1,4 @@
-use crate::{ScoringMode, StartMode, Tiebreaker, TimeMode};
+use crate::{ScoringMode, StartMode, Tiebreaker, TimeMode, SeedingMode};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -24,4 +24,32 @@ pub struct TournamentDetails {
     pub starts_at: Option<DateTime<Utc>>,
     pub round_duration: Option<i32>,
     pub series: Option<Uuid>,
+    pub seeding_mode: Option<SeedingMode>,
+}
+
+impl Default for TournamentDetails {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            description: String::new(),
+            scoring: ScoringMode::Game,
+            tiebreakers: Vec::new(),
+            invitees: Vec::new(),
+            seats: 0,
+            min_seats: 0,
+            rounds: 0,
+            invite_only: false,
+            mode: String::new(),
+            time_mode: TimeMode::RealTime,
+            time_base: None,
+            time_increment: None,
+            band_upper: None,
+            band_lower: None,
+            start_mode: StartMode::Manual,
+            starts_at: None,
+            round_duration: None,
+            series: None,
+            seeding_mode: Some(SeedingMode::Standard),
+        }
+    }
 }
