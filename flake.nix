@@ -82,6 +82,7 @@
             flyctl
             cargo-leptos
             tailwindcss
+            openssl
             (rust-bin.selectLatestNightlyWith( toolchain: toolchain.default.override {
               extensions= [ "rust-src" "rust-analyzer" ];
               targets = [ "wasm32-unknown-unknown" ];
