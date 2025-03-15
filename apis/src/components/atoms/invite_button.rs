@@ -12,11 +12,10 @@ pub fn InviteButton(user: UserResponse, tournament_id: TournamentId) -> impl Int
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let logged_in_and_not_user = move || {
-        if let Some(Ok(current_user)) = auth_context.user.get() {
-            current_user.id != user.uid
-        } else {
-            false
-        }
+        auth_context
+            .user
+            .get()
+            .is_some_and(|current_user| current_user.id != user.uid)
     };
 
     let tournament_id = StoredValue::new(tournament_id);

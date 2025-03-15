@@ -20,10 +20,8 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
-    let user = move || match auth_context.user.get() {
-        Some(Ok(user)) => Some(user),
-        _ => None,
-    };
+    let user = auth_context.user;
+
     let black_id = create_read_slice(game_state.signal, |gs| gs.black_id);
     let player_is_black =
         Memo::new(move |_| user().is_some_and(|user| Some(user.id) == black_id()));

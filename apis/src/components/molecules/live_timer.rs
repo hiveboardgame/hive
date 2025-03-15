@@ -23,10 +23,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let user_id = Signal::derive(move || match auth_context.user.get_untracked() {
-        Some(Ok(user)) => Some(user.id),
-        _ => None,
-    });
+    let user_id = Signal::derive(move || auth_context.user.get_untracked().map(|user| user.id));
     let user_color = game_state.user_color_as_signal(user_id);
     let in_progress = create_read_slice(game_state.signal, |gs| {
         gs.game_response

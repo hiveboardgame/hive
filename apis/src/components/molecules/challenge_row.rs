@@ -74,10 +74,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
 
     let td_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let time_mode = challenge().time_mode;
-    let uid = move || match (auth_context.user).get() {
-        Some(Ok(user)) => Some(user.id),
-        _ => None,
-    };
+    let uid = move || auth_context.user.get().map(|user| user.id);
     let player = move || {
         if let (Some(uid), Some(opponent)) = (uid(), challenge().opponent) {
             if challenge().challenger.uid == uid {

@@ -32,10 +32,7 @@ fn Button(takeback: Takeback) -> impl IntoView {
     let i18n = use_i18n();
     let takeback = StoredValue::new(takeback);
     let auth_context = expect_context::<AuthContext>();
-    let user = move || match auth_context.user.get() {
-        Some(Ok(user)) => Some(user),
-        _ => None,
-    };
+    let user = auth_context.user;
     let is_active = move || {
         if user().is_some_and(|user| user.user.takeback == takeback.get_value()) {
             "bg-pillbug-teal"

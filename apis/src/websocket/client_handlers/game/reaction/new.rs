@@ -32,10 +32,7 @@ pub fn handle_new_game(game_response: GameResponse) {
     };
     if should_navigate {
         let auth_context = expect_context::<AuthContext>();
-        let user_uuid = move || match auth_context.user.get_untracked() {
-            Some(Ok(user)) => Some(user.id),
-            _ => None,
-        };
+        let user_uuid = Signal::derive(move || auth_context.user.get().map(|user| user.id));
         if let Some(id) = user_uuid() {
             if id == game_response.white_player.uid || id == game_response.black_player.uid {
                 let navigate = use_navigate();

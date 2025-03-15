@@ -20,10 +20,7 @@ pub struct Redirect(pub RwSignal<String>);
 #[component]
 pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let username = move || match auth_context.user.get() {
-        Some(Ok(user)) => Some(user.username),
-        _ => None,
-    };
+    let username = move || auth_context.user.get().map(|user| user.username);
     let i18n = use_i18n();
     view! {
         <header class="w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none">

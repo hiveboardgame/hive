@@ -34,7 +34,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <div class="block mb-2 font-bold">Linked Discord account</div>
                     <div class="block mb-2 font-bold">
                         <Show when=move || {
-                            matches!(auth_context.user.get(), Some(Ok(_account)))
+                            auth_context.user.get().is_some()
                         }>{move || { discord_name.value().get() }}</Show>
 
                     </div>

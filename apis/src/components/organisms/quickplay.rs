@@ -43,10 +43,7 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
         <button
             class=BUTTON_STYLE
             on:click=move |_| {
-                let account = match auth_context.user.get() {
-                    Some(Ok(account)) => Some(account),
-                    _ => None,
-                };
+                let account = auth_context.user.get();
                 if account.is_some() {
                     let api = api.get();
                     let details = ChallengeDetails {
@@ -98,10 +95,7 @@ pub fn QuickPlay() -> impl IntoView {
                 <button
                     class=BUTTON_STYLE
                     on:click=move |_| {
-                        let account = match auth_context.user.get() {
-                            Some(Ok(account)) => Some(account),
-                            _ => None,
-                        };
+                        let account = auth_context.user.get();
                         if account.is_some() {
                             open.update(move |b| *b = true)
                         } else {

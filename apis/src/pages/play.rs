@@ -44,10 +44,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             .unwrap_or_default()
     });
     provide_context(CurrentConfirm(current_confirm));
-    let user = move || match auth_context.user.get() {
-        Some(Ok(user)) => Some(user),
-        _ => None,
-    };
+    let user = auth_context.user;
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
     let user_is_player = Signal::derive(move || {
         user().and_then(|user| {

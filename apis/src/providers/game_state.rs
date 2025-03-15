@@ -333,10 +333,7 @@ impl GameState {
     pub fn is_move_allowed(&self) -> bool {
         let auth_context = expect_context::<AuthContext>();
 
-        let user = move || match auth_context.user.get() {
-            Some(Ok(user)) => Some(user),
-            _ => None,
-        };
+        let user = auth_context.user;
         if matches!(self.state.game_status, GameStatus::Finished(_)) {
             return false;
         }

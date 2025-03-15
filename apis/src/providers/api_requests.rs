@@ -113,10 +113,7 @@ impl ApiRequests {
     pub fn challenge(&self, challenge_action: ChallengeAction) {
         let challenge_action = match challenge_action {
             ChallengeAction::Create(details) => {
-                let account = match self.auth_context.user.get() {
-                    Some(Ok(account)) => Some(account),
-                    _ => None,
-                };
+                let account = self.auth_context.user.get();
                 if let Some(account) = account {
                     let challenges = self.challenges.signal.get_untracked();
                     let challenges = challenges.challenges.into_values().collect();

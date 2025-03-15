@@ -7,10 +7,7 @@ use leptos::prelude::*;
 
 fn filter_challenges(challenges: &mut Vec<ChallengeResponse>) {
     let auth_context = expect_context::<AuthContext>();
-    let account = move || match auth_context.user.get_untracked() {
-        Some(Ok(account)) => Some(account),
-        _ => None,
-    };
+    let account = auth_context.user;
     if let Some(account) = account() {
         challenges.retain(|challenge| {
             if challenge.challenger.uid == account.id {
@@ -35,10 +32,7 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
     let mut challenges = expect_context::<ChallengeStateSignal>();
     let notifications = expect_context::<NotificationContext>();
     let auth_context = expect_context::<AuthContext>();
-    let account = move || match auth_context.user.get_untracked() {
-        Some(Ok(account)) => Some(account),
-        _ => None,
-    };
+    let account = auth_context.user;
     match challenge {
         ChallengeUpdate::Challenges(mut new_challanges) => {
             filter_challenges(&mut new_challanges);

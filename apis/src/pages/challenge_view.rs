@@ -68,10 +68,7 @@ pub fn ChallengeView() -> impl IntoView {
                                 Either::Left(view! { <pre>"Challenge doesn't seem to exist"</pre> })
                             }
                             Ok(challenge) => {
-                                let user = move || match auth_context.user.get() {
-                                    Some(Ok(user)) => Some(user),
-                                    _ => None,
-                                };
+                                let user = auth_context.user;
                                 Either::Right(
                                     view! {
                                         <Show when=move || {

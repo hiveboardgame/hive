@@ -101,11 +101,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         }
     };
 
-    let user_id = Signal::derive(move || match auth_context.user.get_untracked() {
-        Some(Ok(user)) => Some(user.id),
-        _ => None,
-    });
-
+    let user_id = Signal::derive(move || auth_context.user.get_untracked().map(|user| user.id));
     let user_color = gamestate.user_color_as_signal(user_id);
     let has_gamecontrol = create_read_slice(gamestate.signal, move |gs| {
         if let Some(color) = user_color() {

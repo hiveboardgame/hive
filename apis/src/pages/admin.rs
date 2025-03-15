@@ -8,11 +8,7 @@ pub fn Admin() -> impl IntoView {
     view! {
         <div class="pt-20">
             <Show when=move || {
-                if let Some(Ok(account)) = auth_context.user.get() {
-                    account.user.admin
-                } else {
-                    false
-                }
+                auth_context.user.get().is_some_and(|account| account.user.admin)
             }>
                 <ChatWindow destination=SimpleDestination::Global />
             </Show>

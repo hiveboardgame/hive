@@ -42,13 +42,7 @@ pub fn Challenges() -> impl IntoView {
     let challenges = expect_context::<ChallengeStateSignal>().signal;
     let online_users = expect_context::<OnlineUsersSignal>().signal;
     let auth_context = expect_context::<AuthContext>();
-    let user = move || {
-        if let Some(Ok(user)) = auth_context.user.get() {
-            Some(user)
-        } else {
-            None
-        }
-    };
+    let user = auth_context.user;
     let direct = Signal::derive(move || {
         let mut ret = if let Some(user) = user() {
             // Get the challenges direct at the current user

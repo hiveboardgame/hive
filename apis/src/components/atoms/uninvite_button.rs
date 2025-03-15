@@ -14,13 +14,11 @@ pub fn UninviteButton(user: UserResponse, tournament_id: TournamentId) -> impl I
     let auth_context = expect_context::<AuthContext>();
 
     let logged_in_and_not_user = move || {
-        if let Some(Ok(current_user)) = auth_context.user.get() {
-            current_user.id != user.get_value().uid
-        } else {
-            false
-        }
+        auth_context
+            .user
+            .get()
+            .is_some_and(|current_user| current_user.id != user.get_value().uid)
     };
-
     let tournament_id = StoredValue::new(tournament_id);
 
     let uninvite = move |_| {

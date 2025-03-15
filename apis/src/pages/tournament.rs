@@ -78,10 +78,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let tournament = Signal::derive(move || tournament.clone());
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let account = move || match auth_context.user.get() {
-        Some(Ok(account)) => Some(account),
-        _ => None,
-    };
+    let account = auth_context.user;
     let user_id = Signal::derive(move || account().map(|a| a.user.uid));
     let time_info = Signal::derive(move || {
         let tournament = tournament();

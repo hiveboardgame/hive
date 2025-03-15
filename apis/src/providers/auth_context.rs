@@ -6,7 +6,7 @@ use leptos::prelude::*;
 #[derive(Clone)]
 pub struct AuthContext {
     pub logout: ServerAction<Logout>,
-    pub user: ReadSignal<Option<Result<AccountResponse, ServerFnError>>>,
+    pub user: Signal<Option<AccountResponse>>,
     action: Action<(), Result<AccountResponse, ServerFnError>>,
 }
 
@@ -37,8 +37,9 @@ pub fn provide_auth(websocket_context: WebsocketContext) {
         },
         false,
     );
+    let user = Signal::derive(move || action.value().get().and_then(|v| v.ok()));
     provide_context(AuthContext {
-        user: action.value().read_only(),
+        user,
         logout,
         action,
     })
