@@ -15,7 +15,6 @@ pub mod refocus;
 pub mod schedules;
 mod sounds;
 pub mod timer;
-pub mod tournament_ready;
 pub mod tournaments;
 pub mod websocket;
 pub use alerts::{provide_alerts, AlertType, AlertsContext};

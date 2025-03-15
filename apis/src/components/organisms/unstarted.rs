@@ -1,6 +1,7 @@
 use crate::i18n::*;
+use crate::providers::game_state::GameStateSignal;
+use crate::providers::tournaments::TournamentStateContext;
 use crate::providers::ApiRequestsProvider;
-use crate::providers::{game_state::GameStateSignal, tournament_ready::TournamentReadySignal};
 use leptos::prelude::*;
 use leptos_icons::*;
 use uuid::Uuid;
@@ -13,7 +14,7 @@ pub fn Unstarted(
 ) -> impl IntoView {
     let i18n = use_i18n();
     let game_state = expect_context::<GameStateSignal>();
-    let ready = expect_context::<TournamentReadySignal>().signal;
+    let ready = expect_context::<TournamentStateContext>().ready;
     let api = expect_context::<ApiRequestsProvider>().0;
     let game_id = create_read_slice(game_state.signal, |gs| gs.game_id.clone());
     let white_id = create_read_slice(game_state.signal, |gs| {

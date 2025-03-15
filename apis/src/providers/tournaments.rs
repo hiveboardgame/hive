@@ -1,10 +1,12 @@
 use leptos::prelude::*;
-use shared_types::TournamentId;
-use std::collections::HashSet;
+use shared_types::{GameId, TournamentId};
+use std::collections::{HashMap, HashSet};
+use uuid::Uuid;
 
 #[derive(Clone, Debug, Copy, Default)]
 pub struct TournamentStateContext {
     pub needs_update: RwSignal<HashSet<TournamentId>>,
+    pub ready: RwSignal<HashMap<GameId, HashSet<Uuid>>>,
 }
 
 impl TournamentStateContext {

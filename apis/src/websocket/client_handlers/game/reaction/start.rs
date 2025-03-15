@@ -3,7 +3,7 @@ use crate::{
     common::GameActionResponse,
     providers::{
         navigation_controller::NavigationControllerSignal, timer::TimerSignal,
-        tournament_ready::TournamentReadySignal,
+        tournaments::TournamentStateContext,
     },
 };
 use leptos::prelude::*;
@@ -13,7 +13,7 @@ pub fn handle_start(gar: GameActionResponse) {
     if navi.game_signal.get().game_id != Some(gar.game_id.clone()) {
         return;
     }
-    let ready = expect_context::<TournamentReadySignal>().signal;
+    let ready = expect_context::<TournamentStateContext>().ready;
     reset_game_state(&gar.game);
     let timer = expect_context::<TimerSignal>();
     timer.update_from(&gar.game);
