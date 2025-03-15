@@ -15,7 +15,8 @@ impl AuthContext {
         self.action.dispatch(());
     }
 }
-pub fn provide_auth(websocket_context: WebsocketContext) {
+pub fn provide_auth() {
+    let websocket_context = expect_context::<WebsocketContext>();
     let logout = ServerAction::<Logout>::new();
     let action = Action::new(move |_: &()| async { get_account().await });
 

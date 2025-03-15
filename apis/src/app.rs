@@ -26,21 +26,13 @@ use crate::{
         tutorial::Tutorial,
     },
     providers::{
-        challenges::provide_challenges,
-        chat::provide_chat,
-        game_state::provide_game_state,
-        games::provide_games,
-        navigation_controller::{provide_navigation_controller, NavigationControllerSignal},
-        online_users::provide_users,
-        provide_alerts, provide_api_requests, provide_auth, provide_challenge_params,
-        provide_config, provide_notifications, provide_ping, provide_sounds,
-        refocus::provide_refocus,
-        schedules::provide_schedules,
-        timer::provide_timer,
-        tournament_ready::provide_tournament_ready,
-        tournaments::provide_tournaments,
-        websocket::{provide_websocket, WebsocketContext},
-        AuthContext,
+        challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state,
+        games::provide_games, navigation_controller::provide_navigation_controller,
+        online_users::provide_users, provide_alerts, provide_api_requests, provide_auth,
+        provide_challenge_params, provide_config, provide_notifications, provide_ping,
+        provide_sounds, refocus::provide_refocus, schedules::provide_schedules,
+        timer::provide_timer, tournament_ready::provide_tournament_ready,
+        tournaments::provide_tournaments, websocket::provide_websocket,
     },
 };
 use leptos::prelude::*;
@@ -64,18 +56,14 @@ pub fn App() -> impl IntoView {
     provide_game_state();
     provide_challenges();
     provide_navigation_controller();
-    let navigation_controller = expect_context::<NavigationControllerSignal>();
     let url = "/ws/";
     provide_websocket(url);
-    let ws = expect_context::<WebsocketContext>();
-    let ws_clone = ws.clone();
-    provide_auth(ws);
-    let user = expect_context::<AuthContext>().user;
-    provide_games(navigation_controller, user);
+    provide_auth();
+    provide_games();
     provide_users();
     provide_timer();
     provide_ping();
-    provide_api_requests(ws_clone);
+    provide_api_requests();
     provide_challenge_params();
     provide_alerts();
     provide_refocus();

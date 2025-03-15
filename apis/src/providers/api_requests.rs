@@ -151,7 +151,8 @@ impl ApiRequests {
     }
 }
 
-pub fn provide_api_requests(ws: websocket::WebsocketContext) {
+pub fn provide_api_requests() {
+    let ws = expect_context::<WebsocketContext>();
     let auth_context = expect_context::<auth_context::AuthContext>();
     let challenges = expect_context::<ChallengeStateSignal>();
     let api_requests = ApiRequests::new(ws, auth_context, challenges);
