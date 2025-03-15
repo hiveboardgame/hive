@@ -11,15 +11,16 @@ pub fn TakebackConf() -> impl IntoView {
     let action = ServerAction::<EditConfig>::new();
     let auth_context = expect_context::<AuthContext>();
     Effect::watch(
-        action.version()
-        , move |_,_,_| auth_context.refresh(), 
-    false);
+        action.version(),
+        move |_, _, _| auth_context.refresh(),
+        false,
+    );
     view! {
         <ActionForm action=action>
             <p class="m-1 text-black dark:text-white">{t!(i18n, user_config. allow_takeback)}</p>
             <div class="flex">
-                <Button takeback=Takeback::Always  />
-                <Button takeback=Takeback::CasualOnly  />
+                <Button takeback=Takeback::Always />
+                <Button takeback=Takeback::CasualOnly />
                 <Button takeback=Takeback::Never />
             </div>
         </ActionForm>
@@ -45,7 +46,7 @@ fn Button(takeback: Takeback) -> impl IntoView {
     let value = match takeback.get_value() {
         Takeback::Always => "Always",
         Takeback::CasualOnly => "CasualOnly",
-        Takeback::Never => "Never"
+        Takeback::Never => "Never",
     };
     view! {
         <div class="inline-flex justify-center items-center m-1 text-base font-medium rounded-md border border-transparent shadow cursor-pointer">
@@ -58,7 +59,7 @@ fn Button(takeback: Takeback) -> impl IntoView {
                 }
                 type="submit"
                 name="takeback"
-                value = value
+                value=value
             >
 
                 {match takeback.get_value() {

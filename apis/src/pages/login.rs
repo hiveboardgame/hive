@@ -1,3 +1,4 @@
+use crate::functions::auth::login::Login;
 use crate::i18n::*;
 use crate::{components::organisms::header::Redirect, providers::AuthContext};
 use leptos::prelude::*;
@@ -6,17 +7,23 @@ use leptos::{form::ActionForm, html};
 #[component]
 pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let i18n = use_i18n();
-    let auth_context = expect_context::<AuthContext>();
     let pathname =
         move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
     let my_input = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
+    let auth_context = expect_context::<AuthContext>();
+    let login = ServerAction::<Login>::new();
+    Effect::watch(
+        login.version(),
+        move |_, _, _| auth_context.refresh(),
+        false,
+    );
     view! {
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
-                action=auth_context.login
+                action=login
                 attr:class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-stone-300 dark:bg-reserve-twilight"
             >
                 <label class="block mb-2 font-bold" for="email">
@@ -45,9 +52,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 </label>
                 <input type="hidden" name="pathname" value=pathname().0 />
                 <p class="h-5">
-                    <Show when=move || {
-                        auth_context.login.value().get().is_some_and(|v| v.is_err())
-                    }>
+                    <Show when=move || { login.value().get().is_some_and(|v| v.is_err()) }>
                         <small class="text-ladybug-red">
                             {t!(i18n, user_config.login.invalid_login)}
                         </small>

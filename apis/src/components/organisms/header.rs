@@ -55,22 +55,20 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </div>
             </div>
-            <Transition fallback=|| view! { <GuestActions /> }>
-                <Show when=move || username().is_some() fallback=|| view! { <GuestActions /> }>
-                    <div class="flex items-center">
-                        <NextGameButton time_mode=StoredValue::new(TimeMode::RealTime) />
-                        <NextGameButton time_mode=StoredValue::new(TimeMode::Correspondence) />
-                        <NextGameButton time_mode=StoredValue::new(TimeMode::Untimed) />
-                    </div>
-                    <div class="flex items-center mr-1">
-                        <ChatAndControls />
-                        <SoundToggle />
-                        <LocaleDropdown />
-                        <NotificationDropdown />
-                        <UserDropdown username=username().expect("Username is some") />
-                    </div>
-                </Show>
-            </Transition>
+            <Show when=move || username().is_some() fallback=|| view! { <GuestActions /> }>
+                <div class="flex items-center">
+                    <NextGameButton time_mode=StoredValue::new(TimeMode::RealTime) />
+                    <NextGameButton time_mode=StoredValue::new(TimeMode::Correspondence) />
+                    <NextGameButton time_mode=StoredValue::new(TimeMode::Untimed) />
+                </div>
+                <div class="flex items-center mr-1">
+                    <ChatAndControls />
+                    <SoundToggle />
+                    <LocaleDropdown />
+                    <NotificationDropdown />
+                    <UserDropdown username=username().expect("Username is some") />
+                </div>
+            </Show>
         </header>
     }
 }

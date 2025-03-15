@@ -1,3 +1,4 @@
+use crate::functions::auth::register::Register;
 use crate::functions::users::username_taken;
 use crate::i18n::*;
 use crate::{
@@ -79,17 +80,17 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     };
     let conditionally_disable =
         move || !agree() || username_exists() || pw_invalid() || is_invalid_email();
-    let display_register_error = move || {
-        auth_context
-            .register
-            .value()
-            .get()
-            .is_some_and(|v| v.is_err())
-    };
+    let register = ServerAction::<Register>::new();
+    let display_register_error = move || register.value().get().is_some_and(|v| v.is_err());
+    Effect::watch(
+        register.version(),
+        move |_, _, _| auth_context.refresh(),
+        false,
+    );
     view! {
         <div class=format!("w-full max-w-xs mx-auto pt-20 {extend_tw_classes}")>
             <ActionForm
-                action=auth_context.register
+                action=register
                 attr:class="px-8 pt-6 pb-8 mb-4 rounded shadow-md bg-inherit bg-stone-300 dark:bg-slate-800"
             >
                 <label class="block mb-2">
