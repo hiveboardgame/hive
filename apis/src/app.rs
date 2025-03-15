@@ -49,28 +49,37 @@ const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
 
 #[component]
 pub fn App() -> impl IntoView {
-    provide_config();
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
+    
+    //These dont expect any other context, can be provided in any order
+    provide_ping();
+    provide_schedules();
+    provide_notifications();
+    provide_sounds();
+    provide_refocus();
+    provide_alerts();
+    provide_challenge_params();
+    provide_config();
     provide_game_state();
+    provide_timer();
+    provide_users();
+    provide_tournaments();
     provide_challenges();
     provide_navigation_controller();
-    let url = "/ws/";
-    provide_websocket(url);
+    provide_websocket("/ws/");
+
+    //expects websocket
     provide_auth();
+    
+    //expects auth and navigation_controller
     provide_games();
-    provide_users();
-    provide_timer();
-    provide_ping();
+    
+    //expects auth, challengeStateSignal, websocket
     provide_api_requests();
-    provide_challenge_params();
-    provide_alerts();
-    provide_refocus();
+
+    //expects auth, api_requests, navigation_controller, gameStateSignal
     provide_chat();
-    provide_tournaments();
-    provide_notifications();
-    provide_schedules();
-    provide_sounds();
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)

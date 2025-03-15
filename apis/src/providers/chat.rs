@@ -1,7 +1,7 @@
+use crate::responses::AccountResponse;
+
 use super::{
-    auth_context::AuthContext, game_state::GameStateSignal,
-    navigation_controller::NavigationControllerSignal, AlertType, AlertsContext,
-    ApiRequestsProvider,
+    api_requests::ApiRequests, auth_context::AuthContext, game_state::GameStateSignal, navigation_controller::{GameNavigationControllerState, NavigationControllerSignal}, AlertType, AlertsContext, ApiRequestsProvider
 };
 use leptos::prelude::*;
 use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId, TournamentId};
@@ -19,16 +19,19 @@ pub struct Chat {
     pub tournament_lobby_messages: RwSignal<HashMap<TournamentId, Vec<ChatMessage>>>, // tournament_id -> Messages
     pub tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
     pub typed_message: RwSignal<String>,
-}
-
-impl Default for Chat {
-    fn default() -> Self {
-        Self::new()
-    }
+    user: Signal<Option<AccountResponse>>,
+    gamestate: GameStateSignal,
+    api: Signal<ApiRequests>,
+    game_signal: Signal<GameNavigationControllerState>,
 }
 
 impl Chat {
-    pub fn new() -> Self {
+    pub fn new(
+        user: Signal<Option<AccountResponse>>,
+        gamestate: GameStateSignal,
+        api: Signal<ApiRequests>,
+        game_signal: Signal<GameNavigationControllerState>,
+    ) -> Self {
         Self {
             users_messages: RwSignal::new(HashMap::new()),
             users_new_messages: RwSignal::new(HashMap::new()),
@@ -39,6 +42,10 @@ impl Chat {
             tournament_lobby_messages: RwSignal::new(HashMap::new()),
             tournament_lobby_new_messages: RwSignal::new(HashMap::new()),
             typed_message: RwSignal::new(String::new()),
+            user,
+            gamestate,
+            api,
+            game_signal,
         }
     }
 
@@ -61,8 +68,7 @@ impl Chat {
     }
 
     pub fn seen_messages(&self) {
-        let navi = expect_context::<NavigationControllerSignal>();
-        if let Some(game_id) = navi.game_signal.get_untracked().game_id {
+        if let Some(game_id) = self.game_signal.get_untracked().game_id {
             self.games_public_new_messages.update(|m| {
                 m.entry(game_id.clone())
                     .and_modify(|b| *b = false)
@@ -75,22 +81,19 @@ impl Chat {
     }
 
     pub fn send(&self, message: &str, destination: ChatDestination) {
-        let auth_context = expect_context::<AuthContext>();
-        let gamestate = expect_context::<GameStateSignal>();
-        let api = expect_context::<ApiRequestsProvider>().0.get();
-        if let Some(account) = auth_context.user.get_untracked() {
+        if let Some(account) = self.user.get_untracked() {
             let id = account.user.uid;
             let name = account.user.username;
             let turn = match destination {
                 ChatDestination::GamePlayers(_, _, _)
                 | ChatDestination::GameSpectators(_, _, _) => {
-                    Some(gamestate.signal.get_untracked().state.turn)
+                    Some(self.gamestate.signal.get_untracked().state.turn)
                 }
                 _ => None,
             };
             let msg = ChatMessage::new(name, id, message, None, turn);
             let container = ChatMessageContainer::new(destination, &msg);
-            api.chat(&container);
+            self.api.get().chat(&container);
         }
     }
 
@@ -193,5 +196,15 @@ impl Chat {
 }
 
 pub fn provide_chat() {
-    provide_context(Chat::new())
+    let user = expect_context::<AuthContext>().user;
+    let gamestate = expect_context::<GameStateSignal>();
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let game_signal = expect_context::<NavigationControllerSignal>().game_signal;
+
+    provide_context(Chat::new(
+        user,
+        gamestate,
+        api,
+        game_signal.into(),
+    ))
 }

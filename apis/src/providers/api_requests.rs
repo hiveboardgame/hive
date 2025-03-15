@@ -4,7 +4,7 @@ use super::{auth_context, websocket};
 use crate::common::{ChallengeAction, ScheduleAction, TournamentAction};
 use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
-use crate::responses::create_challenge_handler;
+use crate::responses::{create_challenge_handler, AccountResponse};
 use hive_lib::{GameControl, Turn};
 use leptos::prelude::*;
 use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResult, TournamentId};
@@ -12,7 +12,7 @@ use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResu
 #[derive(Clone)]
 pub struct ApiRequests {
     websocket: WebsocketContext,
-    auth_context: auth_context::AuthContext,
+    user: Signal<Option<AccountResponse>>,
     pub challenges: ChallengeStateSignal,
 }
 
@@ -22,12 +22,12 @@ pub struct ApiRequestsProvider(pub Signal<ApiRequests>);
 impl ApiRequests {
     pub fn new(
         websocket: websocket::WebsocketContext,
-        auth_context: auth_context::AuthContext,
+        user: Signal<Option<AccountResponse>>,
         challenges: ChallengeStateSignal,
     ) -> Self {
         Self {
             websocket,
-            auth_context,
+            user,
             challenges,
         }
     }
@@ -113,7 +113,7 @@ impl ApiRequests {
     pub fn challenge(&self, challenge_action: ChallengeAction) {
         let challenge_action = match challenge_action {
             ChallengeAction::Create(details) => {
-                let account = self.auth_context.user.get();
+                let account = self.user.get();
                 if let Some(account) = account {
                     let challenges = self.challenges.signal.get_untracked();
                     let challenges = challenges.challenges.into_values().collect();
@@ -155,7 +155,7 @@ pub fn provide_api_requests() {
     let ws = expect_context::<WebsocketContext>();
     let auth_context = expect_context::<auth_context::AuthContext>();
     let challenges = expect_context::<ChallengeStateSignal>();
-    let api_requests = ApiRequests::new(ws, auth_context, challenges);
+    let api_requests = ApiRequests::new(ws, auth_context.user, challenges);
     provide_context(ApiRequestsProvider(Signal::derive(move || {
         api_requests.clone()
     })));
