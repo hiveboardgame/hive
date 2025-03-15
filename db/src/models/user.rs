@@ -94,6 +94,7 @@ pub struct NewUser {
     pub updated_at: DateTime<Utc>,
     pub normalized_username: String,
     pub patreon: bool,
+    pub bot: bool,
 }
 
 impl NewUser {
@@ -108,6 +109,7 @@ impl NewUser {
             updated_at: Utc::now(),
             normalized_username: username.to_lowercase(),
             patreon: false,
+            bot: false,
         })
     }
 }
@@ -125,6 +127,7 @@ pub struct User {
     pub patreon: bool,
     pub admin: bool,
     pub takeback: String,
+    pub bot: bool,
 }
 
 impl User {
@@ -226,6 +229,14 @@ impl User {
     pub async fn delete(&self, conn: &mut DbConn<'_>) -> Result<usize, DbError> {
         Ok(diesel::delete(users_table.find(&self.id))
             .execute(conn)
+            .await?)
+    }
+    pub async fn get_ongoing_games(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+        Ok(GameUser::belonging_to(self)
+            .inner_join(games::table)
+            .select(Game::as_select())
+            .filter(finished.eq(false))
+            .get_results(conn)
             .await?)
     }
 

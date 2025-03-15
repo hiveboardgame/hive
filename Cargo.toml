@@ -35,6 +35,7 @@ http-serde = { version = "2" }
 icondata = {version = "0.5"}
 indoc = "2"
 itertools = "0.13.0"
+jsonwebtoken = { version = "9.3.1" }
 lazy_static = "1.5"
 leptix_primitives = { version = "0.2" }
 leptos = { version = "0.6", features = ["nightly"] }

@@ -8,6 +8,17 @@ use std::{
     io::{self, BufRead},
 };
 
+lazy_static! {
+    static ref HEADER: Regex = Regex::new(r"\[.*").expect("This regex should compile");
+}
+lazy_static! {
+    static ref RESULT: Regex = Regex::new(r"\[Result").expect("This regex should compile");
+}
+lazy_static! {
+    static ref GAME_TYPE_LINE: Regex =
+        Regex::new(r"\[GameType.*").expect("This regex should compile");
+}
+
 #[derive(Debug, Clone, Serialize, Default, Deserialize, PartialEq, Eq)]
 pub struct History {
     pub moves: Vec<(String, String)>,
@@ -177,16 +188,6 @@ impl History {
 
     pub fn from_filepath(file_path: &str) -> Result<Self, GameError> {
         let mut history = History::new();
-        lazy_static! {
-            static ref HEADER: Regex = Regex::new(r"\[.*").expect("This regex should compile");
-        }
-        lazy_static! {
-            static ref RESULT: Regex = Regex::new(r"\[Result").expect("This regex should compile");
-        }
-        lazy_static! {
-            static ref GAME_TYPE_LINE: Regex =
-                Regex::new(r"\[GameType.*").expect("This regex should compile");
-        }
         match File::open(file_path) {
             Ok(file) => {
                 for line in io::BufReader::new(file).lines().map_while(Result::ok) {
@@ -214,18 +215,9 @@ impl History {
         }
         Ok(history)
     }
+
     pub fn from_pgn_str(string: String) -> Result<Self, GameError> {
         let mut history = History::new();
-        lazy_static! {
-            static ref HEADER: Regex = Regex::new(r"\[.*").expect("This regex should compile");
-        }
-        lazy_static! {
-            static ref RESULT: Regex = Regex::new(r"\[Result").expect("This regex should compile");
-        }
-        lazy_static! {
-            static ref GAME_TYPE_LINE: Regex =
-                Regex::new(r"\[GameType.*").expect("This regex should compile");
-        }
         for line in string.lines() {
             if line.is_empty() {
                 continue;
