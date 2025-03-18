@@ -14,7 +14,7 @@ use leptos_router::use_navigate;
 use shared_types::PrettyString;
 use shared_types::{
     CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
-    TournamentMode,
+    TournamentMode, SeedingMode,
 };
 use std::str::FromStr;
 use uuid::Uuid;
@@ -41,6 +41,7 @@ pub struct TournamentSignals {
     pub start_mode: RwSignal<StartMode>,
     pub starts_at: RwSignal<DateTime<Utc>>,
     pub round_duration: RwSignal<i32>,
+	pub seeding_mode: RwSignal<Option<SeedingMode>>,
 }
 
 impl TournamentSignals {
@@ -69,6 +70,7 @@ impl TournamentSignals {
             series: RwSignal::new(None),
             starts_at: RwSignal::new(Utc::now()),
             round_duration: RwSignal::new(7),
+			seeding_mode: RwSignal::new(Some(SeedingMode::Standard)),
         }
     }
 }
@@ -170,6 +172,7 @@ pub fn TournamentCreate() -> impl IntoView {
             rounds: tournament.rounds.get_untracked(),
             invite_only: tournament.invite_only.get_untracked(),
             mode: tournament.mode.get_untracked().to_string(),
+			seeding_mode: tournament.seeding_mode.get_untracked(),
             time_mode: tournament.time_mode.get_untracked(),
             time_base: tournament.time_base.get_value(),
             time_increment: tournament.time_increment.get_value(),
