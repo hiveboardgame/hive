@@ -754,100 +754,35 @@ impl Tournament {
 
         // Apply pairing rules based on seeding mode
         let seeding_mode = SeedingMode::from_str(&self.seeding_mode)?;
-        match seeding_mode {
-            SeedingMode::Accelerated => {
-                // In accelerated pairing, we split the field into quarters
-                let total_players = players_to_pair.len();
+		let remaining_players = players_to_pair.len();
+		let quarter_size = remaining_players / 4; // Note that remaining_players is an integer. So / here is integer division!
 
-                // Give bye to the lowest rated player (last in the list)
-                if total_players % 2 != 0 {
-                    let bye_player = players_to_pair.pop().unwrap(); // Safe to unwrap since we know there are players
-                    println!(
-                        "Odd number of players, giving bye to lowest rated player {} (rating: {})",
-                        bye_player.0.username, bye_player.1
-                    );
+		let pairing_ranges = match seeding_mode{
+			SeedingMode::Accelerated => [
+				(0, quarter_size * 2),                  // Q1 vs Q2 Using quarter_size guaranteees even players
+				(quarter_size * 2, remaining_players),  // Q3 vs Q4 (guaranteed even due to fixed bye)
+				];
+			SeedingMode::Standard => [(0,remaining_players)]
+			}
+		
+		for &(start, end) in &pairing_ranges {
+			let mid = start + (end - start) / 2; 
 
-                    // Create a bye game
-                    let new_game =
-                        NewGame::new_from_tournament(bye_player.0.id, bye_player.0.id, self);
-                    let game = Game::create(new_game, conn).await?;
-                    games.push(game);
+			for i in start..mid {
+				let white = &players_to_pair[i].0;      // Top half
+				let black = &players_to_pair[mid + (i - start)].0; // Bottom half
 
-                    // Update tournament bye list
-                    diesel::update(tournaments::table.find(self.id))
-                        .set(bye.eq(vec![Some(bye_player.0.id)]))
-                        .execute(conn)
-                        .await?;
-                }
+				println!(
+					"  Pairing {} (White, rating: {}) vs {} (Black, rating: {})",
+					white.username, players_to_pair[i].1,
+					black.username, players_to_pair[mid + (i - start)].1
+				);
 
-                // Now pair the remaining players
-                // For accelerated pairing:
-                // - player7 vs player4
-                // - player6 vs player3
-                // - player5 vs player2
-                // - player11 vs player8
-                // - etc.
-                let remaining_players = players_to_pair.len();
-                let quarter_size = remaining_players / 4;
-
-                // First group: players 2-7 vs players 8-13
-                for i in 0..3 {
-                    let white_idx = 6 - i; // 6,5,4 (player7,6,5)
-                    let black_idx = 9 - i; // 9,8,7 (player4,3,2)
-
-                    let white = &players_to_pair[white_idx].0;
-                    let black = &players_to_pair[black_idx].0;
-                    println!(
-                        "  Pairing {} (White, rating: {}) vs {} (Black, rating: {})",
-                        white.username,
-                        players_to_pair[white_idx].1,
-                        black.username,
-                        players_to_pair[black_idx].1
-                    );
-                    let new_game = NewGame::new_from_tournament(white.id, black.id, self);
-                    let game = Game::create(new_game, conn).await?;
-                    games.push(game);
-                }
-
-                // Second group: remaining players
-                let start_idx = 10; // Start from player11
-                let pairs_to_make = (remaining_players - start_idx) / 2;
-                for i in 0..pairs_to_make {
-                    let white = &players_to_pair[start_idx + i].0;
-                    let black = &players_to_pair[start_idx + pairs_to_make + i].0;
-                    println!(
-                        "  Pairing {} (White, rating: {}) vs {} (Black, rating: {})",
-                        white.username,
-                        players_to_pair[start_idx + i].1,
-                        black.username,
-                        players_to_pair[start_idx + pairs_to_make + i].1
-                    );
-                    let new_game = NewGame::new_from_tournament(white.id, black.id, self);
-                    let game = Game::create(new_game, conn).await?;
-                    games.push(game);
-                }
-            }
-            SeedingMode::Standard => {
-                // In standard Swiss, we use a fold system where we pair 1 vs n/2+1, 2 vs n/2+2, etc.
-                let half_point = players_to_pair.len() / 2;
-                println!("Creating standard Swiss pairings:");
-
-                for i in 0..half_point {
-                    let white = &players_to_pair[i].0;
-                    let black = &players_to_pair[i + half_point].0;
-                    println!(
-                        "  Pairing {} (White, rating: {}) vs {} (Black, rating: {})",
-                        white.username,
-                        players_to_pair[i].1,
-                        black.username,
-                        players_to_pair[i + half_point].1
-                    );
-                    let new_game = NewGame::new_from_tournament(white.id, black.id, self);
-                    let game = Game::create(new_game, conn).await?;
-                    games.push(game);
-                }
-            }
-        }
+				let new_game = NewGame::new_from_tournament(white.id, black.id, self);
+				let game = Game::create(new_game, conn).await?;
+				games.push(game);
+			}
+		}
 
         println!(
             "Swiss tournament initialization complete with {} games",
