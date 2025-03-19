@@ -1,5 +1,6 @@
+use crate::functions::accounts::edit::EditAccount;
 use crate::functions::oauth::get_discord_handle;
-use crate::{components::organisms::header::Redirect, functions::accounts::edit::EditAccount};
+use crate::providers::navigation_controller::NavigationControllerSignal;
 use crate::{providers::ApiRequestsProvider, providers::AuthContext};
 use leptos::form::ActionForm;
 use leptos::*;
@@ -8,8 +9,7 @@ use leptos::{html, prelude::*};
 #[component]
 pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let account_action = ServerAction::<EditAccount>::new();
-    let pathname =
-        move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
+    let pathname = expect_context::<NavigationControllerSignal>().redirect;
     let my_input = NodeRef::<html::Input>::new();
 
     Effect::new(move |_| {
@@ -100,7 +100,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     autocomplete="new-password"
                     placeholder="New password (again)"
                 />
-                <input type="hidden" name="pathname" value=pathname().0 />
+                <input type="hidden" name="pathname" value=pathname() />
                 <input
                     type="submit"
                     class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight active:scale-95 hover:bg-pillbug-teal focus:outline-none"

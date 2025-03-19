@@ -7,6 +7,7 @@ use super::ApiRequestsProvider;
 #[derive(Clone, Debug, Copy)]
 pub struct NavigationControllerSignal {
     pub game_signal: RwSignal<GameNavigationControllerState>,
+    pub redirect: RwSignal<String>,
 }
 
 impl Default for NavigationControllerSignal {
@@ -19,6 +20,7 @@ impl NavigationControllerSignal {
     pub fn new() -> Self {
         Self {
             game_signal: RwSignal::new(GameNavigationControllerState::new()),
+            redirect: RwSignal::new("/".to_owned()),
         }
     }
 

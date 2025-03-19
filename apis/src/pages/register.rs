@@ -1,10 +1,8 @@
 use crate::functions::auth::register::Register;
 use crate::functions::users::username_taken;
 use crate::i18n::*;
-use crate::{
-    components::{organisms::header::Redirect, update_from_event::update_from_input},
-    providers::AuthContext,
-};
+use crate::providers::navigation_controller::NavigationControllerSignal;
+use crate::{components::update_from_event::update_from_input, providers::AuthContext};
 use lazy_static::lazy_static;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::prelude::*;
@@ -29,8 +27,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         let user = user.clone();
         async move { username_taken(user).await }
     });
-    let pathname =
-        move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
+    let pathname = expect_context::<NavigationControllerSignal>().redirect;
     let my_input = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
@@ -185,7 +182,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         {t!(i18n, user_config.create_account.password_error)}
                     </small>
                 </Show>
-                <input type="hidden" name="pathname" value=pathname().0 />
+                <input type="hidden" name="pathname" value=pathname() />
                 <div class="flex items-center mb-2">
                     <input
                         on:change=move |_| agree.update(|b| *b = !*b)

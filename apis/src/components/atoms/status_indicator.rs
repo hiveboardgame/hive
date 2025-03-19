@@ -10,7 +10,8 @@ use leptos_icons::*;
 use leptos_use::core::ConnectionReadyState;
 
 #[component]
-pub fn StatusIndicator(username: Signal<String>) -> impl IntoView {
+pub fn StatusIndicator(username: String) -> impl IntoView {
+    let cloned = username.clone();
     let websocket = expect_context::<WebsocketContext>();
     let ping = expect_context::<PingContext>();
     let auth_context = expect_context::<AuthContext>();
@@ -19,7 +20,7 @@ pub fn StatusIndicator(username: Signal<String>) -> impl IntoView {
         auth_context
             .user
             .get()
-            .is_some_and(|user| user.username == username())
+            .is_some_and(|user| user.username == cloned)
     };
     let user_has_ws = move || {
         Utc::now()
@@ -30,25 +31,27 @@ pub fn StatusIndicator(username: Signal<String>) -> impl IntoView {
     };
 
     let icon_style = move || {
-        if user_is_player() {
-            if user_has_ws() {
-                "fill-grasshopper-green"
-            } else {
-                "w-6 h-6 fill-ladybug-red"
-            }
-        } else {
-            match (online_users.signal)().username_status.get(&username()) {
-                Some(UserStatus::Online) => "fill-grasshopper-green",
+        let base_classes = "mr-1 pb-[2px]";
 
-                // TODO: Figure out away Some(UserStatus::Away) => ....
-                _ => "fill-slate-400",
-            }
+        if user_is_player() {
+            return if user_has_ws() {
+                format!("{base_classes} fill-grasshopper-green")
+            } else {
+                format!("{base_classes} w-6 h-6 fill-ladybug-red")
+            };
+        }
+
+        match (online_users.signal)().username_status.get(&username) {
+            Some(UserStatus::Online) => "fill-grasshopper-green".to_string(),
+            //TODO: Figure out away Some(UserStatus::Away) => ....
+            _ => format!("{base_classes} fill-slate-400"),
         }
     };
+
     view! {
         <Icon
             icon=icondata::BiCircleSolid
-            attr:class=move || format!("mr-1 pb-[2px] {}", icon_style())
+            attr:class=icon_style
         />
     }
 }

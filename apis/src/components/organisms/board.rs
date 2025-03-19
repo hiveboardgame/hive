@@ -16,11 +16,10 @@ use leptos::{
     prelude::*,
     svg::{self, Svg},
 };
-use leptos_use::on_click_outside;
 use leptos_use::{
-    use_event_listener, use_event_listener_with_options, use_intersection_observer_with_options,
-    use_resize_observer, use_throttle_fn_with_arg, UseEventListenerOptions,
-    UseIntersectionObserverOptions,
+    on_click_outside, use_event_listener, use_event_listener_with_options,
+    use_intersection_observer_with_options, use_resize_observer, use_throttle_fn_with_arg,
+    UseEventListenerOptions, UseIntersectionObserverOptions,
 };
 use std::time::Duration;
 use wasm_bindgen::JsCast;
@@ -117,14 +116,15 @@ pub fn Board(
             .center_coordinates()
     };
 
-    let straight = { config().unwrap_or_default().tile_design == TileDesign::ThreeD };
+    let straight =
+        move || config.get_untracked().unwrap_or_default().tile_design == TileDesign::ThreeD;
 
     Effect::watch(
         move || (),
         move |_, _, _| {
             let div = div_ref.get_untracked().expect("it exists");
             let rect = div.get_bounding_client_rect();
-            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight);
+            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight());
             viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                 viewbox_controls.x = 0.0;
                 viewbox_controls.y = 0.0;
@@ -137,12 +137,10 @@ pub fn Board(
         true,
     );
 
-    let straight = { config().unwrap_or_default().tile_design == TileDesign::ThreeD };
-
     //This handles board resizes
     let throttled_resize = use_throttle_fn_with_arg(
         move |rect: DomRectReadOnly| {
-            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight);
+            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight());
             let svg = viewbox_ref.get_untracked().expect("It exists");
             // if user has zoomed, keep their scale when resizing board
             let (current_x_scale, current_y_scale) = if has_zoomed.get_untracked() {
@@ -319,8 +317,8 @@ pub fn Board(
     _ = use_event_listener(viewbox_ref, contextmenu, move |evt| {
         evt.prevent_default();
     });
-    #[allow(unused)]
-    on_click_outside(g_ref, move |event| {
+
+    _ = on_click_outside(g_ref, move |event| {
         let clicked_timer = event
             .target()
             .map(|t| t.dyn_ref::<web_sys::HtmlElement>().map(|t| t.id()))

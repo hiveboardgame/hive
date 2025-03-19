@@ -59,7 +59,6 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
             }
         });
     };
-    let delay = 250.0;
     let toggle_speeds = move |speed| {
         controls.update(|c| {
             if c.speeds.contains(&speed) {

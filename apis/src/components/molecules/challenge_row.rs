@@ -15,13 +15,13 @@ use shared_types::{ChallengeVisibility, TimeInfo};
 
 #[component]
 pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView {
-    //let challenge = Signal::derive(move || challenge.get_value().clone());
     let i18n = use_i18n();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let api = expect_context::<ApiRequestsProvider>().0;
-    let challenge = Signal::derive(move || challenge.clone());
-    let icon = move || match challenge().color_choice {
+    let challenge_id = StoredValue::new(challenge.challenge_id);
+    let visibility = StoredValue::new(challenge.visibility);
+    let icon = move || match challenge.color_choice {
         ColorChoice::Random => {
             view! { <Icon icon=icondata::BsHexagonHalf attr:class="pb-[2px]" /> }
         }
@@ -45,7 +45,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
         format!(
             "{}/challenge/{}",
             hostname_and_port(),
-            challenge().challenge_id
+            challenge_id.get_value()
         )
     };
     let button_ref = NodeRef::<html::Button>::new();
@@ -73,65 +73,39 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
     };
 
     let td_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
-    let time_mode = challenge().time_mode;
+    let time_mode = challenge.time_mode;
     let uid = move || auth_context.user.get().map(|user| user.id);
-    let player = move || {
-        if let (Some(uid), Some(opponent)) = (uid(), challenge().opponent) {
-            if challenge().challenger.uid == uid {
-                view! {
-                    <div class="flex items-center">
-                        <StatusIndicator username=opponent.username.to_owned().into() />
-                        <ProfileLink
-                            username=opponent.username
-                            patreon=opponent.patreon
-                            extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-[150px]"
-                        />
-                    </div>
-                }
-            } else {
-                view! {
-                    <div class="flex items-center">
-                        <StatusIndicator username=challenge().challenger.username.into() />
-                        <ProfileLink
-                            username=challenge().challenger.username
-                            patreon=challenge().challenger.patreon
-                            extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-[150px]"
-                        />
-                    </div>
-                }
-            }
-        } else {
-            view! {
-                <div class="flex items-center">
-                    <StatusIndicator username=Signal::derive(move || {
-                        challenge().challenger.username
-                    }) />
-                    <ProfileLink
-                        username=challenge().challenger.username
-                        patreon=challenge().challenger.patreon
-                        extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm:max-w-[150px]"
-                    />
-                </div>
-            }
-        }
-    };
 
-    let rating = move || {
-        if let (Some(uid), Some(opponent)) = (uid(), challenge().opponent) {
-            if challenge().challenger.uid == uid {
-                view! { <p>{opponent.rating_for_speed(&challenge().speed)}</p> }
+    let challenger_username = StoredValue::new(challenge.challenger.username);
+    let challenger_patreon = StoredValue::new(challenge.challenger.patreon);
+    let (username, patreon, rating) =
+        if let (Some(uid), Some(opponent)) = (uid(), challenge.opponent.clone()) {
+            if challenge.challenger.uid == uid {
+                let opp = opponent.username.clone();
+                (
+                    opp.clone(),
+                    opponent.patreon,
+                    opponent.rating_for_speed(&challenge.speed),
+                )
             } else {
-                view! { <p>{challenge().challenger_rating}</p> }
+                (
+                    challenger_username.get_value(),
+                    challenger_patreon.get_value(),
+                    challenge.challenger_rating,
+                )
             }
         } else {
-            view! { <p>{challenge().challenger_rating}</p> }
-        }
-    };
+            (
+                challenger_username.get_value(),
+                challenger_patreon.get_value(),
+                challenge.challenger_rating,
+            )
+        };
 
     let time_info = TimeInfo {
         mode: time_mode,
-        base: challenge().time_base,
-        increment: challenge().time_increment,
+        base: challenge.time_base,
+        increment: challenge.time_increment,
     };
 
     view! {
@@ -140,14 +114,25 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                 <div>{icon}</div>
             </td>
             <td class=format!("w-10 sm:w-36 {td_class}")>
-                <div class="flex justify-center items-center">{player}</div>
-            </td>
-            <td class=td_class>
-                <div class="flex justify-center items-center">{rating}</div>
+                <div class="flex justify-center items-center">
+                    <div class="flex items-center">
+                        <StatusIndicator username=username.clone() />
+                        <ProfileLink
+                            username=username
+                            patreon=patreon
+                            extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm-max-w-[150px]"
+                        />
+                    </div>
+                </div>
             </td>
             <td class=td_class>
                 <div class="flex justify-center items-center">
-                    <GameType game_type=challenge().game_type />
+                    <p>{rating}</p>
+                </div>
+            </td>
+            <td class=td_class>
+                <div class="flex justify-center items-center">
+                    <GameType game_type=challenge.game_type />
                 </div>
             </td>
             <td class=td_class>
@@ -161,7 +146,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
             <td class=td_class>
                 <div class="flex justify-center items-center">
                     <span class="font-bold">
-                        {if challenge().rated {
+                        {if challenge.rated {
                             Either::Left(t!(i18n, home.challenge_details.rated.yes))
                         } else {
                             Either::Right(t!(i18n, home.challenge_details.rated.no))
@@ -175,13 +160,13 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                     <Show
                         when=move || {
                             let uid = uid();
-                            uid != Some(challenge().challenger.uid)
+                            uid != Some(challenge.challenger.uid)
                         }
 
                         fallback=move || {
                             view! {
                                 <Show when=move || {
-                                    challenge().visibility == ChallengeVisibility::Private
+                                    visibility.get_value() == ChallengeVisibility::Private
                                         && !single
                                 }>
                                     <button
@@ -194,7 +179,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                                 </Show>
                                 <button
                                     on:click=move |_| {
-                                        api.get().challenge_cancel(challenge().challenge_id)
+                                        api.get().challenge_cancel(challenge_id.get_value())
                                     }
 
                                     class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
@@ -207,7 +192,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
 
                         <button
                             on:click=move |_| {
-                                api.get().challenge_accept(challenge().challenge_id);
+                                api.get().challenge_accept(challenge_id.get_value());
                             }
 
                             class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
@@ -215,12 +200,12 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
                             <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
 
                         </button>
-                        {if challenge().opponent.is_some() {
+                        {if challenge.opponent.is_some() {
                             Either::Left(
                                 view! {
                                     <button
                                         on:click=move |_| {
-                                            api.get().challenge_cancel(challenge().challenge_id);
+                                            api.get().challenge_cancel(challenge_id.get_value());
                                         }
 
                                         class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"

@@ -1,14 +1,14 @@
 use crate::functions::auth::login::Login;
 use crate::i18n::*;
-use crate::{components::organisms::header::Redirect, providers::AuthContext};
+use crate::providers::navigation_controller::NavigationControllerSignal;
+use crate::providers::AuthContext;
 use leptos::prelude::*;
 use leptos::{form::ActionForm, html};
 
 #[component]
 pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let i18n = use_i18n();
-    let pathname =
-        move || use_context::<Redirect>().unwrap_or(Redirect(RwSignal::new(String::from("/"))));
+    let pathname = expect_context::<NavigationControllerSignal>().redirect;
     let my_input = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
@@ -50,7 +50,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         placeholder="********"
                     />
                 </label>
-                <input type="hidden" name="pathname" value=pathname().0 />
+                <input type="hidden" name="pathname" value=pathname() />
                 <p class="h-5">
                     <Show when=move || { login.value().get().is_some_and(|v| v.is_err()) }>
                         <small class="text-ladybug-red">

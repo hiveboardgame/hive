@@ -46,7 +46,7 @@ pub fn UserWithRating(
             {move || {
                 view! {
                     <div class="flex items-center">
-                        <StatusIndicator username />
+                        <StatusIndicator username=username() />
                         <ProfileLink
                             patreon=patreon()
                             username=username()

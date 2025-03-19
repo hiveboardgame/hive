@@ -3,9 +3,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{
-    Conclusion, GameId, GameSpeed, GameStart, GamesQueryOptions, TimeMode, TournamentGameResult,
-};
+use shared_types::{Conclusion, GameId, GameSpeed, GameStart, TimeMode, TournamentGameResult};
 use std::cmp::Ordering;
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
@@ -160,6 +158,7 @@ use db_lib::{
 use hive_lib::{
     Color, GameStatus::Finished, Piece,
 };
+use shared_types::GamesQueryOptions;
 use std::str::FromStr;
 
 impl GameResponse {

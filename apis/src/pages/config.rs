@@ -24,7 +24,6 @@ pub fn Config() -> impl IntoView {
         let game_speed = game_speed();
         view! { <ConfirmModeToggle game_speed /> }
     };
-    //TODO: add MaybeProp back in
     view! {
         <div class="flex flex-col pt-10 sm:flex-row">
             <div class="m-1">

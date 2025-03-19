@@ -36,7 +36,7 @@ impl Default for Config {
                 .max_age(CONF_MAX_AGE)
                 .path("/"),
         );
-        set_cookie.update(|v| {
+        set_cookie.update_untracked(|v| {
             if v.is_none() {
                 *v = Some(ConfigOpts::default())
             }

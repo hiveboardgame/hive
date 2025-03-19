@@ -164,7 +164,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                 <div class="flex gap-1 justify-center items-center w-full">
                     <div class="mr-2">
                         <div class="flex items-center">
-                            <StatusIndicator username=game().white_player.username.into() />
+                            <StatusIndicator username=game().white_player.username />
                             <ProfileLink
                                 patreon=game().white_player.patreon
                                 username=game().white_player.username
@@ -179,7 +179,7 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
                     <Icon icon=icondata::RiSwordOthersLine />
                     <div class="ml-2">
                         <div class="flex items-center">
-                            <StatusIndicator username=game().black_player.username.into() />
+                            <StatusIndicator username=game().black_player.username />
                             <ProfileLink
                                 username=game().black_player.username
                                 patreon=game().black_player.patreon
