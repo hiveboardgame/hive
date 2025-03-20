@@ -9,3 +9,4 @@ pub mod oauth;
 pub mod pwa;
 pub mod tournaments;
 pub mod users;
+pub mod home_banner;

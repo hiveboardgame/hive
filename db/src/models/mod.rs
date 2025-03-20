@@ -1,6 +1,7 @@
 mod challenge;
 mod game;
 mod game_user;
+mod home_banner;
 mod rating;
 mod schedule;
 mod tournament;
@@ -11,6 +12,7 @@ mod tournament_series_organizer;
 mod tournament_user;
 mod user;
 pub use challenge::{Challenge, NewChallenge};
+pub use home_banner::HomeBanner;
 pub use game::{Game, NewGame};
 pub use game_user::GameUser;
 pub use rating::{NewRating, Rating};
