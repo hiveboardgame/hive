@@ -1,5 +1,5 @@
 use crate::responses::ScheduleResponse;
-use leptos::{provide_context, RwSignal};
+use leptos::prelude::{provide_context, RwSignal};
 use shared_types::GameId;
 use std::collections::HashMap;
 use uuid::Uuid;

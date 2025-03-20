@@ -1,6 +1,6 @@
 use crate::common::GameActionResponse;
 use crate::providers::{game_state::GameStateSignal, games::GamesSignal};
-use leptos::*;
+use leptos::prelude::*;
 
 pub fn handle_timeout(gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();

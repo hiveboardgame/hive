@@ -1,6 +1,6 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage, TournamentUpdate},
-    responses::{GameResponse, TournamentResponse},
+    responses::GameResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -39,7 +39,7 @@ impl AbandonHandler {
         // scheduled against them.
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
-        let (tournament, abandoned) = conn
+        let abandoned = conn
             .transaction::<_, DbError, _>(move |tc| {
                 async move {
                     let mut abandoned = Vec::new();
@@ -50,7 +50,7 @@ impl AbandonHandler {
                             abandoned.push(game.resign(&GameControl::Resign(color), tc).await?);
                         }
                     }
-                    Ok((tournament, abandoned))
+                    Ok(abandoned)
                 }
                 .scope_boxed()
             })
@@ -74,7 +74,7 @@ impl AbandonHandler {
             });
         }
 
-        let tournament_response = TournamentResponse::from_model(&tournament, &mut conn).await?;
+        let tournament_response = self.tournament_id.clone();
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::Global,

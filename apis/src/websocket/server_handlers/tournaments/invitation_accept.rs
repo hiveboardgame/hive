@@ -1,6 +1,5 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    responses::TournamentResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -35,7 +34,7 @@ impl InvitationAccept {
                     .scope_boxed()
             })
             .await?;
-        let response = TournamentResponse::from_model(&tournament, &mut conn).await?;
+        let response = TournamentId(tournament.nanoid.clone());
         Ok(vec![
             InternalServerMessage {
                 destination: MessageDestination::User(self.user_id),

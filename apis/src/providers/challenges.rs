@@ -1,5 +1,5 @@
 use crate::responses::ChallengeResponse;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::ChallengeId;
 use std::collections::HashMap;
 
@@ -17,7 +17,7 @@ impl Default for ChallengeStateSignal {
 impl ChallengeStateSignal {
     pub fn new() -> Self {
         Self {
-            signal: create_rw_signal(ChallengeState::new()),
+            signal: RwSignal::new(ChallengeState::new()),
         }
     }
 

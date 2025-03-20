@@ -1,8 +1,7 @@
 use super::game_reaction::GameReaction;
 use super::ClientRequest;
 use crate::responses::{
-    ChallengeResponse, GameResponse, GamesSearchResponse, HeartbeatResponse, ScheduleResponse,
-    TournamentAbstractResponse, TournamentResponse, UserResponse,
+    ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse, UserResponse,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -48,36 +47,30 @@ pub enum ServerMessage {
     Challenge(ChallengeUpdate),
     Chat(Vec<ChatMessageContainer>),
     ConnectionUpdated(Uuid, String),
-    CouldSetUserConf(bool),
     Error(String),
     Game(Box<GameUpdate>),
-    GamesSearch(GamesSearchResponse),
     // sent to everyone in the game when a user joins the game
     Join(UserResponse),
     Ping { nonce: u64, value: f64 },
-    PlayerProfile(UserResponse),
     Schedule(ScheduleUpdate),
     Tournament(TournamentUpdate),
-    UserSearch(Vec<UserResponse>),
     UserStatus(UserUpdate),
     RedirectLink(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TournamentUpdate {
-    AbstractTournaments(Vec<TournamentAbstractResponse>),
-    Adjudicated(Box<TournamentResponse>),
-    Created(Box<TournamentResponse>),
-    Declined(Box<TournamentResponse>),
+    Adjudicated(TournamentId),
+    Created(TournamentId),
+    Declined(TournamentId),
     Deleted(TournamentId),
-    Finished(Box<TournamentResponse>),
-    Invited(Box<TournamentResponse>),
-    Joined(Box<TournamentResponse>),
-    Left(Box<TournamentResponse>),
-    Modified(Box<TournamentResponse>),
-    Started(Box<TournamentResponse>),
-    Tournaments(Vec<Box<TournamentResponse>>),
-    Uninvited(Box<TournamentResponse>),
+    Finished(TournamentId),
+    Invited(TournamentId),
+    Joined(TournamentId),
+    Left(TournamentId),
+    Modified(TournamentId),
+    Started(TournamentId),
+    Uninvited(TournamentId),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

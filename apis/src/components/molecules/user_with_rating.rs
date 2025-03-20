@@ -1,5 +1,5 @@
 use hive_lib::Color;
-use leptos::*;
+use leptos::{either::Either, prelude::*};
 use shared_types::GameSpeed;
 
 use crate::{
@@ -28,13 +28,13 @@ pub fn UserWithRating(
             _ => resp.speed,
         })
     };
-    let username = move || player().map_or(String::new(), |p| p.username);
+    let username = Signal::derive(move || player().map_or(String::new(), |p| p.username));
     let patreon = move || player().is_some_and(|p| p.patreon);
     let rating = move || match (player(), speed()) {
-        (Some(player), Some(speed)) => {
-            view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> }
-        }
-        _ => view! { "" }.into_view(),
+        (Some(player), Some(speed)) => Either::Left(
+            view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> },
+        ),
+        _ => Either::Right(view! { "" }),
     };
     view! {
         <div class=move || {

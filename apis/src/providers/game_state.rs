@@ -1,20 +1,18 @@
 use std::str::FromStr;
 
 use crate::common::MoveInfo;
-use crate::providers::api_requests::ApiRequests;
 use crate::responses::GameResponse;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
-use super::auth_context::AuthContext;
+use super::{auth_context::AuthContext, ApiRequestsProvider};
 
 #[derive(Clone, Debug, Copy)]
 pub struct GameStateSignal {
     pub signal: RwSignal<GameState>,
-    pub loaded: RwSignal<bool>,
 }
 
 impl Default for GameStateSignal {
@@ -27,7 +25,6 @@ impl GameStateSignal {
     pub fn new() -> Self {
         Self {
             signal: RwSignal::new(GameState::new()),
-            loaded: RwSignal::new(false),
         }
     }
 
@@ -56,10 +53,7 @@ impl GameStateSignal {
     }
 
     // No longer access the whole signal when getting user_color
-    pub fn user_color_as_signal(
-        &self,
-        user_id: MaybeSignal<Option<Uuid>>,
-    ) -> Signal<Option<Color>> {
+    pub fn user_color_as_signal(&self, user_id: Signal<Option<Uuid>>) -> Signal<Option<Color>> {
         create_read_slice(self.signal, move |gamestate| {
             match (gamestate.white_id, gamestate.black_id) {
                 (Some(w), Some(b)) => {
@@ -114,20 +108,18 @@ impl GameStateSignal {
     }
 
     pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
-        batch(move || {
-            self.reset();
-            let turn = if state.turn != 0 {
-                Some(state.turn - 1)
-            } else {
-                None
-            };
-            self.signal.update(|s| {
-                s.history_turn = turn;
-                s.state = state;
-                s.black_id = Some(black_id);
-                s.white_id = Some(white_id);
-            })
-        });
+        self.reset();
+        let turn = if state.turn != 0 {
+            Some(state.turn - 1)
+        } else {
+            None
+        };
+        self.signal.update(|s| {
+            s.history_turn = turn;
+            s.state = state;
+            s.black_id = Some(black_id);
+            s.white_id = Some(white_id);
+        })
     }
 
     pub fn set_game_id(&mut self, game_id: GameId) {
@@ -326,11 +318,12 @@ impl GameState {
     }
 
     pub fn send_game_control(&mut self, game_control: GameControl, user_id: Uuid) {
+        let api = expect_context::<ApiRequestsProvider>().0.get();
         if let Some(color) = self.user_color(user_id) {
             if color != game_control.color() {
                 log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
             } else if let Some(ref game_id) = self.game_id {
-                ApiRequests::new().game_control(game_id.to_owned(), game_control);
+                api.game_control(game_id.to_owned(), game_control);
             } else {
                 log!("This is a bug, there should be a game_id");
             }
@@ -340,10 +333,7 @@ impl GameState {
     pub fn is_move_allowed(&self) -> bool {
         let auth_context = expect_context::<AuthContext>();
 
-        let user = move || match (auth_context.user)() {
-            Some(Ok(Some(user))) => Some(user),
-            _ => None,
-        };
+        let user = auth_context.user;
         if matches!(self.state.game_status, GameStatus::Finished(_)) {
             return false;
         }
@@ -361,6 +351,7 @@ impl GameState {
 
     pub fn move_active(&mut self) {
         //log!("Moved active!");
+        let api = expect_context::<ApiRequestsProvider>().0.get();
         if let (Some(active), Some(position)) =
             (self.move_info.active, self.move_info.target_position)
         {
@@ -368,7 +359,7 @@ impl GameState {
                 log!("Could not play turn: {} {} {}", active, position, e);
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
-                ApiRequests::new().turn(game_id.to_owned(), turn);
+                api.turn(game_id.to_owned(), turn);
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             } else {

@@ -9,7 +9,7 @@ use crate::{
     websocket::client_handlers::game::tv::handler::handle_tv,
 };
 use hive_lib::{GameStatus, History, State};
-use leptos::*;
+use leptos::prelude::*;
 
 use super::{ready::handle_ready, start::handle_start};
 
@@ -59,20 +59,18 @@ pub fn reset_game_state_for_takeback(game: &GameResponse) {
 
 pub fn reset_game_state(game: &GameResponse) {
     let mut game_state = expect_context::<GameStateSignal>();
-    batch(move || {
-        game_state.full_reset();
-        game_state
-            .signal
-            .update_untracked(|gs| gs.game_id = Some(game.game_id.clone()));
-        game_state.set_game_response(game.clone());
-        let mut history = History::new();
-        game.history.clone_into(&mut history.moves);
-        game.game_type.clone_into(&mut history.game_type);
-        if let GameStatus::Finished(result) = &game.game_status {
-            result.clone_into(&mut history.result);
-        }
-        if let Ok(state) = State::new_from_history(&history) {
-            game_state.set_state(state, game.black_player.uid, game.white_player.uid);
-        }
-    });
+    game_state.full_reset();
+    game_state
+        .signal
+        .update_untracked(|gs| gs.game_id = Some(game.game_id.clone()));
+    game_state.set_game_response(game.clone());
+    let mut history = History::new();
+    game.history.clone_into(&mut history.moves);
+    game.game_type.clone_into(&mut history.game_type);
+    if let GameStatus::Finished(result) = &game.game_status {
+        result.clone_into(&mut history.result);
+    }
+    if let Ok(state) = State::new_from_history(&history) {
+        game_state.set_state(state, game.black_player.uid, game.white_player.uid);
+    }
 }

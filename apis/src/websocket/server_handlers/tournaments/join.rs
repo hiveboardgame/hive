@@ -1,6 +1,5 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    responses::TournamentResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -34,7 +33,7 @@ impl JoinHandler {
                 async move { Ok(tournament.join(&self.user_id, tc).await?) }.scope_boxed()
             })
             .await?;
-        let response = TournamentResponse::from_model(&tournament, &mut conn).await?;
+        let response = TournamentId(tournament.nanoid.clone());
         Ok(vec![
             InternalServerMessage {
                 destination: MessageDestination::User(self.user_id),

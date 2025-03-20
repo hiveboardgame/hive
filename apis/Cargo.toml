@@ -32,7 +32,6 @@ http-serde = { workspace = true }
 icondata = { workspace = true }
 indoc = { workspace = true }
 lazy_static = { workspace = true }
-leptix_primitives = {workspace = true}
 leptos = { workspace = true }
 leptos-use = { workspace = true }
 leptos_actix = { workspace = true, optional = true }
@@ -48,6 +47,8 @@ regex = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+server_fn = { workspace = true }
+send_wrapper = { workspace = true }
 sha2 = { workspace = true }
 shared_types = { path = "../shared_types" }
 simple_logger = { workspace = true }
@@ -61,8 +62,8 @@ wasm-bindgen-futures = { workspace = true}
 web-sys = { workspace = true }
 
 [features]
-csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr", "leptos_i18n/csr"]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_i18n/hydrate"]
+csr = ["leptos/csr", "leptos_i18n/csr"]
+hydrate = ["leptos/hydrate", "leptos_i18n/hydrate"]
 ssr = [
   "dep:actix",
   "dep:actix-files",
@@ -86,6 +87,7 @@ ssr = [
 
 [package.metadata.leptos-i18n]
 default = "en"
+#Commented out very incomplete locales (< 30% translated)
 locales = [
   "ca", 
   "de",
@@ -96,7 +98,11 @@ locales = [
   "it", 
   "pt",
   "ro", 
-  "ru" 
+  "ru" ,
+  #cs,
+  #ja,
+  #nl,
+  #sv
 ]
 namespaces = [
   "header", 
@@ -112,7 +118,7 @@ namespaces = [
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name   
 output-name = "HiveGame"
-hash-files=false
+hash-files=true
 # The site root folder is where cargo-leptos generate all output. WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
 site-root = "target/site"
 # The site-root relative folder where all compiled output (JS, WASM and CSS) is written

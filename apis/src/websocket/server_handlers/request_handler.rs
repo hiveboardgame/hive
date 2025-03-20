@@ -1,14 +1,10 @@
 use super::challenges::handler::ChallengeHandler;
 use super::chat::handler::ChatHandler;
 use super::game::handler::GameActionHandler;
-use super::games_search::GamesSearchHandler;
 use super::oauth::handler::OauthHandler;
 use super::pong::handler::PongHandler;
 use super::schedules::ScheduleHandler;
-use super::search::handler::UserSearchHandler;
-use super::set_userconf::ServerUserConfHandler;
 use super::tournaments::handler::TournamentHandler;
-use super::user_profile::UserProfileHandler;
 use super::user_status::handler::UserStatusHandler;
 use crate::common::{ClientRequest, GameAction};
 use crate::websocket::chat::Chats;
@@ -17,11 +13,25 @@ use crate::websocket::messages::AuthError;
 use crate::websocket::messages::InternalServerMessage;
 use crate::websocket::messages::WsMessage;
 use crate::websocket::tournament_game_start::TournamentGameStart;
-use anyhow::Result;
 use db_lib::DbPool;
 use shared_types::{ChatDestination, SimpleUser};
+use thiserror::Error;
 use uuid::Uuid;
 
+#[derive(Error, Debug)]
+pub enum RequestHandlerError {
+    InternalError(#[from] anyhow::Error),
+    AuthError(#[from] AuthError),
+}
+
+impl std::fmt::Display for RequestHandlerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RequestHandlerError::InternalError(e) => write!(f, "{}", e),
+            RequestHandlerError::AuthError(e) => write!(f, "{}", e),
+        }
+    }
+}
 pub struct RequestHandler {
     command: ClientRequest,
     chat_storage: actix_web::web::Data<Chats>,
@@ -35,7 +45,7 @@ pub struct RequestHandler {
     authed: bool,
     admin: bool,
 }
-
+type Result<T> = std::result::Result<T, RequestHandlerError>;
 impl RequestHandler {
     pub fn new(
         command: ClientRequest,
@@ -79,11 +89,6 @@ impl RequestHandler {
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
             ClientRequest::LinkDiscord => OauthHandler::new(self.user_id).handle().await?,
-            ClientRequest::UserSearch(pattern) => {
-                UserSearchHandler::new(self.user_id, pattern, &self.pool)
-                    .handle()
-                    .await?
-            }
             ClientRequest::Chat(message_container) => {
                 self.ensure_auth()?;
                 if self.user_id != message_container.message.user_id {
@@ -147,25 +152,6 @@ impl RequestHandler {
                     _ => self.ensure_auth()?,
                 }
                 ScheduleHandler::new(self.user_id, action, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            ClientRequest::GamesSearch(options) => {
-                GamesSearchHandler::new(self.user_id, options, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            ClientRequest::UserProfile(username) => {
-                UserProfileHandler::new(self.user_id, username, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            ClientRequest::SetServerUserConf(takeback) => {
-                self.ensure_auth()?;
-                ServerUserConfHandler::new(self.user_id, takeback, &self.pool)
                     .await?
                     .handle()
                     .await?

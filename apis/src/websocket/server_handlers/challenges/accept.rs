@@ -107,8 +107,7 @@ impl AcceptHandler {
                 let _ = Busybee::msg(white_id, msg).await;
                 let msg = format!(
                     "[Your game](<https://hivegame.com/game/{}>) vs {} started.",
-                    game.nanoid,
-                    white.username
+                    game.nanoid, white.username
                 );
                 let _ = Busybee::msg(black_id, msg).await;
             }
