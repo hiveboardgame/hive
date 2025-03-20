@@ -42,7 +42,7 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
     let tile_design = Signal::derive(move || tile_design.clone());
     let Config(config, set_cookie) = expect_context();
     let is_active = move || {
-        if config().unwrap_or_default().tile_design == tile_design() {
+        if config().tile_design == tile_design() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"

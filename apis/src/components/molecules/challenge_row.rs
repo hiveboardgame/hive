@@ -26,14 +26,14 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
             view! { <Icon icon=icondata::BsHexagonHalf attr:class="pb-[2px]" /> }
         }
         ColorChoice::White => {
-            if config().unwrap_or_default().prefers_dark {
+            if config().prefers_dark {
                 view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-white pb-[2px]" /> }
             } else {
                 view! { <Icon icon=icondata::BsHexagon attr:class="stroke-black pb-[2px]" /> }
             }
         }
         ColorChoice::Black => {
-            if config().unwrap_or_default().prefers_dark {
+            if config().prefers_dark {
                 view! { <Icon icon=icondata::BsHexagon attr:class="stroke-white pb-[2px]" /> }
             } else {
                 view! { <Icon icon=icondata::BsHexagonFill attr:class="fill-black pb-[2px]" /> }

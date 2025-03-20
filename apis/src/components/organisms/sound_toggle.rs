@@ -6,7 +6,7 @@ use leptos_icons::Icon;
 pub fn SoundToggle() -> impl IntoView {
     let Config(config, set_cookie) = expect_context();
     let icon = move || {
-        let icon = if config().unwrap_or_default().prefers_sound {
+        let icon = if config().prefers_sound {
             icondata::BiVolumeFullRegular
         } else {
             icondata::BiVolumeMuteRegular

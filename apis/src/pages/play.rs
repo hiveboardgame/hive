@@ -35,7 +35,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let current_confirm = Memo::new(move |_| {
-        let preferred_confirms = config().unwrap_or_default().confirm_mode;
+        let preferred_confirms = config().confirm_mode;
         game_state
             .signal
             .get()

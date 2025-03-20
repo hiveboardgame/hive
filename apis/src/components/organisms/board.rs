@@ -117,7 +117,7 @@ pub fn Board(
     };
 
     let straight =
-        move || config.get_untracked().unwrap_or_default().tile_design == TileDesign::ThreeD;
+        move || config.get_untracked().tile_design == TileDesign::ThreeD;
 
     Effect::watch(
         move || (),

@@ -94,7 +94,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     }
 
     let color_scheme_meta = move || {
-        if config.get_untracked().unwrap_or_default().prefers_dark {
+        if config.get_untracked().prefers_dark {
             "dark"
         } else {
             "light"
@@ -201,7 +201,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         <Meta name="apple-mobile-web-app-status-bar-style" content="black" />
         <Script src="/assets/js/pwa.js" />
         <Html attr:class=move || {
-            match config.get_untracked().unwrap_or_default().prefers_dark {
+            match config.get_untracked().prefers_dark {
                 true => "dark",
                 false => "",
             }

@@ -31,7 +31,6 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> im
     let is_active = move || {
         let inactive_class = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal";
         config()
-            .unwrap_or_default()
             .confirm_mode
             .get(&game_speed())
             .map_or(inactive_class, |preferred| {
