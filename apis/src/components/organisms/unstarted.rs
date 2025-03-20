@@ -1,8 +1,8 @@
 use crate::i18n::*;
-use crate::providers::{
-    game_state::GameStateSignal, tournament_ready::TournamentReadySignal, ApiRequests,
-};
-use leptos::*;
+use crate::providers::game_state::GameStateSignal;
+use crate::providers::tournaments::TournamentStateContext;
+use crate::providers::ApiRequestsProvider;
+use leptos::prelude::*;
 use leptos_icons::*;
 use uuid::Uuid;
 
@@ -14,7 +14,8 @@ pub fn Unstarted(
 ) -> impl IntoView {
     let i18n = use_i18n();
     let game_state = expect_context::<GameStateSignal>();
-    let ready = expect_context::<TournamentReadySignal>().signal;
+    let ready = expect_context::<TournamentStateContext>().ready;
+    let api = expect_context::<ApiRequestsProvider>().0;
     let game_id = create_read_slice(game_state.signal, |gs| gs.game_id.clone());
     let white_id = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().map(|gr| (gr.white_player.uid))
@@ -53,7 +54,7 @@ pub fn Unstarted(
 
     let start = move |_| {
         if let Some(id) = game_id() {
-            let api = ApiRequests::new();
+            let api = api.get();
             api.tournament_game_start(id);
         };
     };
@@ -70,11 +71,11 @@ pub fn Unstarted(
                         <Show
                             when=white_ready
                             fallback=|| {
-                                view! { <Icon icon=icondata::IoCloseSharp class="w-6 h-6" /> }
+                                view! { <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" /> }
                             }
                         >
 
-                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6" />
+                            <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
                         </Show>
 
                     </div>
@@ -84,11 +85,11 @@ pub fn Unstarted(
                         <Show
                             when=black_ready
                             fallback=|| {
-                                view! { <Icon icon=icondata::IoCloseSharp class="w-6 h-6" /> }
+                                view! { <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" /> }
                             }
                         >
 
-                            <Icon icon=icondata::AiCheckOutlined class="w-6 h-6" />
+                            <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
                         </Show>
 
                     </div>

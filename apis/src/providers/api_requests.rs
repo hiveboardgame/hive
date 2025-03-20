@@ -1,32 +1,35 @@
 use super::challenges::ChallengeStateSignal;
 use super::games::GamesSignal;
-use super::AuthContext;
+use super::{auth_context, websocket};
 use crate::common::{ChallengeAction, ScheduleAction, TournamentAction};
 use crate::common::{ClientRequest, GameAction};
 use crate::providers::websocket::WebsocketContext;
-use crate::responses::create_challenge_handler;
+use crate::responses::{create_challenge_handler, AccountResponse};
 use hive_lib::{GameControl, Turn};
-use leptos::*;
-use shared_types::{
-    ChallengeId, ChatMessageContainer, GameId, GamesQueryOptions, Takeback, TournamentGameResult,
-    TournamentId,
-};
+use leptos::prelude::*;
+use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResult, TournamentId};
 
 #[derive(Clone)]
 pub struct ApiRequests {
     websocket: WebsocketContext,
+    user: Signal<Option<AccountResponse>>,
+    pub challenges: ChallengeStateSignal,
 }
 
-impl Default for ApiRequests {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+#[derive(Clone)]
+pub struct ApiRequestsProvider(pub Signal<ApiRequests>);
 
 impl ApiRequests {
-    pub fn new() -> Self {
-        let websocket = expect_context::<WebsocketContext>();
-        Self { websocket }
+    pub fn new(
+        websocket: websocket::WebsocketContext,
+        user: Signal<Option<AccountResponse>>,
+        challenges: ChallengeStateSignal,
+    ) -> Self {
+        Self {
+            websocket,
+            user,
+            challenges,
+        }
     }
 
     pub fn turn(&self, game_id: GameId, turn: Turn) {
@@ -110,15 +113,9 @@ impl ApiRequests {
     pub fn challenge(&self, challenge_action: ChallengeAction) {
         let challenge_action = match challenge_action {
             ChallengeAction::Create(details) => {
-                let auth_context = expect_context::<AuthContext>();
-                let account = match (auth_context.user)() {
-                    Some(Ok(Some(account))) => Some(account),
-                    _ => None,
-                };
+                let account = self.user.get();
                 if let Some(account) = account {
-                    let challenges = expect_context::<ChallengeStateSignal>()
-                        .signal
-                        .get_untracked();
+                    let challenges = self.challenges.signal.get_untracked();
                     let challenges = challenges.challenges.into_values().collect();
                     create_challenge_handler(account.user.username, details, challenges)
                 } else {
@@ -148,28 +145,18 @@ impl ApiRequests {
         self.websocket.send(&msg);
     }
 
-    pub fn search_user(&self, pattern: String) {
-        if !pattern.is_empty() {
-            let msg = ClientRequest::UserSearch(pattern);
-            self.websocket.send(&msg);
-        }
-    }
-
     pub fn schedule_action(&self, action: ScheduleAction) {
         let msg = ClientRequest::Schedule(action);
         self.websocket.send(&msg);
     }
+}
 
-    pub fn games_search(&self, options: GamesQueryOptions) {
-        let msg = ClientRequest::GamesSearch(options);
-        self.websocket.send(&msg);
-    }
-    pub fn user_profile(&self, username: String) {
-        let msg = ClientRequest::UserProfile(username);
-        self.websocket.send(&msg);
-    }
-    pub fn set_server_user_conf(&self, takeback: Takeback) {
-        let msg = ClientRequest::SetServerUserConf(takeback);
-        self.websocket.send(&msg);
-    }
+pub fn provide_api_requests() {
+    let ws = expect_context::<WebsocketContext>();
+    let auth_context = expect_context::<auth_context::AuthContext>();
+    let challenges = expect_context::<ChallengeStateSignal>();
+    let api_requests = ApiRequests::new(ws, auth_context.user, challenges);
+    provide_context(ApiRequestsProvider(Signal::derive(move || {
+        api_requests.clone()
+    })));
 }

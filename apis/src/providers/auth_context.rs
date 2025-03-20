@@ -1,54 +1,47 @@
 use crate::functions::accounts::get::get_account;
-use crate::functions::auth::{login::Login, logout::Logout, register::Register};
+use crate::functions::auth::logout::Logout;
 use crate::providers::websocket::WebsocketContext;
 use crate::responses::AccountResponse;
-use leptos::*;
-
+use leptos::prelude::*;
 #[derive(Clone)]
 pub struct AuthContext {
-    pub login: Action<Login, Result<AccountResponse, ServerFnError>>,
-    pub logout: Action<Logout, Result<(), ServerFnError>>,
-    pub register: Action<Register, Result<(), ServerFnError>>,
-    pub user: Resource<(usize, usize, usize), Result<Option<AccountResponse>, ServerFnError>>,
+    pub logout: ServerAction<Logout>,
+    pub user: Signal<Option<AccountResponse>>,
+    action: Action<(), Result<AccountResponse, ServerFnError>>,
 }
 
-/// Get the current user and place it in Context
+impl AuthContext {
+    pub fn refresh(&self) {
+        self.action.dispatch(());
+    }
+}
 pub fn provide_auth() {
-    let login = create_server_action::<Login>();
-    let logout = create_server_action::<Logout>();
-    let register = create_server_action::<Register>();
+    let websocket_context = expect_context::<WebsocketContext>();
+    let logout = ServerAction::<Logout>::new();
+    let action = Action::new(move |_: &()| async { get_account().await });
 
-    let user = create_local_resource(
-        move || {
-            (
-                login.version().get(),
-                logout.version().get(),
-                register.version().get(),
-            )
+    // Get the current user and place it in Context
+    action.dispatch(());
+
+    Effect::watch(
+        logout.version(),
+        move |_, _, _| {
+            action.dispatch(());
         },
-        move |_| get_account(),
+        false,
     );
-
-    create_effect(move |_| {
-        user.and_then(|user| {
-            let websocket_context = expect_context::<WebsocketContext>();
+    Effect::watch(
+        action.version(),
+        move |_, _, _| {
             websocket_context.close();
-            if user.is_some() {
-                websocket_context.open();
-            }
-        });
-    });
-
-    create_effect(move |_| {
-        let websocket_context = expect_context::<WebsocketContext>();
-        logout.version().get();
-        websocket_context.close();
-    });
-
+            websocket_context.open();
+        },
+        false,
+    );
+    let user = Signal::derive(move || action.value().get().and_then(|v| v.ok()));
     provide_context(AuthContext {
         user,
-        login,
         logout,
-        register,
+        action,
     })
 }

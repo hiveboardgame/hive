@@ -1,10 +1,7 @@
 use super::TreeNode;
 use crate::components::organisms::analysis::{AnalysisSignal, ToggleStates};
 use crate::providers::game_state::GameStateSignal;
-use leptix_primitives::components::collapsible::{
-    CollapsibleContent, CollapsibleRoot, CollapsibleTrigger,
-};
-use leptos::*;
+use leptos::{html, prelude::*};
 use leptos_icons::Icon;
 use tree_ds::prelude::Node;
 
@@ -48,7 +45,7 @@ pub fn UndoButton() -> impl IntoView {
             on:click=undo
             prop:disabled=is_disabled
         >
-            <Icon icon=icondata::BiUndoRegular class="w-6 h-6" />
+            <Icon icon=icondata::BiUndoRegular attr:class="w-6 h-6" />
         </button>
     }
 }
@@ -75,15 +72,23 @@ pub fn HistoryButton(
     };
 
     let is_disabled = move || {
-        analysis.get().is_none_or(|analysis| {
-            analysis.current_node.is_none_or(|n| match cloned_action {
-                HistoryNavigation::Next => n.get_children_ids().is_empty(),
-                HistoryNavigation::Previous => n.get_parent_id().is_none(),
-            })
+        analysis.with(|analysis| {
+            if let Some(analysis) = analysis {
+                if let Some(n) = &analysis.current_node {
+                    match cloned_action {
+                        HistoryNavigation::Next => n.get_children_ids().is_empty(),
+                        HistoryNavigation::Previous => n.get_parent_id().is_none(),
+                    }
+                } else {
+                    false
+                }
+            } else {
+                true
+            }
         })
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        let current_node = analysis.get().unwrap().current_node;
+        let current_node = analysis.get().unwrap().current_node.clone();
         let updated_node_id = current_node.and_then(|n| match action {
             HistoryNavigation::Next => n.get_children_ids().first().cloned(),
             HistoryNavigation::Previous => n.get_parent_id(),
@@ -96,14 +101,14 @@ pub fn HistoryButton(
             });
         }
         if let Some(post_action) = post_action {
-            post_action(())
+            post_action.run(())
         }
     });
-    let _definite_node_ref = node_ref.unwrap_or(create_node_ref::<html::Button>());
+    let _definite_node_ref = node_ref.unwrap_or_default();
 
     view! {
         <button
-            ref=_definite_node_ref
+            node_ref=_definite_node_ref
             class=nav_buttons_style
             prop:disabled=is_disabled
             on:click=debounced_action
@@ -155,51 +160,46 @@ pub fn HistoryMove(node: Node<i32, TreeNode>, current_path: Memo<Vec<i32>>) -> i
 pub fn CollapsibleMove(
     node: Node<i32, TreeNode>,
     current_path: Memo<Vec<i32>>,
-    children: ChildrenFn,
+    inner: AnyView,
 ) -> impl IntoView {
     let closed_toggles = expect_context::<ToggleStates>().0;
     let node_id = node.get_node_id();
-    let is_open = !closed_toggles.get().contains(&node_id);
-    let (open, set_open) = create_signal(is_open);
-    view! {
-        <CollapsibleRoot
-            open
-            on_open_change=move |s: bool| {
-                closed_toggles
-                    .update_untracked(|t| {
-                        if s {
-                            t.remove(&node_id);
-                        } else {
-                            t.insert(node_id);
-                        }
-                    });
-                set_open(s);
+    let is_open = !closed_toggles.get_untracked().contains(&node_id);
+    let (open, set_open) = signal(is_open);
+    let onclick = move |_| {
+        let s = !open();
+        closed_toggles.update_untracked(|t| {
+            if s {
+                t.remove(&node_id);
+            } else {
+                t.insert(node_id);
             }
-        >
-
-            <div class="flex">
-                <CollapsibleTrigger>
-                    <button>
-                        <svg
-                            width="15"
-                            height="15"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        >
-                            <polyline points=move || {
-                                if open() { "19 12 12 19 5 12" } else { "12 5 19 12 12 19" }
-                            }></polyline>
-                        </svg>
-                    </button>
-                </CollapsibleTrigger>
-                <HistoryMove current_path node=node.clone() />
-            </div>
-            <CollapsibleContent children=children.clone() attr:class="nested-content" />
-        </CollapsibleRoot>
+        });
+        set_open(s);
+    };
+    view! {
+        <div class="flex">
+            <button on:click=onclick>
+                <svg
+                    width="15"
+                    height="15"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <polyline points=move || {
+                        if open() { "19 12 12 19 5 12" } else { "12 5 19 12 12 19" }
+                    }></polyline>
+                </svg>
+            </button>
+            <HistoryMove current_path node=node.clone() />
+        </div>
+        <div class=move || {
+            format!("nested-content {}", if open() { "" } else { "hidden" })
+        }>{inner}</div>
     }
 }

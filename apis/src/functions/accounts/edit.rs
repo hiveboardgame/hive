@@ -1,9 +1,9 @@
 use crate::responses::AccountResponse;
-use leptos::*;
+use leptos::prelude::*;
+use shared_types::Takeback;
 
 #[server]
 pub async fn edit_account(
-    new_email: String,
     new_password: String,
     new_password_confirmation: String,
     password: String,
@@ -22,8 +22,8 @@ pub async fn edit_account(
     if new_password != new_password_confirmation {
         return Err(ServerFnError::new("Passwords don't match."));
     }
-    let uuid = uuid()?;
-    let pool = pool()?;
+    let uuid = uuid().await?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let user = User::find_by_uuid(&uuid, &mut conn).await?;
     let argon2 = Argon2::default();
@@ -42,7 +42,20 @@ pub async fn edit_account(
         .map_err(ServerFnError::new)?
         .to_string();
 
-    user.edit(&hashed_password, &new_email, &mut conn).await?;
+    user.edit(&hashed_password, "", &mut conn).await?;
     leptos_actix::redirect(&pathname);
     AccountResponse::from_uuid(&user.id, &mut conn).await
+}
+
+#[server]
+pub async fn edit_config(takeback: Takeback) -> Result<(), ServerFnError> {
+    use crate::functions::auth::identity::uuid;
+    use crate::functions::db::pool;
+    use db_lib::get_conn;
+    use db_lib::models::User;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    let user = User::find_by_uuid(&uuid().await?, &mut conn).await?;
+    user.set_takeback(takeback.clone(), &mut conn).await?;
+    Ok(())
 }

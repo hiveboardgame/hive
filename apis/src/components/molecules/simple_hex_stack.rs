@@ -1,6 +1,6 @@
 use crate::common::HexStack;
 use crate::components::atoms::simple_hex::SimpleHex;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn SimpleHexStack(hex_stack: HexStack) -> impl IntoView {

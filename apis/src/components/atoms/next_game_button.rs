@@ -1,20 +1,20 @@
 use crate::providers::{games::GamesSignal, navigation_controller::NavigationControllerSignal};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::Icon;
 use shared_types::TimeMode;
 
 #[component]
 pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
-    let navigate = leptos_router::use_navigate();
+    let navigate = leptos_router::hooks::use_navigate();
     let navigation_controller = expect_context::<NavigationControllerSignal>();
-    let games = expect_context::<GamesSignal>();
+    let mut games = expect_context::<GamesSignal>();
     let next_games = move || {
         let game_id = navigation_controller
             .game_signal
             .get()
             .game_id
             .unwrap_or_default();
-        match time_mode() {
+        match time_mode.get_value() {
             TimeMode::Untimed => games.own.get().next_untimed,
             TimeMode::RealTime => games.own.get().next_realtime,
             TimeMode::Correspondence => games.own.get().next_correspondence,
@@ -23,7 +23,7 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
         .filter(|gp| gp.game_id != game_id)
         .count()
     };
-    let icon = move || match time_mode() {
+    let icon = move || match time_mode.get_value() {
         TimeMode::Untimed => icondata::BiInfiniteRegular,
         TimeMode::RealTime => icondata::BiStopwatchRegular,
         TimeMode::Correspondence => icondata::AiMailOutlined,
@@ -36,8 +36,7 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
     };
     let text = move || format!(": {}", next_games());
     let onclick = move |_| {
-        let mut games = expect_context::<GamesSignal>();
-        if let Some(game) = games.visit(time_mode()) {
+        if let Some(game) = games.visit(time_mode.get_value()) {
             navigate(&format!("/game/{}", game), Default::default());
         } else {
             navigate("/", Default::default());
@@ -46,7 +45,7 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
 
     view! {
         <button on:click=onclick class=style>
-            <Icon icon=icon() class="w-4 h-4" />
+            <Icon icon=icon() attr:class="w-4 h-4" />
             {text}
         </button>
     }

@@ -1,7 +1,7 @@
 use crate::common::RatingChangeInfo;
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::Color;
-use leptos::*;
+use leptos::prelude::*;
 use std::cmp::Ordering;
 
 #[component]
@@ -10,7 +10,7 @@ pub fn RatingAndChange(
     ratings: StoredValue<RatingChangeInfo>,
     side: Color,
 ) -> impl IntoView {
-    let ratings = ratings();
+    let ratings = ratings.get_value();
     let (rating_change, rating) = match side {
         Color::White => (ratings.white_rating_change, ratings.white_rating),
 

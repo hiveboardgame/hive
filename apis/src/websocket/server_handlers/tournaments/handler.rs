@@ -1,9 +1,9 @@
 use super::{
     abandon::AbandonHandler, adjudicate_result::AdjudicateResultHandler, create::CreateHandler,
-    delete::DeleteHandler, finish::FinishHandler, get::GetHandler, get_all::GetAllHandler,
-    invitation_accept::InvitationAccept, invitation_create::InvitationCreate,
-    invitation_decline::InvitationDecline, invitation_retract::InvitationRetract,
-    join::JoinHandler, kick::KickHandler, leave::LeaveHandler, start::StartHandler,
+    delete::DeleteHandler, finish::FinishHandler, invitation_accept::InvitationAccept,
+    invitation_create::InvitationCreate, invitation_decline::InvitationDecline,
+    invitation_retract::InvitationRetract, join::JoinHandler, kick::KickHandler,
+    leave::LeaveHandler, start::StartHandler,
 };
 use crate::{
     common::TournamentAction,
@@ -48,23 +48,6 @@ impl TournamentHandler {
             }
             TournamentAction::Join(tournament_id) => {
                 JoinHandler::new(tournament_id, self.user_id, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            TournamentAction::Get(tournament_id, _depth) => {
-                GetHandler::new(
-                    tournament_id,
-                    self.user_id,
-                    self.chat_storage.clone(),
-                    &self.pool,
-                )
-                .await?
-                .handle()
-                .await?
-            }
-            TournamentAction::GetAll(depth, _) => {
-                GetAllHandler::new(self.user_id, depth, &self.pool)
                     .await?
                     .handle()
                     .await?
