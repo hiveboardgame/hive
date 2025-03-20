@@ -2,24 +2,25 @@ use crate::{
     components::atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator},
     responses::UserResponse,
 };
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{PlayerScores, Tiebreaker};
 
 #[component]
 pub fn ScoreRow(
-    user: StoredValue<UserResponse>,
+    user: UserResponse,
     standing: String,
     finished: i32,
     tiebreakers: Vec<Tiebreaker>,
     scores: PlayerScores,
 ) -> impl IntoView {
+    let user = Signal::derive(move || user.clone());
     let profile_link = move || {
         view! {
             <ProfileLink
                 patreon=user().patreon
                 username=user().username
                 extend_tw_classes="truncate max-w-[120px]"
-                user_is_hoverable=user
+                user_is_hoverable=user()
             />
         }
     };

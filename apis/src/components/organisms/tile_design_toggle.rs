@@ -1,7 +1,8 @@
 use crate::i18n::*;
 use crate::{common::TileDesign, providers::Config};
 use lazy_static::lazy_static;
-use leptos::*;
+use leptos::either::EitherOf5;
+use leptos::prelude::*;
 use leptos_use::use_window;
 
 lazy_static! {
@@ -20,7 +21,7 @@ lazy_static! {
 pub fn TileDesignToggle() -> impl IntoView {
     let i18n = use_i18n();
     let good_software = RwSignal::new(false);
-    create_effect(move |_| good_software.update(|b| *b = *NOT_APPLE));
+    Effect::new(move |_| good_software.update(|b| *b = *NOT_APPLE));
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.piece_style)}</p>
         <div class="flex">
@@ -38,11 +39,10 @@ pub fn TileDesignToggle() -> impl IntoView {
 #[component]
 pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
     let i18n = use_i18n();
-    let tile_design = store_value(tile_design);
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let tile_design = Signal::derive(move || tile_design.clone());
+    let Config(config, set_cookie) = expect_context();
     let is_active = move || {
-        if config().tile_design == tile_design() {
+        if config().unwrap_or_default().tile_design == tile_design() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -70,11 +70,17 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
             >
 
                 {match tile_design() {
-                    TileDesign::Official => t!(i18n, user_config.style_buttons.official).into_view(),
-                    TileDesign::Flat => t!(i18n, user_config.style_buttons.flat).into_view(),
-                    TileDesign::ThreeD => t!(i18n, user_config.style_buttons.three_d).into_view(),
-                    TileDesign::HighContrast => t!(i18n, user_config.style_buttons.high_contrast).into_view(),
-                    TileDesign::Community => t!(i18n, user_config.style_buttons.community).into_view(),
+                    TileDesign::Official => {
+                        EitherOf5::A(t!(i18n, user_config.style_buttons.official))
+                    }
+                    TileDesign::Flat => EitherOf5::B(t!(i18n, user_config.style_buttons.flat)),
+                    TileDesign::ThreeD => EitherOf5::C(t!(i18n, user_config.style_buttons.three_d)),
+                    TileDesign::HighContrast => {
+                        EitherOf5::D(t!(i18n, user_config.style_buttons.high_contrast))
+                    }
+                    TileDesign::Community => {
+                        EitherOf5::E(t!(i18n, user_config.style_buttons.community))
+                    }
                 }}
 
             </button>

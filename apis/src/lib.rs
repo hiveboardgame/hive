@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 pub mod app;
 pub mod common;
 pub mod components;
@@ -21,7 +22,7 @@ if #[cfg(feature = "hydrate")] {
 
       console_error_panic_hook::set_once();
 
-      leptos::mount_to_body(App);
+      leptos::mount::hydrate_body(App);
     }
 }
 }

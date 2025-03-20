@@ -1,25 +1,28 @@
 use crate::common::TournamentAction;
 use crate::components::molecules::time_row::TimeRow;
-use crate::providers::ApiRequests;
-use crate::responses::TournamentResponse;
-use leptos::*;
+use crate::providers::ApiRequestsProvider;
+use crate::responses::TournamentAbstractResponse;
+use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::TimeInfo;
 
 #[component]
-pub fn TournamentInvitationNotification(tournament: RwSignal<TournamentResponse>) -> impl IntoView {
+pub fn TournamentInvitationNotification(
+    tournament: RwSignal<TournamentAbstractResponse>,
+) -> impl IntoView {
     let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
-    let seats_taken = format!("{}/{}", tournament().players.len(), tournament().seats);
-    let seats_full = move || tournament().players.len() as i32 >= tournament().seats;
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let seats_taken = format!("{}/{}", tournament().players, tournament().seats);
+    let seats_full = move || tournament().players as i32 >= tournament().seats;
 
     let decline = move |_| {
-        let api = ApiRequests::new();
+        let api = api.get();
         api.tournament(TournamentAction::InvitationDecline(
             tournament().tournament_id,
         ));
     };
     let accept = move |_| {
-        let api = ApiRequests::new();
+        let api = api.get();
         api.tournament(TournamentAction::InvitationAccept(
             tournament().tournament_id,
         ));
@@ -54,14 +57,14 @@ pub fn TournamentInvitationNotification(tournament: RwSignal<TournamentResponse>
                     prop:disabled=seats_full
                     class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
-                    <Icon icon=icondata::AiCheckOutlined class="w-6 h-6" />
+                    <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
                 </button>
                 <button
                     title="Decline Invitation"
                     on:click=decline
                     class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95"
                 >
-                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6" />
+                    <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
                 </button>
             </div>
         </div>

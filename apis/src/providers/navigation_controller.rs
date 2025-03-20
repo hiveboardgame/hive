@@ -1,15 +1,13 @@
-use crate::{
-    common::{TournamentAction, TournamentResponseDepth::Full},
-    providers::{api_requests::ApiRequests, chat::Chat, game_state::GameStateSignal},
-};
-use leptos::*;
-use shared_types::{GameId, TournamentId};
+use crate::providers::{chat::Chat, game_state::GameStateSignal};
+use leptos::prelude::*;
+use shared_types::GameId;
+
+use super::ApiRequestsProvider;
 
 #[derive(Clone, Debug, Copy)]
 pub struct NavigationControllerSignal {
     pub game_signal: RwSignal<GameNavigationControllerState>,
-    pub tournament_signal: RwSignal<TournamentNavigationControllerState>,
-    pub profile_signal: RwSignal<ProfileNavigationControllerState>,
+    pub redirect: RwSignal<String>,
 }
 
 impl Default for NavigationControllerSignal {
@@ -22,51 +20,22 @@ impl NavigationControllerSignal {
     pub fn new() -> Self {
         Self {
             game_signal: RwSignal::new(GameNavigationControllerState::new()),
-            tournament_signal: RwSignal::new(TournamentNavigationControllerState::new()),
-            profile_signal: RwSignal::new(ProfileNavigationControllerState::new()),
+            redirect: RwSignal::new("/".to_owned()),
         }
     }
 
-    pub fn update_ids(&mut self, game_id: Option<GameId>, tournament_id: Option<TournamentId>) {
-        batch(move || {
-            self.game_signal
-                .update(|s| game_id.clone_into(&mut s.game_id));
-            self.tournament_signal
-                .update(|s| tournament_id.clone_into(&mut s.tournament_id));
-            if let Some(game_id) = game_id {
-                let api = ApiRequests::new();
-                let mut game_state = expect_context::<GameStateSignal>();
-                let chat = expect_context::<Chat>();
-                game_state.set_game_id(game_id.to_owned());
-                api.join(game_id);
-                chat.typed_message.update(|s| s.clear());
-            }
-            if let Some(tournament_id) = tournament_id {
-                let api = ApiRequests::new();
-                let chat = expect_context::<Chat>();
-                api.tournament(TournamentAction::Get(tournament_id, Full));
-                chat.typed_message.update(|s| s.clear());
-            }
-        });
-    }
-}
+    pub fn update_id(&mut self, game_id: Option<GameId>) {
+        let api = expect_context::<ApiRequestsProvider>().0.get();
+        let mut game_state = expect_context::<GameStateSignal>();
+        let chat = expect_context::<Chat>();
 
-#[derive(Clone, Debug)]
-pub struct TournamentNavigationControllerState {
-    pub tournament_id: Option<TournamentId>,
-}
-
-impl TournamentNavigationControllerState {
-    pub fn new() -> Self {
-        Self {
-            tournament_id: None,
+        self.game_signal
+            .update(|s| game_id.clone_into(&mut s.game_id));
+        if let Some(game_id) = game_id {
+            game_state.set_game_id(game_id.to_owned());
+            api.join(game_id);
+            chat.typed_message.update(|s| s.clear());
         }
-    }
-}
-
-impl Default for TournamentNavigationControllerState {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -82,23 +51,6 @@ impl GameNavigationControllerState {
 }
 
 impl Default for GameNavigationControllerState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct ProfileNavigationControllerState {
-    pub username: Option<String>,
-}
-
-impl ProfileNavigationControllerState {
-    pub fn new() -> Self {
-        Self { username: None }
-    }
-}
-
-impl Default for ProfileNavigationControllerState {
     fn default() -> Self {
         Self::new()
     }

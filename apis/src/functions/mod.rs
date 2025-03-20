@@ -7,4 +7,5 @@ pub mod games;
 pub mod hostname;
 pub mod oauth;
 pub mod pwa;
+pub mod tournaments;
 pub mod users;

@@ -8,7 +8,7 @@ RUN wget --progress=dot:giga https://github.com/cargo-bins/cargo-binstall/releas
     tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz && \
     cp cargo-binstall /usr/local/cargo/bin && \
     # Install cargo-leptos
-    cargo binstall cargo-leptos -y && \
+    cargo binstall cargo-leptos@0.2.26 -y && \
     # Add the WASM target
     rustup target add wasm32-unknown-unknown && \
     # Make an /app dir, which everything will eventually live in
@@ -20,7 +20,7 @@ WORKDIR /app
 COPY . .
 
 # Build the app
-RUN rm -f Cargo.lock && LEPTOS_HASH_FILES=true cargo leptos build -r -P -vv
+RUN rm -f Cargo.lock && cargo leptos build -r -P -vv
 
 FROM debian:bookworm-slim AS runner
 # Copy the server binary to the /app directory

@@ -1,5 +1,5 @@
 use super::Config;
-use leptos::*;
+use leptos::prelude::*;
 use rand::Rng;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
@@ -21,16 +21,16 @@ struct ClientData {
 }
 #[derive(Clone)]
 pub struct Sounds {
-    client_data: Resource<(), Result<ClientData, JsValue>>,
+    client_data: LocalResource<Result<ClientData, JsValue>>,
 }
 
 impl Sounds {
     pub fn play_sound(&self, kind: SoundType) {
         let config = expect_context::<Config>().0;
-        if !config().prefers_sound {
+        if !config().unwrap_or_default().prefers_sound {
             return;
         };
-        if let Some(Ok(s)) = self.client_data.get() {
+        if let Some(Ok(s)) = self.client_data.get().as_deref() {
             let (buffer, offset, duration) = match kind {
                 SoundType::Turn => (&s.turn, rand::thread_rng().gen_range(0..20) as f64, 1.0),
                 SoundType::NewGame => (&s.new, 0.0, 3.0),
@@ -72,6 +72,6 @@ async fn load_client_data() -> Result<ClientData, JsValue> {
 
 pub fn provide_sounds() {
     provide_context(Sounds {
-        client_data: Resource::local(|| (), |_| load_client_data()),
+        client_data: LocalResource::new(load_client_data),
     });
 }

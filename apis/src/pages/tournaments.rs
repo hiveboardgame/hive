@@ -1,12 +1,8 @@
+use crate::components::molecules::tournament_row::TournamentRow;
+use crate::functions::tournaments::get_all_abstract;
 use crate::pages::tournament::BUTTON_STYLE;
-use crate::{
-    common::TournamentAction,
-    common::TournamentResponseDepth::Abstract,
-    components::molecules::tournament_row::TournamentRow,
-    providers::{tournaments::TournamentStateContext, websocket::WebsocketContext, ApiRequests},
-};
-use leptos::*;
-use leptos_use::core::ConnectionReadyState;
+use leptos::either::Either;
+use leptos::prelude::*;
 use shared_types::{TournamentSortOrder, TournamentStatus};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -26,19 +22,12 @@ fn get_button_classes(current: TournamentFilter, selected: TournamentFilter) -> 
 
 #[component]
 pub fn Tournaments() -> impl IntoView {
-    let tournament = expect_context::<TournamentStateContext>();
-    let ws = expect_context::<WebsocketContext>();
     let filter = RwSignal::new(TournamentFilter::Status(TournamentStatus::NotStarted));
-    create_effect(move |_| {
-        if ws.ready_state.get() == ConnectionReadyState::Open {
-            let api = ApiRequests::new();
-            api.tournament(TournamentAction::GetAll(
-                Abstract,
-                TournamentSortOrder::CreatedAtDesc,
-            ));
-        };
-    });
     let search = RwSignal::new("".to_string());
+    let tournament_resource =
+        OnceResource::new(
+            async move { get_all_abstract(TournamentSortOrder::CreatedAtDesc).await },
+        );
     view! {
         <div class="pt-10">
             <div class="container px-4 mx-auto">
@@ -49,7 +38,7 @@ pub fn Tournaments() -> impl IntoView {
                     on:input=move |ev| search.set(event_target_value(&ev))
                     value=search
                 />
-                <div class="flex justify-center space-x-4 mb-4 w-full -mx-2 content-center">
+                <div class="flex justify-center content-center -mx-2 mb-4 space-x-4 w-full">
                     <button
                         class=move || get_button_classes(TournamentFilter::All, filter.get())
                         on:click=move |_| filter.set(TournamentFilter::All)
@@ -90,36 +79,63 @@ pub fn Tournaments() -> impl IntoView {
                         "Completed"
                     </button>
                 </div>
-                <For
-                    each=move || {
-                        let mut v: Vec<_> = tournament
-                            .summary
+                <Suspense fallback=move || {
+                    view! { <div class="flex justify-center">"Loading tournaments..."</div> }
+                }>
+                    {move || {
+                        tournament_resource
                             .get()
-                            .tournaments
-                            .into_iter()
-                            .filter(|(_, t)| {
-                                match filter.get() {
-                                    TournamentFilter::All => true,
-                                    TournamentFilter::Status(status) => t.status == status,
+                            .map(|tournaments| {
+                                if let Ok(tournaments) = tournaments {
+                                    Either::Left(
+                                        view! {
+                                            <For
+                                                each=move || {
+                                                    let mut v: Vec<_> = tournaments
+                                                        .clone()
+                                                        .into_iter()
+                                                        .filter(|t| {
+                                                            match filter.get() {
+                                                                TournamentFilter::All => true,
+                                                                TournamentFilter::Status(status) => t.status == status,
+                                                            }
+                                                        })
+                                                        .collect();
+                                                    v.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+                                                    v
+                                                }
+                                                key=move |tournament| {
+                                                    (tournament.updated_at, search(), filter.get())
+                                                }
+                                                children=move |tournament| {
+                                                    if search().is_empty()
+                                                        || tournament
+                                                            .name
+                                                            .to_lowercase()
+                                                            .contains(&search().to_lowercase())
+                                                    {
+                                                        Either::Left(
+                                                            view! { <TournamentRow tournament=tournament.clone() /> },
+                                                        )
+                                                    } else {
+                                                        Either::Right("")
+                                                    }
+                                                }
+                                            />
+                                        },
+                                    )
+                                } else {
+                                    Either::Right(
+                                        view! {
+                                            <div class="flex justify-center">
+                                                {"Error loading tournaments"}
+                                            </div>
+                                        },
+                                    )
                                 }
                             })
-                            .collect();
-                        v.sort_by(|a, b| b.1.updated_at.cmp(&a.1.updated_at));
-                        v
-                    }
-                    key=move |(nanoid, tournament)| {
-                        (nanoid.to_owned(), tournament.updated_at, search(), filter.get())
-                    }
-                    children=move |(_id, tournament)| {
-                        if search().is_empty()
-                            || tournament.name.to_lowercase().contains(&search().to_lowercase())
-                        {
-                            view! { <TournamentRow tournament=tournament.clone() /> }
-                        } else {
-                            "".into_view()
-                        }
-                    }
-                />
+                    }}
+                </Suspense>
             </div>
         </div>
     }

@@ -12,17 +12,16 @@ use crate::{
     providers::game_state::GameStateSignal,
 };
 use hive_lib::Color;
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::HashSet;
-
 #[component]
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
     game_state.do_analysis();
     provide_context(TargetStack(RwSignal::new(None)));
-    provide_context(AnalysisSignal(RwSignal::new(Some(
+    provide_context(AnalysisSignal(RwSignal::new(Some(LocalStorage::wrap(
         AnalysisTree::from_state(game_state).unwrap_or_default(),
-    ))));
+    )))));
     provide_context(ToggleStates(RwSignal::new(HashSet::new())));
     provide_context(CurrentConfirm(Memo::new(move |_| MoveConfirm::Single)));
     let is_tall = expect_context::<OrientationSignal>().is_tall;

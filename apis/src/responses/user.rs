@@ -113,5 +113,13 @@ impl UserResponse {
         };
         Ok(response)
     }
+    pub async fn search_usernames(pattern: &str, conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
+        let users = User::search_usernames(pattern, conn).await?;
+        let mut ret = vec![];
+        for user in users {
+            ret.push(UserResponse::from_model(&user, conn).await?);
+        }
+        Ok(ret)
+    }
 }
 }}
