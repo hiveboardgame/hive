@@ -27,12 +27,15 @@ use hive_lib::Color;
 use itertools::Itertools;
 use nanoid::nanoid;
 use rand::random;
+use rand::prelude::SliceRandom;
+use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    GameSpeed, ScoringMode, SeedingMode, Standings, StartMode, Tiebreaker, TimeMode,
+    Certainty, GameSpeed, ScoringMode, SeedingMode, Standings, StartMode, Tiebreaker, TimeMode,
     TournamentDetails, TournamentGameResult, TournamentId, TournamentSortOrder, TournamentStatus,
 };
 use std::collections::{HashMap, HashSet};
+use std::cmp::Ordering;
 use std::io::{self, Read};
 use std::pin::Pin;
 use std::str::FromStr;
@@ -655,28 +658,35 @@ impl Tournament {
     /// The function prioritizes players who:
     /// 1. Haven't received a bye yet
     /// 2. Are ranked lower in the initial seeding
-    pub fn find_bye_player(&self) -> Option<Uuid> {
+    pub fn find_bye_player<T: PartialOrd + Default>(&self, player_scores: HashMap<Uuid, T>) -> Option<Uuid> {
         // Get the set of players who have already received byes
         let players_with_byes: HashSet<_> = self.bye.iter().flatten().collect();
 
+
+
         // Start from the end of initial_seeding (lowest ranked players)
         // and find the first player who hasn't had a bye yet
-        let eligible_players: Vec<_> = self
+        let mut eligible_players: Vec<Uuid> = self
             .initial_seeding
             .iter()
             .rev() // Reverse to start from lowest ranked
             .flatten() // Remove None values
             .filter(|player_id| !players_with_byes.contains(player_id))
-            .collect();
+			.cloned()
+			.collect();
 
-        if eligible_players.is_empty() {
-            // If all players have had byes, just take the lowest ranked player
-            self.initial_seeding.last().and_then(|x| *x)
-        } else {
-            // If there are multiple eligible players with the same lowest rank,
-            // randomly select one of them
-            Some(*eligible_players[random::<usize>() % eligible_players.len()])
-        }
+		//Stable sort by scores. Keeps intitial seeding order for equal scores
+		eligible_players.sort_by(|a, b| {
+				let default = &T::default();
+			    let score_a = player_scores.get(a).unwrap_or(&default); // Default to T::default()
+				let score_b = player_scores.get(b).unwrap_or(&default); // Default to T::default() 
+				score_a.partial_cmp(score_b).unwrap_or(Ordering::Equal)
+			});
+
+		eligible_players
+			.into_iter()
+			.next()
+			.or_else(|| self.initial_seeding.last().copied().flatten())
     }
 
     pub async fn swiss_start(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
@@ -700,12 +710,16 @@ impl Tournament {
         println!("Using game speed: {:?}", game_speed);
 
         // Sort players by rating for initial seeding
-        let mut players_with_ratings: Vec<(User, f64)> = Vec::new();
+        let mut players_with_ratings_certainties: Vec<(User, f64, bool)> = Vec::new();
         for player in players {
             let rating = Rating::for_uuid(&player.id, &game_speed, conn).await?;
-            players_with_ratings.push((player, rating.rating));
+            players_with_ratings_certainties.push((player, rating.rating, Certainty::Clueless != Certainty::from_deviation(rating.deviation)));
         }
-        players_with_ratings.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+		players_with_ratings_certainties.sort_by(|a, b| (b.2,b.1).partial_cmp(&(a.2,a.1)).unwrap());
+        let players_with_ratings: Vec<(User, f64)> = players_with_ratings_certainties
+			.into_iter()
+			.map(|(a,b,_)| (a,b)) //Drop certainty
+			.collect();
 
         // Store initial seeding
         let initial_seeding: Vec<Option<Uuid>> = players_with_ratings
@@ -724,7 +738,7 @@ impl Tournament {
         // Handle odd number of players first
         let mut players_to_pair = players_with_ratings.clone();
         if players_to_pair.len() % 2 != 0 {
-            if let Some(bye_player_id) = self.find_bye_player() {
+            if let Some(bye_player_id) = self.find_bye_player(HashMap::<Uuid, f64>::new()) {
                 let bye_player_idx = players_to_pair
                     .iter()
                     .position(|(p, _)| p.id == bye_player_id)
@@ -754,100 +768,44 @@ impl Tournament {
 
         // Apply pairing rules based on seeding mode
         let seeding_mode = SeedingMode::from_str(&self.seeding_mode)?;
-        match seeding_mode {
-            SeedingMode::Accelerated => {
-                // In accelerated pairing, we split the field into quarters
-                let total_players = players_to_pair.len();
+		let remaining_players = players_to_pair.len();
+		let quarter_size = remaining_players / 4; // Note that remaining_players is an integer. So / here is integer division!
 
-                // Give bye to the lowest rated player (last in the list)
-                if total_players % 2 != 0 {
-                    let bye_player = players_to_pair.pop().unwrap(); // Safe to unwrap since we know there are players
-                    println!(
-                        "Odd number of players, giving bye to lowest rated player {} (rating: {})",
-                        bye_player.0.username, bye_player.1
-                    );
+		let pairing_ranges = match seeding_mode{
+			SeedingMode::Accelerated => vec![
+				(0, quarter_size * 2),                  // Q1 vs Q2 Using quarter_size guaranteees even players
+				(quarter_size * 2, remaining_players),  // Q3 vs Q4 (guaranteed even due to fixed bye)
+				],
+			SeedingMode::Standard => vec![(0,remaining_players)],
+			};
+		
+		for &(start, end) in &pairing_ranges {
+			let mid = start + (end - start) / 2; 
 
-                    // Create a bye game
-                    let new_game =
-                        NewGame::new_from_tournament(bye_player.0.id, bye_player.0.id, self);
-                    let game = Game::create(new_game, conn).await?;
-                    games.push(game);
+			for i in start..mid {
+				
+				let player_1_idx = i;      // Top half
+				let player_2_idx = mid + (i - start); // Bottom half
+				let mut randomized_games = vec![
+					(player_1_idx, player_2_idx),
+					(player_2_idx, player_1_idx),
+					];
+				randomized_games.shuffle(&mut thread_rng());
+				for (p1_idx,p2_idx) in randomized_games {
+					let white = &players_to_pair[p1_idx].0;
+					let black = &players_to_pair[p2_idx].0;
+					println!(
+						"  Pairing {} (White, rating: {}) vs {} (Black, rating: {})",
+						white.username, players_to_pair[i].1,
+						black.username, players_to_pair[mid + (i - start)].1
+					);
 
-                    // Update tournament bye list
-                    diesel::update(tournaments::table.find(self.id))
-                        .set(bye.eq(vec![Some(bye_player.0.id)]))
-                        .execute(conn)
-                        .await?;
-                }
-
-                // Now pair the remaining players
-                // For accelerated pairing:
-                // - player7 vs player4
-                // - player6 vs player3
-                // - player5 vs player2
-                // - player11 vs player8
-                // - etc.
-                let remaining_players = players_to_pair.len();
-                let quarter_size = remaining_players / 4;
-
-                // First group: players 2-7 vs players 8-13
-                for i in 0..3 {
-                    let white_idx = 6 - i; // 6,5,4 (player7,6,5)
-                    let black_idx = 9 - i; // 9,8,7 (player4,3,2)
-
-                    let white = &players_to_pair[white_idx].0;
-                    let black = &players_to_pair[black_idx].0;
-                    println!(
-                        "  Pairing {} (White, rating: {}) vs {} (Black, rating: {})",
-                        white.username,
-                        players_to_pair[white_idx].1,
-                        black.username,
-                        players_to_pair[black_idx].1
-                    );
-                    let new_game = NewGame::new_from_tournament(white.id, black.id, self);
-                    let game = Game::create(new_game, conn).await?;
-                    games.push(game);
-                }
-
-                // Second group: remaining players
-                let start_idx = 10; // Start from player11
-                let pairs_to_make = (remaining_players - start_idx) / 2;
-                for i in 0..pairs_to_make {
-                    let white = &players_to_pair[start_idx + i].0;
-                    let black = &players_to_pair[start_idx + pairs_to_make + i].0;
-                    println!(
-                        "  Pairing {} (White, rating: {}) vs {} (Black, rating: {})",
-                        white.username,
-                        players_to_pair[start_idx + i].1,
-                        black.username,
-                        players_to_pair[start_idx + pairs_to_make + i].1
-                    );
-                    let new_game = NewGame::new_from_tournament(white.id, black.id, self);
-                    let game = Game::create(new_game, conn).await?;
-                    games.push(game);
-                }
-            }
-            SeedingMode::Standard => {
-                // In standard Swiss, we use a fold system where we pair 1 vs n/2+1, 2 vs n/2+2, etc.
-                let half_point = players_to_pair.len() / 2;
-                println!("Creating standard Swiss pairings:");
-
-                for i in 0..half_point {
-                    let white = &players_to_pair[i].0;
-                    let black = &players_to_pair[i + half_point].0;
-                    println!(
-                        "  Pairing {} (White, rating: {}) vs {} (Black, rating: {})",
-                        white.username,
-                        players_to_pair[i].1,
-                        black.username,
-                        players_to_pair[i + half_point].1
-                    );
-                    let new_game = NewGame::new_from_tournament(white.id, black.id, self);
-                    let game = Game::create(new_game, conn).await?;
-                    games.push(game);
-                }
-            }
-        }
+					let new_game = NewGame::new_from_tournament(white.id, black.id, self);
+					let game = Game::create(new_game, conn).await?;
+					games.push(game);
+				}
+			}
+		}
 
         println!(
             "Swiss tournament initialization complete with {} games",
@@ -927,6 +885,92 @@ impl Tournament {
         Ok(sorted_query.get_results(conn).await?)
     }
 
+	//Return a hashmap of player_id to score
+	pub async fn get_player_info(
+			&self,
+	        conn: &mut DbConn<'_>,
+		) -> Result<HashMap<Uuid, ((f64,f64), HashSet<Uuid>)>, DbError> { 
+        let players = self.players(conn).await?;
+        let existing_games = self.games(conn).await?;
+		        println!(
+            "Found {} players and {} existing games",
+            players.len(),
+            existing_games.len()
+        );
+		
+        println!("\nCalculating current scores and previous opponents:");
+
+		let mut player_faceoffs: HashMap<Uuid, HashMap<Uuid, (u32,f64)>> = HashMap::new();
+
+		// Process all games to construct player_faceoffs
+		for game in &existing_games {
+			let white_id = game.white_id;
+			let black_id = game.black_id;
+			let result = TournamentGameResult::from_str(&game.tournament_game_result)
+				.map_err(|_| DbError::InvalidInput {
+					info: format!("Invalid game result: {}", game.tournament_game_result),
+					error: String::from("Failed to parse tournament game result"),
+				})?;
+
+			// Assign points based on game result
+			let (white_score, black_score) = match result {
+				TournamentGameResult::Winner(Color::White) => (1.0, 0.0),
+				TournamentGameResult::Winner(Color::Black) => (0.0, 1.0),
+				TournamentGameResult::Draw => (0.5, 0.5),
+				TournamentGameResult::Bye => (1.0, 0.0),
+				TournamentGameResult::DoubeForfeit => (0.0 , 0.0),
+				TournamentGameResult::Unknown => (0.0, 0.0),
+			};
+
+			// Update player_faceoffs
+			player_faceoffs
+				.entry(white_id) //Get white entry
+				.or_default() //Create hashmap if no entry
+				.entry(black_id) //Get white's entry for black
+				.and_modify(|(n,s)| {
+					*n += 1; //Increase game count
+					*s += white_score;//Modify score
+				}) 
+				.or_insert((1,white_score)); //If first game for white
+			// Update player_faceoffs for Black
+			player_faceoffs
+				.entry(black_id)
+				.or_default()
+				.entry(white_id)
+				.and_modify(|(n, s)| {
+					*n += 1;
+					*s += black_score;
+				})
+				.or_insert((1, black_score));
+		}
+		let mut player_info: HashMap<Uuid, ((f64, f64), HashSet<Uuid>)> = HashMap::new();
+
+		// Create a set of valid players
+		let player_set: HashSet<Uuid> = players.iter().map(|p| p.id).collect();
+
+		for (player, faceoffs) in &player_faceoffs {
+			if player_set.contains(player) {
+				let mut total_match_score = 0.0;
+				let mut total_score = 0.0;
+				let mut opponents = HashSet::new();
+
+				for (opponent, (games, score)) in faceoffs {
+					if (score * 2.0) > (*games as f64) {				
+						total_match_score += 1.0;
+					}else if (score * 2.0) == (*games as f64) {
+						total_match_score += 0.5;
+					}
+					total_score += score;
+					opponents.insert(*opponent);
+				}
+
+				player_info.insert(*player, ((total_match_score, total_score), opponents));
+			}
+		}
+
+		return Ok(player_info)
+	}
+
     pub async fn create_next_round(
         &self,
         conn: &mut DbConn<'_>,
@@ -942,78 +986,41 @@ impl Tournament {
             "\nStarting next round creation for tournament {} ({})",
             self.name, self.id
         );
-        let mut games = Vec::new();
+        let mut games = Vec::<Game>::new();
         let players = self.players(conn).await?;
-        let existing_games = self.games(conn).await?;
-        println!(
-            "Found {} players and {} existing games",
-            players.len(),
-            existing_games.len()
-        );
 
         // Create a map of player scores and opponents
-        let mut player_info: HashMap<Uuid, (f64, HashSet<Uuid>)> = HashMap::new();
-        println!("\nCalculating current scores and previous opponents:");
+        let player_info: HashMap<Uuid, ((f64,f64), HashSet<Uuid>)> = self.get_player_info(conn).await.unwrap();
+		
+		let player_scores: HashMap<Uuid, (f64, f64)> = player_info
+			.iter()
+			.map(|(&player_id, &(scores, _))| (player_id, scores))
+			.collect();
+			
+		let mut players_to_pair: Vec<(User, (f64,f64))> = players
+			.iter()
+			.map(|p| (p.clone(), player_info.get(&p.id).unwrap().0))
+			.collect();
 
-        for player in &players {
-            let mut score = 0.0;
-            let mut opponents = HashSet::new();
+		// First, sort by initial seeding order
+		let initial_seeding_positions: HashMap<Uuid, usize> = self
+			.initial_seeding
+			.iter()
+			.flatten() // Remove None values
+			.enumerate()
+			.map(|(index, id)| (*id, index))
+			.collect();
 
-            for game in &existing_games {
-                if game.white_id == player.id {
-                    opponents.insert(game.black_id);
-                    match TournamentGameResult::from_str(&game.tournament_game_result) {
-                        Ok(TournamentGameResult::Winner(Color::White)) => score += 1.0,
-                        Ok(TournamentGameResult::Draw) => score += 0.5,
-                        _ => {}
-                        Err(_) => {
-                            return Err(DbError::InvalidInput {
-                                info: format!(
-                                    "Invalid game result: {}",
-                                    game.tournament_game_result
-                                ),
-                                error: String::from("Failed to parse tournament game result"),
-                            })
-                        }
-                    }
-                } else if game.black_id == player.id {
-                    opponents.insert(game.white_id);
-                    match TournamentGameResult::from_str(&game.tournament_game_result) {
-                        Ok(TournamentGameResult::Winner(Color::Black)) => score += 1.0,
-                        Ok(TournamentGameResult::Draw) => score += 0.5,
-                        _ => {}
-                        Err(_) => {
-                            return Err(DbError::InvalidInput {
-                                info: format!(
-                                    "Invalid game result: {}",
-                                    game.tournament_game_result
-                                ),
-                                error: String::from("Failed to parse tournament game result"),
-                            })
-                        }
-                    }
-                }
-            }
+		// Stable sort by initial seeding order 1,2,3,4, etc
+		players_to_pair.sort_by_key(|(player, _)| 0-initial_seeding_positions.get(&player.id).copied().unwrap_or(usize::MAX));
 
-            println!(
-                "  Player {} has {:.1} points and {} previous opponents",
-                players.iter().find(|p| p.id == player.id).unwrap().username,
-                score,
-                opponents.len()
-            );
-            player_info.insert(player.id, (score, opponents));
-        }
+		// Stable sort by score (keeping initial seeding order for ties)
+		// Highest score first
+		players_to_pair.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
-        // Sort players by score
-        let mut players_to_pair: Vec<(User, f64)> = players
-            .iter()
-            .map(|p| (p.clone(), player_info.get(&p.id).unwrap().0))
-            .collect();
-        players_to_pair.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-
-        println!("\nPlayers sorted by score:");
-        for (player, score) in &players_to_pair {
-            println!("  {}: {:.1} points", player.username, score);
+        println!("\nPlayers sorted by score/initial seeding:");
+        for (player, (matchscore,gamescore)) in &players_to_pair {
+            println!("  {}: {:.1} matchpoints, {:.1} gamepoints", player.username, matchscore, gamescore);
         }
 
         // Handle odd number of players
@@ -1024,7 +1031,7 @@ impl Tournament {
             );
 
             // Find bye player using the new function
-            if let Some(bye_player_id) = self.find_bye_player() {
+            if let Some(bye_player_id) = self.find_bye_player(player_scores) {
                 let bye_player_idx = players_to_pair
                     .iter()
                     .position(|(p, _)| p.id == bye_player_id)
@@ -1032,7 +1039,7 @@ impl Tournament {
                 let bye_player = players_to_pair.remove(bye_player_idx);
                 println!(
                     "  Giving bye to {} (score: {:.1})",
-                    bye_player.0.username, bye_player.1
+                    bye_player.0.username, bye_player.1.0
                 );
 
                 // Update tournament to track the new bye
@@ -1058,60 +1065,91 @@ impl Tournament {
                 .await?;
         }
 
-        // Create pairings for remaining players
-        println!("\nCreating pairings for remaining players:");
-        while !players_to_pair.is_empty() {
-            let mut paired = false;
-            let current_player = &players_to_pair[0];
-            let current_opponents = &player_info.get(&current_player.0.id).unwrap().1;
+		let mut find_score_bracket_start_end: Vec<(usize,usize)> = vec![(0,0);players_to_pair.len()];
+		let mut curr_score: (f64,f64) = (-1.0,-1.0);
+		let mut curr_edge: usize = 0;
+		//Find start of score groups
+		for i in 0..players_to_pair.len() {
+			if players_to_pair[i].1 != curr_score{
+				curr_edge = i;
+				curr_score = players_to_pair[i].1;
+			}
+			find_score_bracket_start_end[i].0 = curr_edge;
+		}
+		curr_score = (-1.0,-1.0); //Reset
+		//Find end of score groups
+		for i in (0..players_to_pair.len()).rev() {
+			if players_to_pair[i].1 != curr_score{
+				curr_edge = i+1;//End is exclusive
+				curr_score = players_to_pair[i].1;
+			}
+			find_score_bracket_start_end[i].1 = curr_edge;
+		}
+		
+		let mut pairings: Vec<(usize,usize)> = Vec::new();
+		let mut is_paired: Vec<bool> = vec![false;players_to_pair.len()];
+		let mut current_searched_opponent: Vec<Option<usize>> = vec![None;players_to_pair.len()];
+		let mut base_players: Vec<usize> = vec![];
+		let mut curr_i = 0;
+		while pairings.len()*2 < players_to_pair.len() {
+			//Continue to next player case
+			if is_paired[curr_i]{
+				curr_i += 1;
+				continue;
+			}
 
-            println!(
-                "  Looking for opponent for {} ({:.1} points)",
-                current_player.0.username, current_player.1
-            );
+			let (start, end): (usize,usize) = find_score_bracket_start_end[curr_i];
+			
+			// Update opponent search
+			let curr_opp = current_searched_opponent[curr_i];
+			let next_opp = Self::next_preferred_opponent(curr_i, start, end, curr_opp);
+			current_searched_opponent[curr_i] = Some(next_opp);
 
-            // Try to find an opponent
-            for i in 1..players_to_pair.len() {
-                let potential_opponent = &players_to_pair[i];
-                if !current_opponents.contains(&potential_opponent.0.id) {
-                    println!(
-                        "    Found valid opponent: {} ({:.1} points)",
-                        potential_opponent.0.username, potential_opponent.1
-                    );
-                    // Create the game
-                    let white = players_to_pair.remove(0).0;
-                    let black = players_to_pair.remove(i - 1).0;
-                    println!(
-                        "    Creating game: {} (White) vs {} (Black)",
-                        white.username, black.username
-                    );
-                    let new_game = NewGame::new_from_tournament(white.id, black.id, self);
-                    let game = Game::create(new_game, conn).await?;
-                    games.push(game);
-                    paired = true;
-                    break;
-                } else {
-                    println!(
-                        "    {} already played against {}, skipping",
-                        current_player.0.username, potential_opponent.0.username
-                    );
-                }
-            }
+			//Failed. Must backtrack
+			if next_opp >= players_to_pair.len() {
+				//Remove last inserted match in pairings
+				let prev = base_players.pop();
+				match prev {
+					Some(x) => {curr_i = x;},
+					// Backtracking from first player
+					// pairing failed
+					None => break 
+				}
+				let (p1, p2) = pairings.pop().unwrap();
+				is_paired[p1] = false;
+				is_paired[p2] = false;
+				continue;
+			}
+			
+			//Is valid pairing
+			if !is_paired[next_opp] {
+				pairings.push((curr_i,next_opp));
+				base_players.push(curr_i);
+				is_paired[curr_i] = true;
+				is_paired[next_opp] = true;
+				curr_i+=1;
+				current_searched_opponent[curr_i] = None;
+			} 
+		}
+		
 
-            if !paired {
-                // If no opponent found, pair with the next available player
-                let white = players_to_pair.remove(0).0;
-                let black = players_to_pair.remove(0).0;
-                println!(
-                    "    No valid opponents found, forced pairing: {} vs {}",
-                    white.username, black.username
-                );
-                let new_game = NewGame::new_from_tournament(white.id, black.id, self);
-                let game = Game::create(new_game, conn).await?;
-                games.push(game);
-            }
-        }
-
+		for (player_1,player_2) in pairings {
+			let mut paired_game = vec![
+				(&players_to_pair[player_1].0, &players_to_pair[player_2].0),
+				(&players_to_pair[player_2].0, &players_to_pair[player_1].0),
+				];
+		    paired_game.shuffle(&mut thread_rng());
+			for (white, black) in paired_game {
+				println!(
+					"    Creating game: {} (White) vs {} (Black)",
+					white.username, black.username
+				);
+				let new_game = NewGame::new_from_tournament(white.id, black.id, self);
+				let game = Game::create(new_game, conn).await?;
+				games.push(game);
+			}
+		}
+					
         // Increment the current round
         let tournament = diesel::update(self)
             .set(current_round.eq(self.current_round + 1))
@@ -1125,6 +1163,39 @@ impl Tournament {
         );
         Ok((tournament, games))
     }
+	
+	//Take current player index, start and end (exclusive) indices of score bracket
+	//And current opponent. Returns next preferred opponent index
+	fn next_preferred_opponent(curr_i: usize, start: usize, end: usize, 
+		curr_opp_option: Option<usize>) -> usize {
+		//+1 to round up
+		let midsize: usize = (1+ end - start) / 2;
+		match curr_opp_option {
+			Some(curr_opp) => 	{
+				if curr_i < start + midsize && curr_opp < end {
+					// Top-half player search order
+					if curr_opp == curr_i+1 {
+						return end;
+					} else if curr_opp == end - 1 {
+						return curr_i + midsize - 1;
+					} else {
+						return curr_opp - 1;
+					}
+				} else {
+					// Bottom-half player or failed top-half search
+					return curr_opp + 1;
+				}
+			},
+			None => {
+				//Consider especially last top half player in odd group
+				if curr_i < start + midsize - (end-start)%2 { 
+					return curr_i + midsize;
+				} else { 
+					return curr_i + 1;
+				}
+			},
+		};
+	}
 }
 
 #[cfg(test)]
@@ -1682,4 +1753,74 @@ mod tests {
         println!("\nTest completed successfully!");
         Ok(())
     }
+	
+
+	#[test]
+	fn test_next_preferred_opponent_bottom_half_initial() {
+		let start = 2;
+		let end = 8;
+		for curr_i in 5..8 {
+			let expected = curr_i+1; // Initial target (curr_i + 1)
+			assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, None), expected);
+		}
+	}
+
+	#[test]
+	fn test_next_preferred_opponent_top_half_backwards_search() {
+		//First preferred pairing is 2-5, 3-6, 4-7
+		let curr_i = 3; //Second player
+		let start = 2;
+		let end = 8;
+		let prev_opp = Some(7); // Already searched to end. Now should search backwards
+		let expected = 5;
+		assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, prev_opp), expected);
+		let prev_opp = Some(5); // Continue backward search. 
+		let expected = 4;
+		assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, prev_opp), expected);
+		let prev_opp = Some(4); // Continue backward search. 
+		let expected = 8; // Score group fail. Continue out of score group 
+		assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, prev_opp), expected);
+	}
+
+
+	#[test]
+	fn test_next_preferred_opponent_fallback_to_rest() {
+		let start = 2;
+		let end = 8;
+		//For all players in a score group. Always continue downward after score group is exhausted
+		for curr_i in 2..7 {
+			for prev_opp in 8..20 {
+				let expected = prev_opp+1; // Move beyond the score bracket
+				assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, Some(prev_opp)), expected);
+			}
+		}
+	}
+
+	#[test]
+	fn test_next_preferred_opponent_out_of_bounds() {
+		let curr_i = 5;
+		let start = 0;
+		let end = 6;
+		let prev_opp = Some(10); // Already exceeded range
+		let expected = 11; // Should continue beyond bounds safely
+
+		assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, prev_opp), expected);
+	}
+
+	#[test]
+	fn test_next_preferred_opponent_small_groups() {
+		//1 player group
+		assert_eq!(Tournament::next_preferred_opponent(0, 0, 1, None), 1);
+		//2 player group
+		assert_eq!(Tournament::next_preferred_opponent(0, 0, 2, None), 1);
+		assert_eq!(Tournament::next_preferred_opponent(0, 0, 2, Some(1)), 2);
+		assert_eq!(Tournament::next_preferred_opponent(1, 0, 2, None), 2);
+		//3 player group
+		assert_eq!(Tournament::next_preferred_opponent(0, 0, 3, None), 2);
+		assert_eq!(Tournament::next_preferred_opponent(0, 0, 3, Some(2)), 1);
+		assert_eq!(Tournament::next_preferred_opponent(0, 0, 3, Some(1)), 3);
+		assert_eq!(Tournament::next_preferred_opponent(1, 0, 3, None), 2);
+		assert_eq!(Tournament::next_preferred_opponent(1, 0, 3, Some(2)), 3);
+		assert_eq!(Tournament::next_preferred_opponent(2, 0, 3, None), 3);
+	}
 }
