@@ -73,8 +73,12 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
                     TileDesign::Official => t!(i18n, user_config.style_buttons.official).into_view(),
                     TileDesign::Flat => t!(i18n, user_config.style_buttons.flat).into_view(),
                     TileDesign::ThreeD => t!(i18n, user_config.style_buttons.three_d).into_view(),
-                    TileDesign::HighContrast => t!(i18n, user_config.style_buttons.high_contrast).into_view(),
-                    TileDesign::Community => t!(i18n, user_config.style_buttons.community).into_view(),
+                    TileDesign::HighContrast => {
+                        t!(i18n, user_config.style_buttons.high_contrast).into_view()
+                    }
+                    TileDesign::Community => {
+                        t!(i18n, user_config.style_buttons.community).into_view()
+                    }
                 }}
 
             </button>

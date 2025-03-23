@@ -12,9 +12,9 @@ pub fn Home() -> impl IntoView {
     view! {
         <div class="flex overflow-x-hidden flex-col justify-start items-center pt-20 w-full md:justify-center">
             // INFO: Leave this here for future tournaments
-            // <div>
-            //     <RlBanner />
-            // </div>
+            <div>
+                <RlBanner />
+            </div>
             <div class="container flex flex-col justify-center items-center lg:flex-row lg:items-start">
                 <div class="flex justify-center items-center">
                     <Logo tw_class="flex lg:w-72 w-48" />
