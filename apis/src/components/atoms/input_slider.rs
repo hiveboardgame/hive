@@ -1,39 +1,28 @@
-use leptix_primitives::components::slider::{SliderRange, SliderRoot, SliderThumb, SliderTrack};
-use leptos::*;
+use leptos::prelude::*;
+
+const STYLE: &str = "block mt-2 w-full rounded-lg hover:pillbug-teal accent-orange-twilight active:accent-pillbug-teal";
 
 #[component]
 pub fn InputSlider(
     signal_to_update: RwSignal<i32>,
     name: &'static str,
-    #[prop(into)] min: MaybeSignal<i32>,
-    #[prop(into)] max: MaybeSignal<i32>,
+    #[prop(into)] min: Signal<i32>,
+    #[prop(into)] max: Signal<i32>,
     step: i32,
 ) -> impl IntoView {
-    let min = Signal::derive(move || min() as f64);
-    let max = Signal::derive(move || max() as f64);
-    let step: f64 = step as f64;
-    let default_value = MaybeProp::derive(move || vec![signal_to_update() as f64].into());
-    let on_value_change = Callback::from(move |val: Vec<f64>| {
-        signal_to_update.update(|v| *v = val[0] as i32);
-    });
     view! {
-        <SliderRoot
-            min
-            max
-            step
-            on_value_change
-            default_value
-            attr:class="flex relative items-center w-fit min-w-[150px] h-5 select-none touch-none"
-            attr:name=name
-        >
-            <SliderTrack attr:class="bg-white relative grow rounded-full h-[3px]">
-                <SliderRange attr:class="absolute h-full rounded-full bg-orange-twilight">
-                    {().into_view()}
-                </SliderRange>
-            </SliderTrack>
-            <SliderThumb attr:class="bg-button-dawn dark:bg-button-twilight block w-5 h-5 shadow-lg rounded-[10px] hover:bg-pillbug-teal">
-                {().into_view()}
-            </SliderThumb>
-        </SliderRoot>
+        <input
+            type="range"
+            class=STYLE
+            name=name
+            min=min
+            max=max
+            step=step
+            value=signal_to_update
+            on:input:target=move |ev| {
+                let val = ev.target().value().parse::<i32>().unwrap();
+                signal_to_update.set(val);
+            }
+        />
     }
 }

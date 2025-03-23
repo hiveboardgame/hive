@@ -68,7 +68,7 @@ impl FromStr for TimeMode {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CorrespondenceMode {
     DaysPerMove,
     TotalTimeEach,

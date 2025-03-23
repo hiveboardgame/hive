@@ -2,7 +2,7 @@ use crate::components::atoms::progress_bar::ProgressBar;
 use crate::components::molecules::time_row::TimeRow;
 use crate::responses::TournamentAbstractResponse;
 use chrono::Local;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::PrettyString;
 use shared_types::{TimeInfo, TournamentStatus};
 

@@ -6,7 +6,7 @@ use crate::{
     responses::{GameResponse, UserResponse},
 };
 use hive_lib::{Color, GameStatus};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{Conclusion, GameSpeed, PrettyString, TimeInfo};
 
 #[component]
@@ -18,8 +18,8 @@ pub fn GamePreviews(
                                         bp: StoredValue<UserResponse>,
                                         base: Option<i32>,
                                         inc: Option<i32>| {
-        let white = wp();
-        let black = bp();
+        let white = wp.get_value();
+        let black = bp.get_value();
         view! {
             <div class="flex flex-wrap gap-1 justify-center p-1 text-center">
                 {format!(
@@ -47,32 +47,32 @@ pub fn GamePreviews(
               gs: StoredValue<GameStatus>,
               ratings: StoredValue<RatingChangeInfo>,
               conclusion: StoredValue<Conclusion>| {
-            let game_result = match gs() {
+            let game_result = match gs.get_value() {
                 GameStatus::Finished(ref result) => result.to_string(),
                 _ => "".to_string(),
             };
             view! {
                 <div class="flex flex-wrap gap-1 justify-center p-1 w-full text-center">
                     <div class="flex flex-grow gap-1 items-center w-auto min-w-0 whitespace-nowrap max-w-[fit-content]">
-                        <p>{w_username}</p>
+                        <p>{w_username.get_value()}</p>
                         <RatingAndChange ratings side=Color::White />
                     </div>
                     <div class="w-auto text-center">vs</div>
                     <div class="flex flex-grow gap-1 items-center w-auto min-w-0 whitespace-nowrap max-w-[fit-content]">
-                        <p>{b_username}</p>
+                        <p>{b_username.get_value()}</p>
                         <RatingAndChange ratings side=Color::Black />
                     </div>
 
                 </div>
                 <div class="flex gap-1">
                     <div>{game_result.to_string()}</div>
-                    {conclusion().pretty_string()}
+                    {conclusion.get_value().pretty_string()}
                 </div>
             }
         };
     view! {
         <div class="flex flex-row flex-wrap justify-center">
-            <For each=move || games(()) key=|g| (g.game_id.clone(), g.turn) let:game>
+            <For each=move || games.run(()) key=|g| (g.game_id.clone(), g.turn) let:game>
 
                 {
                     let base = game.time_base;
@@ -80,7 +80,7 @@ pub fn GamePreviews(
                     let finished = move || game.finished;
                     let rated = game.rated;
                     let game_id = game.game_id.clone();
-                    let time_info = StoredValue::new(TimeInfo {
+                    let time_info = Signal::derive(move || TimeInfo {
                         mode: game.time_mode,
                         base,
                         increment: inc,

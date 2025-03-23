@@ -1,6 +1,7 @@
 use crate::i18n::*;
 use crate::{common::TileDots, providers::Config};
-use leptos::*;
+use leptos::either::EitherOf3;
+use leptos::prelude::*;
 #[component]
 pub fn TileDotsToggle() -> impl IntoView {
     let i18n = use_i18n();
@@ -17,9 +18,8 @@ pub fn TileDotsToggle() -> impl IntoView {
 #[component]
 pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
     let i18n = use_i18n();
-    let tile_dots = store_value(tile_dots);
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let tile_dots = Signal::derive(move || tile_dots.clone());
+    let Config(config, set_cookie) = expect_context();
     let is_active = move || {
         if config().tile_dots == tile_dots() {
             "bg-pillbug-teal"
@@ -49,9 +49,9 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
             >
 
                 {match tile_dots() {
-                    TileDots::No => t!(i18n, user_config.dots_buttons.no).into_view(),
-                    TileDots::Angled => t!(i18n, user_config.dots_buttons.angled).into_view(),
-                    TileDots::Vertical => t!(i18n, user_config.dots_buttons.vertical).into_view(),
+                    TileDots::No => EitherOf3::A(t!(i18n, user_config.dots_buttons.no)),
+                    TileDots::Angled => EitherOf3::B(t!(i18n, user_config.dots_buttons.angled)),
+                    TileDots::Vertical => EitherOf3::C(t!(i18n, user_config.dots_buttons.vertical)),
                 }}
 
             </button>

@@ -1,18 +1,17 @@
 use crate::providers::Config;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::Icon;
 
 #[component]
 pub fn SoundToggle() -> impl IntoView {
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let Config(config, set_cookie) = expect_context();
     let icon = move || {
         let icon = if config().prefers_sound {
             icondata::BiVolumeFullRegular
         } else {
             icondata::BiVolumeMuteRegular
         };
-        view! { <Icon icon class="w-4 h-4" /> }
+        view! { <Icon icon attr:class="w-4 h-4" /> }
     };
     view! {
         <div class="inline-flex justify-center items-center m-1 rounded">
@@ -22,7 +21,7 @@ pub fn SoundToggle() -> impl IntoView {
                     set_cookie
                         .update(|c| {
                             if let Some(cookie) = c {
-                                cookie.prefers_sound = !config().prefers_sound;
+                                cookie.prefers_sound = !cookie.prefers_sound;
                             }
                         });
                 }

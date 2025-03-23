@@ -18,7 +18,7 @@ use crate::{
     providers::{config::Config, game_state::GameStateSignal, AuthContext},
 };
 use hive_lib::{Color, GameStatus, Position};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{GameStart, TournamentGameResult};
 
 #[derive(Clone)]
@@ -35,25 +35,16 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let current_confirm = Memo::new(move |_| {
-        if game_state.loaded.get() {
-            {
-                let preferred_confirms = config().confirm_mode;
-                game_state
-                    .signal
-                    .get_untracked()
-                    .get_game_speed()
-                    .and_then(|game_speed| preferred_confirms.get(&game_speed).cloned())
-                    .unwrap_or(MoveConfirm::Single)
-            }
-        } else {
-            MoveConfirm::Single
-        }
+        let preferred_confirms = config().confirm_mode;
+        game_state
+            .signal
+            .get()
+            .get_game_speed()
+            .and_then(|game_speed| preferred_confirms.get(&game_speed).cloned())
+            .unwrap_or_default()
     });
     provide_context(CurrentConfirm(current_confirm));
-    let user = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user),
-        _ => None,
-    };
+    let user = auth_context.user;
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
     let user_is_player = Signal::derive(move || {
         user().and_then(|user| {
@@ -65,7 +56,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             }
         })
     });
-    let player_color = create_memo(move |_| {
+    let player_color = Memo::new(move |_| {
         user().map_or(Color::White, |user| {
             let black_id = white_and_black().1;
             match Some(user.id) == black_id {

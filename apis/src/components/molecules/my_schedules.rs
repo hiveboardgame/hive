@@ -10,7 +10,7 @@ use crate::{
 };
 use chrono::{Duration, Utc};
 use hive_lib::GameStatus;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::Conclusion;
 use shared_types::GameId;
 use std::collections::HashMap;
@@ -78,7 +78,7 @@ fn MySchedulesInner(
 
                 {
                     let (gr, _) = game;
-                    let game_id = StoredValue::new(gr.game_id);
+                    let game_id = Signal::derive(move || gr.game_id.clone());
                     let white_username = gr.white_player.username;
                     let black_username = gr.black_player.username;
                     let white_patreon = gr.white_player.patreon;

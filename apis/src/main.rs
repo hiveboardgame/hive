@@ -7,6 +7,7 @@ pub mod websocket;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
 use actix_web::middleware::Compress;
+use leptos_meta::{HashedStylesheet, MetaTags};
 use websocket::{Lags, Pings, TournamentGameStart};
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
@@ -24,11 +25,11 @@ async fn main() -> std::io::Result<()> {
     use diesel::pg::PgConnection;
     use diesel::Connection;
     use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-    use leptos::*;
+    use leptos::prelude::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use sha2::*;
 
-    let conf = get_configuration(None).await.expect("Got configuration");
+    let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
 
@@ -77,18 +78,35 @@ async fn main() -> std::io::Result<()> {
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             // serve other assets from the `assets` directory
-            .service(Files::new("/assets", site_root))
+            .service(Files::new("/assets", site_root.as_ref()))
             // serve the favicon from /favicon.ico
             .service(favicon)
             .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::oauth::callback)
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
-            .leptos_routes(
-                leptos_options.to_owned(),
-                routes.to_owned(),
-                || view! { <App/> },
-            )
+            .leptos_routes(routes.to_owned(), {
+                let leptos_options = leptos_options.clone();
+                move || {
+                    use leptos::prelude::*;
+
+                    view! {
+                        <!DOCTYPE html>
+                        <html lang="en">
+                            <head>
+                                <meta charset="utf-8"/>
+                                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                                <AutoReload options=leptos_options.clone() />
+                                <HydrationScripts options=leptos_options.clone()/>
+                                <MetaTags/>
+                                <HashedStylesheet options=leptos_options.clone() id="leptos"/>
+                            </head>
+                            <body>
+                                <App/>
+                            </body>
+                        </html>
+                    }
+            }})
             .app_data(Data::new(leptos_options.to_owned()))
             // IdentityMiddleware needs to be first
             .wrap(IdentityMiddleware::default())
@@ -109,7 +127,7 @@ async fn main() -> std::io::Result<()> {
 
 #[actix_web::get("favicon.ico")]
 async fn favicon(
-    leptos_options: actix_web::web::Data<leptos::LeptosOptions>,
+    leptos_options: actix_web::web::Data<leptos::prelude::LeptosOptions>,
 ) -> actix_web::Result<actix_files::NamedFile> {
     let leptos_options = leptos_options.into_inner();
     let site_root = &leptos_options.site_root;
