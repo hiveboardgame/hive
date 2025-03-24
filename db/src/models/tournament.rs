@@ -758,12 +758,12 @@ impl Tournament {
 		let quarter_size = remaining_players / 4; // Note that remaining_players is an integer. So / here is integer division!
 
 		let pairing_ranges = match seeding_mode{
-			SeedingMode::Accelerated => vec![
+			SeedingMode::Accelerated => [
 				(0, quarter_size * 2),                  // Q1 vs Q2 Using quarter_size guaranteees even players
 				(quarter_size * 2, remaining_players),  // Q3 vs Q4 (guaranteed even due to fixed bye)
-				],
-			SeedingMode::Standard => vec![(0,remaining_players)],
-			};
+				];
+			SeedingMode::Standard => [(0,remaining_players)]
+			}
 		
 		for &(start, end) in &pairing_ranges {
 			let mid = start + (end - start) / 2; 
@@ -862,13 +862,22 @@ impl Tournament {
         Ok(sorted_query.get_results(conn).await?)
     }
 
-	//Return a hashmap of player_id to score
-	pub async fn get_player_info(
-			&self,
-	        conn: &mut DbConn<'_>,
-		) -> Result<HashMap<Uuid, (f64, HashSet<Uuid>)>, DbError> { 
-		let mut player_info = HashMap::new();
-		
+    pub async fn create_next_round(
+        &self,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(Self, Vec<Game>), DbError> {
+        if self.mode.to_uppercase() != "SWISS" {
+            return Err(DbError::InvalidInput {
+                info: String::from("Not a Swiss tournament"),
+                error: String::from("Can only create next round for Swiss tournaments"),
+            });
+        }
+
+        println!(
+            "\nStarting next round creation for tournament {} ({})",
+            self.name, self.id
+        );
+        let mut games = Vec::new();
         let players = self.players(conn).await?;
         let existing_games = self.games(conn).await?;
         println!(
@@ -876,7 +885,9 @@ impl Tournament {
             players.len(),
             existing_games.len()
         );
-		
+
+        // Create a map of player scores and opponents
+        let mut player_info: HashMap<Uuid, (f64, HashSet<Uuid>)> = HashMap::new();
         println!("\nCalculating current scores and previous opponents:");
 
         for player in &players {
@@ -927,29 +938,6 @@ impl Tournament {
             );
             player_info.insert(player.id, (score, opponents));
         }
-		return Ok(player_info)
-	}
-
-    pub async fn create_next_round(
-        &self,
-        conn: &mut DbConn<'_>,
-    ) -> Result<(Self, Vec<Game>), DbError> {
-        if self.mode.to_uppercase() != "SWISS" {
-            return Err(DbError::InvalidInput {
-                info: String::from("Not a Swiss tournament"),
-                error: String::from("Can only create next round for Swiss tournaments"),
-            });
-        }
-
-        println!(
-            "\nStarting next round creation for tournament {} ({})",
-            self.name, self.id
-        );
-        let mut games = Vec::<Game>::new();
-        let players = self.players(conn).await?;
-
-        // Create a map of player scores and opponents
-        let mut player_info: HashMap<Uuid, (f64, HashSet<Uuid>)> = self.get_player_info(conn).await.unwrap();
 
         // Sort players by score
         let mut players_to_pair: Vec<(User, f64)> = players
