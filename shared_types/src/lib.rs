@@ -34,6 +34,7 @@ pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use pretty_string::PrettyString;
 pub use scoring_mode::ScoringMode;
 pub use simple_user::SimpleUser;
+pub use standings::Pairing;
 pub use standings::PlayerScores;
 pub use standings::Standings;
 pub use start_mode::StartMode;
