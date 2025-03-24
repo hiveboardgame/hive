@@ -27,8 +27,6 @@ use hive_lib::Color;
 use itertools::Itertools;
 use nanoid::nanoid;
 use rand::random;
-use rand::prelude::SliceRandom;
-use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use shared_types::{
     Certainty, GameSpeed, ScoringMode, SeedingMode, Standings, StartMode, Tiebreaker, TimeMode,
@@ -710,21 +708,17 @@ impl Tournament {
         println!("Using game speed: {:?}", game_speed);
 
         // Sort players by rating for initial seeding
-        let mut players_with_ratings_certainties: Vec<(User, f64, bool)> = Vec::new();
+        let mut players_with_ratings: Vec<(User, f64, bool)> = Vec::new();
         for player in players {
             let rating = Rating::for_uuid(&player.id, &game_speed, conn).await?;
-            players_with_ratings_certainties.push((player, rating.rating, Certainty::Clueless != Certainty::from_deviation(rating.deviation)));
+            players_with_ratings.push((player, rating.rating, Certainty::Clueless != Certainty::from_deviation(rating.deviation)));
         }
-		players_with_ratings_certainties.sort_by(|a, b| (b.2,b.1).partial_cmp(&(a.2,a.1)).unwrap());
-        let players_with_ratings: Vec<(User, f64)> = players_with_ratings_certainties
-			.into_iter()
-			.map(|(a,b,_)| (a,b)) //Drop certainty
-			.collect();
+        players_with_ratings.sort_by(|a, b| (b.1,b.2).partial_cmp(&(a.1,a.2)).unwrap());
 
         // Store initial seeding
         let initial_seeding: Vec<Option<Uuid>> = players_with_ratings
             .iter()
-            .map(|(player, _)| Some(player.id))
+            .map(|(player, _, _)| Some(player.id))
             .collect();
         println!("Initial seeding: {:?}", initial_seeding);
         diesel::update(self)
@@ -741,7 +735,7 @@ impl Tournament {
             if let Some(bye_player_id) = self.find_bye_player(HashMap::<Uuid, f64>::new()) {
                 let bye_player_idx = players_to_pair
                     .iter()
-                    .position(|(p, _)| p.id == bye_player_id)
+                    .position(|(p, _, _ )| p.id == bye_player_id)
                     .unwrap();
                 let bye_player = players_to_pair.remove(bye_player_idx);
                 println!(
@@ -783,27 +777,18 @@ impl Tournament {
 			let mid = start + (end - start) / 2; 
 
 			for i in start..mid {
-				
-				let player_1_idx = i;      // Top half
-				let player_2_idx = mid + (i - start); // Bottom half
-				let mut randomized_games = vec![
-					(player_1_idx, player_2_idx),
-					(player_2_idx, player_1_idx),
-					];
-				randomized_games.shuffle(&mut thread_rng());
-				for (p1_idx,p2_idx) in randomized_games {
-					let white = &players_to_pair[p1_idx].0;
-					let black = &players_to_pair[p2_idx].0;
-					println!(
-						"  Pairing {} (White, rating: {}) vs {} (Black, rating: {})",
-						white.username, players_to_pair[i].1,
-						black.username, players_to_pair[mid + (i - start)].1
-					);
+				let white = &players_to_pair[i].0;      // Top half
+				let black = &players_to_pair[mid + (i - start)].0; // Bottom half
 
-					let new_game = NewGame::new_from_tournament(white.id, black.id, self);
-					let game = Game::create(new_game, conn).await?;
-					games.push(game);
-				}
+				println!(
+					"  Pairing {} (White, rating: {}) vs {} (Black, rating: {})",
+					white.username, players_to_pair[i].1,
+					black.username, players_to_pair[mid + (i - start)].1
+				);
+
+				let new_game = NewGame::new_from_tournament(white.id, black.id, self);
+				let game = Game::create(new_game, conn).await?;
+				games.push(game);
 			}
 		}
 
@@ -997,30 +982,16 @@ impl Tournament {
 			.map(|(&player_id, &(scores, _))| (player_id, scores))
 			.collect();
 			
-		let mut players_to_pair: Vec<(User, (f64,f64))> = players
+        // Sort players by score
+        let mut players_to_pair: Vec<(User, f64)> = players
 			.iter()
-			.map(|p| (p.clone(), player_info.get(&p.id).unwrap().0))
-			.collect();
+            .map(|p| (p.clone(), player_info.get(&p.id).unwrap().0.0))
+            .collect();
+        players_to_pair.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
-		// First, sort by initial seeding order
-		let initial_seeding_positions: HashMap<Uuid, usize> = self
-			.initial_seeding
-			.iter()
-			.flatten() // Remove None values
-			.enumerate()
-			.map(|(index, id)| (*id, index))
-			.collect();
-
-		// Stable sort by initial seeding order 1,2,3,4, etc
-		players_to_pair.sort_by_key(|(player, _)| 0-initial_seeding_positions.get(&player.id).copied().unwrap_or(usize::MAX));
-
-		// Stable sort by score (keeping initial seeding order for ties)
-		// Highest score first
-		players_to_pair.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-
-        println!("\nPlayers sorted by score/initial seeding:");
-        for (player, (matchscore,gamescore)) in &players_to_pair {
-            println!("  {}: {:.1} matchpoints, {:.1} gamepoints", player.username, matchscore, gamescore);
+        println!("\nPlayers sorted by score:");
+        for (player, score) in &players_to_pair {
+            println!("  {}: {:.1} points", player.username, score);
         }
 
         // Handle odd number of players
@@ -1039,7 +1010,7 @@ impl Tournament {
                 let bye_player = players_to_pair.remove(bye_player_idx);
                 println!(
                     "  Giving bye to {} (score: {:.1})",
-                    bye_player.0.username, bye_player.1.0
+                    bye_player.0.username, bye_player.1
                 );
 
                 // Update tournament to track the new bye
@@ -1065,91 +1036,60 @@ impl Tournament {
                 .await?;
         }
 
-		let mut find_score_bracket_start_end: Vec<(usize,usize)> = vec![(0,0);players_to_pair.len()];
-		let mut curr_score: (f64,f64) = (-1.0,-1.0);
-		let mut curr_edge: usize = 0;
-		//Find start of score groups
-		for i in 0..players_to_pair.len() {
-			if players_to_pair[i].1 != curr_score{
-				curr_edge = i;
-				curr_score = players_to_pair[i].1;
-			}
-			find_score_bracket_start_end[i].0 = curr_edge;
-		}
-		curr_score = (-1.0,-1.0); //Reset
-		//Find end of score groups
-		for i in (0..players_to_pair.len()).rev() {
-			if players_to_pair[i].1 != curr_score{
-				curr_edge = i+1;//End is exclusive
-				curr_score = players_to_pair[i].1;
-			}
-			find_score_bracket_start_end[i].1 = curr_edge;
-		}
-		
-		let mut pairings: Vec<(usize,usize)> = Vec::new();
-		let mut is_paired: Vec<bool> = vec![false;players_to_pair.len()];
-		let mut current_searched_opponent: Vec<Option<usize>> = vec![None;players_to_pair.len()];
-		let mut base_players: Vec<usize> = vec![];
-		let mut curr_i = 0;
-		while pairings.len()*2 < players_to_pair.len() {
-			//Continue to next player case
-			if is_paired[curr_i]{
-				curr_i += 1;
-				continue;
-			}
+        // Create pairings for remaining players
+        println!("\nCreating pairings for remaining players:");
+        while !players_to_pair.is_empty() {
+            let mut paired = false;
+            let current_player = &players_to_pair[0];
+            let current_opponents = &player_info.get(&current_player.0.id).unwrap().1;
 
-			let (start, end): (usize,usize) = find_score_bracket_start_end[curr_i];
-			
-			// Update opponent search
-			let curr_opp = current_searched_opponent[curr_i];
-			let next_opp = Self::next_preferred_opponent(curr_i, start, end, curr_opp);
-			current_searched_opponent[curr_i] = Some(next_opp);
+            println!(
+                "  Looking for opponent for {} ({:.1} points)",
+                current_player.0.username, current_player.1
+            );
 
-			//Failed. Must backtrack
-			if next_opp >= players_to_pair.len() {
-				//Remove last inserted match in pairings
-				let prev = base_players.pop();
-				match prev {
-					Some(x) => {curr_i = x;},
-					// Backtracking from first player
-					// pairing failed
-					None => break 
-				}
-				let (p1, p2) = pairings.pop().unwrap();
-				is_paired[p1] = false;
-				is_paired[p2] = false;
-				continue;
-			}
-			
-			//Is valid pairing
-			if !is_paired[next_opp] {
-				pairings.push((curr_i,next_opp));
-				base_players.push(curr_i);
-				is_paired[curr_i] = true;
-				is_paired[next_opp] = true;
-				curr_i+=1;
-				current_searched_opponent[curr_i] = None;
-			} 
-		}
-		
+            // Try to find an opponent
+            for i in 1..players_to_pair.len() {
+                let potential_opponent = &players_to_pair[i];
+                if !current_opponents.contains(&potential_opponent.0.id) {
+                    println!(
+                        "    Found valid opponent: {} ({:.1} points)",
+                        potential_opponent.0.username, potential_opponent.1
+                    );
+                    // Create the game
+                    let white = players_to_pair.remove(0).0;
+                    let black = players_to_pair.remove(i - 1).0;
+                    println!(
+                        "    Creating game: {} (White) vs {} (Black)",
+                        white.username, black.username
+                    );
+                    let new_game = NewGame::new_from_tournament(white.id, black.id, self);
+                    let game = Game::create(new_game, conn).await?;
+                    games.push(game);
+                    paired = true;
+                    break;
+                } else {
+                    println!(
+                        "    {} already played against {}, skipping",
+                        current_player.0.username, potential_opponent.0.username
+                    );
+                }
+            }
 
-		for (player_1,player_2) in pairings {
-			let mut paired_game = vec![
-				(&players_to_pair[player_1].0, &players_to_pair[player_2].0),
-				(&players_to_pair[player_2].0, &players_to_pair[player_1].0),
-				];
-		    paired_game.shuffle(&mut thread_rng());
-			for (white, black) in paired_game {
-				println!(
-					"    Creating game: {} (White) vs {} (Black)",
-					white.username, black.username
-				);
-				let new_game = NewGame::new_from_tournament(white.id, black.id, self);
-				let game = Game::create(new_game, conn).await?;
-				games.push(game);
-			}
-		}
-					
+            if !paired {
+                // If no opponent found, pair with the next available player
+                let white = players_to_pair.remove(0).0;
+                let black = players_to_pair.remove(0).0;
+                println!(
+                    "    No valid opponents found, forced pairing: {} vs {}",
+                    white.username, black.username
+                );
+                let new_game = NewGame::new_from_tournament(white.id, black.id, self);
+                let game = Game::create(new_game, conn).await?;
+                games.push(game);
+            }
+        }
+
         // Increment the current round
         let tournament = diesel::update(self)
             .set(current_round.eq(self.current_round + 1))
@@ -1163,39 +1103,6 @@ impl Tournament {
         );
         Ok((tournament, games))
     }
-	
-	//Take current player index, start and end (exclusive) indices of score bracket
-	//And current opponent. Returns next preferred opponent index
-	fn next_preferred_opponent(curr_i: usize, start: usize, end: usize, 
-		curr_opp_option: Option<usize>) -> usize {
-		//+1 to round up
-		let midsize: usize = (1+ end - start) / 2;
-		match curr_opp_option {
-			Some(curr_opp) => 	{
-				if curr_i < start + midsize && curr_opp < end {
-					// Top-half player search order
-					if curr_opp == curr_i+1 {
-						return end;
-					} else if curr_opp == end - 1 {
-						return curr_i + midsize - 1;
-					} else {
-						return curr_opp - 1;
-					}
-				} else {
-					// Bottom-half player or failed top-half search
-					return curr_opp + 1;
-				}
-			},
-			None => {
-				//Consider especially last top half player in odd group
-				if curr_i < start + midsize - (end-start)%2 { 
-					return curr_i + midsize;
-				} else { 
-					return curr_i + 1;
-				}
-			},
-		};
-	}
 }
 
 #[cfg(test)]
@@ -1753,74 +1660,4 @@ mod tests {
         println!("\nTest completed successfully!");
         Ok(())
     }
-	
-
-	#[test]
-	fn test_next_preferred_opponent_bottom_half_initial() {
-		let start = 2;
-		let end = 8;
-		for curr_i in 5..8 {
-			let expected = curr_i+1; // Initial target (curr_i + 1)
-			assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, None), expected);
-		}
-	}
-
-	#[test]
-	fn test_next_preferred_opponent_top_half_backwards_search() {
-		//First preferred pairing is 2-5, 3-6, 4-7
-		let curr_i = 3; //Second player
-		let start = 2;
-		let end = 8;
-		let prev_opp = Some(7); // Already searched to end. Now should search backwards
-		let expected = 5;
-		assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, prev_opp), expected);
-		let prev_opp = Some(5); // Continue backward search. 
-		let expected = 4;
-		assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, prev_opp), expected);
-		let prev_opp = Some(4); // Continue backward search. 
-		let expected = 8; // Score group fail. Continue out of score group 
-		assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, prev_opp), expected);
-	}
-
-
-	#[test]
-	fn test_next_preferred_opponent_fallback_to_rest() {
-		let start = 2;
-		let end = 8;
-		//For all players in a score group. Always continue downward after score group is exhausted
-		for curr_i in 2..7 {
-			for prev_opp in 8..20 {
-				let expected = prev_opp+1; // Move beyond the score bracket
-				assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, Some(prev_opp)), expected);
-			}
-		}
-	}
-
-	#[test]
-	fn test_next_preferred_opponent_out_of_bounds() {
-		let curr_i = 5;
-		let start = 0;
-		let end = 6;
-		let prev_opp = Some(10); // Already exceeded range
-		let expected = 11; // Should continue beyond bounds safely
-
-		assert_eq!(Tournament::next_preferred_opponent(curr_i, start, end, prev_opp), expected);
-	}
-
-	#[test]
-	fn test_next_preferred_opponent_small_groups() {
-		//1 player group
-		assert_eq!(Tournament::next_preferred_opponent(0, 0, 1, None), 1);
-		//2 player group
-		assert_eq!(Tournament::next_preferred_opponent(0, 0, 2, None), 1);
-		assert_eq!(Tournament::next_preferred_opponent(0, 0, 2, Some(1)), 2);
-		assert_eq!(Tournament::next_preferred_opponent(1, 0, 2, None), 2);
-		//3 player group
-		assert_eq!(Tournament::next_preferred_opponent(0, 0, 3, None), 2);
-		assert_eq!(Tournament::next_preferred_opponent(0, 0, 3, Some(2)), 1);
-		assert_eq!(Tournament::next_preferred_opponent(0, 0, 3, Some(1)), 3);
-		assert_eq!(Tournament::next_preferred_opponent(1, 0, 3, None), 2);
-		assert_eq!(Tournament::next_preferred_opponent(1, 0, 3, Some(2)), 3);
-		assert_eq!(Tournament::next_preferred_opponent(2, 0, 3, None), 3);
-	}
 }
