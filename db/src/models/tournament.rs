@@ -29,11 +29,10 @@ use nanoid::nanoid;
 use rand::random;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    Certainty, GameSpeed, ScoringMode, SeedingMode, Standings, StartMode, Tiebreaker, TimeMode,
+    GameSpeed, ScoringMode, SeedingMode, Standings, StartMode, Tiebreaker, TimeMode,
     TournamentDetails, TournamentGameResult, TournamentId, TournamentSortOrder, TournamentStatus,
 };
 use std::collections::{HashMap, HashSet};
-use std::cmp::Ordering;
 use std::io::{self, Read};
 use std::pin::Pin;
 use std::str::FromStr;
@@ -656,35 +655,28 @@ impl Tournament {
     /// The function prioritizes players who:
     /// 1. Haven't received a bye yet
     /// 2. Are ranked lower in the initial seeding
-    pub fn find_bye_player<T: PartialOrd + Default>(&self, player_scores: HashMap<Uuid, T>) -> Option<Uuid> {
+    pub fn find_bye_player(&self) -> Option<Uuid> {
         // Get the set of players who have already received byes
         let players_with_byes: HashSet<_> = self.bye.iter().flatten().collect();
 
-
-
         // Start from the end of initial_seeding (lowest ranked players)
         // and find the first player who hasn't had a bye yet
-        let mut eligible_players: Vec<Uuid> = self
+        let eligible_players: Vec<_> = self
             .initial_seeding
             .iter()
             .rev() // Reverse to start from lowest ranked
             .flatten() // Remove None values
             .filter(|player_id| !players_with_byes.contains(player_id))
-			.cloned()
-			.collect();
+            .collect();
 
-		//Stable sort by scores. Keeps intitial seeding order for equal scores
-		eligible_players.sort_by(|a, b| {
-				let default = &T::default();
-			    let score_a = player_scores.get(a).unwrap_or(&default); // Default to T::default()
-				let score_b = player_scores.get(b).unwrap_or(&default); // Default to T::default() 
-				score_a.partial_cmp(score_b).unwrap_or(Ordering::Equal)
-			});
-
-		eligible_players
-			.into_iter()
-			.next()
-			.or_else(|| self.initial_seeding.last().copied().flatten())
+        if eligible_players.is_empty() {
+            // If all players have had byes, just take the lowest ranked player
+            self.initial_seeding.last().and_then(|x| *x)
+        } else {
+            // If there are multiple eligible players with the same lowest rank,
+            // randomly select one of them
+            Some(*eligible_players[random::<usize>() % eligible_players.len()])
+        }
     }
 
     pub async fn swiss_start(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
@@ -708,17 +700,17 @@ impl Tournament {
         println!("Using game speed: {:?}", game_speed);
 
         // Sort players by rating for initial seeding
-        let mut players_with_ratings: Vec<(User, f64, bool)> = Vec::new();
+        let mut players_with_ratings: Vec<(User, f64)> = Vec::new();
         for player in players {
             let rating = Rating::for_uuid(&player.id, &game_speed, conn).await?;
-            players_with_ratings.push((player, rating.rating, Certainty::Clueless != Certainty::from_deviation(rating.deviation)));
+            players_with_ratings.push((player, rating.rating));
         }
-        players_with_ratings.sort_by(|a, b| (b.1,b.2).partial_cmp(&(a.1,a.2)).unwrap());
+        players_with_ratings.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
         // Store initial seeding
         let initial_seeding: Vec<Option<Uuid>> = players_with_ratings
             .iter()
-            .map(|(player, _, _)| Some(player.id))
+            .map(|(player, _)| Some(player.id))
             .collect();
         println!("Initial seeding: {:?}", initial_seeding);
         diesel::update(self)
@@ -732,10 +724,10 @@ impl Tournament {
         // Handle odd number of players first
         let mut players_to_pair = players_with_ratings.clone();
         if players_to_pair.len() % 2 != 0 {
-            if let Some(bye_player_id) = self.find_bye_player(HashMap::<Uuid, f64>::new()) {
+            if let Some(bye_player_id) = self.find_bye_player() {
                 let bye_player_idx = players_to_pair
                     .iter()
-                    .position(|(p, _, _ )| p.id == bye_player_id)
+                    .position(|(p, _)| p.id == bye_player_id)
                     .unwrap();
                 let bye_player = players_to_pair.remove(bye_player_idx);
                 println!(
@@ -874,10 +866,12 @@ impl Tournament {
 	pub async fn get_player_info(
 			&self,
 	        conn: &mut DbConn<'_>,
-		) -> Result<HashMap<Uuid, ((f64,f64), HashSet<Uuid>)>, DbError> { 
+		) -> Result<HashMap<Uuid, (f64, HashSet<Uuid>)>, DbError> { 
+		let mut player_info = HashMap::new();
+		
         let players = self.players(conn).await?;
         let existing_games = self.games(conn).await?;
-		        println!(
+        println!(
             "Found {} players and {} existing games",
             players.len(),
             existing_games.len()
@@ -885,74 +879,54 @@ impl Tournament {
 		
         println!("\nCalculating current scores and previous opponents:");
 
-		let mut player_faceoffs: HashMap<Uuid, HashMap<Uuid, (u32,f64)>> = HashMap::new();
+        for player in &players {
+            let mut score = 0.0;
+            let mut opponents = HashSet::new();
 
-		// Process all games to construct player_faceoffs
-		for game in &existing_games {
-			let white_id = game.white_id;
-			let black_id = game.black_id;
-			let result = TournamentGameResult::from_str(&game.tournament_game_result)
-				.map_err(|_| DbError::InvalidInput {
-					info: format!("Invalid game result: {}", game.tournament_game_result),
-					error: String::from("Failed to parse tournament game result"),
-				})?;
+            for game in &existing_games {
+                if game.white_id == player.id {
+                    opponents.insert(game.black_id);
+                    match TournamentGameResult::from_str(&game.tournament_game_result) {
+                        Ok(TournamentGameResult::Winner(Color::White)) => score += 1.0,
+                        Ok(TournamentGameResult::Draw) => score += 0.5,
+                        _ => {}
+                        Err(_) => {
+                            return Err(DbError::InvalidInput {
+                                info: format!(
+                                    "Invalid game result: {}",
+                                    game.tournament_game_result
+                                ),
+                                error: String::from("Failed to parse tournament game result"),
+                            })
+                        }
+                    }
+                } else if game.black_id == player.id {
+                    opponents.insert(game.white_id);
+                    match TournamentGameResult::from_str(&game.tournament_game_result) {
+                        Ok(TournamentGameResult::Winner(Color::Black)) => score += 1.0,
+                        Ok(TournamentGameResult::Draw) => score += 0.5,
+                        _ => {}
+                        Err(_) => {
+                            return Err(DbError::InvalidInput {
+                                info: format!(
+                                    "Invalid game result: {}",
+                                    game.tournament_game_result
+                                ),
+                                error: String::from("Failed to parse tournament game result"),
+                            })
+                        }
+                    }
+                }
+            }
 
-			// Assign points based on game result
-			let (white_score, black_score) = match result {
-				TournamentGameResult::Winner(Color::White) => (1.0, 0.0),
-				TournamentGameResult::Winner(Color::Black) => (0.0, 1.0),
-				TournamentGameResult::Draw => (0.5, 0.5),
-				TournamentGameResult::Bye => (1.0, 0.0),
-				TournamentGameResult::DoubeForfeit => (0.0 , 0.0),
-				TournamentGameResult::Unknown => (0.0, 0.0),
-			};
-
-			// Update player_faceoffs
-			player_faceoffs
-				.entry(white_id) //Get white entry
-				.or_default() //Create hashmap if no entry
-				.entry(black_id) //Get white's entry for black
-				.and_modify(|(n,s)| {
-					*n += 1; //Increase game count
-					*s += white_score;//Modify score
-				}) 
-				.or_insert((1,white_score)); //If first game for white
-			// Update player_faceoffs for Black
-			player_faceoffs
-				.entry(black_id)
-				.or_default()
-				.entry(white_id)
-				.and_modify(|(n, s)| {
-					*n += 1;
-					*s += black_score;
-				})
-				.or_insert((1, black_score));
-		}
-		let mut player_info: HashMap<Uuid, ((f64, f64), HashSet<Uuid>)> = HashMap::new();
-
-		// Create a set of valid players
-		let player_set: HashSet<Uuid> = players.iter().map(|p| p.id).collect();
-
-		for (player, faceoffs) in &player_faceoffs {
-			if player_set.contains(player) {
-				let mut total_match_score = 0.0;
-				let mut total_score = 0.0;
-				let mut opponents = HashSet::new();
-
-				for (opponent, (games, score)) in faceoffs {
-					if (score * 2.0) > (*games as f64) {				
-						total_match_score += 1.0;
-					}else if (score * 2.0) == (*games as f64) {
-						total_match_score += 0.5;
-					}
-					total_score += score;
-					opponents.insert(*opponent);
-				}
-
-				player_info.insert(*player, ((total_match_score, total_score), opponents));
-			}
-		}
-
+            println!(
+                "  Player {} has {:.1} points and {} previous opponents",
+                players.iter().find(|p| p.id == player.id).unwrap().username,
+                score,
+                opponents.len()
+            );
+            player_info.insert(player.id, (score, opponents));
+        }
 		return Ok(player_info)
 	}
 
@@ -975,17 +949,12 @@ impl Tournament {
         let players = self.players(conn).await?;
 
         // Create a map of player scores and opponents
-        let player_info: HashMap<Uuid, ((f64,f64), HashSet<Uuid>)> = self.get_player_info(conn).await.unwrap();
-		
-		let player_scores: HashMap<Uuid, (f64, f64)> = player_info
-			.iter()
-			.map(|(&player_id, &(scores, _))| (player_id, scores))
-			.collect();
-			
+        let mut player_info: HashMap<Uuid, (f64, HashSet<Uuid>)> = self.get_player_info(conn).await.unwrap();
+
         // Sort players by score
         let mut players_to_pair: Vec<(User, f64)> = players
-			.iter()
-            .map(|p| (p.clone(), player_info.get(&p.id).unwrap().0.0))
+            .iter()
+            .map(|p| (p.clone(), player_info.get(&p.id).unwrap().0))
             .collect();
         players_to_pair.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
@@ -1002,7 +971,7 @@ impl Tournament {
             );
 
             // Find bye player using the new function
-            if let Some(bye_player_id) = self.find_bye_player(player_scores) {
+            if let Some(bye_player_id) = self.find_bye_player() {
                 let bye_player_idx = players_to_pair
                     .iter()
                     .position(|(p, _)| p.id == bye_player_id)
