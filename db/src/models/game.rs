@@ -88,6 +88,7 @@ pub struct NewGame {
     pub tournament_game_result: String,
     pub game_start: String,
     pub move_times: Vec<Option<i64>>,
+    pub round: Option<i32>,
 }
 
 impl NewGame {
@@ -148,6 +149,7 @@ impl NewGame {
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: start,
             move_times: vec![],
+            round: Some(tournament.current_round),
         }
     }
 
@@ -204,6 +206,7 @@ impl NewGame {
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
             move_times: vec![],
+            round: None,
         })
     }
 }
@@ -246,6 +249,7 @@ pub struct Game {
     pub tournament_game_result: String,
     pub game_start: String,
     pub move_times: Vec<Option<i64>>,
+    pub round: Option<i32>,
 }
 
 impl Game {

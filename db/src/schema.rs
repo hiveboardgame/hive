@@ -54,6 +54,7 @@ diesel::table! {
         tournament_game_result -> Text,
         game_start -> Text,
         move_times -> Array<Nullable<Int8>>,
+        round -> Nullable<Int4>,
     }
 }
 
