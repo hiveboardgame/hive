@@ -1,6 +1,5 @@
 use crate::common::SvgPos;
 use crate::common::TileDesign;
-use crate::providers::game_state::GameStateSignal;
 use crate::providers::Config;
 use hive_lib::Position;
 use leptos::prelude::*;
@@ -15,14 +14,8 @@ pub fn Active(
     let straight = move || config().tile_design == TileDesign::ThreeD;
     let center = move || SvgPos::center_for_level(position, level(), straight());
     let transform = move || format!("translate({},{})", center().0, center().1);
-    let mut game_state_signal = expect_context::<GameStateSignal>();
-
-    let onclick = move |_| {
-        game_state_signal.reset();
-    };
-
     view! {
-        <g on:click=onclick class=format!("{extend_tw_classes}")>
+        <g class=format!("{extend_tw_classes}")>
             <g id="Active" transform=transform>
                 <use_
                     href="/assets/tiles/common/all.svg#active"
