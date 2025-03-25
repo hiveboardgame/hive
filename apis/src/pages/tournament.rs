@@ -33,7 +33,7 @@ pub fn Tournament() -> impl IntoView {
     let tournaments = expect_context::<TournamentStateContext>();
     let tournament_id = move || {
         use_params
-            .get()
+            .get_untracked()
             .get("nanoid")
             .map(|s| TournamentId(s.to_string()))
     };
@@ -44,11 +44,8 @@ pub fn Tournament() -> impl IntoView {
     });
     Effect::watch(
         tournaments.needs_update,
-        move |_, _, _| {
-            if tournaments
-                .needs_update
-                .get()
-                .contains(&tournament_id().unwrap())
+        move |needs_update, _, _| {
+            if needs_update.contains(&tournament_id().unwrap())
             {
                 current_tournament.dispatch(());
             }
