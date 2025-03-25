@@ -43,6 +43,7 @@ pub fn Challenges() -> impl IntoView {
     let online_users = expect_context::<OnlineUsersSignal>().signal;
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
+    let uid = move || auth_context.user.get().map(|user| user.id);
     let direct = Signal::derive(move || {
         let mut ret = if let Some(user) = user() {
             // Get the challenges direct at the current user
@@ -118,15 +119,15 @@ pub fn Challenges() -> impl IntoView {
             </thead>
             <tbody>
                 <For each=direct key=|c| c.challenge_id.to_owned() let(challenge)>
-                    <ChallengeRow challenge=challenge.to_owned() single=false />
+                    <ChallengeRow challenge=challenge.to_owned() single=false uid=uid() />
                 </For>
                 <tr class="h-2"></tr>
                 <For each=own key=|c| c.challenge_id.to_owned() let(challenge)>
-                    <ChallengeRow challenge=challenge.to_owned() single=false />
+                    <ChallengeRow challenge=challenge.to_owned() single=false uid=uid() />
                 </For>
                 <tr class="h-2"></tr>
                 <For each=public key=|c| c.challenge_id.to_owned() let(challenge)>
-                    <ChallengeRow challenge=challenge.to_owned() single=false />
+                    <ChallengeRow challenge=challenge.to_owned() single=false uid=uid() />
                 </For>
             </tbody>
         </table>

@@ -48,10 +48,5 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
         }
     };
 
-    view! {
-        <Icon
-            icon=icondata::BiCircleSolid
-            attr:class=icon_style
-        />
-    }
+    view! { <Icon icon=icondata::BiCircleSolid attr:class=icon_style /> }
 }

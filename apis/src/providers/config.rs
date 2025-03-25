@@ -41,15 +41,12 @@ impl Default for ConfigOpts {
     }
 }
 #[derive(Clone, Debug)]
-pub struct Config(
-    pub Signal<ConfigOpts>,
-    pub WriteSignal<Option<ConfigOpts>>,
-);
+pub struct Config(pub Signal<ConfigOpts>, pub WriteSignal<Option<ConfigOpts>>);
 
 pub fn provide_config() {
     let (cookie, set_cookie) = use_cookie_with_options::<ConfigOpts, Base64<MsgpackSerdeCodec>>(
         USER_CONFIG_COOKIE,
-        UseCookieOptions::<ConfigOpts,_,_>::default()
+        UseCookieOptions::<ConfigOpts, _, _>::default()
             .same_site(SameSite::Lax)
             .secure(true)
             .max_age(CONF_MAX_AGE)

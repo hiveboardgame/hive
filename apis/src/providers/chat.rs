@@ -1,7 +1,11 @@
 use crate::responses::AccountResponse;
 
 use super::{
-    api_requests::ApiRequests, auth_context::AuthContext, game_state::GameStateSignal, navigation_controller::{GameNavigationControllerState, NavigationControllerSignal}, AlertType, AlertsContext, ApiRequestsProvider
+    api_requests::ApiRequests,
+    auth_context::AuthContext,
+    game_state::GameStateSignal,
+    navigation_controller::{GameNavigationControllerState, NavigationControllerSignal},
+    AlertType, AlertsContext, ApiRequestsProvider,
 };
 use leptos::prelude::*;
 use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId, TournamentId};
@@ -201,10 +205,5 @@ pub fn provide_chat() {
     let api = expect_context::<ApiRequestsProvider>().0;
     let game_signal = expect_context::<NavigationControllerSignal>().game_signal;
 
-    provide_context(Chat::new(
-        user,
-        gamestate,
-        api,
-        game_signal.into(),
-    ))
+    provide_context(Chat::new(user, gamestate, api, game_signal.into()))
 }

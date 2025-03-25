@@ -255,21 +255,21 @@ pub fn TournamentCreate() -> impl IntoView {
                             ></textarea>
                         </Show>
                         <div class="flex flex-row gap-1 p-1">
-                        <button
-                            on:click=move |_| is_not_preview_desc.update(|b| *b = !*b)
-                            class="flex gap-1 justify-center items-center px-4 mr-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                        >
-                            {move || if is_not_preview_desc() { "Preview" } else { "Edit" }}
-                        </button>
+                            <button
+                                on:click=move |_| is_not_preview_desc.update(|b| *b = !*b)
+                                class="flex gap-1 justify-center items-center px-4 mr-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                                {move || if is_not_preview_desc() { "Preview" } else { "Edit" }}
+                            </button>
 
-                        <a
-                            class="font-bold text-blue-500 hover:underline"
-                            href="https://commonmark.org/help/"
-                            target="_blank"
-                        >
-                            "Markdown Cheat Sheet"
-                        </a>
-                    </div>
+                            <a
+                                class="font-bold text-blue-500 hover:underline"
+                                href="https://commonmark.org/help/"
+                                target="_blank"
+                            >
+                                "Markdown Cheat Sheet"
+                            </a>
+                        </div>
                     </div>
                     <div class="p-1">
                         Min number of players:

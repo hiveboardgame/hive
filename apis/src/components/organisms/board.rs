@@ -116,8 +116,7 @@ pub fn Board(
             .center_coordinates()
     };
 
-    let straight =
-        move || config.get_untracked().tile_design == TileDesign::ThreeD;
+    let straight = move || config.get_untracked().tile_design == TileDesign::ThreeD;
 
     Effect::watch(
         move || (),

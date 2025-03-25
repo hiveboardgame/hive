@@ -4,7 +4,7 @@ use crate::i18n::*;
 use crate::providers::{ApiRequestsProvider, Config};
 use crate::{
     components::atoms::game_type::GameType, components::atoms::profile_link::ProfileLink,
-    functions::hostname::hostname_and_port, providers::AuthContext, responses::ChallengeResponse,
+    functions::hostname::hostname_and_port, responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
 use leptos::either::Either;
@@ -12,11 +12,15 @@ use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_use::use_window;
 use shared_types::{ChallengeVisibility, TimeInfo};
+use uuid::Uuid;
 
 #[component]
-pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView {
+pub fn ChallengeRow(
+    challenge: ChallengeResponse,
+    single: bool,
+    uid: Option<Uuid>,
+) -> impl IntoView {
     let i18n = use_i18n();
-    let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let api = expect_context::<ApiRequestsProvider>().0;
     let challenge_id = StoredValue::new(challenge.challenge_id);
@@ -74,12 +78,11 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
 
     let td_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let time_mode = challenge.time_mode;
-    let uid = move || auth_context.user.get().map(|user| user.id);
 
     let challenger_username = StoredValue::new(challenge.challenger.username);
     let challenger_patreon = StoredValue::new(challenge.challenger.patreon);
     let (username, patreon, rating) =
-        if let (Some(uid), Some(opponent)) = (uid(), challenge.opponent.clone()) {
+        if let (Some(uid), Some(opponent)) = (uid, challenge.opponent.clone()) {
             if challenge.challenger.uid == uid {
                 let opp = opponent.username.clone();
                 (
@@ -158,10 +161,7 @@ pub fn ChallengeRow(challenge: ChallengeResponse, single: bool) -> impl IntoView
             <td class=td_class>
                 <div class="flex justify-center items-center">
                     <Show
-                        when=move || {
-                            let uid = uid();
-                            uid != Some(challenge.challenger.uid)
-                        }
+                        when=move || { uid != Some(challenge.challenger.uid) }
 
                         fallback=move || {
                             view! {

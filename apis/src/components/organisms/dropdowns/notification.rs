@@ -7,7 +7,7 @@ use crate::components::molecules::{
 };
 use crate::functions::tournaments::get_all_abstract;
 use crate::providers::challenges::ChallengeStateSignal;
-use crate::providers::NotificationContext;
+use crate::providers::{AuthContext, NotificationContext};
 use crate::responses::TournamentAbstractResponse;
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -15,6 +15,8 @@ use shared_types::TournamentSortOrder;
 
 #[component]
 pub fn NotificationDropdown() -> impl IntoView {
+    let auth_context = expect_context::<AuthContext>();
+    let uid = move || auth_context.user.get().map(|user| user.id);
     let hamburger_show = RwSignal::new(false);
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
     let notifications_context = Signal::derive(move || expect_context::<NotificationContext>());
@@ -78,6 +80,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                                 .expect("Challenge exists")
                                 .clone()
                             single=false
+                            uid=uid()
                         />
                     </div>
                 </For>

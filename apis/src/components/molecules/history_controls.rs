@@ -60,17 +60,18 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
     view! {
         <div>
             <div class="flex gap-1 min-h-0 [&>*]:grow">
-                <HistoryButton action=HistoryNavigation::First post_action=focus/>
-                <HistoryButton node_ref=prev_button action=HistoryNavigation::Previous post_action=focus/>
+                <HistoryButton action=HistoryNavigation::First post_action=focus />
+                <HistoryButton
+                    node_ref=prev_button
+                    action=HistoryNavigation::Previous
+                    post_action=focus
+                />
                 <HistoryButton
                     node_ref=next_button
                     action=HistoryNavigation::Next
                     post_action=if_last_go_to_end
                 />
-                <HistoryButton
-                    action=HistoryNavigation::Last
-                    post_action=go_to_end
-                />
+                <HistoryButton action=HistoryNavigation::Last post_action=go_to_end />
             </div>
             <div class="flex p-2">
                 <Reserve alignment=Alignment::DoubleRow color=Color::White analysis=false />

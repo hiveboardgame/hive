@@ -51,7 +51,7 @@ const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
-    
+
     //These dont expect any other context, can be provided in any order
     provide_ping();
     provide_schedules();
@@ -71,10 +71,10 @@ pub fn App() -> impl IntoView {
 
     //expects websocket
     provide_auth();
-    
+
     //expects auth and navigation_controller
     provide_games();
-    
+
     //expects auth, challengeStateSignal, websocket
     provide_api_requests();
 

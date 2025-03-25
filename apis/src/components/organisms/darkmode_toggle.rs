@@ -20,9 +20,7 @@ pub fn DarkModeToggle(#[prop(optional)] extend_tw_classes: &'static str) -> impl
                 }
 
                 class="flex justify-center items-center px-1 py-2 w-full h-full"
-                value=move || {
-                    if config().prefers_dark { "dark" } else { "light" }
-                }
+                value=move || { if config().prefers_dark { "dark" } else { "light" } }
                 inner_html=move || {
                     if config().prefers_dark {
                         r#"<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-4 text-hive-black bg-orange-twilight dark:text-text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

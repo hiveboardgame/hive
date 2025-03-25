@@ -56,7 +56,7 @@ pub fn ChallengeView() -> impl IntoView {
             .add_2("bg-grasshopper-green", "hover:bg-green-500")
             .expect("tw classes to be added");
     };
-
+    let uid = move || auth_context.user.get().map(|user| user.id);
     view! {
         <div class="flex flex-col items-center pt-20 mx-auto">
             <Transition>
@@ -97,7 +97,7 @@ pub fn ChallengeView() -> impl IntoView {
                                                 "The first person to come to this URL will play with you."
                                             </p>
                                         </Show>
-                                        <ChallengeRow challenge=challenge single=true />
+                                        <ChallengeRow challenge=challenge single=true uid=uid() />
                                     },
                                 )
                             }
