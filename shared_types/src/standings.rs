@@ -201,6 +201,9 @@ impl Standings {
                 TournamentGameResult::Winner(Color::Black) => {
                     *results.entry(pairing.black_uuid).or_default() += 1.0;
                 }
+                TournamentGameResult::Bye => {
+                    *results.entry(pairing.black_uuid).or_default() += 1.0;
+                }
             }
         }
         (
