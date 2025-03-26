@@ -9,20 +9,22 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
     let mut online_users = expect_context::<OnlineUsersSignal>();
     let i18n = use_i18n();
     view! {
-        <ActionForm action=auth_context.logout prop:class=format!("flex m-1 {extend_tw_classes}")>
+        <div class=format!("m-1 {extend_tw_classes}")>
+            <ActionForm action=auth_context.logout>
 
-            <button
-                on:click=move |_| {
-                    if let Some(user) = auth_context.user.get() {
-                        online_users.remove(user.username);
+                <button
+                    on:click=move |_| {
+                        if let Some(user) = auth_context.user.get() {
+                            online_users.remove(user.username);
+                        }
                     }
-                }
 
-                class="flex place-content-start px-4 py-2 w-full h-full font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red active:scale-95"
-                type="submit"
-            >
-                {t!(i18n, header.user_menu.logout)}
-            </button>
-        </ActionForm>
+                    class="flex place-content-start px-4 py-2 w-full h-full font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red active:scale-95"
+                    type="submit"
+                >
+                    {t!(i18n, header.user_menu.logout)}
+                </button>
+            </ActionForm>
+        </div>
     }
 }
