@@ -21,7 +21,7 @@ use itertools::Itertools;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    TimeMode, TournamentDetails, TournamentId, TournamentSortOrder, TournamentStatus,
+    SeedingMode, TimeMode, TournamentDetails, TournamentId, TournamentSortOrder, TournamentStatus,
 };
 use uuid::Uuid;
 
@@ -52,6 +52,10 @@ pub struct NewTournament {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub series: Option<Uuid>,
+    pub bye: Vec<Option<Uuid>>,
+    pub current_round: i32,
+    pub initial_seeding: Vec<Option<Uuid>>,
+    pub seeding_mode: String,
 }
 
 impl NewTournament {
@@ -124,6 +128,13 @@ impl NewTournament {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             series: details.series,
+            bye: Vec::new(),
+            current_round: 0,
+            initial_seeding: Vec::new(),
+            seeding_mode: details
+                .seeding_mode
+                .unwrap_or(SeedingMode::Standard)
+                .to_string(),
         })
     }
 }
@@ -159,6 +170,10 @@ pub struct Tournament {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub series: Option<Uuid>,
+    pub bye: Vec<Option<Uuid>>, // Vector of (player_id, round_number) tuples for byes
+    pub current_round: i32,
+    pub initial_seeding: Vec<Option<Uuid>>,
+    pub seeding_mode: String,
 }
 
 impl Tournament {
