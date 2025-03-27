@@ -614,7 +614,7 @@ impl Tournament {
             .map(|(uuid, _, _)| Some(*uuid))
             .collect();
 
-        // Update tournament with initial seeding
+        // Update tournament with initial seeding and return the updated instance
         let updated = diesel::update(self)
             .set(tournaments::initial_seeding.eq(&initial_seeding))
             .get_result(conn)
@@ -626,19 +626,19 @@ impl Tournament {
     
     pub async fn swiss_start(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
         // 1. Generate initial seeding
-        self.generate_initial_seeding(conn).await?;
+        let tournament = self.generate_initial_seeding(conn).await?;
         println!("Initial seeding generated successfully");
     
         // 2. Generate the TRFx file and write to disk
-        let trfx_file_path = self.save_trfx(conn).await?;
+        let trfx_file_path = tournament.save_trfx(conn).await?;
         println!("TRFx file saved to: {}", trfx_file_path);
         
         // 3. Generate pairings using external program
-        let pairings_file_path = self.generate_pairings(&trfx_file_path)?;
+        let pairings_file_path = tournament.generate_pairings(&trfx_file_path)?;
         println!("Pairings generated and saved to: {}", pairings_file_path);
         
         // 4. Read the pairings and create games
-        let games = self.create_games_from_pairing_file(&pairings_file_path, conn).await?;
+        let games = tournament.create_games_from_pairing_file(&pairings_file_path, conn).await?;
         println!("Created {} games from pairings", games.len());
         
         // 5. Update tournament to indicate first round is created
@@ -952,14 +952,14 @@ impl Tournament {
                 .and_then(|id| *id)
                 .ok_or_else(|| DbError::InvalidInput {
                     info: format!("Invalid white player number: {}", white_number),
-                    error: String::from("Player number not found in initial seeding"),
+                    error: format!("Player number {} not found in initial seeding (array length: {})", white_number, self.initial_seeding.len()),
                 })?;
             
             let black_id = self.initial_seeding.get(black_number - 1)
                 .and_then(|id| *id)
                 .ok_or_else(|| DbError::InvalidInput {
                     info: format!("Invalid black player number: {}", black_number),
-                    error: String::from("Player number not found in initial seeding"),
+                    error: format!("Player number {} not found in initial seeding (array length: {})", black_number, self.initial_seeding.len()),
                 })?;
             
             println!("Creating {} games for pairing: {} (white) vs {} (black)", 
@@ -1179,7 +1179,7 @@ mod tests {
         
         // Clean up test files
         println!("TEST: Cleaning up test files");
-        let trfx_dir = "trfx";
+        let trfx_dir = "/Users/leex/src/hive/trfx";
         if let Ok(entries) = std::fs::read_dir(&trfx_dir) {
             for entry in entries {
                 if let Ok(entry) = entry {
@@ -1258,13 +1258,21 @@ mod tests {
         
         // Clean up test files
         println!("TEST: Cleaning up test files");
-        let trfx_dir = "trfx";
-        for entry in std::fs::read_dir(&trfx_dir).unwrap() {
-            let path = entry.unwrap().path();
-            if path.is_file() && (path.to_string_lossy().ends_with(".trfx") || path.to_string_lossy().contains("_pairing")) {
-                println!("TEST: Removing file: {:?}", path);
-                std::fs::remove_file(path).unwrap();
+        let trfx_dir = "/Users/leex/src/hive/trfx";
+        if let Ok(entries) = std::fs::read_dir(&trfx_dir) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if path.is_file() && (path.to_string_lossy().ends_with(".trfx") || path.to_string_lossy().contains("_pairing")) {
+                        println!("TEST: Removing file: {:?}", path);
+                        if let Err(e) = std::fs::remove_file(path) {
+                            println!("TEST WARNING: Failed to remove file: {:?}", e);
+                        }
+                    }
+                }
             }
+        } else {
+            println!("TEST WARNING: Failed to read trfx directory");
         }
         
         println!("=== TEST COMPLETED: test_swiss_tournament_with_odd_players ===\n\n");
