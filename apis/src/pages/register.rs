@@ -81,7 +81,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let display_register_error = move || register.value().get().is_some_and(|v| v.is_err());
     Effect::watch(
         register.version(),
-        move |_, _, _| auth_context.refresh(),
+        move |_, _, _| auth_context.refresh(true),
         false,
     );
     view! {

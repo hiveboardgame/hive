@@ -12,7 +12,7 @@ pub fn TakebackConf() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     Effect::watch(
         action.version(),
-        move |_, _, _| auth_context.refresh(),
+        move |_, _, _| auth_context.refresh(false),
         false,
     );
     view! {

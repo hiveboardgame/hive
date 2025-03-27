@@ -7,11 +7,13 @@ use leptos::prelude::*;
 pub struct AuthContext {
     pub logout: ServerAction<Logout>,
     pub user: Signal<Option<AccountResponse>>,
+    ws_refresh: StoredValue<bool>,
     action: Action<(), Result<AccountResponse, ServerFnError>>,
 }
 
 impl AuthContext {
-    pub fn refresh(&self) {
+    pub fn refresh(&self, ws_reconnect: bool) {
+        self.ws_refresh.set_value(ws_reconnect);
         self.action.dispatch(());
     }
 }
@@ -23,25 +25,33 @@ pub fn provide_auth() {
     // Get the current user and place it in Context
     action.dispatch(());
 
-    Effect::watch(
-        logout.version(),
-        move |_, _, _| {
-            action.dispatch(());
-        },
-        false,
-    );
-    Effect::watch(
-        action.version(),
-        move |_, _, _| {
-            websocket_context.close();
-            websocket_context.open();
-        },
-        false,
-    );
     let user = Signal::derive(move || action.value().get().and_then(|v| v.ok()));
+    let ws_refresh = StoredValue::new(false);
+
     provide_context(AuthContext {
         user,
         logout,
         action,
-    })
+        ws_refresh,
+    });
+
+    let ctx = use_context::<AuthContext>().unwrap();
+
+    Effect::watch(
+        ctx.action.version(),
+        move |_, _, _| {
+            if ctx.ws_refresh.get_value() {
+                websocket_context.close();
+                websocket_context.open();
+            }
+        },
+        false,
+    );
+    Effect::watch(
+        ctx.logout.version(),
+        move |_, _, _| {
+            ctx.refresh(true);
+        },
+        false,
+    );
 }
