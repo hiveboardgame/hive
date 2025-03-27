@@ -1,3 +1,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+    @layer base {
+      input {
+       @apply text-black dark:text-white bg-light dark:bg-gray-700;
+      }
+    }
