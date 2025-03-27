@@ -11,11 +11,11 @@ use crate::{
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::*;
 use leptos_router::use_navigate;
-use shared_types::PrettyString;
 use shared_types::{
     CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
     TournamentMode,
 };
+use shared_types::{PrettyString, SeedingMode};
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -41,6 +41,7 @@ pub struct TournamentSignals {
     pub start_mode: RwSignal<StartMode>,
     pub starts_at: RwSignal<DateTime<Utc>>,
     pub round_duration: RwSignal<i32>,
+    pub games_per_round: RwSignal<i32>,
 }
 
 impl TournamentSignals {
@@ -69,6 +70,7 @@ impl TournamentSignals {
             series: RwSignal::new(None),
             starts_at: RwSignal::new(Utc::now()),
             round_duration: RwSignal::new(7),
+            games_per_round: RwSignal::new(1),
         }
     }
 }
@@ -191,6 +193,9 @@ pub fn TournamentCreate() -> impl IntoView {
             } else {
                 None
             },
+            // TODO: make this dynamic
+            seeding_mode: Some(SeedingMode::Accelerated),
+            games_per_round: tournament.games_per_round.get_untracked(),
         };
         if account.is_some() {
             let api = ApiRequests::new();

@@ -25,4 +25,5 @@ pub struct TournamentDetails {
     pub round_duration: Option<i32>,
     pub series: Option<Uuid>,
     pub seeding_mode: Option<SeedingMode>,
+    pub games_per_round: i32,
 }

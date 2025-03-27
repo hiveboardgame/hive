@@ -143,6 +143,7 @@ diesel::table! {
         current_round -> Int4,
         initial_seeding -> Array<Nullable<Uuid>>,
         seeding_mode -> Varchar,
+        games_per_round -> Int4,
     }
 }
 

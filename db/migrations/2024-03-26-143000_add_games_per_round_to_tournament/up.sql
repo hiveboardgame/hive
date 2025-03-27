@@ -1,0 +1,1 @@
+ALTER TABLE tournaments ADD COLUMN games_per_round INTEGER NOT NULL DEFAULT 1;
