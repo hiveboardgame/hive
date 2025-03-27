@@ -184,8 +184,10 @@ pub fn PieceWithOnClick(
                     game_state.show_spawns(piece(), position());
                 }
                 PieceType::Move | PieceType::Spawn => {
-                    if current_confirm() == MoveConfirm::Double {
-                        game_state.move_active();
+                    match current_confirm() {
+                        MoveConfirm::Double => game_state.move_active(),
+                        MoveConfirm::Clock => game_state.reset(),
+                        MoveConfirm::Single => {}
                     }
                 }
                 _ => {}
