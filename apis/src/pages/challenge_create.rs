@@ -15,19 +15,12 @@ use leptos::prelude::*;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
 
 #[component]
-pub fn ChallengeCreate(
-    open: RwSignal<bool>,
-    #[prop(optional)] opponent: Option<String>,
-) -> impl IntoView {
-    view! {
-        <Show when=open>
-            <ChallengeCreateInner opponent=opponent.clone() open />
-        </Show>
-    }
+pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoView {
+    view! { <ChallengeCreateInner opponent=opponent.clone() /> }
 }
 
 #[component]
-fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl IntoView {
+fn ChallengeCreateInner(opponent: Option<String>) -> impl IntoView {
     let i18n = use_i18n();
     let params = expect_context::<ChallengeParams>();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -107,7 +100,6 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
         };
         let challenge_action = ChallengeAction::Create(details);
         api.challenge(challenge_action);
-        open.set(false);
     });
 
     let rating_string = move || {
@@ -209,18 +201,20 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
                 </div>
             </Show>
             <div class="flex justify-center items-baseline">
-                <CreateChallengeButton
-                    color_choice=StoredValue::new(ColorChoice::White)
-                    create_challenge
-                />
-                <CreateChallengeButton
-                    color_choice=StoredValue::new(ColorChoice::Random)
-                    create_challenge
-                />
-                <CreateChallengeButton
-                    color_choice=StoredValue::new(ColorChoice::Black)
-                    create_challenge
-                />
+                <form method="dialog">
+                    <CreateChallengeButton
+                        color_choice=StoredValue::new(ColorChoice::White)
+                        create_challenge
+                    />
+                    <CreateChallengeButton
+                        color_choice=StoredValue::new(ColorChoice::Random)
+                        create_challenge
+                    />
+                    <CreateChallengeButton
+                        color_choice=StoredValue::new(ColorChoice::Black)
+                        create_challenge
+                    />
+                </form>
             </div>
         </div>
     }

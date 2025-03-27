@@ -45,8 +45,7 @@ pub fn Tournament() -> impl IntoView {
     Effect::watch(
         tournaments.needs_update,
         move |needs_update, _, _| {
-            if needs_update.contains(&tournament_id().unwrap())
-            {
+            if needs_update.contains(&tournament_id().unwrap()) {
                 current_tournament.dispatch(());
             }
         },

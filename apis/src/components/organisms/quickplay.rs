@@ -75,13 +75,12 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
 #[component]
 pub fn QuickPlay() -> impl IntoView {
     let i18n = use_i18n();
-    let open = RwSignal::new(false);
     let dialog_el = NodeRef::<Dialog>::new();
     let auth_context = expect_context::<AuthContext>();
     view! {
         <div class="flex flex-col items-center m-2 grow">
-            <Modal open dialog_el=dialog_el>
-                <ChallengeCreate open />
+            <Modal dialog_el>
+                <ChallengeCreate />
             </Modal>
             <span class="flex justify-center mb-4 text-xl font-bold">
                 {t!(i18n, home.create_game)}
@@ -97,7 +96,9 @@ pub fn QuickPlay() -> impl IntoView {
                     on:click=move |_| {
                         let account = auth_context.user.get();
                         if account.is_some() {
-                            open.update(move |b| *b = true)
+                            if let Some(dialog_el) = dialog_el.get() {
+                                let _ = dialog_el.show_modal();
+                            }
                         } else {
                             let navigate = use_navigate();
                             navigate("/login", Default::default());
