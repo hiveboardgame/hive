@@ -36,7 +36,7 @@ pub fn ProfileLink(
                     </Show>
                 </div>
             </a>
-            <Show when=move || user_is_hoverable().is_some()>
+            <Show when=move || user_is_hoverable().is_some() && hover_show()>
                 <HoverRating user=user_is_hoverable().expect("Showing because it's some") />
             </Show>
         </div>
