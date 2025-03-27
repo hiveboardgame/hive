@@ -93,14 +93,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         }
     }
 
-    let color_scheme_meta = move || {
-        if config.get().prefers_dark {
-            "dark"
-        } else {
-            "light"
-        }
-    };
-
     let user_id = Signal::derive(move || auth_context.user.get_untracked().map(|user| user.id));
     let user_color = gamestate.user_color_as_signal(user_id);
     let has_gamecontrol = create_read_slice(gamestate.signal, move |gs| {

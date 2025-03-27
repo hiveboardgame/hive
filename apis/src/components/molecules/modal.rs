@@ -19,9 +19,9 @@ pub fn Modal(
         <dialog
             node_ref=dialog_el
             open=open
-            class="rounded-lg border shadow-xl drop-shadow-xl backdrop:backdrop-blur bg-stone-300 dark:bg-gray-600 dark:border-gray-500"
+            class="z-50 rounded-lg border shadow-xl drop-shadow-xl backdrop:backdrop-blur bg-stone-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
         >
-            <header class="flex justify-end">
+            <div class="flex justify-end">
                 <form class="m-2" method="dialog">
                     <button
                         class="flex justify-center items-center w-5 h-5 rounded-full duration-300 hover:bg-ladybug-red active:scale-95"
@@ -31,8 +31,8 @@ pub fn Modal(
                         x
                     </button>
                 </form>
-            </header>
-            <main>{children()}</main>
+            </div>
+            <div>{children()}</div>
         </dialog>
     }
 }
