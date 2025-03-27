@@ -16,11 +16,6 @@ use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
 
 #[component]
 pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoView {
-    view! { <ChallengeCreateInner opponent=opponent.clone() /> }
-}
-
-#[component]
-fn ChallengeCreateInner(opponent: Option<String>) -> impl IntoView {
     let i18n = use_i18n();
     let params = expect_context::<ChallengeParams>();
     let api = expect_context::<ApiRequestsProvider>().0;
