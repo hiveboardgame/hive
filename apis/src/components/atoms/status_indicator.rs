@@ -33,19 +33,17 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     let icon_style = move || {
         let base_classes = "mr-1 pb-[2px]";
 
-        if user_is_player() {
-            return if user_has_ws() {
-                format!("{base_classes} fill-grasshopper-green")
-            } else {
-                format!("{base_classes} w-6 h-6 fill-ladybug-red")
-            };
-        }
+        let extra_classes = match (user_is_player(), user_has_ws()) {
+            (true, true) => " fill-grasshopper-green",
+            (true, false) => " w-6 h-6 fill-ladybug-red",
+            _ => match (online_users.signal)().username_status.get(&username) {
+                Some(UserStatus::Online) => " fill-grasshopper-green",
+                // TODO: Handle `Some(UserStatus::Away)`
+                _ => " fill-slate-400",
+            },
+        };
 
-        match (online_users.signal)().username_status.get(&username) {
-            Some(UserStatus::Online) => "fill-grasshopper-green".to_string(),
-            //TODO: Figure out away Some(UserStatus::Away) => ....
-            _ => format!("{base_classes} fill-slate-400"),
-        }
+        format!("{base_classes}{extra_classes}")
     };
 
     view! { <Icon icon=icondata::BiCircleSolid attr:class=icon_style /> }
