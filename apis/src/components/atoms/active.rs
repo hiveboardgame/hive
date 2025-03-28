@@ -8,13 +8,13 @@ use leptos::text_prop::TextProp;
 #[component]
 pub fn Active(
     position: Position,
-    #[prop(into)] level: Signal<usize>,
+    level: usize,
     #[prop(optional)] extend_tw_classes: &'static str,
     active_state: ActiveState,
     straight: bool,
 ) -> impl IntoView {
     let mut game_signal = expect_context::<GameStateSignal>();
-    let center = move || SvgPos::center_for_level(position, level(), straight);
+    let center = move || SvgPos::center_for_level(position, level, straight);
     let transform = TextProp::from(move || format!("translate({},{})", center().0, center().1));
     match active_state {
         ActiveState::None | ActiveState::Board => view! {

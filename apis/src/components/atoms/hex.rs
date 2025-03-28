@@ -1,17 +1,20 @@
 use crate::{
     common::{Direction, Hex, HexType, PieceType},
     components::atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
-    pages::play::TargetStack,
     providers::{config::TileOptions, game_state::GameStateSignal},
 };
+use hive_lib::Position;
 use leptos::{either::EitherOf4, prelude::*};
 
 #[component]
-pub fn Hex(hex: Hex, tile_opts: TileOptions) -> impl IntoView {
+pub fn Hex(
+    hex: Hex,
+    tile_opts: TileOptions,
+    target_stack: Signal<Option<Position>>,
+) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let target_stack = expect_context::<TargetStack>();
     let straight = tile_opts.clone().is_three_d();
-    let level_multiplier = move || match target_stack.0.get_untracked() {
+    let level_multiplier = move || match target_stack() {
         Some(pos) => {
             if hex.position == pos {
                 13
@@ -35,9 +38,9 @@ pub fn Hex(hex: Hex, tile_opts: TileOptions) -> impl IntoView {
                 .is_none()
                 || hex.level == 0
             {
-                expanded_level
+                expanded_level.get_untracked()
             } else {
-                expanded_sublevel
+                expanded_sublevel.get_untracked()
             };
             EitherOf4::A(view! { <Active position=hex.position level active_state straight /> })
         }

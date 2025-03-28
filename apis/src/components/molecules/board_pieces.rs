@@ -7,7 +7,10 @@ use hive_lib::Position;
 use leptos::prelude::*;
 
 #[component]
-pub fn BoardPieces(tile_opts: TileOptions) -> impl IntoView {
+pub fn BoardPieces(
+    tile_opts: TileOptions,
+    target_stack: RwSignal<Option<Position>>,
+) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     // TODO get the BOARD_SIZE from board
     let board = move || {
@@ -76,7 +79,7 @@ pub fn BoardPieces(tile_opts: TileOptions) -> impl IntoView {
         board()
             .into_iter()
             .map(|hs| {
-                view! { <HexStackView hex_stack=hs tile_opts=tile_opts.clone() /> }
+                view! { <HexStackView hex_stack=hs tile_opts=tile_opts.clone() target_stack /> }
             })
             .collect_view()
     }

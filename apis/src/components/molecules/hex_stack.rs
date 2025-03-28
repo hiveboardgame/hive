@@ -1,11 +1,11 @@
 use crate::common::HexType;
 use crate::common::PieceType;
-use crate::pages::play::TargetStack;
 use crate::providers::config::TileOptions;
 use crate::{
     common::{ActiveState, HexStack},
     components::atoms::hex::Hex,
 };
+use hive_lib::Position;
 use leptos::either::Either;
 use leptos::prelude::*;
 use leptos::{
@@ -20,14 +20,17 @@ use std::sync::Arc;
 use web_sys::PointerEvent;
 
 #[component]
-pub fn HexStack(hex_stack: HexStack, tile_opts: TileOptions) -> impl IntoView {
-    let target_stack = expect_context::<TargetStack>().0;
+pub fn HexStack(
+    hex_stack: HexStack,
+    tile_opts: TileOptions,
+    target_stack: RwSignal<Option<Position>>,
+) -> impl IntoView {
     let tile_opts = StoredValue::new(tile_opts);
     let interval = StoredValue::new(Arc::new(use_interval_with_options(
         500,
         UseIntervalOptions::default().immediate(false),
     )));
-    Effect::new_isomorphic(move |_| {
+    Effect::new(move |_| {
         if (interval.get_value().counter)() >= 1 {
             target_stack.set(Some(hex_stack.position));
         }
@@ -66,9 +69,7 @@ pub fn HexStack(hex_stack: HexStack, tile_opts: TileOptions) -> impl IntoView {
         },
         UseEventListenerOptions::default().passive(true),
     );
-
-    hex_stack
-        .hexes
+    hex_stack.hexes
         .into_iter()
         .map(|hex| {
             let is_expandable = match hex.kind {
@@ -86,11 +87,12 @@ pub fn HexStack(hex_stack: HexStack, tile_opts: TileOptions) -> impl IntoView {
                             hex=hex
                             on:pointerdown=rightclick_expand
                             tile_opts=tile_opts.get_value()
+                            target_stack=target_stack.into()
                         />
                     </g>
                 })
             } else {
-                Either::Right(view! { <Hex hex=hex tile_opts=tile_opts.get_value() /> })
+                Either::Right(view! { <Hex hex=hex tile_opts=tile_opts.get_value() target_stack=target_stack.into() /> })
             }
         })
         .collect_view()

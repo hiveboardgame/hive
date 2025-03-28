@@ -1,6 +1,7 @@
 use crate::{
     common::HexStack,
     components::molecules::hex_stack::HexStack as HexStackView,
+    pages::play::TargetStack,
     providers::{game_state::GameStateSignal, Config},
 };
 use hive_lib::{History, Position, State};
@@ -10,6 +11,7 @@ use leptos::prelude::*;
 pub fn HistoryPieces() -> impl IntoView {
     let game_state_signal = expect_context::<GameStateSignal>();
     let config = expect_context::<Config>().0;
+    let target_stack = expect_context::<TargetStack>().0;
     let tile_opts = Signal::derive(move || config().tile);
     let history_pieces = move || {
         let mut history_pieces = Vec::new();
@@ -36,7 +38,7 @@ pub fn HistoryPieces() -> impl IntoView {
         history_pieces()
             .into_iter()
             .map(|hs| {
-                view! { <HexStackView hex_stack=hs tile_opts=tile_opts() /> }
+                view! { <HexStackView hex_stack=hs tile_opts=tile_opts() target_stack /> }
             })
             .collect_view()
     }

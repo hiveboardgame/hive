@@ -166,7 +166,6 @@ pub fn PieceWithOnClick(
         ""
     };
     let current_confirm = expect_context::<CurrentConfirm>().0;
-    //let tile_opts = StoredValue::new(tile_opts);
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
         let in_analysis = analysis.get().is_some();

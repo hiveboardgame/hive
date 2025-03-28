@@ -140,7 +140,7 @@ pub fn Board(
     //This handles board resizes
     let throttled_resize = use_throttle_fn_with_arg(
         move |rect: DomRectReadOnly| {
-            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight());
+            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight.get_untracked());
             let svg = viewbox_ref.get_untracked().expect("It exists");
             // if user has zoomed, keep their scale when resizing board
             let (current_x_scale, current_y_scale) = if has_zoomed.get_untracked() {
@@ -351,7 +351,9 @@ pub fn Board(
                             Either::Left(view! { <HistoryPieces /> })
                         } else {
                             Either::Right(
-                                view! { <BoardPieces tile_opts=tile_opts.get_untracked() /> },
+                                view! {
+                                    <BoardPieces tile_opts=tile_opts.get_untracked() target_stack />
+                                },
                             )
                         }
                     }}

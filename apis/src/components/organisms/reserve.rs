@@ -168,7 +168,7 @@ pub fn Reserve(
         stacked_pieces()
             .into_iter()
             .map(|hex_stack| {
-                view! { <HexStack hex_stack=hex_stack tile_opts=tile_opts() /> }
+                view! { <HexStack hex_stack=hex_stack tile_opts=tile_opts() target_stack=RwSignal::new(None) /> }
             })
             .collect_view()
     };
