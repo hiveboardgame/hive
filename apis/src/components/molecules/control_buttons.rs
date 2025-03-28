@@ -186,7 +186,7 @@ pub fn ControlButtons() -> impl IntoView {
                 fallback=move || {
                     view! {
                         <div class="flex flex-col w-full">
-                            <div class="flex justify-around items-center grow shrink">
+                            <div class="flex justify-around items-center pt-1 grow shrink">
                                 <Show when=not_tournament>
                                     <div class="relative">
                                         <ConfirmButton

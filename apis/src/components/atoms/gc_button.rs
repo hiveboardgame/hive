@@ -151,7 +151,7 @@ pub fn ConfirmButton(
 
                 <Icon
                     icon=icon
-                    prop:class=move || {
+                    attr:class=move || {
                         format!("h-6 w-6 lg:h-8 lg:w-8 {}", conditional_icon_style())
                     }
                 />
