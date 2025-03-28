@@ -1,3 +1,5 @@
+// TODO: FIX BYE generation and rounds
+
 use super::{Game, NewGame, TournamentInvitation};
 use crate::{
     db_error::DbError,
@@ -19,8 +21,8 @@ use chrono::Utc;
 use chrono::{prelude::*, TimeDelta};
 use diesel::prelude::*;
 use diesel::BelongingToDsl;
-use diesel_async::AsyncConnection;
 use diesel_async::RunQueryDsl;
+use hive_lib::Color;
 use itertools::Itertools;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
@@ -630,7 +632,10 @@ impl Tournament {
         Ok(updated)
     }
 
-    pub async fn swiss_start(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+    pub async fn swiss_start_round(
+        &self,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(Self, Vec<Game>), DbError> {
         // 1. Generate initial seeding
         let tournament = self.generate_initial_seeding(conn).await?;
         println!("Initial seeding generated successfully");
@@ -650,17 +655,17 @@ impl Tournament {
         println!("Created {} games from pairings", games.len());
 
         // 5. Update tournament to indicate first round is created
-        diesel::update(self)
+        let tournament = diesel::update(self)
             .set((
                 updated_at.eq(Utc::now()),
                 status_column.eq(TournamentStatus::InProgress.to_string()),
                 started_at.eq(Utc::now()),
-                current_round.eq(1), // Set to round 1
+                current_round.eq(self.current_round + 1),
             ))
-            .execute(conn)
+            .get_result(conn)
             .await?;
 
-        Ok(games)
+        Ok((tournament, games))
     }
 
     /// Generate pairings using the external pairing program
@@ -794,13 +799,16 @@ impl Tournament {
         }
 
         // Add results from games
+        println!("Adding results for {} games", games.len());
         for game in games {
+            let result = TournamentGameResult::from_str(&game.tournament_game_result)
+                .expect("TGR should be correctly set");
             standings.add_result(
                 game.white_id,
                 game.black_id,
                 game.white_rating.unwrap_or(1500.0),
                 game.black_rating.unwrap_or(1500.0),
-                TournamentGameResult::from_str(&game.tournament_game_result).expect("TGR should be correctly set"),
+                result,
             );
         }
 
@@ -845,7 +853,7 @@ impl Tournament {
         writeln!(trfx, "102 IA Tournament Director")?; // Set a default arbiter name
         writeln!(trfx, "112 Tournament Director")?; // Set the same name for deputy arbiter
         writeln!(trfx, "122 300+3")?; // Standard format for time control
-        writeln!(trfx, "XXR {}", self.rounds)?;
+        writeln!(trfx, "XXR {}", self.rounds * self.games_per_round)?;
 
         // Add piece color configuration based on tournament ID
         let first_char = self.nanoid.chars().next().unwrap_or('0');
@@ -863,10 +871,10 @@ impl Tournament {
             let player_games: Vec<_> = games
                 .iter()
                 .filter(|g| {
-                    g.round == Some(round_number as i32 - 1)
+                    g.round <= Some(round_number as i32 - 1)
                         && (g.white_id == player_id || g.black_id == player_id)
                 })
-                .sorted_by_key(|g| g.id)
+                .sorted_by_key(|g| (g.round, g.id))
                 .collect();
 
             println!(
@@ -875,69 +883,78 @@ impl Tournament {
                 player_games
             );
 
+            // This needs to iter over 0..current_round then find the games for the player of that
+            // round if it cannot find any games for the current round it needs to check if the
+            // player_id is in self.bye and then we need to add "0000 - U" as below
             let mut round_results = String::new();
-            for game in player_games.iter() {
-                // Add 3 spaces before normal game results (except first result)
-                if !round_results.is_empty() {
-                    round_results.push_str("   ");
+            for i in 0..self.current_round {
+                let round_games: Vec<_> = games
+                    .iter()
+                    .filter(|g| {
+                        g.round == Some(i) && (g.white_id == player_id || g.black_id == player_id)
+                    })
+                    .sorted_by_key(|g| (g.round, g.id))
+                    .collect();
+                for game in round_games.iter() {
+                    if round_results.is_empty() {
+                        round_results.push_str("  ");
+                    } else {
+                        round_results.push_str("   ");
+                    }
+                    let opponent_number = if game.white_id == player_id {
+                        self.initial_seeding
+                            .iter()
+                            .position(|&id| id == Some(game.black_id))
+                            .map(|pos| pos + 1)
+                            .unwrap_or(0)
+                    } else {
+                        self.initial_seeding
+                            .iter()
+                            .position(|&id| id == Some(game.white_id))
+                            .map(|pos| pos + 1)
+                            .unwrap_or(0)
+                    };
+                    let color = if game.white_id == player_id { "w" } else { "b" };
+                    let result = match TournamentGameResult::from_str(&game.tournament_game_result)
+                        .expect("TGR should be correctly set")
+                    {
+                        TournamentGameResult::Winner(color) => {
+                            if game.white_id == player_id {
+                                if color == Color::White {
+                                    "1"
+                                } else {
+                                    "0"
+                                }
+                            } else if color == Color::White {
+                                "0"
+                            } else {
+                                "1"
+                            }
+                        }
+                        TournamentGameResult::Draw => "=",
+                        TournamentGameResult::Unknown => "-",
+                        TournamentGameResult::DoubeForfeit => "0",
+                        TournamentGameResult::Bye => "U",
+                    };
+                    round_results.push_str(&format!("{:>3} {} {}", opponent_number, color, result));
                 }
-                let opponent_number = if game.white_id == player_id {
-                    self.initial_seeding
-                        .iter()
-                        .position(|&id| id == Some(game.black_id))
-                        .map(|pos| pos + 1)
-                        .unwrap_or(0)
-                } else {
-                    self.initial_seeding
-                        .iter()
-                        .position(|&id| id == Some(game.white_id))
-                        .map(|pos| pos + 1)
-                        .unwrap_or(0)
-                };
-                let color = if game.white_id == player_id { "w" } else { "b" };
-                let result = match game.tournament_game_result.as_str() {
-                    "white" => {
-                        if game.white_id == player_id {
-                            "1"
-                        } else {
-                            "0"
+                if round_games.is_empty() {
+                    if self.bye.get(i as usize) != Some(&Some(player_id)) {
+                        return Err(DbError::InvalidInput {
+                            info: "Couldn't find result but player is not bye".to_string(),
+                            error: "Tournament has invalid state".to_string(),
+                        });
+                    };
+                    for _ in 0..self.games_per_round {
+                        if !round_results.is_empty() {
+                            round_results.push(' ');
                         }
+                        round_results.push_str(" 0000 - U");
                     }
-                    "black" => {
-                        if game.black_id == player_id {
-                            "1"
-                        } else {
-                            "0"
-                        }
-                    }
-                    "draw" => "=",
-                    _ => "-",
-                };
-                round_results.push_str(&format!("{:>3} {} {}", opponent_number, color, result));
-                // This is just a quick sanity check
-            }
-            if games.is_empty() && self.current_round >= 1 {
-                println!(
-                    "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-                );
-                println!("{}", player_number);
-                println!(
-                    "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-                );
-                if self.bye.get(self.current_round as usize) != Some(&Some(player_id)) {
-                    return Err(DbError::InvalidInput {
-                        info: "Couldn't find result but player is not bye".to_string(),
-                        error: "Tournament has invalid state".to_string(),
-                    });
-                };
-                let bye_result = " 0000 - U";
-                for _ in 0..self.games_per_round {
-                    round_results.push_str(bye_result);
                 }
             }
 
             // Get player's current score from standings
-            println!("Standings are: {:?}", standings);
             let score = if let Some(scores) = standings.players_scores.get(&player_id) {
                 scores.get(&Tiebreaker::RawPoints).unwrap_or(&0.0)
             } else {
@@ -951,10 +968,10 @@ impl Tournament {
                 .expect("User to be preset in players");
             let username = format!("{:<33}", player.username);
             let player_line = format!(
-                "{} {:>4} {} {:3} {}{:>4} {:<3} {:>11} {:>10} {:>4} {:>4}   {}",
+                "{} {:>4} {} {:3} {}{:>4} {:<3} {:>11} {:>10} {:>4} {:>4} {}",
                 "001",                   // 1-3: DataIdentificationnumber 001 (for player-data)
                 player_number,           // 5-8: Starting rank (4 chars, right-aligned)
-                "M",                     // 10: Sex (1 char)
+                "?",                     // 10: Sex (1 char)
                 "   ",                   // 11-13: Title (3 chars, spaces if none)
                 username,                // 15-47: Name (33 chars, left-aligned)
                 0,                       // 49-52: FIjDE Rating (4 chars, right-aligned)
@@ -1001,6 +1018,9 @@ impl Tournament {
 
         // Generate filename using tournament nanoid
         let now = Utc::now();
+        println!("############################################################");
+        println!("Current round is: {}", self.current_round);
+        println!("############################################################");
         let trfx_filename = format!(
             "{}_{}_{}_{}_round_{}.trfx",
             now.format("%Y"),
@@ -1137,6 +1157,7 @@ mod tests {
     use crate::models::rating::Rating;
     use crate::models::user::NewUser;
     use crate::models::user::User;
+    use diesel_async::AsyncConnection;
     use hive_lib::Color;
     use hive_lib::GameControl;
     use shared_types::{GameSpeed, ScoringMode, StartMode, Tiebreaker, TimeMode};
@@ -1316,7 +1337,7 @@ mod tests {
         let tournament_result = create_test_swiss_tournament(&mut conn, 8, 1, 0).await;
 
         match tournament_result {
-            Ok((mut tournament, _players)) => {
+            Ok((tournament, _players)) => {
                 println!(
                     "TEST: Test tournament created successfully with ID: {}",
                     tournament.id
@@ -1325,8 +1346,8 @@ mod tests {
                 // Round 1
                 println!("\n=== ROUND 1 ===");
                 println!("TEST: Starting Swiss tournament");
-                match tournament.swiss_start(&mut conn).await {
-                    Ok(games) => {
+                match tournament.swiss_start_round(&mut conn).await {
+                    Ok((_, games)) => {
                         println!(
                             "TEST: Swiss tournament started successfully, created {} games",
                             games.len()
@@ -1377,8 +1398,8 @@ mod tests {
                 // Round 2
                 println!("\n=== ROUND 2 ===");
                 println!("TEST: Starting round 2");
-                match tournament.swiss_start(&mut conn).await {
-                    Ok(games) => {
+                match tournament.swiss_start_round(&mut conn).await {
+                    Ok((_, games)) => {
                         println!(
                             "TEST: Round 2 started successfully, created {} games",
                             games.len()
@@ -1428,8 +1449,8 @@ mod tests {
                 // Round 3
                 println!("\n=== ROUND 3 ===");
                 println!("TEST: Starting round 3");
-                match tournament.swiss_start(&mut conn).await {
-                    Ok(games) => {
+                match tournament.swiss_start_round(&mut conn).await {
+                    Ok((_, games)) => {
                         println!(
                             "TEST: Round 3 started successfully, created {} games",
                             games.len()
@@ -1462,15 +1483,13 @@ mod tests {
                                     .rating;
 
                             // Higher rated player wins
-                            let result = if white_rating >= black_rating {
-                                "white"
+                            if white_rating >= black_rating {
+                                game.resign(&GameControl::Resign(Color::Black), &mut conn)
+                                    .await?;
                             } else {
-                                "black"
+                                game.resign(&GameControl::Resign(Color::White), &mut conn)
+                                    .await?;
                             };
-                            diesel::update(&game)
-                                .set(games::tournament_game_result.eq(result))
-                                .execute(&mut conn)
-                                .await?;
                         }
                     }
                     Err(e) => {
@@ -1488,18 +1507,16 @@ mod tests {
         // Clean up test files
         println!("TEST: Cleaning up test files");
         let trfx_dir = "/Users/leex/src/hive/trfx";
-        if let Ok(entries) = std::fs::read_dir(&trfx_dir) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_file()
-                        && (path.to_string_lossy().ends_with(".trfx")
-                            || path.to_string_lossy().contains("_pairing"))
-                    {
-                        println!("TEST: Removing file: {:?}", path);
-                        if let Err(e) = std::fs::remove_file(path) {
-                            println!("TEST WARNING: Failed to remove file: {:?}", e);
-                        }
+        if let Ok(entries) = std::fs::read_dir(trfx_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file()
+                    && (path.to_string_lossy().ends_with(".trfx")
+                        || path.to_string_lossy().contains("_pairing"))
+                {
+                    println!("TEST: Removing file: {:?}", path);
+                    if let Err(e) = std::fs::remove_file(path) {
+                        println!("TEST WARNING: Failed to remove file: {:?}", e);
                     }
                 }
             }
@@ -1563,14 +1580,14 @@ mod tests {
         // Round 1
         println!("\n=== ROUND 1 ===");
         println!("TEST: Starting Swiss tournament");
-        let start_result = tournament.swiss_start(&mut conn).await;
+        let start_result = tournament.swiss_start_round(&mut conn).await;
 
         if let Err(ref e) = start_result {
             println!("TEST ERROR: Failed to start Swiss tournament: {:?}", e);
             panic!("Failed to start Swiss tournament: {:?}", e);
         }
 
-        let games = start_result.expect("Failed to start Swiss tournament");
+        let (tournament, games) = start_result.expect("Failed to start Swiss tournament");
         println!(
             "TEST: Swiss tournament started successfully, created {} games",
             games.len()
@@ -1599,28 +1616,26 @@ mod tests {
                 .rating;
 
             // Higher rated player wins
-            let result = if white_rating >= black_rating {
-                "white"
+            if white_rating >= black_rating {
+                game.resign(&GameControl::Resign(Color::Black), &mut conn)
+                    .await?;
             } else {
-                "black"
+                game.resign(&GameControl::Resign(Color::White), &mut conn)
+                    .await?;
             };
-            diesel::update(&game)
-                .set(games::tournament_game_result.eq(result))
-                .execute(&mut conn)
-                .await?;
         }
 
         // Round 2
         println!("\n=== ROUND 2 ===");
         println!("TEST: Starting round 2");
-        let round2_result = tournament.swiss_start(&mut conn).await;
+        let round2_result = tournament.swiss_start_round(&mut conn).await;
 
         if let Err(ref e) = round2_result {
             println!("TEST ERROR: Failed to start round 2: {:?}", e);
             panic!("Failed to start round 2: {:?}", e);
         }
 
-        let games = round2_result.expect("Failed to start round 2");
+        let (tournament, games) = round2_result.expect("Failed to start round 2");
         println!(
             "TEST: Round 2 started successfully, created {} games",
             games.len()
@@ -1650,9 +1665,9 @@ mod tests {
 
             // Higher rated player wins
             let result = if white_rating >= black_rating {
-                "white"
+                TournamentGameResult::Winner(Color::White).to_string()
             } else {
-                "black"
+                TournamentGameResult::Winner(Color::Black).to_string()
             };
             diesel::update(&game)
                 .set(games::tournament_game_result.eq(result))
@@ -1663,14 +1678,14 @@ mod tests {
         // Round 3
         println!("\n=== ROUND 3 ===");
         println!("TEST: Starting round 3");
-        let round3_result = tournament.swiss_start(&mut conn).await;
+        let round3_result = tournament.swiss_start_round(&mut conn).await;
 
         if let Err(ref e) = round3_result {
             println!("TEST ERROR: Failed to start round 3: {:?}", e);
             panic!("Failed to start round 3: {:?}", e);
         }
 
-        let games = round3_result.expect("Failed to start round 3");
+        let (tournament, games) = round3_result.expect("Failed to start round 3");
         println!(
             "TEST: Round 3 started successfully, created {} games",
             games.len()
@@ -1700,9 +1715,9 @@ mod tests {
 
             // Higher rated player wins
             let result = if white_rating >= black_rating {
-                "white"
+                TournamentGameResult::Winner(Color::White).to_string()
             } else {
-                "black"
+                TournamentGameResult::Winner(Color::Black).to_string()
             };
             diesel::update(&game)
                 .set(games::tournament_game_result.eq(result))
@@ -1713,18 +1728,16 @@ mod tests {
         // Clean up test files
         println!("TEST: Cleaning up test files");
         let trfx_dir = "/Users/leex/src/hive/trfx";
-        if let Ok(entries) = std::fs::read_dir(&trfx_dir) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.is_file()
-                        && (path.to_string_lossy().ends_with(".trfx")
-                            || path.to_string_lossy().contains("_pairing"))
-                    {
-                        println!("TEST: Removing file: {:?}", path);
-                        if let Err(e) = std::fs::remove_file(path) {
-                            println!("TEST WARNING: Failed to remove file: {:?}", e);
-                        }
+        if let Ok(entries) = std::fs::read_dir(trfx_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_file()
+                    && (path.to_string_lossy().ends_with(".trfx")
+                        || path.to_string_lossy().contains("_pairing"))
+                {
+                    println!("TEST: Removing file: {:?}", path);
+                    if let Err(e) = std::fs::remove_file(path) {
+                        println!("TEST WARNING: Failed to remove file: {:?}", e);
                     }
                 }
             }
