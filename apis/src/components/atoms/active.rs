@@ -17,7 +17,7 @@ pub fn Active(
     let center = move || SvgPos::center_for_level(position, level(), straight());
     let transform = TextProp::from(move || format!("translate({},{})", center().0, center().1));
     match active_state {
-        ActiveState::None => view! {
+        ActiveState::None | ActiveState::Board => view! {
             <g
                 class=format!("{extend_tw_classes}")
                 on:click=move |_| {
@@ -27,7 +27,7 @@ pub fn Active(
                 <Inner transform />
             </g>
         },
-        ActiveState::Reserve | ActiveState::Board => view! {
+        ActiveState::Reserve => view! {
             <g class=format!("{extend_tw_classes}")>
                 <Inner transform />
             </g>
