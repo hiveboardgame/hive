@@ -11,10 +11,10 @@ pub fn Active(
     #[prop(into)] level: Signal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
     active_state: ActiveState,
-    straight: Signal<bool>,
+    straight: bool,
 ) -> impl IntoView {
     let mut game_signal = expect_context::<GameStateSignal>();
-    let center = move || SvgPos::center_for_level(position, level(), straight());
+    let center = move || SvgPos::center_for_level(position, level(), straight);
     let transform = TextProp::from(move || format!("translate({},{})", center().0, center().1));
     match active_state {
         ActiveState::None | ActiveState::Board => view! {

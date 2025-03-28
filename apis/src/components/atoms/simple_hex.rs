@@ -8,15 +8,9 @@ use leptos::{either::Either, prelude::*};
 #[component]
 pub fn SimpleHex(hex: Hex, tile_opts: TileOptions) -> impl IntoView {
     if let HexType::Tile(piece, _) = hex.kind {
-        Either::Left(view! {
-            <Piece
-                piece=piece
-                position=hex.position
-                level=hex.level
-                simple=true
-                tile_opts=tile_opts.into()
-            />
-        })
+        Either::Left(
+            view! { <Piece piece=piece position=hex.position level=hex.level tile_opts /> },
+        )
     } else {
         Either::Right(())
     }

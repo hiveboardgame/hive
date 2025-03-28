@@ -12,20 +12,20 @@ use web_sys::MouseEvent;
 #[component]
 pub fn PieceWithoutOnClick(
     #[prop(into)] piece: Signal<Piece>,
-    #[prop(into)] position: Signal<Position>,
+    #[prop(into)] position: Position,
     #[prop(into)] level: Signal<usize>,
-    #[prop(into)] tile_opts: Signal<TileOptions>,
+    #[prop(into)] tile_opts: TileOptions,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let piece = piece.get_untracked();
-    let position = position.get_untracked();
-    let three_d = move || tile_opts().is_three_d();
+    let tile_opts = StoredValue::new(tile_opts);
+    let three_d = move || tile_opts.get_value().is_three_d();
     let center = move || SvgPos::center_for_level(position, level(), three_d());
     let order = piece.order();
     let ds_transform = move || format!("translate({},{})", center().0, center().1);
     let position_transform = move || format!("translate({},{})", center().0, center().1,);
     let rotate_transform = move || {
-        if tile_opts().rotation == TileRotation::No {
+        if tile_opts.get_value().rotation == TileRotation::No {
             String::new()
         } else {
             format!("rotate({})", order.saturating_sub(1) * 60)
@@ -35,7 +35,7 @@ pub fn PieceWithoutOnClick(
     let bug = piece.bug();
     let color = piece.color();
 
-    let dot_color = move || match tile_opts().design {
+    let dot_color = move || match tile_opts.get_value().design {
         TileDesign::Official | TileDesign::ThreeD => match bug {
             Bug::Ant => "color: #289ee0",
             Bug::Beetle => "color: #9a7fc7",
@@ -69,7 +69,7 @@ pub fn PieceWithoutOnClick(
 
     let active_piece = create_read_slice(game_state.signal, |gs| gs.move_info.active);
     let show_ds = move || {
-        let shadow = match tile_opts().design {
+        let shadow = match tile_opts.get_value().design {
             TileDesign::ThreeD => "/assets/tiles/3d/shadow.svg#dshadow",
             TileDesign::Community
             | TileDesign::HighContrast
@@ -94,13 +94,13 @@ pub fn PieceWithoutOnClick(
         }
     };
 
-    let dots = move || match tile_opts().dots {
+    let dots = move || match tile_opts.get_value().dots {
         TileDots::No => String::new(),
         TileDots::Angled => format!("/assets/tiles/common/all.svg#a{order}"),
         TileDots::Vertical => format!("/assets/tiles/common/all.svg#v{order}"),
     };
 
-    let bug_svg = move || match tile_opts().design {
+    let bug_svg = move || match tile_opts.get_value().design {
         TileDesign::Official => format!("/assets/tiles/official/official.svg#{}", bug.name()),
         TileDesign::Flat => format!("/assets/tiles/flat/flat.svg#{}", bug.name()),
         TileDesign::ThreeD => format!("/assets/tiles/3d/3d.svg#{}{}", color.name(), bug.name()),
@@ -111,7 +111,7 @@ pub fn PieceWithoutOnClick(
         TileDesign::Community => format!("/assets/tiles/community/community.svg#{}", bug.name()),
     };
 
-    let tile_svg = move || match tile_opts().design {
+    let tile_svg = move || match tile_opts.get_value().design {
         TileDesign::Official => format!("/assets/tiles/official/official.svg#{}", color.name()),
         TileDesign::Flat => format!("/assets/tiles/flat/flat.svg#{}", color.name()),
         TileDesign::ThreeD => format!("/assets/tiles/3d/3d.svg#{}", color.name()),
@@ -151,13 +151,12 @@ pub fn PieceWithoutOnClick(
 #[component]
 pub fn PieceWithOnClick(
     #[prop(into)] piece: Signal<Piece>,
-    #[prop(into)] position: Signal<Position>,
+    #[prop(into)] position: Position,
     #[prop(into)] level: Signal<usize>,
     #[prop(optional, into)] piece_type: PieceType,
-    tile_opts: Signal<TileOptions>,
+    tile_opts: TileOptions,
 ) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
-    let current_confirm = expect_context::<CurrentConfirm>().0;
     let analysis = use_context::<AnalysisSignal>()
         .unwrap_or(AnalysisSignal(RwSignal::new(None)))
         .0;
@@ -166,7 +165,8 @@ pub fn PieceWithOnClick(
     } else {
         ""
     };
-
+    let current_confirm = expect_context::<CurrentConfirm>().0;
+    //let tile_opts = StoredValue::new(tile_opts);
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
         let in_analysis = analysis.get().is_some();
@@ -178,10 +178,10 @@ pub fn PieceWithOnClick(
         if (in_analysis && !is_finished) || game_state.is_move_allowed() {
             match piece_type {
                 PieceType::Board => {
-                    game_state.show_moves(piece(), position());
+                    game_state.show_moves(piece(), position);
                 }
                 PieceType::Reserve => {
-                    game_state.show_spawns(piece(), position());
+                    game_state.show_spawns(piece(), position);
                 }
                 PieceType::Move | PieceType::Spawn => {
                     if matches!(current_confirm(), MoveConfirm::Double) {
@@ -204,14 +204,15 @@ pub fn PieceWithOnClick(
 pub fn Piece(
     // WARN piece and position are untracked and might break reactivity if passed in as signals in the future
     #[prop(into)] piece: Signal<Piece>,
-    #[prop(into)] position: Signal<Position>,
+    #[prop(into)] position: Position,
     #[prop(into)] level: Signal<usize>,
+    #[prop(default = false)] simple: bool,
     #[prop(optional, into)] piece_type: PieceType,
-    #[prop(optional, default = false)] simple: bool,
-    tile_opts: Signal<TileOptions>,
+    tile_opts: TileOptions,
 ) -> impl IntoView {
     if simple {
-        return Either::Left(view! { <PieceWithoutOnClick piece position level tile_opts /> });
+        Either::Right(view! { <PieceWithoutOnClick piece position level tile_opts /> })
+    } else {
+        Either::Left(view! { <PieceWithOnClick piece position level tile_opts piece_type /> })
     }
-    Either::Right(view! { <PieceWithOnClick piece position level piece_type tile_opts /> })
 }

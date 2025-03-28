@@ -162,6 +162,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                         viewbox_str
                         analysis=true
                     />
+
                 </div>
             </Show>
             <div class="flex justify-between w-full">

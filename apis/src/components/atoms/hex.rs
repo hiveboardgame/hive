@@ -7,11 +7,11 @@ use crate::{
 use leptos::{either::EitherOf4, prelude::*};
 
 #[component]
-pub fn Hex(hex: Hex, tile_opts: Signal<TileOptions>) -> impl IntoView {
+pub fn Hex(hex: Hex, tile_opts: TileOptions) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let target_stack = expect_context::<TargetStack>();
-    let straight = Signal::derive(move || tile_opts().is_three_d());
-    let level_multiplier = move || match target_stack.0() {
+    let straight = tile_opts.clone().is_three_d();
+    let level_multiplier = move || match target_stack.0.get_untracked() {
         Some(pos) => {
             if hex.position == pos {
                 13

@@ -7,6 +7,7 @@ use crate::{
     pages::play::TargetStack,
 };
 use hive_lib::GameStatus;
+use leptos::either::Either;
 use leptos::ev::{
     contextmenu, pointerdown, pointerleave, pointermove, pointerup, touchmove, touchstart, wheel,
 };
@@ -116,14 +117,14 @@ pub fn Board(
             .center_coordinates()
     };
 
-    let straight = move || config.get_untracked().tile.design == TileDesign::ThreeD;
-
+    let straight = Signal::derive(move || config().tile.design == TileDesign::ThreeD);
+    let tile_opts = Signal::derive(move || config().tile);
     Effect::watch(
         move || (),
         move |_, _, _| {
             let div = div_ref.get_untracked().expect("it exists");
             let rect = div.get_bounding_client_rect();
-            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight());
+            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight.get_untracked());
             viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                 viewbox_controls.x = 0.0;
                 viewbox_controls.y = 0.0;
@@ -345,16 +346,15 @@ pub fn Board(
                 xmlns="http://www.w3.org/2000/svg"
             >
                 <g transform=transform node_ref=g_ref>
-                    <Show
-                        when=move || { View::History == board_view() && !last_turn() }
-
-                        fallback=move || {
-                            view! { <BoardPieces /> }
+                    {move || {
+                        if board_view() == View::History && !last_turn() {
+                            Either::Left(view! { <HistoryPieces /> })
+                        } else {
+                            Either::Right(
+                                view! { <BoardPieces tile_opts=tile_opts.get_untracked() /> },
+                            )
                         }
-                    >
-
-                        <HistoryPieces />
-                    </Show>
+                    }}
                 </g>
             </svg>
         </div>

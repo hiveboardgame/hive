@@ -20,8 +20,9 @@ use std::sync::Arc;
 use web_sys::PointerEvent;
 
 #[component]
-pub fn HexStack(hex_stack: HexStack, tile_opts: Signal<TileOptions>) -> impl IntoView {
+pub fn HexStack(hex_stack: HexStack, tile_opts: TileOptions) -> impl IntoView {
     let target_stack = expect_context::<TargetStack>().0;
+    let tile_opts = StoredValue::new(tile_opts);
     let interval = StoredValue::new(Arc::new(use_interval_with_options(
         500,
         UseIntervalOptions::default().immediate(false),
@@ -81,11 +82,15 @@ pub fn HexStack(hex_stack: HexStack, tile_opts: Signal<TileOptions>) -> impl Int
             if is_expandable {
                 Either::Left(view! {
                     <g node_ref=g_ref>
-                        <Hex hex=hex on:pointerdown=rightclick_expand tile_opts />
+                        <Hex
+                            hex=hex
+                            on:pointerdown=rightclick_expand
+                            tile_opts=tile_opts.get_value()
+                        />
                     </g>
                 })
             } else {
-                Either::Right(view! { <Hex hex=hex tile_opts /> })
+                Either::Right(view! { <Hex hex=hex tile_opts=tile_opts.get_value() /> })
             }
         })
         .collect_view()

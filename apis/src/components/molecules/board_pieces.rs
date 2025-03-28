@@ -1,16 +1,14 @@
 use crate::{
     common::{Direction, HexStack, PieceType},
     components::molecules::hex_stack::HexStack as HexStackView,
-    providers::{game_state::GameStateSignal, Config},
+    providers::{config::TileOptions, game_state::GameStateSignal},
 };
 use hive_lib::Position;
 use leptos::prelude::*;
 
 #[component]
-pub fn BoardPieces() -> impl IntoView {
+pub fn BoardPieces(tile_opts: TileOptions) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let config = expect_context::<Config>().0;
-    let tile_opts = Signal::derive(move || config().tile);
     // TODO get the BOARD_SIZE from board
     let board = move || {
         let mut board = Vec::new();
@@ -78,7 +76,7 @@ pub fn BoardPieces() -> impl IntoView {
         board()
             .into_iter()
             .map(|hs| {
-                view! { <HexStackView hex_stack=hs tile_opts /> }
+                view! { <HexStackView hex_stack=hs tile_opts=tile_opts.clone() /> }
             })
             .collect_view()
     }

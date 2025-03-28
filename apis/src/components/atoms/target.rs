@@ -9,17 +9,17 @@ use leptos::prelude::*;
 #[component]
 pub fn Target(
     position: Position,
-    straight: Signal<bool>,
+    straight: bool,
     #[prop(into)] level: Signal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let center = move || SvgPos::center_for_level(position, level(), straight());
+    let current_confirm = expect_context::<CurrentConfirm>().0;
+    let center = move || SvgPos::center_for_level(position, level(), straight);
     let transform = move || format!("translate({},{})", center().0, center().1);
     let mut game_state = expect_context::<GameStateSignal>();
     let analysis = use_context::<AnalysisSignal>()
         .unwrap_or(AnalysisSignal(RwSignal::new(None)))
         .0;
-    let current_confirm = expect_context::<CurrentConfirm>().0;
     // Select the target position and make a move if it's the correct mode
     let onclick = move |_| {
         let in_analysis = analysis.get().is_some();

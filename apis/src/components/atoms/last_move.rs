@@ -8,13 +8,13 @@ pub fn LastMove(
     #[prop(into)] level: Signal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
     direction: Direction,
-    straight: Signal<bool>,
+    straight: bool,
 ) -> impl IntoView {
-    let center = move || SvgPos::center_for_level(position, level(), straight());
+    let center = move || SvgPos::center_for_level(position, level(), straight);
     let transform = move || format!("translate({},{})", center().0, center().1);
     let href = move || match direction {
         Direction::To => {
-            if straight() {
+            if straight {
                 "/assets/tiles/3d/last_move_to.svg#last_move_to"
             } else {
                 "/assets/tiles/common/all.svg#last_move_to"
