@@ -8,7 +8,6 @@ mod games_query_options;
 mod newtypes;
 mod pretty_string;
 mod scoring_mode;
-mod seeding_mode;
 mod simple_user;
 mod standings;
 mod start_mode;
@@ -33,7 +32,6 @@ pub use games_query_options::{
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use pretty_string::PrettyString;
 pub use scoring_mode::ScoringMode;
-pub use seeding_mode::SeedingMode;
 pub use simple_user::SimpleUser;
 pub use standings::PlayerScores;
 pub use standings::Standings;

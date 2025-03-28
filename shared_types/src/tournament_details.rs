@@ -1,4 +1,4 @@
-use crate::{ScoringMode, SeedingMode, StartMode, Tiebreaker, TimeMode};
+use crate::{ScoringMode, StartMode, Tiebreaker, TimeMode};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -24,6 +24,6 @@ pub struct TournamentDetails {
     pub starts_at: Option<DateTime<Utc>>,
     pub round_duration: Option<i32>,
     pub series: Option<Uuid>,
-    pub seeding_mode: Option<SeedingMode>,
+    pub accelerated_rounds: i32,
     pub games_per_round: i32,
 }

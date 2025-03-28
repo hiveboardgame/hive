@@ -53,7 +53,10 @@ impl FromStr for TournamentGameResult {
             "½-½" => Ok(TournamentGameResult::Draw),
             "0-0" => Ok(TournamentGameResult::DoubeForfeit),
             "BYE" => Ok(TournamentGameResult::Bye),
-            _ => Err(anyhow!("Invalid TournamentGameResult string".to_string())),
+            _ => Err(anyhow!(format!(
+                "{} is an invalid TournamentGameResult string",
+                s
+            ))),
         }
     }
 }

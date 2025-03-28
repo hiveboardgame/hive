@@ -139,11 +139,11 @@ diesel::table! {
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         series -> Nullable<Uuid>,
+        games_per_round -> Int4,
         bye -> Array<Nullable<Uuid>>,
         current_round -> Int4,
         initial_seeding -> Array<Nullable<Uuid>>,
-        seeding_mode -> Varchar,
-        games_per_round -> Int4,
+        accelerated_rounds -> Int4,
     }
 }
 
