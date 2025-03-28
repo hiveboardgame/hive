@@ -40,7 +40,7 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
 
             class=move || {
                 format!(
-                    "transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal {}",
+                    "flex place-content-center transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal {}",
                     if tab() == name {
                         "dark:bg-button-twilight bg-slate-400"
                     } else if name == TabView::Chat && chat.has_messages() {
