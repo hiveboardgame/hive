@@ -1,22 +1,18 @@
 use crate::common::MoveConfirm;
 use crate::common::SvgPos;
-use crate::common::TileDesign;
 use crate::components::organisms::analysis::AnalysisSignal;
-//use crate::components::organisms::analysis::AnalysisSignal;
 use crate::pages::play::CurrentConfirm;
 use crate::providers::game_state::GameStateSignal;
-use crate::providers::Config;
 use hive_lib::Position;
 use leptos::prelude::*;
 
 #[component]
 pub fn Target(
     position: Position,
+    straight: Signal<bool>,
     #[prop(into)] level: Signal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let config = expect_context::<Config>().0;
-    let straight = move || config().tile_design == TileDesign::ThreeD;
     let center = move || SvgPos::center_for_level(position, level(), straight());
     let transform = move || format!("translate({},{})", center().0, center().1);
     let mut game_state = expect_context::<GameStateSignal>();

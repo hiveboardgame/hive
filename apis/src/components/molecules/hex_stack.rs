@@ -1,6 +1,7 @@
 use crate::common::HexType;
 use crate::common::PieceType;
 use crate::pages::play::TargetStack;
+use crate::providers::config::TileOptions;
 use crate::{
     common::{ActiveState, HexStack},
     components::atoms::hex::Hex,
@@ -19,7 +20,7 @@ use std::sync::Arc;
 use web_sys::PointerEvent;
 
 #[component]
-pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
+pub fn HexStack(hex_stack: HexStack, tile_opts: Signal<TileOptions>) -> impl IntoView {
     let target_stack = expect_context::<TargetStack>().0;
     let interval = StoredValue::new(Arc::new(use_interval_with_options(
         500,
@@ -80,11 +81,11 @@ pub fn HexStack(hex_stack: HexStack) -> impl IntoView {
             if is_expandable {
                 Either::Left(view! {
                     <g node_ref=g_ref>
-                        <Hex hex=hex on:pointerdown=rightclick_expand />
+                        <Hex hex=hex on:pointerdown=rightclick_expand tile_opts />
                     </g>
                 })
             } else {
-                Either::Right(view! { <Hex hex=hex /> })
+                Either::Right(view! { <Hex hex=hex tile_opts /> })
             }
         })
         .collect_view()

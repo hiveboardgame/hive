@@ -24,7 +24,8 @@ pub fn ThumbnailPieces(game: StoredValue<GameResponse>) -> impl IntoView {
     };
 
     let config = expect_context::<Config>().0;
-    let straight = move || config().tile_design == TileDesign::ThreeD;
+    let tile_opts = Signal::derive(move || config().tile);
+    let straight = move || config().tile.design == TileDesign::ThreeD;
 
     let (width, height) = (400.0_f32, 510.0_f32);
     // TODO: because Thumbnail pieces is used in two places, this leads to weirdness in the TV
@@ -46,7 +47,7 @@ pub fn ThumbnailPieces(game: StoredValue<GameResponse>) -> impl IntoView {
                     thumbnail_pieces()
                         .into_iter()
                         .map(|hs| {
-                            view! { <SimpleHexStack hex_stack=hs /> }
+                            view! { <SimpleHexStack hex_stack=hs tile_opts=tile_opts() /> }
                         })
                         .collect_view()
                 }}

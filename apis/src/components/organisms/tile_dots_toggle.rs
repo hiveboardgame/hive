@@ -21,7 +21,7 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
     let tile_dots = Signal::derive(move || tile_dots.clone());
     let Config(config, set_cookie) = expect_context();
     let is_active = move || {
-        if config().tile_dots == tile_dots() {
+        if config().tile.dots == tile_dots() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -42,7 +42,7 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
                     set_cookie
                         .update(|c| {
                             if let Some(cookie) = c {
-                                cookie.tile_dots = tile_dots();
+                                cookie.tile.dots = tile_dots();
                             }
                         });
                 }

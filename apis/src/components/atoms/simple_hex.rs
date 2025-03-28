@@ -1,15 +1,22 @@
 use crate::{
     common::{Hex, HexType},
     components::atoms::piece::Piece,
+    providers::config::TileOptions,
 };
 use leptos::{either::Either, prelude::*};
 
 #[component]
-pub fn SimpleHex(hex: Hex) -> impl IntoView {
+pub fn SimpleHex(hex: Hex, tile_opts: TileOptions) -> impl IntoView {
     if let HexType::Tile(piece, _) = hex.kind {
-        Either::Left(
-            view! { <Piece piece=piece position=hex.position level=hex.level simple=true /> },
-        )
+        Either::Left(view! {
+            <Piece
+                piece=piece
+                position=hex.position
+                level=hex.level
+                simple=true
+                tile_opts=tile_opts.into()
+            />
+        })
     } else {
         Either::Right(())
     }

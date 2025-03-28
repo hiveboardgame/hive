@@ -3,7 +3,7 @@ use crate::components::molecules::analysis_and_download::AnalysisAndDownload;
 use crate::components::molecules::control_buttons::ControlButtons;
 use crate::components::molecules::hex_stack::HexStack;
 use crate::providers::game_state::{GameStateSignal, View};
-use crate::providers::AuthContext;
+use crate::providers::{AuthContext, Config};
 use hive_lib::History;
 use hive_lib::{Bug, BugStack, Color, GameStatus, Piece, Position, State};
 use leptos::prelude::*;
@@ -62,7 +62,8 @@ pub fn Reserve(
     #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-
+    let config = expect_context::<Config>().0;
+    let tile_opts = Signal::derive(move || config().tile);
     let (viewbox_str, viewbox_styles) = match alignment {
         Alignment::SingleRow => ("-40 -55 450 100", "inline max-h-[inherit] h-full w-fit"),
         Alignment::DoubleRow => {
@@ -167,7 +168,7 @@ pub fn Reserve(
         stacked_pieces()
             .into_iter()
             .map(|hex_stack| {
-                view! { <HexStack hex_stack=hex_stack /> }
+                view! { <HexStack hex_stack=hex_stack tile_opts /> }
             })
             .collect_view()
     };

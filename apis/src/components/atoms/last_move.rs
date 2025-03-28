@@ -1,6 +1,4 @@
-use crate::common::TileDesign;
 use crate::common::{Direction, SvgPos};
-use crate::providers::Config;
 use hive_lib::Position;
 use leptos::prelude::*;
 
@@ -10,9 +8,8 @@ pub fn LastMove(
     #[prop(into)] level: Signal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
     direction: Direction,
+    straight: Signal<bool>,
 ) -> impl IntoView {
-    let config = expect_context::<Config>().0;
-    let straight = move || config().tile_design == TileDesign::ThreeD;
     let center = move || SvgPos::center_for_level(position, level(), straight());
     let transform = move || format!("translate({},{})", center().0, center().1);
     let href = move || match direction {

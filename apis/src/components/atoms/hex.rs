@@ -2,14 +2,15 @@ use crate::{
     common::{Direction, Hex, HexType, PieceType},
     components::atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
     pages::play::TargetStack,
-    providers::game_state::GameStateSignal,
+    providers::{config::TileOptions, game_state::GameStateSignal},
 };
 use leptos::{either::EitherOf4, prelude::*};
 
 #[component]
-pub fn Hex(hex: Hex) -> impl IntoView {
+pub fn Hex(hex: Hex, tile_opts: Signal<TileOptions>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let target_stack = expect_context::<TargetStack>();
+    let straight = Signal::derive(move || tile_opts().is_three_d());
     let level_multiplier = move || match target_stack.0() {
         Some(pos) => {
             if hex.position == pos {
@@ -38,7 +39,7 @@ pub fn Hex(hex: Hex) -> impl IntoView {
             } else {
                 expanded_sublevel
             };
-            EitherOf4::A(view! { <Active position=hex.position level active_state /> })
+            EitherOf4::A(view! { <Active position=hex.position level active_state straight /> })
         }
         HexType::Target => {
             let level = if hex.level == 0 {
@@ -46,7 +47,7 @@ pub fn Hex(hex: Hex) -> impl IntoView {
             } else {
                 expanded_sublevel
             };
-            EitherOf4::B(view! { <Target position=hex.position level /> })
+            EitherOf4::B(view! { <Target position=hex.position level straight /> })
         }
         HexType::Tile(piece, piece_type) => {
             let level = match piece_type {
@@ -55,7 +56,7 @@ pub fn Hex(hex: Hex) -> impl IntoView {
                 _ => hex.level.into(),
             };
             EitherOf4::C(
-                view! { <Piece piece=piece position=hex.position level=level piece_type=piece_type /> },
+                view! { <Piece piece=piece position=hex.position level=level piece_type=piece_type tile_opts /> },
             )
         }
         HexType::LastMove(direction) => {
@@ -69,7 +70,7 @@ pub fn Hex(hex: Hex) -> impl IntoView {
                     }
                 }
             };
-            EitherOf4::D(view! { <LastMove position=hex.position level direction /> })
+            EitherOf4::D(view! { <LastMove position=hex.position level direction straight /> })
         }
     }
 }

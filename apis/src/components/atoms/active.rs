@@ -1,8 +1,6 @@
 use crate::common::ActiveState;
 use crate::common::SvgPos;
-use crate::common::TileDesign;
 use crate::providers::game_state::GameStateSignal;
-use crate::providers::Config;
 use hive_lib::Position;
 use leptos::prelude::*;
 use leptos::text_prop::TextProp;
@@ -13,10 +11,9 @@ pub fn Active(
     #[prop(into)] level: Signal<usize>,
     #[prop(optional)] extend_tw_classes: &'static str,
     active_state: ActiveState,
+    straight: Signal<bool>,
 ) -> impl IntoView {
     let mut game_signal = expect_context::<GameStateSignal>();
-    let config = expect_context::<Config>().0;
-    let straight = move || config().tile_design == TileDesign::ThreeD;
     let center = move || SvgPos::center_for_level(position, level(), straight());
     let transform = TextProp::from(move || format!("translate({},{})", center().0, center().1));
     match active_state {

@@ -10,13 +10,23 @@ const USER_CONFIG_COOKIE: &str = "user_config";
 
 // 1 year in milliseconds
 const CONF_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct TileOptions {
+    pub design: TileDesign,
+    pub rotation: TileRotation,
+    pub dots: TileDots,
+}
+
+impl TileOptions {
+    pub fn is_three_d(&self) -> bool {
+        self.design == TileDesign::ThreeD
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ConfigOpts {
     pub confirm_mode: HashMap<GameSpeed, MoveConfirm>,
-    pub tile_design: TileDesign,
-    pub tile_rotation: TileRotation,
-    pub tile_dots: TileDots,
+    pub tile: TileOptions,
     pub prefers_sound: bool,
     pub prefers_dark: bool,
 }
@@ -32,9 +42,7 @@ impl Default for ConfigOpts {
                 (GameSpeed::Correspondence, MoveConfirm::Double),
                 (GameSpeed::Untimed, MoveConfirm::Double),
             ]),
-            tile_design: TileDesign::default(),
-            tile_rotation: TileRotation::default(),
-            tile_dots: TileDots::default(),
+            tile: TileOptions::default(),
             prefers_sound: false,
             prefers_dark: false,
         }

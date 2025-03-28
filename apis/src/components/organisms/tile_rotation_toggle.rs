@@ -21,7 +21,7 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
     let tile_rotation = StoredValue::new(tile_rotation);
     let Config(config, set_cookie) = expect_context();
     let is_active = move || {
-        if config().tile_rotation == tile_rotation.get_value() {
+        if config().tile.rotation == tile_rotation.get_value() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -41,7 +41,7 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
                     set_cookie
                         .update(|c| {
                             if let Some(cookie) = c {
-                                cookie.tile_rotation = tile_rotation.get_value();
+                                cookie.tile.rotation = tile_rotation.get_value();
                             }
                         });
                 }
