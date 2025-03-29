@@ -9,14 +9,13 @@ use hive_lib::Position;
 use leptos::either::Either;
 use leptos::prelude::*;
 use leptos::{
-    ev::{pointerup, touchend, touchstart},
+    ev::{pointerup, touchend},
     svg,
 };
 use leptos_use::{
-    use_event_listener, use_event_listener_with_options, use_interval_with_options, use_window,
-    UseEventListenerOptions, UseIntervalOptions,
+    use_event_listener, use_event_listener_with_options, use_window, use_timeout_fn,
+    UseEventListenerOptions, UseTimeoutFnReturn,
 };
-use std::sync::Arc;
 use web_sys::PointerEvent;
 
 #[component]
@@ -26,15 +25,7 @@ pub fn HexStack(
     target_stack: RwSignal<Option<Position>>,
 ) -> impl IntoView {
     let tile_opts = StoredValue::new(tile_opts);
-    let interval = StoredValue::new(Arc::new(use_interval_with_options(
-        500,
-        UseIntervalOptions::default().immediate(false),
-    )));
-    Effect::new(move |_| {
-        if (interval.get_value().counter)() >= 1 {
-            target_stack.set(Some(hex_stack.position));
-        }
-    });
+    // Mouse right click to expand
     let rightclick_expand = move |evt: PointerEvent| {
         evt.prevent_default();
         if evt.button() == 2 {
@@ -48,23 +39,22 @@ pub fn HexStack(
             target_stack.set(None);
         }
     });
-    let g_ref = NodeRef::<svg::G>::new();
-    let _longpress_expand = use_event_listener_with_options(
-        g_ref,
-        touchstart,
+    
+    // Touch longpress to expand
+    let UseTimeoutFnReturn {
+        start, stop,..
+    } = use_timeout_fn(
         move |_| {
-            (interval.get_value().reset)();
-            (interval.get_value().resume)();
+            target_stack.set(Some(hex_stack.position));
         },
-        UseEventListenerOptions::default().passive(true),
+        500.0,
     );
-
-    let _collapse_expand = use_event_listener_with_options(
+    let g_ref = NodeRef::<svg::G>::new();
+    let _ = use_event_listener_with_options(
         g_ref,
         touchend,
         move |_| {
-            (interval.get_value().reset)();
-            (interval.get_value().pause)();
+            stop();
             target_stack.set(None);
         },
         UseEventListenerOptions::default().passive(true),
@@ -86,6 +76,7 @@ pub fn HexStack(
                         <Hex
                             hex=hex
                             on:pointerdown=rightclick_expand
+                            on:touchstart=start.clone()
                             tile_opts=tile_opts.get_value()
                             target_stack=target_stack.into()
                         />
