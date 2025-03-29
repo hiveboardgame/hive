@@ -1,9 +1,8 @@
 use super::Config;
 use leptos::prelude::*;
-use rand::Rng;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{js_sys::ArrayBuffer, AudioBuffer, AudioContext, Response};
+use web_sys::{js_sys::ArrayBuffer, AudioBuffer, AudioContext, Response, js_sys::Math::random};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SoundType {
@@ -30,9 +29,10 @@ impl Sounds {
         if !config().prefers_sound {
             return;
         };
+        let random = (random() * 1e18) as u64;
         if let Some(Ok(s)) = self.client_data.get().as_deref() {
             let (buffer, offset, duration) = match kind {
-                SoundType::Turn => (&s.turn, rand::thread_rng().gen_range(0..20) as f64, 1.0),
+                SoundType::Turn => (&s.turn, (random % 20) as f64, 1.0),
                 SoundType::NewGame => (&s.new, 0.0, 3.0),
                 SoundType::LowTime => (&s.low, 0.0, 2.0),
             };

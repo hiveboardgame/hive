@@ -12,12 +12,11 @@ pub async fn edit_account(
     use crate::functions::auth::identity::uuid;
     use crate::functions::db::pool;
     use argon2::{
-        password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+        password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
         Argon2,
     };
     use db_lib::get_conn;
     use db_lib::models::User;
-    use rand_core::OsRng;
 
     if new_password != new_password_confirmation {
         return Err(ServerFnError::new("Passwords don't match."));

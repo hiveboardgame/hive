@@ -72,9 +72,9 @@ impl Handler<Ping> for WsServer {
     type Result = ();
 
     fn handle(&mut self, _msg: Ping, _ctx: &mut Context<Self>) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for user_id in self.sessions.keys() {
-            let nonce = rng.gen_range(0..=u64::MAX);
+            let nonce = rng.random::<u64>();
             self.pings.set_nonce(*user_id, nonce);
             let message = ServerResult::Ok(Box::new(ServerMessage::Ping {
                 nonce,

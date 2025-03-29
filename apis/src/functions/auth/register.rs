@@ -12,7 +12,7 @@ pub async fn register(
     use actix_identity::Identity;
     use actix_web::HttpMessage;
     use argon2::{
-        password_hash::{PasswordHasher, SaltString},
+        password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
         Argon2,
     };
     use db_lib::db_error::DbError;
@@ -20,7 +20,6 @@ pub async fn register(
     use db_lib::models::{NewUser, User};
     use diesel_async::scoped_futures::ScopedFutureExt;
     use diesel_async::AsyncConnection;
-    use rand_core::OsRng;
     const MIN_PASSWORD_LENGTH: usize = 8;
     const MAX_PASSWORD_LENGTH: usize = 128;
 

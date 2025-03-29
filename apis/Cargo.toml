@@ -41,8 +41,7 @@ leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
 log = { workspace = true }
 markdown = {workspace = true}
-rand = { workspace = true }
-rand_core = { workspace = true }
+rand = { workspace = true, optional = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
@@ -78,6 +77,7 @@ ssr = [
   "dep:diesel_migrations",
   "dep:diesel-async",
   "dep:leptos_actix",
+  "dep:rand",
   "leptos/ssr",
   "leptos-use/ssr",
   "leptos_meta/ssr",

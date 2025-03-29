@@ -22,7 +22,7 @@ bb8 = { version = "0.8" }
 bimap = {version = "0.6.3", features = ["serde"] }
 cfg-if = "1.0.0"
 chrono = { version = "0.4", features = ["serde"] }
-codee = { version = "0.2", features = ["msgpack_serde", "base64"] }
+codee = { version = "0.3", features = ["msgpack_serde", "base64"] }
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 cookie = "0.18"
@@ -46,8 +46,7 @@ leptos_router =  { version = "0.7", features = ["nightly"] }
 log = "0.4.22"
 markdown = "1.0.0-alpha"
 nanoid = "0.4"
-rand = "0.8"
-rand_core = "0.6"
+rand = "0.9"
 regex = "1.10"
 reqwest = { version = "0.12.12", features = ["json"] }
 serde = { version = "1" }
