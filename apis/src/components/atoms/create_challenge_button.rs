@@ -9,26 +9,24 @@ pub fn CreateChallengeButton(
     create_challenge: Callback<ColorChoice>,
 ) -> impl IntoView {
     let config = expect_context::<Config>().0;
-    let icon_data = |color_choice: ColorChoice| match color_choice {
-        ColorChoice::Random => (
-            icondata::BsHexagonHalf,
-            "w-full h-full stroke-1 stroke-black",
-        ),
+    let icon_data = move |color_choice: ColorChoice| match color_choice {
+        ColorChoice::Random => (icondata::BsHexagonHalf, "w-full h-full"),
         ColorChoice::White => {
-            if config.get_untracked().prefers_dark {
+            if config.get().prefers_dark {
                 (icondata::BsHexagonFill, "w-full h-full fill-white")
             } else {
                 (icondata::BsHexagon, "w-full h-full stroke-1 stroke-black")
             }
         }
         ColorChoice::Black => {
-            if config.get_untracked().prefers_dark {
+            if config.get().prefers_dark {
                 (icondata::BsHexagon, "w-full h-full stroke-1 stroke-white")
             } else {
                 (icondata::BsHexagonFill, "w-full h-full fill-black")
             }
         }
     };
+
     view! {
         <button
             title=color_choice.get_value().to_string()
@@ -39,10 +37,10 @@ pub fn CreateChallengeButton(
 
             on:click=move |_| { create_challenge.run(color_choice.get_value()) }
         >
-            {
+            {move || {
                 let (icon, class) = icon_data(color_choice.get_value());
                 view! { <Icon icon attr:class=class /> }
-            }
+            }}
         </button>
     }
 }
