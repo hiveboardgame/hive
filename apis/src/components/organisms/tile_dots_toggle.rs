@@ -7,7 +7,7 @@ pub fn TileDotsToggle() -> impl IntoView {
     let i18n = use_i18n();
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.show_dots)}</p>
-        <div class="flex">
+        <div class="flex flex-wrap">
             <TileDotsButton tile_dots=TileDots::No />
             <TileDotsButton tile_dots=TileDots::Angled />
             <TileDotsButton tile_dots=TileDots::Vertical />

@@ -18,7 +18,7 @@ pub fn TakebackConf() -> impl IntoView {
     view! {
         <ActionForm action=action>
             <p class="m-1 text-black dark:text-white">{t!(i18n, user_config. allow_takeback)}</p>
-            <div class="flex">
+            <div class="flex flex-wrap">
                 <Button takeback=Takeback::Always />
                 <Button takeback=Takeback::CasualOnly />
                 <Button takeback=Takeback::Never />

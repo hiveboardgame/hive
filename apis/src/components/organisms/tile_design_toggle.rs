@@ -24,7 +24,7 @@ pub fn TileDesignToggle() -> impl IntoView {
     Effect::new(move |_| good_software.update(|b| *b = *NOT_APPLE));
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.piece_style)}</p>
-        <div class="flex">
+        <div class="flex flex-wrap">
             <TileDesignButton tile_design=TileDesign::Official />
             <TileDesignButton tile_design=TileDesign::Flat />
             <Show when=good_software>

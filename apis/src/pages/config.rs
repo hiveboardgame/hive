@@ -32,7 +32,7 @@ pub fn Config() -> impl IntoView {
                 <TileDotsToggle />
                 <TakebackConf />
                 <label class="mr-1">
-                    <div class="flex items-center">
+                    <div class="flex flex-wrap items-center">
                         {icon} <p>{t!(i18n, user_config.game_speed)}</p>
                     </div>
                     <select
