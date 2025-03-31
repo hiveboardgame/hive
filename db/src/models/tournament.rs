@@ -27,7 +27,7 @@ use itertools::Itertools;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    Certainty, GameSpeed, ScoringMode, Standings, StartMode, Tiebreaker, TimeMode,
+    Certainty, GameSpeed, Standings, Tiebreaker, TimeMode,
     TournamentDetails, TournamentGameResult, TournamentId, TournamentSortOrder, TournamentStatus,
 };
 use std::fmt::Write;
@@ -779,7 +779,7 @@ impl Tournament {
         Ok(sorted_query.get_results(conn).await?)
     }
 
-    pub async fn calculate_standings(&self, conn: &mut DbConn<'_>) -> Result<Standings, DbError> {
+    pub async fn calculate_standings(&self, round_number: Option<u32>, conn: &mut DbConn<'_>) -> Result<Standings, DbError> {
         let mut standings = Standings::new();
 
         // Add tiebreakers from tournament settings
@@ -790,7 +790,12 @@ impl Tournament {
         }
 
         // Get all games for this tournament
-        let games = self.games(conn).await?;
+        let mut games = self.games(conn).await?;
+        
+        // Filter games by round if round_number is provided
+        if let Some(round) = round_number {
+            games.retain(|g| g.round.is_some_and(|r| r < round as i32));
+        }
 
         // Add all players to standings
         let players = self.players(conn).await?;
@@ -861,7 +866,7 @@ impl Tournament {
         writeln!(trfx, "XXC {}1", if is_even { "white" } else { "black" })?;
 
         // Calculate standings
-        let standings = self.calculate_standings(conn).await?;
+        let standings = self.calculate_standings(Some(round_number), conn).await?;
 
         for (player_number, player_id) in self.initial_seeding.iter().enumerate() {
             let player_id = player_id.expect("There should not be Nones in the initial_seeding");
@@ -955,6 +960,7 @@ impl Tournament {
             }
 
             // Get player's current score from standings
+            println!("Scores: {:?}", standings.players_scores);
             let score = if let Some(scores) = standings.players_scores.get(&player_id) {
                 scores.get(&Tiebreaker::RawPoints).unwrap_or(&0.0)
             } else {
@@ -1027,7 +1033,7 @@ impl Tournament {
             now.format("%m"),
             now.format("%d"),
             self.nanoid,
-            self.current_round
+            self.current_round + 1
         );
 
         // Save TRFx file with relative path
@@ -1036,7 +1042,7 @@ impl Tournament {
         println!("TRFx file saved as: {}", trfx_path);
 
         // Create trfx directory if it doesn't exist
-        std::fs::create_dir_all(&trfx_dir).map_err(|e| DbError::InvalidInput {
+        std::fs::create_dir_all(trfx_dir).map_err(|e| DbError::InvalidInput {
             info: "Failed to create trfx directory".to_string(),
             error: e.to_string(),
         })?;
@@ -1202,52 +1208,36 @@ mod tests {
         println!("TEST: NewTournament created successfully");
 
         // Create organizer user
-        let organizer_details = NewUser {
-            username: format!("organizer_{}", nanoid!(5)),
-            password: "hash".to_string(),
-            email: format!("organizer_{}@example.com", nanoid!(5)),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            normalized_username: format!("organizer_{}", nanoid!(5)).to_lowercase(),
-            patreon: false,
-        };
-        println!(
-            "TEST: Creating organizer with username: {}",
-            organizer_details.username
-        );
-        let organizer = User::create(organizer_details, conn).await?;
+        let organizer_username = format!("organizer_{}", nanoid!(5));
+        println!("TEST: Creating organizer with username: {}", organizer_username);
+        let organizer = NewUser::new(
+            &organizer_username,
+            "test_password",
+            "test@example.com",
+        )?;
+        let organizer = User::create(organizer, conn).await?;
         println!("TEST: Organizer created with ID: {}", organizer.id);
 
-        // Create tournament
-        println!(
-            "TEST: Creating tournament with organizer ID: {}",
-            organizer.id
-        );
+        // Create tournament with organizer
+        println!("TEST: Creating tournament with organizer ID: {}", organizer.id);
         let tournament = Tournament::create(organizer.id, &new_tournament, conn).await?;
         println!("TEST: Tournament created with ID: {}", tournament.id);
 
-        // Create players and make them join
+        // Create players in a transaction
         let mut players = Vec::new();
         for i in 1..=num_players {
-            let player_details = NewUser {
-                username: format!("player_{}", i),
-                password: "hash".to_string(),
-                email: format!("player_{}@example.com", i),
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                normalized_username: format!("player_{}", i).to_lowercase(),
-                patreon: false,
-            };
-            println!(
-                "TEST: Creating player {} with username: {}",
-                i, player_details.username
-            );
-            let player = User::create(player_details, conn).await?;
+            let player_username = format!("player_{}", i);
+            println!("TEST: Creating player {} with username: {}", i, player_username);
+            let player = NewUser::new(
+                &player_username,
+                "test_password",
+                &format!("player{}@example.com", i),
+            )?;
+            let player = User::create(player, conn).await?;
             println!("TEST: Player created with ID: {}", player.id);
 
             // Update the player's rating to the desired value
-            let game_speed =
-                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
+            let game_speed = GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
             let rating_value = 2000.0 - (i as f64 * 25.0); // Spread ratings for proper seeding
             let deviation = 50.0;
             println!(
@@ -1268,11 +1258,6 @@ mod tests {
 
             println!("TEST: Rating updated for player");
 
-            // Join tournament
-            println!(
-                "TEST: Player {} joining tournament {}",
-                player.id, tournament.id
-            );
             tournament.join(&player.id, conn).await?;
             println!("TEST: Player joined tournament successfully");
             players.push(player);
@@ -1289,11 +1274,16 @@ mod tests {
     async fn test_swiss_tournament_with_even_players() -> Result<(), Box<dyn std::error::Error>> {
         println!("\n\n=== STARTING TEST: test_swiss_tournament_with_even_players ===");
 
+        // Clean up pool from previous tests
+        crate::test_utils::cleanup_pool().await;
+
         // Use the common test database connection pool
         println!("TEST: Getting database pool");
         let pool = crate::test_utils::get_pool();
 
-        // Add retry logic for getting a connection
+        // Add retry logic for getting a connection with a maximum number of retries
+        let mut retries = 0;
+        const MAX_RETRIES: u32 = 5;
         let mut conn = loop {
             match pool.get().await {
                 Ok(conn) => {
@@ -1301,7 +1291,14 @@ mod tests {
                     break conn;
                 }
                 Err(e) => {
-                    println!("TEST WARNING: Failed to get connection, retrying: {:?}", e);
+                    retries += 1;
+                    if retries >= MAX_RETRIES {
+                        panic!("Failed to get connection after {} retries: {:?}", MAX_RETRIES, e);
+                    }
+                    println!(
+                        "TEST WARNING: Failed to get connection (attempt {}/{}), retrying in 1s: {:?}",
+                        retries, MAX_RETRIES, e
+                    );
                     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
                 }
             }
@@ -1418,10 +1415,8 @@ mod tests {
                         println!("TEST: Completing round 2 games");
                         for game in games {
                             // Get player ratings from the database
-                            let game_speed = GameSpeed::from_base_increment(
-                                tournament.time_base,
-                                tournament.time_increment,
-                            );
+                            let game_speed =
+                                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
                             let white_rating =
                                 Rating::for_uuid(&game.white_id, &game_speed, &mut conn)
                                     .await?
@@ -1469,10 +1464,8 @@ mod tests {
                         println!("TEST: Completing round 3 games");
                         for game in games {
                             // Get player ratings from the database
-                            let game_speed = GameSpeed::from_base_increment(
-                                tournament.time_base,
-                                tournament.time_increment,
-                            );
+                            let game_speed =
+                                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
                             let white_rating =
                                 Rating::for_uuid(&game.white_id, &game_speed, &mut conn)
                                     .await?
@@ -1525,6 +1518,10 @@ mod tests {
         }
 
         println!("=== TEST COMPLETED: test_swiss_tournament_with_even_players ===\n\n");
+
+        // Clean up pool after test
+        crate::test_utils::cleanup_pool().await;
+
         Ok(())
     }
 
@@ -1532,19 +1529,46 @@ mod tests {
     async fn test_swiss_tournament_with_odd_players() -> Result<(), Box<dyn std::error::Error>> {
         println!("\n\n=== STARTING TEST: test_swiss_tournament_with_odd_players ===");
 
+        // Clean up pool from previous tests
+        crate::test_utils::cleanup_pool().await;
+
         // Use the common test database connection pool
         println!("TEST: Getting database pool");
         let pool = crate::test_utils::get_pool();
         println!("TEST: Pool obtained, getting connection");
-        let mut conn = pool.get().await.expect("Failed to get connection");
-        println!("TEST: Connection obtained");
+
+        // Add retry logic for getting a connection with a maximum number of retries
+        let mut retries = 0;
+        const MAX_RETRIES: u32 = 5;
+        let mut conn = loop {
+            match pool.get().await {
+                Ok(conn) => {
+                    println!("TEST: Connection obtained successfully");
+                    break conn;
+                }
+                Err(e) => {
+                    retries += 1;
+                    if retries >= MAX_RETRIES {
+                        panic!("Failed to get connection after {} retries: {:?}", MAX_RETRIES, e);
+                    }
+                    println!(
+                        "TEST WARNING: Failed to get connection (attempt {}/{}), retrying in 1s: {:?}",
+                        retries, MAX_RETRIES, e
+                    );
+                    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+                }
+            }
+        };
 
         // Start a test transaction that will be rolled back automatically
         println!("TEST: Starting test transaction");
-        conn.begin_test_transaction()
-            .await
-            .expect("Failed to start test transaction");
-        println!("TEST: Test transaction started");
+        match conn.begin_test_transaction().await {
+            Ok(_) => println!("TEST: Test transaction started successfully"),
+            Err(e) => {
+                println!("TEST ERROR: Failed to start test transaction: {:?}", e);
+                panic!("Failed to start test transaction: {:?}", e);
+            }
+        };
 
         // Check if pairer executable exists
         let pairer_path = if cfg!(target_os = "macos") {
@@ -1570,8 +1594,7 @@ mod tests {
             panic!("Failed to create test tournament: {:?}", e);
         }
 
-        let (mut tournament, _players) =
-            tournament_result.expect("Failed to create test tournament");
+        let (tournament, _players) = tournament_result.expect("Failed to create test tournament");
         println!(
             "TEST: Test tournament created successfully with ID: {}",
             tournament.id
@@ -1746,6 +1769,10 @@ mod tests {
         }
 
         println!("=== TEST COMPLETED: test_swiss_tournament_with_odd_players ===\n\n");
+
+        // Clean up pool after test
+        crate::test_utils::cleanup_pool().await;
+
         Ok(())
     }
 }
