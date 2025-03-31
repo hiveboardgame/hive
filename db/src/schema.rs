@@ -95,6 +95,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    tournament_dropouts (tournament_id, user_id) {
+        tournament_id -> Uuid,
+        user_id -> Uuid,
+        dropped_at -> Timestamptz,
+        dropped_by -> Uuid,
+        dropped_in_round -> Int4,
+        reason -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
     tournament_series (id) {
         id -> Uuid,
         nanoid -> Text,
@@ -189,6 +200,7 @@ diesel::joinable!(games_users -> users (user_id));
 diesel::joinable!(ratings -> users (user_uid));
 diesel::joinable!(schedules -> games (game_id));
 diesel::joinable!(schedules -> tournaments (tournament_id));
+diesel::joinable!(tournament_dropouts -> tournaments (tournament_id));
 diesel::joinable!(tournament_series_organizers -> tournament_series (tournament_series_id));
 diesel::joinable!(tournament_series_organizers -> users (organizer_id));
 diesel::joinable!(tournaments -> tournament_series (series));
@@ -205,6 +217,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     games_users,
     ratings,
     schedules,
+    tournament_dropouts,
     tournament_series,
     tournament_series_organizers,
     tournaments,

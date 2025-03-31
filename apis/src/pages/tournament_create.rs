@@ -194,7 +194,7 @@ pub fn TournamentCreate() -> impl IntoView {
                 None
             },
             games_per_round: tournament.games_per_round.get_untracked(),
-            accelerated_rounds: 1, // Default to 1 accelerated round for Swiss tournaments
+            accelerated_rounds: 0, // Default to 0 accelerated rounds for Swiss tournaments
         };
         if account.is_some() {
             let api = ApiRequests::new();

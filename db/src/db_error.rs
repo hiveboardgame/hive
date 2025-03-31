@@ -50,6 +50,12 @@ pub enum DbError {
     #[error("You are not authorized to perform that action")]
     Unauthorized,
 
+    #[error("Player is not in the tournament")]
+    PlayerNotInTournament,
+
+    #[error("Player has already dropped from the tournament")]
+    PlayerAlreadyDropped,
+
     #[error("Internal error in database operation")]
     InternalError,
 
@@ -110,6 +116,8 @@ impl DbError {
             DbError::NotFound { reason } => println!("ERROR: Resource not found: {}", reason),
             DbError::TimeNotFound { reason } => println!("ERROR: Time not found: {}", reason),
             DbError::Unauthorized => println!("ERROR: Unauthorized operation"),
+            DbError::PlayerNotInTournament => println!("ERROR: Player is not in the tournament"),
+            DbError::PlayerAlreadyDropped => println!("ERROR: Player has already dropped from the tournament"),
             DbError::InternalError => println!("ERROR: Internal error (unexpected condition)"),
             DbError::DatabaseError(e) => println!("ERROR: Database error: {:?}", e),
             DbError::IoError(e) => println!("ERROR: IO error: {:?}", e),

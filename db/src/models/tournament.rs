@@ -1,6 +1,6 @@
 // TODO: FIX BYE generation and rounds
 
-use super::{Game, NewGame, TournamentInvitation};
+use super::{Game, NewGame, TournamentDropout, TournamentInvitation};
 use crate::{
     db_error::DbError,
     models::{
@@ -9,6 +9,7 @@ use crate::{
     },
     schema::{
         games::{self, tournament_id as tournament_id_column},
+        tournament_dropouts,
         tournaments::{
             self, current_round, ends_at, nanoid as nanoid_field, series as series_column,
             started_at, starts_at, status as status_column, updated_at,
@@ -22,7 +23,7 @@ use chrono::{prelude::*, TimeDelta};
 use diesel::prelude::*;
 use diesel::BelongingToDsl;
 use diesel_async::RunQueryDsl;
-use hive_lib::Color;
+use hive_lib::{Color, GameControl};
 use itertools::Itertools;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
@@ -846,8 +847,11 @@ impl Tournament {
         );
 
         let players = self.players(conn).await?;
-        let games = self.games(conn).await?;
-        println!("Found {} games", games.len());
+        let mut games = self.games(conn).await?;
+        // Filter games by round number
+        games.retain(|g| g.round.is_some_and(|r| r < round_number as i32));
+        let dropped_players = self.get_dropped_players(conn).await?;
+        println!("Found {} games and {} dropped players", games.len(), dropped_players.len());
 
         // Build header section
         writeln!(trfx, "012 {}", self.name)?;
@@ -876,6 +880,10 @@ impl Tournament {
             let player_id = player_id.expect("There should not be Nones in the initial_seeding");
             let player_number = player_number + 1;
 
+            // Check if player is dropped and in which round
+            let dropped_info = dropped_players.iter().find(|(p, _)| p.id == player_id);
+            let dropped_in_round = dropped_info.map(|(_, d)| d.dropped_in_round);
+
             println!("There's {} game total", games.len());
             let player_games: Vec<_> = games
                 .iter()
@@ -892,11 +900,19 @@ impl Tournament {
                 player_games
             );
 
-            // This needs to iter over 0..current_round then find the games for the player of that
-            // round if it cannot find any games for the current round it needs to check if the
-            // player_id is in self.bye and then we need to add "0000 - U" as below
             let mut round_results = String::new();
             for i in 0..self.current_round {
+                // If player dropped out before this round, mark all remaining games with "Z"
+                if let Some(dropped_round) = dropped_in_round {
+                    if i >= dropped_round {
+                        if !round_results.is_empty() {
+                            round_results.push(' ');
+                        }
+                        round_results.push_str(" 0000 - Z");
+                        continue;
+                    }
+                }
+
                 let round_games: Vec<_> = games
                     .iter()
                     .filter(|g| {
@@ -947,7 +963,7 @@ impl Tournament {
                     };
                     round_results.push_str(&format!("{:>3} {} {}", opponent_number, color, result));
                 }
-                if round_games.is_empty() {
+                if round_games.is_empty() && dropped_in_round.is_none() {
                     if self.bye.get(i as usize) != Some(&Some(player_id)) {
                         return Err(DbError::InvalidInput {
                             info: "Couldn't find result but player is not bye".to_string(),
@@ -1158,6 +1174,150 @@ impl Tournament {
         }
 
         Ok(games)
+    }
+
+    /// Check if a user is an organizer of this tournament
+    pub async fn is_organizer(&self, user_id: Uuid, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
+        use crate::schema::tournaments_organizers;
+        
+        Ok(tournaments_organizers::table
+            .filter(tournaments_organizers::tournament_id.eq(self.id))
+            .filter(tournaments_organizers::organizer_id.eq(user_id))
+            .first::<TournamentOrganizer>(conn)
+            .await
+            .optional()?
+            .is_some())
+    }
+
+    /// Check if a user is a player in this tournament
+    pub async fn has_player(&self, user_id: Uuid, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
+        use crate::schema::tournaments_users;
+        
+        Ok(tournaments_users::table
+            .filter(tournaments_users::tournament_id.eq(self.id))
+            .filter(tournaments_users::user_id.eq(user_id))
+            .first::<TournamentUser>(conn)
+            .await
+            .optional()?
+            .is_some())
+    }
+
+    /// Drop a player from the tournament.
+    /// This will:
+    /// 1. Record the dropout in tournament_dropouts
+    /// 2. Auto-resign any active games for the player
+    /// 3. Exclude them from future pairings
+    pub async fn drop_player(
+        &self,
+        player_id: Uuid,
+        organizer_id: Uuid,
+        reason: Option<String>,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
+        // Verify organizer has permission
+        self.ensure_user_is_organizer(&organizer_id, conn).await?;
+
+        // Verify player is in tournament
+        if !self.has_player(player_id, conn).await? {
+            return Err(DbError::PlayerNotInTournament);
+        }
+
+        // Check if player is already dropped
+        let already_dropped = tournament_dropouts::table
+            .filter(tournament_dropouts::tournament_id.eq(self.id))
+            .filter(tournament_dropouts::user_id.eq(player_id))
+            .first::<TournamentDropout>(conn)
+            .await
+            .optional()?;
+
+        if already_dropped.is_some() {
+            return Err(DbError::PlayerAlreadyDropped);
+        }
+
+        // Create dropout record
+        let dropout = TournamentDropout::new(
+            self.id,
+            player_id,
+            organizer_id,
+            self.current_round,
+            reason,
+        );
+
+        // Insert dropout record
+        diesel::insert_into(tournament_dropouts::table)
+            .values(&dropout)
+            .execute(conn)
+            .await?;
+
+        // Auto-resign active games
+        self.resign_active_games_for_player(player_id, conn).await?;
+
+        Ok(())
+    }
+
+    /// Get all dropped players for this tournament
+    pub async fn get_dropped_players(
+        &self,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<(User, TournamentDropout)>, DbError> {
+        use crate::schema::users;
+
+        tournament_dropouts::table
+            .filter(tournament_dropouts::tournament_id.eq(self.id))
+            .inner_join(users::table.on(users::id.eq(tournament_dropouts::user_id)))
+            .select((users::all_columns, tournament_dropouts::all_columns))
+            .load::<(User, TournamentDropout)>(conn)
+            .await
+            .map_err(DbError::from)
+    }
+
+    /// Check if a player is dropped from this tournament
+    pub async fn is_player_dropped(
+        &self,
+        player_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<bool, DbError> {
+        Ok(tournament_dropouts::table
+            .filter(tournament_dropouts::tournament_id.eq(self.id))
+            .filter(tournament_dropouts::user_id.eq(player_id))
+            .first::<TournamentDropout>(conn)
+            .await
+            .optional()?
+            .is_some())
+    }
+
+    /// Helper function to resign all active games for a dropped player
+    async fn resign_active_games_for_player(
+        &self,
+        player_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
+        use crate::schema::games;
+
+        // Get all active games in current round where player is participating
+        let active_games = games::table
+            .filter(games::tournament_id.eq(self.id))
+            .filter(games::round.eq(self.current_round))
+            .filter(games::finished.eq(false))
+            .filter(
+                games::white_id
+                    .eq(player_id)
+                    .or(games::black_id.eq(player_id)),
+            )
+            .load::<crate::models::Game>(conn)
+            .await?;
+
+        // Resign each game
+        for game in active_games {
+            let color = if game.white_id == player_id {
+                Color::White
+            } else {
+                Color::Black
+            };
+            game.resign(&GameControl::Resign(color), conn).await?;
+        }
+
+        Ok(())
     }
 }
 
@@ -1501,6 +1661,193 @@ mod tests {
         cleanup_test_files().await;
         println!("=== TEST COMPLETED: {} ===\n\n", test_name);
         crate::test_utils::cleanup_pool().await;
+
+        Ok(())
+    }
+
+    /// Test cases for tournament dropouts functionality
+    #[tokio::test]
+    async fn test_tournament_dropouts() -> Result<(), Box<dyn std::error::Error>> {
+        // Get DB connection and start transaction
+        let mut conn = get_db_connection().await?;
+        start_test_transaction(&mut conn).await?;
+
+        // Create a test tournament with 4 players
+        let (tournament, players) = create_test_swiss_tournament(&mut conn, 4, 1, 0).await?;
+        let organizers = tournament.organizers(&mut conn).await?;
+        let organizer = &organizers[0];
+
+        // Test 1: Successfully drop a player
+        tournament.drop_player(players[0].id, organizer.id, Some("Test dropout".to_string()), &mut conn).await?;
+        assert!(tournament.is_player_dropped(players[0].id, &mut conn).await?);
+        
+        // Test 2: Try to drop a player who is not in the tournament
+        let non_participant = NewUser::new("non_participant", "test_password", "non@example.com")?;
+        let non_participant = User::create(non_participant, &mut conn).await?;
+        let result = tournament.drop_player(non_participant.id, organizer.id, None, &mut conn).await;
+        assert!(matches!(result, Err(DbError::PlayerNotInTournament)));
+
+        // Test 3: Try to drop an already dropped player
+        let result = tournament.drop_player(players[0].id, organizer.id, None, &mut conn).await;
+        assert!(matches!(result, Err(DbError::PlayerAlreadyDropped)));
+
+        // Test 4: Try to drop without proper permissions
+        let result = tournament.drop_player(players[1].id, players[2].id, None, &mut conn).await;
+        assert!(matches!(result, Err(DbError::Unauthorized)));
+
+        // Test 5: Verify dropped players list
+        let dropped_players = tournament.get_dropped_players(&mut conn).await?;
+        assert_eq!(dropped_players.len(), 1);
+        assert_eq!(dropped_players[0].0.id, players[0].id);
+        assert_eq!(dropped_players[0].1.reason, Some("Test dropout".to_string()));
+
+        // Test 6: Start tournament and verify that active games are resigned when dropping
+        tournament.start(&mut conn).await?;
+        
+        // Find an active game for player[1]
+        let games = tournament.games(&mut conn).await?;
+        let game_with_player = games.iter().find(|g| g.white_id == players[1].id || g.black_id == players[1].id)
+            .expect("Should have found a game with the player");
+        
+        // Drop player[1] and verify their game is resigned
+        tournament.drop_player(players[1].id, organizer.id, None, &mut conn).await?;
+        
+        // Reload the game and verify it's finished
+        let updated_game = Game::find_by_uuid(&game_with_player.id, &mut conn).await?;
+        assert!(updated_game.finished);
+        
+        Ok(())
+    }
+
+    /// Test that TRFX generation correctly handles dropped players
+    #[tokio::test]
+    async fn test_trfx_with_dropped_players() -> Result<(), Box<dyn std::error::Error>> {
+        // Get DB connection and start transaction
+        let mut conn = get_db_connection().await?;
+        start_test_transaction(&mut conn).await?;
+
+        // Create a test tournament with 10 players and 3 rounds
+        let details = TournamentDetails {
+            name: format!("Test Swiss Tournament {}", nanoid!(5)),
+            description: "Test tournament for Swiss pairing".to_string(),
+            scoring: ScoringMode::Game,
+            tiebreakers: vec![Some(Tiebreaker::HeadToHead)],
+            invitees: Vec::new(),
+            seats: 10,
+            min_seats: 2,
+            rounds: 3,
+            invite_only: false,
+            mode: "Swiss".to_string(),
+            time_mode: TimeMode::RealTime,
+            time_base: Some(300),
+            time_increment: Some(3),
+            band_upper: None,
+            band_lower: None,
+            start_mode: StartMode::Manual,
+            starts_at: None,
+            round_duration: None,
+            series: None,
+            accelerated_rounds: 0,
+            games_per_round: 1,
+        };
+        let (tournament, players) = create_test_swiss_tournament(&mut conn, 10, 1, 0).await?;
+        let organizers = tournament.organizers(&mut conn).await?;
+        let organizer = &organizers[0];
+
+        // Start the tournament
+        tournament.start(&mut conn).await?;
+        println!("Tournament started with 10 players");
+
+        // Complete round 1 games
+        let round_1_games: Vec<Game> = games::table
+            .filter(games::tournament_id.eq(tournament.id))
+            .filter(games::round.eq(tournament.current_round))
+            .get_results(&mut conn)
+            .await?;
+        for game in round_1_games {
+            game.resign(&GameControl::Resign(Color::Black), &mut conn).await?;
+        }
+        println!("Round 1 completed");
+
+        // Drop player[0] after round 1
+        tournament.drop_player(players[0].id, organizer.id, Some("Dropping after round 1".to_string()), &mut conn).await?;
+        println!("Player 1 dropped after round 1");
+
+        // Start and complete round 2 (now with 9 players)
+        tournament.swiss_start_round(&mut conn).await?;
+        let round_2_games: Vec<Game> = games::table
+            .filter(games::tournament_id.eq(tournament.id))
+            .filter(games::round.eq(tournament.current_round))  // Round 1 is the second round
+            .get_results(&mut conn)
+            .await?;
+        for game in round_2_games {
+            game.resign(&GameControl::Resign(Color::Black), &mut conn).await?;
+        }
+        println!("Round 2 completed");
+
+        // Start and complete round 3
+        tournament.swiss_start_round(&mut conn).await?;
+        let round_3_games: Vec<Game> = games::table
+            .filter(games::tournament_id.eq(tournament.id))
+            .filter(games::round.eq(tournament.current_round))  // Round 2 is the third round
+            .get_results(&mut conn)
+            .await?;
+        for game in round_3_games {
+            game.resign(&GameControl::Resign(Color::Black), &mut conn).await?;
+        }
+        println!("Round 3 completed");
+
+        // Drop two more players after round 3
+        tournament.drop_player(players[1].id, organizer.id, Some("Dropping after round 3".to_string()), &mut conn).await?;
+        tournament.drop_player(players[2].id, organizer.id, Some("Also dropping after round 3".to_string()), &mut conn).await?;
+        println!("Two more players dropped after round 3");
+
+        // Generate TRFX file and verify dropouts
+        let trfx_content = tournament.generate_trfx(tournament.current_round as u32, &mut conn).await?;
+        println!("TRFX Content:\n{}", trfx_content);
+
+        // Get all player lines from TRFX
+        let player_lines: Vec<&str> = trfx_content.lines()
+            .filter(|line| line.starts_with("001"))
+            .collect();
+
+        // Verify first dropout (after round 1)
+        let first_dropout_line = player_lines.iter()
+            .find(|&&line| line.contains(&players[0].username))
+            .expect("Should find first dropped player's line");
+        let results_section = &first_dropout_line[90..];
+        println!("Results section for first dropout: {}", results_section);
+        assert!(results_section.contains(" Z"), "First dropped player's games should be marked with 'Z' from round 2");
+
+        // Verify later dropouts (after round 3)
+        for player_idx in 1..=2 {
+            let dropout_line = player_lines.iter()
+                .find(|&&line| line.contains(&players[player_idx].username))
+                .expect("Should find dropped player's line");
+            let results_section = &dropout_line[90..];
+            println!("Results section for player {}: {}", player_idx + 1, results_section);
+            
+            // Should have normal results for rounds 1-3, then Z for round 4
+            assert!(!results_section.contains(" Z "), "Should have normal results for rounds 1-3");
+            assert!(results_section.ends_with(" Z"), "Should end with Z for round 4");
+        }
+
+        // Verify active players (should have normal results, no Z)
+        for player_idx in 3..10 {
+            let active_line = player_lines.iter()
+                .find(|&&line| line.contains(&players[player_idx].username))
+                .expect("Should find active player's line");
+            let results_section = &active_line[90..];
+            println!("Results section for active player {}: {}", player_idx + 1, results_section);
+            assert!(!results_section.contains(" Z"), "Active players should not have any Z results");
+        }
+
+        // Verify the number of games in the final round
+        let final_round_games = tournament.games(&mut conn).await?
+            .into_iter()
+            .filter(|g| g.round == Some(3))
+            .count();
+        assert_eq!(final_round_games, 3, "Round 4 should have 3 games with 7 players (including one bye)");
 
         Ok(())
     }
