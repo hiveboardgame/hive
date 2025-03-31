@@ -15,7 +15,7 @@ use shared_types::{
     CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
     TournamentMode,
 };
-use shared_types::{PrettyString, SeedingMode};
+use shared_types::PrettyString;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -193,9 +193,8 @@ pub fn TournamentCreate() -> impl IntoView {
             } else {
                 None
             },
-            // TODO: make this dynamic
-            seeding_mode: Some(SeedingMode::Accelerated),
             games_per_round: tournament.games_per_round.get_untracked(),
+            accelerated_rounds: 1, // Default to 1 accelerated round for Swiss tournaments
         };
         if account.is_some() {
             let api = ApiRequests::new();

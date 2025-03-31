@@ -27,8 +27,8 @@ use itertools::Itertools;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    Certainty, GameSpeed, Standings, Tiebreaker, TimeMode,
-    TournamentDetails, TournamentGameResult, TournamentId, TournamentSortOrder, TournamentStatus,
+    Certainty, GameSpeed, Standings, Tiebreaker, TimeMode, TournamentDetails, TournamentGameResult,
+    TournamentId, TournamentSortOrder, TournamentStatus,
 };
 use std::fmt::Write;
 use std::str::FromStr;
@@ -779,7 +779,11 @@ impl Tournament {
         Ok(sorted_query.get_results(conn).await?)
     }
 
-    pub async fn calculate_standings(&self, round_number: Option<u32>, conn: &mut DbConn<'_>) -> Result<Standings, DbError> {
+    pub async fn calculate_standings(
+        &self,
+        round_number: Option<u32>,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Standings, DbError> {
         let mut standings = Standings::new();
 
         // Add tiebreakers from tournament settings
@@ -791,7 +795,7 @@ impl Tournament {
 
         // Get all games for this tournament
         let mut games = self.games(conn).await?;
-        
+
         // Filter games by round if round_number is provided
         if let Some(round) = round_number {
             games.retain(|g| g.round.is_some_and(|r| r < round as i32));
@@ -1209,17 +1213,19 @@ mod tests {
 
         // Create organizer user
         let organizer_username = format!("organizer_{}", nanoid!(5));
-        println!("TEST: Creating organizer with username: {}", organizer_username);
-        let organizer = NewUser::new(
-            &organizer_username,
-            "test_password",
-            "test@example.com",
-        )?;
+        println!(
+            "TEST: Creating organizer with username: {}",
+            organizer_username
+        );
+        let organizer = NewUser::new(&organizer_username, "test_password", "test@example.com")?;
         let organizer = User::create(organizer, conn).await?;
         println!("TEST: Organizer created with ID: {}", organizer.id);
 
         // Create tournament with organizer
-        println!("TEST: Creating tournament with organizer ID: {}", organizer.id);
+        println!(
+            "TEST: Creating tournament with organizer ID: {}",
+            organizer.id
+        );
         let tournament = Tournament::create(organizer.id, &new_tournament, conn).await?;
         println!("TEST: Tournament created with ID: {}", tournament.id);
 
@@ -1227,7 +1233,10 @@ mod tests {
         let mut players = Vec::new();
         for i in 1..=num_players {
             let player_username = format!("player_{}", i);
-            println!("TEST: Creating player {} with username: {}", i, player_username);
+            println!(
+                "TEST: Creating player {} with username: {}",
+                i, player_username
+            );
             let player = NewUser::new(
                 &player_username,
                 "test_password",
@@ -1237,7 +1246,8 @@ mod tests {
             println!("TEST: Player created with ID: {}", player.id);
 
             // Update the player's rating to the desired value
-            let game_speed = GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
+            let game_speed =
+                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
             let rating_value = 2000.0 - (i as f64 * 25.0); // Spread ratings for proper seeding
             let deviation = 50.0;
             println!(
@@ -1286,7 +1296,11 @@ mod tests {
                 Err(e) => {
                     retries += 1;
                     if retries >= MAX_RETRIES {
-                        return Err(format!("Failed to get connection after {} retries: {:?}", MAX_RETRIES, e).into());
+                        return Err(format!(
+                            "Failed to get connection after {} retries: {:?}",
+                            MAX_RETRIES, e
+                        )
+                        .into());
                     }
                     println!(
                         "TEST WARNING: Failed to get connection (attempt {}/{}), retrying in 1s: {:?}",
@@ -1301,7 +1315,9 @@ mod tests {
     }
 
     /// Start a test transaction
-    async fn start_test_transaction(conn: &mut DbConn<'_>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn start_test_transaction(
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         println!("TEST: Starting test transaction");
         match conn.begin_test_transaction().await {
             Ok(_) => {
@@ -1324,7 +1340,11 @@ mod tests {
         };
 
         if !std::path::Path::new(pairer_path).exists() {
-            return Err(format!("Pairer executable not found at {}. Test cannot proceed.", pairer_path).into());
+            return Err(format!(
+                "Pairer executable not found at {}. Test cannot proceed.",
+                pairer_path
+            )
+            .into());
         }
         println!("TEST: Found pairer executable at: {}", pairer_path);
         Ok(())
@@ -1338,14 +1358,21 @@ mod tests {
     ) -> Result<(), Box<dyn std::error::Error>> {
         println!("TEST: Completing round games");
         for game in games {
-            let game_speed = GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
-            let white_rating = Rating::for_uuid(&game.white_id, &game_speed, conn).await?.rating;
-            let black_rating = Rating::for_uuid(&game.black_id, &game_speed, conn).await?.rating;
+            let game_speed =
+                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
+            let white_rating = Rating::for_uuid(&game.white_id, &game_speed, conn)
+                .await?
+                .rating;
+            let black_rating = Rating::for_uuid(&game.black_id, &game_speed, conn)
+                .await?
+                .rating;
 
             if white_rating >= black_rating {
-                game.resign(&GameControl::Resign(Color::Black), conn).await?;
+                game.resign(&GameControl::Resign(Color::Black), conn)
+                    .await?;
             } else {
-                game.resign(&GameControl::Resign(Color::White), conn).await?;
+                game.resign(&GameControl::Resign(Color::White), conn)
+                    .await?;
             }
         }
         Ok(())
@@ -1362,7 +1389,10 @@ mod tests {
         println!("TEST: Starting round {}", round_number);
 
         let (tournament, games) = tournament.swiss_start_round(conn).await.map_err(|e| {
-            println!("TEST ERROR: Failed to start round {}: {:?}", round_number, e);
+            println!(
+                "TEST ERROR: Failed to start round {}: {:?}",
+                round_number, e
+            );
             format!("Failed to start round {}: {:?}", round_number, e)
         })?;
 
@@ -1433,7 +1463,10 @@ mod tests {
         verify_pairer_executable()?;
 
         // Create tournament
-        println!("TEST: Creating test tournament with {} players", num_players);
+        println!(
+            "TEST: Creating test tournament with {} players",
+            num_players
+        );
         let (tournament, _players) = create_test_swiss_tournament(
             &mut conn,
             num_players,
@@ -1476,10 +1509,10 @@ mod tests {
     async fn test_swiss_tournament_with_even_players() -> Result<(), Box<dyn std::error::Error>> {
         run_swiss_tournament_test(
             "test_swiss_tournament_with_even_players",
-            8,  // num_players
-            1,  // games_per_round
-            0,  // accelerated_rounds
-            4,  // expected_games_per_round (8 players / 2 = 4 games)
+            8, // num_players
+            1, // games_per_round
+            0, // accelerated_rounds
+            4, // expected_games_per_round (8 players / 2 = 4 games)
         )
         .await
     }

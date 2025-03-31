@@ -1208,7 +1208,7 @@ impl Game {
             }
         }
         if let Some(tid) = self.tournament_id {
-            let tournament = Tournament::find_by_uuid( tid, conn).await?;
+            let tournament = Tournament::find_by_uuid(tid, conn).await?;
             tournament.ensure_user_is_organizer(user_id, conn).await?;
             if *new_result == TournamentGameResult::Draw {
                 return Err(DbError::InvalidAction {
