@@ -1270,21 +1270,14 @@ mod tests {
         Ok((tournament, players))
     }
 
-    #[tokio::test]
-    async fn test_swiss_tournament_with_even_players() -> Result<(), Box<dyn std::error::Error>> {
-        println!("\n\n=== STARTING TEST: test_swiss_tournament_with_even_players ===");
-
-        // Clean up pool from previous tests
-        crate::test_utils::cleanup_pool().await;
-
-        // Use the common test database connection pool
+    /// Get a database connection with retry logic
+    async fn get_db_connection() -> Result<DbConn<'static>, Box<dyn std::error::Error>> {
         println!("TEST: Getting database pool");
         let pool = crate::test_utils::get_pool();
 
-        // Add retry logic for getting a connection with a maximum number of retries
         let mut retries = 0;
         const MAX_RETRIES: u32 = 5;
-        let mut conn = loop {
+        let conn = loop {
             match pool.get().await {
                 Ok(conn) => {
                     println!("TEST: Connection obtained successfully");
@@ -1293,7 +1286,7 @@ mod tests {
                 Err(e) => {
                     retries += 1;
                     if retries >= MAX_RETRIES {
-                        panic!("Failed to get connection after {} retries: {:?}", MAX_RETRIES, e);
+                        return Err(format!("Failed to get connection after {} retries: {:?}", MAX_RETRIES, e).into());
                     }
                     println!(
                         "TEST WARNING: Failed to get connection (attempt {}/{}), retrying in 1s: {:?}",
@@ -1304,17 +1297,26 @@ mod tests {
             }
         };
 
-        // Start a test transaction that will be rolled back automatically
+        Ok(conn)
+    }
+
+    /// Start a test transaction
+    async fn start_test_transaction(conn: &mut DbConn<'_>) -> Result<(), Box<dyn std::error::Error>> {
         println!("TEST: Starting test transaction");
         match conn.begin_test_transaction().await {
-            Ok(_) => println!("TEST: Test transaction started successfully"),
+            Ok(_) => {
+                println!("TEST: Test transaction started successfully");
+                Ok(())
+            }
             Err(e) => {
                 println!("TEST ERROR: Failed to start test transaction: {:?}", e);
-                panic!("Failed to start test transaction: {:?}", e);
+                Err(format!("Failed to start test transaction: {:?}", e).into())
             }
         }
+    }
 
-        // Check if pairer executable exists
+    /// Verify pairer executable exists
+    fn verify_pairer_executable() -> Result<(), Box<dyn std::error::Error>> {
         let pairer_path = if cfg!(target_os = "macos") {
             "/Users/leex/src/hive/tools/macos/pairer"
         } else {
@@ -1322,182 +1324,72 @@ mod tests {
         };
 
         if !std::path::Path::new(pairer_path).exists() {
-            panic!(
-                "Pairer executable not found at {}. Test cannot proceed.",
-                pairer_path
-            );
+            return Err(format!("Pairer executable not found at {}. Test cannot proceed.", pairer_path).into());
         }
         println!("TEST: Found pairer executable at: {}", pairer_path);
+        Ok(())
+    }
 
-        // Create a tournament with 8 players and 1 game per round (no acceleration)
-        println!("TEST: Creating test tournament with 8 players");
-        let tournament_result = create_test_swiss_tournament(&mut conn, 8, 1, 0).await;
+    /// Complete a round of games
+    async fn complete_round_games(
+        tournament: &Tournament,
+        games: Vec<Game>,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        println!("TEST: Completing round games");
+        for game in games {
+            let game_speed = GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
+            let white_rating = Rating::for_uuid(&game.white_id, &game_speed, conn).await?.rating;
+            let black_rating = Rating::for_uuid(&game.black_id, &game_speed, conn).await?.rating;
 
-        match tournament_result {
-            Ok((tournament, _players)) => {
-                println!(
-                    "TEST: Test tournament created successfully with ID: {}",
-                    tournament.id
-                );
-
-                // Round 1
-                println!("\n=== ROUND 1 ===");
-                println!("TEST: Starting Swiss tournament");
-                match tournament.swiss_start_round(&mut conn).await {
-                    Ok((_, games)) => {
-                        println!(
-                            "TEST: Swiss tournament started successfully, created {} games",
-                            games.len()
-                        );
-                        println!(
-                            "TEST: Verifying game count: expected 4, actual {}",
-                            games.len()
-                        );
-                        assert_eq!(
-                            games.len(),
-                            4,
-                            "Expected 4 games for 8 players with 1 game per round"
-                        );
-
-                        // Complete round 1 games
-                        println!("TEST: Completing round 1 games");
-                        for game in games {
-                            // Get player ratings from the database
-                            let game_speed = GameSpeed::from_base_increment(
-                                tournament.time_base,
-                                tournament.time_increment,
-                            );
-                            let white_rating =
-                                Rating::for_uuid(&game.white_id, &game_speed, &mut conn)
-                                    .await?
-                                    .rating;
-                            let black_rating =
-                                Rating::for_uuid(&game.black_id, &game_speed, &mut conn)
-                                    .await?
-                                    .rating;
-
-                            // Higher rated player wins
-                            if white_rating >= black_rating {
-                                game.resign(&GameControl::Resign(Color::Black), &mut conn)
-                                    .await?;
-                            } else {
-                                game.resign(&GameControl::Resign(Color::White), &mut conn)
-                                    .await?;
-                            };
-                        }
-                    }
-                    Err(e) => {
-                        println!("TEST ERROR: Failed to start Swiss tournament: {:?}", e);
-                        panic!("Failed to start Swiss tournament: {:?}", e);
-                    }
-                }
-
-                // Round 2
-                println!("\n=== ROUND 2 ===");
-                println!("TEST: Starting round 2");
-                match tournament.swiss_start_round(&mut conn).await {
-                    Ok((_, games)) => {
-                        println!(
-                            "TEST: Round 2 started successfully, created {} games",
-                            games.len()
-                        );
-                        println!(
-                            "TEST: Verifying game count: expected 4, actual {}",
-                            games.len()
-                        );
-                        assert_eq!(
-                            games.len(),
-                            4,
-                            "Expected 4 games for 8 players with 1 game per round"
-                        );
-
-                        // Complete round 2 games
-                        println!("TEST: Completing round 2 games");
-                        for game in games {
-                            // Get player ratings from the database
-                            let game_speed =
-                                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
-                            let white_rating =
-                                Rating::for_uuid(&game.white_id, &game_speed, &mut conn)
-                                    .await?
-                                    .rating;
-                            let black_rating =
-                                Rating::for_uuid(&game.black_id, &game_speed, &mut conn)
-                                    .await?
-                                    .rating;
-
-                            if white_rating >= black_rating {
-                                game.resign(&GameControl::Resign(Color::Black), &mut conn)
-                                    .await?;
-                            } else {
-                                game.resign(&GameControl::Resign(Color::White), &mut conn)
-                                    .await?;
-                            };
-                        }
-                    }
-                    Err(e) => {
-                        println!("TEST ERROR: Failed to start round 2: {:?}", e);
-                        panic!("Failed to start round 2: {:?}", e);
-                    }
-                }
-
-                // Round 3
-                println!("\n=== ROUND 3 ===");
-                println!("TEST: Starting round 3");
-                match tournament.swiss_start_round(&mut conn).await {
-                    Ok((_, games)) => {
-                        println!(
-                            "TEST: Round 3 started successfully, created {} games",
-                            games.len()
-                        );
-                        println!(
-                            "TEST: Verifying game count: expected 4, actual {}",
-                            games.len()
-                        );
-                        assert_eq!(
-                            games.len(),
-                            4,
-                            "Expected 4 games for 8 players with 1 game per round"
-                        );
-
-                        // Complete round 3 games
-                        println!("TEST: Completing round 3 games");
-                        for game in games {
-                            // Get player ratings from the database
-                            let game_speed =
-                                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
-                            let white_rating =
-                                Rating::for_uuid(&game.white_id, &game_speed, &mut conn)
-                                    .await?
-                                    .rating;
-                            let black_rating =
-                                Rating::for_uuid(&game.black_id, &game_speed, &mut conn)
-                                    .await?
-                                    .rating;
-
-                            // Higher rated player wins
-                            if white_rating >= black_rating {
-                                game.resign(&GameControl::Resign(Color::Black), &mut conn)
-                                    .await?;
-                            } else {
-                                game.resign(&GameControl::Resign(Color::White), &mut conn)
-                                    .await?;
-                            };
-                        }
-                    }
-                    Err(e) => {
-                        println!("TEST ERROR: Failed to start round 3: {:?}", e);
-                        panic!("Failed to start round 3: {:?}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                println!("TEST ERROR: Failed to create test tournament: {:?}", e);
-                panic!("Failed to create test tournament: {:?}", e);
+            if white_rating >= black_rating {
+                game.resign(&GameControl::Resign(Color::Black), conn).await?;
+            } else {
+                game.resign(&GameControl::Resign(Color::White), conn).await?;
             }
         }
+        Ok(())
+    }
 
-        // Clean up test files
+    /// Run a tournament round
+    async fn run_tournament_round(
+        tournament: &Tournament,
+        round_number: u32,
+        expected_game_count: usize,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(Tournament, Vec<Game>), Box<dyn std::error::Error>> {
+        println!("\n=== ROUND {} ===", round_number);
+        println!("TEST: Starting round {}", round_number);
+
+        let (tournament, games) = tournament.swiss_start_round(conn).await.map_err(|e| {
+            println!("TEST ERROR: Failed to start round {}: {:?}", round_number, e);
+            format!("Failed to start round {}: {:?}", round_number, e)
+        })?;
+
+        println!(
+            "TEST: Round {} started successfully, created {} games",
+            round_number,
+            games.len()
+        );
+        println!(
+            "TEST: Verifying game count: expected {}, actual {}",
+            expected_game_count,
+            games.len()
+        );
+        assert_eq!(
+            games.len(),
+            expected_game_count,
+            "Expected {} games for this round",
+            expected_game_count
+        );
+
+        complete_round_games(&tournament, games.clone(), conn).await?;
+
+        Ok((tournament, games))
+    }
+
+    /// Clean up test files
+    async fn cleanup_test_files() {
         println!("TEST: Cleaning up test files");
         let trfx_dir = "/Users/leex/src/hive/trfx";
         if let Ok(entries) = std::fs::read_dir(trfx_dir) {
@@ -1516,263 +1408,91 @@ mod tests {
         } else {
             println!("TEST WARNING: Failed to read trfx directory");
         }
+    }
 
-        println!("=== TEST COMPLETED: test_swiss_tournament_with_even_players ===\n\n");
+    /// Run a complete Swiss tournament test
+    async fn run_swiss_tournament_test(
+        test_name: &str,
+        num_players: usize,
+        games_per_round: i32,
+        accelerated_rounds: i32,
+        expected_games_per_round: usize,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        println!("\n\n=== STARTING TEST: {} ===\n", test_name);
 
-        // Clean up pool after test
+        // Clean up pool from previous tests
+        crate::test_utils::cleanup_pool().await;
+
+        // Get database connection
+        let mut conn = get_db_connection().await?;
+
+        // Start test transaction
+        start_test_transaction(&mut conn).await?;
+
+        // Verify pairer executable
+        verify_pairer_executable()?;
+
+        // Create tournament
+        println!("TEST: Creating test tournament with {} players", num_players);
+        let (tournament, _players) = create_test_swiss_tournament(
+            &mut conn,
+            num_players,
+            games_per_round,
+            accelerated_rounds,
+        )
+        .await
+        .map_err(|e| {
+            println!("TEST ERROR: Failed to create test tournament: {:?}", e);
+            format!("Failed to create test tournament: {:?}", e)
+        })?;
+
+        println!(
+            "TEST: Test tournament created successfully with ID: {}",
+            tournament.id
+        );
+
+        // Run three rounds
+        let mut current_tournament = tournament;
+        for round in 1..=3 {
+            let (tournament, _) = run_tournament_round(
+                &current_tournament,
+                round,
+                expected_games_per_round,
+                &mut conn,
+            )
+            .await?;
+            current_tournament = tournament;
+        }
+
+        // Clean up
+        cleanup_test_files().await;
+        println!("=== TEST COMPLETED: {} ===\n\n", test_name);
         crate::test_utils::cleanup_pool().await;
 
         Ok(())
     }
 
     #[tokio::test]
+    async fn test_swiss_tournament_with_even_players() -> Result<(), Box<dyn std::error::Error>> {
+        run_swiss_tournament_test(
+            "test_swiss_tournament_with_even_players",
+            8,  // num_players
+            1,  // games_per_round
+            0,  // accelerated_rounds
+            4,  // expected_games_per_round (8 players / 2 = 4 games)
+        )
+        .await
+    }
+
+    #[tokio::test]
     async fn test_swiss_tournament_with_odd_players() -> Result<(), Box<dyn std::error::Error>> {
-        println!("\n\n=== STARTING TEST: test_swiss_tournament_with_odd_players ===");
-
-        // Clean up pool from previous tests
-        crate::test_utils::cleanup_pool().await;
-
-        // Use the common test database connection pool
-        println!("TEST: Getting database pool");
-        let pool = crate::test_utils::get_pool();
-        println!("TEST: Pool obtained, getting connection");
-
-        // Add retry logic for getting a connection with a maximum number of retries
-        let mut retries = 0;
-        const MAX_RETRIES: u32 = 5;
-        let mut conn = loop {
-            match pool.get().await {
-                Ok(conn) => {
-                    println!("TEST: Connection obtained successfully");
-                    break conn;
-                }
-                Err(e) => {
-                    retries += 1;
-                    if retries >= MAX_RETRIES {
-                        panic!("Failed to get connection after {} retries: {:?}", MAX_RETRIES, e);
-                    }
-                    println!(
-                        "TEST WARNING: Failed to get connection (attempt {}/{}), retrying in 1s: {:?}",
-                        retries, MAX_RETRIES, e
-                    );
-                    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-                }
-            }
-        };
-
-        // Start a test transaction that will be rolled back automatically
-        println!("TEST: Starting test transaction");
-        match conn.begin_test_transaction().await {
-            Ok(_) => println!("TEST: Test transaction started successfully"),
-            Err(e) => {
-                println!("TEST ERROR: Failed to start test transaction: {:?}", e);
-                panic!("Failed to start test transaction: {:?}", e);
-            }
-        };
-
-        // Check if pairer executable exists
-        let pairer_path = if cfg!(target_os = "macos") {
-            "/Users/leex/src/hive/tools/macos/pairer"
-        } else {
-            "/Users/leex/src/hive/tools/linux/pairer"
-        };
-
-        if !std::path::Path::new(pairer_path).exists() {
-            panic!(
-                "Pairer executable not found at {}. Test cannot proceed.",
-                pairer_path
-            );
-        }
-        println!("TEST: Found pairer executable at: {}", pairer_path);
-
-        // Create a tournament with 13 players and 2 games per round (accelerated seeding)
-        println!("TEST: Creating test tournament with 13 players");
-        let tournament_result = create_test_swiss_tournament(&mut conn, 13, 2, 1).await;
-
-        if let Err(ref e) = tournament_result {
-            println!("TEST ERROR: Failed to create test tournament: {:?}", e);
-            panic!("Failed to create test tournament: {:?}", e);
-        }
-
-        let (tournament, _players) = tournament_result.expect("Failed to create test tournament");
-        println!(
-            "TEST: Test tournament created successfully with ID: {}",
-            tournament.id
-        );
-
-        // Round 1
-        println!("\n=== ROUND 1 ===");
-        println!("TEST: Starting Swiss tournament");
-        let start_result = tournament.swiss_start_round(&mut conn).await;
-
-        if let Err(ref e) = start_result {
-            println!("TEST ERROR: Failed to start Swiss tournament: {:?}", e);
-            panic!("Failed to start Swiss tournament: {:?}", e);
-        }
-
-        let (tournament, games) = start_result.expect("Failed to start Swiss tournament");
-        println!(
-            "TEST: Swiss tournament started successfully, created {} games",
-            games.len()
-        );
-        println!(
-            "TEST: Verifying game count: expected 12, actual {}",
-            games.len()
-        );
-        assert_eq!(
-            games.len(),
-            12,
-            "Expected 12 games for 13 players with 2 games per round"
-        );
-
-        // Complete round 1 games
-        println!("TEST: Completing round 1 games");
-        for game in games {
-            // Get player ratings from the database
-            let game_speed =
-                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
-            let white_rating = Rating::for_uuid(&game.white_id, &game_speed, &mut conn)
-                .await?
-                .rating;
-            let black_rating = Rating::for_uuid(&game.black_id, &game_speed, &mut conn)
-                .await?
-                .rating;
-
-            // Higher rated player wins
-            if white_rating >= black_rating {
-                game.resign(&GameControl::Resign(Color::Black), &mut conn)
-                    .await?;
-            } else {
-                game.resign(&GameControl::Resign(Color::White), &mut conn)
-                    .await?;
-            };
-        }
-
-        // Round 2
-        println!("\n=== ROUND 2 ===");
-        println!("TEST: Starting round 2");
-        let round2_result = tournament.swiss_start_round(&mut conn).await;
-
-        if let Err(ref e) = round2_result {
-            println!("TEST ERROR: Failed to start round 2: {:?}", e);
-            panic!("Failed to start round 2: {:?}", e);
-        }
-
-        let (tournament, games) = round2_result.expect("Failed to start round 2");
-        println!(
-            "TEST: Round 2 started successfully, created {} games",
-            games.len()
-        );
-        println!(
-            "TEST: Verifying game count: expected 12, actual {}",
-            games.len()
-        );
-        assert_eq!(
-            games.len(),
-            12,
-            "Expected 12 games for 13 players with 2 games per round"
-        );
-
-        // Complete round 2 games
-        println!("TEST: Completing round 2 games");
-        for game in games {
-            // Get player ratings from the database
-            let game_speed =
-                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
-            let white_rating = Rating::for_uuid(&game.white_id, &game_speed, &mut conn)
-                .await?
-                .rating;
-            let black_rating = Rating::for_uuid(&game.black_id, &game_speed, &mut conn)
-                .await?
-                .rating;
-
-            // Higher rated player wins
-            let result = if white_rating >= black_rating {
-                TournamentGameResult::Winner(Color::White).to_string()
-            } else {
-                TournamentGameResult::Winner(Color::Black).to_string()
-            };
-            diesel::update(&game)
-                .set(games::tournament_game_result.eq(result))
-                .execute(&mut conn)
-                .await?;
-        }
-
-        // Round 3
-        println!("\n=== ROUND 3 ===");
-        println!("TEST: Starting round 3");
-        let round3_result = tournament.swiss_start_round(&mut conn).await;
-
-        if let Err(ref e) = round3_result {
-            println!("TEST ERROR: Failed to start round 3: {:?}", e);
-            panic!("Failed to start round 3: {:?}", e);
-        }
-
-        let (tournament, games) = round3_result.expect("Failed to start round 3");
-        println!(
-            "TEST: Round 3 started successfully, created {} games",
-            games.len()
-        );
-        println!(
-            "TEST: Verifying game count: expected 12, actual {}",
-            games.len()
-        );
-        assert_eq!(
-            games.len(),
-            12,
-            "Expected 12 games for 13 players with 2 games per round"
-        );
-
-        // Complete round 3 games
-        println!("TEST: Completing round 3 games");
-        for game in games {
-            // Get player ratings from the database
-            let game_speed =
-                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
-            let white_rating = Rating::for_uuid(&game.white_id, &game_speed, &mut conn)
-                .await?
-                .rating;
-            let black_rating = Rating::for_uuid(&game.black_id, &game_speed, &mut conn)
-                .await?
-                .rating;
-
-            // Higher rated player wins
-            let result = if white_rating >= black_rating {
-                TournamentGameResult::Winner(Color::White).to_string()
-            } else {
-                TournamentGameResult::Winner(Color::Black).to_string()
-            };
-            diesel::update(&game)
-                .set(games::tournament_game_result.eq(result))
-                .execute(&mut conn)
-                .await?;
-        }
-
-        // Clean up test files
-        println!("TEST: Cleaning up test files");
-        let trfx_dir = "/Users/leex/src/hive/trfx";
-        if let Ok(entries) = std::fs::read_dir(trfx_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_file()
-                    && (path.to_string_lossy().ends_with(".trfx")
-                        || path.to_string_lossy().contains("_pairing"))
-                {
-                    println!("TEST: Removing file: {:?}", path);
-                    if let Err(e) = std::fs::remove_file(path) {
-                        println!("TEST WARNING: Failed to remove file: {:?}", e);
-                    }
-                }
-            }
-        } else {
-            println!("TEST WARNING: Failed to read trfx directory");
-        }
-
-        println!("=== TEST COMPLETED: test_swiss_tournament_with_odd_players ===\n\n");
-
-        // Clean up pool after test
-        crate::test_utils::cleanup_pool().await;
-
-        Ok(())
+        run_swiss_tournament_test(
+            "test_swiss_tournament_with_odd_players",
+            13, // num_players
+            2,  // games_per_round
+            1,  // accelerated_rounds
+            12, // expected_games_per_round (13 players - 1 bye = 12 games)
+        )
+        .await
     }
 }
