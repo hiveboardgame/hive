@@ -16,7 +16,7 @@ use db_lib::{
     models::User,
     DbConn,
 };
-use leptos::*;
+use leptos::prelude::*;
 
 impl AccountResponse {
     pub async fn from_uuid(id: &Uuid, conn: &mut DbConn<'_>) -> Result<Self, ServerFnError> {

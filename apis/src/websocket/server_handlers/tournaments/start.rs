@@ -1,6 +1,6 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage, TournamentUpdate},
-    responses::{GameResponse, TournamentResponse},
+    responses::GameResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -34,27 +34,22 @@ impl StartHandler {
                 async move { tournament.start_by_organizer(&self.user_id, tc).await }.scope_boxed()
             })
             .await?;
-        let tournament_response = TournamentResponse::from_model(&tournament, &mut conn).await?;
 
         for uuid in deleted_invitations {
             messages.push(InternalServerMessage {
                 destination: MessageDestination::User(uuid),
-                message: ServerMessage::Tournament(TournamentUpdate::Uninvited(
-                    tournament_response.clone(),
-                )),
+                message: ServerMessage::Tournament(TournamentUpdate::Uninvited(TournamentId(
+                    tournament.nanoid.clone(),
+                ))),
             });
         }
 
-        let players = tournament.players(&mut conn).await?;
-
-        for player in players {
-            messages.push(InternalServerMessage {
-                destination: MessageDestination::User(player.id),
-                message: ServerMessage::Tournament(TournamentUpdate::Started(
-                    tournament_response.clone(),
-                )),
-            });
-        }
+        messages.push(InternalServerMessage {
+            destination: MessageDestination::Global,
+            message: ServerMessage::Tournament(TournamentUpdate::Started(TournamentId(
+                tournament.nanoid.clone(),
+            ))),
+        });
 
         for game in games {
             let game_response = GameResponse::from_model(&game, &mut conn).await?;

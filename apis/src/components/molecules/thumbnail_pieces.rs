@@ -4,11 +4,11 @@ use crate::providers::Config;
 use crate::responses::GameResponse;
 use crate::{common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
 use hive_lib::Position;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn ThumbnailPieces(game: StoredValue<GameResponse>) -> impl IntoView {
-    let state = store_value(game().create_state());
+    let state = Signal::derive(move || game.get_value().create_state());
     let thumbnail_pieces = move || {
         let mut pieces = Vec::new();
         for r in 0..32 {
@@ -24,7 +24,8 @@ pub fn ThumbnailPieces(game: StoredValue<GameResponse>) -> impl IntoView {
     };
 
     let config = expect_context::<Config>().0;
-    let straight = move || config().tile_design == TileDesign::ThreeD;
+    let tile_opts = Signal::derive(move || config().tile);
+    let straight = move || config().tile.design == TileDesign::ThreeD;
 
     let (width, height) = (400.0_f32, 510.0_f32);
     // TODO: because Thumbnail pieces is used in two places, this leads to weirdness in the TV
@@ -46,7 +47,7 @@ pub fn ThumbnailPieces(game: StoredValue<GameResponse>) -> impl IntoView {
                     thumbnail_pieces()
                         .into_iter()
                         .map(|hs| {
-                            view! { <SimpleHexStack hex_stack=hs /> }
+                            view! { <SimpleHexStack hex_stack=hs tile_opts=tile_opts() /> }
                         })
                         .collect_view()
                 }}

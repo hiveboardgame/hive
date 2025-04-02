@@ -1,5 +1,5 @@
 use crate::{common::UserStatus, responses::UserResponse};
-use leptos::*;
+use leptos::prelude::*;
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, Copy)]
@@ -16,7 +16,7 @@ impl Default for OnlineUsersSignal {
 impl OnlineUsersSignal {
     pub fn new() -> Self {
         Self {
-            signal: create_rw_signal(OnlineUsersState::new()),
+            signal: RwSignal::new(OnlineUsersState::new()),
         }
     }
 

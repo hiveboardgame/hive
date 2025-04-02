@@ -3,10 +3,10 @@ use crate::components::molecules::analysis_and_download::AnalysisAndDownload;
 use crate::components::molecules::control_buttons::ControlButtons;
 use crate::components::molecules::hex_stack::HexStack;
 use crate::providers::game_state::{GameStateSignal, View};
-use crate::providers::AuthContext;
+use crate::providers::Config;
 use hive_lib::History;
 use hive_lib::{Bug, BugStack, Color, GameStatus, Piece, Position, State};
-use leptos::*;
+use leptos::prelude::*;
 use std::str::FromStr;
 
 fn piece_active(
@@ -55,14 +55,15 @@ pub enum Alignment {
 
 #[component]
 pub fn Reserve(
-    #[prop(into)] color: MaybeSignal<Color>,
+    #[prop(into)] color: Signal<Color>,
     alignment: Alignment,
     analysis: bool,
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-
+    let config = expect_context::<Config>().0;
+    let tile_opts = Signal::derive(move || config().tile);
     let (viewbox_str, viewbox_styles) = match alignment {
         Alignment::SingleRow => ("-40 -55 450 100", "inline max-h-[inherit] h-full w-fit"),
         Alignment::DoubleRow => {
@@ -73,44 +74,39 @@ pub fn Reserve(
             }
         }
     };
-    // For some reason getting a slice of the whole state is a problem and leads to wasm oob errors, because of that the other slices are less useful
+    // TODO: Should be a Store, this is hacky
     let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
     let move_info = create_read_slice(game_state.signal, |gs| gs.move_info.clone());
     let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
+    let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
     let last_turn = game_state.is_last_turn_as_signal();
-
+    let game_response = create_read_slice(game_state.signal, |gs| gs.game_response.clone());
     let stacked_pieces = move || {
         let board_view = board_view();
         let move_info = move_info();
         let history_turn = history_turn();
-        let game_state = game_state.signal.get();
-        let tournament = game_state
-            .game_response
+        let game_response = game_response();
+        let state = state();
+        let tournament = game_response
             .as_ref()
             .is_some_and(|gr| gr.tournament.is_some());
-        let status = game_state
-            .game_response
+        let status = game_response
             .as_ref()
             .map_or(GameStatus::NotStarted, |g| g.game_status.clone());
         let reserve = match board_view {
-            View::Game => game_state
-                .state
-                .board
-                .reserve(color(), game_state.state.game_type),
+            View::Game => state.board.reserve(color(), state.game_type),
             View::History => {
                 let mut history = History::new();
                 if let Some(turn) = history_turn {
-                    history.moves = game_state.state.history.moves[0..=turn].into();
+                    history.moves = state.history.moves[0..=turn].into();
                 }
                 let history_state =
                     State::new_from_history(&history).expect("Got state from history");
-                history_state
-                    .board
-                    .reserve(color(), game_state.state.game_type)
+                history_state.board.reserve(color(), state.game_type)
             }
         };
         let mut clicked_position = None;
-        if color() == game_state.state.turn_color {
+        if color() == state.turn_color {
             clicked_position = move_info.reserve_position;
         }
         let mut seen = -1;
@@ -129,7 +125,7 @@ pub fn Reserve(
                     let piece = Piece::from_str(piece_str).expect("Parsed piece");
                     let piece_type = if piece_active(
                         status.clone(),
-                        &game_state.state,
+                        &state,
                         &board_view,
                         &piece,
                         tournament,
@@ -167,7 +163,7 @@ pub fn Reserve(
         stacked_pieces()
             .into_iter()
             .map(|hex_stack| {
-                view! { <HexStack hex_stack=hex_stack /> }
+                view! { <HexStack hex_stack=hex_stack tile_opts=tile_opts() target_stack=RwSignal::new(None) /> }
             })
             .collect_view()
     };
@@ -186,22 +182,10 @@ pub fn Reserve(
 }
 
 #[component]
-pub fn ReserveContent(player_color: Memo<Color>) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+pub fn ReserveContent(player_color: Memo<Color>, show_buttons: Signal<bool>) -> impl IntoView {
     let top_color = Signal::derive(move || player_color().opposite_color());
     let bottom_color = Signal::derive(player_color);
-    let auth_context = expect_context::<AuthContext>();
-    let user = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user),
-        _ => None,
-    };
-    let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
-    let show_buttons = move || {
-        user().is_some_and(|user| {
-            let (white_id, black_id) = white_and_black();
-            Some(user.id) == black_id || Some(user.id) == white_id
-        })
-    };
+
     view! {
         <Reserve color=top_color alignment=Alignment::DoubleRow analysis=false />
         <div class="flex flex-row-reverse justify-center items-center">

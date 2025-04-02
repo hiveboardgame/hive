@@ -1,7 +1,7 @@
 use crate::i18n::*;
 use crate::{common::TileDesign, providers::Config};
 use lazy_static::lazy_static;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::use_window;
 
 lazy_static! {
@@ -20,15 +20,17 @@ lazy_static! {
 pub fn TileDesignToggle() -> impl IntoView {
     let i18n = use_i18n();
     let good_software = RwSignal::new(false);
-    create_effect(move |_| good_software.update(|b| *b = *NOT_APPLE));
+    Effect::new(move |_| good_software.update(|b| *b = *NOT_APPLE));
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.piece_style)}</p>
-        <div class="flex">
+        <div class="flex flex-wrap">
             <TileDesignButton tile_design=TileDesign::Official />
             <TileDesignButton tile_design=TileDesign::Flat />
             <Show when=good_software>
                 <TileDesignButton tile_design=TileDesign::ThreeD />
             </Show>
+            <TileDesignButton tile_design=TileDesign::HighContrast />
+            <TileDesignButton tile_design=TileDesign::Community />
             <TileDesignButton tile_design=TileDesign::HighContrast />
             <TileDesignButton tile_design=TileDesign::Community />
         </div>
@@ -38,11 +40,10 @@ pub fn TileDesignToggle() -> impl IntoView {
 #[component]
 pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
     let i18n = use_i18n();
-    let tile_design = store_value(tile_design);
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let tile_design = Signal::derive(move || tile_design.clone());
+    let Config(config, set_cookie) = expect_context();
     let is_active = move || {
-        if config().tile_design == tile_design() {
+        if config().tile.design == tile_design() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -63,22 +64,20 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
                     set_cookie
                         .update(|c| {
                             if let Some(cookie) = c {
-                                cookie.tile_design = tile_design();
+                                cookie.tile.design = tile_design();
                             }
                         });
                 }
             >
 
-                {match tile_design() {
-                    TileDesign::Official => t!(i18n, user_config.style_buttons.official).into_view(),
-                    TileDesign::Flat => t!(i18n, user_config.style_buttons.flat).into_view(),
-                    TileDesign::ThreeD => t!(i18n, user_config.style_buttons.three_d).into_view(),
+                {move || match tile_design() {
+                    TileDesign::Official => t_string!(i18n, user_config.style_buttons.official),
+                    TileDesign::Flat => t_string!(i18n, user_config.style_buttons.flat),
+                    TileDesign::ThreeD => t_string!(i18n, user_config.style_buttons.three_d),
                     TileDesign::HighContrast => {
-                        t!(i18n, user_config.style_buttons.high_contrast).into_view()
+                        t_string!(i18n, user_config.style_buttons.high_contrast)
                     }
-                    TileDesign::Community => {
-                        t!(i18n, user_config.style_buttons.community).into_view()
-                    }
+                    TileDesign::Community => t_string!(i18n, user_config.style_buttons.community),
                 }}
 
             </button>

@@ -2,14 +2,13 @@ use crate::components::layouts::base_layout::OrientationSignal;
 use crate::components::molecules::hamburger::Hamburger;
 use crate::components::organisms::chat::ChatWindow;
 use crate::providers::chat::Chat;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::SimpleDestination;
 
 #[component]
 pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
     let chat = expect_context::<Chat>();
-    let destination = StoredValue::new(destination);
     let hamburger_show = expect_context::<OrientationSignal>().chat_dropdown_open;
     let chat_style = "absolute z-50 flex-col w-full h-[80dvh] max-w-screen bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md left-0 p-2";
     let button_color = move || {
@@ -22,7 +21,7 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
         }
     };
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         hamburger_show();
         chat.seen_messages()
     });
@@ -38,10 +37,10 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
             })
 
             dropdown_style=chat_style
-            content=view! { <Icon icon=icondata::BiChatRegular class="w-4 h-4" /> }
+            content=view! { <Icon icon=icondata::BiChatRegular attr:class="w-4 h-4" /> }
             id="chat"
         >
-            <ChatWindow destination=destination() />
+            <ChatWindow destination=destination.clone() />
         </Hamburger>
     }
 }

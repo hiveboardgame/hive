@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[server]
 pub async fn register(
@@ -12,7 +12,7 @@ pub async fn register(
     use actix_identity::Identity;
     use actix_web::HttpMessage;
     use argon2::{
-        password_hash::{PasswordHasher, SaltString},
+        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2,
     };
     use db_lib::db_error::DbError;
@@ -20,7 +20,6 @@ pub async fn register(
     use db_lib::models::{NewUser, User};
     use diesel_async::scoped_futures::ScopedFutureExt;
     use diesel_async::AsyncConnection;
-    use rand_core::OsRng;
     const MIN_PASSWORD_LENGTH: usize = 8;
     const MAX_PASSWORD_LENGTH: usize = 128;
 
@@ -41,7 +40,7 @@ pub async fn register(
         )));
     }
 
-    let pool = pool()?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
@@ -58,9 +57,8 @@ pub async fn register(
         })
         .await?;
 
-    let req = use_context::<actix_web::HttpRequest>()
-        .ok_or("Failed to get HttpRequest")
-        .map_err(ServerFnError::new)?;
+    let req: actix_web::HttpRequest = leptos_actix::extract().await?;
+
     Identity::login(&req.extensions(), user.id.to_string()).expect("To have logged in");
     leptos_actix::redirect(&pathname);
 

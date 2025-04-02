@@ -1,12 +1,13 @@
 use crate::components::organisms::analysis::atoms::{
     CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation,
 };
+use crate::components::organisms::analysis::AnalysisTree;
 use crate::components::organisms::{
     analysis::{AnalysisSignal, DownloadTree, LoadTree, UndoButton},
     reserve::{Alignment, Reserve},
 };
 use hive_lib::Color;
-use leptos::{ev::keydown, *};
+use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 use std::collections::HashMap;
 use tree_ds::prelude::*;
@@ -14,12 +15,20 @@ use tree_ds::prelude::*;
 #[component]
 pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let current_node = create_read_slice(analysis, |a| {
-        a.as_ref().and_then(|a| a.current_node.clone())
-    });
-    let current_path = create_memo(move |_| {
+    let current_node = move || analysis.get().and_then(|a| a.current_node.clone());
+    let get_tree = move || {
+        let t = analysis.get().unwrap();
+        let out = AnalysisTree {
+            current_node: t.current_node.clone(),
+            tree: t.tree.clone(),
+            hashes: t.hashes.clone(),
+            game_type: t.game_type,
+        };
+        serde_json::to_string(&out).unwrap()
+    };
+    let current_path = Memo::new(move |_| {
         let mut current_path = vec![];
-        if let Some(current_node) = current_node.get() {
+        if let Some(current_node) = current_node() {
             let current_id = current_node.get_node_id();
             current_path.push(current_id);
             let analysis = analysis.get_untracked().unwrap();
@@ -29,17 +38,9 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         };
         current_path
     });
-    let prev_button = create_node_ref::<html::Button>();
-    let next_button = create_node_ref::<html::Button>();
-    let window = use_window();
-    let active = Signal::derive(move || {
-        window
-            .as_ref()?
-            .document()?
-            .query_selector(".bg-orange-twilight")
-            .ok()?
-    });
-    create_effect(move |_| {
+    let prev_button = NodeRef::<html::Button>::new();
+    let next_button = NodeRef::<html::Button>::new();
+    Effect::new(move |_| {
         _ = use_event_listener(document().body(), keydown, move |evt| {
             if evt.key() == "ArrowLeft" {
                 evt.prevent_default();
@@ -59,20 +60,25 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         None
     } else {
         Some(Callback::new(move |()| {
-            if let Some(elem) = active.get_untracked() {
+            let active = use_window()
+                .as_ref()
+                .and_then(|w| w.document())
+                .and_then(|d| d.query_selector(".bg-orange-twilight").ok())
+                .flatten();
+            if let Some(elem) = active {
                 elem.scroll_into_view_with_bool(false);
             }
         }))
     };
     let walk_tree = move || {
-        let tree = analysis.get().unwrap().tree;
+        let tree = analysis.get().unwrap().tree.clone();
         let root = tree.get_root_node()?;
         //Post order traversal ensures all children are processed before their parents
         let node_order = tree
             .traverse(&root.get_node_id(), TraversalStrategy::PostOrder)
             .ok()?;
-        let mut content = Fragment::new(vec![]);
-        let mut branches = HashMap::<i32, Fragment>::new();
+        let mut content = "".into_any();
+        let mut branches = HashMap::<i32, AnyView>::new();
         for node_id in node_order {
             let node = tree.get_node_by_id(&node_id)?;
             let children_ids = node.get_children_ids();
@@ -85,19 +91,17 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 and place them inside a collapsible
                 then place the first child (main variation) at the same level as the parent
                 */
-                let inner = store_value(
-                    children_ids
-                        .iter()
-                        .skip(1)
-                        .map(|c| branches.remove(c))
-                        .collect::<Vec<_>>(),
-                );
+                let inner = children_ids
+                    .iter()
+                    .skip(1)
+                    .map(|c| branches.remove(c))
+                    .collect::<Vec<_>>()
+                    .into_any();
                 view! {
-                    <CollapsibleMove current_path node>
-                        {inner}
-                    </CollapsibleMove>
+                    <CollapsibleMove current_path node inner />
                     {branches.remove(&children_ids[0])}
                 }
+                .into_any()
             } else if parent_deg > 2 && not_first_sibling && children_ids.len() == 1 {
                 /* We make a colapsible for nodes with one child
                 for aesthetic reasons, to hide its content.
@@ -105,13 +109,8 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 (else a toggle would not be needed)
                 and this must not be the "main variation" (first child)
                 */
-                let static_cont = store_value(content);
-                view! {
-                    <CollapsibleMove current_path node>
-                        {static_cont}
-                    </CollapsibleMove>
-                }
-                .into()
+                //let static_cont = StoredValue::new(content);
+                view! { <CollapsibleMove current_path node inner=content /> }.into_any()
             } else {
                 /* All other nodes are placed at the same level as the parent
                 in a regular HistoryMove node */
@@ -119,13 +118,14 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                     <HistoryMove current_path node />
                     {content}
                 }
+                .into_any()
             };
             /* We are start of a new branch so clear the content
             to process either the next sibling or tho parent */
             if parent_deg > 1 {
                 //save the branch only when its the start
-                branches.insert(node_id, content.clone());
-                content = Fragment::new(vec![]);
+                branches.insert(node_id, content);
+                content = "".into_any();
             }
         }
         //all branches are processed
@@ -162,11 +162,12 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                         viewbox_str
                         analysis=true
                     />
+
                 </div>
             </Show>
             <div class="flex justify-between w-full">
                 <Show when=move || walk_tree().is_some()>
-                    <DownloadTree tree=analysis.get().unwrap() />
+                    <DownloadTree tree=get_tree() />
                 </Show>
                 <LoadTree />
             </div>

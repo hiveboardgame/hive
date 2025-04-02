@@ -1,6 +1,6 @@
 # Get started with a build env with Rust nightly,
 # using bullseye because bookworm refused to build it 
-FROM rustlang/rust:nightly-bullseye AS builder
+FROM rustlang/rust:nightly-bookworm AS builder
 
 # Install cargo-binstall, which makes it easier to install other
 # cargo extensions like cargo-leptos
@@ -20,7 +20,7 @@ WORKDIR /app
 COPY . .
 
 # Build the app
-RUN rm -f Cargo.lock && LEPTOS_HASH_FILES=true cargo leptos build -r -P -vv
+RUN LEPTOS_TAILWIND_VERSION=v3.4.1 LEPTOS_HASH_FILES=true cargo leptos build -r -P -vv
 
 FROM debian:bookworm-slim AS runner
 # Copy the server binary to the /app directory

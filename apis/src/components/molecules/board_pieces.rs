@@ -1,36 +1,36 @@
 use crate::{
     common::{Direction, HexStack, PieceType},
     components::molecules::hex_stack::HexStack as HexStackView,
-    providers::game_state::GameStateSignal,
+    providers::{config::TileOptions, game_state::GameStateSignal},
 };
 use hive_lib::Position;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
-pub fn BoardPieces() -> impl IntoView {
+pub fn BoardPieces(
+    tile_opts: TileOptions,
+    target_stack: RwSignal<Option<Position>>,
+) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
+    let move_info = create_read_slice(game_state.signal, |gs| gs.move_info.clone());
+    let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
     // TODO get the BOARD_SIZE from board
     let board = move || {
         let mut board = Vec::new();
-        let game_state = (game_state.signal)();
-        let targets = game_state.move_info.target_positions;
-        let last_move = game_state.state.board.last_move;
-        let active_piece = (
-            game_state.move_info.active,
-            game_state.move_info.target_position,
-        );
-        let from_to_position = (
-            game_state.move_info.current_position,
-            game_state.move_info.target_position,
-        );
+        let move_info = move_info();
+        let state = state();
+        let targets = move_info.target_positions;
+        let last_move = state.board.last_move;
+        let active_piece = (move_info.active, move_info.target_position);
+        let from_to_position = (move_info.current_position, move_info.target_position);
         // TODO: Find a better solution instead of the nested loop here
         for r in 0..32 {
             for q in 0..32 {
                 let position = Position::new(q, r);
                 // start this empty and only add
-                let bug_stack = game_state.state.board.board.get(position).clone();
+                let bug_stack = state.board.board.get(position).clone();
                 let mut hs = HexStack::new(&bug_stack, position);
-                if game_state.move_info.active.is_none() {
+                if move_info.active.is_none() {
                     if let (_, Some(to)) = last_move {
                         if to == position {
                             hs.add_last_move(Direction::To);
@@ -53,11 +53,7 @@ pub fn BoardPieces() -> impl IntoView {
                 if let (Some(piece), Some(target_position)) = active_piece {
                     if position == target_position {
                         // Check here whether piece is still in reserve?
-                        if game_state
-                            .state
-                            .current_reserve()
-                            .contains_key(&piece.bug())
-                        {
+                        if state.current_reserve().contains_key(&piece.bug()) {
                             hs.add_tile(piece, PieceType::Spawn);
                         } else {
                             hs.add_tile(piece, PieceType::Move);
@@ -76,7 +72,7 @@ pub fn BoardPieces() -> impl IntoView {
         board()
             .into_iter()
             .map(|hs| {
-                view! { <HexStackView hex_stack=hs /> }
+                view! { <HexStackView hex_stack=hs tile_opts=tile_opts.clone() target_stack /> }
             })
             .collect_view()
     }

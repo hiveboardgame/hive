@@ -1,12 +1,12 @@
 use crate::i18n::*;
 use crate::{common::TileDots, providers::Config};
-use leptos::*;
+use leptos::prelude::*;
 #[component]
 pub fn TileDotsToggle() -> impl IntoView {
     let i18n = use_i18n();
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.show_dots)}</p>
-        <div class="flex">
+        <div class="flex flex-wrap">
             <TileDotsButton tile_dots=TileDots::No />
             <TileDotsButton tile_dots=TileDots::Angled />
             <TileDotsButton tile_dots=TileDots::Vertical />
@@ -17,11 +17,10 @@ pub fn TileDotsToggle() -> impl IntoView {
 #[component]
 pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
     let i18n = use_i18n();
-    let tile_dots = store_value(tile_dots);
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let tile_dots = Signal::derive(move || tile_dots.clone());
+    let Config(config, set_cookie) = expect_context();
     let is_active = move || {
-        if config().tile_dots == tile_dots() {
+        if config().tile.dots == tile_dots() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -42,16 +41,16 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
                     set_cookie
                         .update(|c| {
                             if let Some(cookie) = c {
-                                cookie.tile_dots = tile_dots();
+                                cookie.tile.dots = tile_dots();
                             }
                         });
                 }
             >
 
-                {match tile_dots() {
-                    TileDots::No => t!(i18n, user_config.dots_buttons.no).into_view(),
-                    TileDots::Angled => t!(i18n, user_config.dots_buttons.angled).into_view(),
-                    TileDots::Vertical => t!(i18n, user_config.dots_buttons.vertical).into_view(),
+                {move || match tile_dots() {
+                    TileDots::No => t_string!(i18n, user_config.dots_buttons.no),
+                    TileDots::Angled => t_string!(i18n, user_config.dots_buttons.angled),
+                    TileDots::Vertical => t_string!(i18n, user_config.dots_buttons.vertical),
                 }}
 
             </button>

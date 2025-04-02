@@ -3,12 +3,10 @@ use super::{
     control_handler::GameControlHandler, join_handler::JoinHandler,
     timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
 };
-use crate::websocket::lag_tracking::Lags;
-use crate::websocket::lag_tracking::Pings;
+use crate::common::GameAction;
 use crate::websocket::messages::InternalServerMessage;
 use crate::websocket::messages::WsMessage;
-use crate::websocket::tournament_game_start::TournamentGameStart;
-use crate::{common::GameAction, websocket::chat::Chats};
+use crate::websocket::WebsocketData;
 use anyhow::Result;
 use db_lib::get_conn;
 use db_lib::{models::Game, DbPool};
@@ -17,6 +15,7 @@ use diesel_async::AsyncConnection;
 use hive_lib::{GameError, GameStatus};
 use shared_types::GameId;
 use std::str::FromStr;
+use std::sync::Arc;
 use uuid::Uuid;
 pub struct GameActionHandler {
     game_action: GameAction,
@@ -24,10 +23,7 @@ pub struct GameActionHandler {
     pool: DbPool,
     user_id: Uuid,
     received_from: actix::Recipient<WsMessage>,
-    chat_storage: actix_web::web::Data<Chats>,
-    game_start: actix_web::web::Data<TournamentGameStart>,
-    pings: actix_web::web::Data<Pings>,
-    lags: actix_web::web::Data<Lags>,
+    data: Arc<WebsocketData>,
     username: String,
 }
 
@@ -37,10 +33,7 @@ impl GameActionHandler {
         game_action: GameAction,
         user_details: (&str, Uuid),
         received_from: actix::Recipient<WsMessage>,
-        chat_storage: actix_web::web::Data<Chats>,
-        game_start: actix_web::web::Data<TournamentGameStart>,
-        pings: actix_web::web::Data<Pings>,
-        lags: actix_web::web::Data<Lags>,
+        data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Result<Self> {
         let (username, user_id) = user_details;
@@ -55,15 +48,12 @@ impl GameActionHandler {
 
         Ok(Self {
             pool: pool.clone(),
+            data,
             game,
             username: username.to_owned(),
             game_action,
             received_from,
-            chat_storage,
-            game_start,
             user_id,
-            pings,
-            lags,
         })
     }
 
@@ -82,8 +72,7 @@ impl GameActionHandler {
                     &self.game,
                     &self.username,
                     self.user_id,
-                    self.pings.clone(),
-                    self.lags.clone(),
+                    self.data.clone(),
                     &self.pool,
                 )
                 .handle()
@@ -108,7 +97,7 @@ impl GameActionHandler {
                     &self.username,
                     self.user_id,
                     self.received_from.clone(),
-                    self.chat_storage.clone(),
+                    self.data.clone(),
                     &self.pool,
                 )
                 .handle()
@@ -121,7 +110,7 @@ impl GameActionHandler {
                     &self.game,
                     self.user_id,
                     self.username.clone(),
-                    self.game_start.clone(),
+                    self.data.clone(),
                     &self.pool,
                 )
                 .handle()

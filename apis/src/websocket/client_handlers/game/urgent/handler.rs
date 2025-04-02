@@ -1,5 +1,5 @@
 use crate::{providers::games::GamesSignal, responses::GameResponse};
-use leptos::*;
+use leptos::prelude::*;
 
 pub fn handle_urgent(games: Vec<GameResponse>) {
     let mut games_signal = expect_context::<GamesSignal>();
@@ -10,7 +10,7 @@ pub fn handle_urgent(games: Vec<GameResponse>) {
     //        .iter()
     //        .map(|g| g.nanoid.clone())
     //        .collect::<Vec<String>>(),
-    //    untrack(auth_context.user)
+    //    auth_context.user.get_untracked()
     //);
     games_signal.own_games_set(games);
 }

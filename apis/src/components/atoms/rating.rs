@@ -1,6 +1,6 @@
 use crate::responses::RatingResponse;
 use icondata::Icon;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{Certainty, GameSpeed};
 
@@ -20,8 +20,8 @@ pub fn Rating(rating: RatingResponse) -> impl IntoView {
 pub fn RatingWithIcon(rating: StoredValue<RatingResponse>) -> impl IntoView {
     view! {
         <div class="flex flex-row gap-1 items-center">
-            <Icon icon=icon_for_speed(&rating().speed) />
-            <Rating rating=rating() />
+            <Icon icon=icon_for_speed(&rating.get_value().speed) attr:class="w-4 h-4" />
+            <Rating rating=rating.get_value() />
         </div>
     }
 }

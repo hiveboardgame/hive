@@ -2,9 +2,12 @@
 codegen-backend = true
 [profile.apis-dev]
 codegen-backend = "cranelift"
+rustflags = ["-Z", "threads=8", "--cfg=web_sys_unstable_apis", "--cfg=erase_components"]
 [profile.engine-dev]
 codegen-backend = "cranelift"
 [profile.db-dev]
 codegen-backend = "cranelift"
+[target.'cfg(debug_assertions)']
+rustflags = ["--cfg=erase_components"]
 [build]
-rustflags = ["-Z", "threads=8","--cfg=web_sys_unstable_apis"]
+rustflags = ["-Z", "threads=8", "--cfg=web_sys_unstable_apis"]

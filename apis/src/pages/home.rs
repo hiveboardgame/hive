@@ -3,7 +3,7 @@ use crate::components::molecules::rl_banner::RlBanner;
 use crate::components::organisms::{
     challenges::Challenges, online_users::OnlineUsers, quickplay::QuickPlay, tv::Tv,
 };
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::use_media_query;
 
 #[component]

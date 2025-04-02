@@ -26,9 +26,7 @@ pub use chat_message::{ChatDestination, ChatMessage, ChatMessageContainer, Simpl
 pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
-pub use games_query_options::{
-    BatchInfo, GameProgress, GamesContextToUpdate, GamesQueryOptions, ResultType,
-};
+pub use games_query_options::{BatchInfo, GameProgress, GamesQueryOptions, ResultType};
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use pretty_string::PrettyString;
 pub use scoring_mode::ScoringMode;

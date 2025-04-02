@@ -29,7 +29,7 @@ pub use rating_change_info::RatingChangeInfo;
 pub use schedule_action::ScheduleAction;
 pub use server_result::{
     ChallengeUpdate, ExternalServerError, GameActionResponse, GameUpdate, ScheduleUpdate,
-    ServerMessage, ServerResult, TournamentUpdate, UserStatus, UserUpdate, WebsocketMessage,
+    ServerMessage, ServerResult, TournamentUpdate, UserStatus, UserUpdate,
 };
 pub use svg_pos::SvgPos;
 pub use time_signals::TimeSignals;

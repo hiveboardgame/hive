@@ -22,7 +22,7 @@ bb8 = { version = "0.8" }
 bimap = {version = "0.6.3", features = ["serde"] }
 cfg-if = "1.0.0"
 chrono = { version = "0.4", features = ["serde"] }
-codee = { version = "0.2", features = ["msgpack_serde", "base64"] }
+codee = { version = "0.3", features = ["msgpack_serde", "base64"] }
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 cookie = "0.18"
@@ -34,37 +34,37 @@ http = "1.1.0"
 http-serde = { version = "2" }
 icondata = {version = "0.5"}
 indoc = "2"
-itertools = "0.13.0"
+itertools = "0.14.0"
 lazy_static = "1.5"
-leptix_primitives = { version = "0.2" }
-leptos = { version = "0.6", features = ["nightly"] }
-leptos-use = { version = "0.13" }
-leptos_actix =  { version = "0.6" }
-leptos_i18n = { version = "0.4", features = ["suppress_key_warnings"] }
-leptos_icons = { version = "0.3"}
-leptos_meta =  { version = "0.6", features = ["nightly"] }
-leptos_router =  { version = "0.6", features = ["nightly"] }
+leptos = { version = "0.7", features = ["nightly"] }
+leptos-use = { version = "0.15" }
+leptos_actix =  { version = "0.7" }
+leptos_i18n = {version=  "0.5", features = ["suppress_key_warnings", "plurals", "interpolate_display"] }
+leptos_icons = { version = "0.5"}
+leptos_meta =  { version = "0.7"}
+leptos_router =  { version = "0.7", features = ["nightly"] }
 log = "0.4.22"
 markdown = "1.0.0-alpha"
 nanoid = "0.4"
-rand = "0.8"
-rand_core = "0.6"
+rand = "0.9"
 regex = "1.10"
 reqwest = { version = "0.12.12", features = ["json"] }
 serde = { version = "1" }
 serde_json = { version = "1" }
 serde_with = { version = "3.9" }
+server_fn = { version = "0.7", features = ["cbor"] }
 sha2 = "0.10"
+send_wrapper = "0.6"
 simple_logger = "5.0"
 skillratings = "0.27"
-thiserror = "1"
-tokio = { version = "1.39.2", features = ["full"] }
-tree-ds = {version = "0.1.5", features = ["serde", "compact_serde"] }
-uuid = { version = "1.10", features = ["v4", "js", "serde"] }
+thiserror = "2"
+tokio = { version = "1.44.0", features = ["full"] }
+tree-ds = {version = "0.1.6", features = ["serde", "compact_serde"] }
+uuid = { version = "1.15", features = ["v4", "js", "serde"] }
 walkdir = "2.5"
-wasm-bindgen = "0.2.95"
+wasm-bindgen = "0.2.100"
 wasm-bindgen-futures = "0.4"
-web-sys = {version = "0.3.70", features = ["AbortController", "AbortSignal", "AudioContext", "AudioBuffer", "AudioBufferSourceNode", "AudioDestinationNode", "Blob", "Clipboard", "HtmlDocument", "SvgPoint", "SvgsvgElement", "SvgGraphicsElement", "SvgRect", "SvgMatrix", "Url", "Window"] }
+web-sys = {version = "0.3.77", features = ["AbortController", "AbortSignal", "AudioContext", "AudioBuffer", "AudioBufferSourceNode", "AudioDestinationNode", "Blob", "Clipboard", "HtmlDocument", "SvgPoint", "SvgsvgElement", "SvgGraphicsElement", "SvgRect", "SvgMatrix", "Url", "Window"] }
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

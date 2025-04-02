@@ -7,16 +7,20 @@ use crate::{
     pages::play::TargetStack,
 };
 use hive_lib::GameStatus;
+use leptos::either::Either;
 use leptos::ev::{
     contextmenu, pointerdown, pointerleave, pointermove, pointerup, touchmove, touchstart, wheel,
 };
 use leptos::leptos_dom::helpers::debounce;
-use leptos::svg::Svg;
-use leptos::*;
+use leptos::{
+    html,
+    prelude::*,
+    svg::{self, Svg},
+};
 use leptos_use::{
-    use_event_listener, use_event_listener_with_options, use_intersection_observer_with_options,
-    use_resize_observer, use_throttle_fn_with_arg, UseEventListenerOptions,
-    UseIntersectionObserverOptions,
+    on_click_outside, use_event_listener, use_event_listener_with_options,
+    use_intersection_observer_with_options, use_resize_observer, use_throttle_fn_with_arg,
+    UseEventListenerOptions, UseIntersectionObserverOptions,
 };
 use std::time::Duration;
 use wasm_bindgen::JsCast;
@@ -59,6 +63,7 @@ pub fn Board(
 ) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
     let target_stack = expect_context::<TargetStack>().0;
+    let config = expect_context::<Config>().0;
     let is_panning = RwSignal::new(false);
     let has_zoomed = RwSignal::new(false);
     let viewbox_signal = RwSignal::new(ViewBoxControls::new());
@@ -112,16 +117,14 @@ pub fn Board(
             .center_coordinates()
     };
 
-    let straight = {
-        let config = expect_context::<Config>().0;
-        config().tile_design == TileDesign::ThreeD
-    };
-
-    let update_once = create_effect(move |_| {
-        if game_state.loaded.get() {
+    let straight = Signal::derive(move || config().tile.design == TileDesign::ThreeD);
+    let tile_opts = Signal::derive(move || config().tile);
+    Effect::watch(
+        move || (),
+        move |_, _, _| {
             let div = div_ref.get_untracked().expect("it exists");
             let rect = div.get_bounding_client_rect();
-            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight);
+            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight.get_untracked());
             viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                 viewbox_controls.x = 0.0;
                 viewbox_controls.y = 0.0;
@@ -130,23 +133,14 @@ pub fn Board(
                 viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
                 viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
             });
-        };
-    });
-    create_effect(move |_| {
-        if game_state.loaded.get() {
-            update_once.dispose();
-        }
-    });
-
-    let straight = {
-        let config = expect_context::<Config>().0;
-        config().tile_design == TileDesign::ThreeD
-    };
+        },
+        true,
+    );
 
     //This handles board resizes
     let throttled_resize = use_throttle_fn_with_arg(
         move |rect: DomRectReadOnly| {
-            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight);
+            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight.get_untracked());
             let svg = viewbox_ref.get_untracked().expect("It exists");
             // if user has zoomed, keep their scale when resizing board
             let (current_x_scale, current_y_scale) = if has_zoomed.get_untracked() {
@@ -241,19 +235,15 @@ pub fn Board(
                     || (scale > 0.0 && initial_height <= zoom_out_limit)
                 {
                     if is_visible() {
-                        batch(move || {
-                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                                *viewbox_controls = future_viewbox;
-                            });
-                            has_zoomed.set(true);
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox;
                         });
+                        has_zoomed.set(true);
                     } else if will_svg_be_visible(g_bbox, &future_viewbox) {
-                        batch(move || {
-                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                                *viewbox_controls = future_viewbox;
-                            });
-                            has_zoomed.set(true);
-                        })
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox;
+                        });
+                        has_zoomed.set(true);
                     }
                 }
             }
@@ -297,19 +287,15 @@ pub fn Board(
                     current_point_0.y() - (current_point_0.y() - future_viewbox.y) / scale;
                 if intermediate_height >= zoom_in_limit && intermediate_height <= zoom_out_limit {
                     if is_visible() {
-                        batch(move || {
-                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                                *viewbox_controls = future_viewbox
-                            });
-                            has_zoomed.set(true);
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox
                         });
+                        has_zoomed.set(true);
                     } else if will_svg_be_visible(g_bbox, &future_viewbox) {
-                        batch(move || {
-                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                                *viewbox_controls = future_viewbox
-                            });
-                            has_zoomed.set(true);
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox
                         });
+                        has_zoomed.set(true);
                     }
                 };
             }
@@ -332,9 +318,18 @@ pub fn Board(
         evt.prevent_default();
     });
 
+    _ = on_click_outside(g_ref, move |event| {
+        let clicked_timer = event
+            .target()
+            .map(|t| t.dyn_ref::<web_sys::HtmlElement>().map(|t| t.id()))
+            .map(|id| id.is_some_and(|id| id == "timer"));
+        if !clicked_timer.unwrap_or_default() {
+            game_state.reset();
+        }
+    });
     view! {
         <div
-            ref=div_ref
+            node_ref=div_ref
             class=if !overwrite_tw_classes.is_empty() {
                 overwrite_tw_classes.to_string()
             } else {
@@ -347,21 +342,21 @@ pub fn Board(
                 height="100%"
                 viewBox=viewbox_string
                 class=move || format!("touch-none duration-300 {}", history_style())
-                ref=viewbox_ref
+                node_ref=viewbox_ref
                 xmlns="http://www.w3.org/2000/svg"
-                on:click=move |_| { game_state.reset() }
             >
-                <g transform=transform ref=g_ref>
-                    <Show
-                        when=move || { View::History == board_view() && !last_turn() }
-
-                        fallback=move || {
-                            view! { <BoardPieces /> }
+                <g transform=transform node_ref=g_ref>
+                    {move || {
+                        if board_view() == View::History && !last_turn() {
+                            Either::Left(view! { <HistoryPieces /> })
+                        } else {
+                            Either::Right(
+                                view! {
+                                    <BoardPieces tile_opts=tile_opts.get_untracked() target_stack />
+                                },
+                            )
                         }
-                    >
-
-                        <HistoryPieces />
-                    </Show>
+                    }}
                 </g>
             </svg>
         </div>

@@ -1,9 +1,10 @@
 use crate::common::ScheduleAction;
 use crate::components::atoms::date_time_picker::DateTimePicker;
-use crate::providers::ApiRequests;
+use crate::providers::ApiRequestsProvider;
 use crate::responses::ScheduleResponse;
 use chrono::{DateTime, Duration, Local, Utc};
-use leptos::*;
+use leptos::callback::Callback;
+use leptos::prelude::*;
 use shared_types::GameId;
 use uuid::Uuid;
 
@@ -13,6 +14,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
     let agreed = schedule.agreed;
     let id = schedule.id;
     let proposer_id = schedule.proposer_id;
+    let api = expect_context::<ApiRequestsProvider>().0;
     let formated_game_date = move |time: DateTime<Utc>| {
         let to_date = time - Utc::now();
 
@@ -27,7 +29,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
         )
     };
     let accept = Callback::from(move |id| {
-        let api = ApiRequests::new();
+        let api = api.get();
         api.schedule_action(ScheduleAction::Accept(id));
     });
     view! {
@@ -38,7 +40,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             )>{formated_game_date(start_date)}</div>
             <Show when=move || !agreed && proposer_id != player_id>
                 <button
-                    on:click=move |_| accept(id)
+                    on:click=move |_| accept.run((id,))
                     class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
 
@@ -47,7 +49,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             </Show>
             <button
                 on:click=move |_| {
-                    let api = ApiRequests::new();
+                    let api = api.get();
                     api.schedule_action(ScheduleAction::Cancel(id));
                 }
 
@@ -62,9 +64,13 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
 #[component]
 pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
     let selected_time = RwSignal::new(Utc::now() + Duration::minutes(10));
+    let api = expect_context::<ApiRequestsProvider>().0;
     let propose = Callback::from(move |date| {
-        let api = ApiRequests::new();
+        let api = api.get();
         api.schedule_action(ScheduleAction::Propose(date, game_id.clone()));
+    });
+    let callback = Callback::from(move |utc: DateTime<Utc>| {
+        selected_time.set(utc);
     });
     view! {
         <div class="flex justify-between p-2">
@@ -72,14 +78,12 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
                 text=""
                 min=Local::now() + Duration::minutes(10)
                 max=Local::now() + Duration::weeks(12)
-                success_callback=Callback::from(move |utc| {
-                    selected_time.set(utc);
-                })
+                success_callback=callback
             />
 
             <button
                 class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                on:click=move |_| propose(selected_time.get())
+                on:click=move |_| propose.run((selected_time.get(),))
             >
 
                 "Propose Date"

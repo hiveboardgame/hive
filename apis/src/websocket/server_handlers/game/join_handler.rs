@@ -1,12 +1,11 @@
+use std::sync::Arc;
+
 use crate::{
-    common::{
-        GameReaction, {GameActionResponse, GameUpdate, ServerMessage},
-    },
+    common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::{GameResponse, UserResponse},
     websocket::{
-        chat::Chats,
-        messages::WsMessage,
-        messages::{InternalServerMessage, MessageDestination},
+        messages::{InternalServerMessage, MessageDestination, WsMessage},
+        WebsocketData,
     },
 };
 use anyhow::Result;
@@ -18,7 +17,7 @@ use uuid::Uuid;
 pub struct JoinHandler {
     pool: DbPool,
     received_from: actix::Recipient<WsMessage>,
-    chat_storage: actix_web::web::Data<Chats>,
+    data: Arc<WebsocketData>,
     user_id: Uuid,
     username: String,
     game: Game,
@@ -30,7 +29,7 @@ impl JoinHandler {
         username: &str,
         user_id: Uuid,
         received_from: actix::Recipient<WsMessage>,
-        chat_storage: actix_web::web::Data<Chats>,
+        data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Self {
         Self {
@@ -38,7 +37,7 @@ impl JoinHandler {
             game: game.to_owned(),
             user_id,
             username: username.to_owned(),
-            chat_storage,
+            data,
             pool: pool.clone(),
         }
     }
@@ -68,9 +67,9 @@ impl JoinHandler {
             }))),
         });
         let chat = if self.user_id == self.game.white_id || self.user_id == self.game.black_id {
-            self.chat_storage.games_private.read().unwrap()
+            self.data.chat_storage.games_private.read().unwrap()
         } else {
-            self.chat_storage.games_public.read().unwrap()
+            self.data.chat_storage.games_public.read().unwrap()
         };
         if let Some(messages_to_push) = chat.get(&GameId(self.game.nanoid.clone())) {
             messages.push(InternalServerMessage {

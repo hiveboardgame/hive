@@ -1,17 +1,16 @@
-use core::str;
-use hive_lib::History;
-use leptos::*;
-use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{js_sys::Array, Blob, Url};
-
 use super::AnalysisTree;
 use crate::{
     components::organisms::analysis::AnalysisSignal, providers::game_state::GameStateSignal,
 };
+use hive_lib::History;
+use leptos::{html, logging, prelude::*};
 use std::path::Path;
-use wasm_bindgen::closure::Closure;
+use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen_futures::{spawn_local, JsFuture};
+use web_sys::{js_sys::Array, Blob, Url};
+
 #[component]
-pub fn DownloadTree(tree: AnalysisTree) -> impl IntoView {
+pub fn DownloadTree(tree: String) -> impl IntoView {
     let download = move |_| {
         let (blob, filename) = blob_and_filename(tree.clone());
         // Create an object URL for the blob
@@ -41,8 +40,7 @@ pub fn DownloadTree(tree: AnalysisTree) -> impl IntoView {
     }
 }
 
-fn blob_and_filename(tree: AnalysisTree) -> (Blob, String) {
-    let tree = serde_json::to_string(&tree).unwrap();
+fn blob_and_filename(tree: String) -> (Blob, String) {
     let file = Array::from(&JsValue::from(tree));
     let date = chrono::offset::Local::now()
         .format("%d-%b-%Y_%H:%M:%S")
@@ -55,95 +53,78 @@ fn blob_and_filename(tree: AnalysisTree) -> (Blob, String) {
 
 #[component]
 pub fn LoadTree() -> impl IntoView {
-    let input_ref = create_node_ref::<html::Input>();
     let analysis = expect_context::<AnalysisSignal>().0;
     let game_state = expect_context::<GameStateSignal>();
-    let loaded = RwSignal::new(false);
-    let div_ref = NodeRef::<html::Div>::new();
-    div_ref.on_load(move |_| {
-        let _ = div_ref
+    let input_ref = NodeRef::<html::Input>::new();
+
+    let from_pgn = move |string: JsValue| {
+        string
+            .as_string()
+            .and_then(|string| History::from_pgn_str(string).ok())
+            .and_then(|history| hive_lib::State::new_from_history(&history).ok())
+            .and_then(|state| {
+                game_state.signal.update(|gs| gs.state = state);
+                AnalysisTree::from_state(game_state)
+            })
+            .map(|tree| {
+                analysis.set(Some(LocalStorage::wrap(tree)));
+            })
+    };
+    let from_hat = move |string: JsValue| {
+        string
+            .as_string()
+            .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
+            .map(|tree| {
+                analysis.set(Some(LocalStorage::wrap(tree.clone())));
+                if let Some(node) = tree.current_node {
+                    analysis.get().unwrap().update_node(node.get_node_id());
+                }
+            })
+    };
+    let oninput = move |_| {
+        let file = input_ref
             .get_untracked()
-            .expect("div to be loaded")
-            .on_mount(move |_| loaded.set(true));
-    });
-    let update_tree = move |tree: AnalysisTree| -> Option<()> {
-        analysis.update(|a| {
-            if let Some(a) = a {
-                *a = tree
-            }
-        });
-        Some(())
+            .unwrap()
+            .files()
+            .unwrap()
+            .get(0)
+            .unwrap();
+        Path::new(&file.name()).extension().map_or_else(
+            || logging::log!("Couldn't open file"),
+            |ext| {
+                if ext == "json" {
+                    spawn_local(async move {
+                        let res = JsFuture::from(file.text()).await.ok().and_then(from_hat);
+                        if res.is_none() {
+                            logging::log!("Couldn't open file");
+                        }
+                    });
+                } else if ext == "pgn" {
+                    spawn_local(async move {
+                        let res = JsFuture::from(file.text()).await.ok().and_then(from_pgn);
+                        if res.is_none() {
+                            logging::log!("Couldn't open file");
+                        }
+                    });
+                } else {
+                    logging::log!("Unsupported file type");
+                }
+            },
+        );
     };
     view! {
-        <div ref=div_ref class="m-1 w-1/3 h-7">
-            <Show when=loaded>
-
-                {
-                    let from_hat = Closure::new(move |string: JsValue| {
-                        let res = string
-                            .as_string()
-                            .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
-                            .and_then(update_tree);
-                        if res.is_none() {
-                            logging::log!("Couldn't open file");
-                        }
-                    });
-                    let from_pgn = Closure::new(move |string: JsValue| {
-                        let res = string
-                            .as_string()
-                            .and_then(|string| { History::from_pgn_str(string).ok() })
-                            .and_then(|history| hive_lib::State::new_from_history(&history).ok())
-                            .and_then(|state| {
-                                game_state.signal.update(|gs| gs.state = state);
-                                AnalysisTree::from_state(game_state)
-                            })
-                            .and_then(update_tree);
-                        if res.is_none() {
-                            logging::log!("Couldn't open file");
-                        }
-                    });
-                    view! {
-                        <label
-                            for="load-analysis"
-                            class="flex z-20 justify-center items-center w-full h-full text-white break-words rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
-                        >
-                            "Load"
-                            <input
-                                ref=input_ref
-                                on:input=move |_| {
-                                    let file = input_ref
-                                        .get_untracked()
-                                        .unwrap()
-                                        .files()
-                                        .unwrap()
-                                        .get(0)
-                                        .unwrap();
-                                    Path::new(&file.name())
-                                        .extension()
-                                        .map_or_else(
-                                            || logging::log!("Couldn't open file"),
-                                            |ext| {
-                                                if ext == "json" {
-                                                    let _ = file.text().then(&from_hat);
-                                                } else if ext == "pgn" {
-                                                    let _ = file.text().then(&from_pgn);
-                                                } else {
-                                                    logging::log!("Couldn't open file");
-                                                }
-                                            },
-                                        );
-                                }
-
-                                type="file"
-                                id="load-analysis"
-                                class="hidden"
-                                accept=".json,.pgn"
-                            />
-                        </label>
-                    }
-                }
-
-            </Show>
-        </div>
+        <form>
+            <label class="flex z-20 justify-center items-center w-full h-full text-white break-words rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95">
+                "Load"
+                <input
+                    node_ref=input_ref
+                    on:input=oninput
+                    type="file"
+                    id="load-analysis"
+                    class="hidden"
+                    accept=".json,.pgn"
+                />
+            </label>
+        </form>
     }
 }

@@ -3,11 +3,10 @@ use crate::{
         molecules::history_controls::HistoryControls,
         organisms::{chat::ChatWindow, history::History, reserve::ReserveContent},
     },
-    providers::{chat::Chat, game_state::GameStateSignal},
+    providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
 use hive_lib::Color;
-use leptix_primitives::components::tabs::{TabsContent, TabsList, TabsRoot, TabsTrigger};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::SimpleDestination;
 
 #[derive(Clone, PartialEq, Copy)]
@@ -26,7 +25,7 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
     };
     let mut game_state = expect_context::<GameStateSignal>();
     view! {
-        <TabsTrigger
+        <div
             on:click=move |_| {
                 if tab() == TabView::Chat {
                     chat.seen_messages();
@@ -39,9 +38,9 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
                 tab.update(|v| *v = name);
             }
 
-            attr:class=move || {
+            class=move || {
                 format!(
-                    "transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal {}",
+                    "flex place-content-center transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal {}",
                     if tab() == name {
                         "dark:bg-button-twilight bg-slate-400"
                     } else if name == TabView::Chat && chat.has_messages() {
@@ -51,11 +50,9 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
                     },
                 )
             }
-
-            value=string.clone()
         >
             {string.clone()}
-        </TabsTrigger>
+        </div>
     }
 }
 
@@ -64,35 +61,57 @@ pub fn SideboardTabs(
     player_color: Memo<Color>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
+    let game_state = expect_context::<GameStateSignal>();
+    let auth_context = expect_context::<AuthContext>();
     let tab = RwSignal::new(TabView::Reserve);
+    let user = auth_context.user;
+    let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
+    let show_buttons = Signal::derive(move || {
+        user().is_some_and(|user| {
+            let (white_id, black_id) = white_and_black();
+            Some(user.id) == black_id || Some(user.id) == white_id
+        })
+    });
     view! {
-        <TabsRoot
-            default_value="Game"
-            attr:class=format!(
-                "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",
-            )
-        >
+        <div class=format!(
+            "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",
+        )>
 
-            <TabsList>
+            <div>
                 <div class="z-10 border-b-2 border-black dark:border-white flex justify-between [&>*]:grow sticky top-0 bg-inherit">
                     <TriggerButton name=TabView::Reserve tab />
                     <TriggerButton name=TabView::History tab />
                     <TriggerButton name=TabView::Chat tab />
                 </div>
-            </TabsList>
-            <TabsContent value="Game" attr:class="flex flex-col h-full">
-                <ReserveContent player_color />
+            </div>
+            <TabsContent value=TabView::Reserve class="flex flex-col h-full" tab>
+                <ReserveContent player_color show_buttons />
             </TabsContent>
-            <TabsContent value="History" attr:class="h-full">
+            <TabsContent value=TabView::History class="h-full" tab>
                 <History />
             </TabsContent>
             <TabsContent
-                value="Chat"
-                attr:class="flex flex-col flex-grow h-full max-h-full justify-beetween"
+                tab
+                value=TabView::Chat
+                class="flex flex-col flex-grow h-full max-h-full justify-beetween"
             >
                 <HistoryControls />
                 <ChatWindow destination=SimpleDestination::Game />
             </TabsContent>
-        </TabsRoot>
+        </div>
+    }
+}
+
+#[component]
+fn TabsContent(
+    tab: RwSignal<TabView>,
+    value: TabView,
+    class: &'static str,
+    children: ChildrenFn,
+) -> impl IntoView {
+    view! {
+        <Show when=move || tab() == value>
+            <div class=class>{children()}</div>
+        </Show>
     }
 }

@@ -1,19 +1,23 @@
+#![recursion_limit = "256"]
 pub mod common;
 pub mod functions;
 pub mod jobs;
 pub mod providers;
 pub mod responses;
 pub mod websocket;
+use std::sync::Arc;
+
 use actix_session::config::PersistentSession;
 use actix_web::cookie::time::Duration;
 use actix_web::middleware::Compress;
-use websocket::{Lags, Pings, TournamentGameStart};
+use leptos_meta::{HashedStylesheet, MetaTags};
+use websocket::WebsocketData;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websocket::{Chats, start_connection, WsServer};
+    use crate::websocket::{start_connection, WsServer};
     use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
@@ -24,11 +28,11 @@ async fn main() -> std::io::Result<()> {
     use diesel::pg::PgConnection;
     use diesel::Connection;
     use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
-    use leptos::*;
+    use leptos::prelude::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use sha2::*;
 
-    let conf = get_configuration(None).await.expect("Got configuration");
+    let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
 
@@ -50,11 +54,8 @@ async fn main() -> std::io::Result<()> {
     let pool = get_pool(&config.database_url)
         .await
         .expect("Failed to get pool");
-    let chat_history = Data::new(Chats::new());
-    let pings = Data::new(Pings::new());
-    let lags = Data::new(Lags::new());
-    let websocket_server = Data::new(WsServer::new(pings.clone(), pool.clone()).start());
-    let tournament_game_start = Data::new(TournamentGameStart::new());
+    let data = Data::new(WebsocketData::default());
+    let websocket_server = Data::new(WsServer::new(Arc::clone(&data), pool.clone()).start());
 
     jobs::tournament_start(pool.clone(), Data::clone(&websocket_server));
     jobs::heartbeat(Data::clone(&websocket_server));
@@ -68,27 +69,41 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .app_data(Data::new(pool.clone()))
-            .app_data(Data::clone(&chat_history))
             .app_data(Data::clone(&websocket_server))
-            .app_data(Data::clone(&tournament_game_start))
-            .app_data(Data::clone(&pings))
-            .app_data(Data::clone(&lags))
+            .app_data(Data::clone(&data))
             .app_data(Data::new(site_root.to_string()))
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
             // serve other assets from the `assets` directory
-            .service(Files::new("/assets", site_root))
+            .service(Files::new("/assets", site_root.as_ref()))
             // serve the favicon from /favicon.ico
             .service(favicon)
             .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::oauth::callback)
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
-            .leptos_routes(
-                leptos_options.to_owned(),
-                routes.to_owned(),
-                || view! { <App/> },
-            )
+            .leptos_routes(routes.to_owned(), {
+                let leptos_options = leptos_options.clone();
+                move || {
+                    use leptos::prelude::*;
+
+                    view! {
+                        <!DOCTYPE html>
+                        <html lang="en">
+                            <head>
+                                <meta charset="utf-8"/>
+                                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                                <AutoReload options=leptos_options.clone() />
+                                <HydrationScripts options=leptos_options.clone()/>
+                                <MetaTags/>
+                                <HashedStylesheet options=leptos_options.clone() id="leptos"/>
+                            </head>
+                            <body>
+                                <App/>
+                            </body>
+                        </html>
+                    }
+            }})
             .app_data(Data::new(leptos_options.to_owned()))
             // IdentityMiddleware needs to be first
             .wrap(IdentityMiddleware::default())
@@ -109,7 +124,7 @@ async fn main() -> std::io::Result<()> {
 
 #[actix_web::get("favicon.ico")]
 async fn favicon(
-    leptos_options: actix_web::web::Data<leptos::LeptosOptions>,
+    leptos_options: actix_web::web::Data<leptos::prelude::LeptosOptions>,
 ) -> actix_web::Result<actix_files::NamedFile> {
     let leptos_options = leptos_options.into_inner();
     let site_root = &leptos_options.site_root;

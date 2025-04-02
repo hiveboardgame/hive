@@ -1,9 +1,8 @@
-use super::tournament_game_start::TournamentGameStart;
+use super::WebsocketData;
 use super::{messages::MessageDestination, server_handlers::request_handler::RequestHandler};
-use crate::common::{ExternalServerError, ServerResult, WebsocketMessage};
+use crate::common::{ClientRequest, ExternalServerError, ServerResult};
+use crate::websocket::server_handlers::request_handler::RequestHandlerError;
 use crate::websocket::{
-    chat::Chats,
-    lag_tracking::{Lags, Pings},
     messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
     ws_server::WsServer,
 };
@@ -17,6 +16,7 @@ use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 use db_lib::DbPool;
 use indoc::printdoc;
 use shared_types::SimpleUser;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
@@ -28,10 +28,7 @@ pub struct WsConnection {
     username: String,
     authed: bool,
     admin: bool,
-    chat_storage: actix_web::web::Data<Chats>,
-    game_start: actix_web::web::Data<TournamentGameStart>,
-    pings: actix_web::web::Data<Pings>,
-    lags: actix_web::web::Data<Lags>,
+    data: Arc<WebsocketData>,
     wss_addr: Addr<WsServer>,
     hb: Instant,
     pool: DbPool,
@@ -78,10 +75,7 @@ impl WsConnection {
         username: Option<String>,
         admin: Option<bool>,
         lobby: Addr<WsServer>,
-        chat_storage: actix_web::web::Data<Chats>,
-        game_start: actix_web::web::Data<TournamentGameStart>,
-        pings: actix_web::web::Data<Pings>,
-        lags: actix_web::web::Data<Lags>,
+        data: Arc<WebsocketData>,
         pool: DbPool,
     ) -> WsConnection {
         let id = user_uid.unwrap_or(Uuid::new_v4());
@@ -91,11 +85,8 @@ impl WsConnection {
             user_uid: id,
             username: name,
             admin,
-            game_start,
-            pings,
-            lags,
+            data: data.clone(),
             authed: user_uid.is_some(),
-            chat_storage,
             hb: Instant::now(),
             wss_addr: lobby,
             pool,
@@ -137,8 +128,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             }
             Ok(ws::Message::Nop) => (),
             Ok(ws::Message::Binary(s)) => {
-                let request: Result<WebsocketMessage, _> = MsgpackSerdeCodec::decode(&s);
-                if let Ok(WebsocketMessage::Client(request)) = request {
+                let request: Result<ClientRequest, _> = MsgpackSerdeCodec::decode(&s);
+                if let Ok(request) = request {
                     let pool = self.pool.clone();
                     let lobby = self.wss_addr.clone();
                     let user_id = self.user_uid;
@@ -149,30 +140,15 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                         authed: self.authed,
                         admin: self.admin,
                     };
-                    let chat_storage = self.chat_storage.clone();
-                    let pings = self.pings.clone();
-                    let lags = self.lags.clone();
-                    let game_start = self.game_start.clone();
                     let addr = ctx.address().recipient();
-
+                    let data = Arc::clone(&self.data);
                     let future = async move {
-                        let handler = RequestHandler::new(
-                            request.clone(),
-                            chat_storage,
-                            game_start,
-                            pings,
-                            lags,
-                            addr,
-                            user,
-                            pool,
-                        );
+                        let handler = RequestHandler::new(request.clone(), data, addr, user, pool);
                         let handler_result = handler.handle().await;
                         match handler_result {
                             Ok(messages) => {
                                 for message in messages {
-                                    let serialized = WebsocketMessage::Server(ServerResult::Ok(
-                                        Box::new(message.message),
-                                    ));
+                                    let serialized = ServerResult::Ok(Box::new(message.message));
                                     if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
                                         let cam = ClientActorMessage {
                                             destination: message.destination,
@@ -184,6 +160,12 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                 }
                             }
                             Err(err) => {
+                                let status_code = match err {
+                                    RequestHandlerError::AuthError(_) => {
+                                        http::StatusCode::UNAUTHORIZED
+                                    }
+                                    _ => http::StatusCode::NOT_IMPLEMENTED,
+                                };
                                 printdoc! {r#"
                                     -----------------ERROR-----------------
                                       Request: {:?}
@@ -197,10 +179,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                     user_id,
                                     field: "foo".to_string(),
                                     reason: format!("{err}"),
-                                    status_code: http::StatusCode::NOT_IMPLEMENTED,
+                                    status_code,
                                 });
-                                let serialized = WebsocketMessage::Server(message);
-                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                                     let cam = ClientActorMessage {
                                         destination: MessageDestination::User(user_id),
                                         serialized,

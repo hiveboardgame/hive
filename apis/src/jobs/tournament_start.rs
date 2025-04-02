@@ -1,8 +1,7 @@
 use crate::common::{
     GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult, TournamentUpdate,
-    WebsocketMessage,
 };
-use crate::responses::{GameResponse, TournamentResponse};
+use crate::responses::GameResponse;
 use crate::websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer};
 use actix::Addr;
 use actix_web::web::Data;
@@ -11,6 +10,7 @@ use codee::Encoder;
 use db_lib::{get_conn, models::Tournament, DbPool};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
+use shared_types::TournamentId;
 use std::time::Duration;
 
 pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
@@ -27,7 +27,7 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                 let mut messages = Vec::new();
                                 for (tournament, games, deleted_invitations) in tournament_infos {
                                     let tournament_response =
-                                        TournamentResponse::from_model(&tournament, tc).await?;
+                                        TournamentId(tournament.nanoid.clone());
 
                                     for uuid in deleted_invitations {
                                         messages.push(InternalServerMessage {
@@ -87,9 +87,7 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                     }
                                 }
                                 for message in messages {
-                                    let serialized = WebsocketMessage::Server(ServerResult::Ok(
-                                        Box::new(message.message),
-                                    ));
+                                    let serialized = ServerResult::Ok(Box::new(message.message));
                                     if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
                                         let cam = ClientActorMessage {
                                             destination: message.destination,

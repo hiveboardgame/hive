@@ -1,34 +1,31 @@
+use std::sync::Arc;
+
 use crate::{
     common::ServerMessage,
     websocket::{
-        chat::{Chats, UserToUser},
+        chat::UserToUser,
         messages::{InternalServerMessage, MessageDestination},
+        WebsocketData,
     },
 };
 use shared_types::{ChatDestination, ChatMessageContainer};
 
 pub struct ChatHandler {
     container: ChatMessageContainer,
-    chat_storage: actix_web::web::Data<Chats>,
+    data: Arc<WebsocketData>,
 }
 
 impl ChatHandler {
-    pub fn new(
-        mut container: ChatMessageContainer,
-        chat_storage: actix_web::web::Data<Chats>,
-    ) -> Self {
+    pub fn new(mut container: ChatMessageContainer, data: Arc<WebsocketData>) -> Self {
         container.time();
-        Self {
-            container,
-            chat_storage,
-        }
+        Self { container, data }
     }
 
     pub fn handle(&self) -> Vec<InternalServerMessage> {
         let mut messages = Vec::new();
         match &self.container.destination {
             ChatDestination::TournamentLobby(tournament_id) => {
-                let mut tournament_lobby = self.chat_storage.tournament.write().unwrap();
+                let mut tournament_lobby = self.data.chat_storage.tournament.write().unwrap();
                 let entry = tournament_lobby.entry(tournament_id.clone()).or_default();
                 entry.push(self.container.clone());
                 messages.push(InternalServerMessage {
@@ -37,7 +34,7 @@ impl ChatHandler {
                 })
             }
             ChatDestination::GamePlayers(game_id, white_id, black_id) => {
-                let mut games_private = self.chat_storage.games_private.write().unwrap();
+                let mut games_private = self.data.chat_storage.games_private.write().unwrap();
                 let entry = games_private.entry(game_id.clone()).or_default();
                 entry.push(self.container.clone());
                 messages.push(InternalServerMessage {
@@ -50,7 +47,7 @@ impl ChatHandler {
                 });
             }
             ChatDestination::GameSpectators(game, white_id, black_id) => {
-                let mut games_public = self.chat_storage.games_public.write().unwrap();
+                let mut games_public = self.data.chat_storage.games_public.write().unwrap();
                 let entry = games_public.entry(game.clone()).or_default();
                 entry.push(self.container.clone());
                 messages.push(InternalServerMessage {
@@ -64,10 +61,11 @@ impl ChatHandler {
             }
             ChatDestination::User((id, _username)) => {
                 let sender = self.container.message.user_id;
-                self.chat_storage
+                self.data
+                    .chat_storage
                     .insert_or_update_direct_lookup(sender, *id);
                 let user_to_user = UserToUser::new(*id, sender);
-                let mut direct = self.chat_storage.direct.write().unwrap();
+                let mut direct = self.data.chat_storage.direct.write().unwrap();
                 let entry = direct.entry(user_to_user).or_default();
                 entry.push(self.container.clone());
                 messages.push(InternalServerMessage {

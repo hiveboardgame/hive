@@ -1,16 +1,20 @@
 use crate::{
     common::{Direction, Hex, HexType, PieceType},
     components::atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
-    pages::play::TargetStack,
-    providers::game_state::GameStateSignal,
+    providers::{config::TileOptions, game_state::GameStateSignal},
 };
-use leptos::*;
+use hive_lib::Position;
+use leptos::{either::EitherOf4, prelude::*};
 
 #[component]
-pub fn Hex(hex: Hex) -> impl IntoView {
+pub fn Hex(
+    hex: Hex,
+    tile_opts: TileOptions,
+    target_stack: Signal<Option<Position>>,
+) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let target_stack = expect_context::<TargetStack>();
-    let level_multiplier = move || match target_stack.0() {
+    let straight = tile_opts.clone().is_three_d();
+    let level_multiplier = move || match target_stack() {
         Some(pos) => {
             if hex.position == pos {
                 13
@@ -25,8 +29,8 @@ pub fn Hex(hex: Hex) -> impl IntoView {
     let expanded_level = Signal::derive(move || hex.level * level_multiplier());
 
     match hex.kind {
-        HexType::Active(_) => {
-            if game_state
+        HexType::Active(active_state) => {
+            let level = if game_state
                 .signal
                 .get_untracked()
                 .move_info
@@ -34,41 +38,42 @@ pub fn Hex(hex: Hex) -> impl IntoView {
                 .is_none()
                 || hex.level == 0
             {
-                view! { <Active position=hex.position level=expanded_level /> }
+                expanded_level.get_untracked()
             } else {
-                view! { <Active position=hex.position level=expanded_sublevel /> }
-            }
+                expanded_sublevel.get_untracked()
+            };
+            EitherOf4::A(view! { <Active position=hex.position level active_state straight /> })
         }
         HexType::Target => {
-            if hex.level == 0 {
-                view! { <Target position=hex.position level=hex.level /> }
+            let level = if hex.level == 0 {
+                hex.level.into()
             } else {
-                view! { <Target position=hex.position level=expanded_sublevel /> }
-            }
+                expanded_sublevel
+            };
+            EitherOf4::B(view! { <Target position=hex.position level straight /> })
         }
-        HexType::Tile(piece, piece_type) => match piece_type {
-            PieceType::Board | PieceType::Covered | PieceType::History => {
-                view! { <Piece piece=piece position=hex.position level=expanded_level piece_type=piece_type /> }
-            }
-            PieceType::Move => {
-                view! { <Piece piece=piece position=hex.position level=expanded_sublevel piece_type=piece_type /> }
-            }
-            PieceType::Spawn => {
-                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> }
-            }
-            _ => {
-                view! { <Piece piece=piece position=hex.position level=hex.level piece_type=piece_type /> }
-            }
-        },
-        HexType::LastMove(Direction::To) => {
-            view! { <LastMove position=hex.position level=expanded_level direction=Direction::To /> }
+        HexType::Tile(piece, piece_type) => {
+            let level = match piece_type {
+                PieceType::Board | PieceType::Covered | PieceType::History => expanded_level,
+                PieceType::Move => expanded_sublevel,
+                _ => hex.level.into(),
+            };
+            EitherOf4::C(
+                view! { <Piece piece=piece position=hex.position level=level piece_type=piece_type tile_opts /> },
+            )
         }
-        HexType::LastMove(Direction::From) => {
-            if hex.level == 0 {
-                view! { <LastMove position=hex.position level=hex.level direction=Direction::From /> }
-            } else {
-                view! { <LastMove position=hex.position level=expanded_sublevel direction=Direction::From /> }
-            }
+        HexType::LastMove(direction) => {
+            let level = match direction {
+                Direction::To => expanded_level,
+                Direction::From => {
+                    if hex.level == 0 {
+                        hex.level.into()
+                    } else {
+                        expanded_sublevel
+                    }
+                }
+            };
+            EitherOf4::D(view! { <LastMove position=hex.position level direction straight /> })
         }
     }
 }

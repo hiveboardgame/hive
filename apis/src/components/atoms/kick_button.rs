@@ -1,23 +1,22 @@
 use crate::{
     common::TournamentAction,
-    providers::{ApiRequests, AuthContext},
+    providers::{ApiRequestsProvider, AuthContext},
     responses::{TournamentResponse, UserResponse},
 };
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 
 #[component]
-pub fn KickButton(
-    user: StoredValue<UserResponse>,
-    tournament: TournamentResponse,
-) -> impl IntoView {
+pub fn KickButton(user: UserResponse, tournament: TournamentResponse) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let tournament = store_value(tournament);
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let tournament = StoredValue::new(tournament);
 
     let is_organizer = move || {
-        if let Some(Ok(Some(current_user))) = (auth_context.user)() {
-            current_user.id != user().uid
-                && tournament()
+        if let Some(current_user) = auth_context.user.get() {
+            current_user.id != user.uid
+                && tournament
+                    .get_value()
                     .organizers
                     .iter()
                     .any(|o| o.uid == current_user.id)
@@ -27,10 +26,10 @@ pub fn KickButton(
     };
 
     let kick = move |_| {
-        let api = ApiRequests::new();
+        let api = api.get();
         api.tournament(TournamentAction::Kick(
-            tournament().tournament_id,
-            user().uid,
+            tournament.get_value().tournament_id,
+            user.uid,
         ));
     };
 
@@ -41,7 +40,7 @@ pub fn KickButton(
                 on:click=kick
                 class="p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
             >
-                <Icon icon=icondata::AiUserDeleteOutlined class="w-6 h-6" />
+                <Icon icon=icondata::AiUserDeleteOutlined attr:class="w-6 h-6" />
             </button>
         </Show>
     }

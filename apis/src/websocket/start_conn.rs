@@ -1,10 +1,6 @@
-use super::tournament_game_start::TournamentGameStart;
-use crate::websocket::{
-    chat::Chats,
-    lag_tracking::{Lags, Pings},
-    ws_connection::WsConnection,
-    ws_server::WsServer,
-};
+use std::sync::Arc;
+
+use crate::websocket::{ws_connection::WsConnection, ws_server::WsServer, WebsocketData};
 use actix::Addr;
 use actix_identity::Identity;
 use actix_web::{get, web::Data, web::Payload, Error, HttpRequest, HttpResponse};
@@ -17,12 +13,9 @@ pub async fn start_connection(
     req: HttpRequest,
     stream: Payload,
     srv: Data<Addr<WsServer>>,
-    chat_storage: Data<Chats>,
-    game_start: Data<TournamentGameStart>,
-    pings: Data<Pings>,
-    lags: Data<Lags>,
     pool: Data<DbPool>,
     identity: Option<Identity>,
+    data: Data<WebsocketData>,
 ) -> Result<HttpResponse, Error> {
     if let Some(id) = identity {
         if let Ok(id_string) = id.id() {
@@ -36,10 +29,7 @@ pub async fn start_connection(
                                 Some(user.username),
                                 Some(user.admin),
                                 srv.get_ref().clone(),
-                                chat_storage.clone(),
-                                game_start.clone(),
-                                pings.clone(),
-                                lags.clone(),
+                                Arc::clone(&data),
                                 pool.get_ref().clone(),
                             );
                             let resp = ws::start(ws, &req, stream)?;
@@ -62,10 +52,7 @@ pub async fn start_connection(
         None,
         None,
         srv.get_ref().clone(),
-        chat_storage.clone(),
-        game_start.clone(),
-        pings.clone(),
-        lags.clone(),
+        Arc::clone(&data),
         pool.get_ref().clone(),
     );
 
