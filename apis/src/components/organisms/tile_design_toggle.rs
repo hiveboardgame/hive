@@ -31,8 +31,6 @@ pub fn TileDesignToggle() -> impl IntoView {
             </Show>
             <TileDesignButton tile_design=TileDesign::HighContrast />
             <TileDesignButton tile_design=TileDesign::Community />
-            <TileDesignButton tile_design=TileDesign::HighContrast />
-            <TileDesignButton tile_design=TileDesign::Community />
         </div>
     }
 }
