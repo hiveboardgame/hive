@@ -1,13 +1,13 @@
 use crate::i18n::*;
 use crate::{common::TileRotation, providers::Config};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn TileRotationToggle() -> impl IntoView {
     let i18n = use_i18n();
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.rotation)}</p>
-        <div class="flex">
+        <div class="flex flex-wrap">
             <TileRotationButton tile_rotation=TileRotation::No />
             <TileRotationButton tile_rotation=TileRotation::Yes />
         </div>
@@ -17,11 +17,10 @@ pub fn TileRotationToggle() -> impl IntoView {
 #[component]
 pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
     let i18n = use_i18n();
-    let tile_rotation = store_value(tile_rotation);
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let tile_rotation = StoredValue::new(tile_rotation);
+    let Config(config, set_cookie) = expect_context();
     let is_active = move || {
-        if config().tile_rotation == tile_rotation() {
+        if config().tile.rotation == tile_rotation.get_value() {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
@@ -41,15 +40,15 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
                     set_cookie
                         .update(|c| {
                             if let Some(cookie) = c {
-                                cookie.tile_rotation = tile_rotation();
+                                cookie.tile.rotation = tile_rotation.get_value();
                             }
                         });
                 }
             >
 
-                {match tile_rotation() {
-                    TileRotation::No => t!(i18n, user_config.rotation_buttons.no).into_view(),
-                    TileRotation::Yes => t!(i18n, user_config.rotation_buttons.yes).into_view(),
+                {move || match tile_rotation.get_value() {
+                    TileRotation::No => t_string!(i18n, user_config.rotation_buttons.no),
+                    TileRotation::Yes => t_string!(i18n, user_config.rotation_buttons.yes),
                 }}
 
             </button>

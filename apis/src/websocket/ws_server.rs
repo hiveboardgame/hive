@@ -1,10 +1,10 @@
 use super::messages::GameHB;
+use super::WebsocketData;
 use super::{messages::MessageDestination, messages::Ping};
-use crate::websocket::lag_tracking::Pings;
 use crate::{
     common::{
         ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, TournamentUpdate, UserStatus,
-        UserUpdate, WebsocketMessage,
+        UserUpdate,
     },
     responses::{
         ChallengeResponse, GameResponse, HeartbeatResponse, TournamentResponse, UserResponse,
@@ -15,7 +15,6 @@ use actix::{
     prelude::{Actor, Context, Handler, Recipient},
     AsyncContext, WrapFuture,
 };
-use actix_web::web::Data;
 use codee::binary::MsgpackSerdeCodec;
 use codee::Encoder;
 use db_lib::{
@@ -28,6 +27,7 @@ use hive_lib::GameStatus;
 use rand::Rng;
 use shared_types::{GameId, TimeMode};
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -36,19 +36,19 @@ pub struct WsServer {
     sessions: HashMap<Uuid, Vec<Recipient<WsMessage>>>, // user_id to (socket_)id
     games_users: HashMap<GameId, HashSet<Uuid>>,        // game_id to set of users
     users_games: HashMap<Uuid, HashSet<String>>,        // user_id to set of games
-    pings: Data<Pings>,
+    data: Arc<WebsocketData>,
     pool: DbPool,
 }
 
 impl WsServer {
-    pub fn new(pings: Data<Pings>, pool: DbPool) -> WsServer {
+    pub fn new(data: Arc<WebsocketData>, pool: DbPool) -> WsServer {
         WsServer {
             // TODO: work on replacing the id here...
             id: String::from("lobby"),
             sessions: HashMap::new(),
             games_users: HashMap::new(),
             users_games: HashMap::new(),
-            pings,
+            data,
             pool,
         }
     }
@@ -72,16 +72,15 @@ impl Handler<Ping> for WsServer {
     type Result = ();
 
     fn handle(&mut self, _msg: Ping, _ctx: &mut Context<Self>) {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for user_id in self.sessions.keys() {
-            let nonce = rng.gen_range(0..=u64::MAX);
-            self.pings.set_nonce(*user_id, nonce);
+            let nonce = rng.random::<u64>();
+            self.data.pings.set_nonce(*user_id, nonce);
             let message = ServerResult::Ok(Box::new(ServerMessage::Ping {
                 nonce,
-                value: self.pings.value(*user_id),
+                value: self.data.pings.value(*user_id),
             }));
-            let serialized = WebsocketMessage::Server(message);
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                 self.send_message(&serialized, user_id);
             };
         }
@@ -113,8 +112,7 @@ impl Handler<GameHB> for WsServer {
                                 let message = ServerResult::Ok(Box::new(ServerMessage::Game(
                                     Box::new(GameUpdate::Heartbeat(hb)),
                                 )));
-                                let serialized = WebsocketMessage::Server(message);
-                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                                     for user_id in user_ids {
                                         if let Some(sockets) = sessions.get(&user_id) {
                                             for socket in sockets {
@@ -165,8 +163,7 @@ impl Handler<Disconnect> for WsServer {
                 user: None,
                 username: msg.username,
             })));
-            let serialized = WebsocketMessage::Server(message);
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                 let game_id = GameId(self.id.clone());
                 if let Some(ws_server) = self.games_users.get_mut(&game_id) {
                     ws_server.remove(&msg.user_id);
@@ -213,8 +210,7 @@ impl Handler<Connect> for WsServer {
                                 user: Some(user_response.clone()),
                                 username: user_response.username,
                             })));
-                        let serialized = WebsocketMessage::Server(message);
-                        if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+                        if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                             let cam = ClientActorMessage {
                                 destination: MessageDestination::User(user_id),
                                 serialized,
@@ -233,8 +229,7 @@ impl Handler<Connect> for WsServer {
                                 user: Some(user_response),
                                 username: msg.username,
                             })));
-                        let serialized = WebsocketMessage::Server(message);
-                        if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+                        if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                             // TODO: one needs to be a game::join to everyone in the game, the other one just to the
                             // ws_server that the user came online
                             if let Some(user_ids) = games_users.get(&GameId(msg.game_id)) {
@@ -277,8 +272,7 @@ impl Handler<Connect> for WsServer {
                             let message = ServerResult::Ok(Box::new(ServerMessage::Game(
                                 Box::new(GameUpdate::Urgent(games)),
                             )));
-                            let serialized = WebsocketMessage::Server(message);
-                            if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+                            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                                 let cam = ClientActorMessage {
                                     destination: MessageDestination::User(user_id),
                                     serialized,
@@ -297,11 +291,11 @@ impl Handler<Connect> for WsServer {
                                 TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn)
                                     .await
                             {
-                                let message = ServerResult::Ok(Box::new(
-                                    ServerMessage::Tournament(TournamentUpdate::Invited(response)),
-                                ));
-                                let serialized = WebsocketMessage::Server(message);
-                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+                                let message =
+                                    ServerResult::Ok(Box::new(ServerMessage::Tournament(
+                                        TournamentUpdate::Invited(response.tournament_id.clone()),
+                                    )));
+                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                                     let cam = ClientActorMessage {
                                         destination: MessageDestination::User(user_id),
                                         serialized,
@@ -347,7 +341,6 @@ impl Handler<Connect> for WsServer {
                     let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
                         ChallengeUpdate::Challenges(responses),
                     )));
-                    let message = WebsocketMessage::Server(message);
                     MsgpackSerdeCodec::encode(&message)
                 } else {
                     let mut responses = Vec::new();
@@ -363,7 +356,6 @@ impl Handler<Connect> for WsServer {
                     let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
                         ChallengeUpdate::Challenges(responses),
                     )));
-                    let message = WebsocketMessage::Server(message);
                     MsgpackSerdeCodec::encode(&message)
                 };
                 if let Ok(serialized) = serialized {

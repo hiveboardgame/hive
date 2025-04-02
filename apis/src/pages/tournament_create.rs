@@ -1,22 +1,19 @@
 use crate::common::{markdown_to_html, TimeSignals, TournamentAction};
+use crate::components::atoms::{
+    date_time_picker::DateTimePicker, input_slider::InputSlider, select_options::SelectOption,
+    simple_switch::SimpleSwitch,
+};
 use crate::components::organisms::time_select::TimeSelect;
 use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
-use crate::{
-    components::atoms::{
-        date_time_picker::DateTimePicker, input_slider::InputSlider, select_options::SelectOption,
-        simple_switch::SimpleSwitch,
-    },
-    providers::{ApiRequests, AuthContext},
-};
+use crate::providers::{ApiRequestsProvider, AuthContext};
 use chrono::{DateTime, Duration, Local, Utc};
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::use_navigate;
 use shared_types::PrettyString;
 use shared_types::{
     CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
     TournamentMode,
 };
-use std::str::FromStr;
 use uuid::Uuid;
 
 const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -61,8 +58,8 @@ impl TournamentSignals {
             invite_only: RwSignal::new(false),
             mode: RwSignal::new(TournamentMode::DoubleRoundRobin),
             time_mode: RwSignal::new(TimeMode::RealTime),
-            time_base: store_value(Some(60)),
-            time_increment: store_value(Some(0)),
+            time_base: StoredValue::new(Some(60)),
+            time_increment: StoredValue::new(Some(0)),
             band_upper: RwSignal::new(None),
             band_lower: RwSignal::new(None),
             start_mode: RwSignal::new(StartMode::Manual),
@@ -87,6 +84,8 @@ pub fn TournamentCreate() -> impl IntoView {
     let max_rating = RwSignal::new(2500);
     let organizer_start = RwSignal::new(true);
     let fixed_round_duration = RwSignal::new(false);
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let auth_context = expect_context::<AuthContext>();
     let rating_string = move || {
         format!(
             "Min Rating: {}/ Max Rating: {}",
@@ -106,11 +105,7 @@ pub fn TournamentCreate() -> impl IntoView {
         move || tournament.name.get().len() < 4 || tournament.description.get().len() < 50;
 
     let create = move |_| {
-        let auth_context = expect_context::<AuthContext>();
-        let account = match (auth_context.user)() {
-            Some(Ok(Some(account))) => Some(account),
-            _ => None,
-        };
+        let account = auth_context.user.get();
         tournament
             .time_mode
             .update_untracked(|v| *v = time_signals.time_mode.get_untracked());
@@ -193,17 +188,15 @@ pub fn TournamentCreate() -> impl IntoView {
             },
         };
         if account.is_some() {
-            let api = ApiRequests::new();
+            let api = api.get();
             let action = TournamentAction::Create(Box::new(details));
             api.tournament(action);
             let navigate = use_navigate();
             navigate("/tournaments", Default::default());
         }
     };
-    let on_value_change: Callback<String, ()> = Callback::from(move |string: String| {
-        if let Ok(new_value) = TimeMode::from_str(&string) {
-            time_signals.time_mode.update(|v| *v = new_value);
-        };
+    let on_value_change = Callback::new(move |t: TimeMode| {
+        time_signals.time_mode.update(|v| *v = t);
     });
     let allowed_values = vec![TimeMode::RealTime, TimeMode::Correspondence];
     let tournament_length = move || {
@@ -218,21 +211,7 @@ pub fn TournamentCreate() -> impl IntoView {
     };
     let is_not_preview_desc = RwSignal::new(true);
     let markdown_desc = move || markdown_to_html(&tournament.description.get());
-    //let unused = move || {
-    //    view! {
 
-    //        <div class="p-1">
-    //            Number of rounds:
-    //            <InputSlider
-    //                signal_to_update=tournament.rounds
-    //                name="Rounds"
-    //                min=1
-    //                max=12
-    //                step=1
-    //            /> {tournament.rounds}
-    //        </div>
-    //    </div>}
-    //};
     view! {
         <div class="flex justify-center items-center pt-10">
             <div class="container flex flex-col justify-between p-2 md:flex-row md:flex-wrap">
@@ -247,7 +226,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             prop:value=tournament.name
                             placeholder="At least a 4 character name"
                             on:input=update_from_input(tournament.name)
-                            attr:maxlength="50"
+                            maxlength="50"
                         />
                     </div>
 
@@ -269,30 +248,28 @@ pub fn TournamentCreate() -> impl IntoView {
                             <textarea
                                 class="px-3 py-2 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
                                 name="Tournament description"
-                                type="text"
                                 prop:value=tournament.description
                                 placeholder="At least a 50 character description.\nMarkdown supported, for links do <https://example.com> or check below."
                                 on:input=update_from_input(tournament.description)
-                                attr:maxlength="2000"
+                                maxlength="2000"
                             ></textarea>
-
-                            <div class="flex flex-row p-1 gap-1">
-                                <button
-                                    on:click=move |_| is_not_preview_desc.update(|b| *b = !*b)
-                                    class="mr-4 flex gap-1 justify-center items-center px-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                                >
-                                    {move || if is_not_preview_desc() { "Preview" } else { "Edit" }}
-                                </button>
-
-                                <a
-                                    class="font-bold text-blue-500 hover:underline"
-                                    href="https://commonmark.org/help/"
-                                    target="_blank"
-                                >
-                                    "Markdown Cheat Sheet"
-                                </a>
-                            </div>
                         </Show>
+                        <div class="flex flex-row gap-1 p-1">
+                            <button
+                                on:click=move |_| is_not_preview_desc.update(|b| *b = !*b)
+                                class="flex gap-1 justify-center items-center px-4 mr-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            >
+                                {move || if is_not_preview_desc() { "Preview" } else { "Edit" }}
+                            </button>
+
+                            <a
+                                class="font-bold text-blue-500 hover:underline"
+                                href="https://commonmark.org/help/"
+                                target="_blank"
+                            >
+                                "Markdown Cheat Sheet"
+                            </a>
+                        </div>
                     </div>
                     <div class="p-1">
                         Min number of players:
@@ -326,10 +303,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="DoubleRoundRobin"
-                                text=TournamentMode::DoubleRoundRobin
-                                    .pretty_string()
-                                    .into_view()
-                                    .into()
+                                text=TournamentMode::DoubleRoundRobin.pretty_string()
                             />
 
                         </select>
@@ -344,7 +318,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             <SelectOption
                                 value=tournament.mode
                                 is="Game"
-                                text=ScoringMode::Game.pretty_string().into_view().into()
+                                text=ScoringMode::Game.pretty_string()
                             />
 
                         </select>
@@ -375,7 +349,7 @@ pub fn TournamentCreate() -> impl IntoView {
                                         })
                                 })
 
-                                failure_callback=Callback::from(move |_| organizer_start.set(true))
+                                failure_callback=Callback::new(move |_| organizer_start.set(true))
                             />
                         </Show>
                     </div>

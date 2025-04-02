@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::{use_interval_fn_with_options, utils::Pausable, UseIntervalFnOptions};
 
 use crate::providers::{AlertType, AlertsContext};
@@ -23,7 +23,7 @@ pub fn Alert() -> impl IntoView {
         None => ("", ""),
     };
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if (alerts.last_alert)().is_some() {
             resume();
         } else {

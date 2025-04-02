@@ -1,18 +1,19 @@
 use crate::responses::AccountResponse;
-use leptos::*;
+use leptos::prelude::*;
+use server_fn::codec;
 
-#[server]
-pub async fn get_account() -> Result<Option<AccountResponse>, ServerFnError> {
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_account() -> Result<AccountResponse, ServerFnError> {
     use crate::functions::auth::identity::uuid;
     use crate::functions::db::pool;
     use db_lib::get_conn;
 
-    let uuid = match uuid() {
+    let uuid = match uuid().await {
         Ok(uuid) => uuid,
-        Err(_) => return Ok(None),
+        Err(e) => return Err(e),
     };
-    let pool = pool()?;
+    let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let account_response = AccountResponse::from_uuid(&uuid, &mut conn).await?;
-    Ok(Some(account_response))
+    Ok(account_response)
 }

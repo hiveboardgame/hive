@@ -2,7 +2,7 @@ use crate::components::atoms::history_button::set_timer_from_response;
 use crate::components::molecules::history_controls::HistoryControls;
 use crate::providers::game_state::{self, GameStateSignal};
 use hive_lib::GameStatus;
-use leptos::*;
+use leptos::{html, prelude::*};
 use leptos_icons::*;
 use shared_types::{PrettyString, TimeMode};
 
@@ -17,15 +17,11 @@ pub fn HistoryMove(
     parent_div: NodeRef<html::Div>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let div_ref = create_node_ref::<html::Div>();
+    let div_ref = NodeRef::<html::Div>::new();
     div_ref.on_load(move |_| {
-        let _ = div_ref
-            .get_untracked()
-            .expect("div to be loaded")
-            .on_mount(move |_| {
-                let parent_div = parent_div.get_untracked().expect("div to be loaded");
-                parent_div.set_scroll_top(parent_div.scroll_height())
-            });
+        if let Some(parent_div) = parent_div.get_untracked() {
+            parent_div.set_scroll_top(parent_div.scroll_height())
+        }
     });
     let onclick = move |_| {
         game_state.show_history_turn(turn);
@@ -67,7 +63,7 @@ pub fn HistoryMove(
         }
     };
     view! {
-        <div ref=div_ref class=get_class on:click=onclick>
+        <div node_ref=div_ref class=get_class on:click=onclick>
             {format!("{}. {piece} {position}{}", turn + 1, rep)}
             <Show when=is_realtime>{time_took}</Show>
         </div>
@@ -91,7 +87,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             .collect::<Vec<(usize, String, String)>>()
     };
 
-    let parent = create_node_ref::<html::Div>();
+    let parent = NodeRef::<html::Div>::new();
     let game_result = move || match state().game_status {
         GameStatus::Finished(result) => result.to_string(),
         _ => "".to_string(),
@@ -119,7 +115,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
 
             <HistoryControls parent=parent.into() />
-            <div ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
+            <div node_ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
                 <For each=history_moves key=|history_move| (history_move.0) let:history_move>
 
                     <HistoryMove
@@ -140,7 +136,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                         on:click=analysis_setup
                     >
                         <div class="flex gap-1 justify-center items-center">
-                            <Icon icon=icondata::TbMicroscope class="py-1 w-7 h-7" />
+                            <Icon icon=icondata::TbMicroscope attr:class="py-1 w-7 h-7" />
                             "Analyze here"
                         </div>
                     </a>

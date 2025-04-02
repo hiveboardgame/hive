@@ -5,20 +5,22 @@ use crate::{
     },
 };
 use chrono::Utc;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::core::ConnectionReadyState;
 
 #[component]
 pub fn StatusIndicator(username: String) -> impl IntoView {
+    let cloned = username.clone();
     let websocket = expect_context::<WebsocketContext>();
     let ping = expect_context::<PingContext>();
     let auth_context = expect_context::<AuthContext>();
     let online_users = expect_context::<OnlineUsersSignal>();
-    let username = store_value(username);
-    let user_is_player = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => user.username == username(),
-        _ => false,
+    let user_is_player = move || {
+        auth_context
+            .user
+            .get()
+            .is_some_and(|user| user.username == cloned)
     };
     let user_has_ws = move || {
         Utc::now()
@@ -29,25 +31,20 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     };
 
     let icon_style = move || {
-        if user_is_player() {
-            if batch(user_has_ws) {
-                "fill-grasshopper-green"
-            } else {
-                "w-6 h-6 fill-ladybug-red"
-            }
-        } else {
-            match (online_users.signal)().username_status.get(&username()) {
-                Some(UserStatus::Online) => "fill-grasshopper-green",
+        let base_classes = "mr-1 pb-[2px]";
 
-                // TODO: Figure out away Some(UserStatus::Away) => ....
-                _ => "fill-slate-400",
-            }
-        }
+        let extra_classes = match (user_is_player(), user_has_ws()) {
+            (true, true) => " fill-grasshopper-green",
+            (true, false) => " w-6 h-6 fill-ladybug-red",
+            _ => match (online_users.signal)().username_status.get(&username) {
+                Some(UserStatus::Online) => " fill-grasshopper-green",
+                // TODO: Handle `Some(UserStatus::Away)`
+                _ => " fill-slate-400",
+            },
+        };
+
+        format!("{base_classes}{extra_classes}")
     };
-    view! {
-        <Icon
-            icon=icondata::BiCircleSolid
-            class=TextProp::from(move || format!("mr-1 pb-[2px] {}", icon_style()))
-        />
-    }
+
+    view! { <Icon icon=icondata::BiCircleSolid attr:class=icon_style /> }
 }

@@ -27,19 +27,20 @@ use crate::{
     },
     providers::{
         challenges::provide_challenges, chat::provide_chat, game_state::provide_game_state,
-        games::provide_games, games_search::provide_profile_games,
-        navigation_controller::provide_navigation_controller, online_users::provide_users,
-        provide_alerts, provide_auth, provide_challenge_params, provide_config,
-        provide_notifications, provide_ping, provide_sounds, refocus::provide_refocus,
-        schedules::provide_schedules, timer::provide_timer,
-        tournament_ready::provide_tournament_ready, tournaments::provide_tournaments,
-        user_search::provide_user_search, websocket::provide_websocket,
+        games::provide_games, navigation_controller::provide_navigation_controller,
+        online_users::provide_users, provide_alerts, provide_api_requests, provide_auth,
+        provide_challenge_params, provide_config, provide_notifications, provide_ping,
+        provide_sounds, refocus::provide_refocus, schedules::provide_schedules,
+        timer::provide_timer, tournaments::provide_tournaments, websocket::provide_websocket,
     },
 };
-use leptos::*;
+use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
-use leptos_router::*;
+use leptos_router::{
+    components::{Outlet, ParentRoute, Route, Router, Routes},
+    path, SsrMode,
+};
 use leptos_use::SameSite;
 use shared_types::GameProgress;
 
@@ -48,39 +49,46 @@ const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
 
 #[component]
 pub fn App() -> impl IntoView {
-    provide_config();
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
-    provide_game_state();
-    provide_challenges();
-    provide_games();
-    provide_users();
-    provide_timer();
+
+    //These dont expect any other context, can be provided in any order
     provide_ping();
-    provide_navigation_controller();
-    let url = "/ws/";
-    provide_websocket(url);
-    provide_auth();
-    provide_challenge_params();
-    provide_alerts();
-    provide_refocus();
-    provide_chat();
-    provide_user_search();
-    provide_tournaments();
-    provide_notifications();
-    provide_tournament_ready();
     provide_schedules();
+    provide_notifications();
     provide_sounds();
-    provide_profile_games();
+    provide_refocus();
+    provide_alerts();
+    provide_challenge_params();
+    provide_config();
+    provide_game_state();
+    provide_timer();
+    provide_users();
+    provide_tournaments();
+    provide_challenges();
+    provide_navigation_controller();
+    provide_websocket("/ws/");
+
+    //expects websocket
+    provide_auth();
+
+    //expects auth and navigation_controller
+    provide_games();
+
+    //expects auth, challengeStateSignal, websocket
+    provide_api_requests();
+
+    //expects auth, api_requests, navigation_controller, gameStateSignal
+    provide_chat();
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)
-            .same_site(SameSite::Lax)>
-            <Stylesheet id="leptos" href="/pkg/HiveGame.css" />
-            <Router trailing_slash=TrailingSlash::Redirect>
-                <Routes>
-                    <Route
-                        path=""
+            .same_site(SameSite::Lax)
+            .path("/")>
+            <Router>
+                <Routes fallback=|| "404 Not Found">
+                    <ParentRoute
+                        path=path!("")
                         view=|| {
                             view! {
                                 <BaseLayout>
@@ -90,9 +98,9 @@ pub fn App() -> impl IntoView {
                         }
                     >
 
-                        <Route path="" ssr=SsrMode::InOrder view=|| view! { <Home /> } />
-                        <Route
-                            path="/@/:username"
+                        <Route path=path!("") ssr=SsrMode::InOrder view=|| view! { <Home /> } />
+                        <ParentRoute
+                            path=path!("/@/:username")
                             view=|| {
                                 view! {
                                     <ProfileView>
@@ -103,47 +111,53 @@ pub fn App() -> impl IntoView {
                         >
 
                             <Route
-                                path=""
+                                path=path!("")
                                 view=|| view! { <DisplayGames tab_view=GameProgress::Playing /> }
                             />
                             <Route
-                                path="playing"
+                                path=path!("playing")
                                 view=|| view! { <DisplayGames tab_view=GameProgress::Playing /> }
                             />
                             <Route
-                                path="finished"
+                                path=path!("finished")
                                 view=|| view! { <DisplayGames tab_view=GameProgress::Finished /> }
                             />
                             <Route
-                                path="unstarted"
+                                path=path!("unstarted")
                                 view=|| view! { <DisplayGames tab_view=GameProgress::Unstarted /> }
                             />
-                        </Route>
-                        <Route path="/register" view=|| view! { <Register /> } />
-                        <Route path="/top_players" view=|| view! { <TopPlayers /> } />
-                        <Route path="/login" view=|| view! { <Login /> } />
-                        <Route path="/account" view=|| view! { <Account /> } />
-                        <Route path="/challenge/:nanoid" view=|| view! { <ChallengeView /> } />
-                        <Route path="/analysis" view=|| view! { <Analysis /> } />
-                        <Route path="/config" view=|| view! { <Config /> } />
-                        <Route path="/tournament/:nanoid" view=|| view! { <Tournament /> } />
-                        <Route path="/tournaments/create" view=|| view! { <TournamentCreate /> } />
-                        <Route path="/tournaments" view=|| view! { <Tournaments /> } />
-                        <Route path="/donate" view=|| view! { <Donate /> } />
-                        <Route path="/faq" view=|| view! { <Faq /> } />
-                        <Route path="/puzzles" view=|| view! { <Puzzles /> } />
-                        <Route path="/rules" view=|| view! { <Rules /> } />
-                        <Route path="/strategy" view=|| view! { <Strategy /> } />
-                        <Route path="/resources" view=|| view! { <Resources /> } />
-                        <Route path="/tutorial" view=|| view! { <Tutorial /> } />
-                        <Route path="/rules_summary" view=|| view! { <RulesSummary /> } />
+                        </ParentRoute>
+                        <Route path=path!("/register") view=|| view! { <Register /> } />
+                        <Route path=path!("/top_players") view=|| view! { <TopPlayers /> } />
+                        <Route path=path!("/login") view=|| view! { <Login /> } />
+                        <Route path=path!("/account") view=|| view! { <Account /> } />
                         <Route
-                            path="/game/:nanoid"
+                            path=path!("/challenge/:nanoid")
+                            view=|| view! { <ChallengeView /> }
+                        />
+                        <Route path=path!("/analysis") view=|| view! { <Analysis /> } />
+                        <Route path=path!("/config") view=|| view! { <Config /> } />
+                        <Route path=path!("/tournament/:nanoid") view=|| view! { <Tournament /> } />
+                        <Route
+                            path=path!("/tournaments/create")
+                            view=|| view! { <TournamentCreate /> }
+                        />
+                        <Route path=path!("/tournaments") view=|| view! { <Tournaments /> } />
+                        <Route path=path!("/donate") view=|| view! { <Donate /> } />
+                        <Route path=path!("/faq") view=|| view! { <Faq /> } />
+                        <Route path=path!("/puzzles") view=|| view! { <Puzzles /> } />
+                        <Route path=path!("/rules") view=|| view! { <Rules /> } />
+                        <Route path=path!("/strategy") view=|| view! { <Strategy /> } />
+                        <Route path=path!("/resources") view=|| view! { <Resources /> } />
+                        <Route path=path!("/tutorial") view=|| view! { <Tutorial /> } />
+                        <Route path=path!("/rules_summary") view=|| view! { <RulesSummary /> } />
+                        <Route
+                            path=path!("/game/:nanoid")
                             ssr=SsrMode::PartiallyBlocked
                             view=|| view! { <Play /> }
                         />
-                        <Route path="/admin" view=|| view! { <Admin /> } />
-                    </Route>
+                        <Route path=path!("/admin") view=|| view! { <Admin /> } />
+                    </ParentRoute>
                 </Routes>
             </Router>
         </I18nContextProvider>

@@ -1,10 +1,9 @@
 use crate::providers::Config;
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn DarkModeToggle(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let config = expect_context::<Config>().0;
-    let (_, set_cookie) = Config::get_cookie();
+    let Config(config, set_cookie) = expect_context();
     view! {
         <div class=format!(
             "inline-flex justify-center items-center m-1 rounded dark:bg-orange-twilight bg-gray-950 {extend_tw_classes}",
@@ -15,7 +14,7 @@ pub fn DarkModeToggle(#[prop(optional)] extend_tw_classes: &'static str) -> impl
                     set_cookie
                         .update(|c| {
                             if let Some(cookie) = c {
-                                cookie.prefers_dark = !config().prefers_dark;
+                                cookie.prefers_dark = !cookie.prefers_dark;
                             }
                         });
                 }

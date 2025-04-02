@@ -158,6 +158,7 @@ use db_lib::{
 use hive_lib::{
     Color, GameStatus::Finished, Piece,
 };
+use shared_types::GamesQueryOptions;
 use std::str::FromStr;
 
 impl GameResponse {
@@ -175,6 +176,15 @@ impl GameResponse {
         let history = Box::new(History::new_from_str(&game.history)?);
         let state = Box::new(State::new_from_history(&history)?);
         GameResponse::new_from(game, state, conn).await
+    }
+
+    pub async fn vec_from_options(options: GamesQueryOptions, conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
+        let games = Game::get_rows_from_options(&options, conn).await?;
+        let mut vec = Vec::new();
+        for game in games {
+            vec.push(GameResponse::from_model(&game, conn).await?);
+        }
+        Ok(vec)
     }
 
     async fn new_from(

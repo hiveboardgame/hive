@@ -18,4 +18,12 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     pub use ws_server::WsServer;
     pub use messages::{GameHB, Ping, InternalServerMessage, MessageDestination, ClientActorMessage};
 
+    #[derive(Default, Debug)]
+    pub struct WebsocketData {
+        pub chat_storage: Chats,
+        pub game_start: TournamentGameStart,
+        pub pings: Pings,
+        pub lags: Lags,
+    }
+
 }}

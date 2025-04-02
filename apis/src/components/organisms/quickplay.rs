@@ -1,15 +1,16 @@
 use crate::i18n::*;
+use crate::providers::ApiRequestsProvider;
 use crate::{
     common::ChallengeAction,
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
     pages::challenge_create::ChallengeCreate,
-    providers::{ApiRequests, AuthContext},
+    providers::AuthContext,
 };
 use core::panic;
 use hive_lib::{ColorChoice, GameType};
-use leptos::{html::Dialog, *};
+use leptos::{html::Dialog, prelude::*};
 use leptos_icons::*;
-use leptos_router::use_navigate;
+use leptos_router::hooks::use_navigate;
 use shared_types::ChallengeVisibility;
 use shared_types::{ChallengeDetails, GameSpeed::*, TimeMode};
 
@@ -27,6 +28,8 @@ const BUTTON_STYLE: &str = "flex w-full gap-1 justify-center items-center px-4 p
 
 #[component]
 pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
+    let auth_context = expect_context::<AuthContext>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     let (display_text, icon_data, base, increment) = match time_control {
         Bullet1p2 => ("1+2".to_owned(), icon_for_speed(&Bullet), 1, 2),
         Blitz3p3 => ("3+3".to_owned(), icon_for_speed(&Blitz), 3, 3),
@@ -40,13 +43,9 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
         <button
             class=BUTTON_STYLE
             on:click=move |_| {
-                let auth_context = expect_context::<AuthContext>();
-                let account = match (auth_context.user)() {
-                    Some(Ok(Some(account))) => Some(account),
-                    _ => None,
-                };
+                let account = auth_context.user.get();
                 if account.is_some() {
-                    let api = ApiRequests::new();
+                    let api = api.get();
                     let details = ChallengeDetails {
                         rated: true,
                         game_type: GameType::MLP,
@@ -76,12 +75,12 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
 #[component]
 pub fn QuickPlay() -> impl IntoView {
     let i18n = use_i18n();
-    let open = RwSignal::new(false);
     let dialog_el = NodeRef::<Dialog>::new();
+    let auth_context = expect_context::<AuthContext>();
     view! {
         <div class="flex flex-col items-center m-2 grow">
-            <Modal open dialog_el=dialog_el>
-                <ChallengeCreate open />
+            <Modal dialog_el>
+                <ChallengeCreate />
             </Modal>
             <span class="flex justify-center mb-4 text-xl font-bold">
                 {t!(i18n, home.create_game)}
@@ -95,13 +94,11 @@ pub fn QuickPlay() -> impl IntoView {
                 <button
                     class=BUTTON_STYLE
                     on:click=move |_| {
-                        let auth_context = expect_context::<AuthContext>();
-                        let account = match (auth_context.user)() {
-                            Some(Ok(Some(account))) => Some(account),
-                            _ => None,
-                        };
+                        let account = auth_context.user.get();
                         if account.is_some() {
-                            open.update(move |b| *b = true)
+                            if let Some(dialog_el) = dialog_el.get() {
+                                let _ = dialog_el.show_modal();
+                            }
                         } else {
                             let navigate = use_navigate();
                             navigate("/login", Default::default());

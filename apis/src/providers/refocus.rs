@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use leptos::*;
+use leptos::prelude::*;
 
 #[derive(Clone, Debug, Copy)]
 pub struct RefocusSignal {
@@ -15,7 +15,7 @@ impl Default for RefocusSignal {
 impl RefocusSignal {
     pub fn new() -> Self {
         Self {
-            signal: create_rw_signal(RefocusState::new()),
+            signal: RwSignal::new(RefocusState::new()),
         }
     }
 

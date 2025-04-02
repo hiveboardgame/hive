@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
-use shared_types::{
-    GameId, TournamentDetails, TournamentGameResult, TournamentId, TournamentSortOrder,
-};
+use shared_types::{GameId, TournamentDetails, TournamentGameResult, TournamentId};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -18,8 +16,6 @@ pub enum TournamentAction {
     Create(Box<TournamentDetails>),
     Delete(TournamentId),
     Finish(TournamentId),
-    Get(TournamentId, TournamentResponseDepth),
-    GetAll(TournamentResponseDepth, TournamentSortOrder),
     InvitationAccept(TournamentId),
     InvitationCreate(TournamentId, Uuid),
     InvitationDecline(TournamentId),

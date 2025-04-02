@@ -7,7 +7,7 @@ use crate::{
     },
     responses::UserResponse,
 };
-use leptos::*;
+use leptos::{either::EitherOf4, prelude::*};
 use shared_types::GameSpeed;
 
 #[component]
@@ -18,9 +18,10 @@ pub fn UserRow(
     #[prop(optional)] game_speed: Option<StoredValue<GameSpeed>>,
     #[prop(optional)] on_profile: bool,
 ) -> impl IntoView {
+    let user = Signal::derive(move || user.get_value());
     let rating = move || {
         if let Some(speed) = game_speed {
-            user().ratings.get(&speed()).cloned()
+            user().ratings.get(&speed.get_value()).cloned()
         } else {
             None
         }
@@ -45,7 +46,7 @@ pub fn UserRow(
                     patreon=user().patreon
                     username=user().username
                     extend_tw_classes="truncate max-w-[120px]"
-                    user_is_hoverable=user
+                    user_is_hoverable=user()
                 />
             }
         }
@@ -56,16 +57,24 @@ pub fn UserRow(
         for action in actions {
             match action {
                 UserAction::Challenge => {
-                    views.push(view! { <DirectChallengeButton user /> });
+                    views.push(EitherOf4::A(
+                        view! { <DirectChallengeButton user=user() /> },
+                    ));
                 }
                 UserAction::Invite(tournament_id) => {
-                    views.push(view! { <InviteButton user tournament_id /> });
+                    views.push(EitherOf4::B(
+                        view! { <InviteButton user=user() tournament_id /> },
+                    ));
                 }
                 UserAction::Uninvite(tournament_id) => {
-                    views.push(view! { <UninviteButton user tournament_id /> });
+                    views.push(EitherOf4::C(
+                        view! { <UninviteButton user=user() tournament_id /> },
+                    ));
                 }
                 UserAction::Kick(tournament) => {
-                    views.push(view! { <KickButton user tournament=*tournament /> });
+                    views.push(EitherOf4::D(
+                        view! { <KickButton user=user() tournament=*tournament /> },
+                    ));
                 }
                 _ => {}
             };

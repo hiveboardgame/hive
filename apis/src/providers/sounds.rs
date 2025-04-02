@@ -1,9 +1,8 @@
 use super::Config;
-use leptos::*;
-use rand::Rng;
+use leptos::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{js_sys::ArrayBuffer, AudioBuffer, AudioContext, Response};
+use web_sys::{js_sys::ArrayBuffer, js_sys::Math::random, AudioBuffer, AudioContext, Response};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SoundType {
@@ -21,7 +20,7 @@ struct ClientData {
 }
 #[derive(Clone)]
 pub struct Sounds {
-    client_data: Resource<(), Result<ClientData, JsValue>>,
+    client_data: LocalResource<Result<ClientData, JsValue>>,
 }
 
 impl Sounds {
@@ -30,9 +29,10 @@ impl Sounds {
         if !config().prefers_sound {
             return;
         };
-        if let Some(Ok(s)) = self.client_data.get() {
+        let random = (random() * 1e18) as u64;
+        if let Some(Ok(s)) = self.client_data.get().as_deref() {
             let (buffer, offset, duration) = match kind {
-                SoundType::Turn => (&s.turn, rand::thread_rng().gen_range(0..20) as f64, 1.0),
+                SoundType::Turn => (&s.turn, (random % 20) as f64, 1.0),
                 SoundType::NewGame => (&s.new, 0.0, 3.0),
                 SoundType::LowTime => (&s.low, 0.0, 2.0),
             };
@@ -72,6 +72,6 @@ async fn load_client_data() -> Result<ClientData, JsValue> {
 
 pub fn provide_sounds() {
     provide_context(Sounds {
-        client_data: Resource::local(|| (), |_| load_client_data()),
+        client_data: LocalResource::new(load_client_data),
     });
 }

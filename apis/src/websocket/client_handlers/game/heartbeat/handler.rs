@@ -2,7 +2,7 @@ use crate::{
     providers::{games::GamesSignal, timer::TimerSignal},
     responses::HeartbeatResponse,
 };
-use leptos::*;
+use leptos::prelude::*;
 
 pub fn handle_heartbeat(hb: HeartbeatResponse) {
     let mut games_signal = expect_context::<GamesSignal>();

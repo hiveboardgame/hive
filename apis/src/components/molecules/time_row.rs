@@ -1,16 +1,16 @@
 use crate::components::atoms::rating::icon_for_speed;
 use crate::i18n::*;
-use leptos::*;
+use leptos::{either::EitherOf3, prelude::*};
 use leptos_icons::*;
 use shared_types::{GameSpeed, TimeInfo, TimeMode};
 
 #[component]
 pub fn TimeRow(
-    time_info: MaybeSignal<TimeInfo>,
+    time_info: Signal<TimeInfo>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let time_mode = store_value(time_info.get_untracked().mode);
+    let time_mode = Signal::derive(move || time_info.get_untracked().mode);
     let icon = move || {
         let time_info = time_info();
         let speed = match time_mode() {
@@ -20,36 +20,33 @@ pub fn TimeRow(
                 GameSpeed::from_base_increment(time_info.base, time_info.increment)
             }
         };
-        view! { <Icon icon=icon_for_speed(&speed) class="w-4 h-4" /> }
+        view! { <Icon icon=icon_for_speed(&speed) attr:class="w-4 h-4" /> }
     };
     let text = move || {
         let time_info = time_info();
         match time_mode() {
-            TimeMode::Untimed => "No time limit".to_owned().into_view(),
-            TimeMode::RealTime => format!(
+            TimeMode::Untimed => EitherOf3::A("No time limit".to_owned()),
+            TimeMode::RealTime => EitherOf3::A(format!(
                 "{} + {}",
                 time_info.base.expect("Time exists") / 60,
                 time_info.increment.expect("Increment exists"),
-            )
-            .into_view(),
+            )),
 
             TimeMode::Correspondence => {
                 if let Some(base) = time_info.base {
-                    t!(
+                    EitherOf3::B(t!(
                         i18n,
                         game.time_mode.correspondence.days_side,
                         count = move || (base / 86400)
-                    )
-                    .into_view()
+                    ))
                 } else if let Some(increment) = time_info.increment {
-                    t!(
+                    EitherOf3::C(t!(
                         i18n,
                         game.time_mode.correspondence.days_move,
                         count = move || (increment / 86400)
-                    )
-                    .into_view()
+                    ))
                 } else {
-                    "".into_view()
+                    EitherOf3::A("".to_string())
                 }
             }
         }

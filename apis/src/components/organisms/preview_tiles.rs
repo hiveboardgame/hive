@@ -1,11 +1,15 @@
-use crate::{common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
+use crate::{
+    common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack, providers::Config,
+};
 use hive_lib::{GameType, Position, State};
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn PreviewTiles() -> impl IntoView {
     let moves = "wA1; bG1 wA1-; wA2 /wA1; bG2 bG1\\; wA3 -wA1; bG3 bG1-";
     let state = State::new_from_str(moves, &GameType::MLP.to_string()).unwrap();
+    let config = expect_context::<Config>().0;
+    let tile_opts = Signal::derive(move || config().tile);
     let thumbnail_pieces = move || {
         let mut pieces = Vec::new();
         for r in 0..32 {
@@ -24,7 +28,7 @@ pub fn PreviewTiles() -> impl IntoView {
         thumbnail_pieces()
             .into_iter()
             .map(|hs| {
-                view! { <SimpleHexStack hex_stack=hs /> }
+                view! { <SimpleHexStack hex_stack=hs tile_opts=tile_opts() /> }
             })
             .collect_view()
     };

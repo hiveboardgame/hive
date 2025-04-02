@@ -1,6 +1,5 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    responses::TournamentResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -11,7 +10,7 @@ use db_lib::{
 };
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
-use shared_types::TournamentDetails;
+use shared_types::{TournamentDetails, TournamentId};
 use uuid::Uuid;
 
 pub struct CreateHandler {
@@ -39,11 +38,11 @@ impl CreateHandler {
             })
             .await?;
 
-        let response = TournamentResponse::from_model(&tournament, &mut conn).await?;
-
         Ok(vec![InternalServerMessage {
             destination: MessageDestination::Global,
-            message: ServerMessage::Tournament(TournamentUpdate::Created(response)),
+            message: ServerMessage::Tournament(TournamentUpdate::Created(TournamentId(
+                tournament.nanoid.clone(),
+            ))),
         }])
     }
 }

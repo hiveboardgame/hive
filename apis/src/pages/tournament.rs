@@ -9,17 +9,17 @@ use crate::components::{
         chat::ChatWindow, standings::Standings, tournament_admin::TournamentAdminControls,
     },
 };
-use crate::providers::{
-    navigation_controller::NavigationControllerSignal, tournaments::TournamentStateContext,
-    ApiRequests, AuthContext,
-};
+use crate::functions::tournaments::get_complete;
+use crate::providers::ApiRequestsProvider;
+use crate::providers::{tournaments::TournamentStateContext, AuthContext};
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
-use leptos::*;
-use leptos_router::use_navigate;
+use leptos::prelude::*;
+use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{
-    Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentStatus,
+    Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentId,
+    TournamentStatus,
 };
 use std::collections::HashMap;
 
@@ -29,27 +29,40 @@ pub const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-
 
 #[component]
 pub fn Tournament() -> impl IntoView {
-    let navi = expect_context::<NavigationControllerSignal>();
+    let use_params = use_params_map();
     let tournaments = expect_context::<TournamentStateContext>();
-    let tournament_id = move || navi.tournament_signal.get().tournament_id;
-    let current_tournament = move || {
-        tournament_id().and_then(|tournament_id| {
-            tournaments
-                .full
-                .get()
-                .tournaments
-                .get(&tournament_id)
-                .cloned()
-        })
+    let tournament_id = move || {
+        use_params
+            .get_untracked()
+            .get("nanoid")
+            .map(|s| TournamentId(s.to_string()))
     };
-
+    let current_tournament = Action::new(move |_: &()| async move {
+        get_complete(tournament_id().unwrap().to_string())
+            .await
+            .ok()
+    });
+    Effect::watch(
+        tournaments.needs_update,
+        move |needs_update, _, _| {
+            if needs_update.contains(&tournament_id().unwrap()) {
+                current_tournament.dispatch(());
+            }
+        },
+        true,
+    );
+    Effect::new(move |_| {
+        current_tournament.dispatch(());
+    });
     view! {
         <div class="flex flex-col justify-center items-center pt-20 w-full">
             <div class="container flex flex-col items-center w-full">
-                <Show when=move || current_tournament().is_some()>
-                    <LoadedTournament tournament=Signal::derive(move || {
-                        current_tournament().expect("Current tournament is some")
-                    }) />
+                <Show when=move || current_tournament.value().get().is_some()>
+                    <LoadedTournament tournament=current_tournament
+                        .value()
+                        .get()
+                        .flatten()
+                        .expect("Current tournament is some") />
                 </Show>
             </div>
         </div>
@@ -57,12 +70,11 @@ pub fn Tournament() -> impl IntoView {
 }
 
 #[component]
-fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
+fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
+    let tournament = Signal::derive(move || tournament.clone());
     let auth_context = expect_context::<AuthContext>();
-    let account = move || match (auth_context.user)() {
-        Some(Ok(Some(account))) => Some(account),
-        _ => None,
-    };
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let account = auth_context.user;
     let user_id = Signal::derive(move || account().map(|a| a.user.uid));
     let time_info = Signal::derive(move || {
         let tournament = tournament();
@@ -73,9 +85,9 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
         }
     });
     let tournament_id = Memo::new(move |_| tournament().tournament_id);
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if tournament().status != TournamentStatus::NotStarted {
-            let api = ApiRequests::new();
+            let api = api.get();
             api.schedule_action(ScheduleAction::TournamentPublic(tournament_id()));
             if user_id().is_some() {
                 api.schedule_action(ScheduleAction::TournamentOwn(tournament_id()));
@@ -110,7 +122,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
         }
     });
     let send_action = move |action: TournamentAction| {
-        let api = ApiRequests::new();
+        let api = api.get();
         api.tournament(action);
     };
     let delete = move |_| {
@@ -199,7 +211,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
     let inprogress = Memo::new(move |_| tournament().status == TournamentStatus::InProgress);
     let finished = Memo::new(move |_| tournament().status == TournamentStatus::Finished);
 
-    let game_previews = Callback::new(move |_| {
+    let game_previews = Callback::new(move |()| {
         games_hashmap
             .get()
             .iter()
@@ -244,7 +256,6 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
             "flex flex-col gap-1 w-full sm:flex-row sm:flex-wrap justify-center"
         }
     };
-
     view! {
         <div class="flex flex-col items-center p-2 w-full">
             <h1 class="w-full max-w-full text-3xl font-bold text-center whitespace-normal break-words">
@@ -257,7 +268,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
                 <div class=INFO_STYLE>Tournament Info</div>
                 <div class="flex gap-1 m-2">
                     <span class="font-bold">"Time control: "</span>
-                    <TimeRow time_info=time_info.into() />
+                    <TimeRow time_info=time_info />
                 </div>
                 <div class="m-2">
                     <span class="font-bold">"Players: "</span>
@@ -282,7 +293,7 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
                             let:user
                         >
                             <div>
-                                <UserRow actions=vec![] user=store_value(user) />
+                                <UserRow actions=vec![] user=StoredValue::new(user) />
                             </div>
                         </For>
                     </div>
@@ -366,14 +377,14 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
 
                         <UnplayedGameRow
                             game
-                            user_is_organizer=user_is_organizer.into()
+                            user_is_organizer=user_is_organizer
                             tournament_finished=finished.into()
                         />
 
                     </For>
                 </details>
             </Show>
-            <Show when=move || !game_previews(()).is_empty()>
+            <Show when=move || !game_previews.run(()).is_empty()>
                 <details class=DETAILS_STYLE>
                     <summary class=INFO_STYLE>Finished or ongoing games:</summary>
                     <GamePreviews games=game_previews />
@@ -382,7 +393,9 @@ fn LoadedTournament(tournament: Signal<TournamentResponse>) -> impl IntoView {
         </div>
         <Show when=move || user_is_organizer() || user_joined()>
             <div class="p-3 m-2 w-full max-w-full h-60 whitespace-normal break-words sm:w-2/3 bg-even-light dark:bg-even-dark">
-                <ChatWindow destination=shared_types::SimpleDestination::Tournament />
+                <ChatWindow destination=shared_types::SimpleDestination::Tournament(
+                    tournament().tournament_id,
+                ) />
             </div>
         </Show>
     }

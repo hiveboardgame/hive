@@ -1,21 +1,22 @@
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::GameControl;
 use icondata::Icon;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::{use_interval_with_options, UseIntervalOptions};
-use std::rc::Rc;
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[component]
 pub fn AcceptDenyGc(
     game_control: StoredValue<GameControl>,
     user_id: Uuid,
-    #[prop(optional, into)] hidden: MaybeSignal<String>,
+    #[prop(optional, into)] hidden: Signal<String>,
 ) -> impl IntoView {
-    let (icon, title) = get_icon_and_title(game_control());
+    let game_state = expect_context::<GameStateSignal>();
+    let (icon, title) = get_icon_and_title(game_control.get_value());
 
-    let button_style = move || match game_control() {
+    let button_style = move || match game_control.get_value() {
         GameControl::DrawReject(_) | GameControl::TakebackReject(_) => {
             "bg-red-700 hover:bg-ladybug-red absolute"
         }
@@ -23,8 +24,7 @@ pub fn AcceptDenyGc(
     };
 
     let on_click = move |_| {
-        let game_state = expect_context::<GameStateSignal>();
-        game_state.send_game_control(game_control(), user_id);
+        game_state.send_game_control(game_control.get_value(), user_id);
     };
     view! {
         <button
@@ -39,7 +39,7 @@ pub fn AcceptDenyGc(
             }
         >
 
-            <Icon icon=icon class="w-6 h-6 lg:h-8 lg:w-8" />
+            <Icon icon=icon attr:class="w-6 h-6 lg:h-8 lg:w-8" />
         </button>
     }
 }
@@ -48,39 +48,42 @@ pub fn AcceptDenyGc(
 pub fn ConfirmButton(
     game_control: StoredValue<GameControl>,
     user_id: Uuid,
-    #[prop(optional, into)] hidden: MaybeSignal<String>,
+    #[prop(optional, into)] hidden: Signal<String>,
 ) -> impl IntoView {
-    let game_state = store_value(expect_context::<GameStateSignal>());
-    let (icon, title) = get_icon_and_title(game_control());
-    let color = game_control().color();
+    let game_state = StoredValue::new(expect_context::<GameStateSignal>());
+    let (icon, title) = get_icon_and_title(game_control.get_value());
+    let color = game_control.get_value().color();
     let is_clicked = RwSignal::new(false);
-    let interval = store_value(Rc::new(use_interval_with_options(
+    let interval = StoredValue::new(Arc::new(use_interval_with_options(
         5000,
         UseIntervalOptions::default().immediate(false),
     )));
 
     let onclick_confirm = move |_| {
         if is_clicked() {
-            game_state().send_game_control(game_control(), user_id);
+            game_state
+                .get_value()
+                .send_game_control(game_control.get_value(), user_id);
             is_clicked.update(|v| *v = false);
-            (interval().reset)();
-            (interval().pause)();
+            (interval.get_value().reset)();
+            (interval.get_value().pause)();
         } else {
             is_clicked.update(|v| *v = true);
-            (interval().resume)();
+            (interval.get_value().resume)();
         }
     };
 
-    create_isomorphic_effect(move |_| {
-        if (interval().counter)() >= 1 {
+    Effect::new_isomorphic(move |_| {
+        if (interval.get_value().counter)() >= 1 {
             is_clicked.update(|v| *v = false);
-            (interval().reset)();
-            (interval().pause)();
+            (interval.get_value().reset)();
+            (interval.get_value().pause)();
         }
     });
 
-    let pending_slice =
-        create_read_slice(game_state().signal, |gs| gs.game_control_pending.clone());
+    let pending_slice = create_read_slice(game_state.get_value().signal, |gs| {
+        gs.game_control_pending.clone()
+    });
 
     let cancel = move |_| is_clicked.update(|v| *v = false);
     let pending = move |game_control: GameControl| match pending_slice() {
@@ -99,11 +102,11 @@ pub fn ConfirmButton(
         _ => false,
     };
 
-    let turn = create_read_slice(game_state().signal, |gs| gs.state.turn as i32);
+    let turn = create_read_slice(game_state.get_value().signal, |gs| gs.state.turn as i32);
 
     let disabled = move || {
-        if game_control().allowed_on_turn(turn()) {
-            !matches!(game_control(), GameControl::Resign(_))
+        if game_control.get_value().allowed_on_turn(turn()) {
+            !matches!(game_control.get_value(), GameControl::Resign(_))
                 && (pending(GameControl::DrawOffer(color))
                     || pending(GameControl::TakebackRequest(color)))
         } else {
@@ -114,7 +117,7 @@ pub fn ConfirmButton(
     let conditional_button_style = move || {
         if is_clicked() {
             "bg-grasshopper-green hover:bg-green-500"
-        } else if pending(game_control()) {
+        } else if pending(game_control.get_value()) {
             "bg-pullbug-teal"
         } else if disabled() {
             ""
@@ -148,9 +151,9 @@ pub fn ConfirmButton(
 
                 <Icon
                     icon=icon
-                    class=TextProp::from(move || {
+                    attr:class=move || {
                         format!("h-6 w-6 lg:h-8 lg:w-8 {}", conditional_icon_style())
-                    })
+                    }
                 />
 
             </button>
@@ -160,7 +163,7 @@ pub fn ConfirmButton(
                     on:click=cancel
                     class="absolute ml-1 bg-red-700 rounded-sm duration-300 aspect-square hover:bg-ladybug-red"
                 >
-                    <Icon icon=icondata::IoCloseSharp class="w-6 h-6 lg:h-8 lg:w-8" />
+                    <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6 lg:h-8 lg:w-8" />
                 </button>
             </Show>
         </div>

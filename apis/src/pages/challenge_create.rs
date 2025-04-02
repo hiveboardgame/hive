@@ -1,5 +1,5 @@
 use crate::i18n::*;
-use crate::providers::{AuthContext, ChallengeParams};
+use crate::providers::{ApiRequestsProvider, AuthContext, ChallengeParams};
 use crate::{
     common::ChallengeAction,
     components::{
@@ -9,44 +9,28 @@ use crate::{
         },
         organisms::time_select::TimeSelect,
     },
-    providers::ApiRequests,
 };
 use hive_lib::{ColorChoice, GameType};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
-use std::str::FromStr;
 
 #[component]
-pub fn ChallengeCreate(
-    open: RwSignal<bool>,
-    #[prop(optional)] opponent: Option<String>,
-) -> impl IntoView {
-    view! {
-        <Show when=open>
-            <ChallengeCreateInner opponent=opponent.clone() open />
-        </Show>
-    }
-}
-
-#[component]
-fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl IntoView {
+pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoView {
     let i18n = use_i18n();
     let params = expect_context::<ChallengeParams>();
-    let opponent = store_value(opponent);
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let auth_context = expect_context::<AuthContext>();
+    let opponent = Signal::derive(move || opponent.clone());
     let time_signals = params.time_signals;
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let opponent = opponent();
         if opponent.is_some() {
             params.opponent.update(|o| *o = opponent);
         }
     });
     let create_challenge = Callback::new(move |color_choice| {
-        let api = ApiRequests::new();
-        let auth_context = expect_context::<AuthContext>();
-        let account = move || match (auth_context.user)() {
-            Some(Ok(Some(account))) => Some(account),
-            _ => None,
-        };
+        let api = api.get();
+        let account = auth_context.user;
 
         let upper_rating = move || {
             if let Some(account) = account() {
@@ -111,7 +95,6 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
         };
         let challenge_action = ChallengeAction::Create(details);
         api.challenge(challenge_action);
-        open.set(false);
     });
 
     let rating_string = move || {
@@ -132,14 +115,12 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
         )
     };
 
-    let time_change = Callback::from(move |s: String| {
-        if let Ok(new_value) = TimeMode::from_str(&s) {
-            time_signals.corr_days.update(|v| *v = 2);
-            if new_value == TimeMode::Untimed {
-                params.rated.set(false);
-            }
-            time_signals.time_mode.update(|v| *v = new_value);
-        };
+    let time_change = Callback::new(move |t: TimeMode| {
+        time_signals.corr_days.update(|v| *v = 2);
+        if t == TimeMode::Untimed {
+            params.rated.set(false);
+        }
+        time_signals.time_mode.update(|v| *v = t);
     });
     let allowed_values = vec![
         TimeMode::RealTime,
@@ -215,18 +196,20 @@ fn ChallengeCreateInner(open: RwSignal<bool>, opponent: Option<String>) -> impl 
                 </div>
             </Show>
             <div class="flex justify-center items-baseline">
-                <CreateChallengeButton
-                    color_choice=store_value(ColorChoice::White)
-                    create_challenge
-                />
-                <CreateChallengeButton
-                    color_choice=store_value(ColorChoice::Random)
-                    create_challenge
-                />
-                <CreateChallengeButton
-                    color_choice=store_value(ColorChoice::Black)
-                    create_challenge
-                />
+                <form method="dialog">
+                    <CreateChallengeButton
+                        color_choice=StoredValue::new(ColorChoice::White)
+                        create_challenge
+                    />
+                    <CreateChallengeButton
+                        color_choice=StoredValue::new(ColorChoice::Random)
+                        create_challenge
+                    />
+                    <CreateChallengeButton
+                        color_choice=StoredValue::new(ColorChoice::Black)
+                        create_challenge
+                    />
+                </form>
             </div>
         </div>
     }

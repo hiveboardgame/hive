@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn RlBanner() -> impl IntoView {
@@ -13,7 +13,7 @@ pub fn RlBanner() -> impl IntoView {
                     href="https://docs.google.com/document/d/1e_dVoYBEje6i1NNpEEiaQzRtyI1vZnaeDaN9GQ7-YLI/edit?tab=t.0"
                     rel="external"
                     target="_blank"
-                    class="place-self-center text-blue-500 hover:underline inline"
+                    class="inline place-self-center text-blue-500 hover:underline"
                 >
                     Read the rules
                 </a>
@@ -23,7 +23,7 @@ pub fn RlBanner() -> impl IntoView {
                     href="https://docs.google.com/forms/d/e/1FAIpQLSecnSm3UJtQyKB7Th-bLnJchSyYbv1f9RGm1qa3BYNNKaNYYQ/viewform"
                     rel="external"
                     target="_blank"
-                    class="place-self-center text-blue-500 hover:underline inline"
+                    class="inline place-self-center text-blue-500 hover:underline"
                 >
                     Then sign up
                 </a>

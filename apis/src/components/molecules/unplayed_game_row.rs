@@ -1,10 +1,10 @@
 use crate::providers::schedules::SchedulesContext;
-use crate::providers::ApiRequests;
+use crate::providers::ApiRequestsProvider;
 use crate::responses::GameResponse;
 use crate::{common::TournamentAction, components::atoms::profile_link::ProfileLink};
 use chrono::{DateTime, Duration, Local, Utc};
 use hive_lib::Color;
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::{PrettyString, TournamentGameResult};
 
 pub const BUTTON_STYLE: &str = "flex justify-center items-center min-w-fit px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -12,11 +12,12 @@ pub const BUTTON_STYLE: &str = "flex justify-center items-center min-w-fit px-4 
 #[component]
 pub fn UnplayedGameRow(
     game: GameResponse,
-    user_is_organizer: MaybeSignal<bool>,
-    tournament_finished: MaybeSignal<bool>,
+    user_is_organizer: Signal<bool>,
+    tournament_finished: Signal<bool>,
 ) -> impl IntoView {
     let schedules_signal = expect_context::<SchedulesContext>();
-    let game = StoredValue::new(game);
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let game = Signal::derive(move || game.clone());
     let schedule: Signal<Option<DateTime<Utc>>> = Signal::derive(move || {
         schedules_signal
             .tournament
@@ -47,7 +48,7 @@ pub fn UnplayedGameRow(
     let adjudicate = move |result| {
         if user_is_organizer() {
             let action = TournamentAction::AdjudicateResult(game().game_id.clone(), result);
-            let api = ApiRequests::new();
+            let api = api.get();
             api.tournament(action);
             show_adjudicate_menu.update(|b| *b = !*b);
         }

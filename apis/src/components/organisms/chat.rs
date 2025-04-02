@@ -6,7 +6,7 @@ use crate::{
     },
 };
 use chrono::Local;
-use leptos::*;
+use leptos::{html, prelude::*};
 use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};
 use shared_types::{ChatDestination, ChatMessage, SimpleDestination};
 use uuid::Uuid;
@@ -37,13 +37,11 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let send = move || {
-        batch(move || {
-            let message = chat.typed_message.get();
-            if !message.is_empty() {
-                chat.send(&message, destination());
-                chat.typed_message.set(String::new());
-            };
-        })
+        let message = chat.typed_message.get();
+        if !message.is_empty() {
+            chat.send(&message, destination());
+            chat.typed_message.set(String::new());
+        };
     };
     let placeholder = move || match destination() {
         ChatDestination::GamePlayers(_, _, _) => "Chat with opponent",
@@ -51,16 +49,16 @@ pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
         _ => "Chat",
     };
     let my_input = NodeRef::<html::Input>::new();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
     view! {
         <input
-            ref=my_input
+            node_ref=my_input
             type="text"
             class="box-border px-2 py-4 w-full rounded-lg resize-none bg-odd-light dark:bg-odd-dark focus:outline-none shrink-0"
             prop:value=chat.typed_message
-            attr:placeholder=placeholder
+            prop:placeholder=placeholder
             on:input=update_from_input(chat.typed_message)
             on:keydown=move |evt| {
                 if evt.key() == "Enter" {
@@ -69,7 +67,7 @@ pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
                 }
             }
 
-            attr:maxlength="1000"
+            maxlength="1000"
         />
     }
 }
@@ -83,11 +81,7 @@ pub fn ChatWindow(
     let chat = expect_context::<Chat>();
     let auth_context = expect_context::<AuthContext>();
     let game_state = expect_context::<GameStateSignal>();
-    let uid = if let Some(Ok(Some(account))) = untrack(auth_context.user) {
-        Some(account.user.uid)
-    } else {
-        None
-    };
+    let uid = auth_context.user.get_untracked().map(|user| user.user.uid);
     let white_id = move || {
         game_state
             .signal
@@ -105,15 +99,9 @@ pub fn ChatWindow(
 
     let navi = expect_context::<NavigationControllerSignal>();
     let game_id = Signal::derive(move || navi.game_signal.get().game_id.unwrap_or_default());
-    let tournament_id = Signal::derive(move || {
-        navi.tournament_signal
-            .get()
-            .tournament_id
-            .unwrap_or_default()
-    });
     let correspondant_id = Signal::derive(move || correspondant_id.map_or(Uuid::new_v4(), |id| id));
     let correspondant_username = Signal::derive(move || correspondant_username.clone());
-    let div = create_node_ref::<html::Div>();
+    let div = NodeRef::<html::Div>::new();
     let _ = use_mutation_observer_with_options(
         div,
         move |mutations, _| {
@@ -127,7 +115,7 @@ pub fn ChatWindow(
             .attributes(true),
     );
 
-    let actual_destination = Signal::derive(move || match destination {
+    let actual_destination = Signal::derive(move || match destination.clone() {
         SimpleDestination::Game => {
             if game_state.signal.get().uid_is_player(uid) {
                 ChatDestination::GamePlayers(game_id(), white_id(), black_id())
@@ -139,7 +127,9 @@ pub fn ChatWindow(
             ChatDestination::User((correspondant_id(), correspondant_username()))
         }
         SimpleDestination::Global => ChatDestination::Global,
-        SimpleDestination::Tournament => ChatDestination::TournamentLobby(tournament_id()),
+        SimpleDestination::Tournament(tournament_id) => {
+            ChatDestination::TournamentLobby(tournament_id)
+        }
     });
     let messages = move || match actual_destination() {
         ChatDestination::TournamentLobby(tournament) => (chat.tournament_lobby_messages)()
@@ -167,7 +157,7 @@ pub fn ChatWindow(
             id="ignoreChat"
             class="flex flex-col flex-grow justify-between w-full min-w-full max-w-full h-full"
         >
-            <div ref=div class="overflow-y-auto flex-grow w-full min-w-full h-0">
+            <div node_ref=div class="overflow-y-auto flex-grow w-full min-w-full h-0">
                 <For each=messages key=|message| message.timestamp let:message>
                     <Message message=message />
                 </For>

@@ -1,10 +1,11 @@
-use super::auth_context::AuthContext;
 use super::navigation_controller::NavigationControllerSignal;
+use super::AuthContext;
+use crate::responses::AccountResponse;
 use crate::responses::GameResponse;
 use crate::responses::HeartbeatResponse;
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameControl};
-use leptos::*;
+use leptos::prelude::*;
 use shared_types::GameId;
 use shared_types::TimeMode;
 use std::cmp::Ordering;
@@ -15,19 +16,20 @@ use std::collections::HashMap;
 pub struct GamesSignal {
     pub own: RwSignal<OwnGames>,
     pub live: RwSignal<LiveGames>,
-}
-
-impl Default for GamesSignal {
-    fn default() -> Self {
-        Self::new()
-    }
+    navigation_controller: NavigationControllerSignal,
+    user: Signal<Option<AccountResponse>>,
 }
 
 impl GamesSignal {
-    pub fn new() -> Self {
+    pub fn new(
+        navigation_controller: NavigationControllerSignal,
+        user: Signal<Option<AccountResponse>>,
+    ) -> Self {
         Self {
-            own: create_rw_signal(OwnGames::new()),
-            live: create_rw_signal(LiveGames::new()),
+            own: RwSignal::new(OwnGames::new()),
+            live: RwSignal::new(LiveGames::new()),
+            navigation_controller,
+            user,
         }
     }
 
@@ -45,9 +47,8 @@ impl GamesSignal {
     }
 
     pub fn visit(&mut self, time_mode: TimeMode) -> Option<GameId> {
-        let navigation_controller = expect_context::<NavigationControllerSignal>();
-        let auth_context = expect_context::<AuthContext>();
-        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+        let navigation_controller = self.navigation_controller;
+        if let Some(user) = self.user.get_untracked() {
             self.own.update(|s| {
                 if let Some(game_id) = navigation_controller.game_signal.get_untracked().game_id {
                     if let Some(game) = s.untimed.get(&game_id) {
@@ -135,10 +136,9 @@ impl GamesSignal {
     }
 
     pub fn own_games_add(&mut self, game: GameResponse) {
-        let auth_context = expect_context::<AuthContext>();
         let mut next_required = false;
         let mut player_color = Color::White;
-        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+        if let Some(user) = self.user.get_untracked() {
             if game.current_player_id == user.id {
                 next_required = true;
             }
@@ -246,9 +246,8 @@ impl GamesSignal {
     }
 
     pub fn live_games_add(&mut self, game: GameResponse) {
-        let auth_context = expect_context::<AuthContext>();
         let mut should_show = true;
-        if let Some(Ok(Some(user))) = untrack(auth_context.user) {
+        if let Some(user) = self.user.get_untracked() {
             if game.black_player.uid == user.id || game.white_player.uid == user.id {
                 should_show = false;
             }
@@ -341,5 +340,7 @@ impl Default for LiveGames {
 }
 
 pub fn provide_games() {
-    provide_context(GamesSignal::new())
+    let auth_context = expect_context::<AuthContext>();
+    let navigation_controller = expect_context::<NavigationControllerSignal>();
+    provide_context(GamesSignal::new(navigation_controller, auth_context.user))
 }

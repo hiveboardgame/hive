@@ -1,7 +1,8 @@
 use crate::i18n::*;
 use crate::{components::molecules::time_row::TimeRow, providers::game_state::GameStateSignal};
 use hive_lib::{Color, GameResult, GameStatus};
-use leptos::*;
+use leptos::either::Either;
+use leptos::prelude::*;
 use shared_types::{Conclusion, PrettyString, TimeInfo, TournamentGameResult, TournamentId};
 
 #[component]
@@ -105,11 +106,11 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             (game_info(), tournament_info())
         {
             let rated = if rated {
-                t!(i18n, game.rated).into_view()
+                t_string!(i18n, game.rated)
             } else {
-                t!(i18n, game.casual).into_view()
+                t_string!(i18n, game.casual)
             };
-            let name = store_value(name);
+            let name = Signal::derive(move || name.clone());
             let name = move || {
                 if let Some(name) = name() {
                     format!("played in {}", name)
@@ -117,7 +118,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     String::new()
                 }
             };
-            let nanoid = store_value(nanoid);
+            let nanoid = Signal::derive(move || nanoid.clone());
             let link = move || {
                 if let Some(TournamentId(id)) = nanoid() {
                     format!("/tournament/{}", id)
@@ -125,11 +126,11 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     String::new()
                 }
             };
-            view! {
+            Either::Left(view! {
                 <div class=extend_tw_classes>
                     <div class="flex gap-1 items-center">
                         <TimeRow time_info=time_info.into() extend_tw_classes="whitespace-nowrap" />
-                        <div>{rated}</div>
+                        <div>{move || rated}</div>
                         <Show when=move || is_tournament>
                             <a href=link>{name()}</a>
                         </Show>
@@ -141,10 +142,9 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         </Show>
                     </div>
                 </div>
-            }
-            .into_view()
+            })
         } else {
-            view! { "" }.into_view()
+            Either::Right(view! { "" })
         }
     }
 }

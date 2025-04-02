@@ -32,7 +32,6 @@ http-serde = { workspace = true }
 icondata = { workspace = true }
 indoc = { workspace = true }
 lazy_static = { workspace = true }
-leptix_primitives = {workspace = true}
 leptos = { workspace = true }
 leptos-use = { workspace = true }
 leptos_actix = { workspace = true, optional = true }
@@ -42,12 +41,13 @@ leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
 log = { workspace = true }
 markdown = {workspace = true}
-rand = { workspace = true }
-rand_core = { workspace = true }
+rand = { workspace = true, optional = true }
 regex = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+server_fn = { workspace = true }
+send_wrapper = { workspace = true }
 sha2 = { workspace = true }
 shared_types = { path = "../shared_types" }
 simple_logger = { workspace = true }
@@ -61,8 +61,8 @@ wasm-bindgen-futures = { workspace = true}
 web-sys = { workspace = true }
 
 [features]
-csr = ["leptos/csr", "leptos_meta/csr", "leptos_router/csr", "leptos_i18n/csr"]
-hydrate = ["leptos/hydrate", "leptos_meta/hydrate", "leptos_router/hydrate", "leptos_i18n/hydrate"]
+csr = ["leptos/csr", "leptos_i18n/csr"]
+hydrate = ["leptos/hydrate", "leptos_i18n/hydrate"]
 ssr = [
   "dep:actix",
   "dep:actix-files",
@@ -77,6 +77,7 @@ ssr = [
   "dep:diesel_migrations",
   "dep:diesel-async",
   "dep:leptos_actix",
+  "dep:rand",
   "leptos/ssr",
   "leptos-use/ssr",
   "leptos_meta/ssr",
@@ -86,6 +87,7 @@ ssr = [
 
 [package.metadata.leptos-i18n]
 default = "en"
+#Commented out very incomplete locales (< 30% translated)
 locales = [
   "ca", 
   "de",
@@ -96,7 +98,11 @@ locales = [
   "it", 
   "pt",
   "ro", 
-  "ru" 
+  "ru" ,
+  #cs,
+  #ja,
+  #nl,
+  #sv
 ]
 namespaces = [
   "header", 

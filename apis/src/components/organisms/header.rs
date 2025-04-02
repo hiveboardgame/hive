@@ -10,21 +10,16 @@ use crate::components::organisms::{
     sound_toggle::SoundToggle,
 };
 use crate::i18n::*;
+use crate::providers::navigation_controller::NavigationControllerSignal;
 use crate::providers::AuthContext;
-use leptos::*;
-use leptos_router::use_location;
+use leptos::prelude::*;
+use leptos_router::hooks::use_location;
 use shared_types::TimeMode;
-
-#[derive(Clone)]
-pub struct Redirect(pub RwSignal<String>);
 
 #[component]
 pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let username = move || match (auth_context.user)() {
-        Some(Ok(Some(user))) => Some(user.username),
-        _ => None,
-    };
+    let username = move || auth_context.user.get().map(|user| user.username);
     let i18n = use_i18n();
     view! {
         <header class="w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none">
@@ -56,28 +51,27 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </div>
             </div>
-            <Transition fallback=|| view! { <GuestActions /> }>
-                <Show when=move || username().is_some() fallback=|| view! { <GuestActions /> }>
-                    <div class="flex items-center">
-                        <NextGameButton time_mode=store_value(TimeMode::RealTime) />
-                        <NextGameButton time_mode=store_value(TimeMode::Correspondence) />
-                        <NextGameButton time_mode=store_value(TimeMode::Untimed) />
-                    </div>
-                    <div class="flex items-center mr-1">
-                        <ChatAndControls />
-                        <SoundToggle />
-                        <LocaleDropdown />
-                        <NotificationDropdown />
-                        <UserDropdown username=username().expect("Username is some") />
-                    </div>
-                </Show>
-            </Transition>
+            <Show when=move || username().is_some() fallback=|| view! { <GuestActions /> }>
+                <div class="flex items-center">
+                    <NextGameButton time_mode=StoredValue::new(TimeMode::RealTime) />
+                    <NextGameButton time_mode=StoredValue::new(TimeMode::Correspondence) />
+                    <NextGameButton time_mode=StoredValue::new(TimeMode::Untimed) />
+                </div>
+                <div class="flex items-center mr-1">
+                    <ChatAndControls />
+                    <SoundToggle />
+                    <LocaleDropdown />
+                    <NotificationDropdown />
+                    <UserDropdown username=username().expect("Username is some") />
+                </div>
+            </Show>
         </header>
     }
 }
 
 #[component]
 fn GuestActions() -> impl IntoView {
+    let referrer = expect_context::<NavigationControllerSignal>().redirect;
     view! {
         <div class="flex items-center mr-1">
             <ChatAndControls />
@@ -87,7 +81,7 @@ fn GuestActions() -> impl IntoView {
             <a
                 class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                 href="/login"
-                on:focus=move |_| set_redirect()
+                on:focus=move |_| set_redirect(referrer)
             >
                 Login
             </a>
@@ -95,9 +89,6 @@ fn GuestActions() -> impl IntoView {
     }
 }
 
-pub fn set_redirect() {
-    let referrer = RwSignal::new(String::from("/"));
-    let location = use_location().pathname.get();
-    referrer.update(|s| *s = location);
-    provide_context(Redirect(referrer));
+pub fn set_redirect(referrer: RwSignal<String>) {
+    referrer.update_untracked(|s| *s = use_location().pathname.get());
 }

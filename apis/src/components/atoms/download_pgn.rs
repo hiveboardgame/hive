@@ -1,5 +1,5 @@
 use hive_lib::{Color, GameResult, GameStatus};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_icons::*;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{js_sys::Array, Blob, Url};
@@ -10,12 +10,12 @@ use crate::{providers::game_state::GameStateSignal, responses::GameResponse};
 pub fn DownloadPgn(
     #[prop(optional, into)] game: Option<StoredValue<GameResponse>>,
 ) -> impl IntoView {
+    let game_state = expect_context::<GameStateSignal>();
     let maybe_game = move || {
         if let Some(game) = game {
             Some(game)
         } else {
-            let game_state = expect_context::<GameStateSignal>();
-            (game_state.signal)().game_response.map(store_value)
+            (game_state.signal)().game_response.map(StoredValue::new)
         }
     };
     let download = move |_| {
@@ -45,14 +45,14 @@ pub fn DownloadPgn(
                 class="flex z-20 justify-center items-center m-1 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                 on:click=download
             >
-                <Icon icon=icondata::AiDownloadOutlined class="py-1 w-7 h-7" />
+                <Icon icon=icondata::AiDownloadOutlined attr:class="py-1 w-7 h-7" />
             </button>
         </Show>
     }
 }
 
 fn blob_and_filename(game: StoredValue<GameResponse>) -> (Blob, String) {
-    let game = game();
+    let game = game.get_value();
     let date = game.created_at.format("%d-%b-%Y_%H:%M:%S").to_string();
     let game_result = match game.game_status {
         GameStatus::Finished(result) => match result {

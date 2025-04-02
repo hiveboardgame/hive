@@ -1,16 +1,16 @@
 use crate::components::atoms::history_button::{HistoryButton, HistoryNavigation};
 use crate::components::organisms::reserve::{Alignment, Reserve};
 use crate::providers::game_state::GameStateSignal;
-use ev::keydown;
 use hive_lib::Color;
-use leptos::*;
+use leptos::ev::keydown;
+use leptos::{html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 
 #[component]
 pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let window = use_window();
-    let active = Signal::derive(move || {
+    let active = Signal::derive_local(move || {
         window.as_ref().and_then(|w| {
             w.document()
                 .expect("window to have a document")
@@ -23,8 +23,8 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
             elem.scroll_into_view_with_bool(false);
         }
     });
-    let prev_button = create_node_ref::<html::Button>();
-    let next_button = create_node_ref::<html::Button>();
+    let prev_button = NodeRef::<html::Button>::new();
+    let next_button = NodeRef::<html::Button>::new();
     _ = use_event_listener(document().body(), keydown, move |evt| {
         if evt.key() == "ArrowLeft" {
             evt.prevent_default();
@@ -47,12 +47,12 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
         game_state.show_history_turn(game_state.signal.get_untracked().state.turn - 1);
     });
     let if_last_go_to_end = Callback::new(move |()| {
-        focus(());
+        focus.run(());
         let gamestate = game_state.signal.get_untracked();
         {
             if let Some(turn) = gamestate.history_turn {
                 if turn == gamestate.state.turn - 1 {
-                    go_to_end(());
+                    go_to_end.run(());
                 }
             }
         }
@@ -60,12 +60,7 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
     view! {
         <div>
             <div class="flex gap-1 min-h-0 [&>*]:grow">
-                <HistoryButton
-
-                    action=HistoryNavigation::First
-                    post_action=focus
-                />
-
+                <HistoryButton action=HistoryNavigation::First post_action=focus />
                 <HistoryButton
                     node_ref=prev_button
                     action=HistoryNavigation::Previous
@@ -76,12 +71,7 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
                     action=HistoryNavigation::Next
                     post_action=if_last_go_to_end
                 />
-
-                <HistoryButton
-
-                    action=HistoryNavigation::Last
-                    post_action=go_to_end
-                />
+                <HistoryButton action=HistoryNavigation::Last post_action=go_to_end />
             </div>
             <div class="flex p-2">
                 <Reserve alignment=Alignment::DoubleRow color=Color::White analysis=false />

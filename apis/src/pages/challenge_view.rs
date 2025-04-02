@@ -1,9 +1,11 @@
 use crate::components::molecules::challenge_row::ChallengeRow;
 use crate::functions::{challenges::get::get_challenge, hostname::hostname_and_port};
 use crate::providers::AuthContext;
-use leptos::*;
+use leptos::either::Either;
+use leptos::{html, prelude::*};
 use leptos_icons::*;
-use leptos_router::*;
+use leptos_router::hooks::use_params;
+use leptos_router::params::Params;
 use leptos_use::use_window;
 use shared_types::ChallengeId;
 
@@ -27,9 +29,11 @@ pub fn ChallengeView() -> impl IntoView {
     };
     let challenge_id = move || ChallengeId(nanoid());
 
-    let challenge = Resource::once(move || get_challenge(challenge_id()));
+    //let challenge = OnceResource::new(move || get_challenge(challenge_id()));
+    let challenge = OnceResource::new(get_challenge(challenge_id()));
+
     let challenge_address = move || format!("{}/challenge/{}", hostname_and_port(), nanoid());
-    let button_ref = create_node_ref::<html::Button>();
+    let button_ref = NodeRef::<html::Button>::new();
     let copy = move |_| {
         let clipboard = use_window()
             .as_ref()
@@ -52,51 +56,50 @@ pub fn ChallengeView() -> impl IntoView {
             .add_2("bg-grasshopper-green", "hover:bg-green-500")
             .expect("tw classes to be added");
     };
-
+    let uid = move || auth_context.user.get().map(|user| user.id);
     view! {
         <div class="flex flex-col items-center pt-20 mx-auto">
             <Transition>
                 {move || {
-                    challenge()
+                    challenge
+                        .get()
                         .map(|data| match data {
                             Err(_) => {
-                                view! { <pre>"Challenge doesn't seem to exist"</pre> }.into_view()
+                                Either::Left(view! { <pre>"Challenge doesn't seem to exist"</pre> })
                             }
                             Ok(challenge) => {
-                                let user = move || match (auth_context.user)() {
-                                    Some(Ok(Some(user))) => Some(user),
-                                    _ => None,
-                                };
-                                view! {
-                                    <Show when=move || {
-                                        user()
-                                            .is_some_and(|user| user.id == challenge.challenger.uid)
-                                    }>
-                                        <p>"To invite someone to play, give this URL:"</p>
-                                        <div class="flex">
-                                            <input
-                                                id="challenge_link"
-                                                type="text"
-                                                class="w-[50ch]"
-                                                value=challenge_address
-                                                readonly
-                                            />
-                                            <button
-                                                title="Copy link"
-                                                ref=button_ref
-                                                on:click=copy
-                                                class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
-                                            >
-                                                <Icon icon=icondata::AiCopyOutlined class="w-6 h-6" />
-                                            </button>
-                                        </div>
-                                        <p>
-                                            "The first person to come to this URL will play with you."
-                                        </p>
-                                    </Show>
-                                    <ChallengeRow challenge=store_value(challenge) single=true />
-                                }
-                                    .into_view()
+                                let user = auth_context.user;
+                                Either::Right(
+                                    view! {
+                                        <Show when=move || {
+                                            user()
+                                                .is_some_and(|user| user.id == challenge.challenger.uid)
+                                        }>
+                                            <p>"To invite someone to play, give this URL:"</p>
+                                            <div class="flex">
+                                                <input
+                                                    id="challenge_link"
+                                                    type="text"
+                                                    class="w-[50ch]"
+                                                    value=challenge_address
+                                                    readonly
+                                                />
+                                                <button
+                                                    title="Copy link"
+                                                    node_ref=button_ref
+                                                    on:click=copy
+                                                    class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
+                                                >
+                                                    <Icon icon=icondata::AiCopyOutlined attr:class="w-6 h-6" />
+                                                </button>
+                                            </div>
+                                            <p>
+                                                "The first person to come to this URL will play with you."
+                                            </p>
+                                        </Show>
+                                        <ChallengeRow challenge=challenge single=true uid=uid() />
+                                    },
+                                )
                             }
                         })
                 }}

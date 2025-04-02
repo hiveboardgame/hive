@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use leptos::*;
+use leptos::prelude::*;
 
 #[derive(Clone, Debug, Copy)]
 pub struct PingContext {
@@ -23,8 +23,8 @@ impl Default for PingContext {
 impl PingContext {
     pub fn new() -> Self {
         Self {
-            ping: 0.0.into(),
-            last_updated: Utc::now().into(),
+            ping: RwSignal::new(0.0),
+            last_updated: RwSignal::new(Utc::now()),
         }
     }
 }

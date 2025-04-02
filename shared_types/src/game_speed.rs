@@ -23,6 +23,11 @@ impl GameSpeed {
         vec![Bullet, Blitz, Rapid, Classic, Correspondence, Puzzle]
     }
 
+    pub fn all_games() -> Vec<GameSpeed> {
+        use GameSpeed::*;
+        vec![Bullet, Blitz, Rapid, Classic, Correspondence, Untimed]
+    }
+
     pub fn all() -> Vec<GameSpeed> {
         use GameSpeed::*;
         vec![
