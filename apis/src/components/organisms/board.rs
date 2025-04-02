@@ -352,7 +352,7 @@ pub fn Board(
                         } else {
                             Either::Right(
                                 view! {
-                                    <BoardPieces tile_opts=tile_opts.get_untracked() target_stack />
+                                    <BoardPieces tile_opts=tile_opts() target_stack=target_stack.into() />
                                 },
                             )
                         }

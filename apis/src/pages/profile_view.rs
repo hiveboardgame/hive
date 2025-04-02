@@ -322,9 +322,12 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
             node_ref=el
             class="overflow-x-hidden items-center h-full sm:grid sm:grid-cols-2 sm:gap-1"
         >
-            <For each=ctx.games key=move |game| (game.uuid, tab_view) let:game>
-                <GameRow game=StoredValue::new(game) />
-            </For>
+        {
+            move || ctx.games.get().iter().map(|game| 
+            view!{
+                <GameRow game=game.clone() />
+            }).collect_view()
+        }
         </div>
     }
 }

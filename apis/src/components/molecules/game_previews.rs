@@ -75,6 +75,7 @@ pub fn GamePreviews(
             <For each=move || games.run(()) key=|g| (g.game_id.clone(), g.turn) let:game>
 
                 {
+                    let board = game.create_state().board;
                     let base = game.time_base;
                     let inc = game.time_increment;
                     let finished = move || game.finished;
@@ -92,7 +93,6 @@ pub fn GamePreviews(
                     let b_username = StoredValue::new(game.black_player.username.clone());
                     let white_player = StoredValue::new(game.white_player.clone());
                     let black_player = StoredValue::new(game.black_player.clone());
-                    let game = StoredValue::new(game);
                     view! {
                         <div class="flex relative flex-col items-center m-2 w-60 h-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
                             <div class="flex flex-col items-center w-full">
@@ -122,7 +122,7 @@ pub fn GamePreviews(
                                     <TimeRow time_info=time_info().into() />
                                 </div>
                             </Show>
-                            <ThumbnailPieces game />
+                            <ThumbnailPieces board=StoredValue::new(board) />
                             <a
                                 class="absolute top-0 left-0 z-10 w-full h-full"
                                 href=format!("/game/{}", game_id)
