@@ -4,6 +4,7 @@ pub mod challenges;
 #[cfg(feature = "ssr")]
 pub mod db;
 pub mod games;
+pub mod home_banner;
 pub mod hostname;
 pub mod oauth;
 pub mod pwa;

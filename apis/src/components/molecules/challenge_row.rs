@@ -107,7 +107,6 @@ pub fn ChallengeRow(
         base: challenge.time_base,
         increment: challenge.time_increment,
     };
-
     view! {
         <tr class="items-center text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
             <td class=td_class>
