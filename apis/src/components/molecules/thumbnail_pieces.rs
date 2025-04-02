@@ -1,20 +1,19 @@
 use crate::common::SvgPos;
 use crate::common::TileDesign;
 use crate::providers::Config;
-use crate::responses::GameResponse;
 use crate::{common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
+use hive_lib::Board;
 use hive_lib::Position;
 use leptos::prelude::*;
 
 #[component]
-pub fn ThumbnailPieces(game: StoredValue<GameResponse>) -> impl IntoView {
-    let state = Signal::derive(move || game.get_value().create_state());
+pub fn ThumbnailPieces(board: StoredValue<Board>) -> impl IntoView {
     let thumbnail_pieces = move || {
         let mut pieces = Vec::new();
         for r in 0..32 {
             for q in 0..32 {
                 let position = Position::new(q, r);
-                let bug_stack = state().board.board.get(position).clone();
+                let bug_stack = board.get_value().board.get(position).clone();
                 if !bug_stack.is_empty() {
                     pieces.push(HexStack::new_history(&bug_stack, position));
                 }
@@ -30,7 +29,7 @@ pub fn ThumbnailPieces(game: StoredValue<GameResponse>) -> impl IntoView {
     let (width, height) = (400.0_f32, 510.0_f32);
     // TODO: because Thumbnail pieces is used in two places, this leads to weirdness in the TV
     let transform = move || {
-        let svg_pos = SvgPos::center_for_level(state().board.center_coordinates(), 0, straight());
+        let svg_pos = SvgPos::center_for_level(board.get_value().center_coordinates(), 0, straight());
         let x_transform = -(svg_pos.0 - (width / 2.0));
         let y_transform = -(svg_pos.1 - (height / 2.0));
         format!("translate({},{})", x_transform, y_transform)

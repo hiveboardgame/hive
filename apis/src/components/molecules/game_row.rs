@@ -19,8 +19,8 @@ use leptos_icons::*;
 use shared_types::{GameStart, PrettyString, TimeInfo};
 
 #[component]
-pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
-    let game = Signal::derive(move || game.get_value().clone());
+pub fn GameRow(game: GameResponse) -> impl IntoView {
+    let game = Signal::derive(move || game.clone());
     let i18n = use_i18n();
     let rated_string = move || {
         if game().rated {
@@ -136,11 +136,11 @@ pub fn GameRow(game: StoredValue<GameResponse>) -> impl IntoView {
         base: game().time_base,
         increment: game().time_increment,
     };
-
+    let board = game().create_state().board;
     view! {
         <article class="flex relative px-2 py-4 mx-2 w-full h-40 duration-300 sm:h-56 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="mx-2">
-                <ThumbnailPieces game=StoredValue::new(game()) />
+                <ThumbnailPieces board=StoredValue::new(board) />
             </div>
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">
                 <div class="flex flex-col justify-between">
