@@ -59,7 +59,7 @@ pub fn Hex(
                 _ => hex.level.into(),
             };
             EitherOf4::C(
-                view! { <Piece piece=piece position=hex.position level=level piece_type=piece_type tile_opts /> },
+                view! { <Piece piece=piece position=hex.position level=level tile_opts piece_type=piece_type /> },
             )
         }
         HexType::LastMove(direction) => {

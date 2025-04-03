@@ -27,7 +27,7 @@ pub fn Header() -> impl IntoView {
                 <MobileDropdown />
                 <div class="hidden lg:flex lg:items-center lg:gap-1">
                     <a
-                        class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
+                        class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform no-link-style hover:text-pillbug-teal active:scale-95"
                         href="/"
                     >
                         {t!(i18n, header.home)}
@@ -36,7 +36,7 @@ pub fn Header() -> impl IntoView {
                     <LearnDropdown />
                     <TournamentDropdown />
                     <a
-                        class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform hover:text-pillbug-teal active:scale-95"
+                        class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 transform no-link-style hover:text-pillbug-teal active:scale-95"
                         href="https://www.gen42.com/"
                         rel="external"
                         target="_blank"
@@ -44,7 +44,7 @@ pub fn Header() -> impl IntoView {
                         {t!(i18n, header.buy_game)}
                     </a>
                     <a
-                        class="block p-2 h-full font-bold uppercase whitespace-nowrap transition-transform duration-300 transform dark:text-[#FAB93F] text-[#2A6560] hover:text-pillbug-teal active:scale-95"
+                        class="no-link-style block p-2 h-full font-bold uppercase whitespace-nowrap transition-transform duration-300 transform dark:text-[#FAB93F] text-[#2A6560] hover:text-pillbug-teal active:scale-95"
                         href="/donate"
                     >
                         {t!(i18n, header.donate)}

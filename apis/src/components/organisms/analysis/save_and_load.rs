@@ -114,7 +114,7 @@ pub fn LoadTree() -> impl IntoView {
     };
     view! {
         <form>
-            <label class="flex z-20 justify-center items-center w-full h-full text-white break-words rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95">
+            <label class="flex z-20 justify-center items-center p-2 w-full h-full text-white break-words rounded-sm transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95">
                 "Load"
                 <input
                     node_ref=input_ref

@@ -45,7 +45,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
         format!("flex hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-3 rounded {}", if active { "bg-pillbug-teal" } else { "bg-button-dawn dark:bg-button-twilight" })
     };
     let radio_classes = |active| {
-        format!("hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded {}", if active { "bg-pillbug-teal" } else { "bg-button-dawn dark:bg-button-twilight" })
+        format!("no-link-style hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded {}", if active { "bg-pillbug-teal" } else { "bg-button-dawn dark:bg-button-twilight" })
     };
     let set_first_batch = move || {
         spawn_local(async move {
@@ -71,7 +71,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
     };
     view! {
         <div class="flex flex-col m-1 text-md sm:text-lg">
-            <div class="flex gap-1">
+            <div class="flex flex-wrap gap-1">
                 <a
                     href=format!("/@/{}/unstarted", username())
                     class=move || radio_classes(controls().tab_view == GameProgress::Unstarted)
@@ -93,7 +93,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
 
             </div>
             <div class="font-bold text-md">{t!(i18n, profile.player_color)}</div>
-            <div class="flex gap-1">
+            <div class="flex flex-wrap gap-1">
                 <button
                     on:click=move |_| {
                         controls.update(|c| c.color = Some(Color::Black));
@@ -124,7 +124,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
             </div>
             <Show when=move || controls().tab_view == GameProgress::Finished>
                 <div class="font-bold text-md">{t!(i18n, profile.game_result)}</div>
-                <div class="flex gap-1">
+                <div class="flex flex-wrap gap-1">
                     <button
                         class=move || radio_classes(controls().result == Some(ResultType::Win))
                         on:click=move |_| {
@@ -164,7 +164,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
                 </div>
             </Show>
             <div class="font-bold text-md">{t!(i18n, profile.include_speeds)}</div>
-            <div class="flex gap-1 mb-1">
+            <div class="flex flex-wrap gap-1 mb-1">
                 <button
                     on:click=move |_| {
                         toggle_speeds(GameSpeed::Bullet);

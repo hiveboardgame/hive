@@ -132,7 +132,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <div class="col-span-4 text-center">{conclusion}</div>
                     <a
                         href="/analysis"
-                        class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+                        class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
                         on:click=analysis_setup
                     >
                         <div class="flex gap-1 justify-center items-center">

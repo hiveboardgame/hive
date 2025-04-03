@@ -65,6 +65,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    home_banner (id) {
+        id -> Int4,
+        title -> Text,
+        content -> Text,
+        display -> Bool,
+    }
+}
+
+diesel::table! {
     ratings (id) {
         id -> Int4,
         user_uid -> Uuid,
@@ -197,6 +206,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     challenges,
     games,
     games_users,
+    home_banner,
     ratings,
     schedules,
     tournament_series,
