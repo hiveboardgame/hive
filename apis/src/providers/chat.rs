@@ -1,11 +1,8 @@
 use crate::responses::AccountResponse;
 
 use super::{
-    api_requests::ApiRequests,
-    auth_context::AuthContext,
-    game_state::GameStateSignal,
-    navigation_controller::{GameNavigationControllerState, NavigationControllerSignal},
-    AlertType, AlertsContext, ApiRequestsProvider,
+    api_requests::ApiRequests, auth_context::AuthContext, game_state::GameStateSignal, AlertType,
+    AlertsContext, ApiRequestsProvider,
 };
 use leptos::prelude::*;
 use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId, TournamentId};
@@ -26,7 +23,6 @@ pub struct Chat {
     user: Signal<Option<AccountResponse>>,
     gamestate: GameStateSignal,
     api: Signal<ApiRequests>,
-    game_signal: Signal<GameNavigationControllerState>,
 }
 
 impl Chat {
@@ -34,7 +30,6 @@ impl Chat {
         user: Signal<Option<AccountResponse>>,
         gamestate: GameStateSignal,
         api: Signal<ApiRequests>,
-        game_signal: Signal<GameNavigationControllerState>,
     ) -> Self {
         Self {
             users_messages: RwSignal::new(HashMap::new()),
@@ -49,39 +44,30 @@ impl Chat {
             user,
             gamestate,
             api,
-            game_signal,
         }
     }
 
-    pub fn has_messages(&self) -> bool {
-        let navi = expect_context::<NavigationControllerSignal>();
-
-        if let Some(game_id) = navi.game_signal.get().game_id {
-            self.games_public_new_messages
+    pub fn has_messages(&self, game_id: GameId) -> bool {
+        self.games_public_new_messages
+            .get()
+            .get(&game_id)
+            .is_some_and(|v| *v)
+            || self
+                .games_private_new_messages
                 .get()
                 .get(&game_id)
                 .is_some_and(|v| *v)
-                || self
-                    .games_private_new_messages
-                    .get()
-                    .get(&game_id)
-                    .is_some_and(|v| *v)
-        } else {
-            false
-        }
     }
 
-    pub fn seen_messages(&self) {
-        if let Some(game_id) = self.game_signal.get_untracked().game_id {
-            self.games_public_new_messages.update(|m| {
-                m.entry(game_id.clone())
-                    .and_modify(|b| *b = false)
-                    .or_insert(false);
-            });
-            self.games_private_new_messages.update(|m| {
-                m.entry(game_id).and_modify(|b| *b = false).or_insert(false);
-            });
-        }
+    pub fn seen_messages(&self, game_id: GameId) {
+        self.games_public_new_messages.update(|m| {
+            m.entry(game_id.clone())
+                .and_modify(|b| *b = false)
+                .or_insert(false);
+        });
+        self.games_private_new_messages.update(|m| {
+            m.entry(game_id).and_modify(|b| *b = false).or_insert(false);
+        });
     }
 
     pub fn send(&self, message: &str, destination: ChatDestination) {
@@ -203,7 +189,5 @@ pub fn provide_chat() {
     let user = expect_context::<AuthContext>().user;
     let gamestate = expect_context::<GameStateSignal>();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let game_signal = expect_context::<NavigationControllerSignal>().game_signal;
-
-    provide_context(Chat::new(user, gamestate, api, game_signal.into()))
+    provide_context(Chat::new(user, gamestate, api))
 }

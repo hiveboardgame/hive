@@ -1,9 +1,6 @@
 use crate::{
     common::GameActionResponse,
-    providers::{
-        navigation_controller::NavigationControllerSignal, timer::TimerSignal,
-        tournaments::TournamentStateContext,
-    },
+    providers::{timer::TimerSignal, tournaments::TournamentStateContext},
 };
 use leptos::prelude::*;
 

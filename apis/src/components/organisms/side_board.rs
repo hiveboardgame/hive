@@ -7,7 +7,8 @@ use crate::{
 };
 use hive_lib::Color;
 use leptos::prelude::*;
-use shared_types::SimpleDestination;
+use leptos_router::hooks::use_params_map;
+use shared_types::{GameId, SimpleDestination};
 
 #[derive(Clone, PartialEq, Copy)]
 enum TabView {
@@ -18,6 +19,14 @@ enum TabView {
 #[component]
 fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
     let chat = expect_context::<Chat>();
+    let params = use_params_map();
+    let game_id = move || {
+        params
+            .get()
+            .get("nanoid")
+            .map(|s| GameId(s.to_owned()))
+            .unwrap_or_default()
+    };
     let string = match name {
         TabView::Reserve => "Game".to_string(),
         TabView::History => "History".to_string(),
@@ -28,7 +37,7 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
         <div
             on:click=move |_| {
                 if tab() == TabView::Chat {
-                    chat.seen_messages();
+                    chat.seen_messages(game_id());
                 }
                 if name == TabView::History {
                     game_state.view_history();
@@ -43,7 +52,7 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
                     "flex place-content-center transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal {}",
                     if tab() == name {
                         "dark:bg-button-twilight bg-slate-400"
-                    } else if name == TabView::Chat && chat.has_messages() {
+                    } else if name == TabView::Chat && chat.has_messages(game_id()) {
                         "bg-ladybug-red"
                     } else {
                         "bg-inherit"

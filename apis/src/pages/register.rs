@@ -12,7 +12,6 @@ use web_sys::Event;
 const BANNED_USERNAMES: [&str; 3] = ["black", "white", "admin"];
 const VALID_USERNAME_CHARS: &str = "-_";
 
-
 #[component]
 pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let i18n = use_i18n();
@@ -33,7 +32,8 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let pw_confirm = RwSignal::new(String::new());
     let has_invalid_char = RwSignal::new(false);
     let email_ref = NodeRef::<html::Input>::new();
-    let is_invalid_email = Signal::derive(move || email_ref.get().is_some_and(|e| !e.check_validity()));
+    let is_invalid_email =
+        Signal::derive(move || email_ref.get().is_some_and(|e| !e.check_validity()));
     let pw_invalid = move || {
         let pw = pw();
         !(7 < pw.len() && pw == pw_confirm())

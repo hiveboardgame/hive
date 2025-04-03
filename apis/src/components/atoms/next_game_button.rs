@@ -1,19 +1,16 @@
-use crate::providers::{games::GamesSignal, navigation_controller::NavigationControllerSignal};
+use crate::providers::games::GamesSignal;
 use leptos::prelude::*;
 use leptos_icons::Icon;
-use shared_types::TimeMode;
+use shared_types::{GameId, TimeMode};
 
 #[component]
 pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
+    //TODO: fix this
     let navigate = leptos_router::hooks::use_navigate();
-    let navigation_controller = expect_context::<NavigationControllerSignal>();
+    let game_id = move || GameId::default();
     let mut games = expect_context::<GamesSignal>();
     let next_games = move || {
-        let game_id = navigation_controller
-            .game_signal
-            .get()
-            .game_id
-            .unwrap_or_default();
+        let game_id = game_id();
         match time_mode.get_value() {
             TimeMode::Untimed => games.own.get().next_untimed,
             TimeMode::RealTime => games.own.get().next_realtime,
@@ -36,7 +33,7 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
     };
     let text = move || format!(": {}", next_games());
     let onclick = move |_| {
-        if let Some(game) = games.visit(time_mode.get_value()) {
+        if let Some(game) = games.visit(time_mode.get_value(), game_id()) {
             navigate(&format!("/game/{}", game), Default::default());
         } else {
             navigate("/", Default::default());

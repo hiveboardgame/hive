@@ -9,7 +9,6 @@ pub mod config;
 mod game_controller;
 pub mod game_state;
 pub mod games;
-pub mod navigation_controller;
 mod notifications;
 pub mod online_users;
 mod ping;
