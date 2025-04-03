@@ -17,7 +17,7 @@ pub fn ProfileLink(
     view! {
         <div class="relative w-full">
             <a
-                class="z-20 font-bold duration-300 hover:text-pillbug-teal"
+                class="z-20 font-bold duration-300 no-link-style hover:text-pillbug-teal"
                 on:mouseover=move |_| {
                     if user_is_hoverable().is_some() {
                         hover_show.set(true);

@@ -1,8 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-    @layer base {
-      input {
-       @apply text-black dark:text-white bg-light dark:bg-gray-700;
-      }
-    }
+
+@layer base {
+
+  input,
+  textarea {
+    @apply text-black dark:text-white bg-light dark:bg-gray-700;
+  }
+
+  a:not(.no-link-style) {
+    @apply text-blue-600 underline hover:text-blue-800;
+  }
+}
