@@ -36,7 +36,7 @@ lazy_static! {
     static ref TOURNAMENT_NANOID: Regex =
         Regex::new(r"/tournament/(?<nanoid>.*)").expect("This regex should compile");
 }
-pub const COMMON_LINK_STYLE: &str = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
+pub const COMMON_LINK_STYLE: &str = "no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
 pub const DROPDOWN_BUTTON_STYLE: &str= "font-bold h-full p-2 hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block";
 
 #[derive(Clone)]
