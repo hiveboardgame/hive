@@ -3,26 +3,29 @@ use crate::providers::{
     Sounds,
 };
 use hive_lib::{Color, GameStatus};
-use lazy_static::lazy_static;
 use leptos::prelude::*;
-use leptos_router::hooks::use_location;
+use leptos_router::hooks::use_params_map;
 use leptos_use::{
     use_interval_fn_with_options, utils::Pausable, watch_with_options, whenever_with_options,
     UseIntervalFnOptions, WatchOptions,
 };
-use regex::Regex;
 use shared_types::GameId;
 use std::time::Duration;
-lazy_static! {
-    static ref NANOID: Regex =
-        Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
-}
+
 #[component]
 pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
+    let params = use_params_map();
+    let game_id = move || {
+        params
+            .get()
+            .get("nanoid")
+            .map(|s| GameId(s.to_owned()))
+            .unwrap_or_default()
+    };
     let user_id = Signal::derive(move || auth_context.user.get_untracked().map(|user| user.id));
     let user_color = game_state.user_color_as_signal(user_id);
     let in_progress = create_read_slice(game_state.signal, |gs| {
@@ -98,14 +101,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         move |_, _, _| {
             // When time runs out declare winner and style timer that ran out
             let api = api.get();
-            let location = use_location();
-            let pathname = (location.pathname)();
-            if let Some(caps) = NANOID.captures(&pathname) {
-                if let Some(nanoid) = caps.name("nanoid") {
-                    let game_id = GameId(nanoid.as_str().to_string());
-                    api.game_check_time(&game_id);
-                }
-            }
+            api.game_check_time(&game_id());
         },
         WatchOptions::default().immediate(true),
     );

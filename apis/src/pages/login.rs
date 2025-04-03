@@ -1,14 +1,13 @@
 use crate::functions::auth::login::Login;
 use crate::i18n::*;
-use crate::providers::navigation_controller::NavigationControllerSignal;
-use crate::providers::AuthContext;
+use crate::providers::{AuthContext, RefererContext};
 use leptos::prelude::*;
 use leptos::{form::ActionForm, html};
 
 #[component]
 pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let i18n = use_i18n();
-    let pathname = expect_context::<NavigationControllerSignal>().redirect;
+    let pathname = expect_context::<RefererContext>().pathname;
     let my_input = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());

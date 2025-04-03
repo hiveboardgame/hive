@@ -10,8 +10,7 @@ use crate::components::organisms::{
     sound_toggle::SoundToggle,
 };
 use crate::i18n::*;
-use crate::providers::navigation_controller::NavigationControllerSignal;
-use crate::providers::AuthContext;
+use crate::providers::{AuthContext, RefererContext};
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
 use shared_types::TimeMode;
@@ -71,7 +70,7 @@ pub fn Header() -> impl IntoView {
 
 #[component]
 fn GuestActions() -> impl IntoView {
-    let referrer = expect_context::<NavigationControllerSignal>().redirect;
+    let referrer = expect_context::<RefererContext>().pathname;
     view! {
         <div class="flex items-center mr-1">
             <ChatAndControls />

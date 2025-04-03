@@ -15,11 +15,14 @@ use crate::{
             unstarted::Unstarted,
         },
     },
-    providers::{config::Config, game_state::GameStateSignal, AuthContext},
+    functions::games::get::get_game_from_nanoid,
+    providers::{config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext},
+    websocket::client_handlers::game::reaction::handler::reset_game_state,
 };
-use hive_lib::{Color, GameStatus, Position};
-use leptos::prelude::*;
-use shared_types::{GameStart, TournamentGameResult};
+use hive_lib::{Color, GameControl, GameStatus, Position};
+use leptos::{prelude::*, task::spawn_local};
+use leptos_router::hooks::use_params_map;
+use shared_types::{GameId, GameStart, TournamentGameResult};
 
 #[derive(Clone)]
 pub struct TargetStack(pub RwSignal<Option<Position>>);
@@ -30,6 +33,14 @@ pub struct CurrentConfirm(pub Memo<MoveConfirm>);
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
+    let params = use_params_map();
+    let game_id = move || {
+        params
+            .get()
+            .get("nanoid")
+            .map(|s| GameId(s.to_owned()))
+            .unwrap_or_default()
+    };
     let orientation_signal = expect_context::<OrientationSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
@@ -55,6 +66,22 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 None
             }
         })
+    });
+    let timer = expect_context::<TimerSignal>();
+    spawn_local(async move {
+        let game = get_game_from_nanoid(game_id()).await;
+        if let Ok(game) = game {
+            reset_game_state(&game, game_state);
+            timer.update_from(&game);
+            if let Some((_turn, gc)) = game.game_control_history.last() {
+                match gc {
+                    GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
+                        game_state.set_pending_gc(gc.clone())
+                    }
+                    _ => {}
+                }
+            }
+        }
     });
     let player_color = Memo::new(move |_| {
         user().map_or(Color::White, |user| {

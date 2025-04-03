@@ -1,6 +1,6 @@
 use crate::functions::accounts::edit::EditAccount;
 use crate::functions::oauth::get_discord_handle;
-use crate::providers::navigation_controller::NavigationControllerSignal;
+use crate::providers::RefererContext;
 use crate::{providers::ApiRequestsProvider, providers::AuthContext};
 use leptos::form::ActionForm;
 use leptos::*;
@@ -9,7 +9,7 @@ use leptos::{html, prelude::*};
 #[component]
 pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let account_action = ServerAction::<EditAccount>::new();
-    let pathname = expect_context::<NavigationControllerSignal>().redirect;
+    let pathname = expect_context::<RefererContext>().pathname;
     let my_input = NodeRef::<html::Input>::new();
 
     Effect::new(move |_| {

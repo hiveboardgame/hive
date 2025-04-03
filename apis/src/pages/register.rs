@@ -1,23 +1,17 @@
 use crate::functions::auth::register::Register;
 use crate::functions::users::username_taken;
 use crate::i18n::*;
-use crate::providers::navigation_controller::NavigationControllerSignal;
+use crate::providers::RefererContext;
 use crate::{components::update_from_event::update_from_input, providers::AuthContext};
-use lazy_static::lazy_static;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::prelude::*;
 use leptos::{form::ActionForm, html};
-use regex::Regex;
 use std::time::Duration;
 use web_sys::Event;
 
 const BANNED_USERNAMES: [&str; 3] = ["black", "white", "admin"];
 const VALID_USERNAME_CHARS: &str = "-_";
 
-lazy_static! {
-    static ref EMAIL_RE: Regex =
-        Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
-}
 
 #[component]
 pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
@@ -27,7 +21,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
         let user = user.clone();
         async move { username_taken(user).await }
     });
-    let pathname = expect_context::<NavigationControllerSignal>().redirect;
+    let pathname = expect_context::<RefererContext>().pathname;
     let my_input = NodeRef::<html::Input>::new();
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
@@ -38,7 +32,8 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let pw = RwSignal::new(String::new());
     let pw_confirm = RwSignal::new(String::new());
     let has_invalid_char = RwSignal::new(false);
-    let is_invalid_email = RwSignal::new(false);
+    let email_ref = NodeRef::<html::Input>::new();
+    let is_invalid_email = Signal::derive(move || email_ref.get().is_some_and(|e| !e.check_validity()));
     let pw_invalid = move || {
         let pw = pw();
         !(7 < pw.len() && pw == pw_confirm())
@@ -122,14 +117,8 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <label class="mb-2">
                     <p class="font-bold">Email</p>
                     <input
+                        node_ref=email_ref
                         on:input=debounce(Duration::from_millis(350), update_from_input(email))
-                        on:change=move |evt| {
-                            if invalid_email(&event_target_value(&evt)) {
-                                is_invalid_email.set(true)
-                            } else {
-                                is_invalid_email.set(false)
-                            }
-                        }
                         class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="email"
                         type="email"
@@ -223,8 +212,4 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
 
 fn valid_username_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || VALID_USERNAME_CHARS.contains(c)
-}
-
-fn invalid_email(email: &str) -> bool {
-    !EMAIL_RE.is_match(email)
 }

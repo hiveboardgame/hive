@@ -1,12 +1,9 @@
 use super::{
-    control::handle_control, join::handle_join, new::handle_new_game, timeout::handle_timeout,
+    control::handle_control, new::handle_new_game, timeout::handle_timeout,
     turn::handle_turn,
 };
 use crate::{
-    common::{GameActionResponse, GameReaction},
-    providers::{game_state::GameStateSignal, games::GamesSignal},
-    responses::GameResponse,
-    websocket::client_handlers::game::tv::handler::handle_tv,
+    common::{GameActionResponse, GameReaction}, providers::{game_state::GameStateSignal, games::GamesSignal}, responses::GameResponse, websocket::client_handlers::game::tv::handler::handle_tv
 };
 use hive_lib::{GameStatus, History, State};
 use leptos::prelude::*;
@@ -33,9 +30,6 @@ pub fn handle_reaction(gar: GameActionResponse) {
         GameReaction::Control(ref game_control) => {
             handle_control(game_control.clone(), gar.clone())
         }
-        GameReaction::Join => {
-            handle_join(gar.clone());
-        }
         GameReaction::Started => {
             handle_start(gar.clone());
         }
@@ -57,8 +51,7 @@ pub fn reset_game_state_for_takeback(game: &GameResponse) {
     };
 }
 
-pub fn reset_game_state(game: &GameResponse) {
-    let mut game_state = expect_context::<GameStateSignal>();
+pub fn reset_game_state(game: &GameResponse, mut game_state: GameStateSignal) {
     game_state.full_reset();
     game_state
         .signal

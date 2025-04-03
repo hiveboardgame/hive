@@ -3,21 +3,17 @@ use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
 use crate::providers::Config;
 use crate::providers::{
-    game_state::GameStateSignal, navigation_controller::NavigationControllerSignal,
-    refocus::RefocusSignal, websocket::WebsocketContext, AuthContext, PingContext,
+    game_state::GameStateSignal, refocus::RefocusSignal, websocket::WebsocketContext, AuthContext,
+    PingContext,
 };
 use cfg_if::cfg_if;
 use chrono::Utc;
 use hive_lib::GameControl;
-use lazy_static::lazy_static;
 use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::hooks::use_location;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::utils::Pausable;
 use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
-use regex::Regex;
-use shared_types::GameId;
 
 cfg_if! { if #[cfg(not(feature = "ssr"))] {
     use leptos_use::utils::IS_IOS;
@@ -27,15 +23,6 @@ cfg_if! { if #[cfg(not(feature = "ssr"))] {
     static IOS_WORKAROUND: RwLock<bool> = RwLock::new(false);
 }}
 
-lazy_static! {
-    static ref GAME_NANOID: Regex =
-        Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
-}
-
-lazy_static! {
-    static ref TOURNAMENT_NANOID: Regex =
-        Regex::new(r"/tournament/(?<nanoid>.*)").expect("This regex should compile");
-}
 pub const COMMON_LINK_STYLE: &str = "no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
 pub const DROPDOWN_BUTTON_STYLE: &str= "font-bold h-full p-2 hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block";
 
@@ -65,7 +52,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let is_tall = use_media_query("(min-height: 100vw)");
     let chat_dropdown_open = RwSignal::new(false);
     let orientation_vertical = Signal::derive(move || is_tall() || chat_dropdown_open());
-    let mut navi = expect_context::<NavigationControllerSignal>();
     provide_context(OrientationSignal {
         is_tall,
         chat_dropdown_open,
@@ -115,20 +101,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
 
     let is_hidden = RwSignal::new("hidden");
     Effect::new(move |_| is_hidden.set(""));
-
-    Effect::new(move |_| {
-        let location = use_location();
-        let pathname = (location.pathname)();
-
-        let game_id = if let Some(caps) = GAME_NANOID.captures(&pathname) {
-            caps.name("nanoid").map(|m| GameId(m.as_str().to_string()))
-        } else {
-            None
-        };
-        if ws_ready() == ConnectionReadyState::Open {
-            navi.update_id(game_id);
-        };
-    });
 
     let focused = use_window_focus();
     let _ = Effect::watch(
