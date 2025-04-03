@@ -4,7 +4,7 @@ use hive_lib::{GameType, History, State};
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, vec};
+use std::vec;
 use tree_ds::prelude::{Node, Tree};
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct TreeNode {
@@ -13,10 +13,7 @@ pub struct TreeNode {
     pub position: String,
 }
 #[derive(Clone)]
-pub struct AnalysisSignal(pub RwSignal<Option<SendWrapper<AnalysisTree>>>);
-
-#[derive(Clone)]
-pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
+pub struct AnalysisSignal(pub RwSignal<SendWrapper<AnalysisTree>>);
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct AnalysisTree {

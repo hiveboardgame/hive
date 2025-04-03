@@ -74,7 +74,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
     let is_button = move || {
         placement == Placement::Bottom
             && current_confirm() == MoveConfirm::Clock
-            && game_state.is_move_allowed()
+            && game_state.is_move_allowed(false)
     };
 
     let button_class = move || {
@@ -97,7 +97,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
 
     let onclick = move |_| {
         if is_button() {
-            game_state.move_active();
+            game_state.move_active(None);
         }
     };
 

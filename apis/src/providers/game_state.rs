@@ -8,6 +8,7 @@ use leptos::prelude::*;
 use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
+use super::analysis::AnalysisSignal;
 use super::{auth_context::AuthContext, ApiRequestsProvider};
 
 #[derive(Clone, Debug, Copy)]
@@ -137,12 +138,12 @@ impl GameStateSignal {
         self.signal.update(|s| s.move_info.reset())
     }
 
-    pub fn move_active(&mut self) {
-        self.signal.update(|s| s.move_active())
+    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>) {
+        self.signal.update(|s| s.move_active(analysis))
     }
 
-    pub fn is_move_allowed(&self) -> bool {
-        self.signal.get_untracked().is_move_allowed()
+    pub fn is_move_allowed(&self, analisis: bool) -> bool {
+        self.signal.get_untracked().is_move_allowed(analisis)
     }
 
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
@@ -330,12 +331,14 @@ impl GameState {
         }
     }
 
-    pub fn is_move_allowed(&self) -> bool {
+    pub fn is_move_allowed(&self, analysis: bool) -> bool {
         let auth_context = expect_context::<AuthContext>();
-
         let user = auth_context.user;
         if matches!(self.state.game_status, GameStatus::Finished(_)) {
             return false;
+        }
+        if analysis {
+            return true;
         }
         user().is_some_and(|user| {
             let turn = self.state.turn;
@@ -349,7 +352,7 @@ impl GameState {
         })
     }
 
-    pub fn move_active(&mut self) {
+    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>) {
         //log!("Moved active!");
         let api = expect_context::<ApiRequestsProvider>().0.get();
         if let (Some(active), Some(position)) =
@@ -363,7 +366,18 @@ impl GameState {
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             } else {
-                log!("We should be in analysis");
+                let analysis = analysis.expect("We should be in analysis");
+                analysis.0.update(|analysis| {
+                    let state = self.state.clone();
+                    let moves = state.history.moves;
+                    let hashes = state.hashes;
+                    let last_index = moves.len() - 1;
+                    if moves[last_index].0 == "pass" {
+                        //if move is pass, add prev move
+                        analysis.add_node(moves[last_index - 1].clone(), hashes[last_index - 1]);
+                    }
+                    analysis.add_node(moves[last_index].clone(), hashes[last_index]);
+                });
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             }

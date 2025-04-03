@@ -1,4 +1,5 @@
 mod alerts;
+pub mod analysis;
 mod api_requests;
 mod auth_context;
 mod challenge_params;

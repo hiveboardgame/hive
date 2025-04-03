@@ -1,6 +1,6 @@
-use super::AnalysisTree;
-use crate::{
-    components::organisms::analysis::AnalysisSignal, providers::game_state::GameStateSignal,
+use crate::providers::{
+    analysis::{AnalysisSignal, AnalysisTree},
+    game_state::GameStateSignal,
 };
 use hive_lib::History;
 use leptos::{html, logging, prelude::*};
@@ -67,7 +67,7 @@ pub fn LoadTree() -> impl IntoView {
                 AnalysisTree::from_state(game_state)
             })
             .map(|tree| {
-                analysis.set(Some(LocalStorage::wrap(tree)));
+                analysis.set(LocalStorage::wrap(tree));
             })
     };
     let from_hat = move |string: JsValue| {
@@ -75,9 +75,9 @@ pub fn LoadTree() -> impl IntoView {
             .as_string()
             .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
             .map(|tree| {
-                analysis.set(Some(LocalStorage::wrap(tree.clone())));
+                analysis.set(LocalStorage::wrap(tree.clone()));
                 if let Some(node) = tree.current_node {
-                    analysis.get().unwrap().update_node(node.get_node_id());
+                    analysis.get().update_node(node.get_node_id());
                 }
             })
     };
