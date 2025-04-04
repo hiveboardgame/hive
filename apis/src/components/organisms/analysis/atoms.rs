@@ -8,6 +8,7 @@ use tree_ds::prelude::Node;
 #[component]
 pub fn UndoButton() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
+    let game_state = expect_context::<GameStateSignal>();
     let analysis = StoredValue::new(analysis.clone());
     let is_disabled = move || analysis.get_value().0.get().current_node.is_none();
     let undo = move |_| {
@@ -15,7 +16,7 @@ pub fn UndoButton() -> impl IntoView {
             if let Some(node) = a.current_node.clone() {
                 let new_current = node.get_parent_id();
                 if let Some(new_current) = new_current {
-                    a.update_node(new_current);
+                    a.update_node(new_current, Some(game_state));
                     if let Ok(tree) = a.tree.get_subtree(&node.get_node_id(), None) {
                         tree.get_nodes().iter().for_each(|n| {
                             a.hashes.remove_by_right(&n.get_node_id());
@@ -59,6 +60,7 @@ pub fn HistoryButton(
     #[prop(optional)] node_ref: Option<NodeRef<html::Button>>,
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
+    let game_state = expect_context::<GameStateSignal>();
     let cloned_action = action.clone();
     let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
@@ -86,7 +88,7 @@ pub fn HistoryButton(
         });
         if let Some(updated_node_id) = updated_node_id {
             analysis.update(|a| {
-                a.update_node(updated_node_id);
+                a.update_node(updated_node_id, Some(game_state));
             });
         }
         if let Some(post_action) = post_action {
@@ -111,6 +113,7 @@ pub fn HistoryButton(
 #[component]
 pub fn HistoryMove(node: Node<i32, TreeNode>, current_path: Memo<Vec<i32>>) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
+    let game_state = expect_context::<GameStateSignal>();
     let value = node.get_value().unwrap();
     let node_id = node.get_node_id();
     let class = move || {
@@ -123,7 +126,7 @@ pub fn HistoryMove(node: Node<i32, TreeNode>, current_path: Memo<Vec<i32>>) -> i
     };
     let onclick = move |_| {
         analysis.update(|a| {
-            a.update_node(node_id);
+            a.update_node(node_id, Some(game_state));
         });
     };
     let history_index = value.turn - 1;

@@ -172,8 +172,8 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                     timer.update_from(&gar.game);
                                     reset_game_state_for_takeback(&gar.game, &mut game_state);
                                 }
-                                GameControl::TakebackRequest(_) 
-                                | GameControl::DrawOffer(_) 
+                                GameControl::TakebackRequest(_)
+                                | GameControl::DrawOffer(_)
                                 | GameControl::DrawReject(_)
                                 | GameControl::TakebackReject(_)
                                 | GameControl::Abort(_) => {}

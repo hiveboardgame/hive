@@ -363,7 +363,6 @@ impl GameState {
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
                 api.turn(game_id.to_owned(), turn);
-                log!("After turn API");
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             } else {
@@ -375,9 +374,13 @@ impl GameState {
                     let last_index = moves.len() - 1;
                     if moves[last_index].0 == "pass" {
                         //if move is pass, add prev move
-                        analysis.add_node(moves[last_index - 1].clone(), hashes[last_index - 1]);
+                        analysis.add_node(
+                            moves[last_index - 1].clone(),
+                            hashes[last_index - 1],
+                            None,
+                        );
                     }
-                    analysis.add_node(moves[last_index].clone(), hashes[last_index]);
+                    analysis.add_node(moves[last_index].clone(), hashes[last_index], None);
                 });
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);

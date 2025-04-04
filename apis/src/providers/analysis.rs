@@ -51,11 +51,11 @@ impl AnalysisTree {
             hashes,
             game_type: gs.state.game_type,
         };
-        tree.update_node(gs.history_turn.unwrap_or(0) as i32);
+        tree.update_node(gs.history_turn.unwrap_or(0) as i32, Some(game_state));
         Some(tree)
     }
 
-    pub fn update_node(&mut self, node_id: i32) -> Option<()> {
+    pub fn update_node(&mut self, node_id: i32, game: Option<GameStateSignal>) -> Option<()> {
         let moves = self
             .tree
             .get_ancestor_ids(&node_id)
@@ -81,17 +81,24 @@ impl AnalysisTree {
             .as_ref()
             .and_then(|n| n.get_value().map(|v| v.turn));
 
-        expect_context::<GameStateSignal>().signal.update(|gs| {
-            gs.state = state;
-            gs.history_turn = history_turn;
-            gs.move_info.reset();
-        });
+        if let Some(g) = game {
+            g.signal.update(|gs| {
+                gs.state = state;
+                gs.history_turn = history_turn;
+                gs.move_info.reset();
+            })
+        }
         self.current_node
             .clone_from(&self.tree.get_node_by_id(&node_id));
         Some(())
     }
 
-    pub fn add_node(&mut self, last_move: (String, String), hash: u64) {
+    pub fn add_node(
+        &mut self,
+        last_move: (String, String),
+        hash: u64,
+        game: Option<GameStateSignal>,
+    ) {
         let (piece, position) = last_move;
         let turn = self
             .current_node
@@ -104,7 +111,7 @@ impl AnalysisTree {
             .and_then(|node| {
                 //Turns must match if we will update the node
                 if node.get_value().unwrap().turn == turn {
-                    self.update_node(node.get_node_id())
+                    self.update_node(node.get_node_id(), game)
                 } else {
                     None
                 }

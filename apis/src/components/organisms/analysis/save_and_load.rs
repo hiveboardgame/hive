@@ -77,7 +77,9 @@ pub fn LoadTree() -> impl IntoView {
             .map(|tree| {
                 analysis.set(LocalStorage::wrap(tree.clone()));
                 if let Some(node) = tree.current_node {
-                    analysis.get().update_node(node.get_node_id());
+                    analysis
+                        .get()
+                        .update_node(node.get_node_id(), Some(game_state));
                 }
             })
     };

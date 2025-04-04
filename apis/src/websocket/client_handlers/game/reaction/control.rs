@@ -25,7 +25,7 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
         GameControl::DrawAccept(_) => {
             games.own_games_remove(&gar.game.game_id);
         }
-        GameControl::Resign(color) => {
+        GameControl::Resign(_) => {
             games.own_games_remove(&gar.game.game_id);
         }
         GameControl::TakebackAccept(_) => {
