@@ -1,3 +1,4 @@
+use crate::websocket::busybee::Busybee;
 use crate::websocket::WebsocketData;
 
 use crate::{
@@ -103,10 +104,10 @@ impl TurnHandler {
                     tournament_name,
                     game.str_time_left_for_player(game.current_player_id),
                 );
-                println!("{}", msg);
-                /*if let Err(e) = Busybee::msg(game.current_player_id, msg).await {
+
+                if let Err(e) = Busybee::msg(game.current_player_id, msg).await {
                     println!("{e}");
-                };*/
+                };
             }
         }
 

@@ -25,8 +25,9 @@ use crate::{
     },
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Position, Turn};
+use leptos::logging::log;
 use leptos::{prelude::*, task::spawn_local};
-use leptos_router::hooks::use_params_map;
+use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{GameId, GameStart, TournamentGameResult};
 
 #[derive(Clone)]
@@ -42,7 +43,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let params = use_params_map();
     let game_id = move || {
         params
-            .get_untracked()
+            .get()
             .get("nanoid")
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
@@ -76,23 +77,28 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     provide_context(TimerSignal::new());
 
     let timer = expect_context::<TimerSignal>();
-    Effect::new(move || {
-        spawn_local(async move {
-            let game = get_game_from_nanoid(game_id()).await;
-            if let Ok(game) = game {
-                reset_game_state(&game, game_state);
-                timer.update_from(&game);
-                if let Some((_turn, gc)) = game.game_control_history.last() {
-                    match gc {
-                        GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
-                            game_state.set_pending_gc(gc.clone())
+    Effect::watch(
+        game_id,
+        move |_, _, _| {
+            log!("TRIGGERED, game_id is  {:?}", game_id());
+            spawn_local(async move {
+                let game = get_game_from_nanoid(game_id()).await;
+                if let Ok(game) = game {
+                    reset_game_state(&game, game_state);
+                    timer.update_from(&game);
+                    if let Some((_turn, gc)) = game.game_control_history.last() {
+                        match gc {
+                            GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
+                                game_state.set_pending_gc(gc.clone())
+                            }
+                            _ => {}
                         }
-                        _ => {}
                     }
                 }
-            }
-        })
-    });
+            })
+        },
+        true,
+    );
     let player_color = Memo::new(move |_| {
         user().map_or(Color::White, |user| {
             let black_id = white_and_black().1;
@@ -175,8 +181,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                 GameControl::TakebackRequest(_)
                                 | GameControl::DrawOffer(_)
                                 | GameControl::DrawReject(_)
-                                | GameControl::TakebackReject(_)
-                                | GameControl::Abort(_) => {}
+                                | GameControl::TakebackReject(_) => {}
+                                GameControl::Abort(_) => {
+                                    let navigate = use_navigate();
+                                    navigate("/", Default::default());
+                                }
                             };
                         }
                         _ => {
