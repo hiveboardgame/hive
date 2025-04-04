@@ -1,14 +1,20 @@
 use crate::providers::games::GamesSignal;
 use leptos::prelude::*;
 use leptos_icons::Icon;
+use leptos_router::hooks::use_params_map;
 use shared_types::{GameId, TimeMode};
 
 #[component]
 pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
-    //TODO: fix this
-    let navigate = leptos_router::hooks::use_navigate();
-    let game_id = move || GameId::default();
-    let mut games = expect_context::<GamesSignal>();
+    let params = use_params_map();
+    let game_id = move || {
+        params
+            .get()
+            .get("nanoid")
+            .map(|s| GameId(s.to_owned()))
+            .unwrap_or_default()
+    };
+    let games = expect_context::<GamesSignal>();
     let next_games = move || {
         let game_id = game_id();
         match time_mode.get_value() {
@@ -32,18 +38,18 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
         }
     };
     let text = move || format!(": {}", next_games());
-    let onclick = move |_| {
-        if let Some(game) = games.visit(time_mode.get_value(), game_id()) {
-            navigate(&format!("/game/{}", game), Default::default());
-        } else {
-            navigate("/", Default::default());
-        }
+    let next_game_id = move || {
+        match time_mode.get_value() {
+            TimeMode::Untimed => games.own.get().next_untimed,
+            TimeMode::RealTime => games.own.get().next_realtime,
+            TimeMode::Correspondence => games.own.get().next_correspondence,
+        }.peek().map(|gp| format!("/game/{}", gp.game_id)).unwrap_or_default()
     };
 
     view! {
-        <button on:click=onclick class=style>
+        <a class=style href=next_game_id>
             <Icon icon=icon() attr:class="w-4 h-4" />
             {text}
-        </button>
+        </a>
     }
 }
