@@ -14,8 +14,8 @@ use crate::{
             unstarted::Unstarted,
         },
     }, functions::games::get::get_game_from_nanoid, providers::{
-        config::Config, game_state::GameStateSignal, games::GamesSignal, timer::TimerSignal, AuthContext, GameUpdater, SoundType, Sounds
-    }, responses::HeartbeatResponse, websocket::client_handlers::game::reaction::handler::{
+        config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext, GameUpdater, SoundType, Sounds
+    }, websocket::client_handlers::game::reaction::handler::{
         reset_game_state, reset_game_state_for_takeback,
     }
 };
@@ -94,7 +94,16 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         },
         true,
     );
+    let game_updater = expect_context::<GameUpdater>();
     //HB handler
+    Effect::watch(move || game_updater.heartbeat.get(),
+        move |hb, _, _| {
+            if let Some(hb) = hb {
+                timer.update_from_hb(hb.clone());
+            }
+        },
+        false,
+    );
     let player_color = Memo::new(move |_| {
         user().map_or(Color::White, |user| {
             let black_id = white_and_black().1;
@@ -128,10 +137,9 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 && gr.tournament_game_result == TournamentGameResult::Unknown
         })
     });
-    let game_updater = expect_context::<GameUpdater>().response;
     let sounds = expect_context::<Sounds>();
     Effect::watch(
-        move || game_updater.get(),
+        game_updater.response,
         move |gar, _, _| {
             if let Some(gar) = gar {
                 if gar.game_id == game_id() {

@@ -1,13 +1,13 @@
 use crate::{
-    providers::{games::GamesSignal, timer::TimerSignal},
+    providers::{games::GamesSignal, GameUpdater},
     responses::HeartbeatResponse,
 };
 use leptos::{logging, prelude::*};
 
 pub fn handle_heartbeat(hb: HeartbeatResponse) {
     let mut games_signal = expect_context::<GamesSignal>();
-    let timer = expect_context::<TimerSignal>();
+    let game_updater = expect_context::<GameUpdater>();
     logging::log!("Got heartbeat: {hb:?}");
     games_signal.update_heartbeat(hb.clone());
-    timer.update_from_hb(hb);
+    game_updater.heartbeat.set(Some(hb));
 }
