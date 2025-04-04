@@ -5,7 +5,8 @@ use leptos_router::hooks::use_params_map;
 use shared_types::{GameId, TimeMode};
 
 #[component]
-pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
+pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoView {
+    let time_mode = StoredValue::new(time_mode);
     let params = use_params_map();
     let game_id = move || {
         params
@@ -14,7 +15,6 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
     };
-    let mut games = expect_context::<GamesSignal>();
     let next_games = move || {
         let game_id = game_id();
         match time_mode.get_value() {

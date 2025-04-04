@@ -1,5 +1,5 @@
 use crate::i18n::*;
-use crate::providers::{ApiRequestsProvider, GameUpdater};
+use crate::providers::{ApiRequestsProvider, UpdateNotifier};
 use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
@@ -22,7 +22,7 @@ pub fn Unstarted(
     let (black_id, black_username) = black;
     let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let ready_notification = expect_context::<GameUpdater>().tournament_ready;
+    let ready_notification = expect_context::<UpdateNotifier>().tournament_ready;
     let white_icon = move || {
         let icon = if Some(ready()) == white_id {
             icondata::AiCheckOutlined

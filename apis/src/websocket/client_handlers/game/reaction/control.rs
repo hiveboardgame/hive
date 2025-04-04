@@ -1,14 +1,14 @@
 use crate::{
     common::GameActionResponse,
-    providers::{games::GamesSignal, AlertType, AlertsContext, GameUpdater},
+    providers::{games::GamesSignal, AlertType, AlertsContext, UpdateNotifier},
 };
 use hive_lib::GameControl;
 use leptos::prelude::*;
 
 pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();
-    let game_updater = expect_context::<GameUpdater>();
-    game_updater.response.set(Some(gar.clone()));
+    let game_updater = expect_context::<UpdateNotifier>();
+    game_updater.game_response.set(Some(gar.clone()));
     match game_control {
         GameControl::Abort(_) => {
             games.own_games_remove(&gar.game.game_id);

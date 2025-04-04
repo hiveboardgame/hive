@@ -1,18 +1,16 @@
-use super::{
-    control::handle_control, new::handle_new_game, timeout::handle_timeout, turn::handle_turn,
-};
+use super::{control::handle_control, new::handle_new_game, timeout::handle_timeout};
 use crate::{
     common::{GameActionResponse, GameReaction},
-    providers::game_state::GameStateSignal,
+    providers::{game_state::GameStateSignal, games::GamesSignal, UpdateNotifier},
     responses::GameResponse,
     websocket::client_handlers::game::tv::handler::handle_tv,
 };
 use hive_lib::{GameStatus, History, State};
 use leptos::prelude::*;
 
-use super::{ready::handle_ready, start::handle_start};
-
 pub fn handle_reaction(gar: GameActionResponse) {
+    let mut games = expect_context::<GamesSignal>();
+    let update_notifier = expect_context::<UpdateNotifier>();
     //logging::log!("Got a game action response message: {:?}", gar);
     match gar.game_action.clone() {
         GameReaction::New => {
@@ -24,17 +22,20 @@ pub fn handle_reaction(gar: GameActionResponse) {
         GameReaction::TimedOut => {
             handle_timeout(gar.clone());
         }
-        GameReaction::Turn(ref turn) => {
-            handle_turn(turn.clone(), gar.clone());
+        GameReaction::Turn(_) => {
+            games.own_games_add(gar.game.clone());
+            update_notifier.game_response.set(Some(gar.clone()));
         }
         GameReaction::Control(ref game_control) => {
             handle_control(game_control.clone(), gar.clone())
         }
         GameReaction::Started => {
-            handle_start(gar.clone());
+            update_notifier.game_response.set(Some(gar.clone()));
         }
         GameReaction::Ready => {
-            handle_ready(gar.clone());
+            update_notifier
+                .tournament_ready
+                .set((gar.game_id, gar.user_id));
         }
     };
 }

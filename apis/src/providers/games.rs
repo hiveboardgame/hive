@@ -1,7 +1,6 @@
 use super::AuthContext;
 use crate::responses::AccountResponse;
 use crate::responses::GameResponse;
-use crate::responses::HeartbeatResponse;
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameControl};
 use leptos::prelude::*;
@@ -25,19 +24,6 @@ impl GamesSignal {
             live: RwSignal::new(LiveGames::new()),
             user,
         }
-    }
-
-    pub fn update_heartbeat(&mut self, hb: HeartbeatResponse) {
-        self.own.update(|games| {
-            if let Some(game) = games.realtime.get_mut(&hb.game_id) {
-                game.black_time_left = Some(hb.black_time_left);
-                game.white_time_left = Some(hb.white_time_left);
-            }
-            if let Some(game) = games.correspondence.get_mut(&hb.game_id) {
-                game.black_time_left = Some(hb.black_time_left);
-                game.white_time_left = Some(hb.white_time_left);
-            }
-        });
     }
 
     pub fn visit(&mut self, time_mode: TimeMode, game_id: GameId) -> Option<GameId> {

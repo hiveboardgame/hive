@@ -1,6 +1,5 @@
 use crate::{
-    common::{GameReaction, MoveConfirm},
-    components::{
+    common::{GameReaction, MoveConfirm}, components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
@@ -14,15 +13,12 @@ use crate::{
             side_board::SideboardTabs,
             unstarted::Unstarted,
         },
-    },
-    functions::games::get::get_game_from_nanoid,
-    providers::{
-        config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext, GameUpdater,
-        SoundType, Sounds,
-    },
-    websocket::client_handlers::game::reaction::handler::{
+    }, functions::games::get::get_game_from_nanoid, providers::{
+        config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext, SoundType,
+        Sounds, UpdateNotifier,
+    }, websocket::client_handlers::game::reaction::handler::{
         reset_game_state, reset_game_state_for_takeback,
-    },
+    }
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Position, Turn};
 use leptos::logging::log;
@@ -43,13 +39,13 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     provide_context(TargetStack(RwSignal::new(None)));
 
     let params = use_params_map();
-    let game_id = move || {
+    let game_id = Signal::derive(move || {
         params
             .get()
             .get("nanoid")
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
-    };
+    });
     let orientation_signal = expect_context::<OrientationSignal>();
     let mut game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
@@ -94,8 +90,8 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         game_id,
         move |_, _, _| {
             spawn_local(async move {
-                log!("TRIGGERED, game_id is  {:?}", game_id());
-                let game = get_game_from_nanoid(game_id()).await;
+                log!("TRIGGERED, game_id is  {:?}", game_id.get_untracked());
+                let game = get_game_from_nanoid(game_id.get_untracked()).await;
                 if let Ok(game) = game {
                     reset_game_state(&game, game_state);
                     timer.update_from(&game);
@@ -112,7 +108,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         },
         true,
     );
-    let game_updater = expect_context::<GameUpdater>();
+    let game_updater = expect_context::<UpdateNotifier>();
     let tournament_ready = RwSignal::new(Uuid::default());
     //HB handler
     Effect::watch(
@@ -157,10 +153,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     });
     let sounds = expect_context::<Sounds>();
     Effect::watch(
-        game_updater.response,
+        game_updater.game_response,
         move |gar, _, _| {
             if let Some(gar) = gar {
-                if gar.game_id == game_id() {
+                let game_id = game_id.get_untracked();
+                if gar.game_id == game_id {
                     match gar.game_action.clone() {
                         GameReaction::Turn(turn) => {
                             timer.update_from(&gar.game);

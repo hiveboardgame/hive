@@ -103,7 +103,3 @@ impl Default for Timer {
         Self::new()
     }
 }
-
-pub fn provide_timer() {
-    provide_context(TimerSignal::new())
-}

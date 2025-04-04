@@ -28,10 +28,9 @@ use crate::{
     providers::{
         challenges::provide_challenges, chat::provide_chat, games::provide_games,
         online_users::provide_users, provide_alerts, provide_api_requests, provide_auth,
-        provide_challenge_params, provide_config, provide_game_updater, provide_notifications,
-        provide_ping, provide_referer, provide_sounds, refocus::provide_refocus,
-        schedules::provide_schedules, timer::provide_timer, tournaments::provide_tournaments,
-        websocket::provide_websocket,
+        provide_challenge_params, provide_config, provide_notifications, provide_ping,
+        provide_referer, provide_server_updates, provide_sounds, refocus::provide_refocus,
+        schedules::provide_schedules, websocket::provide_websocket,
     },
 };
 use leptos::prelude::*;
@@ -55,7 +54,7 @@ pub fn App() -> impl IntoView {
     //These dont expect any other context, can be provided in any order
     provide_ping();
     provide_referer();
-    provide_game_updater();
+    provide_server_updates();
     provide_schedules();
     provide_notifications();
     provide_sounds();
@@ -63,22 +62,20 @@ pub fn App() -> impl IntoView {
     provide_alerts();
     provide_challenge_params();
     provide_config();
-    provide_timer();
     provide_users();
-    provide_tournaments();
     provide_challenges();
     provide_websocket("/ws/");
 
     //expects websocket
     provide_auth();
 
-    //expects auth and navigation_controller
+    //expects auth
     provide_games();
 
     //expects auth, challengeStateSignal, websocket
     provide_api_requests();
 
-    //expects auth, api_requests, navigation_controller, gameStateSignal
+    //expects auth, api_requests, gameStateSignal
     provide_chat();
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()

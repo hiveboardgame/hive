@@ -10,6 +10,7 @@ use crate::components::organisms::{
     sound_toggle::SoundToggle,
 };
 use crate::i18n::*;
+use crate::providers::games::GamesSignal;
 use crate::providers::{AuthContext, RefererContext};
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
@@ -19,6 +20,7 @@ use shared_types::TimeMode;
 pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let username = move || auth_context.user.get().map(|user| user.username);
+    let games = expect_context::<GamesSignal>();
     let i18n = use_i18n();
     view! {
         <header class="w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none">
@@ -52,9 +54,9 @@ pub fn Header() -> impl IntoView {
             </div>
             <Show when=move || username().is_some() fallback=|| view! { <GuestActions /> }>
                 <div class="flex items-center">
-                    <NextGameButton time_mode=StoredValue::new(TimeMode::RealTime) />
-                    <NextGameButton time_mode=StoredValue::new(TimeMode::Correspondence) />
-                    <NextGameButton time_mode=StoredValue::new(TimeMode::Untimed) />
+                    <NextGameButton time_mode=TimeMode::RealTime games />
+                    <NextGameButton time_mode=TimeMode::Correspondence games />
+                    <NextGameButton time_mode=TimeMode::Untimed games />
                 </div>
                 <div class="flex items-center mr-1">
                     <ChatAndControls />
