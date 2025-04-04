@@ -40,7 +40,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let params = use_params_map();
     let game_id = move || {
         params
-            .get()
+            .get_untracked()
             .get("nanoid")
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
@@ -71,8 +71,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             }
         })
     });
+    provide_context(TimerSignal::new());
+    
     let timer = expect_context::<TimerSignal>();
-    spawn_local(async move {
+    Effect::new(
+    move || spawn_local(async move {
         let game = get_game_from_nanoid(game_id()).await;
         if let Ok(game) = game {
             reset_game_state(&game, game_state);
@@ -86,7 +89,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 }
             }
         }
-    });
+    }));
     let player_color = Memo::new(move |_| {
         user().map_or(Color::White, |user| {
             let black_id = white_and_black().1;

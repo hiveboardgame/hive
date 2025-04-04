@@ -47,7 +47,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let ws = expect_context::<WebsocketContext>();
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
-    provide_context(TimerSignal::new());
     provide_context(GameStateSignal::new());
     let gamestate = expect_context::<GameStateSignal>();
     let mut refocus = expect_context::<RefocusSignal>();
