@@ -20,8 +20,8 @@ use crate::{
     }
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Position, Turn};
-use leptos::logging::log;
-use leptos::{prelude::*, task::spawn_local};
+use leptos::logging::{self, log};
+use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{GameId, GameStart, TournamentGameResult};
 
@@ -70,15 +70,25 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         })
     });
     provide_context(TimerSignal::new());
-
     let timer = expect_context::<TimerSignal>();
+    let first_load = Action::new(move |_: &()| 
+    async move {
+        logging::log!("First load");
+        get_game_from_nanoid(game_id()).await.ok()
+    });
     Effect::watch(
         game_id,
         move |_, _, _| {
             log!("TRIGGERED, game_id is  {:?}", game_id());
-            spawn_local(async move {
-                let game = get_game_from_nanoid(game_id()).await;
-                if let Ok(game) = game {
+            first_load.dispatch(());
+        },
+        true,
+    );
+    Effect::watch(
+        first_load.version(),
+        move |_, _, _| {
+            let game = first_load.value().get_untracked().and_then(|g| g);
+                if let Some(game) = game {
                     reset_game_state(&game, game_state);
                     timer.update_from(&game);
                     if let Some((_turn, gc)) = game.game_control_history.last() {
@@ -90,10 +100,8 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         }
                     }
                 }
-            })
         },
-        true,
-    );
+        false);
     let game_updater = expect_context::<GameUpdater>();
     //HB handler
     Effect::watch(move || game_updater.heartbeat.get(),
