@@ -52,6 +52,7 @@ impl GameStateSignal {
             s.black_id = None;
             s.white_id = None;
         });
+        log!("ANALYSIS, game_id is {:?}", self.signal.get().game_id);
     }
 
     // No longer access the whole signal when getting user_color
@@ -335,11 +336,12 @@ impl GameState {
     pub fn is_move_allowed(&self, analysis: bool) -> bool {
         let auth_context = expect_context::<AuthContext>();
         let user = auth_context.user;
-        if matches!(self.state.game_status, GameStatus::Finished(_)) {
-            return false;
-        }
+        log!("ANALYSIS IS {analysis}, game_id is {:?}", self.game_id);
         if analysis {
             return true;
+        }
+        if matches!(self.state.game_status, GameStatus::Finished(_)) {
+            return false;
         }
         user().is_some_and(|user| {
             let turn = self.state.turn;
@@ -354,7 +356,7 @@ impl GameState {
     }
 
     pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
-        //log!("Moved active!");
+        log!("Moved active! analysis is{}", analysis.is_some());
         if let (Some(active), Some(position)) =
             (self.move_info.active, self.move_info.target_position)
         {

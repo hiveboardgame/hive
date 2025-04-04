@@ -14,7 +14,7 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
     };
-    let games = expect_context::<GamesSignal>();
+    let mut games = expect_context::<GamesSignal>();
     let next_games = move || {
         let game_id = game_id();
         match time_mode.get_value() {
@@ -34,20 +34,30 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
     let style = move || {
         match next_games() {
             0 => "hidden",
-            _ => "flex place-items-center bg-ladybug-red transform transition-transform duration-300 active:scale-95 hover:bg-red-400 text-white rounded-md px-2 py-1 m-1",
+            _ => "no-link-style flex place-items-center bg-ladybug-red transform transition-transform duration-300 active:scale-95 hover:bg-red-400 text-white rounded-md px-2 py-1 m-1",
         }
     };
     let text = move || format!(": {}", next_games());
-    let next_game_id = move || {
+    let game_id = move || {
         match time_mode.get_value() {
             TimeMode::Untimed => games.own.get().next_untimed,
             TimeMode::RealTime => games.own.get().next_realtime,
             TimeMode::Correspondence => games.own.get().next_correspondence,
-        }.peek().map(|gp| format!("/game/{}", gp.game_id)).unwrap_or_default()
+        }
+        .peek()
+        .map(|gp| gp.game_id.clone())
+    };
+
+    let href_game_id = move || game_id().map(|id| format!("/game/{id}"));
+
+    let onclick = move |_| {
+        if let Some(game_id) = game_id() {
+            games.visit(time_mode.get_value(), game_id);
+        };
     };
 
     view! {
-        <a class=style href=next_game_id>
+        <a class=style href=href_game_id on:click=onclick>
             <Icon icon=icon() attr:class="w-4 h-4" />
             {text}
         </a>
