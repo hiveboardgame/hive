@@ -1,6 +1,5 @@
 use crate::{
-    common::{GameReaction, MoveConfirm},
-    components::{
+    common::{GameReaction, MoveConfirm}, components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
@@ -14,15 +13,11 @@ use crate::{
             side_board::SideboardTabs,
             unstarted::Unstarted,
         },
-    },
-    functions::games::get::get_game_from_nanoid,
-    providers::{
-        config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext, GameUpdater,
-        SoundType, Sounds,
-    },
-    websocket::client_handlers::game::reaction::handler::{
+    }, functions::games::get::get_game_from_nanoid, providers::{
+        config::Config, game_state::GameStateSignal, games::GamesSignal, timer::TimerSignal, AuthContext, GameUpdater, SoundType, Sounds
+    }, responses::HeartbeatResponse, websocket::client_handlers::game::reaction::handler::{
         reset_game_state, reset_game_state_for_takeback,
-    },
+    }
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Position, Turn};
 use leptos::logging::log;
@@ -43,7 +38,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let params = use_params_map();
     let game_id = move || {
         params
-            .get()
+            .get_untracked()
             .get("nanoid")
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
@@ -77,6 +72,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     provide_context(TimerSignal::new());
 
     let timer = expect_context::<TimerSignal>();
+    let mut games_signal = expect_context::<GamesSignal>();
     Effect::watch(
         game_id,
         move |_, _, _| {
@@ -96,6 +92,27 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                     }
                 }
             })
+        },
+        true,
+    );
+    //HB handler
+    Effect::watch(
+        move || games_signal.own.get(),
+        move |own, _, _| {
+            let hb = if let Some(game) = own.realtime.get(&game_id()) {
+                Some(HeartbeatResponse {
+                    game_id: game.game_id.clone(),
+                    black_time_left: game.black_time_left.unwrap_or_default(),
+                    white_time_left: game.white_time_left.unwrap_or_default(),
+                })
+            } else { own.correspondence.get(&game_id()).map(|game| HeartbeatResponse {
+                    game_id: game.game_id.clone(),
+                    black_time_left: game.black_time_left.unwrap_or_default(),
+                    white_time_left: game.white_time_left.unwrap_or_default(),
+                }) };
+            if let Some(hb) = hb {
+               timer.update_from_hb(hb);
+            }
         },
         true,
     );

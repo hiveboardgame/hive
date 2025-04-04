@@ -26,7 +26,6 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let mut game_state = expect_context::<GameStateSignal>();
     //TODO: Not sure what's up with this but navigating via microscope to a finished game gets into a state where you can't move
     Effect::new(move || game_state.do_analysis());
-    game_state.do_analysis();
     provide_context(TargetStack(RwSignal::new(None)));
     provide_context(AnalysisSignal(RwSignal::new(LocalStorage::wrap(
         AnalysisTree::from_state(game_state).unwrap_or_default(),
