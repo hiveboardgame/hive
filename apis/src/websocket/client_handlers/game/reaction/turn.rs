@@ -1,26 +1,13 @@
 use crate::{
     common::GameActionResponse,
-    providers::{
-        game_state::GameStateSignal, games::GamesSignal, timer::TimerSignal, SoundType, Sounds,
-    },
+    providers::{games::GamesSignal, GameUpdater},
 };
 use hive_lib::Turn;
 use leptos::prelude::*;
 
 pub fn handle_turn(turn: Turn, gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();
-    let sounds = expect_context::<Sounds>();
     games.own_games_add(gar.game.clone());
-    let mut game_state = expect_context::<GameStateSignal>();
-    let timer = expect_context::<TimerSignal>();
-    timer.update_from(&gar.game);
-    game_state.clear_gc();
-    game_state.set_game_response(gar.game.clone());
-    sounds.play_sound(SoundType::Turn);
-    if game_state.signal.get_untracked().state.history.moves != gar.game.history {
-        match turn {
-            Turn::Move(piece, position) => game_state.play_turn(piece, position),
-            _ => unreachable!(),
-        };
-    }
+    let game_updater = expect_context::<GameUpdater>();
+    game_updater.response.set(Some(gar.clone()));
 }

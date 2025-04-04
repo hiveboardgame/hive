@@ -34,10 +34,12 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 #[component]
 pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
     let chat = expect_context::<Chat>();
+    let game_state = use_context::<GameStateSignal>();
+    let turn = move || game_state.map(|gs| gs.signal.get().state.turn);
     let send = move || {
         let message = chat.typed_message.get();
         if !message.is_empty() {
-            chat.send(&message, destination());
+            chat.send(&message, destination(), turn());
             chat.typed_message.set(String::new());
         };
     };

@@ -3,7 +3,7 @@ use super::{
 };
 use crate::{
     common::{GameActionResponse, GameReaction},
-    providers::{game_state::GameStateSignal, games::GamesSignal},
+    providers::game_state::GameStateSignal,
     responses::GameResponse,
     websocket::client_handlers::game::tv::handler::handle_tv,
 };
@@ -13,9 +13,7 @@ use leptos::prelude::*;
 use super::{ready::handle_ready, start::handle_start};
 
 pub fn handle_reaction(gar: GameActionResponse) {
-    let _games = expect_context::<GamesSignal>();
-    let _game_state = expect_context::<GameStateSignal>();
-    //log!("Got a game action response message: {:?}", gar);
+    //logging::log!("Got a game action response message: {:?}", gar);
     match gar.game_action.clone() {
         GameReaction::New => {
             handle_new_game(gar.game.clone());

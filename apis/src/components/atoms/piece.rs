@@ -4,6 +4,7 @@ use crate::pages::play::CurrentConfirm;
 use crate::providers::analysis::AnalysisSignal;
 use crate::providers::config::TileOptions;
 use crate::providers::game_state::GameStateSignal;
+use crate::providers::ApiRequestsProvider;
 use hive_lib::{Bug, Piece, Position};
 use leptos::either::Either;
 use leptos::prelude::*;
@@ -163,6 +164,7 @@ pub fn PieceWithOnClick(
     } else {
         ""
     };
+    let api = expect_context::<ApiRequestsProvider>().0;
     let current_confirm = expect_context::<CurrentConfirm>().0;
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
@@ -176,7 +178,7 @@ pub fn PieceWithOnClick(
                 }
                 PieceType::Move | PieceType::Spawn => {
                     if matches!(current_confirm(), MoveConfirm::Double) {
-                        game_state.move_active(analysis.clone());
+                        game_state.move_active(analysis.clone(), api.get());
                     }
                 }
                 _ => {}

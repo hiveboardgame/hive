@@ -5,6 +5,7 @@ use super::{
 use crate::common::GameUpdate;
 
 pub fn handle_game(game_update: GameUpdate) {
+    //logging::log!("handle_game");
     match game_update {
         GameUpdate::Reaction(game) => handle_reaction(game),
         GameUpdate::Tv(game) => handle_tv(game),

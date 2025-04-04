@@ -2,7 +2,9 @@ use crate::{
     common::MoveConfirm,
     components::molecules::{live_timer::LiveTimer, user_with_rating::UserWithRating},
     pages::play::CurrentConfirm,
-    providers::{game_state::GameStateSignal, timer::TimerSignal, AuthContext},
+    providers::{
+        game_state::GameStateSignal, timer::TimerSignal, ApiRequestsProvider, AuthContext,
+    },
 };
 use hive_lib::Color;
 use leptos::prelude::*;
@@ -94,10 +96,10 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
             )
         }
     };
-
+    let api = expect_context::<ApiRequestsProvider>().0;
     let onclick = move |_| {
         if is_button() {
-            game_state.move_active(None);
+            game_state.move_active(None, api());
         }
     };
 

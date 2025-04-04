@@ -9,6 +9,7 @@ use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
 use super::analysis::AnalysisSignal;
+use super::api_requests::ApiRequests;
 use super::{auth_context::AuthContext, ApiRequestsProvider};
 
 #[derive(Clone, Debug, Copy)]
@@ -138,8 +139,8 @@ impl GameStateSignal {
         self.signal.update(|s| s.move_info.reset())
     }
 
-    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>) {
-        self.signal.update(|s| s.move_active(analysis))
+    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
+        self.signal.update(|s| s.move_active(analysis, api))
     }
 
     pub fn is_move_allowed(&self, analisis: bool) -> bool {
@@ -352,9 +353,8 @@ impl GameState {
         })
     }
 
-    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>) {
+    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
         //log!("Moved active!");
-        let api = expect_context::<ApiRequestsProvider>().0.get();
         if let (Some(active), Some(position)) =
             (self.move_info.active, self.move_info.target_position)
         {
@@ -363,6 +363,7 @@ impl GameState {
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
                 api.turn(game_id.to_owned(), turn);
+                log!("After turn API");
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             } else {
@@ -494,8 +495,4 @@ impl GameState {
             false
         }
     }
-}
-
-pub fn provide_game_state() {
-    provide_context(GameStateSignal::new())
 }

@@ -3,6 +3,7 @@ use crate::common::SvgPos;
 use crate::pages::play::CurrentConfirm;
 use crate::providers::analysis::AnalysisSignal;
 use crate::providers::game_state::GameStateSignal;
+use crate::providers::ApiRequestsProvider;
 use hive_lib::Position;
 use leptos::prelude::*;
 
@@ -18,12 +19,13 @@ pub fn Target(
     let transform = move || format!("translate({},{})", center().0, center().1);
     let mut game_state = expect_context::<GameStateSignal>();
     let analysis = use_context::<AnalysisSignal>();
+    let api = expect_context::<ApiRequestsProvider>().0;
     // Select the target position and make a move if it's the correct mode
     let onclick = move |_| {
         if game_state.is_move_allowed(analysis.is_some()) {
             game_state.set_target(position);
             if current_confirm() == MoveConfirm::Single {
-                game_state.move_active(analysis.clone());
+                game_state.move_active(analysis.clone(), api());
             }
         }
     };

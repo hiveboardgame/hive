@@ -1,5 +1,5 @@
 use crate::{
-    common::MoveConfirm,
+    common::{GameReaction, MoveConfirm},
     components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
@@ -16,10 +16,13 @@ use crate::{
         },
     },
     functions::games::get::get_game_from_nanoid,
-    providers::{config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext},
+    providers::{
+        config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext, GameUpdater,
+        SoundType, Sounds,
+    },
     websocket::client_handlers::game::reaction::handler::reset_game_state,
 };
-use hive_lib::{Color, GameControl, GameStatus, Position};
+use hive_lib::{Color, GameControl, GameStatus, Position, Turn};
 use leptos::{prelude::*, task::spawn_local};
 use leptos_router::hooks::use_params_map;
 use shared_types::{GameId, GameStart, TournamentGameResult};
@@ -33,6 +36,7 @@ pub struct CurrentConfirm(pub Memo<MoveConfirm>);
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     provide_context(TargetStack(RwSignal::new(None)));
+
     let params = use_params_map();
     let game_id = move || {
         params
@@ -42,7 +46,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             .unwrap_or_default()
     };
     let orientation_signal = expect_context::<OrientationSignal>();
-    let game_state = expect_context::<GameStateSignal>();
+    let mut game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let current_confirm = Memo::new(move |_| {
@@ -116,7 +120,40 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 && gr.tournament_game_result == TournamentGameResult::Unknown
         })
     });
-
+    let game_updater = expect_context::<GameUpdater>().response;
+    let sounds = expect_context::<Sounds>();
+    Effect::watch(
+        move || game_updater.get(),
+        move |gar, _, _| {
+            if let Some(gar) = gar {
+                if gar.game_id == game_id() {
+                    match gar.game_action.clone() {
+                        GameReaction::Turn(turn) => {
+                            timer.update_from(&gar.game);
+                            game_state.clear_gc();
+                            game_state.set_game_response(gar.game.clone());
+                            sounds.play_sound(SoundType::Turn);
+                            //logging::log!("Turn: {turn:?}");
+                            if game_state.signal.get_untracked().state.history.moves
+                                != gar.game.history
+                            {
+                                match turn {
+                                    Turn::Move(piece, position) => {
+                                        game_state.play_turn(piece, position)
+                                    }
+                                    _ => unreachable!(),
+                                };
+                            }
+                        }
+                        _ => {
+                            todo!()
+                        }
+                    }
+                }
+            }
+        },
+        false,
+    );
     view! {
         <div class=move || {
             format!(

@@ -1,6 +1,7 @@
 use crate::components::atoms::{og::OG, title::Title};
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
+use crate::providers::timer::TimerSignal;
 use crate::providers::Config;
 use crate::providers::{
     game_state::GameStateSignal, refocus::RefocusSignal, websocket::WebsocketContext, AuthContext,
@@ -46,6 +47,8 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let ws = expect_context::<WebsocketContext>();
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
+    provide_context(TimerSignal::new());
+    provide_context(GameStateSignal::new());
     let gamestate = expect_context::<GameStateSignal>();
     let mut refocus = expect_context::<RefocusSignal>();
     let stored_children = Signal::derive(move || children.clone());

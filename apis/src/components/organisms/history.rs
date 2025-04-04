@@ -1,6 +1,7 @@
 use crate::components::atoms::history_button::set_timer_from_response;
 use crate::components::molecules::history_controls::HistoryControls;
 use crate::providers::game_state::{self, GameStateSignal};
+use crate::providers::timer::TimerSignal;
 use hive_lib::GameStatus;
 use leptos::{html, prelude::*};
 use leptos_icons::*;
@@ -18,6 +19,7 @@ pub fn HistoryMove(
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let div_ref = NodeRef::<html::Div>::new();
+    let timer = expect_context::<TimerSignal>();
     div_ref.on_load(move |_| {
         if let Some(parent_div) = parent_div.get_untracked() {
             parent_div.set_scroll_top(parent_div.scroll_height())
@@ -25,7 +27,7 @@ pub fn HistoryMove(
     });
     let onclick = move |_| {
         game_state.show_history_turn(turn);
-        set_timer_from_response();
+        set_timer_from_response(game_state, timer);
     };
     let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
     let is_realtime = create_read_slice(game_state.signal, |gs| {

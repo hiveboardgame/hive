@@ -1,8 +1,8 @@
 use crate::responses::AccountResponse;
 
 use super::{
-    api_requests::ApiRequests, auth_context::AuthContext, game_state::GameStateSignal, AlertType,
-    AlertsContext, ApiRequestsProvider,
+    api_requests::ApiRequests, auth_context::AuthContext, AlertType, AlertsContext,
+    ApiRequestsProvider,
 };
 use leptos::prelude::*;
 use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId, TournamentId};
@@ -21,16 +21,11 @@ pub struct Chat {
     pub tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
     pub typed_message: RwSignal<String>,
     user: Signal<Option<AccountResponse>>,
-    gamestate: GameStateSignal,
     api: Signal<ApiRequests>,
 }
 
 impl Chat {
-    pub fn new(
-        user: Signal<Option<AccountResponse>>,
-        gamestate: GameStateSignal,
-        api: Signal<ApiRequests>,
-    ) -> Self {
+    pub fn new(user: Signal<Option<AccountResponse>>, api: Signal<ApiRequests>) -> Self {
         Self {
             users_messages: RwSignal::new(HashMap::new()),
             users_new_messages: RwSignal::new(HashMap::new()),
@@ -42,7 +37,6 @@ impl Chat {
             tournament_lobby_new_messages: RwSignal::new(HashMap::new()),
             typed_message: RwSignal::new(String::new()),
             user,
-            gamestate,
             api,
         }
     }
@@ -70,15 +64,13 @@ impl Chat {
         });
     }
 
-    pub fn send(&self, message: &str, destination: ChatDestination) {
+    pub fn send(&self, message: &str, destination: ChatDestination, turn: Option<usize>) {
         if let Some(account) = self.user.get_untracked() {
             let id = account.user.uid;
             let name = account.user.username;
             let turn = match destination {
                 ChatDestination::GamePlayers(_, _, _)
-                | ChatDestination::GameSpectators(_, _, _) => {
-                    Some(self.gamestate.signal.get_untracked().state.turn)
-                }
+                | ChatDestination::GameSpectators(_, _, _) => turn,
                 _ => None,
             };
             let msg = ChatMessage::new(name, id, message, None, turn);
@@ -187,7 +179,6 @@ impl Chat {
 
 pub fn provide_chat() {
     let user = expect_context::<AuthContext>().user;
-    let gamestate = expect_context::<GameStateSignal>();
     let api = expect_context::<ApiRequestsProvider>().0;
-    provide_context(Chat::new(user, gamestate, api))
+    provide_context(Chat::new(user, api))
 }
