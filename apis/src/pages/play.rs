@@ -25,11 +25,12 @@ use crate::{
     },
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Position, Turn};
-use leptos::logging::{self, log};
+use leptos::logging::log;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{GameId, GameStart, TournamentGameResult};
 use uuid::Uuid;
+use wasm_bindgen_futures::spawn_local;
 
 #[derive(Clone)]
 pub struct TargetStack(pub RwSignal<Option<Position>>);
@@ -89,36 +90,27 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     });
     provide_context(TimerSignal::new());
     let timer = expect_context::<TimerSignal>();
-    let first_load = Action::new(move |_: &()| async move {
-        logging::log!("First load");
-        get_game_from_nanoid(game_id()).await.ok()
-    });
     Effect::watch(
         game_id,
         move |_, _, _| {
-            log!("TRIGGERED, game_id is  {:?}", game_id());
-            first_load.dispatch(());
+            spawn_local(async move {
+                log!("TRIGGERED, game_id is  {:?}", game_id());
+                let game = get_game_from_nanoid(game_id()).await;
+                if let Ok(game) = game {
+                    reset_game_state(&game, game_state);
+                    timer.update_from(&game);
+                    if let Some((_turn, gc)) = game.game_control_history.last() {
+                        match gc {
+                            GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
+                                game_state.set_pending_gc(gc.clone())
+                            }
+                            _ => {}
+                        }
+                    }
+                };
+            });
         },
         true,
-    );
-    Effect::watch(
-        first_load.version(),
-        move |_, _, _| {
-            let game = first_load.value().get_untracked().and_then(|g| g);
-            if let Some(game) = game {
-                reset_game_state(&game, game_state);
-                timer.update_from(&game);
-                if let Some((_turn, gc)) = game.game_control_history.last() {
-                    match gc {
-                        GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
-                            game_state.set_pending_gc(gc.clone())
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        },
-        false,
     );
     let game_updater = expect_context::<GameUpdater>();
     let tournament_ready = RwSignal::new(Uuid::default());
