@@ -74,7 +74,7 @@ pub fn HistoryMove(
 
 #[component]
 pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let mut game_state = expect_context::<game_state::GameStateSignal>();
+    let game_state = expect_context::<game_state::GameStateSignal>();
     let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
     let repetitions = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().map(|gr| gr.repetitions.clone())
@@ -110,9 +110,6 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             false
         }
     };
-    let analysis_setup = move |_| {
-        game_state.do_analysis();
-    };
     view! {
         <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
 
@@ -135,7 +132,6 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <a
                         href="/analysis"
                         class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
-                        on:click=analysis_setup
                     >
                         <div class="flex gap-1 justify-center items-center">
                             <Icon icon=icondata::TbMicroscope attr:class="py-1 w-7 h-7" />
