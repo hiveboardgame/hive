@@ -1,5 +1,6 @@
 use crate::{
-    common::{GameReaction, MoveConfirm}, components::{
+    common::{GameReaction, MoveConfirm},
+    components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
@@ -13,17 +14,22 @@ use crate::{
             side_board::SideboardTabs,
             unstarted::Unstarted,
         },
-    }, functions::games::get::get_game_from_nanoid, providers::{
-        config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext, GameUpdater, SoundType, Sounds
-    }, websocket::client_handlers::game::reaction::handler::{
+    },
+    functions::games::get::get_game_from_nanoid,
+    providers::{
+        config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext, GameUpdater,
+        SoundType, Sounds,
+    },
+    websocket::client_handlers::game::reaction::handler::{
         reset_game_state, reset_game_state_for_takeback,
-    }
+    },
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Position, Turn};
 use leptos::logging::{self, log};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{GameId, GameStart, TournamentGameResult};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct TargetStack(pub RwSignal<Option<Position>>);
@@ -59,6 +65,18 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     provide_context(CurrentConfirm(current_confirm));
     let user = auth_context.user;
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
+    let white = create_read_slice(game_state.signal, |gs| {
+        (
+            gs.white_id,
+            gs.game_response.clone().map(|gr| gr.white_player.username),
+        )
+    });
+    let black = create_read_slice(game_state.signal, |gs| {
+        (
+            gs.black_id,
+            gs.game_response.clone().map(|gr| gr.black_player.username),
+        )
+    });
     let user_is_player = Signal::derive(move || {
         user().and_then(|user| {
             let (white_id, black_id) = white_and_black();
@@ -71,8 +89,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     });
     provide_context(TimerSignal::new());
     let timer = expect_context::<TimerSignal>();
-    let first_load = Action::new(move |_: &()| 
-    async move {
+    let first_load = Action::new(move |_: &()| async move {
         logging::log!("First load");
         get_game_from_nanoid(game_id()).await.ok()
     });
@@ -88,27 +105,28 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         first_load.version(),
         move |_, _, _| {
             let game = first_load.value().get_untracked().and_then(|g| g);
-                if let Some(game) = game {
-                    reset_game_state(&game, game_state);
-                    timer.update_from(&game);
-                    if let Some((_turn, gc)) = game.game_control_history.last() {
-                        match gc {
-                            GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
-                                game_state.set_pending_gc(gc.clone())
-                            }
-                            _ => {}
+            if let Some(game) = game {
+                reset_game_state(&game, game_state);
+                timer.update_from(&game);
+                if let Some((_turn, gc)) = game.game_control_history.last() {
+                    match gc {
+                        GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
+                            game_state.set_pending_gc(gc.clone())
                         }
+                        _ => {}
                     }
                 }
-        },
-        false);
-    let game_updater = expect_context::<GameUpdater>();
-    //HB handler
-    Effect::watch(move || game_updater.heartbeat.get(),
-        move |hb, _, _| {
-            if let Some(hb) = hb {
-                timer.update_from_hb(hb.clone());
             }
+        },
+        false,
+    );
+    let game_updater = expect_context::<GameUpdater>();
+    let tournament_ready = RwSignal::new(Uuid::default());
+    //HB handler
+    Effect::watch(
+        move || game_updater.heartbeat.get(),
+        move |hb, _, _| {
+            timer.update_from_hb(hb.clone());
         },
         false,
     );
@@ -200,6 +218,10 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                 }
                             };
                         }
+                        GameReaction::Started => {
+                            reset_game_state(&gar.game, game_state);
+                            timer.update_from(&gar.game);
+                        }
                         _ => {
                             todo!()
                         }
@@ -223,7 +245,15 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         <Show
                             when=show_board
                             fallback=move || {
-                                view! { <Unstarted user_is_player /> }
+                                view! {
+                                    <Unstarted
+                                        user_is_player=user_is_player().is_some()
+                                        white=white()
+                                        black=black()
+                                        game_id=game_id()
+                                        ready=tournament_ready
+                                    />
+                                }
                             }
                         >
 
@@ -270,7 +300,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             view! {
                                 <Unstarted
                                     overwrite_tw_classes="flex grow min-h-0 h-[100dvh] justify-center items-center"
-                                    user_is_player
+                                    user_is_player=user_is_player().is_some()
+                                    game_id=game_id()
+                                    black=black()
+                                    white=white()
+                                    ready=tournament_ready
                                 />
                             }
                         }

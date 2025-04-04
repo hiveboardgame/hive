@@ -9,5 +9,5 @@ pub fn handle_heartbeat(hb: HeartbeatResponse) {
     let game_updater = expect_context::<GameUpdater>();
     logging::log!("Got heartbeat: {hb:?}");
     games_signal.update_heartbeat(hb.clone());
-    game_updater.heartbeat.set(Some(hb));
+    game_updater.heartbeat.set(hb);
 }

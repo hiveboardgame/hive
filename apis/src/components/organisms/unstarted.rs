@@ -1,63 +1,66 @@
 use crate::i18n::*;
-use crate::providers::game_state::GameStateSignal;
-use crate::providers::tournaments::TournamentStateContext;
-use crate::providers::ApiRequestsProvider;
+use crate::providers::{ApiRequestsProvider, GameUpdater};
 use leptos::prelude::*;
 use leptos_icons::*;
+use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
+use shared_types::GameId;
 use uuid::Uuid;
 
 #[component]
 pub fn Unstarted(
-    user_is_player: Signal<Option<(String, Uuid)>>,
+    game_id: GameId,
+    white: (Option<Uuid>, Option<String>),
+    black: (Option<Uuid>, Option<String>),
+    user_is_player: bool,
+    //trick so this signal is passed down from the parent
+    ready: RwSignal<Uuid>,
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] overwrite_tw_classes: &'static str,
 ) -> impl IntoView {
+    let game_id = StoredValue::new(game_id);
+    let (white_id, white_username) = white;
+    let (black_id, black_username) = black;
     let i18n = use_i18n();
-    let game_state = expect_context::<GameStateSignal>();
-    let ready = expect_context::<TournamentStateContext>().ready;
     let api = expect_context::<ApiRequestsProvider>().0;
-    let game_id = create_read_slice(game_state.signal, |gs| gs.game_id.clone());
-    let white_id = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map(|gr| (gr.white_player.uid))
-    });
-    let black_id = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map(|gr| (gr.black_player.uid))
-    });
-    let white_username = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(|gr| (gr.white_player.username.clone()))
-    });
-    let black_username = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
-            .map(|gr| (gr.black_player.username.clone()))
-    });
-
-    let white_ready = move || {
-        if let (Some(white_id), Some(game_id)) = (white_id(), game_id()) {
-            ready().get(&game_id).map(|r| r.contains(&white_id))
+    let ready_notification = expect_context::<GameUpdater>().tournament_ready;
+    let white_icon = move || {
+        let icon = if Some(ready()) == white_id {
+            icondata::AiCheckOutlined
         } else {
-            Some(false)
-        }
-        .unwrap_or(false)
+            icondata::IoCloseSharp
+        };
+        view! { <Icon icon attr:class="w-6 h-6" /> }
     };
-
-    let black_ready = move || {
-        if let (Some(black_id), Some(game_id)) = (black_id(), game_id()) {
-            ready().get(&game_id).map(|r| r.contains(&black_id))
+    let black_icon = move || {
+        let icon = if Some(ready()) == black_id {
+            icondata::AiCheckOutlined
         } else {
-            Some(false)
-        }
-        .unwrap_or(false)
+            icondata::IoCloseSharp
+        };
+        view! { <Icon icon attr:class="w-6 h-6" /> }
     };
 
     let start = move |_| {
-        if let Some(id) = game_id() {
-            let api = api.get();
-            api.tournament_game_start(id);
-        };
+        let api = api.get();
+        api.tournament_game_start(game_id.get_value());
     };
+    Effect::watch(
+        ready_notification,
+        move |val, _, _| {
+            let (g_id, user_id) = val.clone();
+            if g_id == game_id.get_value() {
+                ready.set(user_id);
+            }
+            let UseTimeoutFnReturn { start, .. } = use_timeout_fn(
+                move |_: ()| {
+                    ready.set(Uuid::default());
+                },
+                30_000.0,
+            );
+            start(());
+        },
+        false,
+    );
     view! {
         <div class=if !overwrite_tw_classes.is_empty() {
             overwrite_tw_classes.to_string()
@@ -66,36 +69,12 @@ pub fn Unstarted(
         }>
             <div class="flex flex-col gap-1 justify-center items-center h-full">
                 <div class="flex gap-1 items-center">
-                    <div class="flex gap-1 items-center">
-                        {white_username}
-                        <Show
-                            when=white_ready
-                            fallback=|| {
-                                view! { <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" /> }
-                            }
-                        >
-
-                            <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
-                        </Show>
-
-                    </div>
+                    <div class="flex gap-1 items-center">{white_username} {white_icon}</div>
                     "—"
-                    <div class="flex gap-1 items-center">
-                        {black_username}
-                        <Show
-                            when=black_ready
-                            fallback=|| {
-                                view! { <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" /> }
-                            }
-                        >
-
-                            <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
-                        </Show>
-
-                    </div>
+                    <div class="flex gap-1 items-center">{black_username} {black_icon}</div>
                 </div>
                 <Show
-                    when=move || user_is_player().is_some()
+                    when=move || user_is_player
                     fallback=move || {
                         view! { <div class="p-1">{t!(i18n, game.start_when.both_ready)}</div> }
                     }
