@@ -1,19 +1,14 @@
-use super::handler::reset_game_state_for_takeback;
 use crate::{
     common::GameActionResponse,
-    providers::{
-        game_state::GameStateSignal, games::GamesSignal, timer::TimerSignal, AlertType,
-        AlertsContext,
-    },
+    providers::{games::GamesSignal, AlertType, AlertsContext, GameUpdater},
 };
-use hive_lib::{GameControl, GameResult, GameStatus};
+use hive_lib::GameControl;
 use leptos::prelude::*;
 
 pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();
-    let mut game_state = expect_context::<GameStateSignal>();
-    game_state.set_pending_gc(game_control.clone());
-
+    let game_updater = expect_context::<GameUpdater>();
+    game_updater.response.set(Some(gar.clone()));
     match game_control {
         GameControl::Abort(_) => {
             games.own_games_remove(&gar.game.game_id);
@@ -29,25 +24,12 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
         }
         GameControl::DrawAccept(_) => {
             games.own_games_remove(&gar.game.game_id);
-            game_state.set_game_status(GameStatus::Finished(GameResult::Draw));
-            game_state.set_game_response(gar.game.clone());
-            let timer = expect_context::<TimerSignal>();
-            timer.update_from(&gar.game);
         }
         GameControl::Resign(color) => {
             games.own_games_remove(&gar.game.game_id);
-            game_state.set_game_status(GameStatus::Finished(GameResult::Winner(
-                color.opposite_color(),
-            )));
-            game_state.set_game_response(gar.game.clone());
-            let timer = expect_context::<TimerSignal>();
-            timer.update_from(&gar.game);
         }
         GameControl::TakebackAccept(_) => {
             games.own_games_add(gar.game.to_owned());
-            let timer = expect_context::<TimerSignal>();
-            timer.update_from(&gar.game);
-            reset_game_state_for_takeback(&gar.game);
         }
         GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
             games.own_games_add(gar.game.to_owned());

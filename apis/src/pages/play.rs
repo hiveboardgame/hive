@@ -20,9 +20,11 @@ use crate::{
         config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext, GameUpdater,
         SoundType, Sounds,
     },
-    websocket::client_handlers::game::reaction::handler::reset_game_state,
+    websocket::client_handlers::game::reaction::handler::{
+        reset_game_state, reset_game_state_for_takeback,
+    },
 };
-use hive_lib::{Color, GameControl, GameStatus, Position, Turn};
+use hive_lib::{Color, GameControl, GameResult, GameStatus, Position, Turn};
 use leptos::{prelude::*, task::spawn_local};
 use leptos_router::hooks::use_params_map;
 use shared_types::{GameId, GameStart, TournamentGameResult};
@@ -72,24 +74,25 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         })
     });
     provide_context(TimerSignal::new());
-    
+
     let timer = expect_context::<TimerSignal>();
-    Effect::new(
-    move || spawn_local(async move {
-        let game = get_game_from_nanoid(game_id()).await;
-        if let Ok(game) = game {
-            reset_game_state(&game, game_state);
-            timer.update_from(&game);
-            if let Some((_turn, gc)) = game.game_control_history.last() {
-                match gc {
-                    GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
-                        game_state.set_pending_gc(gc.clone())
+    Effect::new(move || {
+        spawn_local(async move {
+            let game = get_game_from_nanoid(game_id()).await;
+            if let Ok(game) = game {
+                reset_game_state(&game, game_state);
+                timer.update_from(&game);
+                if let Some((_turn, gc)) = game.game_control_history.last() {
+                    match gc {
+                        GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
+                            game_state.set_pending_gc(gc.clone())
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 }
             }
-        }
-    }));
+        })
+    });
     let player_color = Memo::new(move |_| {
         user().map_or(Color::White, |user| {
             let black_id = white_and_black().1;
@@ -147,6 +150,34 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                     _ => unreachable!(),
                                 };
                             }
+                        }
+                        GameReaction::Control(game_control) => {
+                            game_state.set_pending_gc(game_control.clone());
+
+                            match game_control {
+                                GameControl::DrawAccept(_) => {
+                                    game_state
+                                        .set_game_status(GameStatus::Finished(GameResult::Draw));
+                                    game_state.set_game_response(gar.game.clone());
+                                    timer.update_from(&gar.game);
+                                }
+                                GameControl::Resign(color) => {
+                                    game_state.set_game_status(GameStatus::Finished(
+                                        GameResult::Winner(color.opposite_color()),
+                                    ));
+                                    game_state.set_game_response(gar.game.clone());
+                                    timer.update_from(&gar.game);
+                                }
+                                GameControl::TakebackAccept(_) => {
+                                    timer.update_from(&gar.game);
+                                    reset_game_state_for_takeback(&gar.game, &mut game_state);
+                                }
+                                GameControl::TakebackRequest(_) 
+                                | GameControl::DrawOffer(_) 
+                                | GameControl::DrawReject(_)
+                                | GameControl::TakebackReject(_)
+                                | GameControl::Abort(_) => {}
+                            };
                         }
                         _ => {
                             todo!()

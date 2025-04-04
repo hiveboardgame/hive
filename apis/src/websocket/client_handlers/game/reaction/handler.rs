@@ -39,8 +39,7 @@ pub fn handle_reaction(gar: GameActionResponse) {
     };
 }
 
-pub fn reset_game_state_for_takeback(game: &GameResponse) {
-    let mut game_state = expect_context::<GameStateSignal>();
+pub fn reset_game_state_for_takeback(game: &GameResponse, game_state: &mut GameStateSignal) {
     game_state.view_game();
     game_state.set_game_response(game.clone());
     let mut history = History::new();

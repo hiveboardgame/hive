@@ -1,7 +1,6 @@
 use crate::components::atoms::{og::OG, title::Title};
 use crate::components::molecules::alert::Alert;
 use crate::components::organisms::header::Header;
-use crate::providers::timer::TimerSignal;
 use crate::providers::Config;
 use crate::providers::{
     game_state::GameStateSignal, refocus::RefocusSignal, websocket::WebsocketContext, AuthContext,
