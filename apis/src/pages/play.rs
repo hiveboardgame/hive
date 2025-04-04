@@ -72,7 +72,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     provide_context(TimerSignal::new());
 
     let timer = expect_context::<TimerSignal>();
-    let mut games_signal = expect_context::<GamesSignal>();
     Effect::watch(
         game_id,
         move |_, _, _| {
@@ -96,26 +95,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         true,
     );
     //HB handler
-    Effect::watch(
-        move || games_signal.own.get(),
-        move |own, _, _| {
-            let hb = if let Some(game) = own.realtime.get(&game_id()) {
-                Some(HeartbeatResponse {
-                    game_id: game.game_id.clone(),
-                    black_time_left: game.black_time_left.unwrap_or_default(),
-                    white_time_left: game.white_time_left.unwrap_or_default(),
-                })
-            } else { own.correspondence.get(&game_id()).map(|game| HeartbeatResponse {
-                    game_id: game.game_id.clone(),
-                    black_time_left: game.black_time_left.unwrap_or_default(),
-                    white_time_left: game.white_time_left.unwrap_or_default(),
-                }) };
-            if let Some(hb) = hb {
-               timer.update_from_hb(hb);
-            }
-        },
-        true,
-    );
     let player_color = Memo::new(move |_| {
         user().map_or(Color::White, |user| {
             let black_id = white_and_black().1;
