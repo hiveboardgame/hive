@@ -38,7 +38,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let params = use_params_map();
     let game_id = move || {
         params
-            .get_untracked()
+            .get()
             .get("nanoid")
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
