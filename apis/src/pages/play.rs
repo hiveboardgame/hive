@@ -27,7 +27,6 @@ use leptos::logging::log;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{GameId, GameStart, TournamentGameResult};
-use uuid::Uuid;
 use wasm_bindgen_futures::spawn_local;
 
 #[derive(Clone)]
@@ -86,6 +85,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             }
         })
     });
+    let game_updater = expect_context::<UpdateNotifier>();
     provide_context(TimerSignal::new());
     let timer = expect_context::<TimerSignal>();
     Effect::watch(
@@ -110,8 +110,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         },
         true,
     );
-    let game_updater = expect_context::<UpdateNotifier>();
-    let tournament_ready = RwSignal::new(Uuid::default());
     //HB handler
     Effect::watch(
         move || game_updater.heartbeat.get(),
@@ -246,7 +244,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                         white=white()
                                         black=black()
                                         game_id=game_id()
-                                        ready=tournament_ready
+                                        ready=game_updater.tournament_ready.into()
                                     />
                                 }
                             }
@@ -299,7 +297,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                     game_id=game_id()
                                     black=black()
                                     white=white()
-                                    ready=tournament_ready
+                                    ready=game_updater.tournament_ready.into()
                                 />
                             }
                         }

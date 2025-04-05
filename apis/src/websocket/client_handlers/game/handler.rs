@@ -1,11 +1,14 @@
+use super::reaction::{handle_control, handle_new_game};
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate},
     providers::{game_state::GameStateSignal, games::GamesSignal, UpdateNotifier},
     responses::GameResponse,
 };
 use hive_lib::{GameStatus, History, State};
-use leptos::{logging, prelude::*};
-use super::reaction::{handle_control, handle_new_game};
+use leptos::{logging, prelude::*, task::spawn_local};
+use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
+use shared_types::GameId;
+use uuid::Uuid;
 
 pub fn handle_game(game_update: GameUpdate) {
     //logging::log!("handle_game");
@@ -57,6 +60,19 @@ fn handle_reaction(gar: GameActionResponse) {
             update_notifier
                 .tournament_ready
                 .set((gar.game_id, gar.user_id));
+            logging::log!("Handled ready");
+            spawn_local(async move {
+                let UseTimeoutFnReturn { start, .. } = use_timeout_fn(
+                    move |_: ()| {
+                        update_notifier
+                            .tournament_ready
+                            .set((GameId::default(), Uuid::default()));
+                        logging::log!("Deleted ready");
+                    },
+                    30_000.0,
+                );
+                start(());
+            });
         }
     };
 }

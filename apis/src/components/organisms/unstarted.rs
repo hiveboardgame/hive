@@ -1,8 +1,7 @@
 use crate::i18n::*;
-use crate::providers::{ApiRequestsProvider, UpdateNotifier};
+use crate::providers::ApiRequestsProvider;
 use leptos::prelude::*;
 use leptos_icons::*;
-use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
 use shared_types::GameId;
 use uuid::Uuid;
 
@@ -12,8 +11,8 @@ pub fn Unstarted(
     white: (Option<Uuid>, Option<String>),
     black: (Option<Uuid>, Option<String>),
     user_is_player: bool,
+    ready: Signal<(GameId, Uuid)>,
     //trick so this signal is passed down from the parent
-    ready: RwSignal<Uuid>,
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] overwrite_tw_classes: &'static str,
 ) -> impl IntoView {
@@ -22,9 +21,8 @@ pub fn Unstarted(
     let (black_id, black_username) = black;
     let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let ready_notification = expect_context::<UpdateNotifier>().tournament_ready;
     let white_icon = move || {
-        let icon = if Some(ready()) == white_id {
+        let icon = if ready().0 == game_id.get_value() && Some(ready().1) == white_id {
             icondata::AiCheckOutlined
         } else {
             icondata::IoCloseSharp
@@ -32,7 +30,7 @@ pub fn Unstarted(
         view! { <Icon icon attr:class="w-6 h-6" /> }
     };
     let black_icon = move || {
-        let icon = if Some(ready()) == black_id {
+        let icon = if ready().0 == game_id.get_value() && Some(ready().1) == black_id {
             icondata::AiCheckOutlined
         } else {
             icondata::IoCloseSharp
@@ -44,23 +42,6 @@ pub fn Unstarted(
         let api = api.get();
         api.tournament_game_start(game_id.get_value());
     };
-    Effect::watch(
-        ready_notification,
-        move |val, _, _| {
-            let (g_id, user_id) = val.clone();
-            if g_id == game_id.get_value() {
-                ready.set(user_id);
-            }
-            let UseTimeoutFnReturn { start, .. } = use_timeout_fn(
-                move |_: ()| {
-                    ready.set(Uuid::default());
-                },
-                30_000.0,
-            );
-            start(());
-        },
-        false,
-    );
     view! {
         <div class=if !overwrite_tw_classes.is_empty() {
             overwrite_tw_classes.to_string()
