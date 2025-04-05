@@ -23,7 +23,7 @@ pub fn handle_game(game_update: GameUpdate) {
             games_signal.own_games_set(games);
         }
         GameUpdate::Heartbeat(hb) => {
-            logging::log!("Got heartbeat: {hb:?}");
+            //logging::log!("Got heartbeat: {hb:?}");
             game_updater.heartbeat.set(hb);
         }
     }
@@ -60,14 +60,14 @@ fn handle_reaction(gar: GameActionResponse) {
             update_notifier
                 .tournament_ready
                 .set((gar.game_id, gar.user_id));
-            logging::log!("Handled ready");
+            //logging::log!("Handled ready");
             spawn_local(async move {
                 let UseTimeoutFnReturn { start, .. } = use_timeout_fn(
                     move |_: ()| {
                         update_notifier
                             .tournament_ready
                             .set((GameId::default(), Uuid::default()));
-                        logging::log!("Deleted ready");
+                        //logging::log!("Deleted ready");
                     },
                     30_000.0,
                 );
