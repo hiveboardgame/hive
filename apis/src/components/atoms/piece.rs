@@ -1,10 +1,11 @@
 use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
 use crate::common::{PieceType, SvgPos};
-use crate::components::organisms::analysis::AnalysisSignal;
 use crate::pages::play::CurrentConfirm;
+use crate::providers::analysis::AnalysisSignal;
 use crate::providers::config::TileOptions;
 use crate::providers::game_state::GameStateSignal;
-use hive_lib::{Bug, GameStatus, Piece, Position};
+use crate::providers::ApiRequestsProvider;
+use hive_lib::{Bug, Piece, Position};
 use leptos::either::Either;
 use leptos::prelude::*;
 use web_sys::MouseEvent;
@@ -156,25 +157,18 @@ pub fn PieceWithOnClick(
     #[prop(optional, into)] piece_type: PieceType,
     tile_opts: TileOptions,
 ) -> impl IntoView {
+    let analysis = use_context::<AnalysisSignal>();
     let mut game_state = expect_context::<GameStateSignal>();
-    let analysis = use_context::<AnalysisSignal>()
-        .unwrap_or(AnalysisSignal(RwSignal::new(None)))
-        .0;
     let sepia = if piece_type == PieceType::Inactive {
         "sepia-[.75]"
     } else {
         ""
     };
+    let api = expect_context::<ApiRequestsProvider>().0;
     let current_confirm = expect_context::<CurrentConfirm>().0;
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
-        let in_analysis = analysis.get().is_some();
-        let is_finished = matches!(
-            game_state.signal.get_untracked().state.game_status,
-            GameStatus::Finished(_)
-        );
-
-        if (in_analysis && !is_finished) || game_state.is_move_allowed() {
+        if game_state.is_move_allowed(analysis.is_some()) {
             match piece_type {
                 PieceType::Board => {
                     game_state.show_moves(piece(), position);
@@ -184,7 +178,7 @@ pub fn PieceWithOnClick(
                 }
                 PieceType::Move | PieceType::Spawn => {
                     if matches!(current_confirm(), MoveConfirm::Double) {
-                        game_state.move_active();
+                        game_state.move_active(None, api.get());
                     }
                 }
                 _ => {}

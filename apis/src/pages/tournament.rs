@@ -10,8 +10,8 @@ use crate::components::{
     },
 };
 use crate::functions::tournaments::get_complete;
-use crate::providers::ApiRequestsProvider;
-use crate::providers::{tournaments::TournamentStateContext, AuthContext};
+use crate::providers::AuthContext;
+use crate::providers::{ApiRequestsProvider, UpdateNotifier};
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
@@ -30,7 +30,7 @@ pub const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-
 #[component]
 pub fn Tournament() -> impl IntoView {
     let use_params = use_params_map();
-    let tournaments = expect_context::<TournamentStateContext>();
+    let update_notification = expect_context::<UpdateNotifier>().tournament_update;
     let tournament_id = move || {
         use_params
             .get_untracked()
@@ -43,9 +43,9 @@ pub fn Tournament() -> impl IntoView {
             .ok()
     });
     Effect::watch(
-        tournaments.needs_update,
+        update_notification,
         move |needs_update, _, _| {
-            if needs_update.contains(&tournament_id().unwrap()) {
+            if Some(needs_update) == tournament_id().as_ref() {
                 current_tournament.dispatch(());
             }
         },

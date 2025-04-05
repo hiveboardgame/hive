@@ -4,13 +4,13 @@ use crate::components::organisms::darkmode_toggle::DarkModeToggle;
 use crate::components::organisms::header::set_redirect;
 use crate::components::organisms::logout::Logout;
 use crate::i18n::*;
-use crate::providers::navigation_controller::NavigationControllerSignal;
+use crate::providers::RefererContext;
 use leptos::prelude::*;
 
 #[component]
 pub fn UserDropdown(username: String) -> impl IntoView {
     let i18n = use_i18n();
-    let pathname = expect_context::<NavigationControllerSignal>().redirect;
+    let pathname = expect_context::<RefererContext>().pathname;
     let hamburger_show = RwSignal::new(false);
     let onclick_close = move || hamburger_show.update(|b| *b = false);
     view! {

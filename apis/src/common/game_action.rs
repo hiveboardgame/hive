@@ -7,7 +7,6 @@ pub enum GameAction {
     Start,
     CheckTime,
     Control(GameControl),
-    Join,
     Turn(Turn),
 }
 
@@ -16,7 +15,6 @@ impl fmt::Display for GameAction {
         match self {
             GameAction::CheckTime => write!(f, "CheckTime"),
             GameAction::Control(ref gc) => write!(f, "{}", gc),
-            GameAction::Join => write!(f, "Join"),
             GameAction::Start => write!(f, "Start"),
             GameAction::Turn(ref turn) => write!(f, "{}", turn),
         }

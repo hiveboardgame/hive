@@ -1,14 +1,12 @@
 use crate::{
     components::update_from_event::update_from_input,
-    providers::{
-        chat::Chat, game_state::GameStateSignal, navigation_controller::NavigationControllerSignal,
-        AuthContext,
-    },
+    providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
 use chrono::Local;
 use leptos::{html, prelude::*};
+use leptos_router::hooks::use_params_map;
 use leptos_use::{use_mutation_observer_with_options, UseMutationObserverOptions};
-use shared_types::{ChatDestination, ChatMessage, SimpleDestination};
+use shared_types::{ChatDestination, ChatMessage, GameId, SimpleDestination};
 use uuid::Uuid;
 
 #[component]
@@ -36,10 +34,12 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 #[component]
 pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
     let chat = expect_context::<Chat>();
+    let game_state = use_context::<GameStateSignal>();
+    let turn = move || game_state.map(|gs| gs.signal.get().state.turn);
     let send = move || {
         let message = chat.typed_message.get();
         if !message.is_empty() {
-            chat.send(&message, destination());
+            chat.send(&message, destination(), turn());
             chat.typed_message.set(String::new());
         };
     };
@@ -78,6 +78,14 @@ pub fn ChatWindow(
     #[prop(optional)] correspondant_id: Option<Uuid>,
     #[prop(optional)] correspondant_username: String,
 ) -> impl IntoView {
+    let params = use_params_map();
+    let game_id = move || {
+        params
+            .get()
+            .get("nanoid")
+            .map(|s| GameId(s.to_owned()))
+            .unwrap_or_default()
+    };
     let chat = expect_context::<Chat>();
     let auth_context = expect_context::<AuthContext>();
     let game_state = expect_context::<GameStateSignal>();
@@ -97,8 +105,6 @@ pub fn ChatWindow(
             .expect("Game has black player")
     };
 
-    let navi = expect_context::<NavigationControllerSignal>();
-    let game_id = Signal::derive(move || navi.game_signal.get().game_id.unwrap_or_default());
     let correspondant_id = Signal::derive(move || correspondant_id.map_or(Uuid::new_v4(), |id| id));
     let correspondant_username = Signal::derive(move || correspondant_username.clone());
     let div = NodeRef::<html::Div>::new();

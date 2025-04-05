@@ -1,11 +1,11 @@
 use crate::{
     common::TournamentUpdate,
-    providers::{tournaments::TournamentStateContext, NotificationContext},
+    providers::{NotificationContext, UpdateNotifier},
 };
 use leptos::prelude::*;
 
 pub fn handle_tournament(tournament: TournamentUpdate) {
-    let mut tournaments_signal = expect_context::<TournamentStateContext>();
+    let notify_update = expect_context::<UpdateNotifier>().tournament_update;
     let notifications = expect_context::<NotificationContext>();
 
     match tournament {
@@ -13,7 +13,7 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
         | TournamentUpdate::Created(tournament_id)
         | TournamentUpdate::Adjudicated(tournament_id)
         | TournamentUpdate::Modified(tournament_id) => {
-            tournaments_signal.add_full(tournament_id);
+            notify_update.set(tournament_id);
         }
         TournamentUpdate::Declined(tournament_id)
         | TournamentUpdate::Joined(tournament_id)
@@ -23,19 +23,19 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
             });
         }
         TournamentUpdate::Invited(tournament_id) => {
-            tournaments_signal.add_full(tournament_id.clone());
+            notify_update.set(tournament_id.clone());
             notifications.tournament_invitations.update(|invitations| {
                 invitations.insert(tournament_id.clone());
             });
         }
         TournamentUpdate::Deleted(t_id) => {
-            tournaments_signal.add_full(t_id.clone());
+            notify_update.set(t_id.clone());
             notifications.tournament_invitations.update(|t| {
                 t.remove(&t_id);
             });
         }
         TournamentUpdate::Started(tournament_id) => {
-            tournaments_signal.add_full(tournament_id.clone());
+            notify_update.set(tournament_id.clone());
             notifications.tournament_invitations.update(|invitations| {
                 invitations.remove(&tournament_id);
             });
@@ -45,7 +45,7 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
             // TODO: Inform users the tournament started
         }
         TournamentUpdate::Finished(tournament_id) => {
-            tournaments_signal.add_full(tournament_id.clone());
+            notify_update.set(tournament_id.clone());
             notifications.tournament_finished.update(|tournaments| {
                 tournaments.insert(tournament_id.clone());
             });

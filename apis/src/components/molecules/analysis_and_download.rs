@@ -6,10 +6,7 @@ use shared_types::GameSpeed;
 
 #[component]
 pub fn AnalysisAndDownload() -> impl IntoView {
-    let mut game_state = expect_context::<GameStateSignal>();
-    let analysis_setup = move |_| {
-        game_state.do_analysis();
-    };
+    let game_state = expect_context::<GameStateSignal>();
     let correspondence = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().is_some_and(|gr| {
             gr.speed == GameSpeed::Correspondence || gr.speed == GameSpeed::Untimed
@@ -23,7 +20,6 @@ pub fn AnalysisAndDownload() -> impl IntoView {
                 <a
                     href="/analysis"
                     class="justify-self-end place-self-center m-1 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
-                    on:click=analysis_setup
                 >
                     <Icon icon=icondata::TbMicroscope attr:class="py-1 w-7 h-7" />
                 </a>

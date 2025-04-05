@@ -74,8 +74,8 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
                 <HistoryButton action=HistoryNavigation::Last post_action=go_to_end />
             </div>
             <div class="flex p-2">
-                <Reserve alignment=Alignment::DoubleRow color=Color::White analysis=false />
-                <Reserve alignment=Alignment::DoubleRow color=Color::Black analysis=false />
+                <Reserve alignment=Alignment::DoubleRow color=Color::White />
+                <Reserve alignment=Alignment::DoubleRow color=Color::Black />
             </div>
         </div>
     }

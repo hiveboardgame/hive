@@ -104,7 +104,7 @@ impl TurnHandler {
                     tournament_name,
                     game.str_time_left_for_player(game.current_player_id),
                 );
-                println!("{}", msg);
+
                 if let Err(e) = Busybee::msg(game.current_player_id, msg).await {
                     println!("{e}");
                 };
@@ -140,6 +140,7 @@ impl TurnHandler {
                 message: ServerMessage::Game(Box::new(GameUpdate::Tv(response))),
             });
         };
+        println!("Turn handled server side");
         Ok(messages)
     }
 

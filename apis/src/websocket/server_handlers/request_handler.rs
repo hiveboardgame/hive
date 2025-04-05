@@ -10,7 +10,6 @@ use super::user_status::handler::UserStatusHandler;
 use crate::common::{ClientRequest, GameAction};
 use crate::websocket::messages::AuthError;
 use crate::websocket::messages::InternalServerMessage;
-use crate::websocket::messages::WsMessage;
 use crate::websocket::WebsocketData;
 use db_lib::DbPool;
 use shared_types::{ChatDestination, SimpleUser};
@@ -34,7 +33,6 @@ impl std::fmt::Display for RequestHandlerError {
 pub struct RequestHandler {
     command: ClientRequest,
     data: Arc<WebsocketData>,
-    received_from: actix::Recipient<WsMessage>, // This is the socket the message was received over
     pool: DbPool,
     user_id: Uuid,
     username: String,
@@ -46,12 +44,10 @@ impl RequestHandler {
     pub fn new(
         command: ClientRequest,
         data: Arc<WebsocketData>,
-        sender_addr: actix::Recipient<WsMessage>,
         user: SimpleUser,
         pool: DbPool,
     ) -> Self {
         Self {
-            received_from: sender_addr,
             command,
             data,
             pool,
@@ -117,7 +113,6 @@ impl RequestHandler {
                     &game_id,
                     game_action,
                     (&self.username, self.user_id),
-                    self.received_from.clone(),
                     self.data.clone(),
                     &self.pool,
                 )

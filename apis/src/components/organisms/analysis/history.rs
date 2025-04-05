@@ -1,11 +1,11 @@
 use crate::components::organisms::analysis::atoms::{
     CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation,
 };
-use crate::components::organisms::analysis::AnalysisTree;
 use crate::components::organisms::{
-    analysis::{AnalysisSignal, DownloadTree, LoadTree, UndoButton},
+    analysis::{DownloadTree, LoadTree, UndoButton},
     reserve::{Alignment, Reserve},
 };
+use crate::providers::analysis::{AnalysisSignal, AnalysisTree};
 use hive_lib::Color;
 use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
@@ -15,9 +15,9 @@ use tree_ds::prelude::*;
 #[component]
 pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let current_node = move || analysis.get().and_then(|a| a.current_node.clone());
+    let current_node = move || analysis.get().current_node.clone();
     let get_tree = move || {
-        let t = analysis.get().unwrap();
+        let t = analysis.get();
         let out = AnalysisTree {
             current_node: t.current_node.clone(),
             tree: t.tree.clone(),
@@ -31,7 +31,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         if let Some(current_node) = current_node() {
             let current_id = current_node.get_node_id();
             current_path.push(current_id);
-            let analysis = analysis.get_untracked().unwrap();
+            let analysis = analysis.get_untracked();
             if let Ok(a) = analysis.tree.get_ancestor_ids(&current_id) {
                 current_path.extend(a);
             }
@@ -71,7 +71,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         }))
     };
     let walk_tree = move || {
-        let tree = analysis.get().unwrap().tree.clone();
+        let tree = analysis.get().tree.clone();
         let root = tree.get_root_node()?;
         //Post order traversal ensures all children are processed before their parents
         let node_order = tree
@@ -150,18 +150,8 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
             </div>
             <Show when=move || !mobile>
                 <div class="flex flex-col p-4">
-                    <Reserve
-                        alignment=Alignment::DoubleRow
-                        color=Color::White
-                        viewbox_str
-                        analysis=true
-                    />
-                    <Reserve
-                        alignment=Alignment::DoubleRow
-                        color=Color::Black
-                        viewbox_str
-                        analysis=true
-                    />
+                    <Reserve alignment=Alignment::DoubleRow color=Color::White viewbox_str />
+                    <Reserve alignment=Alignment::DoubleRow color=Color::Black viewbox_str />
 
                 </div>
             </Show>

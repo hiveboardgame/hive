@@ -20,6 +20,7 @@ pub fn HistoryButton(
     #[prop(optional)] node_ref: Option<NodeRef<html::Button>>,
 ) -> impl IntoView {
     let game_state_signal = expect_context::<GameStateSignal>();
+    let timer = expect_context::<TimerSignal>();
     let is_last_turn = game_state_signal.is_last_turn_as_signal();
     let is_first_turn = game_state_signal.is_first_turn_as_signal();
     let cloned_action = action.clone();
@@ -39,7 +40,7 @@ pub fn HistoryButton(
         HistoryNavigation::Previous | HistoryNavigation::First => is_first_turn(),
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        send_action(&action);
+        send_action(&action, game_state_signal, timer);
         if let Some(post_action) = post_action {
             post_action.run(())
         }
@@ -59,8 +60,11 @@ pub fn HistoryButton(
     }
 }
 
-fn send_action(action: &HistoryNavigation) {
-    let mut game_state_signal = expect_context::<GameStateSignal>();
+fn send_action(
+    action: &HistoryNavigation,
+    mut game_state_signal: GameStateSignal,
+    timer: TimerSignal,
+) {
     match action {
         HistoryNavigation::First => game_state_signal.first_history_turn(),
         HistoryNavigation::Last => game_state_signal.view_history(),
@@ -75,12 +79,10 @@ fn send_action(action: &HistoryNavigation) {
             game_state_signal.view_game()
         }
     }
-    set_timer_from_response();
+    set_timer_from_response(game_state_signal, timer);
 }
 
-pub fn set_timer_from_response() {
-    let game_state_signal = expect_context::<GameStateSignal>();
-    let timer = expect_context::<TimerSignal>();
+pub fn set_timer_from_response(game_state_signal: GameStateSignal, timer: TimerSignal) {
     game_state_signal.signal.with(|gs| {
         if !matches!(gs.state.game_status, GameStatus::Finished(_)) {
             return;

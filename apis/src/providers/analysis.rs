@@ -4,7 +4,7 @@ use hive_lib::{GameType, History, State};
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, vec};
+use std::vec;
 use tree_ds::prelude::{Node, Tree};
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct TreeNode {
@@ -13,10 +13,7 @@ pub struct TreeNode {
     pub position: String,
 }
 #[derive(Clone)]
-pub struct AnalysisSignal(pub RwSignal<Option<SendWrapper<AnalysisTree>>>);
-
-#[derive(Clone)]
-pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
+pub struct AnalysisSignal(pub RwSignal<SendWrapper<AnalysisTree>>);
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct AnalysisTree {
@@ -54,11 +51,11 @@ impl AnalysisTree {
             hashes,
             game_type: gs.state.game_type,
         };
-        tree.update_node(gs.history_turn.unwrap_or(0) as i32);
+        tree.update_node(gs.history_turn.unwrap_or(0) as i32, Some(game_state));
         Some(tree)
     }
 
-    pub fn update_node(&mut self, node_id: i32) -> Option<()> {
+    pub fn update_node(&mut self, node_id: i32, game: Option<GameStateSignal>) -> Option<()> {
         let moves = self
             .tree
             .get_ancestor_ids(&node_id)
@@ -84,11 +81,13 @@ impl AnalysisTree {
             .as_ref()
             .and_then(|n| n.get_value().map(|v| v.turn));
 
-        expect_context::<GameStateSignal>().signal.update(|gs| {
-            gs.state = state;
-            gs.history_turn = history_turn;
-            gs.move_info.reset();
-        });
+        if let Some(g) = game {
+            g.signal.update(|gs| {
+                gs.state = state;
+                gs.history_turn = history_turn;
+                gs.move_info.reset();
+            })
+        }
         self.current_node
             .clone_from(&self.tree.get_node_by_id(&node_id));
         Some(())
@@ -107,7 +106,7 @@ impl AnalysisTree {
             .and_then(|node| {
                 //Turns must match if we will update the node
                 if node.get_value().unwrap().turn == turn {
-                    self.update_node(node.get_node_id())
+                    self.update_node(node.get_node_id(), None)
                 } else {
                     None
                 }

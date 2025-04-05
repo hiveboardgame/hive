@@ -3,20 +3,21 @@ use crate::{
         atoms::toggle_controls::ToggleControls, layouts::base_layout::OrientationSignal,
         organisms::dropdowns::chat::ChatDropdown,
     },
-    providers::{game_state::GameStateSignal, navigation_controller::NavigationControllerSignal},
+    providers::game_state::GameStateSignal,
 };
 use leptos::prelude::*;
-use shared_types::SimpleDestination;
+use leptos_router::hooks::use_params_map;
+use shared_types::{GameId, SimpleDestination};
 
 #[component]
 pub fn ChatAndControls() -> impl IntoView {
+    let params = use_params_map();
+    let game_id = move || params.get().get("nanoid").map(|s| GameId(s.to_owned()));
     let gamestate = expect_context::<GameStateSignal>();
-    let navi = expect_context::<NavigationControllerSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let is_finished = gamestate.is_finished();
-    let in_mobile_game = move || {
-        orientation_signal.orientation_vertical.get() && navi.game_signal.get().game_id.is_some()
-    };
+    let in_mobile_game =
+        move || orientation_signal.orientation_vertical.get() && game_id().is_some();
     view! {
         <Show when=in_mobile_game>
             <Show when=move || !is_finished()>

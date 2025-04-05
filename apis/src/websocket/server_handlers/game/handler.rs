@@ -1,11 +1,9 @@
 use super::start::StartHandler;
 use super::{
-    control_handler::GameControlHandler, join_handler::JoinHandler,
-    timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
+    control_handler::GameControlHandler, timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
 };
 use crate::common::GameAction;
 use crate::websocket::messages::InternalServerMessage;
-use crate::websocket::messages::WsMessage;
 use crate::websocket::WebsocketData;
 use anyhow::Result;
 use db_lib::get_conn;
@@ -22,7 +20,6 @@ pub struct GameActionHandler {
     game: Game,
     pool: DbPool,
     user_id: Uuid,
-    received_from: actix::Recipient<WsMessage>,
     data: Arc<WebsocketData>,
     username: String,
 }
@@ -32,7 +29,6 @@ impl GameActionHandler {
         game_id: &GameId,
         game_action: GameAction,
         user_details: (&str, Uuid),
-        received_from: actix::Recipient<WsMessage>,
         data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Result<Self> {
@@ -52,7 +48,6 @@ impl GameActionHandler {
             game,
             username: username.to_owned(),
             game_action,
-            received_from,
             user_id,
         })
     }
@@ -86,18 +81,6 @@ impl GameActionHandler {
                     &self.game,
                     &self.username,
                     self.user_id,
-                    &self.pool,
-                )
-                .handle()
-                .await?
-            }
-            GameAction::Join => {
-                JoinHandler::new(
-                    &self.game,
-                    &self.username,
-                    self.user_id,
-                    self.received_from.clone(),
-                    self.data.clone(),
                     &self.pool,
                 )
                 .handle()

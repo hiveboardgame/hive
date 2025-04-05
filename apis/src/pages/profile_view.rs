@@ -322,12 +322,13 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
             node_ref=el
             class="overflow-x-hidden items-center h-full sm:grid sm:grid-cols-2 sm:gap-1"
         >
-        {
-            move || ctx.games.get().iter().map(|game| 
-            view!{
-                <GameRow game=game.clone() />
-            }).collect_view()
-        }
+            {move || {
+                ctx.games
+                    .get()
+                    .iter()
+                    .map(|game| view! { <GameRow game=game.clone() /> })
+                    .collect_view()
+            }}
         </div>
     }
 }

@@ -1,19 +1,22 @@
-use crate::providers::{games::GamesSignal, navigation_controller::NavigationControllerSignal};
+use crate::providers::games::GamesSignal;
 use leptos::prelude::*;
 use leptos_icons::Icon;
-use shared_types::TimeMode;
+use leptos_router::hooks::use_params_map;
+use shared_types::{GameId, TimeMode};
 
 #[component]
-pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
-    let navigate = leptos_router::hooks::use_navigate();
-    let navigation_controller = expect_context::<NavigationControllerSignal>();
-    let mut games = expect_context::<GamesSignal>();
-    let next_games = move || {
-        let game_id = navigation_controller
-            .game_signal
+pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoView {
+    let time_mode = StoredValue::new(time_mode);
+    let params = use_params_map();
+    let game_id = move || {
+        params
             .get()
-            .game_id
-            .unwrap_or_default();
+            .get("nanoid")
+            .map(|s| GameId(s.to_owned()))
+            .unwrap_or_default()
+    };
+    let next_games = move || {
+        let game_id = game_id();
         match time_mode.get_value() {
             TimeMode::Untimed => games.own.get().next_untimed,
             TimeMode::RealTime => games.own.get().next_realtime,
@@ -31,22 +34,32 @@ pub fn NextGameButton(time_mode: StoredValue<TimeMode>) -> impl IntoView {
     let style = move || {
         match next_games() {
             0 => "hidden",
-            _ => "flex place-items-center bg-ladybug-red transform transition-transform duration-300 active:scale-95 hover:bg-red-400 text-white rounded-md px-2 py-1 m-1",
+            _ => "no-link-style flex place-items-center bg-ladybug-red transform transition-transform duration-300 active:scale-95 hover:bg-red-400 text-white rounded-md px-2 py-1 m-1",
         }
     };
     let text = move || format!(": {}", next_games());
-    let onclick = move |_| {
-        if let Some(game) = games.visit(time_mode.get_value()) {
-            navigate(&format!("/game/{}", game), Default::default());
-        } else {
-            navigate("/", Default::default());
+    let game_id = move || {
+        match time_mode.get_value() {
+            TimeMode::Untimed => games.own.get().next_untimed,
+            TimeMode::RealTime => games.own.get().next_realtime,
+            TimeMode::Correspondence => games.own.get().next_correspondence,
         }
+        .peek()
+        .map(|gp| gp.game_id.clone())
+    };
+
+    let href_game_id = move || game_id().map(|id| format!("/game/{id}"));
+
+    let onclick = move |_| {
+        if let Some(game_id) = game_id() {
+            games.visit(time_mode.get_value(), game_id);
+        };
     };
 
     view! {
-        <button on:click=onclick class=style>
+        <a class=style href=href_game_id on:click=onclick>
             <Icon icon=icon() attr:class="w-4 h-4" />
             {text}
-        </button>
+        </a>
     }
 }
