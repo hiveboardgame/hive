@@ -178,7 +178,7 @@ pub fn PieceWithOnClick(
                 }
                 PieceType::Move | PieceType::Spawn => {
                     if matches!(current_confirm(), MoveConfirm::Double) {
-                        game_state.move_active(analysis.clone(), api.get());
+                        game_state.move_active(None, api.get());
                     }
                 }
                 _ => {}

@@ -44,17 +44,6 @@ impl GameStateSignal {
         })
     }
 
-    pub fn do_analysis(&mut self) {
-        self.signal.update(|s| {
-            s.view = View::Game;
-            s.game_id = None;
-            s.state.game_status = GameStatus::InProgress;
-            s.black_id = None;
-            s.white_id = None;
-        });
-        //log!("ANALYSIS, game_id is {:?}", self.signal.get().game_id);
-    }
-
     // No longer access the whole signal when getting user_color
     pub fn user_color_as_signal(&self, user_id: Signal<Option<Uuid>>) -> Signal<Option<Color>> {
         create_read_slice(self.signal, move |gamestate| {
@@ -362,13 +351,7 @@ impl GameState {
         {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
-            } else if let Some(ref game_id) = self.game_id {
-                let turn = Turn::Move(active, position);
-                api.turn(game_id.to_owned(), turn);
-                self.move_info.reset();
-                self.history_turn = Some(self.state.turn - 1);
-            } else {
-                let analysis = analysis.expect("We should be in analysis");
+            } else if let Some(analysis) = analysis {
                 analysis.0.update(|analysis| {
                     let state = self.state.clone();
                     let moves = state.history.moves;
@@ -376,14 +359,17 @@ impl GameState {
                     let last_index = moves.len() - 1;
                     if moves[last_index].0 == "pass" {
                         //if move is pass, add prev move
-                        analysis.add_node(
-                            moves[last_index - 1].clone(),
-                            hashes[last_index - 1],
-                            None,
-                        );
+                        analysis.add_node(moves[last_index - 1].clone(), hashes[last_index - 1]);
                     }
-                    analysis.add_node(moves[last_index].clone(), hashes[last_index], None);
+                    analysis.add_node(moves[last_index].clone(), hashes[last_index]);
+                    self.move_info.reset();
                 });
+            } else if let Some(ref game_id) = self.game_id {
+                let turn = Turn::Move(active, position);
+                api.turn(game_id.to_owned(), turn);
+                self.move_info.reset();
+                self.history_turn = Some(self.state.turn - 1);
+
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             }

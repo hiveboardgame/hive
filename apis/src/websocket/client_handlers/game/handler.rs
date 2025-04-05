@@ -5,7 +5,7 @@ use crate::{
     responses::GameResponse,
 };
 use hive_lib::{GameStatus, History, State};
-use leptos::{logging, prelude::*, task::spawn_local};
+use leptos::{prelude::*, task::spawn_local};
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
 use shared_types::GameId;
 use uuid::Uuid;

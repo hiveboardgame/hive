@@ -23,15 +23,8 @@ pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
 
 #[component]
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let mut game_state = expect_context::<GameStateSignal>();
-    //TODO: Not sure what's up with this but navigating via microscope to a finished game gets into a state where you can't move
-    Effect::watch(
-        move || {},
-        move |_, _, _| {
-            game_state.do_analysis();
-        },
-        true,
-    );
+    let game_state = expect_context::<GameStateSignal>();
+    //TODO: No need for do_analysis now, context passing should be enough
     provide_context(TargetStack(RwSignal::new(None)));
     provide_context(AnalysisSignal(RwSignal::new(LocalStorage::wrap(
         AnalysisTree::from_state(game_state).unwrap_or_default(),
