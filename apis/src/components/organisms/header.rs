@@ -12,6 +12,8 @@ use crate::components::organisms::{
 use crate::i18n::*;
 use crate::providers::games::GamesSignal;
 use crate::providers::{AuthContext, RefererContext};
+use crate::responses::AccountResponse;
+use leptos::either::Either;
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
 use shared_types::TimeMode;
@@ -19,8 +21,6 @@ use shared_types::TimeMode;
 #[component]
 pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let username = move || auth_context.user.get().map(|user| user.username);
-    let games = expect_context::<GamesSignal>();
     let i18n = use_i18n();
     view! {
         <header class="w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none">
@@ -52,20 +52,7 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </div>
             </div>
-            <Show when=move || username().is_some() fallback=|| view! { <GuestActions /> }>
-                <div class="flex items-center">
-                    <NextGameButton time_mode=TimeMode::RealTime games />
-                    <NextGameButton time_mode=TimeMode::Correspondence games />
-                    <NextGameButton time_mode=TimeMode::Untimed games />
-                </div>
-                <div class="flex items-center mr-1">
-                    <ChatAndControls />
-                    <SoundToggle />
-                    <LocaleDropdown />
-                    <NotificationDropdown />
-                    <UserDropdown username=username().expect("Username is some") />
-                </div>
-            </Show>
+            <Controls user=auth_context.user />
         </header>
     }
 }
@@ -87,6 +74,30 @@ fn GuestActions() -> impl IntoView {
                 Login
             </a>
         </div>
+    }
+}
+
+#[component]
+fn Controls(user: Signal<Option<AccountResponse>>) -> impl IntoView {
+    move || match user() {
+        Some(user) => {
+            let games = expect_context::<GamesSignal>();
+            Either::Left(view! {
+                <div class="flex items-center">
+                    <NextGameButton time_mode=TimeMode::RealTime games />
+                    <NextGameButton time_mode=TimeMode::Correspondence games />
+                    <NextGameButton time_mode=TimeMode::Untimed games />
+                </div>
+                <div class="flex items-center mr-1">
+                    <ChatAndControls />
+                    <SoundToggle />
+                    <LocaleDropdown />
+                    <NotificationDropdown />
+                    <UserDropdown username=user.username.clone() />
+                </div>
+            })
+        }
+        None => Either::Right(view! { <GuestActions /> }),
     }
 }
 

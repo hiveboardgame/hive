@@ -1,5 +1,5 @@
 use super::{
-    challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
+    challenge::handler::handle_challenge, chat::handle::handle_chat, game::handle_game,
     oauth::handle::handle_oauth, ping::handle::handle_ping, schedule::handler::handle_schedule,
     tournament::handler::handle_tournament, user_status::handle::handle_user_status,
 };
