@@ -1,11 +1,13 @@
 use crate::providers::game_state::{GameState, GameStateSignal};
 use bimap::BiMap;
-use hive_lib::{GameType, History, State};
+use hive_lib::{GameStatus, GameType, History, State};
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use serde::{Deserialize, Serialize};
 use std::vec;
 use tree_ds::prelude::{Node, Tree};
+
+use super::game_state;
 #[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct TreeNode {
     pub turn: usize,
@@ -51,6 +53,13 @@ impl AnalysisTree {
             hashes,
             game_type: gs.state.game_type,
         };
+        game_state.signal.update(|s| {
+            s.view = game_state::View::Game;
+            s.game_id = None;
+            s.state.game_status = GameStatus::InProgress;
+            s.black_id = None;
+            s.white_id = None;
+        });
         tree.update_node(gs.history_turn.unwrap_or(0) as i32, Some(game_state));
         Some(tree)
     }
@@ -76,6 +85,9 @@ impl AnalysisTree {
         })
         .ok()?;
 
+        self.current_node
+            .clone_from(&self.tree.get_node_by_id(&node_id));
+
         let history_turn = self
             .current_node
             .as_ref()
@@ -88,8 +100,6 @@ impl AnalysisTree {
                 gs.move_info.reset();
             })
         }
-        self.current_node
-            .clone_from(&self.tree.get_node_by_id(&node_id));
         Some(())
     }
 

@@ -37,7 +37,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let mut game_state = expect_context::<GameStateSignal>();
 
     let params = use_params_map();
-    let game_id = Signal::derive(move || {
+    let game_id = Memo::new(move |_| {
         params
             .get()
             .get("nanoid")
@@ -86,10 +86,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let timer = expect_context::<TimerSignal>();
     Effect::watch(
         game_id,
-        move |_, _, _| {
+        move |game_id, _, _| {
+            let game_id = game_id.clone();
             spawn_local(async move {
-                log!("TRIGGERED, game_id is  {:?}", game_id.get_untracked());
-                let game = get_game_from_nanoid(game_id.get_untracked()).await;
+                log!("TRIGGERED, game_id is  {:?}", game_id);
+                let game = get_game_from_nanoid(game_id.clone()).await;
                 if let Ok(game) = game {
                     reset_game_state(&game, game_state);
                     timer.update_from(&game);
