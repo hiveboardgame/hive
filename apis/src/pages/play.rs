@@ -22,7 +22,7 @@ use crate::{
     },
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
-use hive_lib::{Color, GameControl, GameResult, GameStatus, Position, Turn};
+use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
 use leptos::logging::log;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
@@ -30,14 +30,11 @@ use shared_types::{GameId, GameStart, TournamentGameResult};
 use wasm_bindgen_futures::spawn_local;
 
 #[derive(Clone)]
-pub struct TargetStack(pub RwSignal<Option<Position>>);
-
-#[derive(Clone)]
 pub struct CurrentConfirm(pub Memo<MoveConfirm>);
 
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    provide_context(TargetStack(RwSignal::new(None)));
+    let mut game_state = expect_context::<GameStateSignal>();
 
     let params = use_params_map();
     let game_id = Signal::derive(move || {
@@ -48,7 +45,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             .unwrap_or_default()
     });
     let orientation_signal = expect_context::<OrientationSignal>();
-    let mut game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let current_confirm = Memo::new(move |_| {
@@ -135,7 +131,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         }
     };
     let go_to_game = Callback::new(move |()| {
-        let mut game_state = expect_context::<GameStateSignal>();
         if game_state.signal.get_untracked().is_last_turn() {
             game_state.view_game();
         }

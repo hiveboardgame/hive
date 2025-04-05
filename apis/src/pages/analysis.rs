@@ -8,7 +8,7 @@ use crate::{
             reserve::{Alignment, Reserve},
         },
     },
-    pages::play::{CurrentConfirm, TargetStack},
+    pages::play::CurrentConfirm,
     providers::{
         analysis::{AnalysisSignal, AnalysisTree},
         game_state::GameStateSignal,
@@ -25,7 +25,6 @@ pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     //TODO: No need for do_analysis now, context passing should be enough
-    provide_context(TargetStack(RwSignal::new(None)));
     provide_context(AnalysisSignal(RwSignal::new(LocalStorage::wrap(
         AnalysisTree::from_state(game_state).unwrap_or_default(),
     ))));

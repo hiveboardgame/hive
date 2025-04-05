@@ -1,11 +1,10 @@
 use crate::common::SvgPos;
 use crate::common::TileDesign;
+use crate::components::layouts::base_layout::TargetStack;
+use crate::components::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces};
+use crate::providers::analysis::AnalysisSignal;
 use crate::providers::game_state::{GameStateSignal, View};
 use crate::providers::Config;
-use crate::{
-    components::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
-    pages::play::TargetStack,
-};
 use hive_lib::GameStatus;
 use leptos::either::Either;
 use leptos::ev::{
@@ -62,6 +61,7 @@ pub fn Board(
     #[prop(optional)] overwrite_tw_classes: &'static str,
 ) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
+    let analysis = use_context::<AnalysisSignal>();
     let target_stack = expect_context::<TargetStack>().0;
     let config = expect_context::<Config>().0;
     let is_panning = RwSignal::new(false);
@@ -347,8 +347,8 @@ pub fn Board(
             >
                 <g transform=transform node_ref=g_ref>
                     {move || {
-                        if board_view() == View::History && !last_turn() {
-                            Either::Left(view! { <HistoryPieces /> })
+                        if board_view() == View::History && !last_turn() && analysis.is_none() {
+                            Either::Left(view! { <HistoryPieces tile_opts=tile_opts() /> })
                         } else {
                             Either::Right(
                                 view! {

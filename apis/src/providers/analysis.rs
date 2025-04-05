@@ -51,7 +51,7 @@ impl AnalysisTree {
             hashes,
             game_type: gs.state.game_type,
         };
-        tree.update_node(gs.history_turn.unwrap_or(0) as i32, None);
+        tree.update_node(gs.history_turn.unwrap_or(0) as i32, Some(game_state));
         Some(tree)
     }
 

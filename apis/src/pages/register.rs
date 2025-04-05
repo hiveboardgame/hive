@@ -31,9 +31,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let pw = RwSignal::new(String::new());
     let pw_confirm = RwSignal::new(String::new());
     let has_invalid_char = RwSignal::new(false);
-    let email_ref = NodeRef::<html::Input>::new();
-    let is_invalid_email =
-        Signal::derive(move || email_ref.get().is_some_and(|e| !e.check_validity()));
+    let is_invalid_email = RwSignal::new(false);
     let pw_invalid = move || {
         let pw = pw();
         !(7 < pw.len() && pw == pw_confirm())
@@ -73,6 +71,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let conditionally_disable =
         move || !agree() || username_exists() || pw_invalid() || is_invalid_email();
     let register = ServerAction::<Register>::new();
+    let email_ref = NodeRef::<html::Input>::new();
     let display_register_error = move || register.value().get().is_some_and(|v| v.is_err());
     Effect::watch(
         register.version(),
@@ -118,13 +117,24 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <p class="font-bold">Email</p>
                     <input
                         node_ref=email_ref
-                        on:input=debounce(Duration::from_millis(350), update_from_input(email))
+                        on:input=debounce(
+                            Duration::from_millis(350),
+                            move |evt| {
+                                if email_ref.get().is_some_and(|e| !e.check_validity()) {
+                                    is_invalid_email.set(true);
+                                } else {
+                                    is_invalid_email.set(false);
+                                }
+                                email.update(|v| v.clone_from(&event_target_value(&evt)));
+                            },
+                        )
                         class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="email"
                         type="email"
                         inputmode="email"
                         prop:value=email
                         autocomplete="email"
+                        on:invalid=move |_| is_invalid_email.set(true)
                         placeholder=move || {
                             t_string!(i18n, user_config.create_account.email.description)
                         }

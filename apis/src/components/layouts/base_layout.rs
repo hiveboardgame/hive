@@ -8,7 +8,7 @@ use crate::providers::{
 };
 use cfg_if::cfg_if;
 use chrono::Utc;
-use hive_lib::GameControl;
+use hive_lib::{GameControl, Position};
 use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_use::core::ConnectionReadyState;
@@ -39,6 +39,9 @@ pub struct OrientationSignal {
     pub orientation_vertical: Signal<bool>,
 }
 
+#[derive(Clone)]
+pub struct TargetStack(pub RwSignal<Option<Position>>);
+
 #[component]
 pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let config = expect_context::<Config>().0;
@@ -47,6 +50,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
     provide_context(GameStateSignal::new());
+    provide_context(TargetStack(RwSignal::new(None)));
     let gamestate = expect_context::<GameStateSignal>();
     let mut refocus = expect_context::<RefocusSignal>();
     let stored_children = Signal::derive(move || children.clone());

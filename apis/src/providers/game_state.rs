@@ -179,7 +179,7 @@ impl GameStateSignal {
         });
     }
 
-    pub fn view_game(&mut self) {
+    pub fn view_game(&self) {
         self.signal.update(|s| s.view_game())
     }
 
