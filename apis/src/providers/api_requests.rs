@@ -137,6 +137,14 @@ impl ApiRequests {
         self.websocket.send(&msg);
     }
 
+    pub fn join(&self, game_id: GameId) {
+        let msg = ClientRequest::Game {
+            game_id,
+            action: GameAction::Join,
+        };
+        self.websocket.send(&msg);
+    }
+
     pub fn schedule_action(&self, action: ScheduleAction) {
         let msg = ClientRequest::Schedule(action);
         self.websocket.send(&msg);

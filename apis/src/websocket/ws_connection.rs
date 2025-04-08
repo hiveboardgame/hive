@@ -140,9 +140,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                         authed: self.authed,
                         admin: self.admin,
                     };
+                    let addr = ctx.address().recipient();
                     let data = Arc::clone(&self.data);
                     let future = async move {
-                        let handler = RequestHandler::new(request.clone(), data, user, pool);
+                        let handler = RequestHandler::new(request.clone(), data, addr, user, pool);
                         let handler_result = handler.handle().await;
                         match handler_result {
                             Ok(messages) => {
