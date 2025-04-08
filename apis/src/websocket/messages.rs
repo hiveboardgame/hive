@@ -65,6 +65,13 @@ pub struct ClientActorMessage {
     pub serialized: Vec<u8>, // the serialized message
 }
 
+#[derive(Message, Debug)]
+#[rtype(result = "()")]
+pub struct UserToGame {
+    pub user_id: Uuid,
+    pub game_id: String,
+}
+
 impl ClientActorMessage {
     pub fn new(from: Option<Uuid>, destination: MessageDestination, serialized: &Vec<u8>) -> Self {
         Self {

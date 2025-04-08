@@ -18,12 +18,35 @@ pub async fn get_game_from_uuid(game_id: Uuid) -> Result<GameResponse, ServerFnE
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_game_from_nanoid(game_id: GameId) -> Result<GameResponse, ServerFnError> {
     use crate::functions::db::pool;
+    use crate::websocket::UserToGame;
+    use crate::websocket::WebsocketData;
+    use crate::websocket::WsServer;
+    use actix::Addr;
+    use actix_web::web::Data;
     use db_lib::get_conn;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
-    GameResponse::new_from_game_id(&game_id, &mut conn)
+    let ret = GameResponse::new_from_game_id(&game_id, &mut conn)
         .await
-        .map_err(ServerFnError::new)
+        .map_err(ServerFnError::new);
+    if ret.is_ok() {
+        let req: actix_web::HttpRequest = leptos_actix::extract().await?;
+        let ws_data = req
+            .app_data::<Data<WebsocketData>>()
+            .ok_or("Failed to get ws adress")
+            .map_err(ServerFnError::new)?
+            .get_ref();
+        let server = req
+            .app_data::<Data<Addr<WsServer>>>()
+            .ok_or("Failed to get ws adress")
+            .map_err(ServerFnError::new)?
+            .get_ref();
+        server.do_send(UserToGame {
+            user_id: *ws_data.uid.read().unwrap(),
+            game_id: game_id.0.clone(),
+        });
+    }
+    ret
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
