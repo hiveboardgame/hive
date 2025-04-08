@@ -17,13 +17,12 @@ use crate::{
     },
     functions::games::get::get_game_from_nanoid,
     providers::{
-        config::Config, game_state::GameStateSignal, timer::TimerSignal, AuthContext, SoundType,
-        Sounds, UpdateNotifier,
+        config::Config, game_state::GameStateSignal, timer::TimerSignal, ApiRequestsProvider,
+        AuthContext, SoundType, Sounds, UpdateNotifier,
     },
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
-use leptos::logging::log;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{GameId, GameStart, TournamentGameResult};
@@ -84,13 +83,14 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     let game_updater = expect_context::<UpdateNotifier>();
     provide_context(TimerSignal::new());
     let timer = expect_context::<TimerSignal>();
+    let api = expect_context::<ApiRequestsProvider>();
     Effect::watch(
         game_id,
         move |game_id, _, _| {
             let game_id = game_id.clone();
+            api.0.get().join(game_id.clone());
             spawn_local(async move {
-                log!("TRIGGERED, game_id is  {:?}", game_id);
-                let game = get_game_from_nanoid(game_id.clone()).await;
+                let game = get_game_from_nanoid(game_id).await;
                 if let Ok(game) = game {
                     reset_game_state(&game, game_state);
                     timer.update_from(&game);
@@ -210,6 +210,9 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         GameReaction::TimedOut => {
                             reset_game_state(&gar.game, game_state);
                             timer.update_from(&gar.game);
+                        }
+                        GameReaction::Join => {
+                            // Dunno if anything should go in here
                         }
                         _ => {
                             todo!()

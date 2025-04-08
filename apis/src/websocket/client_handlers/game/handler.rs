@@ -50,6 +50,13 @@ fn handle_reaction(gar: GameActionResponse) {
             games.own_games_add(gar.game.clone());
             update_notifier.game_response.set(Some(gar.clone()));
         }
+
+        GameReaction::Join => {
+            //Do we want anything here
+            //games.own_games_add(gar.game.clone());
+            //update_notifier.game_response.set(Some(gar.clone()));
+        }
+
         GameReaction::Control(ref game_control) => {
             handle_control(game_control.clone(), gar.clone())
         }
