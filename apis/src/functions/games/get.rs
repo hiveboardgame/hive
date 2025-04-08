@@ -1,6 +1,5 @@
 use crate::functions::games::get::server_fn::codec;
 use crate::responses::GameResponse;
-use hive_lib::GameStatus;
 use leptos::prelude::*;
 use shared_types::{GameId, GamesQueryOptions};
 use uuid::Uuid;
@@ -30,7 +29,7 @@ pub async fn get_game_from_nanoid(game_id: GameId) -> Result<GameResponse, Serve
     let ret = GameResponse::new_from_game_id(&game_id, &mut conn)
         .await
         .map_err(ServerFnError::new);
-    if ret.clone().is_ok_and(|game| !matches!(game.game_status, GameStatus::Finished(_))) {
+    if ret.is_ok() {
         let req: actix_web::HttpRequest = leptos_actix::extract().await?;
         let ws_data = req
             .app_data::<Data<WebsocketData>>()
