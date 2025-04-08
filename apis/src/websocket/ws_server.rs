@@ -1,4 +1,4 @@
-use super::messages::{GameHB, UserToGame};
+use super::messages::GameHB;
 use super::WebsocketData;
 use super::{messages::MessageDestination, messages::Ping};
 use crate::{
@@ -468,20 +468,5 @@ impl Handler<ClientActorMessage> for WsServer {
                 ctx.wait(actor_future);
             }
         }
-    }
-}
-
-impl Handler<UserToGame> for WsServer {
-    type Result = ();
-
-    fn handle(&mut self, msg: UserToGame, _ctx: &mut Self::Context) {
-        self.games_users
-            .entry(GameId(msg.game_id.clone()))
-            .or_default()
-            .insert(msg.user_id);
-        self.users_games
-            .entry(msg.user_id)
-            .or_default()
-            .insert(msg.game_id.clone());
     }
 }

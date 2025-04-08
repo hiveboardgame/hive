@@ -32,9 +32,6 @@ pub async fn start_connection(
                                 Arc::clone(&data),
                                 pool.get_ref().clone(),
                             );
-
-                            let mut uid = data.uid.write().unwrap();
-                            *uid = ws.user_uid;
                             let resp = ws::start(ws, &req, stream)?;
                             return Ok(resp);
                         }
@@ -58,8 +55,7 @@ pub async fn start_connection(
         Arc::clone(&data),
         pool.get_ref().clone(),
     );
-    let mut uid = data.uid.write().unwrap();
-    *uid = ws.user_uid;
+
     let resp = ws::start(ws, &req, stream)?;
     Ok(resp)
 }
