@@ -1,6 +1,5 @@
 use crate::common::SvgPos;
 use crate::common::TileDesign;
-use crate::components::layouts::base_layout::TargetStack;
 use crate::components::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces};
 use crate::providers::analysis::AnalysisSignal;
 use crate::providers::game_state::{GameStateSignal, View};
@@ -62,7 +61,7 @@ pub fn Board(
 ) -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
     let analysis = use_context::<AnalysisSignal>();
-    let target_stack = expect_context::<TargetStack>().0;
+    let target_stack = RwSignal::new(None);
     let config = expect_context::<Config>().0;
     let is_panning = RwSignal::new(false);
     let has_zoomed = RwSignal::new(false);
@@ -348,11 +347,11 @@ pub fn Board(
                 <g transform=transform node_ref=g_ref>
                     {move || {
                         if board_view() == View::History && !last_turn() && analysis.is_none() {
-                            Either::Left(view! { <HistoryPieces tile_opts=tile_opts() /> })
+                            Either::Left(view! { <HistoryPieces tile_opts=tile_opts() target_stack/> })
                         } else {
                             Either::Right(
                                 view! {
-                                    <BoardPieces tile_opts=tile_opts() target_stack=target_stack />
+                                    <BoardPieces tile_opts=tile_opts() target_stack />
                                 },
                             )
                         }

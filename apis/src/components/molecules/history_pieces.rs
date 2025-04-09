@@ -1,22 +1,21 @@
 use crate::{
     common::HexStack,
-    components::{
-        layouts::base_layout::TargetStack, molecules::hex_stack::HexStack as HexStackView,
-    },
+    components::molecules::hex_stack::HexStack as HexStackView,
     providers::{config::TileOptions, game_state::GameStateSignal},
 };
 use hive_lib::{History, Position, State};
 use leptos::prelude::*;
 
 #[component]
-pub fn HistoryPieces(tile_opts: TileOptions) -> impl IntoView {
+pub fn HistoryPieces(
+    tile_opts: TileOptions,
+    target_stack: RwSignal<Option<Position>>,
+) -> impl IntoView {
     let game_state_signal = expect_context::<GameStateSignal>();
-    let target_stack = expect_context::<TargetStack>().0;
     let history_pieces = move || {
         let mut history_pieces = Vec::new();
         let game_state = (game_state_signal.signal)();
         let mut history = History::new();
-        //log!("history_turn: {:?}", game_state.history_turn);
         if let Some(turn) = game_state.history_turn {
             if turn < game_state.state.history.moves.len() {
                 history.moves = game_state.state.history.moves[0..=turn].into();

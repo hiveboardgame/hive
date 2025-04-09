@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::Duration};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 pub struct Busybee {}
@@ -9,11 +9,6 @@ impl Busybee {
         let mut json = HashMap::new();
         json.insert("content", msg);
         let client = reqwest::Client::new();
-        client
-            .post(url)
-            .json(&json)
-            .timeout(Duration::from_millis(1))
-            .send()
-            .await
+        client.post(url).json(&json).send().await
     }
 }

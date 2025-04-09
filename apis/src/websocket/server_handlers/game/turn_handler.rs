@@ -140,7 +140,6 @@ impl TurnHandler {
                 message: ServerMessage::Game(Box::new(GameUpdate::Tv(response))),
             });
         };
-        println!("Turn handled server side");
         Ok(messages)
     }
 

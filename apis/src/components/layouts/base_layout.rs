@@ -8,7 +8,7 @@ use crate::providers::{
 };
 use cfg_if::cfg_if;
 use chrono::Utc;
-use hive_lib::{GameControl, Position};
+use hive_lib::GameControl;
 use leptos::prelude::*;
 use leptos_meta::*;
 use leptos_use::core::ConnectionReadyState;
@@ -39,18 +39,14 @@ pub struct OrientationSignal {
     pub orientation_vertical: Signal<bool>,
 }
 
-#[derive(Clone)]
-pub struct TargetStack(pub RwSignal<Option<Position>>);
-
 #[component]
 pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
+    provide_context(GameStateSignal::new());
     let config = expect_context::<Config>().0;
     let ping = expect_context::<PingContext>();
     let ws = expect_context::<WebsocketContext>();
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
-    provide_context(GameStateSignal::new());
-    provide_context(TargetStack(RwSignal::new(None)));
     let gamestate = expect_context::<GameStateSignal>();
     let mut refocus = expect_context::<RefocusSignal>();
     let stored_children = Signal::derive(move || children.clone());
@@ -130,7 +126,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             match ws_ready() {
                 ConnectionReadyState::Closed => {
                     if retry_at.get() == counter.get() {
-                        //log!("Reconnecting due to ReadyState");
                         ws.open();
                         counter.update(|c| *c = 0);
                         retry_at.update(|r| *r *= 2);
@@ -148,7 +143,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                 >= 5
                 && retry_at.get() == counter.get()
             {
-                //log!("Reconnecting due to ping duration");
                 ws.open();
                 counter.update(|c| *c = 0);
                 retry_at.update(|r| *r *= 2);

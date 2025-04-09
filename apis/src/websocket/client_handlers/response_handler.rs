@@ -13,8 +13,8 @@ pub fn handle_response(m: ServerResult) {
             Ping { value, nonce } => handle_ping(nonce, value),
             UserStatus(user_update) => handle_user_status(user_update),
             Game(game_update) => handle_game(*game_update),
-            Join(_user_response) => {
-                // Do we do anything here
+            Join(_uuid) => {
+                //TODO: Do we do want here
             }
             Challenge(challenge) => handle_challenge(challenge),
             Chat(message) => handle_chat(message),

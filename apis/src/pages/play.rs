@@ -17,8 +17,9 @@ use crate::{
     },
     functions::games::get::get_game_from_nanoid,
     providers::{
-        config::Config, game_state::GameStateSignal, timer::TimerSignal, ApiRequestsProvider,
-        AuthContext, SoundType, Sounds, UpdateNotifier,
+        config::Config, game_state::GameStateSignal, timer::TimerSignal,
+        websocket::WebsocketContext, ApiRequestsProvider, AuthContext, SoundType, Sounds,
+        UpdateNotifier,
     },
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
@@ -84,8 +85,13 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     provide_context(TimerSignal::new());
     let timer = expect_context::<TimerSignal>();
     let api = expect_context::<ApiRequestsProvider>();
+    let ws = expect_context::<WebsocketContext>();
+    let ws_ready = ws.ready_state;
     Effect::watch(
-        game_id,
+        move || {
+            ws_ready();
+            game_id()
+        },
         move |game_id, _, _| {
             let game_id = game_id.clone();
             api.0.get().join(game_id.clone());
@@ -160,7 +166,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             game_state.clear_gc();
                             game_state.set_game_response(gar.game.clone());
                             sounds.play_sound(SoundType::Turn);
-                            //logging::log!("Turn: {turn:?}");
                             if game_state.signal.get_untracked().state.history.moves
                                 != gar.game.history
                             {
@@ -212,7 +217,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             timer.update_from(&gar.game);
                         }
                         GameReaction::Join => {
-                            // Dunno if anything should go in here
+                            // TODO: Do we want anything here?
                         }
                         _ => {
                             todo!()

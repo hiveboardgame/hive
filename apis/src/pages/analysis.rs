@@ -24,7 +24,6 @@ pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
 #[component]
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    //TODO: No need for do_analysis now, context passing should be enough
     provide_context(AnalysisSignal(RwSignal::new(LocalStorage::wrap(
         AnalysisTree::from_state(game_state).unwrap_or_default(),
     ))));

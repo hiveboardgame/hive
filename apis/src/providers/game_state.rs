@@ -133,8 +133,8 @@ impl GameStateSignal {
         self.signal.update(|s| s.move_active(analysis, api))
     }
 
-    pub fn is_move_allowed(&self, analisis: bool) -> bool {
-        self.signal.get_untracked().is_move_allowed(analisis)
+    pub fn is_move_allowed(&self, in_analysis: bool) -> bool {
+        self.signal.get_untracked().is_move_allowed(in_analysis)
     }
 
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
@@ -325,7 +325,6 @@ impl GameState {
     pub fn is_move_allowed(&self, analysis: bool) -> bool {
         let auth_context = expect_context::<AuthContext>();
         let user = auth_context.user;
-        //log!("ANALYSIS IS {analysis}, game_id is {:?}", self.game_id);
         if analysis {
             return true;
         }
@@ -345,7 +344,6 @@ impl GameState {
     }
 
     pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
-        log!("Moved active! analysis is{}", analysis.is_some());
         if let (Some(active), Some(position)) =
             (self.move_info.active, self.move_info.target_position)
         {

@@ -11,7 +11,6 @@ use shared_types::GameId;
 use uuid::Uuid;
 
 pub fn handle_game(game_update: GameUpdate) {
-    //logging::log!("handle_game");
     let game_updater = expect_context::<UpdateNotifier>();
     let mut games_signal = expect_context::<GamesSignal>();
     match game_update {
@@ -23,7 +22,6 @@ pub fn handle_game(game_update: GameUpdate) {
             games_signal.own_games_set(games);
         }
         GameUpdate::Heartbeat(hb) => {
-            //logging::log!("Got heartbeat: {hb:?}");
             game_updater.heartbeat.set(hb);
         }
     }
@@ -32,7 +30,6 @@ pub fn handle_game(game_update: GameUpdate) {
 fn handle_reaction(gar: GameActionResponse) {
     let mut games = expect_context::<GamesSignal>();
     let update_notifier = expect_context::<UpdateNotifier>();
-    //logging::log!("Got a game action response message: {:?}", gar);
     match gar.game_action.clone() {
         GameReaction::New => {
             handle_new_game(gar.game.clone());
@@ -52,9 +49,7 @@ fn handle_reaction(gar: GameActionResponse) {
         }
 
         GameReaction::Join => {
-            //Do we want anything here
-            //games.own_games_add(gar.game.clone());
-            //update_notifier.game_response.set(Some(gar.clone()));
+            // TODO: Do we want anything here?
         }
 
         GameReaction::Control(ref game_control) => {
@@ -67,14 +62,12 @@ fn handle_reaction(gar: GameActionResponse) {
             update_notifier
                 .tournament_ready
                 .set((gar.game_id, gar.user_id));
-            //logging::log!("Handled ready");
             spawn_local(async move {
                 let UseTimeoutFnReturn { start, .. } = use_timeout_fn(
                     move |_: ()| {
                         update_notifier
                             .tournament_ready
                             .set((GameId::default(), Uuid::default()));
-                        //logging::log!("Deleted ready");
                     },
                     30_000.0,
                 );
