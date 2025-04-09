@@ -1,8 +1,6 @@
-use super::navigation_controller::NavigationControllerSignal;
 use super::AuthContext;
 use crate::responses::AccountResponse;
 use crate::responses::GameResponse;
-use crate::responses::HeartbeatResponse;
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameControl};
 use leptos::prelude::*;
@@ -16,96 +14,75 @@ use std::collections::HashMap;
 pub struct GamesSignal {
     pub own: RwSignal<OwnGames>,
     pub live: RwSignal<LiveGames>,
-    navigation_controller: NavigationControllerSignal,
     user: Signal<Option<AccountResponse>>,
 }
 
 impl GamesSignal {
-    pub fn new(
-        navigation_controller: NavigationControllerSignal,
-        user: Signal<Option<AccountResponse>>,
-    ) -> Self {
+    pub fn new(user: Signal<Option<AccountResponse>>) -> Self {
         Self {
             own: RwSignal::new(OwnGames::new()),
             live: RwSignal::new(LiveGames::new()),
-            navigation_controller,
             user,
         }
     }
 
-    pub fn update_heartbeat(&mut self, hb: HeartbeatResponse) {
-        self.own.update(|games| {
-            if let Some(game) = games.realtime.get_mut(&hb.game_id) {
-                game.black_time_left = Some(hb.black_time_left);
-                game.white_time_left = Some(hb.white_time_left);
-            }
-            if let Some(game) = games.correspondence.get_mut(&hb.game_id) {
-                game.black_time_left = Some(hb.black_time_left);
-                game.white_time_left = Some(hb.white_time_left);
-            }
-        });
-    }
-
-    pub fn visit(&mut self, time_mode: TimeMode) -> Option<GameId> {
-        let navigation_controller = self.navigation_controller;
+    pub fn visit(&mut self, time_mode: TimeMode, game_id: GameId) -> Option<GameId> {
         if let Some(user) = self.user.get_untracked() {
             self.own.update(|s| {
-                if let Some(game_id) = navigation_controller.game_signal.get_untracked().game_id {
-                    if let Some(game) = s.untimed.get(&game_id) {
-                        if game.current_player_id == user.id {
-                            if let Some(gp) = s
-                                .next_untimed
-                                .clone()
-                                .iter()
-                                .find(|gp| gp.game_id == game_id)
-                            {
-                                s.next_untimed.retain(|gp| gp.game_id != game_id);
-                                if let Ok(time_left) = game.time_left() {
-                                    s.next_untimed.push(GamePriority {
-                                        last_interaction: gp.last_interaction,
-                                        time_left,
-                                        skipped: gp.skipped + 1,
-                                        game_id: gp.game_id.clone(),
-                                    });
-                                }
+                if let Some(game) = s.untimed.get(&game_id) {
+                    if game.current_player_id == user.id {
+                        if let Some(gp) = s
+                            .next_untimed
+                            .clone()
+                            .iter()
+                            .find(|gp| gp.game_id == game_id)
+                        {
+                            s.next_untimed.retain(|gp| gp.game_id != game_id);
+                            if let Ok(time_left) = game.time_left() {
+                                s.next_untimed.push(GamePriority {
+                                    last_interaction: gp.last_interaction,
+                                    time_left,
+                                    skipped: gp.skipped + 1,
+                                    game_id: gp.game_id.clone(),
+                                });
                             }
                         }
-                    } else if let Some(game) = s.realtime.get(&game_id) {
-                        if game.current_player_id == user.id {
-                            if let Some(gp) = s
-                                .next_realtime
-                                .clone()
-                                .iter()
-                                .find(|gp| gp.game_id == game_id)
-                            {
-                                s.next_realtime.retain(|gp| gp.game_id != game_id);
-                                if let Ok(time_left) = game.time_left() {
-                                    s.next_realtime.push(GamePriority {
-                                        last_interaction: gp.last_interaction,
-                                        time_left,
-                                        skipped: gp.skipped + 1,
-                                        game_id: gp.game_id.clone(),
-                                    });
-                                }
+                    }
+                } else if let Some(game) = s.realtime.get(&game_id) {
+                    if game.current_player_id == user.id {
+                        if let Some(gp) = s
+                            .next_realtime
+                            .clone()
+                            .iter()
+                            .find(|gp| gp.game_id == game_id)
+                        {
+                            s.next_realtime.retain(|gp| gp.game_id != game_id);
+                            if let Ok(time_left) = game.time_left() {
+                                s.next_realtime.push(GamePriority {
+                                    last_interaction: gp.last_interaction,
+                                    time_left,
+                                    skipped: gp.skipped + 1,
+                                    game_id: gp.game_id.clone(),
+                                });
                             }
                         }
-                    } else if let Some(game) = s.correspondence.get(&game_id) {
-                        if game.current_player_id == user.id {
-                            if let Some(gp) = s
-                                .next_correspondence
-                                .clone()
-                                .iter()
-                                .find(|gp| gp.game_id == game_id)
-                            {
-                                s.next_correspondence.retain(|gp| gp.game_id != game_id);
-                                if let Ok(time_left) = game.time_left() {
-                                    s.next_correspondence.push(GamePriority {
-                                        last_interaction: gp.last_interaction,
-                                        time_left,
-                                        skipped: gp.skipped + 1,
-                                        game_id: gp.game_id.clone(),
-                                    });
-                                }
+                    }
+                } else if let Some(game) = s.correspondence.get(&game_id) {
+                    if game.current_player_id == user.id {
+                        if let Some(gp) = s
+                            .next_correspondence
+                            .clone()
+                            .iter()
+                            .find(|gp| gp.game_id == game_id)
+                        {
+                            s.next_correspondence.retain(|gp| gp.game_id != game_id);
+                            if let Ok(time_left) = game.time_left() {
+                                s.next_correspondence.push(GamePriority {
+                                    last_interaction: gp.last_interaction,
+                                    time_left,
+                                    skipped: gp.skipped + 1,
+                                    game_id: gp.game_id.clone(),
+                                });
                             }
                         }
                     }
@@ -341,6 +318,5 @@ impl Default for LiveGames {
 
 pub fn provide_games() {
     let auth_context = expect_context::<AuthContext>();
-    let navigation_controller = expect_context::<NavigationControllerSignal>();
-    provide_context(GamesSignal::new(navigation_controller, auth_context.user))
+    provide_context(GamesSignal::new(auth_context.user))
 }

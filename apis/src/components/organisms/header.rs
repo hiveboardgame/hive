@@ -10,8 +10,10 @@ use crate::components::organisms::{
     sound_toggle::SoundToggle,
 };
 use crate::i18n::*;
-use crate::providers::navigation_controller::NavigationControllerSignal;
-use crate::providers::AuthContext;
+use crate::providers::games::GamesSignal;
+use crate::providers::{AuthContext, RefererContext};
+use crate::responses::AccountResponse;
+use leptos::either::Either;
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
 use shared_types::TimeMode;
@@ -19,7 +21,6 @@ use shared_types::TimeMode;
 #[component]
 pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let username = move || auth_context.user.get().map(|user| user.username);
     let i18n = use_i18n();
     view! {
         <header class="w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none">
@@ -51,27 +52,14 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </div>
             </div>
-            <Show when=move || username().is_some() fallback=|| view! { <GuestActions /> }>
-                <div class="flex items-center">
-                    <NextGameButton time_mode=StoredValue::new(TimeMode::RealTime) />
-                    <NextGameButton time_mode=StoredValue::new(TimeMode::Correspondence) />
-                    <NextGameButton time_mode=StoredValue::new(TimeMode::Untimed) />
-                </div>
-                <div class="flex items-center mr-1">
-                    <ChatAndControls />
-                    <SoundToggle />
-                    <LocaleDropdown />
-                    <NotificationDropdown />
-                    <UserDropdown username=username().expect("Username is some") />
-                </div>
-            </Show>
+            <Controls user=auth_context.user />
         </header>
     }
 }
 
 #[component]
 fn GuestActions() -> impl IntoView {
-    let referrer = expect_context::<NavigationControllerSignal>().redirect;
+    let referrer = expect_context::<RefererContext>().pathname;
     view! {
         <div class="flex items-center mr-1">
             <ChatAndControls />
@@ -79,13 +67,37 @@ fn GuestActions() -> impl IntoView {
             <LocaleDropdown />
             <DarkModeToggle extend_tw_classes="max-h-6 sm:max-h-7" />
             <a
-                class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
                 href="/login"
                 on:focus=move |_| set_redirect(referrer)
             >
                 Login
             </a>
         </div>
+    }
+}
+
+#[component]
+fn Controls(user: Signal<Option<AccountResponse>>) -> impl IntoView {
+    move || match user() {
+        Some(user) => {
+            let games = expect_context::<GamesSignal>();
+            Either::Left(view! {
+                <div class="flex items-center">
+                    <NextGameButton time_mode=TimeMode::RealTime games />
+                    <NextGameButton time_mode=TimeMode::Correspondence games />
+                    <NextGameButton time_mode=TimeMode::Untimed games />
+                </div>
+                <div class="flex items-center mr-1">
+                    <ChatAndControls />
+                    <SoundToggle />
+                    <LocaleDropdown />
+                    <NotificationDropdown />
+                    <UserDropdown username=user.username.clone() />
+                </div>
+            })
+        }
+        None => Either::Right(view! { <GuestActions /> }),
     }
 }
 

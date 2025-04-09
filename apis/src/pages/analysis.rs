@@ -3,25 +3,30 @@ use crate::{
     components::{
         layouts::base_layout::OrientationSignal,
         organisms::{
-            analysis::{AnalysisSignal, AnalysisTree, History, ToggleStates},
+            analysis::History,
             board::Board,
             reserve::{Alignment, Reserve},
         },
     },
-    pages::play::{CurrentConfirm, TargetStack},
-    providers::game_state::GameStateSignal,
+    pages::play::CurrentConfirm,
+    providers::{
+        analysis::{AnalysisSignal, AnalysisTree},
+        game_state::GameStateSignal,
+    },
 };
 use hive_lib::Color;
 use leptos::prelude::*;
 use std::collections::HashSet;
+
+#[derive(Clone)]
+pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
+
 #[component]
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let mut game_state = expect_context::<GameStateSignal>();
-    game_state.do_analysis();
-    provide_context(TargetStack(RwSignal::new(None)));
-    provide_context(AnalysisSignal(RwSignal::new(Some(LocalStorage::wrap(
+    let game_state = expect_context::<GameStateSignal>();
+    provide_context(AnalysisSignal(RwSignal::new(LocalStorage::wrap(
         AnalysisTree::from_state(game_state).unwrap_or_default(),
-    )))));
+    ))));
     provide_context(ToggleStates(RwSignal::new(HashSet::new())));
     provide_context(CurrentConfirm(Memo::new(move |_| MoveConfirm::Single)));
     let is_tall = expect_context::<OrientationSignal>().is_tall;
@@ -57,17 +62,13 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <div class="flex flex-col h-[85dvh]">
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
-                            <Reserve alignment=Alignment::SingleRow color=top_color analysis=true />
+                            <Reserve alignment=Alignment::SingleRow color=top_color />
                         </div>
                     </div>
                     <Board overwrite_tw_classes="flex grow min-h-0" />
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
-                            <Reserve
-                                alignment=Alignment::SingleRow
-                                color=bottom_color
-                                analysis=true
-                            />
+                            <Reserve alignment=Alignment::SingleRow color=bottom_color />
                         </div>
                     </div>
                 </div>

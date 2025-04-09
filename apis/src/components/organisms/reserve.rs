@@ -2,6 +2,7 @@ use crate::common::{Hex, HexStack, HexType, PieceType};
 use crate::components::molecules::analysis_and_download::AnalysisAndDownload;
 use crate::components::molecules::control_buttons::ControlButtons;
 use crate::components::molecules::hex_stack::HexStack;
+use crate::providers::analysis::AnalysisSignal;
 use crate::providers::game_state::{GameStateSignal, View};
 use crate::providers::Config;
 use hive_lib::History;
@@ -57,10 +58,10 @@ pub enum Alignment {
 pub fn Reserve(
     #[prop(into)] color: Signal<Color>,
     alignment: Alignment,
-    analysis: bool,
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
+    let analysis = use_context::<AnalysisSignal>().is_some();
     let game_state = expect_context::<GameStateSignal>();
     let config = expect_context::<Config>().0;
     let tile_opts = Signal::derive(move || config().tile);
@@ -98,7 +99,9 @@ pub fn Reserve(
             View::History => {
                 let mut history = History::new();
                 if let Some(turn) = history_turn {
-                    history.moves = state.history.moves[0..=turn].into();
+                    if turn < state.history.moves.len() {
+                        history.moves = state.history.moves[0..=turn].into();
+                    }
                 }
                 let history_state =
                     State::new_from_history(&history).expect("Got state from history");
@@ -187,13 +190,13 @@ pub fn ReserveContent(player_color: Memo<Color>, show_buttons: Signal<bool>) -> 
     let bottom_color = Signal::derive(player_color);
 
     view! {
-        <Reserve color=top_color alignment=Alignment::DoubleRow analysis=false />
+        <Reserve color=top_color alignment=Alignment::DoubleRow />
         <div class="flex flex-row-reverse justify-center items-center">
             <AnalysisAndDownload />
             <Show when=show_buttons>
                 <ControlButtons />
             </Show>
         </div>
-        <Reserve color=bottom_color alignment=Alignment::DoubleRow analysis=false />
+        <Reserve color=bottom_color alignment=Alignment::DoubleRow />
     }
 }

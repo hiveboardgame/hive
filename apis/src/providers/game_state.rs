@@ -8,6 +8,8 @@ use leptos::prelude::*;
 use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
+use super::analysis::AnalysisSignal;
+use super::api_requests::ApiRequests;
 use super::{auth_context::AuthContext, ApiRequestsProvider};
 
 #[derive(Clone, Debug, Copy)]
@@ -40,16 +42,6 @@ impl GameStateSignal {
             s.view = View::Game;
             s.game_control_pending = None;
         })
-    }
-
-    pub fn do_analysis(&mut self) {
-        self.signal.update(|s| {
-            s.view = View::Game;
-            s.game_id = None;
-            s.state.game_status = GameStatus::InProgress;
-            s.black_id = None;
-            s.white_id = None;
-        });
     }
 
     // No longer access the whole signal when getting user_color
@@ -137,12 +129,12 @@ impl GameStateSignal {
         self.signal.update(|s| s.move_info.reset())
     }
 
-    pub fn move_active(&mut self) {
-        self.signal.update(|s| s.move_active())
+    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
+        self.signal.update(|s| s.move_active(analysis, api))
     }
 
-    pub fn is_move_allowed(&self) -> bool {
-        self.signal.get_untracked().is_move_allowed()
+    pub fn is_move_allowed(&self, in_analysis: bool) -> bool {
+        self.signal.get_untracked().is_move_allowed(in_analysis)
     }
 
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
@@ -187,7 +179,7 @@ impl GameStateSignal {
         });
     }
 
-    pub fn view_game(&mut self) {
+    pub fn view_game(&self) {
         self.signal.update(|s| s.view_game())
     }
 
@@ -330,10 +322,12 @@ impl GameState {
         }
     }
 
-    pub fn is_move_allowed(&self) -> bool {
+    pub fn is_move_allowed(&self, analysis: bool) -> bool {
         let auth_context = expect_context::<AuthContext>();
-
         let user = auth_context.user;
+        if analysis {
+            return true;
+        }
         if matches!(self.state.game_status, GameStatus::Finished(_)) {
             return false;
         }
@@ -349,21 +343,31 @@ impl GameState {
         })
     }
 
-    pub fn move_active(&mut self) {
-        //log!("Moved active!");
-        let api = expect_context::<ApiRequestsProvider>().0.get();
+    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
         if let (Some(active), Some(position)) =
             (self.move_info.active, self.move_info.target_position)
         {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
+            } else if let Some(analysis) = analysis {
+                analysis.0.update(|analysis| {
+                    let state = self.state.clone();
+                    let moves = state.history.moves;
+                    let hashes = state.hashes;
+                    let last_index = moves.len() - 1;
+                    if moves[last_index].0 == "pass" {
+                        //if move is pass, add prev move
+                        analysis.add_node(moves[last_index - 1].clone(), hashes[last_index - 1]);
+                    }
+                    analysis.add_node(moves[last_index].clone(), hashes[last_index]);
+                    self.move_info.reset();
+                });
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
                 api.turn(game_id.to_owned(), turn);
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
-            } else {
-                log!("We should be in analysis");
+
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             }
@@ -480,8 +484,4 @@ impl GameState {
             false
         }
     }
-}
-
-pub fn provide_game_state() {
-    provide_context(GameStateSignal::new())
 }

@@ -1,5 +1,4 @@
-pub mod handler;
-pub mod heartbeat;
-pub mod reaction;
-pub mod tv;
-pub mod urgent;
+mod handler;
+mod reaction;
+
+pub use handler::{handle_game, reset_game_state, reset_game_state_for_takeback};

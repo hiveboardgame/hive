@@ -102,14 +102,6 @@ impl ApiRequests {
         self.websocket.send(&msg);
     }
 
-    pub fn join(&self, game_id: GameId) {
-        let msg = ClientRequest::Game {
-            game_id,
-            action: GameAction::Join,
-        };
-        self.websocket.send(&msg);
-    }
-
     pub fn challenge(&self, challenge_action: ChallengeAction) {
         let challenge_action = match challenge_action {
             ChallengeAction::Create(details) => {
@@ -142,6 +134,14 @@ impl ApiRequests {
 
     pub fn challenge_get(&self, challenger_id: ChallengeId) {
         let msg = ClientRequest::Challenge(ChallengeAction::Get(challenger_id));
+        self.websocket.send(&msg);
+    }
+
+    pub fn join(&self, game_id: GameId) {
+        let msg = ClientRequest::Game {
+            game_id,
+            action: GameAction::Join,
+        };
         self.websocket.send(&msg);
     }
 

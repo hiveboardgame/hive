@@ -42,7 +42,6 @@ leptos_router = { workspace = true }
 log = { workspace = true }
 markdown = {workspace = true}
 rand = { workspace = true, optional = true }
-regex = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

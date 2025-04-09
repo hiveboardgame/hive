@@ -1,5 +1,5 @@
 use crate::{
-    common::MoveConfirm,
+    common::{GameReaction, MoveConfirm},
     components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
@@ -15,23 +15,36 @@ use crate::{
             unstarted::Unstarted,
         },
     },
-    providers::{config::Config, game_state::GameStateSignal, AuthContext},
+    functions::games::get::get_game_from_nanoid,
+    providers::{
+        config::Config, game_state::GameStateSignal, timer::TimerSignal,
+        websocket::WebsocketContext, ApiRequestsProvider, AuthContext, SoundType, Sounds,
+        UpdateNotifier,
+    },
+    websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
-use hive_lib::{Color, GameStatus, Position};
+use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
 use leptos::prelude::*;
-use shared_types::{GameStart, TournamentGameResult};
-
-#[derive(Clone)]
-pub struct TargetStack(pub RwSignal<Option<Position>>);
+use leptos_router::hooks::{use_navigate, use_params_map};
+use shared_types::{GameId, GameStart, TournamentGameResult};
+use wasm_bindgen_futures::spawn_local;
 
 #[derive(Clone)]
 pub struct CurrentConfirm(pub Memo<MoveConfirm>);
 
 #[component]
 pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    provide_context(TargetStack(RwSignal::new(None)));
+    let mut game_state = expect_context::<GameStateSignal>();
+
+    let params = use_params_map();
+    let game_id = Memo::new(move |_| {
+        params
+            .get()
+            .get("nanoid")
+            .map(|s| GameId(s.to_owned()))
+            .unwrap_or_default()
+    });
     let orientation_signal = expect_context::<OrientationSignal>();
-    let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let current_confirm = Memo::new(move |_| {
@@ -46,6 +59,18 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     provide_context(CurrentConfirm(current_confirm));
     let user = auth_context.user;
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
+    let white = create_read_slice(game_state.signal, |gs| {
+        (
+            gs.white_id,
+            gs.game_response.clone().map(|gr| gr.white_player.username),
+        )
+    });
+    let black = create_read_slice(game_state.signal, |gs| {
+        (
+            gs.black_id,
+            gs.game_response.clone().map(|gr| gr.black_player.username),
+        )
+    });
     let user_is_player = Signal::derive(move || {
         user().and_then(|user| {
             let (white_id, black_id) = white_and_black();
@@ -56,6 +81,46 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             }
         })
     });
+    let game_updater = expect_context::<UpdateNotifier>();
+    provide_context(TimerSignal::new());
+    let timer = expect_context::<TimerSignal>();
+    let api = expect_context::<ApiRequestsProvider>();
+    let ws = expect_context::<WebsocketContext>();
+    let ws_ready = ws.ready_state;
+    Effect::watch(
+        move || {
+            ws_ready();
+            game_id()
+        },
+        move |game_id, _, _| {
+            let game_id = game_id.clone();
+            api.0.get().join(game_id.clone());
+            spawn_local(async move {
+                let game = get_game_from_nanoid(game_id).await;
+                if let Ok(game) = game {
+                    reset_game_state(&game, game_state);
+                    timer.update_from(&game);
+                    if let Some((_turn, gc)) = game.game_control_history.last() {
+                        match gc {
+                            GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
+                                game_state.set_pending_gc(gc.clone())
+                            }
+                            _ => {}
+                        }
+                    }
+                };
+            });
+        },
+        true,
+    );
+    //HB handler
+    Effect::watch(
+        move || game_updater.heartbeat.get(),
+        move |hb, _, _| {
+            timer.update_from_hb(hb.clone());
+        },
+        false,
+    );
     let player_color = Memo::new(move |_| {
         user().map_or(Color::White, |user| {
             let black_id = white_and_black().1;
@@ -73,7 +138,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
         }
     };
     let go_to_game = Callback::new(move |()| {
-        let mut game_state = expect_context::<GameStateSignal>();
         if game_state.signal.get_untracked().is_last_turn() {
             game_state.view_game();
         }
@@ -89,7 +153,81 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 && gr.tournament_game_result == TournamentGameResult::Unknown
         })
     });
+    let sounds = expect_context::<Sounds>();
+    Effect::watch(
+        game_updater.game_response,
+        move |gar, _, _| {
+            if let Some(gar) = gar {
+                let game_id = game_id.get_untracked();
+                if gar.game_id == game_id {
+                    match gar.game_action.clone() {
+                        GameReaction::Turn(turn) => {
+                            timer.update_from(&gar.game);
+                            game_state.clear_gc();
+                            game_state.set_game_response(gar.game.clone());
+                            sounds.play_sound(SoundType::Turn);
+                            if game_state.signal.get_untracked().state.history.moves
+                                != gar.game.history
+                            {
+                                match turn {
+                                    Turn::Move(piece, position) => {
+                                        game_state.play_turn(piece, position)
+                                    }
+                                    _ => unreachable!(),
+                                };
+                            }
+                        }
+                        GameReaction::Control(game_control) => {
+                            game_state.set_pending_gc(game_control.clone());
 
+                            match game_control {
+                                GameControl::DrawAccept(_) => {
+                                    game_state
+                                        .set_game_status(GameStatus::Finished(GameResult::Draw));
+                                    game_state.set_game_response(gar.game.clone());
+                                    timer.update_from(&gar.game);
+                                }
+                                GameControl::Resign(color) => {
+                                    game_state.set_game_status(GameStatus::Finished(
+                                        GameResult::Winner(color.opposite_color()),
+                                    ));
+                                    game_state.set_game_response(gar.game.clone());
+                                    timer.update_from(&gar.game);
+                                }
+                                GameControl::TakebackAccept(_) => {
+                                    timer.update_from(&gar.game);
+                                    reset_game_state_for_takeback(&gar.game, &mut game_state);
+                                }
+                                GameControl::TakebackRequest(_)
+                                | GameControl::DrawOffer(_)
+                                | GameControl::DrawReject(_)
+                                | GameControl::TakebackReject(_) => {}
+                                GameControl::Abort(_) => {
+                                    let navigate = use_navigate();
+                                    navigate("/", Default::default());
+                                }
+                            };
+                        }
+                        GameReaction::Started => {
+                            reset_game_state(&gar.game, game_state);
+                            timer.update_from(&gar.game);
+                        }
+                        GameReaction::TimedOut => {
+                            reset_game_state(&gar.game, game_state);
+                            timer.update_from(&gar.game);
+                        }
+                        GameReaction::Join => {
+                            // TODO: Do we want anything here?
+                        }
+                        _ => {
+                            todo!()
+                        }
+                    }
+                }
+            }
+        },
+        false,
+    );
     view! {
         <div class=move || {
             format!(
@@ -104,7 +242,15 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         <Show
                             when=show_board
                             fallback=move || {
-                                view! { <Unstarted user_is_player /> }
+                                view! {
+                                    <Unstarted
+                                        user_is_player=user_is_player().is_some()
+                                        white=white()
+                                        black=black()
+                                        game_id=game_id()
+                                        ready=game_updater.tournament_ready.into()
+                                    />
+                                }
                             }
                         >
 
@@ -132,11 +278,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                         </Show>
 
                         <div class="flex justify-between ml-1 h-full max-h-16">
-                            <Reserve
-                                alignment=Alignment::SingleRow
-                                color=top_color()
-                                analysis=false
-                            />
+                            <Reserve alignment=Alignment::SingleRow color=top_color() />
                             <DisplayTimer vertical=true placement=Placement::Top />
                         </div>
                         <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1 bg-inherit">
@@ -155,7 +297,11 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             view! {
                                 <Unstarted
                                     overwrite_tw_classes="flex grow min-h-0 h-[100dvh] justify-center items-center"
-                                    user_is_player
+                                    user_is_player=user_is_player().is_some()
+                                    game_id=game_id()
+                                    black=black()
+                                    white=white()
+                                    ready=game_updater.tournament_ready.into()
                                 />
                             }
                         }
@@ -171,11 +317,7 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                             />
                         </div>
                         <div class="flex justify-between mb-2 ml-1 h-full max-h-16">
-                            <Reserve
-                                alignment=Alignment::SingleRow
-                                color=player_color()
-                                analysis=false
-                            />
+                            <Reserve alignment=Alignment::SingleRow color=player_color() />
                             <DisplayTimer vertical=true placement=Placement::Bottom />
                         </div>
                         <Show when=show_controls>

@@ -4,8 +4,7 @@ use super::{
     timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
 };
 use crate::common::GameAction;
-use crate::websocket::messages::InternalServerMessage;
-use crate::websocket::messages::WsMessage;
+use crate::websocket::messages::{InternalServerMessage, WsMessage};
 use crate::websocket::WebsocketData;
 use anyhow::Result;
 use db_lib::get_conn;
@@ -31,8 +30,8 @@ impl GameActionHandler {
     pub async fn new(
         game_id: &GameId,
         game_action: GameAction,
-        user_details: (&str, Uuid),
         received_from: actix::Recipient<WsMessage>,
+        user_details: (&str, Uuid),
         data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Result<Self> {
@@ -50,9 +49,9 @@ impl GameActionHandler {
             pool: pool.clone(),
             data,
             game,
+            received_from,
             username: username.to_owned(),
             game_action,
-            received_from,
             user_id,
         })
     }

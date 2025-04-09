@@ -1,5 +1,5 @@
 use super::{
-    challenge::handler::handle_challenge, chat::handle::handle_chat, game::handler::handle_game,
+    challenge::handler::handle_challenge, chat::handle::handle_chat, game::handle_game,
     oauth::handle::handle_oauth, ping::handle::handle_ping, schedule::handler::handle_schedule,
     tournament::handler::handle_tournament, user_status::handle::handle_user_status,
 };
@@ -13,6 +13,9 @@ pub fn handle_response(m: ServerResult) {
             Ping { value, nonce } => handle_ping(nonce, value),
             UserStatus(user_update) => handle_user_status(user_update),
             Game(game_update) => handle_game(*game_update),
+            Join(_uuid) => {
+                //TODO: Do we do want here
+            }
             Challenge(challenge) => handle_challenge(challenge),
             Chat(message) => handle_chat(message),
             RedirectLink(link) => handle_oauth(link),

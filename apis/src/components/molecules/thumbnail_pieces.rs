@@ -29,7 +29,8 @@ pub fn ThumbnailPieces(board: StoredValue<Board>) -> impl IntoView {
     let (width, height) = (400.0_f32, 510.0_f32);
     // TODO: because Thumbnail pieces is used in two places, this leads to weirdness in the TV
     let transform = move || {
-        let svg_pos = SvgPos::center_for_level(board.get_value().center_coordinates(), 0, straight());
+        let svg_pos =
+            SvgPos::center_for_level(board.get_value().center_coordinates(), 0, straight());
         let x_transform = -(svg_pos.0 - (width / 2.0));
         let y_transform = -(svg_pos.1 - (height / 2.0));
         format!("translate({},{})", x_transform, y_transform)

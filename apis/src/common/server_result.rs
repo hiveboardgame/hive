@@ -43,7 +43,7 @@ pub enum ServerMessage {
     Error(String),
     Game(Box<GameUpdate>),
     // sent to everyone in the game when a user joins the game
-    Join(UserResponse),
+    Join(Uuid),
     Ping { nonce: u64, value: f64 },
     Schedule(ScheduleUpdate),
     Tournament(TournamentUpdate),

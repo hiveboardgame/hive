@@ -2,16 +2,10 @@ use crate::common::{ClientRequest, ServerResult};
 use crate::functions::hostname::hostname_and_port;
 use crate::websocket::client_handlers::response_handler::handle_response;
 use codee::binary::MsgpackSerdeCodec;
-use lazy_static::lazy_static;
 use leptos::prelude::*;
 use leptos_use::core::ConnectionReadyState;
 use leptos_use::*;
-use regex::Regex;
 use std::sync::Arc;
-lazy_static! {
-    static ref NANOID: Regex =
-        Regex::new(r"/game/(?<nanoid>.*)").expect("This regex should compile");
-}
 
 #[derive(Clone)]
 pub struct WebsocketContext {
