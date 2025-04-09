@@ -11,6 +11,7 @@ pub enum TournamentGameResult {
     Draw,
     Winner(Color),
     DoubeForfeit,
+    Bye,
 }
 
 impl TournamentGameResult {
@@ -35,6 +36,7 @@ impl fmt::Display for TournamentGameResult {
                 Color::White => "1-0".to_owned(),
             },
             Self::DoubeForfeit => "0-0".to_owned(),
+            Self::Bye => "Bye".to_owned(),
         };
         write!(f, "{game_result}")
     }
@@ -50,6 +52,7 @@ impl FromStr for TournamentGameResult {
             "1-0" => Ok(TournamentGameResult::Winner(Color::White)),
             "½-½" => Ok(TournamentGameResult::Draw),
             "0-0" => Ok(TournamentGameResult::DoubeForfeit),
+            "Bye" => Ok(TournamentGameResult::Bye),
             _ => Err(anyhow!("Invalid TournamentGameResult string".to_string())),
         }
     }
@@ -66,6 +69,7 @@ mod tests {
             TournamentGameResult::Winner(Color::Black),
             TournamentGameResult::Draw,
             TournamentGameResult::Unknown,
+            TournamentGameResult::Bye,
         ]
         .iter()
         {
