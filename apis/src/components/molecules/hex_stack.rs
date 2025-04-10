@@ -24,7 +24,8 @@ pub fn HexStack(
     target_stack: RwSignal<Option<Position>>,
 ) -> impl IntoView {
     let tile_opts = StoredValue::new(tile_opts);
-    hex_stack.hexes
+    hex_stack
+        .hexes
         .into_iter()
         .map(|hex| {
             let is_expandable = match hex.kind {
@@ -45,20 +46,20 @@ pub fn HexStack(
                 });
                 // Touch longpress to expand
                 let UseTimeoutFnReturn { start, stop, .. } = use_timeout_fn(
-            move |_| {
+                    move |_| {
                         target_stack.set(Some(hex_stack.position));
                     },
-            500.0,
+                    500.0,
                 );
                 let g_ref = NodeRef::<svg::G>::new();
                 let _ = use_event_listener_with_options(
-                g_ref,
-                touchend,
-                move |_| {
+                    g_ref,
+                    touchend,
+                    move |_| {
                         stop();
                         target_stack.set(None);
                     },
-            UseEventListenerOptions::default().passive(true),
+                    UseEventListenerOptions::default().passive(true),
                 );
                 Either::Left(view! {
                     <g node_ref=g_ref>
@@ -72,12 +73,14 @@ pub fn HexStack(
                             }
                             on:touchstart=start.clone()
                             tile_opts=tile_opts.get_value()
-                            target_stack=target_stack.into()
+                            target_stack
                         />
                     </g>
                 })
             } else {
-                Either::Right(view! { <Hex hex=hex tile_opts=tile_opts.get_value() target_stack=None.into() /> })
+                Either::Right(
+                    view! { <Hex hex=hex tile_opts=tile_opts.get_value() target_stack /> },
+                )
             }
         })
         .collect_view()
