@@ -10,7 +10,7 @@ use leptos::{either::EitherOf4, prelude::*};
 pub fn Hex(
     hex: Hex,
     tile_opts: TileOptions,
-    target_stack: Signal<Option<Position>>,
+    target_stack: RwSignal<Option<Position>>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let straight = tile_opts.clone().is_three_d();
