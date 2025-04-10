@@ -5,7 +5,7 @@ use crate::{common::TournamentAction, components::atoms::profile_link::ProfileLi
 use chrono::{DateTime, Duration, Local, Utc};
 use hive_lib::Color;
 use leptos::prelude::*;
-use shared_types::{PrettyString, TournamentGameResult};
+use shared_types::{GameStart, PrettyString, TournamentGameResult};
 
 pub const BUTTON_STYLE: &str = "no-link-style flex justify-center items-center min-w-fit px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
@@ -17,12 +17,12 @@ pub fn UnplayedGameRow(
 ) -> impl IntoView {
     let schedules_signal = expect_context::<SchedulesContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let game = Signal::derive(move || game.clone());
+    let game = StoredValue::new(game);
     let schedule: Signal<Option<DateTime<Utc>>> = Signal::derive(move || {
         schedules_signal
             .tournament
             .get()
-            .get(&game().game_id)
+            .get(&game.get_value().game_id)
             .and_then(|schedules| {
                 schedules
                     .values()
@@ -30,9 +30,10 @@ pub fn UnplayedGameRow(
                     .map(|s| s.start_t)
             })
     });
-
-    let date_str = move || {
-        if let Some(time) = schedule() {
+    let progress_info = move || {
+        if game.get_value().game_start != GameStart::Ready {
+            "In progress".to_owned()
+        } else if let Some(time) = schedule() {
             format!(
                 "Scheduled at {}",
                 time.with_timezone(&Local).format("%Y-%m-%d %H:%M"),
@@ -47,7 +48,8 @@ pub fn UnplayedGameRow(
     };
     let adjudicate = move |result| {
         if user_is_organizer() {
-            let action = TournamentAction::AdjudicateResult(game().game_id.clone(), result);
+            let action =
+                TournamentAction::AdjudicateResult(game.get_value().game_id.clone(), result);
             let api = api.get();
             api.tournament(action);
             show_adjudicate_menu.update(|b| *b = !*b);
@@ -66,38 +68,38 @@ pub fn UnplayedGameRow(
                 <div class="flex gap-1 items-center p-1">
                     <div class="flex shrink">
                         <ProfileLink
-                            patreon=game().white_player.patreon
-                            username=game().white_player.username.clone()
+                            patreon=game.get_value().white_player.patreon
+                            username=game.get_value().white_player.username.clone()
                             extend_tw_classes="truncate max-w-[120px]"
                         />
-                        {format!("({})", game().white_rating())}
+                        {format!("({})", game.get_value().white_rating())}
                     </div>
                     vs.
                     <div class="flex shrink">
                         <ProfileLink
-                            patreon=game().black_player.patreon
-                            username=game().black_player.username.clone()
+                            patreon=game.get_value().black_player.patreon
+                            username=game.get_value().black_player.username.clone()
                             extend_tw_classes="truncate max-w-[120px]"
                         />
-                        {format!("({})", game().black_rating())}
+                        {format!("({})", game.get_value().black_rating())}
                     </div>
                 </div>
                 <div class=move || {
                     format!("flex p-1 {}", if schedule().is_some() { "font-bold" } else { "" })
                 }>
                     <Show
-                        when=move || !game().finished
+                        when=move || !game.get_value().finished
                         fallback=move || {
                             view! {
                                 {format!(
                                     "{} {}",
-                                    game().conclusion.pretty_string(),
-                                    game().tournament_game_result,
+                                    game.get_value().conclusion.pretty_string(),
+                                    game.get_value().tournament_game_result,
                                 )}
                             }
                         }
                     >
-                        {date_str}
+                        {progress_info}
                     </Show>
                 </div>
             </div>
@@ -105,8 +107,8 @@ pub fn UnplayedGameRow(
             <div class=buttons_container_class>
                 <Show when=move || !show_adjudicate_menu()>
                     <Show when=move || !tournament_finished()>
-                        <a class=BUTTON_STYLE href=format!("/game/{}", &game().game_id)>
-                            {if game().tournament_game_result == TournamentGameResult::Unknown {
+                        <a class=BUTTON_STYLE href=format!("/game/{}", &game.get_value().game_id)>
+                            {if game.get_value().tournament_game_result == TournamentGameResult::Unknown {
                                 "Join Game"
                             } else {
                                 "View Game"
@@ -114,7 +116,7 @@ pub fn UnplayedGameRow(
                         </a>
                     </Show>
                     <Show when=tournament_finished>
-                        {format!("Adjudicated result: {}", game().tournament_game_result)}
+                        {format!("Adjudicated result: {}", game.get_value().tournament_game_result)}
                     </Show>
                     <Show when=move || user_is_organizer() && !tournament_finished()>
                         <button class=BUTTON_STYLE on:click=toggle_adjudicate>
@@ -142,7 +144,7 @@ pub fn UnplayedGameRow(
                         {"Double forfeit"}
                     </button>
                     <Show
-                        when=move || game().finished
+                        when=move || game.get_value().finished
                         fallback=move || {
                             view! {
                                 <button
