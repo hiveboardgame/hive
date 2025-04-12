@@ -24,7 +24,7 @@ use crate::{
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
-use leptos::prelude::*;
+use leptos::{either::EitherOf3, prelude::*};
 use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{GameId, GameStart, TournamentGameResult};
 use wasm_bindgen_futures::spawn_local;
@@ -59,18 +59,6 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
     provide_context(CurrentConfirm(current_confirm));
     let user = auth_context.user;
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
-    let white = create_read_slice(game_state.signal, |gs| {
-        (
-            gs.white_id,
-            gs.game_response.clone().map(|gr| gr.white_player.username),
-        )
-    });
-    let black = create_read_slice(game_state.signal, |gs| {
-        (
-            gs.black_id,
-            gs.game_response.clone().map(|gr| gr.black_player.username),
-        )
-    });
     let user_is_player = Signal::derive(move || {
         user().and_then(|user| {
             let (white_id, black_id) = white_and_black();
@@ -263,25 +251,10 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                                 </div>
 
                             </div>
-
-                            <Show
-                                when=show_board
-                                fallback=move || {
-                                    view! {
-                                        <Unstarted
-                                            overwrite_tw_classes="flex grow min-h-0 h-[100dvh] justify-center items-center"
-                                            user_is_player=user_is_player().is_some()
-                                            game_id=game_id()
-                                            black=black()
-                                            white=white()
-                                            ready=game_updater.tournament_ready.into()
-                                        />
-                                    }
-                                }
-                            >
-
-                                <Board overwrite_tw_classes="flex grow min-h-0" />
-                            </Show>
+                            <BoardOrUnstarted
+                                show_board=show_board()
+                                is_vertical=orientation_signal.orientation_vertical.get()
+                            />
                             <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
                                 <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
                                     <UserWithRating
@@ -310,25 +283,10 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                     }
                 }
             >
-
-                <Show
-                    when=show_board
-                    fallback=move || {
-                        view! {
-                            <Unstarted
-                                user_is_player=user_is_player().is_some()
-                                white=white()
-                                black=black()
-                                game_id=game_id()
-                                ready=game_updater.tournament_ready.into()
-                            />
-                        }
-                    }
-                >
-
-                    <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight" />
-                    <Board />
-                </Show>
+                <BoardOrUnstarted
+                    show_board=show_board()
+                    is_vertical=orientation_signal.orientation_vertical.get()
+                />
                 <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full">
                     <DisplayTimer placement=Placement::Top vertical=false />
                     <SideboardTabs player_color />
@@ -336,5 +294,62 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
                 </div>
             </Show>
         </div>
+    }
+}
+
+#[component]
+fn BoardOrUnstarted(show_board: bool, is_vertical: bool) -> impl IntoView {
+    let game_state = expect_context::<GameStateSignal>();
+    let game_updater = expect_context::<UpdateNotifier>();
+    let user = expect_context::<AuthContext>().user;
+    let white = create_read_slice(game_state.signal, |gs| {
+        (
+            gs.white_id,
+            gs.game_response.clone().map(|gr| gr.white_player.username),
+        )
+    });
+    let black = create_read_slice(game_state.signal, |gs| {
+        (
+            gs.black_id,
+            gs.game_response.clone().map(|gr| gr.black_player.username),
+        )
+    });
+    let params = use_params_map();
+    let game_id = Memo::new(move |_| {
+        params
+            .get()
+            .get("nanoid")
+            .map(|s| GameId(s.to_owned()))
+            .unwrap_or_default()
+    });
+    let user_is_player = Signal::derive(move || {
+        user().and_then(|user| {
+            let (white_id, black_id) = (white().0, black().0);
+            if Some(user.id) == black_id || Some(user.id) == white_id {
+                Some((user.username, user.id))
+            } else {
+                None
+            }
+        })
+    });
+    if show_board {
+        if is_vertical {
+            EitherOf3::A(view! {
+                <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight" />
+                <Board />
+            })
+        } else {
+            EitherOf3::B(view! { <Board overwrite_tw_classes="flex grow min-h-0" /> })
+        }
+    } else {
+        EitherOf3::C(view! {
+            <Unstarted
+                user_is_player=user_is_player().is_some()
+                white=white()
+                black=black()
+                game_id=game_id()
+                ready=game_updater.tournament_ready.into()
+            />
+        })
     }
 }

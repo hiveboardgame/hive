@@ -347,12 +347,12 @@ pub fn Board(
                 <g transform=transform node_ref=g_ref>
                     {move || {
                         if board_view() == View::History && !last_turn() && analysis.is_none() {
-                            Either::Left(view! { <HistoryPieces tile_opts=tile_opts() target_stack/> })
+                            Either::Left(
+                                view! { <HistoryPieces tile_opts=tile_opts() target_stack /> },
+                            )
                         } else {
                             Either::Right(
-                                view! {
-                                    <BoardPieces tile_opts=tile_opts() target_stack />
-                                },
+                                view! { <BoardPieces tile_opts=tile_opts() target_stack /> },
                             )
                         }
                     }}

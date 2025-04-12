@@ -108,7 +108,9 @@ pub fn UnplayedGameRow(
                 <Show when=move || !show_adjudicate_menu()>
                     <Show when=move || !tournament_finished()>
                         <a class=BUTTON_STYLE href=format!("/game/{}", &game.get_value().game_id)>
-                            {if game.get_value().tournament_game_result == TournamentGameResult::Unknown {
+                            {if game.get_value().tournament_game_result
+                                == TournamentGameResult::Unknown
+                            {
                                 "Join Game"
                             } else {
                                 "View Game"
