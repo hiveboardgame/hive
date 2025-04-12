@@ -236,103 +236,103 @@ pub fn Play(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView 
             )
         }>
             <Show
-                when=orientation_signal.orientation_vertical
+                when=move || !orientation_signal.orientation_vertical.get()
                 fallback=move || {
                     view! {
-                        <Show
-                            when=show_board
-                            fallback=move || {
-                                view! {
-                                    <Unstarted
-                                        user_is_player=user_is_player().is_some()
-                                        white=white()
-                                        black=black()
-                                        game_id=game_id()
-                                        ready=game_updater.tournament_ready.into()
-                                    />
-                                }
-                            }
-                        >
+                        <div class="flex flex-col flex-grow h-full min-h-0">
+                            <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
+                                <Show when=show_controls>
+                                    <div class="flex flex-row-reverse justify-between items-center shrink">
+                                        <AnalysisAndDownload />
+                                        <Show when=move || user_is_player().is_some()>
+                                            <ControlButtons />
+                                        </Show>
+                                    </div>
+                                </Show>
 
-                            <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight" />
-                            <Board />
-                        </Show>
-                        <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full">
-                            <DisplayTimer placement=Placement::Top vertical=false />
-                            <SideboardTabs player_color />
-                            <DisplayTimer placement=Placement::Bottom vertical=false />
+                                <div class="flex justify-between ml-1 h-full max-h-16">
+                                    <Reserve alignment=Alignment::SingleRow color=top_color() />
+                                    <DisplayTimer vertical=true placement=Placement::Top />
+                                </div>
+                                <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1 bg-inherit">
+                                    <UserWithRating
+                                        side=top_color()
+                                        is_tall=orientation_signal.orientation_vertical
+                                    />
+                                    <GameInfo />
+                                </div>
+
+                            </div>
+
+                            <Show
+                                when=show_board
+                                fallback=move || {
+                                    view! {
+                                        <Unstarted
+                                            overwrite_tw_classes="flex grow min-h-0 h-[100dvh] justify-center items-center"
+                                            user_is_player=user_is_player().is_some()
+                                            game_id=game_id()
+                                            black=black()
+                                            white=white()
+                                            ready=game_updater.tournament_ready.into()
+                                        />
+                                    }
+                                }
+                            >
+
+                                <Board overwrite_tw_classes="flex grow min-h-0" />
+                            </Show>
+                            <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
+                                <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
+                                    <UserWithRating
+                                        side=player_color()
+                                        is_tall=orientation_signal.orientation_vertical
+                                    />
+                                </div>
+                                <div class="flex justify-between mb-2 ml-1 h-full max-h-16">
+                                    <Reserve alignment=Alignment::SingleRow color=player_color() />
+                                    <DisplayTimer vertical=true placement=Placement::Bottom />
+                                </div>
+                                <Show when=show_controls>
+                                    <div class="grid grid-cols-4 gap-8 pb-1">
+                                        <HistoryButton action=HistoryNavigation::First />
+                                        <HistoryButton action=HistoryNavigation::Previous />
+                                        <HistoryButton
+                                            action=HistoryNavigation::Next
+                                            post_action=go_to_game
+                                        />
+                                        <HistoryButton action=HistoryNavigation::MobileLast />
+                                    </div>
+                                </Show>
+
+                            </div>
                         </div>
                     }
                 }
             >
 
-                <div class="flex flex-col flex-grow h-full min-h-0">
-                    <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
-                        <Show when=show_controls>
-                            <div class="flex flex-row-reverse justify-between items-center shrink">
-                                <AnalysisAndDownload />
-                                <Show when=move || user_is_player().is_some()>
-                                    <ControlButtons />
-                                </Show>
-                            </div>
-                        </Show>
-
-                        <div class="flex justify-between ml-1 h-full max-h-16">
-                            <Reserve alignment=Alignment::SingleRow color=top_color() />
-                            <DisplayTimer vertical=true placement=Placement::Top />
-                        </div>
-                        <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1 bg-inherit">
-                            <UserWithRating
-                                side=top_color()
-                                is_tall=orientation_signal.orientation_vertical
+                <Show
+                    when=show_board
+                    fallback=move || {
+                        view! {
+                            <Unstarted
+                                user_is_player=user_is_player().is_some()
+                                white=white()
+                                black=black()
+                                game_id=game_id()
+                                ready=game_updater.tournament_ready.into()
                             />
-                            <GameInfo />
-                        </div>
-
-                    </div>
-
-                    <Show
-                        when=show_board
-                        fallback=move || {
-                            view! {
-                                <Unstarted
-                                    overwrite_tw_classes="flex grow min-h-0 h-[100dvh] justify-center items-center"
-                                    user_is_player=user_is_player().is_some()
-                                    game_id=game_id()
-                                    black=black()
-                                    white=white()
-                                    ready=game_updater.tournament_ready.into()
-                                />
-                            }
                         }
-                    >
+                    }
+                >
 
-                        <Board overwrite_tw_classes="flex grow min-h-0" />
-                    </Show>
-                    <div class="flex flex-col flex-grow shrink bg-board-dawn dark:bg-reserve-twilight">
-                        <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
-                            <UserWithRating
-                                side=player_color()
-                                is_tall=orientation_signal.orientation_vertical
-                            />
-                        </div>
-                        <div class="flex justify-between mb-2 ml-1 h-full max-h-16">
-                            <Reserve alignment=Alignment::SingleRow color=player_color() />
-                            <DisplayTimer vertical=true placement=Placement::Bottom />
-                        </div>
-                        <Show when=show_controls>
-                            <div class="grid grid-cols-4 gap-8 pb-1">
-                                <HistoryButton action=HistoryNavigation::First />
-                                <HistoryButton action=HistoryNavigation::Previous />
-                                <HistoryButton
-                                    action=HistoryNavigation::Next
-                                    post_action=go_to_game
-                                />
-                                <HistoryButton action=HistoryNavigation::MobileLast />
-                            </div>
-                        </Show>
-
-                    </div>
+                    <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight" />
+                    <Board />
+                </Show>
+                <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full">
+                    <DisplayTimer placement=Placement::Top vertical=false />
+                    <SideboardTabs player_color />
+                    <DisplayTimer placement=Placement::Bottom vertical=false />
                 </div>
             </Show>
         </div>
