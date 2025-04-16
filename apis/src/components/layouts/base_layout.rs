@@ -34,7 +34,6 @@ pub struct ControlsSignal {
 
 #[derive(Clone)]
 pub struct OrientationSignal {
-    pub is_tall: Signal<bool>,
     pub chat_dropdown_open: RwSignal<bool>,
     pub orientation_vertical: Signal<bool>,
 }
@@ -49,12 +48,10 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let gamestate = expect_context::<GameStateSignal>();
     let mut refocus = expect_context::<RefocusSignal>();
-    let stored_children = Signal::derive(move || children.clone());
-    let is_tall = use_media_query("(min-height: 100vw)");
+    let vertical = use_media_query("(min-height: 100vw)");
     let chat_dropdown_open = RwSignal::new(false);
-    let orientation_vertical = Signal::derive(move || is_tall() || chat_dropdown_open());
+    let orientation_vertical = Signal::derive(move || vertical() || chat_dropdown_open());
     provide_context(OrientationSignal {
-        is_tall,
         chat_dropdown_open,
         orientation_vertical,
     });
@@ -184,7 +181,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
                     <div class="text-lg font-bold text-ladybug-red">Connecting..</div>
                 </div>
             </Show>
-            {stored_children()()}
+            {children()}
 
         </main>
     }

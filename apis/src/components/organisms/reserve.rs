@@ -81,21 +81,27 @@ pub fn Reserve(
     let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
     let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
     let last_turn = game_state.is_last_turn_as_signal();
-    let game_response = create_read_slice(game_state.signal, |gs| gs.game_response.clone());
+    let status = create_read_slice(game_state.signal, |gs| {
+        gs.game_response
+            .as_ref()
+            .map_or(GameStatus::NotStarted, |g| g.game_status.clone())
+    });
+    let tournament = create_read_slice(game_state.signal, |gs| {
+        gs.game_response
+            .as_ref()
+            .is_some_and(|gr| gr.tournament.is_some())
+    });
     let stacked_pieces = move || {
         let board_view = board_view();
+        let color = color();
         let move_info = move_info();
         let history_turn = history_turn();
-        let game_response = game_response();
         let state = state();
-        let tournament = game_response
-            .as_ref()
-            .is_some_and(|gr| gr.tournament.is_some());
-        let status = game_response
-            .as_ref()
-            .map_or(GameStatus::NotStarted, |g| g.game_status.clone());
+        let status = status();
+        let tournament = tournament.get_untracked();
+        let last_turn = last_turn.get_untracked();
         let reserve = match board_view {
-            View::Game => state.board.reserve(color(), state.game_type),
+            View::Game => state.board.reserve(color, state.game_type),
             View::History => {
                 let mut history = History::new();
                 if let Some(turn) = history_turn {
@@ -105,11 +111,11 @@ pub fn Reserve(
                 }
                 let history_state =
                     State::new_from_history(&history).expect("Got state from history");
-                history_state.board.reserve(color(), state.game_type)
+                history_state.board.reserve(color, state.game_type)
             }
         };
         let mut clicked_position = None;
-        if color() == state.turn_color {
+        if color == state.turn_color {
             clicked_position = move_info.reserve_position;
         }
         let mut seen = -1;
@@ -132,7 +138,7 @@ pub fn Reserve(
                         &board_view,
                         &piece,
                         tournament,
-                        last_turn(),
+                        last_turn,
                         analysis,
                     ) {
                         PieceType::Reserve

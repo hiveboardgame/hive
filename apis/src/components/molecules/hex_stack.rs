@@ -7,6 +7,7 @@ use crate::{
 };
 use hive_lib::Position;
 use leptos::either::Either;
+use leptos::ev::touchstart;
 use leptos::prelude::*;
 use leptos::{
     ev::{pointerup, touchend},
@@ -39,21 +40,27 @@ pub fn HexStack(
             if is_expandable {
                 // Mouse right click to expand
                 let window = use_window();
-                _ = use_event_listener(window, pointerup, move |evt| {
+                _ = use_event_listener(window.clone(), pointerup, move |evt| {
                     if evt.button() == 2 {
                         target_stack.set(None);
                     }
                 });
                 // Touch longpress to expand
                 let UseTimeoutFnReturn { start, stop, .. } = use_timeout_fn(
-                    move |_| {
-                        target_stack.set(Some(hex_stack.position));
+                    move |pos| {
+                        target_stack.set(pos);
                     },
                     500.0,
                 );
                 let g_ref = NodeRef::<svg::G>::new();
                 let _ = use_event_listener_with_options(
                     g_ref,
+                    touchstart,
+                    move |_| start(Some(hex_stack.position)),
+                    UseEventListenerOptions::default().passive(true),
+                );
+                let _ = use_event_listener_with_options(
+                    window,
                     touchend,
                     move |_| {
                         stop();
@@ -71,7 +78,6 @@ pub fn HexStack(
                                     target_stack.set(Some(hex_stack.position));
                                 }
                             }
-                            on:touchstart=start.clone()
                             tile_opts=tile_opts.get_value()
                             target_stack
                         />

@@ -1,5 +1,6 @@
 use crate::common::SvgPos;
 use crate::common::TileDesign;
+use crate::components::layouts::base_layout::OrientationSignal;
 use crate::components::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces};
 use crate::providers::analysis::AnalysisSignal;
 use crate::providers::game_state::{GameStateSignal, View};
@@ -55,12 +56,10 @@ impl ViewBoxControls {
 }
 
 #[component]
-pub fn Board(
-    #[prop(optional)] extend_tw_classes: &'static str,
-    #[prop(optional)] overwrite_tw_classes: &'static str,
-) -> impl IntoView {
+pub fn Board() -> impl IntoView {
     let mut game_state = expect_context::<GameStateSignal>();
     let analysis = use_context::<AnalysisSignal>();
+    let orientation_signal = expect_context::<OrientationSignal>();
     let target_stack = RwSignal::new(None);
     let config = expect_context::<Config>().0;
     let is_panning = RwSignal::new(false);
@@ -75,6 +74,13 @@ pub fn Board(
     let last_turn = game_state.is_last_turn_as_signal();
     let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
     let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
+    let board_style = move || {
+        if orientation_signal.orientation_vertical.get() {
+            "flex grow min-h-0"
+        } else {
+            "col-span-8 row-span-6"
+        }
+    };
     let history_style = move || match board_view() {
         View::Game => "",
         View::History => match game_status() {
@@ -329,11 +335,7 @@ pub fn Board(
     view! {
         <div
             node_ref=div_ref
-            class=if !overwrite_tw_classes.is_empty() {
-                overwrite_tw_classes.to_string()
-            } else {
-                format!("col-span-8 row-span-6 {extend_tw_classes}")
-            }
+            class=board_style
         >
 
             <svg
