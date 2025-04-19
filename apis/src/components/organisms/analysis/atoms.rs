@@ -49,6 +49,7 @@ pub fn UndoButton() -> impl IntoView {
 use leptos::leptos_dom::helpers::debounce;
 #[derive(Clone)]
 pub enum HistoryNavigation {
+    First,
     Next,
     Previous,
 }
@@ -64,6 +65,7 @@ pub fn HistoryButton(
     let cloned_action = action.clone();
     let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
+        HistoryNavigation::First => icondata::AiFastBackwardFilled,
         HistoryNavigation::Next => icondata::AiStepForwardFilled,
         HistoryNavigation::Previous => icondata::AiStepBackwardFilled,
     };
@@ -72,6 +74,10 @@ pub fn HistoryButton(
         analysis.with(|analysis| {
             if let Some(n) = &analysis.current_node {
                 match cloned_action {
+                    HistoryNavigation::First => analysis
+                        .tree
+                        .get_ancestor_ids(&n.get_node_id())
+                        .map_or(true, |ids| ids.is_empty()),
                     HistoryNavigation::Next => n.get_children_ids().is_empty(),
                     HistoryNavigation::Previous => n.get_parent_id().is_none(),
                 }
@@ -81,8 +87,12 @@ pub fn HistoryButton(
         })
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        let current_node = analysis.get().current_node.clone();
+        let current_node = analysis().current_node.clone();
         let updated_node_id = current_node.and_then(|n| match action {
+            HistoryNavigation::First => analysis()
+                .tree
+                .get_ancestor_ids(&n.get_node_id())
+                .map_or(None, |ids| ids.last().cloned()),
             HistoryNavigation::Next => n.get_children_ids().first().cloned(),
             HistoryNavigation::Previous => n.get_parent_id(),
         });
@@ -111,18 +121,23 @@ pub fn HistoryButton(
 }
 
 #[component]
-pub fn HistoryMove(node: Node<i32, TreeNode>, current_path: Memo<Vec<i32>>) -> impl IntoView {
+pub fn HistoryMove(
+    node: Node<i32, TreeNode>,
+    current_path: Memo<Vec<i32>>,
+    has_children: bool,
+) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
     let game_state = expect_context::<GameStateSignal>();
     let value = node.get_value().unwrap();
     let node_id = node.get_node_id();
     let class = move || {
-        let mut class =
-            "w-full transition-transform duration-300 transform hover:bg-pillbug-teal active:scale-95";
-        if current_path.get().first() == Some(&node_id) {
-            class = "w-full transition-transform duration-300 transform hover:bg-pillbug-teal bg-orange-twilight active:scale-95"
-        }
-        class
+        let margin = if has_children { "" } else { "ml-[15px] " };
+        let bg_color = if current_path.get().first() == Some(&node_id) {
+            "bg-orange-twilight "
+        } else {
+            ""
+        };
+        format!("{margin}w-fit transition-transform duration-300 transform hover:bg-pillbug-teal {bg_color}active:scale-95")
     };
     let onclick = move |_| {
         analysis.update(|a| {
@@ -186,7 +201,7 @@ pub fn CollapsibleMove(
                     }></polyline>
                 </svg>
             </button>
-            <HistoryMove current_path node=node.clone() />
+            <HistoryMove current_path node=node.clone() has_children=true />
         </div>
         <div class=move || {
             format!("nested-content {}", if open() { "" } else { "hidden" })
