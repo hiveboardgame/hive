@@ -12,13 +12,13 @@ use crate::{
 
 #[component]
 pub fn UserWithRating(
-    side: Color,
+    #[prop(into)] side: Signal<Color>,
     #[prop(optional)] text_color: &'static str,
-    #[prop(optional)] is_tall: Signal<bool>,
+    #[prop(optional)] vertical: bool,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let game_response = create_read_slice(game_state.signal, |gs| gs.game_response.clone());
-    let player = move || match side {
+    let player = move || match side() {
         Color::White => game_response().map(|g| g.white_player),
         Color::Black => game_response().map(|g| g.black_player),
     };
@@ -37,12 +37,12 @@ pub fn UserWithRating(
         _ => Either::Right(view! { "" }),
     };
     view! {
-        <div class=move || {
+        <div class=
             format!(
                 "ml-1 flex items-center {} justify-center",
-                if is_tall() { "flex-row gap-1" } else { "flex-col" },
+                if vertical { "flex-row gap-1" } else { "flex-col" },
             )
-        }>
+        >
             {move || {
                 view! {
                     <div class="flex items-center">
@@ -62,7 +62,7 @@ pub fn UserWithRating(
                 }
             >
 
-                <RatingAndChangeDynamic extend_tw_classes=text_color side=side />
+                <RatingAndChangeDynamic extend_tw_classes=text_color side=side() />
             </Show>
         </div>
     }

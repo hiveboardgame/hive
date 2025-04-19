@@ -37,7 +37,7 @@ impl Default for ConfigOpts {
         Self {
             confirm_mode: HashMap::from([
                 (GameSpeed::Bullet, MoveConfirm::Single),
-                (GameSpeed::Blitz, MoveConfirm::Single),
+                (GameSpeed::Blitz, MoveConfirm::Double),
                 (GameSpeed::Rapid, MoveConfirm::Double),
                 (GameSpeed::Classic, MoveConfirm::Double),
                 (GameSpeed::Correspondence, MoveConfirm::Double),

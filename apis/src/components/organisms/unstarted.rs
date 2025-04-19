@@ -1,4 +1,6 @@
+use crate::components::layouts::base_layout::OrientationSignal;
 use crate::i18n::*;
+use crate::providers::game_state::GameStateSignal;
 use crate::providers::ApiRequestsProvider;
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -7,30 +9,27 @@ use uuid::Uuid;
 
 #[component]
 pub fn Unstarted(
-    game_id: GameId,
-    white: (Option<Uuid>, Option<String>),
-    black: (Option<Uuid>, Option<String>),
-    user_is_player: bool,
-    ready: Signal<(GameId, Uuid)>,
-    //trick so this signal is passed down from the parent
-    #[prop(optional)] extend_tw_classes: &'static str,
-    #[prop(optional)] overwrite_tw_classes: &'static str,
+    game_id: Memo<GameId>,
+    white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)>,
+    user_is_player: Signal<bool>,
+    ready: RwSignal<(GameId, Uuid)>,
 ) -> impl IntoView {
-    let game_id = StoredValue::new(game_id);
-    let (white_id, white_username) = white;
-    let (black_id, black_username) = black;
     let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
-    let white_icon = move || {
-        let icon = if ready().0 == game_id.get_value() && Some(ready().1) == white_id {
-            icondata::AiCheckOutlined
-        } else {
-            icondata::IoCloseSharp
-        };
-        view! { <Icon icon attr:class="w-6 h-6" /> }
-    };
-    let black_icon = move || {
-        let icon = if ready().0 == game_id.get_value() && Some(ready().1) == black_id {
+    let game_state = expect_context::<GameStateSignal>();
+    let orientation_signal = expect_context::<OrientationSignal>();
+    let white = create_read_slice(game_state.signal, |gs| {
+        (gs.game_response
+            .as_ref()
+            .map(|gr| gr.white_player.username.clone()),)
+    });
+    let black = create_read_slice(game_state.signal, |gs| {
+        (gs.game_response
+            .as_ref()
+            .map(|gr| gr.black_player.username.clone()),)
+    });
+    let icon_for_color = move |id| {
+        let icon = if ready().0 == game_id() && Some(ready().1) == id {
             icondata::AiCheckOutlined
         } else {
             icondata::IoCloseSharp
@@ -40,22 +39,25 @@ pub fn Unstarted(
 
     let start = move |_| {
         let api = api.get();
-        api.tournament_game_start(game_id.get_value());
+        api.tournament_game_start(game_id());
+    };
+    let style = move || {
+        if orientation_signal.orientation_vertical.get() {
+            "flex grow min-h-0 justify-center items-center h-full w-full"
+        } else {
+            "col-span-8 row-span-6"
+        }
     };
     view! {
-        <div class=if !overwrite_tw_classes.is_empty() {
-            overwrite_tw_classes.to_string()
-        } else {
-            format!("h-full w-full col-span-8 row-span-6 {extend_tw_classes}")
-        }>
+        <div class=style>
             <div class="flex flex-col gap-1 justify-center items-center h-full">
                 <div class="flex gap-1 items-center">
-                    <div class="flex gap-1 items-center">{white_username} {white_icon}</div>
+                    <div class="flex gap-1 items-center">{white} {move || icon_for_color(white_and_black_ids().0)}</div>
                     "—"
-                    <div class="flex gap-1 items-center">{black_username} {black_icon}</div>
+                    <div class="flex gap-1 items-center">{black} {move || icon_for_color(white_and_black_ids().1)}</div>
                 </div>
                 <Show
-                    when=move || user_is_player
+                    when=user_is_player
                     fallback=move || {
                         view! { <div class="p-1">{t!(i18n, game.start_when.both_ready)}</div> }
                     }

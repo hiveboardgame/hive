@@ -29,9 +29,9 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     ))));
     provide_context(ToggleStates(RwSignal::new(HashSet::new())));
     provide_context(CurrentConfirm(Memo::new(move |_| MoveConfirm::Single)));
-    let is_tall = expect_context::<OrientationSignal>().is_tall;
+    let vertical = expect_context::<OrientationSignal>().orientation_vertical;
     let parent_container_style = move || {
-        if is_tall() {
+        if vertical() {
             "flex flex-col h-full"
         } else {
             "max-h-[100dvh] min-h-[100dvh] grid grid-cols-10  grid-rows-6 pr-1"
@@ -48,7 +48,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             )
         }>
             <Show
-                when=is_tall
+                when=vertical
                 fallback=move || {
                     view! {
                         <Board />
@@ -65,7 +65,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             <Reserve alignment=Alignment::SingleRow color=top_color />
                         </div>
                     </div>
-                    <Board overwrite_tw_classes="flex grow min-h-0" />
+                    <Board />
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
                             <Reserve alignment=Alignment::SingleRow color=bottom_color />
