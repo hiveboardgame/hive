@@ -10,7 +10,7 @@ use crate::{
     },
     pages::play::CurrentConfirm,
     providers::{
-        analysis::{AnalysisSignal, AnalysisTree},
+        analysis::{AnalysisSignal, AnalysisTree, TreeNode},
         game_state::GameStateSignal,
     },
 };
@@ -51,6 +51,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 when=vertical
                 fallback=move || {
                     view! {
+                        <AnalysisInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight" />
                         <Board />
                         <div class="flex flex-col col-span-2 row-span-6 p-1 h-full border-2 border-black select-none dark:border-white">
                             <History />
@@ -65,6 +66,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             <Reserve alignment=Alignment::SingleRow color=top_color />
                         </div>
                     </div>
+                    <AnalysisInfo />
                     <Board />
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
@@ -74,6 +76,55 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 </div>
                 <History mobile=true />
             </Show>
+        </div>
+    }
+}
+
+#[component]
+fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    let analysis = expect_context::<AnalysisSignal>().0;
+    let game_state = expect_context::<GameStateSignal>();
+    let moves = move || {
+        let tree = &analysis().tree;
+        let current_node = analysis().current_node.clone();
+        let mut moves = Vec::new();
+        let sibling_nodes = current_node
+            .and_then(|n| tree.get_sibling_ids(&n.get_node_id(), false).ok())
+            .map_or(Vec::new(), |s| {
+                s.iter()
+                    .filter_map(|id| tree.get_node_by_id(id))
+                    .collect::<Vec<_>>()
+            });
+        for s in sibling_nodes {
+            let TreeNode {
+                turn,
+                piece,
+                position,
+            } = s.get_value().unwrap();
+            moves.push(
+                    view! {
+                        <div
+                            class="underline cursor-pointer no-link-style hover:text-pillbug-teal active:scale-95"
+                            on:click=move |_| {
+                                analysis
+                                    .update(|a| {
+                                        a.update_node(s.get_node_id(), Some(game_state));
+                                    })
+                            }
+                        >
+                            {format!("{}. {} {}", turn, piece, position)}
+                        </div>
+                    }
+                );
+        }
+        moves.collect_view()
+    };
+    view! {
+        <div class=extend_tw_classes>
+            <div class="flex gap-1 items-center">
+                <b>"Other Lines Explored: "</b>
+                {moves}
+            </div>
         </div>
     }
 }

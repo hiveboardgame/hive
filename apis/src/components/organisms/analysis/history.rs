@@ -9,8 +9,11 @@ use crate::providers::analysis::{AnalysisSignal, AnalysisTree};
 use hive_lib::Color;
 use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use tree_ds::prelude::*;
+
+const BTN_CLASS: &str = "flex z-20 justify-center items-center m-1 w-44 h-10 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
 
 #[component]
 pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
@@ -38,6 +41,41 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         };
         current_path
     });
+    let promote_variation = move |promote_all: bool| {
+        analysis.update(|a| {
+            let current_path = current_path();
+            let current_path = current_path
+                .iter()
+                .filter_map(|id| a.tree.get_node_by_id(id));
+            for node in current_path {
+                if let Some(parent) = node
+                    .get_parent_id()
+                    .and_then(|id| a.tree.get_node_by_id(&id))
+                {
+                    let current_id = node.get_node_id();
+                    if parent
+                        .get_children_ids()
+                        .first()
+                        .is_some_and(|id| *id != current_id)
+                    {
+                        parent.sort_children(|a, b| {
+                            if a == &current_id {
+                                Ordering::Less
+                            } else if b == &current_id {
+                                Ordering::Greater
+                            } else {
+                                Ordering::Equal
+                            }
+                        });
+                        if !promote_all {
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+    };
+
     let prev_button = NodeRef::<html::Button>::new();
     let next_button = NodeRef::<html::Button>::new();
     Effect::new(move |_| {
@@ -115,7 +153,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 /* All other nodes are placed at the same level as the parent
                 in a regular HistoryMove node */
                 view! {
-                    <HistoryMove current_path node />
+                    <HistoryMove current_path node has_children=false />
                     {content}
                 }
                 .into_any()
@@ -136,6 +174,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     view! {
         <div class="flex flex-col w-full h-full">
             <div class="flex gap-1 min-h-0 [&>*]:grow">
+                <HistoryButton action=HistoryNavigation::First post_action=focus />
                 <HistoryButton
                     node_ref=prev_button
                     action=HistoryNavigation::Previous
@@ -160,6 +199,14 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                     <DownloadTree tree=get_tree() />
                 </Show>
                 <LoadTree />
+            </div>
+            <div class="flex justify-between w-full">
+                <button on:click=move |_| promote_variation(true) class=BTN_CLASS>
+                    "Make main line"
+                </button>
+                <button on:click=move |_| promote_variation(false) class=BTN_CLASS>
+                    "Promote variation"
+                </button>
             </div>
             <div class="overflow-y-auto p-1">{walk_tree}</div>
         </div>
