@@ -9,6 +9,8 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::{js_sys::Array, Blob, Url};
 
+const BTN_CLASS: &str = "z-20 content-center text-center m-1 w-1/3 h-7 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
+
 #[component]
 pub fn DownloadTree(tree: String) -> impl IntoView {
     let download = move |_| {
@@ -31,10 +33,7 @@ pub fn DownloadTree(tree: String) -> impl IntoView {
     };
 
     view! {
-        <button
-            on:click=download
-            class="z-20 justify-center items-center m-1 w-1/3 h-7 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
-        >
+        <button on:click=download class=BTN_CLASS>
             "Save"
         </button>
     }
@@ -70,7 +69,7 @@ pub fn LoadTree() -> impl IntoView {
                 analysis.set(LocalStorage::wrap(tree));
             })
     };
-    let from_hat = move |string: JsValue| {
+    let from_json = move |string: JsValue| {
         string
             .as_string()
             .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
@@ -94,39 +93,35 @@ pub fn LoadTree() -> impl IntoView {
         Path::new(&file.name()).extension().map_or_else(
             || logging::log!("Couldn't open file"),
             |ext| {
-                if ext == "json" {
-                    spawn_local(async move {
-                        let res = JsFuture::from(file.text()).await.ok().and_then(from_hat);
-                        if res.is_none() {
-                            logging::log!("Couldn't open file");
-                        }
-                    });
-                } else if ext == "pgn" {
-                    spawn_local(async move {
-                        let res = JsFuture::from(file.text()).await.ok().and_then(from_pgn);
-                        if res.is_none() {
-                            logging::log!("Couldn't open file");
-                        }
-                    });
-                } else {
-                    logging::log!("Unsupported file type");
-                }
+                let ext = ext.to_os_string();
+                spawn_local(async move {
+                    let text = JsFuture::from(file.text()).await.ok();
+                    let result = if ext == "json" {
+                        text.and_then(from_json)
+                    } else if ext == "pgn" {
+                        text.and_then(from_pgn)
+                    } else {
+                        logging::log!("Unsupported file type");
+                        None
+                    };
+                    if result.is_none() {
+                        logging::log!("Couldn't open file");
+                    }
+                });
             },
         );
     };
     view! {
-        <form>
-            <label class="flex z-20 justify-center items-center p-2 w-full h-full text-white break-words rounded-sm transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95">
-                "Load"
-                <input
-                    node_ref=input_ref
-                    on:input=oninput
-                    type="file"
-                    id="load-analysis"
-                    class="hidden"
-                    accept=".json,.pgn"
-                />
-            </label>
-        </form>
+        <label for="load-analysis" class=BTN_CLASS>
+            "Load"
+        </label>
+        <input
+            node_ref=input_ref
+            on:input=oninput
+            type="file"
+            id="load-analysis"
+            accept=".json,.pgn"
+            hidden
+        />
     }
 }

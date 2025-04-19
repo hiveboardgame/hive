@@ -51,6 +51,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 when=vertical
                 fallback=move || {
                     view! {
+                        <AnalysisInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight" />
                         <Board />
                         <div class="flex flex-col col-span-2 row-span-6 p-1 h-full border-2 border-black select-none dark:border-white">
                             <History />
@@ -65,6 +66,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             <Reserve alignment=Alignment::SingleRow color=top_color />
                         </div>
                     </div>
+                    <AnalysisInfo />
                     <Board />
                     <div class="flex flex-col flex-grow shrink">
                         <div class="flex justify-between h-full max-h-16">
@@ -74,6 +76,59 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 </div>
                 <History mobile=true />
             </Show>
+        </div>
+    }
+}
+
+#[component]
+fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
+    const MOVES_TO_SHOW: usize = 3;
+    let analysis = expect_context::<AnalysisSignal>().0;
+    let moves = move || {
+        let analysis = analysis();
+        let mut current_node = analysis.current_node.clone();
+        let mut moves = Vec::new();
+        for _ in 0..MOVES_TO_SHOW {
+            let first_child = if let Some(ref node) = current_node {
+                let children = node.get_children_ids();
+                if children.is_empty() {
+                    None
+                } else {
+                    analysis.tree.get_node_by_id(&children[0])
+                }
+            } else {
+                None
+            };
+            if let Some(node) = first_child {
+                moves.push(node.get_value().unwrap());
+                current_node = Some(node);
+            } else {
+                break;
+            }
+        }
+        if moves.is_empty() {
+            String::new()
+        } else {
+            let more = if moves.len() == MOVES_TO_SHOW
+                && current_node.is_some_and(|n| !n.get_children_ids().is_empty())
+            {
+                "..."
+            } else {
+                ""
+            };
+            format!(
+                "Next Moves: {}{more}",
+                moves
+                    .into_iter()
+                    .map(|m| format!("{}. {} {}", m.turn, m.piece, m.position))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }
+    };
+    view! {
+        <div class=extend_tw_classes>
+            <div class="flex gap-1 items-center">{moves}</div>
         </div>
     }
 }
