@@ -24,7 +24,7 @@ use crate::{
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
-use leptos::{either::Either, prelude::*};
+use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use shared_types::{GameId, GameStart, TournamentGameResult};
 use uuid::Uuid;

@@ -37,12 +37,10 @@ pub fn UserWithRating(
         _ => Either::Right(view! { "" }),
     };
     view! {
-        <div class=
-            format!(
-                "ml-1 flex items-center {} justify-center",
-                if vertical { "flex-row gap-1" } else { "flex-col" },
-            )
-        >
+        <div class=format!(
+            "ml-1 flex items-center {} justify-center",
+            if vertical { "flex-row gap-1" } else { "flex-col" },
+        )>
             {move || {
                 view! {
                     <div class="flex items-center">
