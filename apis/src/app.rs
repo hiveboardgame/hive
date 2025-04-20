@@ -5,6 +5,7 @@ use crate::{
         account::Account,
         admin::Admin,
         analysis::Analysis,
+        bevy::BevyExamplePage,
         challenge_view::ChallengeView,
         config::Config,
         donate::Donate,
@@ -154,6 +155,7 @@ pub fn App() -> impl IntoView {
                             view=|| view! { <Play /> }
                         />
                         <Route path=path!("/admin") view=|| view! { <Admin /> } />
+                        <Route path=path!("/bevy") view=|| view! { <BevyExamplePage /> } />
                     </ParentRoute>
                 </Routes>
             </Router>

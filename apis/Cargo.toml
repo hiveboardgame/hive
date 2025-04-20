@@ -16,7 +16,8 @@ actix-web = { workspace = true, optional = true, features = ["macros"] }
 actix-web-actors = { workspace = true, optional = true }
 anyhow = { workspace = true }
 argon2 = { workspace = true, optional = true }
-bimap = {workspace = true}
+bevy = { workspace = true }
+bimap = { workspace = true }
 cfg-if = { workspace = true }
 chrono = { workspace = true }
 codee ={ workspace = true }
@@ -33,6 +34,7 @@ icondata = { workspace = true }
 indoc = { workspace = true }
 lazy_static = { workspace = true }
 leptos = { workspace = true }
+leptos-bevy-canvas = { workspace = true }
 leptos-use = { workspace = true }
 leptos_actix = { workspace = true, optional = true }
 leptos_i18n = { workspace = true }
@@ -60,7 +62,10 @@ wasm-bindgen-futures = { workspace = true}
 web-sys = { workspace = true }
 
 [features]
-csr = ["leptos/csr", "leptos_i18n/csr"]
+csr = [
+  "leptos/csr", 
+  "leptos_i18n/csr",
+]
 hydrate = ["leptos/hydrate", "leptos_i18n/hydrate"]
 ssr = [
   "dep:actix",
