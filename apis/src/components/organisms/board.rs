@@ -333,10 +333,7 @@ pub fn Board() -> impl IntoView {
         }
     });
     view! {
-        <div
-            node_ref=div_ref
-            class=board_style
-        >
+        <div node_ref=div_ref class=board_style>
 
             <svg
                 width="100%"

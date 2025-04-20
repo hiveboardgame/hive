@@ -303,11 +303,18 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 if !ctx.has_more.get() {
                     return;
                 }
+                let is_first = batch_info.is_none();
                 let options = build_options(controls, batch_info, username);
                 let next_batch = get_batch_from_options(options).await;
                 if let Ok(next_batch) = next_batch {
                     ctx.has_more.set(!next_batch.is_empty());
-                    ctx.games.update(|games| games.extend(next_batch));
+                    ctx.games.update(|games| {
+                        if is_first {
+                            *games = next_batch;
+                        } else {
+                            games.extend(next_batch);
+                        }
+                    });
                 } else {
                     ctx.has_more.set(false);
                 }

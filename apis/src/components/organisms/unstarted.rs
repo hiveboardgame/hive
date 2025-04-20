@@ -52,9 +52,13 @@ pub fn Unstarted(
         <div class=style>
             <div class="flex flex-col gap-1 justify-center items-center h-full">
                 <div class="flex gap-1 items-center">
-                    <div class="flex gap-1 items-center">{white} {move || icon_for_color(white_and_black_ids().0)}</div>
+                    <div class="flex gap-1 items-center">
+                        {white} {move || icon_for_color(white_and_black_ids().0)}
+                    </div>
                     "—"
-                    <div class="flex gap-1 items-center">{black} {move || icon_for_color(white_and_black_ids().1)}</div>
+                    <div class="flex gap-1 items-center">
+                        {black} {move || icon_for_color(white_and_black_ids().1)}
+                    </div>
                 </div>
                 <Show
                     when=user_is_player
