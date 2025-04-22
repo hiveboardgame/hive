@@ -51,7 +51,7 @@ pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
                     <div class="flex gap-1">
                         <div>{tournament.mode}</div>
                     </div>
-                    <TimeRow time_info=time_info.into() />
+                    <TimeRow time_info />
                     <div>{seats_taken}</div>
                 </div>
                 <div class="flex flex-col">

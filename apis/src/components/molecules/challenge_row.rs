@@ -139,7 +139,7 @@ pub fn ChallengeRow(
             <td class=td_class>
                 <div class="flex justify-center items-center">
                     <TimeRow
-                        time_info=time_info.into()
+                        time_info
                         extend_tw_classes="break-words max-w-[40px] sm:max-w-fit sm:whitespace-nowrap"
                     />
                 </div>

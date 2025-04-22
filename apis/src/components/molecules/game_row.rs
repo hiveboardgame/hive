@@ -145,7 +145,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
             <div class="flex overflow-hidden flex-col justify-between m-2 w-full">
                 <div class="flex flex-col justify-between">
                     <div class="flex gap-1">
-                        {rated_string} <TimeRow time_info=time_info.into() />
+                        {rated_string} <TimeRow time_info />
                         <Show when=move || {
                             game().tournament.is_some()
                         }>

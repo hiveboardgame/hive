@@ -6,7 +6,7 @@ use shared_types::{GameSpeed, TimeInfo, TimeMode};
 
 #[component]
 pub fn TimeRow(
-    time_info: Signal<TimeInfo>,
+    #[prop(into)] time_info: Signal<TimeInfo>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     let i18n = use_i18n();
