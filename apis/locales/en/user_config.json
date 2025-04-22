@@ -56,11 +56,11 @@
         "existing_account_prompt": "Already have an account? <login_link>Sign in</login_link>"
     },
     "login": {
-        "email": "Email",
+        "email": "Email or username",
         "password": "Password",
         "login_button": "Sign in",
         "no_account_prompt": "Don't have an account? <register_link>Sign up</register_link>",
-        "invalid_login": "Invalid email or password"
+        "invalid_login": "Invalid email/user or password"
     },
    "allow_takeback": "Allow takebacks",
    "allow_takeback_buttons": {

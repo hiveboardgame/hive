@@ -15,10 +15,16 @@ pub async fn login(
     use db_lib::models::User;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
-    let user: User = User::find_by_email(&email, &mut conn)
+    let user_result = User::find_by_email(&email, &mut conn)
         .await
-        .map_err(ServerFnError::new)?;
-
+        .map_err(ServerFnError::new);
+    let user = if let Ok(user) = user_result {
+        user
+    } else {
+        User::find_by_username(&email, &mut conn)
+            .await
+            .map_err(ServerFnError::new)?
+    };
     let argon2 = Argon2::default();
     let parsed_hash = PasswordHash::new(&user.password).map_err(ServerFnError::new)?;
     match argon2.verify_password(password.as_bytes(), &parsed_hash) {
