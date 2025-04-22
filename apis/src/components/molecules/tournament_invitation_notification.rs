@@ -7,47 +7,46 @@ use leptos_icons::*;
 use shared_types::TimeInfo;
 
 #[component]
-pub fn TournamentInvitationNotification(
-    tournament: RwSignal<TournamentAbstractResponse>,
-) -> impl IntoView {
+pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) -> impl IntoView {
+    let tournament_id = StoredValue::new(tournament.tournament_id.clone());
     let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let api = expect_context::<ApiRequestsProvider>().0;
-    let seats_taken = format!("{}/{}", tournament().players, tournament().seats);
-    let seats_full = move || tournament().players as i32 >= tournament().seats;
+    let seats_taken = format!("{}/{}", tournament.players, tournament.seats);
+    let seats_full = tournament.players as i32 >= tournament.seats;
 
     let decline = move |_| {
         let api = api.get();
         api.tournament(TournamentAction::InvitationDecline(
-            tournament().tournament_id,
+            tournament_id.get_value(),
         ));
     };
     let accept = move |_| {
         let api = api.get();
         api.tournament(TournamentAction::InvitationAccept(
-            tournament().tournament_id,
+            tournament_id.get_value(),
         ));
     };
     let time_info = TimeInfo {
-        mode: tournament().time_mode,
-        base: tournament().time_base,
-        increment: tournament().time_increment,
+        mode: tournament.time_mode,
+        base: tournament.time_base,
+        increment: tournament.time_increment,
     };
 
     view! {
         <div class="flex items-center text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
             <div class="flex relative">
                 <div class=div_class>
-                    <div>{tournament().name}</div>
+                    <div>{tournament.name}</div>
                 </div>
                 <div class=div_class>
-                    <TimeRow time_info=time_info.into() />
+                    <TimeRow time_info />
                 </div>
                 <div class=div_class>
                     <div>Players: {seats_taken}</div>
                 </div>
                 <a
                     class="absolute top-0 left-0 z-10 w-full h-full"
-                    href=format!("/tournament/{}", tournament().tournament_id)
+                    href=format!("/tournament/{}", tournament_id.get_value())
                 ></a>
             </div>
             <div class=div_class>
