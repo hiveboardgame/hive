@@ -18,6 +18,7 @@ actix-web = { version = "4",  features = ["macros"] }
 actix-web-actors = { version  = "4.3.0" }
 anyhow = "1"
 argon2 = "0.5"
+bevy = { version = "0.15", default-features = false, features = ["bevy_window"] }
 bb8 = { version = "0.8" }
 bimap = {version = "0.6.3", features = ["serde"] }
 cfg-if = "1.0.0"
@@ -37,6 +38,7 @@ indoc = "2"
 itertools = "0.14.0"
 lazy_static = "1.5"
 leptos = { version = "0.7", features = ["nightly"] }
+leptos-bevy-canvas = { version = "0.2.0" }
 leptos-use = { version = "0.15" }
 leptos_actix =  { version = "0.7" }
 leptos_i18n = {version=  "0.5", features = ["suppress_key_warnings", "plurals", "interpolate_display"] }

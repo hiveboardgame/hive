@@ -1,6 +1,7 @@
 pub mod account;
 pub mod admin;
 pub mod analysis;
+pub mod bevy;
 pub mod challenge_create;
 pub mod challenge_view;
 pub mod config;
