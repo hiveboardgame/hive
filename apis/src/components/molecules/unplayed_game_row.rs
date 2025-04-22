@@ -145,6 +145,12 @@ pub fn UnplayedGameRow(
                     >
                         {"Double forfeit"}
                     </button>
+                    <button
+                        class=BUTTON_STYLE
+                        on:click=move |_| adjudicate(TournamentGameResult::Draw)
+                    >
+                        {"Draw"}
+                    </button>
                     <Show
                         when=move || game.get_value().finished
                         fallback=move || {

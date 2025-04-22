@@ -1206,11 +1206,6 @@ impl Game {
         if let Some(tid) = self.tournament_id {
             let tournament = Tournament::find(tid, conn).await?;
             tournament.ensure_user_is_organizer(user_id, conn).await?;
-            if *new_result == TournamentGameResult::Draw {
-                return Err(DbError::InvalidAction {
-                    info: String::from("Not a valid tournament result for adjudication"),
-                });
-            }
             let con = match new_result {
                 TournamentGameResult::DoubeForfeit => Conclusion::Forfeit,
                 TournamentGameResult::Unknown => Conclusion::Unknown,
