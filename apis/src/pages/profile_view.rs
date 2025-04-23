@@ -237,7 +237,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let ctx = expect_context::<ProfileGamesContext>();
     view! {
         <div class="flex flex-col pt-12 mx-3 bg-light dark:bg-gray-950 h-[100vh]">
-            <Suspense fallback=move || {
+            <Transition fallback=move || {
                 view! { <p>"Loading Profile..."</p> }
             }>
                 {move || {
@@ -268,7 +268,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                             }
                         })
                 }}
-            </Suspense>
+            </Transition>
         </div>
     }
 }

@@ -34,7 +34,7 @@ fn EditBanner() -> impl IntoView {
     let banner =
         OnceResource::new(async move { home_banner::get_with_display().await.unwrap_or_default() });
     view! {
-        <Suspense>
+        <Transition>
             {move || {
                 banner
                     .get()
@@ -114,6 +114,6 @@ fn EditBanner() -> impl IntoView {
                         }
                     })
             }}
-        </Suspense>
+        </Transition>
     }
 }
