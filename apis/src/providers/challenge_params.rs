@@ -4,7 +4,6 @@ use shared_types::{CorrespondenceMode, TimeMode};
 
 #[derive(Debug, Clone, Copy)]
 pub struct ChallengeParams {
-    pub opponent: RwSignal<Option<String>>,
     pub rated: RwSignal<bool>,
     pub with_expansions: RwSignal<bool>,
     pub is_public: RwSignal<bool>,
@@ -17,7 +16,6 @@ pub struct ChallengeParams {
 
 impl ChallengeParams {
     pub fn new() -> Self {
-        let opponent = RwSignal::new(None);
         let upper_slider = RwSignal::new(550);
         let lower_slider = RwSignal::new(-550);
         let time_signals = TimeSignals::default();
@@ -45,7 +43,6 @@ impl ChallengeParams {
         });
 
         Self {
-            opponent,
             rated: RwSignal::new(true),
             with_expansions: RwSignal::new(true),
             is_public: RwSignal::new(true),

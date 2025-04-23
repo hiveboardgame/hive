@@ -1,24 +1,25 @@
 use crate::{
     components::molecules::modal::Modal, pages::challenge_create::ChallengeCreate,
-    providers::AuthContext, responses::UserResponse,
+    providers::AuthContext,
 };
 use leptos::{html::Dialog, prelude::*};
 use leptos_icons::*;
+use uuid::Uuid;
 
 #[component]
-pub fn DirectChallengeButton(user: UserResponse) -> impl IntoView {
+pub fn DirectChallengeButton(user_id: Uuid, opponent: String) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let dialog_el = NodeRef::<Dialog>::new();
     let logged_in_and_not_user = move || {
         auth_context
             .user
             .get()
-            .is_some_and(|current_user| current_user.id != user.uid)
+            .is_some_and(|current_user| current_user.id != user_id)
     };
 
     view! {
         <Modal dialog_el>
-            <ChallengeCreate opponent=user.username />
+            <ChallengeCreate opponent />
         </Modal>
         <Show when=logged_in_and_not_user>
             <button

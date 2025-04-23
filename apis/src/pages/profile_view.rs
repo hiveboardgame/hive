@@ -250,7 +250,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                         <div class="flex justify-center w-full text-lg sm:text-xl">
                                             <UserRow
                                                 actions=vec![UserAction::Challenge]
-                                                user=StoredValue::new(user.clone())
+                                                user=user.clone()
                                                 on_profile=true
                                             />
                                         </div>

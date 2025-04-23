@@ -58,7 +58,7 @@ pub fn OnlineUsers() -> impl IntoView {
                     <For each=users key=move |(_, user)| user.uid let:user>
                         <UserRow
                             actions=vec![UserAction::Challenge]
-                            user=StoredValue::new(user.1)
+                            user=user.1
                         />
                     </For>
                 </Transition>

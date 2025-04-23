@@ -293,7 +293,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                             let:user
                         >
                             <div>
-                                <UserRow actions=vec![] user=StoredValue::new(user) />
+                                <UserRow actions=vec![] user />
                             </div>
                         </For>
                     </div>
