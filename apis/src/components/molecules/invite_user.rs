@@ -50,7 +50,7 @@ pub fn InviteUser(tournament: TournamentResponse) -> impl IntoView {
                     <For each=users key=move |(_, user)| user.uid let:user>
                         <UserRow
                             actions=vec![UserAction::Invite(tournament.tournament_id.clone())]
-                            user=StoredValue::new(user.1)
+                            user=user.1
                         />
                     </For>
                 </Transition>

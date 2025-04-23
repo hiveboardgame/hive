@@ -20,14 +20,8 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
     let params = expect_context::<ChallengeParams>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth_context = expect_context::<AuthContext>();
-    let opponent = Signal::derive(move || opponent.clone());
+    let opponent = StoredValue::new(opponent);
     let time_signals = params.time_signals;
-    Effect::new(move |_| {
-        let opponent = opponent();
-        if opponent.is_some() {
-            params.opponent.update(|o| *o = opponent);
-        }
-    });
     let create_challenge = Callback::new(move |color_choice| {
         let api = api.get();
         let account = auth_context.user;
@@ -35,7 +29,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
         let upper_rating = move || {
             if let Some(account) = account() {
                 let upper_slider = params.upper_slider.get();
-                if upper_slider > 500 || opponent().is_some() {
+                if upper_slider > 500 || opponent.get_value().is_some() {
                     return None;
                 };
                 // TODO: Make rating update in realtime, currently it becomes stale
@@ -54,7 +48,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
         let lower_rating = move || {
             if let Some(account) = account() {
                 let lower_slider = params.lower_slider.get();
-                if lower_slider < -500 || opponent().is_some() {
+                if lower_slider < -500 || opponent.get_value().is_some() {
                     return None;
                 };
                 // TODO: Make rating update in realtime, currently it becomes stale
@@ -76,7 +70,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
             } else {
                 GameType::Base
             },
-            visibility: if opponent().is_none() {
+            visibility: if opponent.get_value().is_none() {
                 if params.is_public.get_untracked() {
                     ChallengeVisibility::Public
                 } else {
@@ -85,7 +79,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
             } else {
                 ChallengeVisibility::Direct
             },
-            opponent: opponent(),
+            opponent: opponent.get_value(),
             color_choice,
             time_mode: time_signals.time_mode.get_untracked(),
             time_base: (params.time_base)(),
@@ -142,8 +136,8 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
 
     view! {
         <div class="flex flex-col items-center w-72 xs:m-2 xs:w-80 sm:w-96">
-            <Show when=move || opponent().is_some()>
-                <div class="block">"Opponent: " {opponent()}</div>
+            <Show when=move || opponent.get_value().is_some()>
+                <div class="block">"Opponent: " {opponent.get_value()}</div>
             </Show>
             <div class="flex flex-col items-center">
                 <TimeSelect
@@ -165,7 +159,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
                 Base <SimpleSwitch checked=params.with_expansions optional_action=make_unrated />MLP
             </div>
 
-            <Show when=move || opponent().is_none()>
+            <Show when=move || opponent.get_value().is_none()>
                 <div class="flex gap-1 p-1">
                     {t!(i18n, home.custom_game.private)} <SimpleSwitch checked=params.is_public />
                     {t!(i18n, home.custom_game.public)}
