@@ -13,7 +13,7 @@ pub fn Home() -> impl IntoView {
     let banner = OnceResource::new(async move { home_banner::get().await.ok().flatten() });
     view! {
         <div class="flex overflow-x-hidden flex-col justify-start items-center pt-20 w-full md:justify-center">
-            <Suspense>
+            <Transition>
                 {move || {
                     banner
                         .get()
@@ -26,7 +26,7 @@ pub fn Home() -> impl IntoView {
                             }
                         })
                 }}
-            </Suspense>
+            </Transition>
             <div class="container flex flex-col justify-center items-center lg:flex-row lg:items-start">
                 <div class="flex justify-center items-center">
                     <Logo tw_class="flex lg:w-72 w-48" />

@@ -54,10 +54,14 @@ pub fn OnlineUsers() -> impl IntoView {
                 {t!(i18n, home.online_players, count = num)}
             </Show>
             <div class="overflow-y-auto max-h-96">
-                <For each=users key=move |(_, user)| user.uid let:user>
-                    <UserRow actions=vec![UserAction::Challenge] user=StoredValue::new(user.1) />
-                </For>
-
+                <Transition>
+                    <For each=users key=move |(_, user)| user.uid let:user>
+                        <UserRow
+                            actions=vec![UserAction::Challenge]
+                            user=StoredValue::new(user.1)
+                        />
+                    </For>
+                </Transition>
             </div>
         </div>
     }

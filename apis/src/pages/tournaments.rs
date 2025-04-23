@@ -25,9 +25,7 @@ pub fn Tournaments() -> impl IntoView {
     let filter = RwSignal::new(TournamentFilter::Status(TournamentStatus::NotStarted));
     let search = RwSignal::new("".to_string());
     let tournament_resource =
-        OnceResource::new(
-            async move { get_all_abstract(TournamentSortOrder::CreatedAtDesc).await },
-        );
+        OnceResource::new(get_all_abstract(TournamentSortOrder::CreatedAtDesc));
     view! {
         <div class="pt-10">
             <div class="container px-4 mx-auto">
@@ -79,7 +77,7 @@ pub fn Tournaments() -> impl IntoView {
                         "Completed"
                     </button>
                 </div>
-                <Suspense fallback=move || {
+                <Transition fallback=move || {
                     view! { <div class="flex justify-center">"Loading tournaments..."</div> }
                 }>
                     {move || {
@@ -135,7 +133,7 @@ pub fn Tournaments() -> impl IntoView {
                                 }
                             })
                     }}
-                </Suspense>
+                </Transition>
             </div>
         </div>
     }
