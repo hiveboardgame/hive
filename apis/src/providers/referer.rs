@@ -1,12 +1,12 @@
-use leptos::prelude::{provide_context, RwSignal};
+use leptos::prelude::{provide_context, StoredValue};
 
 #[derive(Clone)]
 pub struct RefererContext {
-    pub pathname: RwSignal<String>,
+    pub pathname: StoredValue<String>,
 }
 
 pub fn provide_referer() {
     provide_context(RefererContext {
-        pathname: RwSignal::new(String::new()),
+        pathname: StoredValue::new(String::new()),
     })
 }

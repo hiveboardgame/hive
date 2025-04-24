@@ -181,7 +181,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                         {t!(i18n, user_config.create_account.password_error)}
                     </small>
                 </Show>
-                <input type="hidden" name="pathname" value=pathname() />
+                <input type="hidden" name="pathname" value=pathname.get_value() />
                 <div class="flex items-center mb-2">
                     <input
                         on:change=move |_| agree.update(|b| *b = !*b)

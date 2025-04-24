@@ -48,7 +48,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                         placeholder="********"
                     />
                 </label>
-                <input type="hidden" name="pathname" value=pathname() />
+                <input type="hidden" name="pathname" value=pathname.get_value() />
                 <p class="h-5">
                     <Show when=move || { login.value().get().is_some_and(|v| v.is_err()) }>
                         <small class="text-ladybug-red">
