@@ -1,21 +1,90 @@
 use crate::direction::Direction;
 use crate::hasher::Hasher;
 use crate::position::{CircleIter, Rotation};
+use crate::SvgPosition;
 use crate::{
     bug::Bug, bug_stack::BugStack, color::Color, dfs_info::DfsInfo, game_error::GameError,
     game_result::GameResult, game_type::GameType, piece::Piece, position::Position,
     torus_array::TorusArray,
 };
+use anyhow::Result;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{self, Write};
+use std::fs::{self, OpenOptions};
+use std::io::{BufWriter, Write as Writer};
+use std::path::PathBuf;
 
 pub const BOARD_SIZE: i32 = 32;
 lazy_static! {
     static ref BLACK_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::Black, 0);
     static ref WHITE_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::White, 0);
+}
+
+/// Acts as a more transparent representation of
+/// locations and stacks pieces on the board.
+/// Each stack is arranged from lowest to highest.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Stacks {
+    positions: HashMap<Position, Vec<Piece>>,
+}
+
+impl Default for Stacks {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Stacks {
+    pub fn new() -> Self {
+        Self {
+            positions: HashMap::new(),
+        }
+    }
+    /// Given an odd-r offset coordinate, return the pieces (if any)
+    /// at that location.
+    ///
+    /// The vector of pieces returned represents a Hive stack arranged from
+    /// lowest (first element) to highest.
+    pub fn get(&self, q: i32, r: i32) -> Vec<Piece> {
+        let position = Position { q, r };
+        self.positions.get(&position).unwrap_or(&Vec::new()).clone()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Bounds {
+    top_left: Position,
+    bottom_right: Position,
+}
+
+impl Default for Bounds {
+    fn default() -> Self {
+        Self {
+            top_left: Position::new(0, 0),
+            bottom_right: Position::new(0, 0),
+        }
+    }
+}
+
+impl Bounds {
+    pub fn top(&self) -> i32 {
+        self.top_left.r
+    }
+
+    pub fn bottom(&self) -> i32 {
+        self.bottom_right.r
+    }
+
+    pub fn left(&self) -> i32 {
+        self.top_left.q
+    }
+
+    pub fn right(&self) -> i32 {
+        self.bottom_right.q
+    }
 }
 
 impl Default for Board {
@@ -35,6 +104,7 @@ pub struct Board {
     pub stunned: Option<Piece>,
     pub positions: [Option<Position>; 48],
     pinned: [bool; 48],
+    // number of pieces present on the board
     pub played: usize,
     pub hasher: Hasher,
     pub smallest: Option<(Piece, Position)>,
@@ -59,6 +129,141 @@ impl Board {
             smallest: None,
             eigen_direction: None,
         }
+    }
+
+    pub fn create_svg(&self, mut path: PathBuf) -> Result<()> {
+        path.set_extension("svg");
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true) // Required for creation
+            .create(true)
+            .truncate(true)
+            .open(&path)?;
+        let mut writer = BufWriter::new(file);
+
+        let (mut min_x, mut max_x, mut min_y, mut max_y) = (f32::MAX, f32::MIN, f32::MAX, f32::MIN);
+        let mut positions_piece = Vec::new();
+
+        for (offset, maybe_position) in self.positions.iter().enumerate() {
+            if let Some(position) = maybe_position {
+                let piece = self.offset_to_piece(offset);
+                let level = self.level_of_piece(piece, *position).unwrap_or(0);
+                let center = SvgPosition::center_for_level(*position, level, true);
+                if center.0 < min_x {
+                    min_x = center.0;
+                }
+                if center.0 > max_x {
+                    max_x = center.0;
+                }
+                if center.1 < min_y {
+                    min_y = center.1;
+                }
+                if center.1 > max_y {
+                    max_y = center.1;
+                }
+                positions_piece.push((position, piece));
+            }
+        }
+
+        positions_piece.sort_by(|(pos_a, piece_a), (pos_b, piece_b)| {
+            let level_a = self.level_of_piece(*piece_a, **pos_a).unwrap_or(0);
+            let level_b = self.level_of_piece(*piece_b, **pos_b).unwrap_or(0);
+            if level_a != level_b {
+                level_a.cmp(&level_b)
+            } else if pos_a.r != pos_b.r {
+                pos_a.r.cmp(&pos_b.r)
+            } else {
+                pos_a.q.cmp(&pos_b.q)
+            }
+        });
+
+        let piece_height = 104.242;
+        let piece_width = 88.338;
+        let space_around = 20.0;
+        let width = max_x - min_x + piece_width + 2.0 * space_around;
+        let height = max_y - min_y + piece_height + 2.0 * space_around;
+
+        writeln!(
+            writer,
+            "<svg width=\"{width}\" height=\"{height}\" xmlns=\"http://www.w3.org/2000/svg\">"
+        )?;
+        let pieces = std::fs::read_to_string("pieces.svg")?;
+        writeln!(writer, "{pieces}")?;
+        writeln!(
+            writer,
+            "<g transform=\"translate({} {})\">",
+            -1.0 * min_x + space_around,
+            -1.0 * min_y + space_around
+        )?;
+
+        for (position, piece) in positions_piece.iter() {
+            let level = self.level_of_piece(*piece, **position).unwrap_or(0);
+            let center = SvgPosition::center_for_level(**position, level, true);
+            // TODO: @leex add dropshadow
+
+            let dot_color = match piece.bug() {
+                Bug::Ant => "#289ee0",
+                Bug::Beetle => "#9a7fc7",
+                Bug::Grasshopper => "#42b23c",
+                Bug::Spider => "#a4572a",
+                _ => "#FF0000",
+            };
+
+            writeln!(writer, "  <g>")?;
+            writeln!(
+                writer,
+                "    <use href=\"#{}\" x=\"{}\" y=\"{}\"></use>",
+                piece.color().name(),
+                center.0,
+                center.1
+            )?;
+            writeln!(
+                writer,
+                "    <use href=\"#{}{}\" x=\"{}\" y=\"{}\"></use>",
+                piece.color().name(),
+                piece.bug().name(),
+                center.0,
+                center.1
+            )?;
+            // dots
+            if piece.order() > 0 {
+                writeln!(writer, "  <g fill=\"{}\">", dot_color)?;
+                writeln!(
+                    writer,
+                    "    <use href=\"#a{}\" x=\"{}\" y=\"{}\"></use>",
+                    piece.order(),
+                    center.0,
+                    center.1
+                )?;
+                writeln!(writer, "  </g>")?;
+            }
+            // writeln!(
+            //     writer,
+            //     "    <use href=\"#shadow\" x=\"{}\" y=\"{}\"></use>",
+            //     center.0, center.1
+            // )?;
+            writeln!(writer, "  </g>")?;
+        }
+        writeln!(writer, "</g>")?;
+        writeln!(writer, "</svg>")?;
+        writer.flush()?;
+
+        let text = fs::read_to_string(&path)?;
+
+        let tree = resvg::usvg::Tree::from_str(&text, &usvg::Options::default())?;
+        let mut pixmap =
+            resvg::tiny_skia::Pixmap::new(tree.size().width() as u32, tree.size().height() as u32)
+                .unwrap();
+        // Render SVG to pixmap
+        resvg::render(
+            &tree,
+            resvg::tiny_skia::Transform::identity(),
+            &mut pixmap.as_mut(),
+        );
+
+        path.set_extension("png");
+        pixmap.save_png(path)?;
+        Ok(())
     }
 
     // this always gets called as a last step
@@ -319,6 +524,7 @@ impl Board {
         self.position_of_piece(piece).is_some()
     }
 
+    /// @neal - move piece
     pub fn move_piece(
         &mut self,
         piece: Piece,
@@ -342,6 +548,7 @@ impl Board {
         Ok(())
     }
 
+    /// @neal - remove piece
     pub fn remove(&mut self, position: Position) -> Piece {
         let bug_stack = self.board.get_mut(position);
         let piece = bug_stack.pop_piece();
@@ -426,6 +633,14 @@ impl Board {
 
     pub fn under_piece(&self, position: Position) -> Option<Piece> {
         self.board.get(position).under_piece()
+    }
+
+    pub fn level_of_piece(&self, piece: Piece, position: Position) -> Option<usize> {
+        self.board
+            .get(position)
+            .pieces
+            .iter()
+            .position(|e| *e == piece)
     }
 
     pub fn is_bottom_piece(&self, piece: Piece, position: Position) -> bool {
@@ -782,6 +997,7 @@ impl Board {
         self.stunned = stunned;
     }
 
+    /// @neal - add piece
     pub fn insert(&mut self, position: Position, piece: Piece, spawn: bool) {
         self.last_moved = Some((piece, position));
         let stack = self.board.get_mut(position);
@@ -801,6 +1017,49 @@ impl Board {
         (0..BOARD_SIZE)
             .cartesian_product(0..BOARD_SIZE)
             .map(|(q, r)| Position { q, r })
+    }
+
+    pub fn bounds(&self) -> Option<Bounds> {
+        if self.played == 0 {
+            return None;
+        }
+
+        let top_left =
+            self.all_taken_positions()
+                .fold(Position::new(BOARD_SIZE, BOARD_SIZE), |acc, pos| Position {
+                    q: acc.q.min(pos.q),
+                    r: acc.r.min(pos.r),
+                });
+
+        let bottom_right = self
+            .all_taken_positions()
+            .fold(Position::new(0, 0), |acc, pos| Position {
+                q: acc.q.max(pos.q),
+                r: acc.r.max(pos.r),
+            });
+
+        Some(Bounds {
+            top_left,
+            bottom_right,
+        })
+    }
+
+    pub fn stacks(&self) -> Stacks {
+        let mut stacks = Stacks::new();
+        for (i, maybe_pos) in self.positions.iter().enumerate() {
+            if let Some(pos) = maybe_pos {
+                let entry = stacks.positions.entry(*pos).or_default();
+                entry.push(self.offset_to_piece(i));
+            }
+        }
+
+        for (pos, pieces) in stacks.positions.iter_mut() {
+            pieces.sort_by(|a, b| {
+                self.level_of_piece(*a, *pos)
+                    .cmp(&self.level_of_piece(*b, *pos))
+            });
+        }
+        stacks
     }
 }
 

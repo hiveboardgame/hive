@@ -1,0 +1,55 @@
+// Special rule so whitespace is ignored unless explicit
+// via atomic or compound atomic markers 
+WHITESPACE = _{ " " }
+
+
+color = {"b" | "w"}
+order = { "1" | "2" | "3" }
+stack_num = { "1" | "2" | "3" | "4" | "5" | "6" | "7" }
+singlebug = { "Q" | "P" | "M" | "L" }
+multibug =  { "B" | "Q" | "S" | "G" | "A" | "M" | "P" | "L" }
+piece_no_num = @{ color ~ singlebug  } 
+piece_with_num = @{ color ~ multibug ~ order } 
+piece = { piece_no_num | piece_with_num }
+
+star = { "*" }
+hex = { star | stack_num | piece }
+separated_hex = _{ hex ~ " "+ }
+endline = @{ "\n" | EOI }
+blankline = @{ WHITESPACE* ~ "\n"}
+
+aligned_row = ${ " "? ~ separated_hex* ~ hex? ~ WHITESPACE* ~ endline }
+shifted_row = ${ "  " ~ aligned_row }
+
+empty = { "" }
+starts_shifted = ${ shifted_row ~ (aligned_row ~ shifted_row)* ~ aligned_row? }
+starts_aligned = ${ aligned_row ~ (shifted_row ~ aligned_row)* ~ shifted_row? }
+board_desc = ${ starts_shifted | starts_aligned | empty }
+
+board_label= !{ "board" ~ ":" ~ "\n"}
+stack_label= !{ "stack" ~ ":" ~ "\n"?}
+
+stack_id = !{ stack_num ~ ":" }
+stack_left = !{ "bottom" ~ "->" }
+stack_right = !{ "<-" ~ "top" }
+stack_end  = { blankline* }
+
+piece_list = ${ (piece ~ " "+)+ ~ piece? }
+stack_middle = {  "[" ~ piece_list ~ "]" } 
+stack_desc = !{ stack_id ~ stack_left? ~ stack_middle ~ stack_right? ~ endline}
+board_rows = @{ blankline* ~ board_desc ~ blankline* }
+
+stack_section = @{ stack_label ~ blankline* ~ stack_desc* }
+board_section = @{ board_label ~ blankline* ~ board_rows }
+board_section_isolated = { SOI ~ board_section ~ EOI}
+
+// Sanity
+board_desc_test = ${ SOI ~ board_desc ~ EOI }
+stack_section_test = { SOI ~ stack_section ~ EOI}
+
+valid_dsl = { SOI ~ 
+              blankline* ~ 
+              board_section ~ 
+              stack_section? ~ 
+              blankline* ~ 
+              EOI }

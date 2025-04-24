@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 use crate::bug::Bug;
@@ -72,6 +73,22 @@ impl State {
     }
 
     pub fn new_from_history(history: &History) -> Result<Self, GameError> {
+        State::play_and_print(history, None, None)
+    }
+
+    pub fn print_turn_from_history(
+        history: &History,
+        turn: usize,
+        file: PathBuf,
+    ) -> Result<Self, GameError> {
+        State::play_and_print(history, Some(turn), Some(file))
+    }
+
+    fn play_and_print(
+        history: &History,
+        turn: Option<usize>,
+        file: Option<PathBuf>,
+    ) -> Result<Self, GameError> {
         let mut tournament = true;
         // Did white open with a Queen?
         if let Some((piece_str, _)) = history.moves.first() {
@@ -88,8 +105,18 @@ impl State {
             }
         }
         let mut state = State::new(history.game_type, tournament);
-        for (piece, pos) in history.moves.iter() {
+        for (current_turn, (piece, pos)) in history.moves.iter().enumerate() {
             state.play_turn_from_history(piece, pos)?;
+            if turn != Some(0) && Some(current_turn + 1) == turn {
+                if let Some(file) = file.clone() {
+                    state.board.create_svg(file)?;
+                }
+            }
+        }
+        if turn == Some(0) {
+            if let Some(file) = file.clone() {
+                state.board.create_svg(file)?;
+            }
         }
         match history.result {
             GameResult::Winner(color) => {
