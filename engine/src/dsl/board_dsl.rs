@@ -1,4 +1,4 @@
-use crate::board::{Board, Bounds};
+use crate::board::Board;
 use crate::piece::Piece;
 use crate::position::Position;
 use itertools::Itertools;
@@ -136,15 +136,15 @@ impl BoardParser {
         assert!(hex.as_rule() == Rule::hex);
         let symbol = hex.into_inner().next().unwrap();
         match symbol.as_rule() {
-            Rule::star => return BoardInput::Star,
+            Rule::star => BoardInput::Star,
             Rule::piece => {
                 let piece = symbol.into_inner().next().unwrap();
                 let piece = Piece::from_str(piece.as_str()).unwrap();
-                return BoardInput::Piece(piece);
+                BoardInput::Piece(piece)
             }
             Rule::stack_num => {
                 let stack_num = symbol.as_str().parse::<u8>().unwrap();
-                return BoardInput::StackId(stack_num);
+                BoardInput::StackId(stack_num)
             }
             _ => panic!("Unexpected input: {:?}, expected hex symbol", symbol),
         }
@@ -230,7 +230,7 @@ impl BoardParser {
             .map(|row| BoardParser::handle_aligned_row(row))
             .collect_vec();
         // Filter out extraneous empty rows
-        let rows = rows.into_iter().filter(|row| row.len() > 0).collect_vec();
+        let rows = rows.into_iter().filter(|row| !row.is_empty()).collect_vec();
 
         // Ensure all remaining rows are the same width or there are
         // no remaining rows
@@ -320,7 +320,7 @@ impl BoardParser {
     }
 
     pub fn to_dsl(board: &Board) -> String {
-        let bounds = board.bounds().unwrap_or(Bounds::default());
+        let bounds = board.bounds().unwrap_or_default();
         let stacks = board.stacks();
         let mut stack_section = HashMap::new();
 
@@ -331,7 +331,7 @@ impl BoardParser {
                     let piece = format!("{}", pieces[0]);
                     match piece.len() {
                         2 => format!("{} ", piece),
-                        3 => format!("{}", piece),
+                        3 => piece.to_string(),
                         _ => panic!("Unexpected piece length: {}", piece.len()),
                     }
                 }
@@ -353,11 +353,11 @@ impl BoardParser {
             for q in bounds.left() - 1..=bounds.right() + 1 {
                 let symbol = to_str(&stacks.get(q, r));
                 dsl.push_str(&symbol);
-                dsl.push_str(" ");
+                dsl.push(' ');
             }
-            dsl.push_str("\n");
+            dsl.push('\n');
         }
-        dsl.push_str("\n");
+        dsl.push('\n');
 
         // ...then finish with the "stack:" section
         dsl.push_str("stack:\n\n");

@@ -83,3 +83,12 @@ impl GameError {
         }
     }
 }
+
+impl From<anyhow::Error> for GameError {
+    fn from(error: anyhow::Error) -> Self {
+        GameError::ParsingError {
+            found: error.to_string(),
+            typ: "anyhow error".to_string(),
+        }
+    }
+}

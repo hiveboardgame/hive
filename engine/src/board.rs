@@ -13,8 +13,8 @@ use lazy_static::lazy_static;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt::{self, Write};
-use std::fs::{self, File, OpenOptions};
-use std::io::{BufReader, BufWriter, Write as Writer};
+use std::fs::{self, OpenOptions};
+use std::io::{BufWriter, Write as Writer};
 use std::path::PathBuf;
 
 pub const BOARD_SIZE: i32 = 32;
@@ -24,11 +24,17 @@ lazy_static! {
 }
 
 /// Acts as a more transparent representation of
-/// locations and stacks pieces on the board. 
+/// locations and stacks pieces on the board.
 /// Each stack is arranged from lowest to highest.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Stacks {
     positions: HashMap<Position, Vec<Piece>>,
+}
+
+impl Default for Stacks {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Stacks {
@@ -37,10 +43,10 @@ impl Stacks {
             positions: HashMap::new(),
         }
     }
-    /// Given an odd-r offset coordinate, return the pieces (if any) 
+    /// Given an odd-r offset coordinate, return the pieces (if any)
     /// at that location.
     ///
-    /// The vector of pieces returned represents a Hive stack arranged from 
+    /// The vector of pieces returned represents a Hive stack arranged from
     /// lowest (first element) to highest.
     pub fn get(&self, q: i32, r: i32) -> Vec<Piece> {
         let position = Position { q, r };
@@ -1015,7 +1021,7 @@ impl Board {
 
     pub fn bounds(&self) -> Option<Bounds> {
         if self.played == 0 {
-            return None
+            return None;
         }
 
         let top_left =
@@ -1042,8 +1048,8 @@ impl Board {
         let mut stacks = Stacks::new();
         for (i, maybe_pos) in self.positions.iter().enumerate() {
             if let Some(pos) = maybe_pos {
-                let entry = stacks.positions.entry(*pos).or_insert_with(|| vec![]);
-                entry.push(Self::offset_to_piece(i));
+                let entry = stacks.positions.entry(*pos).or_default();
+                entry.push(self.offset_to_piece(i));
             }
         }
 

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::thread::current;
 
 use crate::bug::Bug;
 use crate::color::Color;
@@ -110,13 +109,13 @@ impl State {
             state.play_turn_from_history(piece, pos)?;
             if turn != Some(0) && Some(current_turn + 1) == turn {
                 if let Some(file) = file.clone() {
-                    state.board.create_svg(file);
+                    state.board.create_svg(file)?;
                 }
             }
         }
         if turn == Some(0) {
             if let Some(file) = file.clone() {
-                state.board.create_svg(file);
+                state.board.create_svg(file)?;
             }
         }
         match history.result {
