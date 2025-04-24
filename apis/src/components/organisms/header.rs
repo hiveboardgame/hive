@@ -101,6 +101,6 @@ fn Controls(user: Signal<Option<AccountResponse>>) -> impl IntoView {
     }
 }
 
-pub fn set_redirect(referrer: RwSignal<String>) {
-    referrer.update_untracked(|s| *s = use_location().pathname.get());
+pub fn set_redirect(referrer: StoredValue<String>) {
+    referrer.set_value(use_location().pathname.get_untracked());
 }

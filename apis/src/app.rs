@@ -38,7 +38,7 @@ use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
 use leptos_router::{
     components::{Outlet, ParentRoute, Route, Router, Routes},
-    path, SsrMode,
+    path,
 };
 use leptos_use::SameSite;
 use shared_types::GameProgress;
@@ -95,7 +95,7 @@ pub fn App() -> impl IntoView {
                         }
                     >
 
-                        <Route path=path!("") ssr=SsrMode::InOrder view=|| view! { <Home /> } />
+                        <Route path=path!("") view=|| view! { <Home /> } />
                         <ParentRoute
                             path=path!("/@/:username")
                             view=|| {
@@ -148,11 +148,7 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/resources") view=|| view! { <Resources /> } />
                         <Route path=path!("/tutorial") view=|| view! { <Tutorial /> } />
                         <Route path=path!("/rules_summary") view=|| view! { <RulesSummary /> } />
-                        <Route
-                            path=path!("/game/:nanoid")
-                            ssr=SsrMode::PartiallyBlocked
-                            view=|| view! { <Play /> }
-                        />
+                        <Route path=path!("/game/:nanoid") view=|| view! { <Play /> } />
                         <Route path=path!("/admin") view=|| view! { <Admin /> } />
                     </ParentRoute>
                 </Routes>

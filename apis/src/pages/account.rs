@@ -100,7 +100,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     autocomplete="new-password"
                     placeholder="New password (again)"
                 />
-                <input type="hidden" name="pathname" value=pathname() />
+                <input type="hidden" name="pathname" value=pathname.get_value() />
                 <input
                     type="submit"
                     class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight active:scale-95 hover:bg-pillbug-teal focus:outline-none"
