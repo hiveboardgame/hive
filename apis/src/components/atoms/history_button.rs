@@ -1,4 +1,7 @@
-use crate::providers::{game_state::GameStateSignal, timer::TimerSignal};
+use crate::{
+    components::organisms::side_board::move_query_signal,
+    providers::{game_state::GameStateSignal, timer::TimerSignal},
+};
 use hive_lib::GameStatus;
 use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
 use leptos_icons::*;
@@ -21,6 +24,7 @@ pub fn HistoryButton(
 ) -> impl IntoView {
     let game_state_signal = expect_context::<GameStateSignal>();
     let timer = expect_context::<TimerSignal>();
+    let (_move, set_move) = move_query_signal();
     let is_last_turn = game_state_signal.is_last_turn_as_signal();
     let is_first_turn = game_state_signal.is_first_turn_as_signal();
     let cloned_action = action.clone();
@@ -44,6 +48,13 @@ pub fn HistoryButton(
         if let Some(post_action) = post_action {
             post_action.run(())
         }
+        let game_state = game_state_signal.signal.get_untracked();
+        let turn = match action {
+            HistoryNavigation::Last => Some(game_state.state.turn),
+            HistoryNavigation::MobileLast => None,
+            _ => game_state.history_turn.map(|v| v + 1),
+        };
+        set_move.set(turn);
     });
     let _definite_node_ref = node_ref.unwrap_or_default();
 

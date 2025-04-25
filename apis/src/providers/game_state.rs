@@ -367,9 +367,6 @@ impl GameState {
                 api.turn(game_id.to_owned(), turn);
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
-
-                self.move_info.reset();
-                self.history_turn = Some(self.state.turn - 1);
             }
         }
     }
