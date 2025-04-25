@@ -1,5 +1,6 @@
 use crate::components::atoms::history_button::set_timer_from_response;
 use crate::components::molecules::history_controls::HistoryControls;
+use crate::components::organisms::side_board::move_query_signal;
 use crate::providers::game_state::{self, GameStateSignal};
 use crate::providers::timer::TimerSignal;
 use hive_lib::GameStatus;
@@ -20,13 +21,16 @@ pub fn HistoryMove(
     let game_state = expect_context::<GameStateSignal>();
     let div_ref = NodeRef::<html::Div>::new();
     let timer = expect_context::<TimerSignal>();
-    div_ref.on_load(move |_| {
-        if let Some(parent_div) = parent_div.get_untracked() {
-            parent_div.set_scroll_top(parent_div.scroll_height())
-        }
-    });
+    let (_move, set_move) = move_query_signal();
     let onclick = move |_| {
         game_state.show_history_turn(turn);
+        set_move.set(
+            game_state
+                .signal
+                .get_untracked()
+                .history_turn
+                .map(|v| v + 1),
+        );
         set_timer_from_response(game_state, timer);
     };
     let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
@@ -44,6 +48,14 @@ pub fn HistoryMove(
         }
         base_class.to_string()
     };
+    div_ref.on_load(move |elem| {
+        if let Some(parent_div) = parent_div.get_untracked() {
+            parent_div.set_scroll_top(parent_div.scroll_height())
+        }
+        if history_turn().is_some_and(|t| t == turn) {
+            elem.scroll_into_view_with_bool(false);
+        }
+    });
     let rep = if repetition {
         String::from(" ↺")
     } else {

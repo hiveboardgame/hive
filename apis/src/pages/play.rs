@@ -11,21 +11,23 @@ use crate::{
             board::Board,
             display_timer::{DisplayTimer, Placement},
             reserve::{Alignment, Reserve},
-            side_board::SideboardTabs,
+            side_board::{SideboardTabs, TabView},
             unstarted::Unstarted,
         },
     },
     functions::games::get::get_game_from_nanoid,
     providers::{
-        config::Config, game_state::GameStateSignal, timer::TimerSignal,
-        websocket::WebsocketContext, ApiRequestsProvider, AuthContext, SoundType, Sounds,
-        UpdateNotifier,
+        config::Config,
+        game_state::{GameStateSignal, View},
+        timer::TimerSignal,
+        websocket::WebsocketContext,
+        ApiRequestsProvider, AuthContext, SoundType, Sounds, UpdateNotifier,
     },
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
 use leptos::prelude::*;
-use leptos_router::hooks::{use_navigate, use_params_map};
+use leptos_router::hooks::{use_navigate, use_params_map, use_query_map};
 use shared_types::{GameId, GameStart, TournamentGameResult};
 use uuid::Uuid;
 use wasm_bindgen_futures::spawn_local;
@@ -45,15 +47,24 @@ pub fn Play() -> impl IntoView {
     let game_updater = expect_context::<UpdateNotifier>();
     let sounds = expect_context::<Sounds>();
     let ws = expect_context::<WebsocketContext>();
+    let controls_signal = expect_context::<ControlsSignal>();
     let ws_ready = ws.ready_state;
     let params = use_params_map();
+    let queries = use_query_map();
+    let move_number = StoredValue::new(
+        queries
+            .get_untracked()
+            .get("move")
+            .and_then(|s| s.parse::<usize>().ok())
+            .map(|n| n.saturating_sub(1)),
+    );
     let game_id = Memo::new(move |_| {
-        params
-            .get()
+        params()
             .get("nanoid")
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
     });
+    let tab = RwSignal::new(TabView::Reserve);
     let current_confirm = Memo::new(move |_| {
         let preferred_confirms = config().confirm_mode;
         game_state
@@ -128,6 +139,17 @@ pub fn Play() -> impl IntoView {
                             }
                             _ => {}
                         }
+                    }
+                    if move_number
+                        .get_value()
+                        .is_some_and(|v| v < game_state.signal.get_untracked().state.turn - 1)
+                    {
+                        game_state.signal.update(|s| {
+                            s.history_turn = move_number.get_value();
+                            s.view = View::History;
+                        });
+                        controls_signal.hidden.set(false);
+                        tab.set(TabView::History);
                     }
                 };
             });
@@ -226,6 +248,7 @@ pub fn Play() -> impl IntoView {
                             user_is_player
                             game_id
                             white_and_black_ids
+                            tab
                         />
                     }
                 }
@@ -277,6 +300,7 @@ fn HorizontalLayout(
     user_is_player: Signal<bool>,
     white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)>,
     game_id: Memo<GameId>,
+    tab: RwSignal<TabView>,
 ) -> impl IntoView {
     let vertical = false;
     view! {
@@ -284,7 +308,7 @@ fn HorizontalLayout(
         <BoardOrUnstarted show_board user_is_player game_id white_and_black_ids />
         <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full">
             <DisplayTimer placement=Placement::Top vertical />
-            <SideboardTabs player_color />
+            <SideboardTabs player_color tab />
             <DisplayTimer placement=Placement::Bottom vertical />
         </div>
     }
