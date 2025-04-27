@@ -16,7 +16,7 @@ use shared_types::{ChallengeId, GameSpeed};
 use uuid::Uuid;
 
 pub struct AcceptHandler {
-    challenger_id: ChallengeId,
+    challenge_id: ChallengeId,
     user_id: Uuid,
     username: String,
     pool: DbPool,
@@ -24,13 +24,13 @@ pub struct AcceptHandler {
 
 impl AcceptHandler {
     pub async fn new(
-        challenger_id: ChallengeId,
+        challenge_id: ChallengeId,
         username: &str,
         user_id: Uuid,
         pool: &DbPool,
     ) -> Result<Self> {
         Ok(Self {
-            challenger_id,
+            challenge_id,
             user_id,
             username: username.to_owned(),
             pool: pool.clone(),
@@ -40,7 +40,7 @@ impl AcceptHandler {
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
-        let challenge = Challenge::find_by_challenge_id(&self.challenger_id, &mut conn).await?;
+        let challenge = Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await?;
         let speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
         let rating = Rating::for_uuid(&self.user_id, &speed, &mut conn)
             .await?

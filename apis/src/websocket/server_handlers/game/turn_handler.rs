@@ -144,6 +144,7 @@ impl TurnHandler {
     }
 
     fn users_turn(&self) -> Result<()> {
+        // TODO: refactor to self.game.current_player_id == self.user_id
         if !((self.game.turn % 2 == 0 && self.game.white_id == self.user_id)
             || (self.game.turn % 2 == 1 && self.game.black_id == self.user_id))
         {
