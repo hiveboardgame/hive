@@ -17,6 +17,12 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+        nokamute = pkgs.callPackage (pkgs.fetchFromGitHub {
+          owner = "frisoft";
+          repo = "nokamute";
+          rev = "master";
+          sha256 = "sha256-7Q2VuVexug0iqBXEzHfQ/c9q7TfjL56psGbq5sU2Nw4=";
+        }) {};
         aliases = [(pkgs.writeShellScriptBin "server" ''
           #!/usr/bin/env bash
           mold -run cargo leptos watch
@@ -83,6 +89,7 @@
             cargo-leptos
             tailwindcss
             openssl
+            nokamute # use nokamute as AI during development
             (rust-bin.selectLatestNightlyWith( toolchain: toolchain.default.override {
               extensions= [ "rust-src" "rust-analyzer" ];
               targets = [ "wasm32-unknown-unknown" ];
