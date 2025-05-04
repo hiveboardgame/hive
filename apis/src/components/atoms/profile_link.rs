@@ -6,14 +6,13 @@ use leptos_icons::*;
 #[component]
 pub fn ProfileLink(
     #[prop(optional)] extend_tw_classes: &'static str,
-    #[prop(optional)] user_is_hoverable: Option<UserResponse>,
+    #[prop(optional)] user_is_hoverable: MaybeProp<UserResponse>,
     username: String,
     patreon: bool,
 ) -> impl IntoView {
     let profile_link = format!("/@/{}", username);
     let hover_show = RwSignal::new(false);
     let patreon = RwSignal::new(patreon);
-    let user_is_hoverable = Signal::derive(move || user_is_hoverable.clone());
     view! {
         <div class="relative w-full">
             <a

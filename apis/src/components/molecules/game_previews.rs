@@ -118,8 +118,7 @@ pub fn GamePreviews(
                             </div>
                             <Show when=move || show_time>
                                 <div class="flex items-center">
-                                    {if rated { "RATED " } else { "CASUAL " }}
-                                    <TimeRow time_info />
+                                    {if rated { "RATED " } else { "CASUAL " }} <TimeRow time_info />
                                 </div>
                             </Show>
                             <ThumbnailPieces board=StoredValue::new(board) />

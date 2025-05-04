@@ -19,6 +19,7 @@ pub fn UserRow(
     #[prop(optional)] on_profile: bool,
 ) -> impl IntoView {
     let username = StoredValue::new(user.username.clone());
+    let user_is_hoverable = if on_profile { None } else { Some(user.clone()) };
     let user_id = StoredValue::new(user.uid);
     let rating = StoredValue::new(if let Some(speed) = game_speed {
         user.ratings.get(&speed.get_value()).cloned()
@@ -30,57 +31,27 @@ pub fn UserRow(
     } else {
         "dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light"
     };
-    let profile_link = {
-        let username = username.get_value();
-        if on_profile {
-            view! {
-                <ProfileLink
-                    patreon=user.patreon
-                    username
-                    extend_tw_classes="truncate max-w-[120px]"
-                />
-            }
-        } else {
-            view! {
-                <ProfileLink
-                    patreon=user.patreon
-                    username
-                    extend_tw_classes="truncate max-w-[120px]"
-                    user_is_hoverable=user
-                />
-            }
-        }
-    };
 
     let display_actions = {
-        let mut views = vec![];
         let user_id = user_id.get_value();
-        for action in actions {
-            match action {
-                UserAction::Challenge => {
-                    views.push(EitherOf4::A(
-                        view! { <DirectChallengeButton user_id opponent=username.get_value() /> },
-                    ));
-                }
-                UserAction::Invite(tournament_id) => {
-                    views.push(EitherOf4::B(
-                        view! { <InviteButton user_id tournament_id /> },
-                    ));
-                }
-                UserAction::Uninvite(tournament_id) => {
-                    views.push(EitherOf4::C(
-                        view! { <UninviteButton user_id tournament_id /> },
-                    ));
-                }
-                UserAction::Kick(tournament) => {
-                    views.push(EitherOf4::D(
-                        view! { <KickButton user_id tournament=*tournament /> },
-                    ));
-                }
-                _ => {}
-            };
-        }
-        views.collect_view()
+        actions
+            .into_iter()
+            .filter_map(|action| match action {
+                UserAction::Challenge => Some(EitherOf4::A(
+                    view! { <DirectChallengeButton user_id opponent=username.get_value() /> },
+                )),
+                UserAction::Invite(tournament_id) => Some(EitherOf4::B(
+                    view! { <InviteButton user_id tournament_id /> },
+                )),
+                UserAction::Uninvite(tournament_id) => Some(EitherOf4::C(
+                    view! { <UninviteButton user_id tournament_id /> },
+                )),
+                UserAction::Kick(tournament) => Some(EitherOf4::D(
+                    view! { <KickButton user_id tournament=*tournament /> },
+                )),
+                _ => None,
+            })
+            .collect_view()
     };
 
     view! {
@@ -88,7 +59,12 @@ pub fn UserRow(
             <div class="flex justify-between mr-2 w-48">
                 <div class="flex items-center">
                     <StatusIndicator username=username.get_value() />
-                    {profile_link}
+                    <ProfileLink
+                        patreon=user.patreon
+                        username=username.get_value()
+                        extend_tw_classes="truncate max-w-[120px]"
+                        user_is_hoverable=user_is_hoverable.into()
+                    />
                 </div>
                 <Show when=move || { rating.get_value().is_some() }>
                     <Rating rating=rating.get_value().expect("Rating is some") />
