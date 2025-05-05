@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tracing::info;
 
-// pub const HASH_RETENTION_PERIOD: Duration = Duration::from_secs(3600);
-pub const HASH_RETENTION_PERIOD: Duration = Duration::from_secs(10);
+// How long to keep the processed turns in memory (seconds) to avoid replaying them.
+pub const TURN_RETENTION_TIME: Duration = Duration::from_secs(60);
 
 #[async_trait]
 pub trait TurnTracking {
@@ -57,7 +57,7 @@ impl TurnTracking for TurnTracker {
     async fn cleanup(&self) {
         let now = Instant::now();
         let mut processed = self.processed_turns.lock().await;
-        processed.retain(|_, timestamp| now.duration_since(*timestamp) < HASH_RETENTION_PERIOD);
+        processed.retain(|_, timestamp| now.duration_since(*timestamp) < TURN_RETENTION_TIME);
 
         info!("Processed_turns cleaned up");
     }
