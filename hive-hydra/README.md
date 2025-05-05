@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="Hive Hydra Logo" width="300">
+</p>
+
 # Hive Hydra
 
 Hive-hydra integrates any number of AIs with hivegame.com.
