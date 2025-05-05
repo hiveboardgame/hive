@@ -1,53 +1,33 @@
-use crate::common::TimeSignals;
+use crate::common::TimeParams;
+use codee::{binary::MsgpackSerdeCodec, string::Base64};
+use cookie::SameSite;
 use leptos::prelude::*;
-use shared_types::{CorrespondenceMode, TimeMode};
+use leptos_use::{use_cookie_with_options, UseCookieOptions};
+use reactive_stores::Store;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy)]
+const CHALENGE_PARAMS_COOKIE: &str = "challenge_params";
+const CONF_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
+
+#[derive(Debug, Clone, Store, Serialize, Deserialize)]
 pub struct ChallengeParams {
-    pub rated: RwSignal<bool>,
-    pub with_expansions: RwSignal<bool>,
-    pub is_public: RwSignal<bool>,
-    pub time_base: Signal<Option<i32>>,
-    pub time_increment: Signal<Option<i32>>,
-    pub upper_slider: RwSignal<i32>,
-    pub lower_slider: RwSignal<i32>,
-    pub time_signals: TimeSignals,
+    pub rated: bool,
+    pub with_expansions: bool,
+    pub is_public: bool,
+    pub upper_slider: i32,
+    pub lower_slider: i32,
+    pub time_signals: TimeParams,
 }
 
 impl ChallengeParams {
     pub fn new() -> Self {
-        let upper_slider = RwSignal::new(550);
-        let lower_slider = RwSignal::new(-550);
-        let time_signals = TimeSignals::default();
-        let time_base = Signal::derive(move || match time_signals.time_mode.get() {
-            TimeMode::Untimed => None,
-
-            TimeMode::RealTime => Some(time_signals.total_seconds.get()),
-
-            TimeMode::Correspondence => match time_signals.corr_mode.get() {
-                CorrespondenceMode::DaysPerMove => None,
-
-                CorrespondenceMode::TotalTimeEach => Some(time_signals.corr_days.get() * 86400),
-            },
-        });
-        let time_increment = Signal::derive(move || match time_signals.time_mode.get() {
-            TimeMode::Untimed => None,
-
-            TimeMode::RealTime => Some(time_signals.sec_per_move.get()),
-
-            TimeMode::Correspondence => match time_signals.corr_mode.get() {
-                CorrespondenceMode::DaysPerMove => Some(time_signals.corr_days.get() * 86400),
-
-                CorrespondenceMode::TotalTimeEach => None,
-            },
-        });
-
+        let upper_slider = 550;
+        let lower_slider = -550;
+        let time_signals = TimeParams::default();
         Self {
-            rated: RwSignal::new(true),
-            with_expansions: RwSignal::new(true),
-            is_public: RwSignal::new(true),
-            time_base,
-            time_increment,
+            rated: true,
+            with_expansions: true,
+            is_public: true,
             upper_slider,
             lower_slider,
             time_signals,
@@ -60,7 +40,26 @@ impl Default for ChallengeParams {
         Self::new()
     }
 }
-
+pub fn challenge_params_cookie() -> (
+    Signal<Option<ChallengeParams>>,
+    WriteSignal<Option<ChallengeParams>>,
+) {
+    let (cookie, set_cookie) = use_cookie_with_options::<ChallengeParams, Base64<MsgpackSerdeCodec>>(
+        CHALENGE_PARAMS_COOKIE,
+        UseCookieOptions::<ChallengeParams, _, _>::default()
+            .same_site(SameSite::Lax)
+            .secure(true)
+            .max_age(CONF_MAX_AGE)
+            .default_value(Some(ChallengeParams::default()))
+            .path("/"),
+    );
+    (cookie, set_cookie)
+}
 pub fn provide_challenge_params() {
-    provide_context(ChallengeParams::default())
+    let (cookie, _) = challenge_params_cookie();
+    if let Some(cookie) = cookie() {
+        provide_context(Store::new(cookie));
+    } else {
+        provide_context(Store::new(ChallengeParams::default()));
+    }
 }

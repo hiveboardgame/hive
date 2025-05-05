@@ -492,6 +492,7 @@ dependencies = [
  "log",
  "markdown",
  "rand 0.9.0",
+ "reactive_stores",
  "reqwest",
  "send_wrapper",
  "serde",

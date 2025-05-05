@@ -26,3 +26,29 @@ pub fn InputSlider(
         />
     }
 }
+
+#[component]
+pub fn InputSliderWithCallback(
+    signal: Signal<i32>,
+    callback: Callback<i32>,
+    name: &'static str,
+    #[prop(into)] min: Signal<i32>,
+    #[prop(into)] max: Signal<i32>,
+    step: i32,
+) -> impl IntoView {
+    view! {
+        <input
+            type="range"
+            class=STYLE
+            name=name
+            min=min
+            max=max
+            step=step
+            value=signal
+            on:input:target=move |ev| {
+                let val = ev.target().value().parse::<i32>().unwrap();
+                callback.run(val);
+            }
+        />
+    }
+}

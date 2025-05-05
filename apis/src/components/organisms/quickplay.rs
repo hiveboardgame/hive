@@ -1,5 +1,5 @@
 use crate::i18n::*;
-use crate::providers::ApiRequestsProvider;
+use crate::providers::{challenge_params_cookie, ApiRequestsProvider, ChallengeParams};
 use crate::{
     common::ChallengeAction,
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
@@ -8,9 +8,11 @@ use crate::{
 };
 use core::panic;
 use hive_lib::{ColorChoice, GameType};
-use leptos::{html::Dialog, prelude::*};
+use leptos::{ev, html::Dialog, prelude::*};
 use leptos_icons::*;
 use leptos_router::hooks::use_navigate;
+use leptos_use::use_event_listener;
+use reactive_stores::Store;
 use shared_types::ChallengeVisibility;
 use shared_types::{ChallengeDetails, GameSpeed::*, TimeMode};
 
@@ -77,6 +79,11 @@ pub fn QuickPlay() -> impl IntoView {
     let i18n = use_i18n();
     let dialog_el = NodeRef::<Dialog>::new();
     let auth_context = expect_context::<AuthContext>();
+    let params = expect_context::<Store<ChallengeParams>>();
+    let (_, set_cookie) = challenge_params_cookie();
+    let _ = use_event_listener(dialog_el, ev::close, move |_| {
+        set_cookie.set(Some(params.get()));
+    });
     view! {
         <div class="flex flex-col items-center m-2 grow">
             <Modal dialog_el>

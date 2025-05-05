@@ -1,14 +1,17 @@
-use crate::common::{markdown_to_html, TimeSignals, TournamentAction};
+use crate::common::{markdown_to_html, TimeParamsStoreFields, TournamentAction};
 use crate::components::atoms::{
     date_time_picker::DateTimePicker, input_slider::InputSlider, select_options::SelectOption,
     simple_switch::SimpleSwitch,
 };
 use crate::components::organisms::time_select::TimeSelect;
 use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
-use crate::providers::{ApiRequestsProvider, AuthContext};
+use crate::providers::{
+    ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields,
+};
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
+use reactive_stores::Store;
 use shared_types::PrettyString;
 use shared_types::{
     CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
@@ -79,7 +82,7 @@ impl Default for TournamentSignals {
 #[component]
 pub fn TournamentCreate() -> impl IntoView {
     let tournament = TournamentSignals::default();
-    let time_signals = TimeSignals::default();
+    let params = Store::new(ChallengeParams::default());
     let min_rating = RwSignal::new(500);
     let max_rating = RwSignal::new(2500);
     let organizer_start = RwSignal::new(true);
@@ -108,7 +111,7 @@ pub fn TournamentCreate() -> impl IntoView {
         let account = auth_context.user.get();
         tournament
             .time_mode
-            .update_untracked(|v| *v = time_signals.time_mode.get_untracked());
+            .update_untracked(|v| *v = params.time_signals().time_mode().get_untracked());
         match (tournament.time_mode)() {
             TimeMode::Untimed => {
                 tournament.time_base.update_value(|v| *v = None);
@@ -117,24 +120,24 @@ pub fn TournamentCreate() -> impl IntoView {
             TimeMode::RealTime => {
                 tournament
                     .time_base
-                    .update_value(|v| *v = Some(time_signals.total_seconds.get_untracked()));
+                    .update_value(|v| *v = Some(params.time_signals().get().total_seconds()));
                 tournament
                     .time_increment
-                    .update_value(|v| *v = Some(time_signals.sec_per_move.get_untracked()));
+                    .update_value(|v| *v = Some(params.time_signals().get().sec_per_move()));
             }
             TimeMode::Correspondence => {
                 fixed_round_duration.set(false);
-                match time_signals.corr_mode.get_untracked() {
+                match params.time_signals().corr_mode().get_untracked() {
                     CorrespondenceMode::DaysPerMove => {
                         tournament.time_increment.update_value(|v| {
-                            *v = Some(time_signals.corr_days.get_untracked() * 86400)
+                            *v = Some(params.time_signals().corr_days().get_untracked() * 86400)
                         });
                         tournament.time_base.update_value(|v| *v = None);
                     }
                     CorrespondenceMode::TotalTimeEach => {
                         tournament.time_increment.update_value(|v| *v = None);
                         tournament.time_base.update_value(|v| {
-                            *v = Some(time_signals.corr_days.get_untracked() * 86400)
+                            *v = Some(params.time_signals().corr_days().get_untracked() * 86400)
                         });
                     }
                 };
@@ -196,7 +199,7 @@ pub fn TournamentCreate() -> impl IntoView {
         }
     };
     let on_value_change = Callback::new(move |t: TimeMode| {
-        time_signals.time_mode.update(|v| *v = t);
+        params.time_signals().time_mode().update(|v| *v = t);
     });
     let allowed_values = vec![TimeMode::RealTime, TimeMode::Correspondence];
     let tournament_length = move || {
@@ -354,7 +357,9 @@ pub fn TournamentCreate() -> impl IntoView {
                         </Show>
                     </div>
                     <div class="flex gap-1 mb-2">
-                        <Show when=move || time_signals.time_mode.get() == TimeMode::RealTime>
+                        <Show when=move || {
+                            params.time_signals().time_mode().get() == TimeMode::RealTime
+                        }>
                             <SimpleSwitch checked=fixed_round_duration />
                             <label class="text-sm font-medium text-gray-900 dark:text-gray-300">
                                 Fixed round duration
@@ -379,12 +384,7 @@ pub fn TournamentCreate() -> impl IntoView {
                 </div>
                 <div class="basis-1/2">
                     <div class="flex flex-col items-center">
-                        <TimeSelect
-                            is_tournament=true
-                            time_signals
-                            on_value_change
-                            allowed_values
-                        />
+                        <TimeSelect is_tournament=true params on_value_change allowed_values />
                         <div class="flex">{rating_string}</div>
                         <div class="flex">
                             <div class="flex gap-1 my-1">
