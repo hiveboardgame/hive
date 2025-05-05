@@ -89,7 +89,7 @@
             cargo-leptos
             tailwindcss
             openssl
-            nokamute # use nokamute as AI during development
+            nokamute # The AI used by hive-hydra
             (rust-bin.selectLatestNightlyWith( toolchain: toolchain.default.override {
               extensions= [ "rust-src" "rust-analyzer" ];
               targets = [ "wasm32-unknown-unknown" ];
