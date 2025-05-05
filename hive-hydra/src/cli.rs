@@ -4,7 +4,7 @@ use clap::Parser;
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     /// Path to configuration file
-    #[arg(short, long, default_value = "config.yaml")]
+    #[arg(short, long, default_value = "hive-hydra.yaml")]
     pub config: String,
 }
 
@@ -21,7 +21,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let cli = Cli::parse_from(["program"]);
-        assert_eq!(cli.config, "config.yaml");
+        assert_eq!(cli.config, "hive-hydra.yaml");
     }
 
     #[test]

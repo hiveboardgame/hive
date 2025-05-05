@@ -1,0 +1,25 @@
+# Server configuration
+max_concurrent_processes: 5  # Maximum number of concurrent AI processes
+queue_capacity: 1000        # Size of the turn processing queue
+#base_url: "https://hivegame.com"  # Base URL for the Hive Game API
+base_url: "http://localhost:3000"  # Base URL for the Hive Game API
+
+# Bot configurations
+bots:
+  - name: bot1  # This name is used in env vars like HIVE_HYDRA_BOT_BOT1_EMAIL
+    ai_command: nokamute uhp --threads=1
+    bestmove_command_args: depth 1
+    email: bot1@example.com  # Better to set this via environment variable
+    password: password1      # Better to set this via environment variable
+  
+  - name: bot2
+    ai_command: nokamute uhp --threads=1
+    bestmove_command_args: depth 2
+    email: bot2@example.com
+    password: password2
+
+  # - name: bot3
+  #   ai_command: nokamute uhp
+  #   bestmove_command_args: "time 00:00:01"
+  #   email: bot3@example.com
+  #   password: password3
