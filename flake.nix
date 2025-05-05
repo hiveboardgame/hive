@@ -63,6 +63,10 @@
           pg_ctl -D "$PWD/.pg/data" -l "$PWD/.pg/postgresql.log" -o "-k $PWD/.pg/run" stop
           echo "PotgreSQL stopped"
         '')
+        (pkgs.writeShellScriptBin "hive-hydra" ''
+          #!/usr/bin/env bash
+          cargo run --package hive-hydra -- --config hive-hydra/hive-hydra.yaml
+        '')
         ];
       in
       with pkgs;
@@ -100,6 +104,7 @@
           shellHook = ''
             echo "Welcome to hivegame.com"
             echo "'server' to start everything"
+            echo "'hive-hydra' to start hive-hydra for playiing with Bots"
             echo "'format' to make the code look nice"
             echo "'pg-start' to start PosgreSQL"
             echo "'migration' to 'run', 'revert', ... DB changes"

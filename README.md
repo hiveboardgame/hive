@@ -87,6 +87,14 @@ pg-start
 migration run
 server
 ```
+5. Start Hive-hydra to play with Bots
+
+You need to setup bot users in Hive. See `hive-hydra/hive-hydra.yaml`
+
+```sh
+hive-hydra
+```
+
 5. Stop PostgreSQL
 ``` sh
 pg-stop
