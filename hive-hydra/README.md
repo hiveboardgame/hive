@@ -11,3 +11,12 @@ It communicates with hivegame.com using the Bot REST API and runs and communicat
 ## Configuration
 
 The application uses a YAML configuration file (default: `hive-hydra.yaml`) to define bot settings and API connections.
+
+## Use
+
+Usage: hive-hydra [OPTIONS]
+
+Options:
+  -c, --config <CONFIG>  Path to configuration file [default: hive-hydra.yaml]
+  -h, --help             Print help
+  -V, --version          Print version
