@@ -4,17 +4,17 @@ use crate::{
     common::UserAction, components::molecules::user_row::UserRow,
     providers::online_users::OnlineUsersSignal,
 };
-use leptos::ev::Event;
-use leptos::leptos_dom::helpers::debounce;
 use leptos::prelude::*;
+use leptos_use::signal_debounced;
 use std::collections::BTreeMap;
-use std::time::Duration;
+
 #[component]
 pub fn OnlineUsers() -> impl IntoView {
     let i18n = use_i18n();
     let online_users = expect_context::<OnlineUsersSignal>();
     let pattern = RwSignal::new(String::new());
-    let user_search = Resource::new(pattern, async move |pattern| {
+    let pattern_debounced: Signal<String> = signal_debounced(pattern, 100.0);
+    let user_search = Resource::new(pattern_debounced, async move |pattern| {
         if pattern.is_empty() {
             BTreeMap::new()
         } else {
@@ -26,11 +26,8 @@ pub fn OnlineUsers() -> impl IntoView {
             btree
         }
     });
-    let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
-        pattern.set(event_target_value(&ev));
-    });
     let users = move || {
-        if pattern().is_empty() {
+        if pattern_debounced().is_empty() {
             online_users.signal.get().username_user
         } else {
             user_search.get().unwrap_or_default()
@@ -42,7 +39,7 @@ pub fn OnlineUsers() -> impl IntoView {
             <input
                 class="p-1 w-64"
                 type="text"
-                on:input=debounced_search
+                on:input=move |ev| pattern.set(event_target_value(&ev))
                 placeholder=move || t_string!(i18n, home.search_players)
                 value=pattern
                 maxlength="20"
@@ -55,12 +52,19 @@ pub fn OnlineUsers() -> impl IntoView {
             </Show>
             <div class="overflow-y-auto max-h-96">
                 <Transition>
-                    <For each=users key=move |(_, user)| user.uid let:user>
-                        <UserRow
-                            actions=vec![UserAction::Challenge]
-                            user=user.1
-                        />
-                    </For>
+                    {move || {
+                        users()
+                            .values()
+                            .map(|user| {
+                                view! {
+                                    <UserRow
+                                        actions=vec![UserAction::Challenge]
+                                        user=user.clone()
+                                    />
+                                }
+                            })
+                            .collect_view()
+                    }}
                 </Transition>
             </div>
         </div>

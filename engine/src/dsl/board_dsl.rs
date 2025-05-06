@@ -378,8 +378,8 @@ impl BoardParser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::color::Color;
     use crate::bug::Bug;
+    use crate::color::Color;
 
     #[test]
     pub fn test_dsl_conversion() {

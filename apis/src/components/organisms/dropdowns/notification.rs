@@ -50,7 +50,7 @@ pub fn NotificationDropdown() -> impl IntoView {
             >
                 <Transition>
                     {move || Suspend::new(async move {
-                        let tournaments:StoredValue<HashMap<_,_>> = StoredValue::new(
+                        let tournaments: StoredValue<HashMap<_, _>> = StoredValue::new(
                             tournaments_resource
                                 .await
                                 .unwrap_or_default()
@@ -64,9 +64,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                                 .tournament_invitations
                                 .get()
                                 .iter()
-                                .filter_map(move |id| {
-                                    tournaments.get_value().get(id).cloned()
-                                })
+                                .filter_map(move |id| { tournaments.get_value().get(id).cloned() })
                                 .collect::<Vec<TournamentAbstractResponse>>()
                         };
 
@@ -111,12 +109,12 @@ pub fn NotificationDropdown() -> impl IntoView {
                                 <div on:click=onclick_close>
                                     <TournamentStatusNotification
                                         tournament_id=tournament_id.clone()
-                                        tournament_name=
-                                         tournaments.get_value()
-                                         .get(&tournament_id)
-                                         .expect("tournament exists")
-                                         .name
-                                         .clone()
+                                        tournament_name=tournaments
+                                            .get_value()
+                                            .get(&tournament_id)
+                                            .expect("tournament exists")
+                                            .name
+                                            .clone()
                                         finished=false
                                     />
                                 </div>
@@ -132,12 +130,12 @@ pub fn NotificationDropdown() -> impl IntoView {
                                 <div on:click=onclick_close>
                                     <TournamentStatusNotification
                                         tournament_id=tournament_id.clone()
-                                        tournament_name=
-                                         tournaments.get_value()
-                                         .get(&tournament_id)
-                                         .expect("tournament exists")
-                                         .name
-                                         .clone()
+                                        tournament_name=tournaments
+                                            .get_value()
+                                            .get(&tournament_id)
+                                            .expect("tournament exists")
+                                            .name
+                                            .clone()
                                         finished=true
                                     />
                                 </div>

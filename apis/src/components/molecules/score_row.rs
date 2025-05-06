@@ -20,7 +20,7 @@ pub fn ScoreRow(
                 patreon=user().patreon
                 username=user().username
                 extend_tw_classes="truncate max-w-[120px]"
-                user_is_hoverable=user()
+                user_is_hoverable=user.into()
             />
         }
     };
