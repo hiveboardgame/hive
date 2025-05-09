@@ -43,6 +43,7 @@ log = { workspace = true }
 markdown = {workspace = true}
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true }
+reactive_stores = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 server_fn = { workspace = true }

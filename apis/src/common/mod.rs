@@ -32,7 +32,7 @@ pub use server_result::{
     ServerMessage, ServerResult, TournamentUpdate, UserStatus, UserUpdate,
 };
 pub use svg_pos::SvgPos;
-pub use time_signals::TimeSignals;
+pub use time_signals::{TimeParams, TimeParamsStoreFields};
 pub use tournament_action::TournamentAction;
 pub use tournament_action::TournamentResponseDepth;
 pub use user_action::UserAction;

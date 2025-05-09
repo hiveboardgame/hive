@@ -1,16 +1,15 @@
+use crate::components::atoms::input_slider::InputSliderWithCallback;
 use crate::i18n::*;
-use crate::{
-    common::TimeSignals,
-    components::atoms::{input_slider::InputSlider, rating::icon_for_speed},
-};
+use crate::providers::{ChallengeParams, ChallengeParamsStoreFields};
+use crate::{common::TimeParamsStoreFields, components::atoms::rating::icon_for_speed};
 use leptos::prelude::*;
 use leptos_icons::*;
+use reactive_stores::Store;
 use shared_types::{CorrespondenceMode, GameSpeed, TimeMode};
-
 #[component]
 pub fn TimeSelect(
     is_tournament: bool,
-    time_signals: TimeSignals,
+    params: Store<ChallengeParams>,
     on_value_change: Callback<TimeMode>,
     allowed_values: Vec<TimeMode>,
 ) -> impl IntoView {
@@ -22,15 +21,15 @@ pub fn TimeSelect(
             t_string!(i18n, home.custom_game.title)
         }
     };
-    let time_mode = move || time_signals.time_mode.get();
-    let corr_mode = move || time_signals.corr_mode.get();
+    let time_mode = move || params.time_signals().time_mode().get();
+    let corr_mode = move || params.time_signals().corr_mode().read();
     let gamespeed_icon = move || {
         let speed = match time_mode() {
             TimeMode::Untimed => GameSpeed::Untimed,
             TimeMode::Correspondence => GameSpeed::Correspondence,
             TimeMode::RealTime => GameSpeed::from_base_increment(
-                Some(time_signals.total_seconds.get()),
-                Some(time_signals.sec_per_move.get()),
+                Some(params.time_signals().get().total_seconds()),
+                Some(params.time_signals().get().sec_per_move()),
             ),
         };
         view! { <Icon width="50" height="50" attr:class="p-2" icon=icon_for_speed(&speed) /> }
@@ -48,12 +47,21 @@ pub fn TimeSelect(
     let allow_correspondence = allowed_values.contains(&TimeMode::Correspondence);
     let allow_untimed = allowed_values.contains(&TimeMode::Untimed);
     let toggle_time_mode = move |t: TimeMode| {
-        time_signals.time_mode.update(|v| *v = t);
+        params.time_signals().time_mode().update(|v| *v = t);
         on_value_change.run(t);
     };
     let toggle_corr_mode = move |t: CorrespondenceMode| {
-        time_signals.corr_mode.update(|v| *v = t);
+        params.time_signals().corr_mode().update(|v| *v = t);
     };
+    let minutes_calllback = Callback::new(move |new: i32| {
+        params.time_signals().step_min().update(|v| *v = new);
+    });
+    let seconds_calllback = Callback::new(move |new: i32| {
+        params.time_signals().step_sec().update(|v| *v = new);
+    });
+    let days_calllback = Callback::new(move |new: i32| {
+        params.time_signals().corr_days().update(|v| *v = new);
+    });
     view! {
         <div class="flex flex-col p-2">
             <div class="flex items-center">
@@ -93,13 +101,14 @@ pub fn TimeSelect(
                     <div>
                         {t!(
                             i18n, home.custom_game.mode.real_time.minutes_per_side, count = move ||
-                                    time_signals.total_seconds.get() / 60
+                                    params.time_signals().get().total_seconds() / 60
                         )}
 
                     </div>
-                    <InputSlider
-                        signal_to_update=time_signals.step_min
+                    <InputSliderWithCallback
+                        signal=Signal::derive(move || params.time_signals().step_min().get())
                         name="minutes"
+                        callback=minutes_calllback
                         min=1
                         max=32
                         step=1
@@ -109,12 +118,13 @@ pub fn TimeSelect(
                     <div>
                         {t!(
                             i18n, home.custom_game.mode.real_time.increment_in_seconds, count = move
-                                    || time_signals.sec_per_move.get()
+                                    || params.time_signals().get().sec_per_move()
                         )}
 
                     </div>
-                    <InputSlider
-                        signal_to_update=time_signals.step_sec
+                    <InputSliderWithCallback
+                        signal=Signal::derive(move || params.time_signals().step_sec().get())
+                        callback=seconds_calllback
                         name="increment"
                         min=0
                         max=32
@@ -140,8 +150,9 @@ pub fn TimeSelect(
                     </div>
                 </div>
                 <div class="flex flex-row gap-4 p-3">
-                    <InputSlider
-                        signal_to_update=time_signals.corr_days
+                    <InputSliderWithCallback
+                        signal=Signal::derive(move || params.time_signals().corr_days().get())
+                        callback=days_calllback
                         name="CorrespondenceSlider"
                         min=1
                         max=20
@@ -150,7 +161,7 @@ pub fn TimeSelect(
                     <div class="flex">
                         {t!(
                             i18n, home.custom_game.mode.correspondence.time, count = move ||
-                                    time_signals.corr_days.get()
+                                    params.time_signals().corr_days().get()
                         )}
 
                     </div>
