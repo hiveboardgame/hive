@@ -17,6 +17,12 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+        nokamute = pkgs.callPackage (pkgs.fetchFromGitHub {
+          owner = "frisoft";
+          repo = "nokamute";
+          rev = "master";
+          sha256 = "sha256-7Q2VuVexug0iqBXEzHfQ/c9q7TfjL56psGbq5sU2Nw4=";
+        }) {};
         aliases = [(pkgs.writeShellScriptBin "server" ''
           #!/usr/bin/env bash
           mold -run cargo leptos watch
@@ -57,6 +63,10 @@
           pg_ctl -D "$PWD/.pg/data" -l "$PWD/.pg/postgresql.log" -o "-k $PWD/.pg/run" stop
           echo "PotgreSQL stopped"
         '')
+        (pkgs.writeShellScriptBin "hive-hydra" ''
+          #!/usr/bin/env bash
+          cargo run --package hive-hydra -- --config hive-hydra/hive-hydra.yaml
+        '')
         ];
       in
       with pkgs;
@@ -83,6 +93,7 @@
             cargo-leptos
             tailwindcss
             openssl
+            nokamute # The AI used by hive-hydra
             (rust-bin.selectLatestNightlyWith( toolchain: toolchain.default.override {
               extensions= [ "rust-src" "rust-analyzer" ];
               targets = [ "wasm32-unknown-unknown" ];
@@ -93,6 +104,7 @@
           shellHook = ''
             echo "Welcome to hivegame.com"
             echo "'server' to start everything"
+            echo "'hive-hydra' to start hive-hydra for playiing with Bots"
             echo "'format' to make the code look nice"
             echo "'pg-start' to start PosgreSQL"
             echo "'migration' to 'run', 'revert', ... DB changes"

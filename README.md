@@ -4,6 +4,8 @@ Hivegame is a free online hive game server focused mostly on realtime gameplay a
 
 It is written in rust nightly and relies on the [Leptos](https://leptos.dev/) framework. Pure hive logic is inside the engine workspace.
 
+It also inclides [Hive-hydra](hive-hydra/README.md), an application to integrate Hivegame with any UHP (Universal Hive Protocol) AIs.
+
 ## Development
 
 ### Prerequisites (skip if using Nix)
@@ -87,6 +89,14 @@ pg-start
 migration run
 server
 ```
+5. Start Hive-hydra to play with Bots
+
+You need to setup bot users in Hive. See `hive-hydra/hive-hydra.yaml`
+
+```sh
+hive-hydra
+```
+
 5. Stop PostgreSQL
 ``` sh
 pg-stop
