@@ -3,6 +3,7 @@
 /target/
 pkg
 apis/target/
+.cargo/target/
 todos
 site/
 

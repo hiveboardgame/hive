@@ -2,6 +2,7 @@ use crate::api::v1::auth::auth::Auth;
 use crate::responses::{ChallengeResponse, GameResponse};
 use crate::websocket::WsServer;
 use crate::api::v1::messages::send::send_challenge_messages;
+use crate::websocket::busybee::Busybee;
 use actix::Addr;
 use actix_web::{
     get,
@@ -15,8 +16,9 @@ use db_lib::{
     DbPool,
 };
 use serde_json::json;
-use shared_types::ChallengeId;
+use shared_types::{ChallengeId, TimeMode};
 use rand::random;
+use std::str::FromStr;
 
 #[get("/api/v1/bot/challenges/")]
 pub async fn api_get_challenges(Auth(email): Auth, pool: Data<DbPool>) -> HttpResponse {
@@ -86,8 +88,24 @@ async fn accept_challenge(
     let (game, deleted_challenges) =
         Game::create_and_delete_challenges(new_game, &mut conn).await?;
     
-    // Send all necessary messages
     send_challenge_messages(ws_server, deleted_challenges, &game, &pool).await?;
+    
+    match TimeMode::from_str(&game.time_mode) {
+        Ok(TimeMode::RealTime) | Err(_) => {}
+        _ => {
+            let challenger_id = challenge.challenger_id;
+            let msg = format!(
+                "[Game started](<https://hivegame.com/game/{}>) - Your game with {} has started.\nYou have {} to play.",
+                game.nanoid,
+                bot.username,
+                game.str_time_left_for_player(challenger_id)
+            );
+
+            if let Err(e) = Busybee::msg(challenger_id, msg).await {
+                println!("Failed to send Busybee message: {}", e);
+            }
+        }
+    };
     
     let response = GameResponse::from_model(&game, &mut conn).await?;
     Ok(response)
