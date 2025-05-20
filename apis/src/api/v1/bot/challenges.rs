@@ -1,10 +1,7 @@
 use crate::api::v1::auth::auth::Auth;
-use crate::common::{
-    ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult,
-    TournamentUpdate,
-};
 use crate::responses::{ChallengeResponse, GameResponse};
-use crate::websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer};
+use crate::websocket::WsServer;
+use crate::api::v1::messages::send::send_challenge_messages;
 use actix::Addr;
 use actix_web::{
     get,
@@ -12,16 +9,14 @@ use actix_web::{
     HttpResponse,
 };
 use anyhow::Result;
-use codee::binary::MsgpackSerdeCodec;
-use codee::Encoder;
 use db_lib::{
     get_conn,
     models::{Challenge, Game, NewGame, User},
     DbPool,
 };
 use serde_json::json;
-use shared_types::{ChallengeId, GameId};
-use uuid::Uuid;
+use shared_types::ChallengeId;
+use rand::random;
 
 #[get("/api/v1/bot/challenges/")]
 pub async fn api_get_challenges(Auth(email): Auth, pool: Data<DbPool>) -> HttpResponse {
@@ -80,7 +75,7 @@ async fn accept_challenge(
         "black" => (bot.id, challenge.challenger_id),
         "white" => (challenge.challenger_id, bot.id),
         _ => {
-            if rand::random() {
+            if random() {
                 (challenge.challenger_id, bot.id)
             } else {
                 (bot.id, challenge.challenger_id)
@@ -90,7 +85,10 @@ async fn accept_challenge(
     let new_game = NewGame::new(white_id, black_id, &challenge);
     let (game, deleted_challenges) =
         Game::create_and_delete_challenges(new_game, &mut conn).await?;
-    send_challenge_delete_messages(deleted_challenges, ws_server).await;
+    
+    // Send all necessary messages
+    send_challenge_messages(ws_server, deleted_challenges, &game, &pool).await?;
+    
     let response = GameResponse::from_model(&game, &mut conn).await?;
     Ok(response)
 }
@@ -105,28 +103,4 @@ async fn get_challenges(email: &str, pool: Data<DbPool>) -> Result<Vec<Challenge
         responses.push(response);
     }
     Ok(responses)
-}
-
-async fn send_challenge_delete_messages(
-    deleted_challenges: Vec<ChallengeId>,
-    ws_server: Data<Addr<WsServer>>,
-) {
-    let mut messages = Vec::new();
-    for challenge_id in deleted_challenges {
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Global,
-            message: ServerMessage::Challenge(ChallengeUpdate::Removed(challenge_id)),
-        });
-    }
-    for message in messages {
-        let serialized = ServerResult::Ok(Box::new(message.message));
-        if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-            let cam = ClientActorMessage {
-                destination: message.destination,
-                serialized,
-                from: None,
-            };
-            ws_server.do_send(cam);
-        };
-    }
 }
