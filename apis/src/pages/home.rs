@@ -1,4 +1,5 @@
 use crate::components::atoms::logo::Logo;
+use crate::components::atoms::play_bot::PlayBot;
 use crate::components::molecules::rl_banner::RlBanner;
 use crate::components::organisms::{
     challenges::Challenges, online_users::OnlineUsers, quickplay::QuickPlay, tv::Tv,
@@ -37,6 +38,7 @@ pub fn Home() -> impl IntoView {
                             <Challenges />
                             <QuickPlay />
                         </div>
+                        <PlayBot />
                     </div>
                 </div>
                 <Show when=in_column>
