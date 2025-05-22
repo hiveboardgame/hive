@@ -17,7 +17,7 @@ async-trait = "0.1"
 clap = { version = "4.5", features = ["derive"] }
 config = "0.14"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["local-time"] }
+tracing-subscriber = { version = "0.3", features = ["local-time", "env-filter"] }
 tracing-appender = "0.2"
 time = { version = "0.3", features = ["formatting"] }
 
