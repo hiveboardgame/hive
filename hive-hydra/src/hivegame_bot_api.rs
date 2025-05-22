@@ -26,7 +26,7 @@ pub struct HiveGame {
     #[serde(rename = "id")]
     pub game_id: String,
     #[serde(rename = "time_base")]
-    pub time: Option<i32>, // Changed to Option<i32> to handle null values
+    pub time: Option<i32>,
     #[serde(default)]
     pub opponent_username: String,
     pub game_type: String,
