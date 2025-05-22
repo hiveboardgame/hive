@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
-use tracing::info;
+// use tracing::info;
 
 // How long to keep the processed turns in memory (seconds) to avoid replaying them.
 pub const TURN_RETENTION_TIME: Duration = Duration::from_secs(60);
@@ -59,6 +59,6 @@ impl TurnTracking for TurnTracker {
         let mut processed = self.processed_turns.lock().await;
         processed.retain(|_, timestamp| now.duration_since(*timestamp) < TURN_RETENTION_TIME);
 
-        info!("Processed_turns cleaned up");
+        // info!("Processed_turns cleaned up");
     }
 }

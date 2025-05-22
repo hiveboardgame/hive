@@ -26,7 +26,7 @@ pub struct HiveGame {
     #[serde(rename = "id")]
     pub game_id: String,
     #[serde(rename = "time_base")]
-    pub time: i32, // Changed from String to i32 to match API response
+    pub time: Option<i32>,
     #[serde(default)]
     pub opponent_username: String,
     pub game_type: String,
@@ -485,7 +485,7 @@ mod tests {
     fn test_game_string() {
         let game = HiveGame {
             game_id: "123".to_string(),
-            time: 20,
+            time: Some(20),
             opponent_username: "player1".to_string(),
             game_type: "Base".to_string(),
             game_status: "InProgress".to_string(),

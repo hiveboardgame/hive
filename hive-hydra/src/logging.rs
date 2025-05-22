@@ -4,6 +4,7 @@ use tracing_subscriber::{
     fmt::{self, time::UtcTime},
     layer::SubscriberExt,
     Registry,
+    EnvFilter,
 };
 
 pub fn setup_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -20,6 +21,10 @@ pub fn setup_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .expect("Invalid time format"),
     );
+
+    // Create env filter from RUST_LOG environment variable (defaults to info if not set)
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("info"));
 
     // Console layer with colored output and local time
     let console_layer = fmt::layer()
@@ -42,8 +47,11 @@ pub fn setup_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .with_writer(file_appender)
         .with_timer(timer);
 
-    // Combine layers
-    let subscriber = Registry::default().with(console_layer).with(file_layer);
+    // Combine layers with the env filter
+    let subscriber = Registry::default()
+        .with(env_filter)
+        .with(console_layer)
+        .with(file_layer);
 
     // Set as global default
     tracing::subscriber::set_global_default(subscriber)?;
