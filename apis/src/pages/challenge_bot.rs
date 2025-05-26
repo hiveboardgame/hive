@@ -24,7 +24,7 @@ pub fn ChallengeBot() -> impl IntoView {
             },
             visibility: ChallengeVisibility::Direct,
             // Do we hardcode bot account name and use a direct challenge
-            opponent: Some(String::from("NokaBot")),
+            opponent: Some(String::from("bot1")),
             color_choice,
             time_mode: TimeMode::Untimed,
             time_base: None,
