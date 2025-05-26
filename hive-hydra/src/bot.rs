@@ -7,6 +7,9 @@ use std::time::Duration;
 use tokio::sync::{mpsc, Mutex, Semaphore};
 use tracing::{debug, error, info};
 
+// Constant for login retry interval in seconds
+const LOGIN_RETRY_INTERVAL_SECS: u64 = 10;
+
 pub async fn producer_task(
     sender: mpsc::Sender<BotGameTurn>,
     turn_tracker: TurnTracker,
@@ -15,15 +18,20 @@ pub async fn producer_task(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("Producer task started for bot: {}", bot.name);
 
-    // Authenticate to get token
-    let token = match api.auth(&bot.email, &bot.password).await {
-        Ok(token) => {
-            info!("Authentication successful for bot: {}", bot.name);
-            token
-        }
-        Err(e) => {
-            error!("Authentication failed for bot {}: {}", bot.name, e);
-            return Err(Box::new(e));
+    // Authenticate to get token with retry logic
+    let token = loop {
+        match api.auth(&bot.email, &bot.password).await {
+            Ok(token) => {
+                info!("Authentication successful for bot: {}", bot.name);
+                break token;
+            }
+            Err(e) => {
+                error!(
+                    "Authentication failed for bot {}: {}, retrying in {} seconds",
+                    bot.name, e, LOGIN_RETRY_INTERVAL_SECS
+                );
+                tokio::time::sleep(Duration::from_secs(LOGIN_RETRY_INTERVAL_SECS)).await;
+            }
         }
     };
 
