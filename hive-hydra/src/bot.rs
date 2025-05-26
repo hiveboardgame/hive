@@ -10,20 +10,16 @@ use tracing::{debug, error, info};
 // Constant for login retry interval in seconds
 const LOGIN_RETRY_INTERVAL_SECS: u64 = 10;
 
-pub async fn producer_task(
-    sender: mpsc::Sender<BotGameTurn>,
-    turn_tracker: TurnTracker,
-    api: Arc<HiveGameApi>,
-    bot: BotConfig,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    info!("Producer task started for bot: {}", bot.name);
-
+async fn auth(
+    api: &HiveGameApi,
+    bot: &BotConfig,
+) -> String {
     // Authenticate to get token with retry logic
-    let token = loop {
+    loop {
         match api.auth(&bot.email, &bot.password).await {
             Ok(token) => {
                 info!("Authentication successful for bot: {}", bot.name);
-                break token;
+                return token;
             }
             Err(e) => {
                 error!(
@@ -33,7 +29,19 @@ pub async fn producer_task(
                 tokio::time::sleep(Duration::from_secs(LOGIN_RETRY_INTERVAL_SECS)).await;
             }
         }
-    };
+    }
+}
+
+pub async fn producer_task(
+    sender: mpsc::Sender<BotGameTurn>,
+    turn_tracker: TurnTracker,
+    api: Arc<HiveGameApi>,
+    bot: BotConfig,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    info!("Producer task started for bot: {}", bot.name);
+
+    // Authenticate using the auth function
+    let token = auth(&api, &bot).await;
 
     loop {
         // Get challenges for this bot
