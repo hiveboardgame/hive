@@ -19,7 +19,7 @@
         };
         aliases = [(pkgs.writeShellScriptBin "server" ''
           #!/usr/bin/env bash
-          mold -run cargo leptos watch
+          cargo leptos watch
         '')
          (pkgs.writeShellScriptBin "migration" ''
           #!/usr/bin/env bash
@@ -74,7 +74,6 @@
             cargo-make
             cargo
             trunk
-            mold
             dart-sass
             rustfmt
             leptosfmt
@@ -91,6 +90,7 @@
             darwin.apple_sdk.frameworks.SystemConfiguration
           ] ++ aliases;
           shellHook = ''
+            export CARGO_TARGET_DIR="$PWD/.cargo/target"
             echo "Welcome to hivegame.com"
             echo "'server' to start everything"
             echo "'format' to make the code look nice"

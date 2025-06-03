@@ -13,6 +13,11 @@ pub fn ProfileLink(
     let profile_link = format!("/@/{}", username);
     let hover_show = RwSignal::new(false);
     let patreon = RwSignal::new(patreon);
+    // TODO: @leex show bot icon
+    // let bot = RwSignal::new(bot);
+    //                 <Show when=bot>
+    //                     <Icon icon=icondata::MdiRobotHappy attr:class="w-2 h-2" />
+    //                 </Show>
     let user_is_hoverable = Signal::derive(move || user_is_hoverable.clone());
     view! {
         <div class="relative w-full">
