@@ -36,6 +36,7 @@ pub fn UserRow(
             view! {
                 <ProfileLink
                     patreon=user.patreon
+                    bot=user.bot
                     username
                     extend_tw_classes="truncate max-w-[120px]"
                 />
@@ -44,6 +45,7 @@ pub fn UserRow(
             view! {
                 <ProfileLink
                     patreon=user.patreon
+                    bot=user.bot
                     username
                     extend_tw_classes="truncate max-w-[120px]"
                     user_is_hoverable=user

@@ -22,16 +22,17 @@ impl BotDifficulty {
             BotDifficulty::Easy => "nokamute-easy",
             BotDifficulty::Medium => "nokamute-medium",
             BotDifficulty::Hard => "nokamute-hard",
-        }.to_string()
+        }
+        .to_string()
     }
 }
 
 #[component]
 pub fn ChallengeBot() -> impl IntoView {
-    let expansions = create_rw_signal(true);
-    let difficulty = create_rw_signal(BotDifficulty::Medium);
+    let expansions = RwSignal::new(true);
+    let difficulty = RwSignal::new(BotDifficulty::Medium);
     let api = expect_context::<ApiRequestsProvider>().0;
-    
+
     let radio_style = move |active: bool| {
         format!("flex items-center p-2 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded cursor-pointer {}", 
             if active {
@@ -72,7 +73,7 @@ pub fn ChallengeBot() -> impl IntoView {
             </div>
 
             <div class="flex flex-col items-center">
-                <div class="flex gap-2 p-2 justify-center">
+                <div class="flex gap-2 justify-center p-2">
                     <div
                         class=move || radio_style(matches!(difficulty.get(), BotDifficulty::Easy))
                         on:click=move |_| difficulty.set(BotDifficulty::Easy)

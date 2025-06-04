@@ -30,6 +30,7 @@ pub fn UserWithRating(
     };
     let username = Signal::derive(move || player().map_or(String::new(), |p| p.username));
     let patreon = move || player().is_some_and(|p| p.patreon);
+    let bot = move || player().is_some_and(|p| p.bot);
     let rating = move || match (player(), speed()) {
         (Some(player), Some(speed)) => Either::Left(
             view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> },
@@ -48,6 +49,7 @@ pub fn UserWithRating(
                         <ProfileLink
                             patreon=patreon()
                             username=username()
+                            bot = bot()
                             extend_tw_classes=text_color
                         />
                     </div>
