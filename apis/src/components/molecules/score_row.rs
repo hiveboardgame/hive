@@ -18,6 +18,7 @@ pub fn ScoreRow(
         view! {
             <ProfileLink
                 patreon=user().patreon
+                bot=user().patreon
                 username=user().username
                 extend_tw_classes="truncate max-w-[120px]"
                 user_is_hoverable=user.into()

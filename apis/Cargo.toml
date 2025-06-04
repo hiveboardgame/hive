@@ -18,7 +18,7 @@ anyhow = { workspace = true }
 argon2 = { workspace = true, optional = true }
 bimap = {workspace = true}
 cfg-if = { workspace = true }
-chrono = { workspace = true }
+chrono.workspace = true
 codee ={ workspace = true }
 console_error_panic_hook = { workspace = true }
 cookie = { workspace = true }
@@ -31,6 +31,8 @@ http = { workspace = true }
 http-serde = { workspace = true }
 icondata = { workspace = true }
 indoc = { workspace = true }
+jsonwebtoken = { workspace = true, optional = true }
+# jsonwebtoken = { workspace = true }
 lazy_static = { workspace = true }
 leptos = { workspace = true }
 leptos-use = { workspace = true }
@@ -78,6 +80,7 @@ ssr = [
   "dep:diesel-async",
   "dep:leptos_actix",
   "dep:rand",
+  "dep:jsonwebtoken",
   "leptos/ssr",
   "leptos-use/ssr",
   "leptos_meta/ssr",

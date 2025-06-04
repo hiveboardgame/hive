@@ -184,6 +184,7 @@ diesel::table! {
         patreon -> Bool,
         admin -> Bool,
         takeback -> Text,
+        bot -> Bool,
     }
 }
 

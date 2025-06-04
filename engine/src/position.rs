@@ -1,14 +1,18 @@
-use lazy_static::lazy_static;
-use regex::Regex;
-use serde::{Deserialize, Serialize};
-use std::fmt;
-
 use crate::{
     board::{Board, BOARD_SIZE},
     direction::Direction,
     game_error::GameError,
     piece::Piece,
 };
+use lazy_static::lazy_static;
+use regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::fmt;
+
+lazy_static! {
+    static ref RE: Regex =
+        Regex::new(r"([-/\\]?)([wb][ABGMLPSQ]\d?)([-/\\]?)").expect("This regex should compile");
+}
 
 /// Position represented via [odd-r horizontal](https://www.redblobgames.com/grids/hexagons/#coordinates-offset) coordinates
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord, Deserialize, Serialize)]
@@ -194,10 +198,6 @@ impl Position {
             return Ok(Position::initial_spawn_position());
         }
 
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"([-/\\]?)([wb][ABGMLPSQ]\d?)([-/\\]?)")
-                .expect("This regex should compile");
-        }
         if let Some(cap) = RE.captures(s) {
             let piece: Piece = cap[2].parse()?;
             if let Some(mut position) = board.position_of_piece(piece) {

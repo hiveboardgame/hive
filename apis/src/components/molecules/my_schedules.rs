@@ -83,18 +83,22 @@ fn MySchedulesInner(
                     let black_username = gr.black_player.username;
                     let white_patreon = gr.white_player.patreon;
                     let black_patreon = gr.black_player.patreon;
+                    let white_bot = gr.white_player.bot;
+                    let black_bot = gr.black_player.bot;
                     view! {
                         <div class="flex flex-col justify-between p-3 w-full h-fit dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
                             <div class="flex justify-center mb-4">
                                 <div class="flex gap-1 justify-between items-center p-1 w-fit">
                                     <ProfileLink
                                         patreon=white_patreon
+                                        bot=white_bot
                                         username=white_username
                                         extend_tw_classes="truncate max-w-[120px] "
                                     />
                                     vs.
                                     <ProfileLink
                                         patreon=black_patreon
+                                        bot=black_bot
                                         username=black_username
                                         extend_tw_classes=" truncate max-w-[120px]"
                                     />

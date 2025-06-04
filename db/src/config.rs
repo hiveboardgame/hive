@@ -5,6 +5,7 @@ use std::{env, env::VarError};
 pub struct DbConfig {
     pub database_url: String,
     pub session_secret: String,
+    pub jwt_secret: String,
 }
 
 impl DbConfig {
@@ -13,6 +14,7 @@ impl DbConfig {
         Ok(DbConfig {
             database_url: env::var("DATABASE_URL")?,
             session_secret: env::var("COOKIE_SECRET_KEY")?,
+            jwt_secret: env::var("JWT_SECRET_KEY")?,
         })
     }
 
@@ -22,6 +24,7 @@ impl DbConfig {
             return Ok(DbConfig {
                 database_url: env::var("TEST_DATABASE_URL")?,
                 session_secret: env::var("TEST_COOKIE_SECRET_KEY")?,
+                jwt_secret: env::var("TEST_JWT_SECRET_KEY")?,
             });
         }
         unreachable!("You called a test function in a non test binary!");
