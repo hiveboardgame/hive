@@ -54,6 +54,7 @@ diesel::table! {
         tournament_game_result -> Text,
         game_start -> Text,
         move_times -> Array<Nullable<Int8>>,
+        round -> Nullable<Int4>,
     }
 }
 
@@ -147,6 +148,10 @@ diesel::table! {
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
         series -> Nullable<Uuid>,
+        bye -> Array<Nullable<Uuid>>,
+        current_round -> Int4,
+        initial_seeding -> Array<Nullable<Uuid>>,
+        seeding_mode -> Varchar,
     }
 }
 

@@ -77,6 +77,7 @@ pub struct NewGame {
     pub tournament_game_result: String,
     pub game_start: String,
     pub move_times: Vec<Option<i64>>,
+    pub round: Option<i32>,
 }
 
 impl NewGame {
@@ -137,6 +138,7 @@ impl NewGame {
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: start,
             move_times: vec![],
+            round: Some(tournament.current_round),
         }
     }
 
@@ -186,6 +188,7 @@ impl NewGame {
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
             move_times: vec![],
+            round: None,
         }
     }
 }
@@ -228,6 +231,7 @@ pub struct Game {
     pub tournament_game_result: String,
     pub game_start: String,
     pub move_times: Vec<Option<i64>>,
+    pub round: Option<i32>,
 }
 
 impl Game {
@@ -1204,7 +1208,7 @@ impl Game {
             }
         }
         if let Some(tid) = self.tournament_id {
-            let tournament = Tournament::find(tid, conn).await?;
+            let tournament = Tournament::find_by_uuid( tid, conn).await?;
             tournament.ensure_user_is_organizer(user_id, conn).await?;
             let con = match new_result {
                 TournamentGameResult::DoubeForfeit => Conclusion::Forfeit,

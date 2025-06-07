@@ -10,6 +10,9 @@ pub enum Tiebreaker {
     HeadToHead,
     WinsAsBlack,
     SonnebornBerger,
+    Buchholz,
+    BuchholzCut1,
+    DirectEncounter,
 }
 
 impl Tiebreaker {
@@ -19,6 +22,9 @@ impl Tiebreaker {
             Tiebreaker::HeadToHead => "H2H",
             Tiebreaker::RawPoints => "Points",
             Tiebreaker::SonnebornBerger => "SB",
+            Tiebreaker::Buchholz => "Buch",
+            Tiebreaker::BuchholzCut1 => "Buch1",
+            Tiebreaker::DirectEncounter => "Direct",
         }
     }
 }
@@ -36,6 +42,9 @@ impl Display for Tiebreaker {
             Tiebreaker::HeadToHead => write!(f, "HeadToHead"),
             Tiebreaker::RawPoints => write!(f, "RawPoints"),
             Tiebreaker::SonnebornBerger => write!(f, "SonnebornBerger"),
+            Tiebreaker::Buchholz => write!(f, "Buchholz"),
+            Tiebreaker::BuchholzCut1 => write!(f, "BuchholzCut1"),
+            Tiebreaker::DirectEncounter => write!(f, "DirectEncounter"),
         }
     }
 }
@@ -49,6 +58,9 @@ impl FromStr for Tiebreaker {
             "RawPoints" => Ok(Tiebreaker::RawPoints),
             "WinsAsBlack" => Ok(Tiebreaker::WinsAsBlack),
             "SonnebornBerger" => Ok(Tiebreaker::SonnebornBerger),
+            "Buchholz" => Ok(Tiebreaker::Buchholz),
+            "BuchholzCut1" => Ok(Tiebreaker::BuchholzCut1),
+            "DirectEncounter" => Ok(Tiebreaker::DirectEncounter),
             s => Err(TiebreakerError::InvalidTiebreaker {
                 found: s.to_string(),
             }),

@@ -47,7 +47,10 @@ impl Color {
     }
 
     pub fn opposite_color(&self) -> Color {
-        Color::from(1 - (*self as u8))
+        match self {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        }
     }
 
     pub fn name(&self) -> &'static str {
