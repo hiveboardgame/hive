@@ -2,14 +2,13 @@ use crate::common::UserAction;
 use crate::components::atoms::rating::icon_for_speed;
 use crate::components::molecules::user_row::UserRow;
 use crate::components::{molecules::game_row::GameRow, organisms::display_profile::DisplayProfile};
-use crate::functions::games::get::get_batch_from_options;
+use crate::functions::games::get::GetBatchFromOptions;
 use crate::functions::users::get_profile;
 use crate::i18n::*;
 use crate::responses::GameResponse;
 use hive_lib::Color;
 use hooks::use_params;
 use leptos::either::Either;
-use leptos::task::spawn_local;
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::{params::Params, *};
@@ -24,16 +23,39 @@ struct ProfileControls {
     pub tab_view: GameProgress,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 struct ProfileGamesContext {
     pub games: RwSignal<Vec<GameResponse>>,
     pub controls: RwSignal<ProfileControls>,
-    pub has_more: RwSignal<bool>,
+    pub next_batch: ServerAction<GetBatchFromOptions>,
+    pub is_first_batch: StoredValue<bool>,
+    pub has_more: StoredValue<bool>,
 }
-
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
     username: String,
+}
+
+fn load_games(
+    controls: ProfileControls,
+    username: String,
+    batch_info: Option<BatchInfo>,
+    action: ServerAction<GetBatchFromOptions>,
+) {
+    let user_info = (username, controls.color, controls.result);
+    let batch_size = if batch_info.is_none() {
+        Some(6)
+    } else {
+        Some(4)
+    };
+    let options = GamesQueryOptions {
+        players: vec![user_info],
+        speeds: controls.speeds,
+        current_batch: batch_info,
+        batch_size,
+        game_progress: controls.tab_view,
+    };
+    action.dispatch(GetBatchFromOptions { options });
 }
 
 #[component]
@@ -48,16 +70,9 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
         format!("no-link-style hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-1 px-2 rounded {}", if active { "bg-pillbug-teal" } else { "bg-button-dawn dark:bg-button-twilight" })
     };
     let set_first_batch = move || {
-        spawn_local(async move {
-            ctx.has_more.set(true);
-            let options = build_options(ctx.controls.get(), None, username());
-            let first_batch = get_batch_from_options(options).await;
-            if let Ok(first_batch) = first_batch {
-                ctx.games.set(first_batch);
-            } else {
-                ctx.games.set(vec![]);
-            }
-        });
+        ctx.has_more.set_value(true);
+        ctx.is_first_batch.set_value(true);
+        load_games(ctx.controls.get(), username(), None, ctx.next_batch);
     };
     let toggle_speeds = move |speed| {
         controls.update(|c| {
@@ -232,9 +247,33 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
             ..Default::default()
         }),
         games: RwSignal::new(Vec::new()),
-        has_more: RwSignal::new(true),
+        has_more: StoredValue::new(true),
+        next_batch: ServerAction::new(),
+        is_first_batch: StoredValue::new(true),
     });
     let ctx = expect_context::<ProfileGamesContext>();
+    Effect::watch(
+        ctx.next_batch.version(),
+        move |_, _, _| {
+            let next_batch = if let Some(Ok(next_batch)) = ctx.next_batch.value().get_untracked() {
+                next_batch
+            } else {
+                vec![]
+            };
+            if next_batch.is_empty() {
+                ctx.has_more.set_value(false);
+            }
+            ctx.games.update(|games| {
+                if ctx.is_first_batch.get_value() {
+                    *games = next_batch;
+                } else {
+                    games.extend(next_batch);
+                }
+            });
+        },
+        true,
+    );
+
     view! {
         <div class="flex flex-col pt-12 mx-3 bg-light dark:bg-gray-950 h-[100vh]">
             <Transition fallback=move || {
@@ -287,8 +326,9 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 c.result = None;
             };
         });
-        ctx.games.set(Vec::new());
-        ctx.has_more.set(true);
+        ctx.has_more.set_value(true);
+        ctx.is_first_batch.set_value(true);
+        ctx.games.set(vec![]);
     });
     let _ = use_infinite_scroll_with_options(
         el,
@@ -299,25 +339,12 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 id: game.uuid,
                 timestamp: game.updated_at,
             });
+            ctx.is_first_batch.set_value(batch_info.is_none());
             async move {
-                if !ctx.has_more.get() {
+                if !ctx.has_more.get_value() || ctx.next_batch.pending().get() {
                     return;
                 }
-                let is_first = batch_info.is_none();
-                let options = build_options(controls, batch_info, username);
-                let next_batch = get_batch_from_options(options).await;
-                if let Ok(next_batch) = next_batch {
-                    ctx.has_more.set(!next_batch.is_empty());
-                    ctx.games.update(|games| {
-                        if is_first {
-                            *games = next_batch;
-                        } else {
-                            games.extend(next_batch);
-                        }
-                    });
-                } else {
-                    ctx.has_more.set(false);
-                }
+                load_games(controls, username, batch_info, ctx.next_batch);
             }
         },
         UseInfiniteScrollOptions::default()
@@ -330,32 +357,8 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
             class="overflow-x-hidden items-center h-full sm:grid sm:grid-cols-2 sm:gap-1"
         >
             {move || {
-                ctx.games
-                    .get()
-                    .iter()
-                    .map(|game| view! { <GameRow game=game.clone() /> })
-                    .collect_view()
+                ctx.games.get().into_iter().map(|game| view! { <GameRow game /> }).collect_view()
             }}
         </div>
-    }
-}
-
-fn build_options(
-    controls: ProfileControls,
-    batch_info: Option<BatchInfo>,
-    username: String,
-) -> GamesQueryOptions {
-    let user_info = (username, controls.color, controls.result);
-    let batch_size = if batch_info.is_none() {
-        Some(6)
-    } else {
-        Some(4)
-    };
-    GamesQueryOptions {
-        players: vec![user_info],
-        speeds: controls.speeds,
-        current_batch: batch_info,
-        batch_size,
-        game_progress: controls.tab_view,
     }
 }
