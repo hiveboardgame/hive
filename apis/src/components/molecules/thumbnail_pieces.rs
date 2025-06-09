@@ -9,13 +9,14 @@ use leptos::prelude::*;
 #[component]
 pub fn ThumbnailPieces(board: StoredValue<Board>) -> impl IntoView {
     let thumbnail_pieces = move || {
+        let board = board.get_value();
         let mut pieces = Vec::new();
         for r in 0..32 {
             for q in 0..32 {
                 let position = Position::new(q, r);
-                let bug_stack = board.get_value().board.get(position).clone();
+                let bug_stack = board.board.get(position);
                 if !bug_stack.is_empty() {
-                    pieces.push(HexStack::new_history(&bug_stack, position));
+                    pieces.push(HexStack::new_history(bug_stack, position));
                 }
             }
         }
