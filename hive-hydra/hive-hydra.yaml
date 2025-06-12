@@ -6,20 +6,20 @@ base_url: "http://localhost:3000"  # Base URL for the Hive Game API
 
 # Bot configurations
 bots:
-  - name: bot1  # This name is used in env vars like HIVE_HYDRA_BOT_BOT1_EMAIL
-    ai_command: nokamute uhp --threads=1
-    bestmove_command_args: depth 1
-    email: bot1@example.com  # Better to set this via environment variable
-    password: password1      # Better to set this via environment variable
-  
-  - name: bot2
+  - name: nokamute-easy
     ai_command: nokamute uhp --threads=1
     bestmove_command_args: depth 2
-    email: bot2@example.com
-    password: password2
+    email: nokamute-easy@example.com
+    password: nokamute-easy  # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_EASY_PASSWORD
+  
+  - name: nokamute-medium
+    ai_command: nokamute uhp --threads=1
+    bestmove_command_args: depth 4
+    email: nokamute-medium@example.com
+    password: nokamute-medium  # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_MEDIUM_PASSWORD
 
-  # - name: bot3
-  #   ai_command: nokamute uhp
-  #   bestmove_command_args: "time 00:00:01"
-  #   email: bot3@example.com
-  #   password: password3
+  - name: nokamute-hard
+    ai_command: nokamute uhp --threads=2
+    bestmove_command_args: depth 7
+    email: nokamute-hard@example.com
+    password: nokamute-hard  # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_HARD_PASSWORD
