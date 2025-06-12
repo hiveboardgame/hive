@@ -5,44 +5,20 @@ base_url: "http://localhost:3000"  # Base URL for the Hive Game API
 
 # Bot configurations
 bots:
-  - name: nokamute-1  # This name is used in env vars like HIVE_HYDRA_BOT_NOKAMUTE_1_PASSWORD
-    ai_command: nokamute uhp --threads=1
-    bestmove_command_args: depth 1
-    email: nokamute-1@hivegame.com
-    password: change-this # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_1_PASSWORD
-  
-  - name: nokamute-2  # This name is used in env vars like HIVE_HYDRA_BOT_NOKAMUTE_2_PASSWORD
+  - name: nokamute-easy
     ai_command: nokamute uhp --threads=1
     bestmove_command_args: depth 2
-    email: nokamute-2@hivegame.com
-    password: change-this # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_2_PASSWORD
+    email: nokamute-easy@example.com
+    password: change-this  # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_EASY_PASSWORD
   
-  - name: nokamute-3  # This name is used in env vars like HIVE_HYDRA_BOT_NOKAMUTE_3_PASSWORD
-    ai_command: nokamute uhp --threads=2
-    bestmove_command_args: depth 3
-    email: nokamute-3@hivegame.com
-    password: change-this # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_3_PASSWORD
-  
-  - name: nokamute-4  # This name is used in env vars like HIVE_HYDRA_BOT_NOKAMUTE_4_PASSWORD
-    ai_command: nokamute uhp --threads=2
+  - name: nokamute-medium
+    ai_command: nokamute uhp --threads=1
     bestmove_command_args: depth 4
-    email: nokamute-4@hivegame.com
-    password: change-this # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_4_PASSWORD
-  
-  - name: nokamute-5  # This name is used in env vars like HIVE_HYDRA_BOT_NOKAMUTE_5_PASSWORD
-    ai_command: nokamute uhp --threads=4
-    bestmove_command_args: depth 5
-    email: nokamute-5@hivegame.com
-    password: change-this # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_5_PASSWORD
-  
-  - name: nokamute-6  # This name is used in env vars like HIVE_HYDRA_BOT_NOKAMUTE_6_PASSWORD
-    ai_command: nokamute uhp --threads=4
-    bestmove_command_args: depth 6
-    email: nokamute-6@hivegame.com
-    password: change-this # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_6_PASSWORD
-  
-  - name: nokamute-7  # This name is used in env vars like HIVE_HYDRA_BOT_NOKAMUTE_7_PASSWORD
-    ai_command: nokamute uhp --threads=6
+    email: nokamute-medium@example.com
+    password: change-this  # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_MEDIUM_PASSWORD
+
+  - name: nokamute-hard
+    ai_command: nokamute uhp --threads=2
     bestmove_command_args: depth 7
-    email: nokamute-7@hivegame.com
-    password: change-this # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_7_PASSWORD
+    email: nokamute-hard@example.com
+    password: change-this  # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_HARD_PASSWORD
