@@ -8,17 +8,17 @@ bots:
   - name: nokamute-easy
     ai_command: nokamute uhp --threads=1
     bestmove_command_args: depth 2
-    email: nokamute-easy@example.com
+    email: nokamute-easy@hivegame.com
     password: change-this  # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_EASY_PASSWORD
   
   - name: nokamute-medium
     ai_command: nokamute uhp --threads=1
     bestmove_command_args: depth 4
-    email: nokamute-medium@example.com
+    email: nokamute-medium@hivegame.com
     password: change-this  # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_MEDIUM_PASSWORD
 
   - name: nokamute-hard
     ai_command: nokamute uhp --threads=2
     bestmove_command_args: depth 7
-    email: nokamute-hard@example.com
+    email: nokamute-hard@hivegame.com
     password: change-this  # Better to set this via environment variable HIVE_HYDRA_BOT_NOKAMUTE_HARD_PASSWORD

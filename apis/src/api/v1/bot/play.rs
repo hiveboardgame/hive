@@ -61,8 +61,8 @@ async fn play_move(
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
     let game = Game::find_by_game_id(&play.game_id, &mut conn).await?;
-    let user = User::find_by_email(email, &mut conn).await?;
-    if game.current_player_id != user.id {
+    let bot = User::find_by_email(email, &mut conn).await?;
+    if game.current_player_id != bot.id {
         return Err(anyhow!("Not your turn"));
     }
     let mut state = State::new_from_str(&game.history, &game.game_type)?;
@@ -91,7 +91,7 @@ async fn play_move(
                 send_messages(
                     ws_server.clone(),
                     &updated_game,
-                    &user,
+                    &bot,
                     &pool,
                     played_turn.clone(),
                 )
@@ -104,7 +104,7 @@ async fn play_move(
                         let msg = format!(
                             "[Your turn](<https://hivegame.com/game/{}>) in your game vs {}.\nYou have {} to play.",
                             updated_game.nanoid,
-                            user.username,
+                            bot.username,
                             updated_game.str_time_left_for_player(opponent_id)
                         );
 

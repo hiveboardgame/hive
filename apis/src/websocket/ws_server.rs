@@ -28,6 +28,7 @@ use rand::Rng;
 use shared_types::{GameId, TimeMode};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use log::{error, warn};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -245,10 +246,16 @@ impl Handler<Connect> for WsServer {
                     }
 
                     // Send games which require input from the user
-                    let game_ids = user
+                    let game_ids_result = user
                         .get_urgent_nanoids(&mut conn)
-                        .await
-                        .expect("to get urgent game_ids");
+                        .await;
+                    let game_ids = match game_ids_result {
+                        Ok(ids) => ids,
+                        Err(e) => {
+                            error!("Failed to get urgent game_ids for user {}: {}", user_id, e);
+                            Vec::new()
+                        }
+                    };
                     if !game_ids.is_empty() {
                         let games = conn
                             .transaction::<_, anyhow::Error, _>(move |tc| {
@@ -390,13 +397,13 @@ impl Handler<ClientActorMessage> for WsServer {
                         .insert(from);
                 }
                 // Send the message to everyone
-                self.games_users
-                    .get(&GameId(self.id.clone()))
-                    .expect("Game to exists")
-                    .iter()
-                    .for_each(|client| self.send_message(&cam.serialized, client));
+                if let Some(users) = self.games_users.get(&GameId(self.id.clone())) {
+                    users.iter().for_each(|client| self.send_message(&cam.serialized, client));
+                } else {
+                    warn!("Game '{}' not found in games_users when sending global message", self.id);
+                }
             }
-            MessageDestination::Game(game_id) => {
+            MessageDestination::Game(ref game_id) => {
                 // Make sure the user is in the game:
                 if let Some(from) = cam.from {
                     self.games_users
@@ -405,11 +412,11 @@ impl Handler<ClientActorMessage> for WsServer {
                         .insert(from);
                 }
                 // Send the message to everyone
-                self.games_users
-                    .get(&game_id)
-                    .expect("Game to exists")
-                    .iter()
-                    .for_each(|client| self.send_message(&cam.serialized, client));
+                if let Some(users) = self.games_users.get(&game_id) {
+                    users.iter().for_each(|client| self.send_message(&cam.serialized, client));
+                } else {
+                    warn!("Game '{}' not found in games_users when sending game message", game_id);
+                }
             }
             MessageDestination::GameSpectators(game_id, white_id, black_id) => {
                 // Make sure the user is in the game:
@@ -420,15 +427,15 @@ impl Handler<ClientActorMessage> for WsServer {
                         .insert(from);
                 }
                 // Send the message to everyone except white_id and black_id
-                self.games_users
-                    .get(&game_id)
-                    .expect("Game to exists")
-                    .iter()
-                    .for_each(|user| {
+                if let Some(users) = self.games_users.get(&game_id) {
+                    users.iter().for_each(|user| {
                         if *user != white_id && *user != black_id {
                             self.send_message(&cam.serialized, user);
                         }
                     });
+                } else {
+                    warn!("Game '{}' not found in games_users when sending game spectators message", game_id);
+                }
             }
             MessageDestination::User(user_id) => {
                 self.send_message(&cam.serialized, &user_id);
