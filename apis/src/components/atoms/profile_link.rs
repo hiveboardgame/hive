@@ -9,10 +9,12 @@ pub fn ProfileLink(
     #[prop(optional)] user_is_hoverable: MaybeProp<UserResponse>,
     username: String,
     patreon: bool,
+    bot: bool,
 ) -> impl IntoView {
     let profile_link = format!("/@/{}", username);
     let hover_show = RwSignal::new(false);
     let patreon = RwSignal::new(patreon);
+    let bot = RwSignal::new(bot);
     view! {
         <div class="relative w-full">
             <a
@@ -32,6 +34,8 @@ pub fn ProfileLink(
                 )>
                     {username} <Show when=patreon>
                         <Icon icon=icondata::LuCrown attr:class="w-2 h-2" />
+                    </Show> <Show when=bot>
+                        <Icon icon=icondata::MdiRobotHappy attr:class="w-2 h-2" />
                     </Show>
                 </div>
             </a>

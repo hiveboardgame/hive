@@ -131,6 +131,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                             <ProfileLink
                                 patreon=game().white_player.patreon
                                 username=game().white_player.username
+                                bot=game().white_player.bot
                             />
                         </div>
                         <Show when=is_finished fallback=move || { game().white_rating() }>
@@ -147,6 +148,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                             <ProfileLink
                                 username=game().black_player.username
                                 patreon=game().black_player.patreon
+                                bot=game().black_player.bot
                             />
                         </div>
                         <Show when=is_finished fallback=move || { game().black_rating() }>

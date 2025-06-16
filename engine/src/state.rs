@@ -132,6 +132,7 @@ impl State {
         self.turn > 1 || !self.tournament
     }
 
+    // TODO: Think about renaming this to play_turn_from_str(ings)
     pub fn play_turn_from_history(&mut self, piece: &str, position: &str) -> Result<(), GameError> {
         match piece {
             "pass" => {

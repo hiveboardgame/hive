@@ -69,6 +69,7 @@ pub fn UnplayedGameRow(
                     <div class="flex shrink">
                         <ProfileLink
                             patreon=game.get_value().white_player.patreon
+                            bot=game.get_value().white_player.bot
                             username=game.get_value().white_player.username.clone()
                             extend_tw_classes="truncate max-w-[120px]"
                         />
@@ -78,6 +79,7 @@ pub fn UnplayedGameRow(
                     <div class="flex shrink">
                         <ProfileLink
                             patreon=game.get_value().black_player.patreon
+                            bot=game.get_value().black_player.bot
                             username=game.get_value().black_player.username.clone()
                             extend_tw_classes="truncate max-w-[120px]"
                         />

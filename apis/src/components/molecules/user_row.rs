@@ -31,6 +31,29 @@ pub fn UserRow(
     } else {
         "dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light"
     };
+//    let profile_link = {
+//        let username = username.get_value();
+//        if on_profile {
+//            view! {
+//                <ProfileLink
+//                    patreon=user.patreon
+//                    bot=user.bot
+//                    username
+//                    extend_tw_classes="truncate max-w-[120px]"
+//                />
+//            }
+//        } else {
+//            view! {
+//                <ProfileLink
+//                    patreon=user.patreon
+//                    bot=user.bot
+//                    username
+//                    extend_tw_classes="truncate max-w-[120px]"
+//                    user_is_hoverable=user_is_hoverable.clone().into()
+//                />
+//            }
+//        }
+//    };
 
     let display_actions = {
         let user_id = user_id.get_value();
@@ -61,6 +84,7 @@ pub fn UserRow(
                     <StatusIndicator username=username.get_value() />
                     <ProfileLink
                         patreon=user.patreon
+                        bot=user.bot
                         username=username.get_value()
                         extend_tw_classes="truncate max-w-[120px]"
                         user_is_hoverable=user_is_hoverable.into()

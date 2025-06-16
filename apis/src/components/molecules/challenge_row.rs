@@ -77,27 +77,29 @@ pub fn ChallengeRow(
     let time_mode = challenge.time_mode;
 
     let challenger_username = StoredValue::new(challenge.challenger.username);
-    let challenger_patreon = StoredValue::new(challenge.challenger.patreon);
-    let (username, patreon, rating) =
+    let (username, patreon, bot, rating) =
         if let (Some(uid), Some(opponent)) = (uid, challenge.opponent.clone()) {
             if challenge.challenger.uid == uid {
                 let opp = opponent.username.clone();
                 (
                     opp.clone(),
                     opponent.patreon,
+                    opponent.bot,
                     opponent.rating_for_speed(&challenge.speed),
                 )
             } else {
                 (
                     challenger_username.get_value(),
-                    challenger_patreon.get_value(),
+                    challenge.challenger.patreon,
+                    challenge.challenger.bot,
                     challenge.challenger_rating,
                 )
             }
         } else {
             (
                 challenger_username.get_value(),
-                challenger_patreon.get_value(),
+                challenge.challenger.patreon,
+                challenge.challenger.bot,
                 challenge.challenger_rating,
             )
         };
@@ -119,8 +121,9 @@ pub fn ChallengeRow(
                     <div class="flex items-center">
                         <StatusIndicator username=username.clone() />
                         <ProfileLink
-                            username=username
-                            patreon=patreon
+                            username
+                            patreon
+                            bot
                             extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm-max-w-[150px]"
                         />
                     </div>
