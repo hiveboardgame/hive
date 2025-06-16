@@ -24,7 +24,7 @@ use crate::responses::GameResponse;
 pub async fn send_messages(
     ws_server: Data<Addr<WsServer>>,
     game: &Game,
-    user: &User,
+    bot: &User,
     pool: &Data<DbPool>,
     played_turn: Turn,
 ) -> Result<()> {
@@ -33,6 +33,11 @@ pub async fn send_messages(
     let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
     let games = next_to_move.get_games_with_notifications(&mut conn).await?;
     let mut game_responses = Vec::new();
+    let user_id = if game.white_id == bot.id {
+        game.black_id
+    } else {
+        game.white_id
+    };
     for g in games {
         game_responses.push(GameResponse::from_model(&g, &mut conn).await?);
     }
@@ -47,8 +52,8 @@ pub async fn send_messages(
             game_id: GameId(game.nanoid.to_owned()),
             game: response.clone(),
             game_action: GameReaction::Turn(played_turn),
-            user_id: user.id.to_owned(),
-            username: user.username.to_owned(),
+            user_id: bot.id.to_owned(),
+            username: bot.username.to_owned(),
         }))),
     });
     // TODO: Just add the few top games and keep them rated
@@ -64,7 +69,7 @@ pub async fn send_messages(
             let cam = ClientActorMessage {
                 destination: message.destination,
                 serialized,
-                from: None,
+                from: Some(user_id),
             };
             ws_server.do_send(cam);
         };
@@ -76,6 +81,7 @@ pub async fn send_challenge_messages(
     ws_server: Data<Addr<WsServer>>,
     deleted_challenges: Vec<ChallengeId>,
     game: &Game,
+    bot: &User,
     pool: &Data<DbPool>,
 ) -> Result<()> {
     let mut messages = Vec::new();
@@ -91,14 +97,21 @@ pub async fn send_challenge_messages(
 
     // Add game creation message
     let game_response = GameResponse::from_model(game, &mut conn).await?;
+
+    let user_id = if game.white_id == bot.id {
+        game.black_id
+    } else {
+        game.white_id
+    };
+
     messages.push(InternalServerMessage {
-        destination: MessageDestination::Global,
+        destination: MessageDestination::User(user_id),
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
-            game_id: GameId(game.nanoid.clone()),
-            game: game_response,
             game_action: GameReaction::New,
-            user_id: game.current_player_id,
-            username: User::find_by_uuid(&game.current_player_id, &mut conn).await?.username,
+            game: game_response.clone(),
+            game_id: game_response.game_id.clone(),
+            user_id: bot.id,
+            username: bot.username.to_owned(),
         }))),
     });
 
@@ -109,7 +122,7 @@ pub async fn send_challenge_messages(
             let cam = ClientActorMessage {
                 destination: message.destination,
                 serialized,
-                from: None,
+                from: Some(user_id),
             };
             ws_server.do_send(cam);
         };

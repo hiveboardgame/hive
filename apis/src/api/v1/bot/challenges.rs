@@ -88,7 +88,7 @@ async fn accept_challenge(
     let (game, deleted_challenges) =
         Game::create_and_delete_challenges(new_game, &mut conn).await?;
     
-    send_challenge_messages(ws_server, deleted_challenges, &game, &pool).await?;
+    send_challenge_messages(ws_server, deleted_challenges, &game, &bot, &pool).await?;
     
     match TimeMode::from_str(&game.time_mode) {
         Ok(TimeMode::RealTime) | Err(_) => {}

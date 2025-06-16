@@ -57,7 +57,7 @@ pub struct GameHB {}
 #[rtype(result = "()")]
 pub struct Ping {}
 
-#[derive(Message, Debug)]
+#[derive(Message, Debug, Clone)]
 #[rtype(result = "()")]
 pub struct ClientActorMessage {
     pub destination: MessageDestination,
