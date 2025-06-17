@@ -35,7 +35,7 @@ pub fn ProfileLink(
                     {username} <Show when=patreon>
                         <Icon icon=icondata::LuCrown attr:class="w-2 h-2" />
                     </Show> <Show when=bot>
-                        <Icon icon=icondata::MdiRobotHappy attr:class="w-2 h-2" />
+                        <Icon icon=icondata::MdiRobotHappy attr:class="w-3 h-3" />
                     </Show>
                 </div>
             </a>
