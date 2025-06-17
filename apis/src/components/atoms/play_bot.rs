@@ -27,7 +27,7 @@ pub fn PlayBot() -> impl IntoView {
                         navigate("/login", Default::default());
                     }
                 }
-                class="flex gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                class="flex gap-1 justify-center items-center px-4 py-2 font-bold text-white whitespace-nowrap rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
             >
                 Play bot
             </button>
