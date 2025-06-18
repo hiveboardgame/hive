@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use shared_types::{
     ScoringMode, Standings, StartMode, Tiebreaker, TimeMode, TournamentId, TournamentStatus,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
@@ -15,6 +15,7 @@ pub struct TournamentAbstractResponse {
     pub games_total: usize,
     pub games_played: usize,
     pub players: usize,
+    pub player_list: HashSet<Uuid>,
     pub seats: i32,
     pub invite_only: bool,
     pub mode: String,
@@ -77,6 +78,10 @@ impl TournamentAbstractResponse {
     }
 
     pub async fn from_model(tournament: &Tournament, conn: &mut DbConn<'_>) -> Result<Self> {
+        let player_list = tournament.players(conn).await?
+        .iter()
+        .map(|p| p.id)
+        .collect();
         Ok(Self {
             id: tournament.id,
             tournament_id: TournamentId(tournament.nanoid.clone()),
@@ -84,6 +89,7 @@ impl TournamentAbstractResponse {
             games_total: tournament.number_of_games(conn).await? as usize,
             games_played: tournament.number_of_finished_games(conn).await? as usize,
             players: tournament.number_of_players(conn).await? as usize,
+            player_list,
             seats: tournament.seats,
             invite_only: tournament.invite_only,
             mode: tournament.mode.clone(),
