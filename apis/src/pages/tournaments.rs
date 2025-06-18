@@ -1,6 +1,6 @@
-use crate::components::molecules::tournament_row::TournamentRow;
 use crate::functions::tournaments::get_all_abstract;
 use crate::pages::tournament::BUTTON_STYLE;
+use crate::{components::molecules::tournament_row::TournamentRow, providers::AuthContext};
 use leptos::either::Either;
 use leptos::prelude::*;
 use shared_types::{TournamentSortOrder, TournamentStatus};
@@ -9,6 +9,7 @@ use shared_types::{TournamentSortOrder, TournamentStatus};
 enum TournamentFilter {
     All,
     Status(TournamentStatus),
+    MyTournaments,
 }
 
 fn get_button_classes(current: TournamentFilter, selected: TournamentFilter) -> &'static str {
@@ -22,6 +23,8 @@ fn get_button_classes(current: TournamentFilter, selected: TournamentFilter) -> 
 
 #[component]
 pub fn Tournaments() -> impl IntoView {
+    let auth_context = expect_context::<AuthContext>();
+    let logged_in = move || auth_context.user.get().is_some();
     let filter = RwSignal::new(TournamentFilter::Status(TournamentStatus::NotStarted));
     let search = RwSignal::new("".to_string());
     let tournament_resource =
@@ -76,6 +79,17 @@ pub fn Tournaments() -> impl IntoView {
                     >
                         "Completed"
                     </button>
+                    <Show when=logged_in>
+                        <button
+                            class=move || get_button_classes(
+                                TournamentFilter::MyTournaments,
+                                filter.get(),
+                            )
+                            on:click=move |_| { filter.set(TournamentFilter::MyTournaments) }
+                        >
+                            {"My\u{00A0}Tournaments"}
+                        </button>
+                    </Show>
                 </div>
                 <Transition fallback=move || {
                     view! { <div class="flex justify-center">"Loading tournaments..."</div> }
@@ -96,6 +110,7 @@ pub fn Tournaments() -> impl IntoView {
                                                             match filter.get() {
                                                                 TournamentFilter::All => true,
                                                                 TournamentFilter::Status(status) => t.status == status,
+                                                                TournamentFilter::MyTournaments => auth_context.user.get_untracked().is_some_and(|u|t.player_list.contains(&u.id)),
                                                             }
                                                         })
                                                         .collect();
