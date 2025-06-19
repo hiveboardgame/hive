@@ -114,9 +114,9 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         }
     };
 
-    let user_is_organizer = Signal::derive(move || {
+    let user_is_organizer_or_admin = Signal::derive(move || {
         if let Some(account) = account() {
-            tournament().organizers.iter().any(|p| p.uid == account.id)
+            account.user.admin || tournament().organizers.iter().any(|p| p.uid == account.id)
         } else {
             false
         }
@@ -126,19 +126,19 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         api.tournament(action);
     };
     let delete = move |_| {
-        if user_is_organizer() {
+        if user_is_organizer_or_admin() {
             send_action(TournamentAction::Delete(tournament_id()));
             let navigate = use_navigate();
             navigate("/tournaments", Default::default());
         }
     };
     let finish = move |_| {
-        if user_is_organizer() {
+        if user_is_organizer_or_admin() {
             send_action(TournamentAction::Finish(tournament_id()));
         }
     };
     let start = move |_| {
-        if user_is_organizer() {
+        if user_is_organizer_or_admin() {
             send_action(TournamentAction::Start(tournament_id()));
         }
     };
@@ -327,7 +327,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                                 Leave
                             </button>
                         </Show>
-                        <Show when=user_is_organizer>
+                        <Show when=user_is_organizer_or_admin>
                             <button class=BUTTON_STYLE on:click=delete>
                                 {"Delete"}
                             </button>
@@ -337,11 +337,11 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         </Show>
                     </div>
                     <TournamentAdminControls
-                        user_is_organizer=user_is_organizer()
+                        user_is_organizer=user_is_organizer_or_admin()
                         tournament=tournament()
                     />
                 </Show>
-                <Show when=user_is_organizer>
+                <Show when=user_is_organizer_or_admin>
                     <div class="flex gap-1 justify-center items-center p-2">
                         <Show when=inprogress>
                             <button
@@ -377,7 +377,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
 
                         <UnplayedGameRow
                             game
-                            user_is_organizer=user_is_organizer
+                            user_is_organizer=user_is_organizer_or_admin
                             tournament_finished=finished.into()
                         />
 
@@ -391,7 +391,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                 </details>
             </Show>
         </div>
-        <Show when=move || user_is_organizer() || user_joined()>
+        <Show when=move || user_is_organizer_or_admin() || user_joined()>
             <div class="p-3 m-2 w-full max-w-full h-60 whitespace-normal break-words sm:w-2/3 bg-even-light dark:bg-even-dark">
                 <ChatWindow destination=shared_types::SimpleDestination::Tournament(
                     tournament().tournament_id,
