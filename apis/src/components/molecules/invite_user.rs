@@ -45,16 +45,16 @@ pub fn InviteUser(tournament: TournamentResponse) -> impl IntoView {
                 prop:value=pattern
                 maxlength="20"
             />
-            <div class="overflow-y-auto max-h-96">
-                <Transition>
+            <Transition>
+                <div class="overflow-y-auto max-h-96">
                     <For each=users key=move |(_, user)| user.uid let:user>
                         <UserRow
                             actions=vec![UserAction::Invite(tournament.tournament_id.clone())]
                             user=user.1
                         />
                     </For>
-                </Transition>
-            </div>
+                </div>
+            </Transition>
         </div>
     }
 }
