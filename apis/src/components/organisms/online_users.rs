@@ -50,8 +50,8 @@ pub fn OnlineUsers() -> impl IntoView {
             >
                 {t!(i18n, home.online_players, count = num)}
             </Show>
-            <div class="overflow-y-auto max-h-96">
-                <Transition>
+            <Transition>
+                <div class="overflow-y-auto max-h-96">
                     {move || {
                         users()
                             .values()
@@ -65,8 +65,8 @@ pub fn OnlineUsers() -> impl IntoView {
                             })
                             .collect_view()
                     }}
-                </Transition>
-            </div>
+                </div>
+            </Transition>
         </div>
     }
 }
