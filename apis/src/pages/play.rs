@@ -1,5 +1,5 @@
 use crate::{
-    common::{GameReaction, MoveConfirm},
+    common::{GameReaction, MoveConfirm, PieceType},
     components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
@@ -169,12 +169,32 @@ pub fn Play() -> impl IntoView {
                             game_state.clear_gc();
                             game_state.set_game_response(gar.game.clone());
                             sounds.play_sound(SoundType::Turn);
+                            let pos = game_state.signal.get_untracked().move_info.current_position;
+                            let reserve_pos =
+                                game_state.signal.get_untracked().move_info.reserve_position;
                             if game_state.signal.get_untracked().state.history.moves
                                 != gar.game.history
                             {
                                 match turn {
                                     Turn::Move(piece, position) => {
-                                        game_state.play_turn(piece, position)
+                                        game_state.play_turn(piece, position);
+                                        if let Some((piece, piece_type)) =
+                                            game_state.signal.get_untracked().move_info.active
+                                        {
+                                            match piece_type {
+                                                PieceType::Board => {
+                                                    if let Some(position) = pos {
+                                                        game_state.show_moves(piece, position);
+                                                    }
+                                                }
+                                                PieceType::Inactive => {
+                                                    if let Some(position) = reserve_pos {
+                                                        game_state.show_spawns(piece, position);
+                                                    }
+                                                }
+                                                _ => {}
+                                            }
+                                        }
                                     }
                                     _ => unreachable!(),
                                 };
