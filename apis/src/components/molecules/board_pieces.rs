@@ -50,7 +50,7 @@ pub fn BoardPieces(
                 if targets.contains(&position) {
                     hs.add_target();
                 }
-                if let (Some(piece), Some(target_position)) = active_piece {
+                if let (Some((piece, _)), Some(target_position)) = active_piece {
                     if position == target_position {
                         // Check here whether piece is still in reserve?
                         if state.current_reserve().contains_key(&piece.bug()) {

@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::common::MoveInfo;
+use crate::common::{MoveInfo, PieceType};
 use crate::responses::GameResponse;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
@@ -52,7 +52,7 @@ impl GameStateSignal {
                     if user_id() == Some(b) {
                         Some(Color::Black)
                     } else if user_id() == Some(w) {
-                        return Some(Color::White);
+                        Some(Color::White)
                     } else {
                         None
                     }
@@ -121,7 +121,6 @@ impl GameStateSignal {
     pub fn play_turn(&mut self, piece: Piece, position: Position) {
         self.signal.update(|s| {
             s.play_turn(piece, position);
-            s.move_info.reset()
         })
     }
 
@@ -344,7 +343,7 @@ impl GameState {
     }
 
     pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
-        if let (Some(active), Some(position)) =
+        if let (Some((active, _)), Some(position)) =
             (self.move_info.active, self.move_info.target_position)
         {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
@@ -373,18 +372,12 @@ impl GameState {
 
     // TODO refactor to not take a position, the position and piece are in self already
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
-        if let Some(already) = self.move_info.active {
-            if piece == already {
-                self.move_info.reset();
-                return;
-            }
-        }
         self.move_info.reset();
         self.move_info.current_position = Some(position);
         let moves = self.state.board.moves(self.state.turn_color);
         if let Some(positions) = moves.get(&(piece, position)) {
             positions.clone_into(&mut self.move_info.target_positions);
-            self.move_info.active = Some(piece);
+            self.move_info.active = Some((piece, PieceType::Reserve));
         }
     }
 
@@ -402,7 +395,7 @@ impl GameState {
         if let Some(pieces) = reserve.get(&piece.bug()) {
             if let Some(piece) = pieces.first() {
                 if let Ok(piece) = Piece::from_str(piece) {
-                    self.move_info.active = Some(piece);
+                    self.move_info.active = Some((piece, PieceType::Reserve));
                     self.move_info.reserve_position = Some(position);
                 }
             }

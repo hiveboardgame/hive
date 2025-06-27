@@ -1,9 +1,11 @@
 use hive_lib::{Piece, Position};
 
+use crate::common::PieceType;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct MoveInfo {
     // the piece (either from reserve or board) that has been clicked last
-    pub active: Option<Piece>,
+    pub active: Option<(Piece, PieceType)>,
     // the position of the board piece that has been clicked last
     pub current_position: Option<Position>,
     // possible destinations of selected piece

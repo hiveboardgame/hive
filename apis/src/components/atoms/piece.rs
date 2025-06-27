@@ -4,7 +4,7 @@ use crate::pages::play::CurrentConfirm;
 use crate::providers::analysis::AnalysisSignal;
 use crate::providers::config::TileOptions;
 use crate::providers::game_state::GameStateSignal;
-use crate::providers::ApiRequestsProvider;
+use crate::providers::{ApiRequestsProvider, AuthContext};
 use hive_lib::{Bug, Piece, Position};
 use leptos::either::Either;
 use leptos::prelude::*;
@@ -77,7 +77,7 @@ pub fn PieceWithoutOnClick(
             | TileDesign::Official
             | TileDesign::Flat => "/assets/tiles/common/all.svg#drop_shadow",
         };
-        if let Some(active) = active_piece() {
+        if let Some((active, _)) = active_piece() {
             if active == piece {
                 return "#no_ds";
             }
@@ -159,16 +159,21 @@ pub fn PieceWithOnClick(
 ) -> impl IntoView {
     let analysis = use_context::<AnalysisSignal>();
     let mut game_state = expect_context::<GameStateSignal>();
-    let sepia = if piece_type == PieceType::Inactive {
-        "sepia-[.75]"
-    } else {
-        ""
-    };
+    let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let current_confirm = expect_context::<CurrentConfirm>().0;
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
-        if game_state.is_move_allowed(analysis.is_some()) {
+        let in_analysis = analysis.is_some();
+        let is_selectable_piece = matches!(
+            piece_type,
+            PieceType::Inactive | PieceType::Board | PieceType::Reserve
+        );
+        let is_current_player = game_state
+            .signal
+            .get_untracked()
+            .uid_is_player(auth_context.user.get_untracked().map(|u| u.id));
+        if game_state.is_move_allowed(in_analysis) {
             match piece_type {
                 PieceType::Board => {
                     game_state.show_moves(piece(), position);
@@ -183,11 +188,20 @@ pub fn PieceWithOnClick(
                 }
                 _ => {}
             };
+        } else if !in_analysis && is_current_player && is_selectable_piece {
+            game_state.signal.update(|v| {
+                v.move_info.active = Some((piece(), piece_type));
+                if piece_type == PieceType::Board {
+                    v.move_info.current_position = Some(position);
+                } else {
+                    v.move_info.reserve_position = Some(position);
+                }
+            })
         }
     };
 
     view! {
-        <g on:click=onclick class=sepia>
+        <g on:click=onclick>
             <PieceWithoutOnClick piece position level tile_opts />
         </g>
     }
