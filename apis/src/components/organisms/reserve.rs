@@ -4,7 +4,7 @@ use crate::components::molecules::control_buttons::ControlButtons;
 use crate::components::molecules::hex_stack::HexStack;
 use crate::providers::analysis::AnalysisSignal;
 use crate::providers::game_state::{GameStateSignal, View};
-use crate::providers::Config;
+use crate::providers::{AuthContext, Config};
 use hive_lib::History;
 use hive_lib::{Bug, BugStack, Color, GameStatus, Piece, Position, State};
 use leptos::prelude::*;
@@ -63,6 +63,7 @@ pub fn Reserve(
 ) -> impl IntoView {
     let analysis = use_context::<AnalysisSignal>().is_some();
     let game_state = expect_context::<GameStateSignal>();
+    let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let tile_opts = Signal::derive(move || config().tile);
     let (viewbox_str, viewbox_styles) = match alignment {
@@ -86,6 +87,8 @@ pub fn Reserve(
             .as_ref()
             .map_or(GameStatus::NotStarted, |g| g.game_status.clone())
     });
+    let user_id = Signal::derive(move || auth_context.user.get_untracked().map(|user| user.id));
+    let user_color = game_state.user_color_as_signal(user_id);
     let tournament = create_read_slice(game_state.signal, |gs| {
         gs.game_response
             .as_ref()
@@ -93,7 +96,7 @@ pub fn Reserve(
     });
     let stacked_pieces = move || {
         let board_view = board_view();
-        let color = color();
+        let reserve_color = color();
         let move_info = move_info();
         let history_turn = history_turn();
         let state = state();
@@ -101,7 +104,7 @@ pub fn Reserve(
         let tournament = tournament.get_untracked();
         let last_turn = last_turn.get_untracked();
         let reserve = match board_view {
-            View::Game => state.board.reserve(color, state.game_type),
+            View::Game => state.board.reserve(reserve_color, state.game_type),
             View::History => {
                 let mut history = History::new();
                 if let Some(turn) = history_turn {
@@ -111,11 +114,11 @@ pub fn Reserve(
                 }
                 let history_state =
                     State::new_from_history(&history).expect("Got state from history");
-                history_state.board.reserve(color, state.game_type)
+                history_state.board.reserve(reserve_color, state.game_type)
             }
         };
         let mut clicked_position = None;
-        if color == state.turn_color {
+        if user_color().is_some_and(|uc| uc == reserve_color) {
             clicked_position = move_info.reserve_position;
         }
         let mut seen = -1;
