@@ -4,7 +4,7 @@ use serde_json::Error as JsonError;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
-use tracing::debug;
+use tracing::{debug, info};
 
 const API_TIMEOUT: u64 = 10; // 10 seconds timeout for API calls
 
@@ -145,6 +145,7 @@ impl HiveGameApi {
 
     /// Authenticate with email and password to get a token
     pub async fn auth(&self, email: &str, password: &str) -> Result<String, ApiError> {
+        info!("Authenticating with email: {} and password: {}", email, password);
         let url = format!("{}/api/v1/auth/token", self.base_url);
 
         let auth_request = AuthRequest {
