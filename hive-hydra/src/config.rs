@@ -29,6 +29,7 @@ impl Config {
             .set_default("base_url", "https://hivegame.com")?
             // 2. Config file
             .add_source(File::from(config_path.as_ref()))
+            .add_source(Environment::with_prefix("HIVE_HYDRA"))
             .build()?;
 
         // Load the main configuration
