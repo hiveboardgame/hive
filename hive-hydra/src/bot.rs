@@ -3,12 +3,13 @@ use crate::turn_tracker::{TurnTracker, TurnTracking};
 use crate::BotGameTurn;
 use crate::config::BotConfig;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, Mutex, Semaphore};
 use tracing::{debug, error, info};
 
-// Constant for login retry interval in seconds
+// Constants for token and login management
 const LOGIN_RETRY_INTERVAL_SECS: u64 = 10;
+const TOKEN_REFRESH_INTERVAL_SECS: u64 = 3600; // Refresh token every 60 minutes
 
 async fn auth(
     api: &HiveGameApi,
@@ -40,10 +41,15 @@ pub async fn producer_task(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     info!("Producer task started for bot: {}", bot.name);
 
-    // Authenticate using the auth function
-    let token = auth(&api, &bot).await;
+    let mut token = String::new();
+    let mut token_time = Instant::now();
 
     loop {
+        // Check if token needs to be refreshed (after refresh interval) or is empty
+        if token.is_empty() || token_time.elapsed() > Duration::from_secs(TOKEN_REFRESH_INTERVAL_SECS) {
+            token = auth(&api, &bot).await;
+            token_time = Instant::now();
+        }
         // Get challenges for this bot
         match api.challenges(&token).await {
             Ok(challenge_ids) => {
