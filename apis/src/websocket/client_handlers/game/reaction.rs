@@ -52,7 +52,8 @@ pub fn handle_new_game(game_response: GameResponse) {
         sounds.play_sound(SoundType::NewGame);
         match game_response.time_mode {
             TimeMode::RealTime => true,
-            TimeMode::Correspondence | TimeMode::Untimed => {
+            TimeMode::Untimed => game_response.white_player.bot || game_response.black_player.bot,
+            TimeMode::Correspondence => {
                 //TODO: fix  correspondence and untimed auto-start
                 false
             }
