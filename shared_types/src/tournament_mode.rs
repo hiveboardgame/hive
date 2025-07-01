@@ -8,12 +8,14 @@ use crate::PrettyString;
 pub enum TournamentMode {
     #[default]
     DoubleRoundRobin,
+    QuadrupleRoundRobin,
 }
 
 impl PrettyString for TournamentMode {
     fn pretty_string(&self) -> String {
         match self {
             Self::DoubleRoundRobin => String::from("Double round robin"),
+            Self::QuadrupleRoundRobin => String::from("Quadruple round robin"),
         }
     }
 }
@@ -22,6 +24,7 @@ impl fmt::Display for TournamentMode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let game_status = match self {
             Self::DoubleRoundRobin => String::from("DoubleRoundRobin"),
+            Self::QuadrupleRoundRobin => String::from("QuadrupleRoundRobin"),
         };
         write!(f, "{game_status}")
     }
@@ -33,6 +36,7 @@ impl FromStr for TournamentMode {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "DoubleRoundRobin" => Ok(TournamentMode::DoubleRoundRobin),
+            "QuadrupleRoundRobin" => Ok(TournamentMode::QuadrupleRoundRobin),
             _ => Err(anyhow::anyhow!("Invalid TournamentMode string")),
         }
     }
