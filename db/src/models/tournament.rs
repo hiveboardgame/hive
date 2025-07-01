@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::{Game, NewGame, TournamentInvitation};
 use crate::{
     db_error::DbError,
@@ -21,7 +23,8 @@ use itertools::Itertools;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    TimeMode, TournamentDetails, TournamentId, TournamentSortOrder, TournamentStatus,
+    TimeMode, TournamentDetails, TournamentId, TournamentMode, TournamentSortOrder,
+    TournamentStatus,
 };
 use uuid::Uuid;
 
@@ -516,7 +519,12 @@ impl Tournament {
         // Make sure all the conditions have been met
         // and then call different starts for different tournament types
         let mut deleted_invitees = Vec::new();
-        let games = self.round_robin_start(conn).await?;
+        let games = match TournamentMode::from_str(&self.mode)
+            .expect("Only valid modes should make it to the DB")
+        {
+            TournamentMode::DoubleRoundRobin => self.double_round_robin_start(conn).await?,
+            TournamentMode::QuadrupleRoundRobin => self.quad_round_robin_start(conn).await?,
+        };
         let tournament: Tournament = diesel::update(self)
             .set((
                 updated_at.eq(Utc::now()),
@@ -536,7 +544,36 @@ impl Tournament {
         Ok((tournament, games, deleted_invitees))
     }
 
-    pub async fn round_robin_start(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+    pub async fn quad_round_robin_start(
+        &self,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        let mut games = Vec::new();
+        let players = self.players(conn).await?;
+        let combinations: Vec<Vec<User>> = players.into_iter().combinations(2).collect();
+        for combination in combinations {
+            let white = combination[0].id;
+            let black = combination[1].id;
+            let new_game = NewGame::new_from_tournament(white, black, self);
+            let game = Game::create(new_game, conn).await?;
+            games.push(game);
+            let new_game = NewGame::new_from_tournament(black, white, self);
+            let game = Game::create(new_game, conn).await?;
+            games.push(game);
+            let new_game = NewGame::new_from_tournament(white, black, self);
+            let game = Game::create(new_game, conn).await?;
+            games.push(game);
+            let new_game = NewGame::new_from_tournament(black, white, self);
+            let game = Game::create(new_game, conn).await?;
+            games.push(game);
+        }
+        Ok(games)
+    }
+
+    pub async fn double_round_robin_start(
+        &self,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
         let mut games = Vec::new();
         let players = self.players(conn).await?;
         let combinations: Vec<Vec<User>> = players.into_iter().combinations(2).collect();

@@ -308,6 +308,11 @@ pub fn TournamentCreate() -> impl IntoView {
                                 is="DoubleRoundRobin"
                                 text=TournamentMode::DoubleRoundRobin.pretty_string()
                             />
+                            <SelectOption
+                                value=tournament.mode
+                                is="QuadrupleRoundRobin"
+                                text=TournamentMode::QuadrupleRoundRobin.pretty_string()
+                            />
 
                         </select>
                     </div>
