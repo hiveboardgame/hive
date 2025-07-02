@@ -23,19 +23,19 @@ impl TimeMode {
                 let seconds = duration % 60;
                 if days > 0 {
                     if days > 1 || hours == 24 {
-                        format!("{:1}d", days)
+                        format!("{days:1}d")
                     } else {
                         format!("{:1}d:{:1}h", days, hours % 24)
                     }
                 } else if hours > 0 {
-                    format!("{:1}h{:1}", hours, minutes)
+                    format!("{hours:1}h{minutes:1}")
                 } else if minutes > 0 {
-                    format!("{:1}:{:02}", minutes, seconds)
+                    format!("{minutes:1}:{seconds:02}")
                 } else if duration < 10 {
                     let seconds_f32 = time_left.as_secs_f32();
-                    format!("{:.1}", seconds_f32)
+                    format!("{seconds_f32:.1}")
                 } else {
-                    format!("{:1}", seconds)
+                    format!("{seconds:1}")
                 }
             }
         }
@@ -49,7 +49,7 @@ impl fmt::Display for TimeMode {
             TimeMode::RealTime => "Real Time",
             TimeMode::Untimed => "Untimed",
         };
-        write!(f, "{}", time)
+        write!(f, "{time}")
     }
 }
 
@@ -80,7 +80,7 @@ impl fmt::Display for CorrespondenceMode {
             CorrespondenceMode::DaysPerMove => "Days per move",
             CorrespondenceMode::TotalTimeEach => "Total time each",
         };
-        write!(f, "{}", time)
+        write!(f, "{time}")
     }
 }
 

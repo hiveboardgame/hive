@@ -43,10 +43,10 @@ impl Config {
                 bot.name.to_uppercase().replace('-', "_")
             );
 
-            if let Some(value) = env_vars.get(&format!("{}EMAIL", prefix)) {
+            if let Some(value) = env_vars.get(&format!("{prefix}EMAIL")) {
                 bot.email = value.clone();
             }
-            if let Some(value) = env_vars.get(&format!("{}PASSWORD", prefix)) {
+            if let Some(value) = env_vars.get(&format!("{prefix}PASSWORD")) {
                 bot.password = value.clone();
             }
         }

@@ -145,7 +145,10 @@ impl HiveGameApi {
 
     /// Authenticate with email and password to get a token
     pub async fn auth(&self, email: &str, password: &str) -> Result<String, ApiError> {
-        info!("Authenticating with email: {} and password: {}", email, password);
+        info!(
+            "Authenticating with email: {} and password: {}",
+            email, password
+        );
         let url = format!("{}/api/v1/auth/token", self.base_url);
 
         let auth_request = AuthRequest {
@@ -177,7 +180,7 @@ impl HiveGameApi {
         let response = self
             .client
             .get(&url)
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", format!("Bearer {token}"))
             .send()
             .await?;
 
@@ -215,7 +218,7 @@ impl HiveGameApi {
         let response = self
             .client
             .post(&url)
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", format!("Bearer {token}"))
             .json(&payload)
             .send()
             .await?;
@@ -239,7 +242,7 @@ impl HiveGameApi {
         let response = self
             .client
             .get(&url)
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", format!("Bearer {token}"))
             .send()
             .await?;
 
@@ -278,7 +281,7 @@ impl HiveGameApi {
         let response = self
             .client
             .get(&url)
-            .header("Authorization", format!("Bearer {}", token))
+            .header("Authorization", format!("Bearer {token}"))
             .send()
             .await?;
 
@@ -315,7 +318,7 @@ mod tests {
             .get(&"Authorization".parse().unwrap())
             .expect("Authorization header missing");
 
-        let expected_value = format!("Bearer {}", expected_key);
+        let expected_value = format!("Bearer {expected_key}");
         assert_eq!(auth_header[0], expected_value);
     }
 

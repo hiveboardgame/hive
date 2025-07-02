@@ -30,6 +30,6 @@ impl fmt::Display for PieceType {
             PieceType::Spawn => "spawn",
             PieceType::Move => "move",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }

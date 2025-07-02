@@ -1,6 +1,6 @@
 use crate::api::v1::auth::auth::Auth;
 use actix_web::{
-    get, post,
+    get,
     web::{Data, Path},
     HttpResponse,
 };

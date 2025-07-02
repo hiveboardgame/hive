@@ -146,7 +146,7 @@ impl BoardParser {
                 let stack_num = symbol.as_str().parse::<u8>().unwrap();
                 BoardInput::StackId(stack_num)
             }
-            _ => panic!("Unexpected input: {:?}, expected hex symbol", symbol),
+            _ => panic!("Unexpected input: {symbol:?}, expected hex symbol"),
         }
     }
 
@@ -330,7 +330,7 @@ impl BoardParser {
                 1 => {
                     let piece = format!("{}", pieces[0]);
                     match piece.len() {
-                        2 => format!("{} ", piece),
+                        2 => format!("{piece} "),
                         3 => piece.to_string(),
                         _ => panic!("Unexpected piece length: {}", piece.len()),
                     }
@@ -338,7 +338,7 @@ impl BoardParser {
                 _ => {
                     let stack_id = stack_section.len() + 1;
                     stack_section.insert(stack_id, pieces.clone());
-                    format!(" {} ", stack_id)
+                    format!(" {stack_id} ")
                 }
             }
         };
@@ -366,9 +366,9 @@ impl BoardParser {
             let pieces = stack_section.get(&id).unwrap();
             let mut piece_list = "".to_string();
             for piece in pieces.iter() {
-                piece_list.push_str(&format!("{} ", piece));
+                piece_list.push_str(&format!("{piece} "));
             }
-            dsl.push_str(&format!("{}: bottom -> [ {}] <- top\n", id, piece_list));
+            dsl.push_str(&format!("{id}: bottom -> [ {piece_list}] <- top\n"));
         }
 
         dsl
@@ -523,7 +523,7 @@ mod tests {
                 .unwrap()
                 .next()
                 .unwrap();
-            println!("{:?}", board);
+            println!("{board:?}");
             let board = BoardParser::handle_board_section(pair);
             let board = board.expect("Must be able to handle board section");
             assert!(board.len() == rows);
@@ -644,7 +644,7 @@ mod tests {
         for dsl in dsls.iter() {
             let parsed = BoardParser::parse(Rule::valid_dsl, dsl);
             if parsed.is_err() {
-                panic!("Failed to parse dsl: {:?} {:?}", dsl, parsed);
+                panic!("Failed to parse dsl: {dsl:?} {parsed:?}");
             }
         }
 
@@ -670,9 +670,7 @@ mod tests {
                 "  *   *   *   *   * \n",
                 "\n\n",
             ),
-            concat!(
-                "stack: \n", // only stack section, needs a board section
-            ),
+            "stack: \n",
             concat!(
                 // missing "board:"
                 "  *   *   *   *   * \n",
@@ -691,10 +689,7 @@ mod tests {
         for dsl in invalid_dsls.iter() {
             let parsed = BoardParser::parse(Rule::valid_dsl, dsl);
             if parsed.is_ok() {
-                panic!(
-                    "Expected\n-----\n{}\n------\n to fail.\nGot {:?}",
-                    dsl, parsed
-                );
+                panic!("Expected\n-----\n{dsl}\n------\n to fail.\nGot {parsed:?}");
             }
         }
     }
@@ -758,16 +753,13 @@ mod tests {
                 "2: [wA1 bM   bQ wB2 ] <-     top\n", // "bottom ->" is optional
                 "5 : bottom  ->[ bA1 wG3]",           // "<- top" is optional
             ),
-            concat!("stack:\n",),
+            "stack:\n",
         ];
 
         for stack_section in valid_stack_section.iter() {
             let parsed = BoardParser::parse(Rule::stack_section_test, stack_section);
             if parsed.is_err() {
-                panic!(
-                    "Failed to parse stack_section: {:?} {:?}",
-                    stack_section, parsed
-                );
+                panic!("Failed to parse stack_section: {stack_section:?} {parsed:?}");
             }
         }
     }
@@ -784,7 +776,7 @@ mod tests {
         for stack_desc in valid_stack_descs.iter() {
             let parsed = BoardParser::parse(Rule::stack_desc, stack_desc);
             if parsed.is_err() {
-                panic!("Failed to parse stack_desc: {:?} {:?}", stack_desc, parsed);
+                panic!("Failed to parse stack_desc: {stack_desc:?} {parsed:?}");
             }
         }
 
@@ -802,7 +794,7 @@ mod tests {
         for stack_desc in invalid_stack_descs.iter() {
             let parsed = BoardParser::parse(Rule::stack_desc, stack_desc);
             if parsed.is_ok() {
-                panic!("Expected {:?} to fail. Got {:?}", stack_desc, parsed);
+                panic!("Expected {stack_desc:?} to fail. Got {parsed:?}");
             }
         }
     }
@@ -848,7 +840,7 @@ mod tests {
         for board in boards.iter() {
             let parsed = BoardParser::parse(Rule::board_desc_test, board);
             if parsed.is_err() {
-                panic!("Failed to parse board: {:?} {:?}", board, parsed);
+                panic!("Failed to parse board: {board:?} {parsed:?}");
             }
         }
         let malformed_boards = [
@@ -871,7 +863,7 @@ mod tests {
         for board in malformed_boards.iter() {
             let parsed = BoardParser::parse(Rule::board_desc_test, board);
             if parsed.is_ok() {
-                panic!("Expected \n{} to fail. Got {:?}", board, parsed);
+                panic!("Expected \n{board} to fail. Got {parsed:?}");
             }
         }
     }
@@ -891,7 +883,7 @@ mod tests {
         for row in shifted_rows.iter() {
             let parsed = BoardParser::parse(Rule::shifted_row, row);
             if parsed.is_err() {
-                panic!("Failed to parse row: {:?} {:?}", row, parsed);
+                panic!("Failed to parse row: {row:?} {parsed:?}");
             }
         }
 
@@ -915,7 +907,7 @@ mod tests {
         for row in shifted_rows_malformed.iter() {
             let parsed = BoardParser::parse(Rule::shifted_row, row);
             if parsed.is_ok() {
-                panic!("Expected {:?} to fail. Got {:?}", row, parsed);
+                panic!("Expected {row:?} to fail. Got {parsed:?}");
             }
         }
     }
@@ -939,7 +931,7 @@ mod tests {
         for row in aligned_rows.iter() {
             let parsed = BoardParser::parse(Rule::aligned_row, row);
             if parsed.is_err() {
-                panic!("Failed to parse row: {:?} {:?}", row, parsed);
+                panic!("Failed to parse row: {row:?} {parsed:?}");
             }
         }
 
@@ -956,7 +948,7 @@ mod tests {
         for row in aligned_rows_malformed.iter() {
             let parsed = BoardParser::parse(Rule::aligned_row, row);
             if parsed.is_ok() {
-                panic!("Expected {:?} to fail. Got {:?}", row, parsed);
+                panic!("Expected {row:?} to fail. Got {parsed:?}");
             }
         }
     }
@@ -984,7 +976,7 @@ mod tests {
 
         for piece in malformed_pieces {
             let parsed = BoardParser::parse(Rule::piece, piece);
-            println!("Expected {:?} to fail. Got {:?}", piece, parsed);
+            println!("Expected {piece:?} to fail. Got {parsed:?}");
             assert!(parsed.is_err());
         }
     }

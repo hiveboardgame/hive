@@ -40,7 +40,7 @@ impl fmt::Display for Conclusion {
             Conclusion::Timeout => "Timeout",
             Conclusion::Unknown => "Unknown",
         };
-        write!(f, "{}", time)
+        write!(f, "{time}")
     }
 }
 

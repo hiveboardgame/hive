@@ -65,7 +65,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             _ => "",
         };
 
-        format!("{} won {}", winner_username, additional_info)
+        format!("{winner_username} won {additional_info}")
     };
     let game_result_str = move || match (game_status(), tournament_game_result()) {
         (GameStatus::Finished(result), _) => {
@@ -113,7 +113,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             let name = Signal::derive(move || name.clone());
             let name = move || {
                 if let Some(name) = name() {
-                    format!("played in {}", name)
+                    format!("played in {name}")
                 } else {
                     String::new()
                 }
@@ -121,7 +121,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             let nanoid = Signal::derive(move || nanoid.clone());
             let link = move || {
                 if let Some(TournamentId(id)) = nanoid() {
-                    format!("/tournament/{}", id)
+                    format!("/tournament/{id}")
                 } else {
                     String::new()
                 }

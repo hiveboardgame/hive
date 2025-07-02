@@ -17,7 +17,7 @@ impl fmt::Display for StartMode {
             StartMode::Manual => "Manual",
             StartMode::Full => "Full",
         };
-        write!(f, "{}", start)
+        write!(f, "{start}")
     }
 }
 
