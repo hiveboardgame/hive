@@ -1,6 +1,5 @@
 use crate::api::v1::auth::auth::Auth;
 use crate::api::v1::messages::send::send_messages;
-use crate::websocket::busybee::Busybee;
 use crate::websocket::WsServer;
 use actix::Addr;
 use actix_web::web::{Data, Json};
@@ -16,7 +15,7 @@ use diesel_async::AsyncConnection;
 use hive_lib::{Piece, Position, State, Turn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use shared_types::{GameId, TimeMode};
+use shared_types::GameId;
 use std::str::FromStr;
 
 #[derive(Serialize, Deserialize)]
@@ -95,22 +94,25 @@ async fn play_move(
                 )
                 .await?;
 
-                match TimeMode::from_str(&updated_game.time_mode) {
-                    Ok(TimeMode::RealTime) | Err(_) => {}
-                    _ => {
-                        let opponent_id = updated_game.current_player_id;
-                        let msg = format!(
-                            "[Your turn](<https://hivegame.com/game/{}>) in your game vs {}.\nYou have {} to play.",
-                            updated_game.nanoid,
-                            bot.username,
-                            updated_game.str_time_left_for_player(opponent_id)
-                        );
+                // Disabled because it spams too much
+                //
+                // use crate::websocket::busybee::Busybee;
+                // match TimeMode::from_str(&updated_game.time_mode) {
+                //     Ok(TimeMode::RealTime) | Err(_) => {}
+                //     _ => {
+                //         let opponent_id = updated_game.current_player_id;
+                //         let msg = format!(
+                //             "[Your turn](<https://hivegame.com/game/{}>) in your game vs {}.\nYou have {} to play.",
+                //             updated_game.nanoid,
+                //             bot.username,
+                //             updated_game.str_time_left_for_player(opponent_id)
+                //         );
 
-                        if let Err(e) = Busybee::msg(opponent_id, msg).await {
-                            println!("Failed to send Busybee message: {e}");
-                        }
-                    }
-                };
+                //         if let Err(e) = Busybee::msg(opponent_id, msg).await {
+                //             println!("Failed to send Busybee message: {}", e);
+                //         }
+                //     }
+                // };
 
                 Ok((updated_game, played_turn))
             }
