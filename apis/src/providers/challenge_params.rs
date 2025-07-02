@@ -57,7 +57,7 @@ pub fn challenge_params_cookie() -> (
 }
 pub fn provide_challenge_params() {
     let (cookie, _) = challenge_params_cookie();
-    if let Some(cookie) = cookie.get_untracked() {
+    if let Some(cookie) = cookie() {
         provide_context(Store::new(cookie));
     } else {
         provide_context(Store::new(ChallengeParams::default()));
