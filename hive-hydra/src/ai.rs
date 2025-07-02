@@ -12,9 +12,9 @@ pub enum AiError {
 impl std::fmt::Display for AiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AiError::Process(e) => write!(f, "Process error: {}", e),
-            AiError::Parse(e) => write!(f, "Parse error: {}", e),
-            AiError::Output(e) => write!(f, "Output encoding error: {}", e),
+            AiError::Process(e) => write!(f, "Process error: {e}"),
+            AiError::Parse(e) => write!(f, "Parse error: {e}"),
+            AiError::Output(e) => write!(f, "Output encoding error: {e}"),
         }
     }
 }
@@ -51,11 +51,11 @@ impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ParseError::NoOutput => write!(f, "No output received from AI"),
-            ParseError::MissingBestMove(msg) => write!(f, "No bestmove found in output: {}", msg),
+            ParseError::MissingBestMove(msg) => write!(f, "No bestmove found in output: {msg}"),
             ParseError::BestMoveError(msg) => {
-                write!(f, "bestmove command error in output: {}", msg)
+                write!(f, "bestmove command error in output: {msg}")
             }
-            ParseError::MissingOk(msg) => write!(f, "Missing 'ok' confirmation in output: {}", msg),
+            ParseError::MissingOk(msg) => write!(f, "Missing 'ok' confirmation in output: {msg}"),
         }
     }
 }
@@ -70,7 +70,7 @@ pub fn spawn_process(command: &str, name: &str) -> std::io::Result<Child> {
     if command_parts.is_empty() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
-            format!("Error: Empty AI command for {}, command {}", name, command),
+            format!("Error: Empty AI command for {name}, command {command}"),
         ));
     }
 
@@ -136,14 +136,14 @@ pub async fn run_commands(
     let mut stdin = stdin;
 
     // Send newgame command
-    let newgame_command = format!("newgame {}\n", game_string);
+    let newgame_command = format!("newgame {game_string}\n");
 
     // debug!("Sending newgame command: {}", newgame_command);
 
     stdin.write_all(newgame_command.as_bytes())?;
 
     // Send bestmove command
-    let bestmove_command = format!("bestmove {}\n", bestmove_args);
+    let bestmove_command = format!("bestmove {bestmove_args}\n");
     stdin.write_all(bestmove_command.as_bytes())?;
 
     // We're done with stdin, drop it explicitly to signal EOF to the child process

@@ -11,7 +11,7 @@ pub fn Title() -> impl IntoView {
             + games.own.get().next_realtime.len()
             + games.own.get().next_correspondence.len();
         if !focused.signal.get().focused && len > 0 {
-            format!("({}) HiveGame.com", len)
+            format!("({len}) HiveGame.com")
         } else {
             String::from("HiveGame.com")
         }

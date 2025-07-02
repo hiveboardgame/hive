@@ -18,7 +18,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websocket::{start_connection, WsServer, Chats};
+    use crate::websocket::{start_connection, WsServer};
     use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::api_play, challenges::{api_accept_challenge, api_get_challenges}};
     use api::v1::auth::get_token_handler::get_token;
     use api::v1::auth::get_identity_handler::get_identity;
@@ -48,7 +48,7 @@ async fn main() -> std::io::Result<()> {
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");
     let database_url = &config.database_url;
     let mut conn = PgConnection::establish(database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url));
+        .unwrap_or_else(|_| panic!("Error connecting to {database_url}"));
     conn.run_pending_migrations(MIGRATIONS)
         .expect("Ran migrations");
 

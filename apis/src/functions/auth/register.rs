@@ -29,14 +29,12 @@ pub async fn register(
     let password_length = password.len();
     if password_length < MIN_PASSWORD_LENGTH {
         return Err(ServerFnError::new(format!(
-            "Password is too short, it must be at least {}",
-            MIN_PASSWORD_LENGTH
+            "Password is too short, it must be at least {MIN_PASSWORD_LENGTH}"
         )));
     }
     if password_length > MAX_PASSWORD_LENGTH {
         return Err(ServerFnError::new(format!(
-            "Password is too long it must not exceed {}",
-            MAX_PASSWORD_LENGTH
+            "Password is too long it must not exceed {MAX_PASSWORD_LENGTH}"
         )));
     }
 

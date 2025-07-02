@@ -70,7 +70,7 @@ impl fmt::Display for GameSpeed {
             GameSpeed::Untimed => "Untimed",
             GameSpeed::Puzzle => "Puzzle",
         };
-        write!(f, "{}", time)
+        write!(f, "{time}")
     }
 }
 

@@ -1,24 +1,17 @@
-use crate::api::v1::auth::auth::Auth;
 use crate::common::{GameUpdate, ServerMessage, ServerResult, GameReaction, GameActionResponse, ChallengeUpdate};
 use crate::websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer};
 use actix::Addr;
-use actix_web::web::{Data, Json};
-use actix_web::{post, HttpResponse};
-use anyhow::{anyhow, Result};
-use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
+use actix_web::web::Data;
+use anyhow::Result;
+use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{
     get_conn,
     models::{Game, User},
     DbPool,
 };
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::{AsyncConnection, AsyncPgConnection};
-use hive_lib::{Piece, Position, State, Turn};
-use serde::{Deserialize, Serialize};
-use serde_json::json;
+use hive_lib::Turn;
 use shared_types::{GameId, ChallengeId};
 use shared_types::TimeMode;
-use std::str::FromStr;
 use crate::responses::GameResponse;
 
 pub async fn send_messages(
@@ -45,7 +38,7 @@ pub async fn send_messages(
         destination: MessageDestination::User(game.current_player_id),
         message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
     });
-    let response = GameResponse::from_model(&game, &mut conn).await?;
+    let response = GameResponse::from_model(game, &mut conn).await?;
     messages.push(InternalServerMessage {
         destination: MessageDestination::Game(GameId(game.nanoid.clone())),
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {

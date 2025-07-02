@@ -25,7 +25,7 @@ impl fmt::Display for ScoringMode {
             ScoringMode::Game => "Game",
             ScoringMode::Match => "Match",
         };
-        write!(f, "{}", scoring)
+        write!(f, "{scoring}")
     }
 }
 

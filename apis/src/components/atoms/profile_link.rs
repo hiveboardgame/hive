@@ -11,7 +11,7 @@ pub fn ProfileLink(
     patreon: bool,
     bot: bool,
 ) -> impl IntoView {
-    let profile_link = format!("/@/{}", username);
+    let profile_link = format!("/@/{username}");
     let hover_show = RwSignal::new(false);
     let patreon = RwSignal::new(patreon);
     let bot = RwSignal::new(bot);

@@ -17,10 +17,10 @@ pub enum GameReaction {
 impl fmt::Display for GameReaction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            GameReaction::Control(ref gc) => write!(f, "{}", gc),
+            GameReaction::Control(ref gc) => write!(f, "{gc}"),
             GameReaction::Join => write!(f, "Join"),
             GameReaction::Started => write!(f, "Started"),
-            GameReaction::Turn(ref turn) => write!(f, "{}", turn),
+            GameReaction::Turn(ref turn) => write!(f, "{turn}"),
             GameReaction::New => write!(f, "New"),
             GameReaction::Ready => write!(f, "Ready"),
             GameReaction::TimedOut => write!(f, "TimedOut"),

@@ -252,7 +252,7 @@ impl Handler<Connect> for WsServer {
                     let game_ids = match game_ids_result {
                         Ok(ids) => ids,
                         Err(e) => {
-                            error!("Failed to get urgent game_ids for user {}: {}", user_id, e);
+                            error!("Failed to get urgent game_ids for user {user_id}: {e}");
                             Vec::new()
                         }
                     };
@@ -412,10 +412,10 @@ impl Handler<ClientActorMessage> for WsServer {
                         .insert(from);
                 }
                 // Send the message to everyone
-                if let Some(users) = self.games_users.get(&game_id) {
+                if let Some(users) = self.games_users.get(game_id) {
                     users.iter().for_each(|client| self.send_message(&cam.serialized, client));
                 } else {
-                    warn!("Game '{}' not found in games_users when sending game message", game_id);
+                    warn!("Game '{game_id}' not found in games_users when sending game message");
                 }
             }
             MessageDestination::GameSpectators(game_id, white_id, black_id) => {
@@ -434,7 +434,7 @@ impl Handler<ClientActorMessage> for WsServer {
                         }
                     });
                 } else {
-                    warn!("Game '{}' not found in games_users when sending game spectators message", game_id);
+                    warn!("Game '{game_id}' not found in games_users when sending game spectators message");
                 }
             }
             MessageDestination::User(user_id) => {
@@ -465,7 +465,7 @@ impl Handler<ClientActorMessage> for WsServer {
                                         socket.do_send(WsMessage(cam.serialized.clone()));
                                     }
                                 } else {
-                                    println!("Couldn't find socket for {}", user_id);
+                                    println!("Couldn't find socket for {user_id}");
                                 }
                             }
                         };

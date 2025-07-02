@@ -29,6 +29,6 @@ fn path_to_uri(site_root: &str, path: &str) -> String {
     if relative_path.starts_with("/pkg/") {
         relative_path.to_string()
     } else {
-        format!("/assets{}", relative_path)
+        format!("/assets{relative_path}")
     }
 }

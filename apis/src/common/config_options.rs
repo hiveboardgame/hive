@@ -16,7 +16,7 @@ impl fmt::Display for MoveConfirm {
             MoveConfirm::Double => "Double",
             MoveConfirm::Single => "Single",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }
 
@@ -46,7 +46,7 @@ impl fmt::Display for TileRotation {
             TileRotation::Yes => "Yes",
             TileRotation::No => "No",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }
 
@@ -81,7 +81,7 @@ impl fmt::Display for TileDesign {
             TileDesign::HighContrast => "HighContrast",
             TileDesign::Community => "Community",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }
 
@@ -115,7 +115,7 @@ impl fmt::Display for TileDots {
             TileDots::Angled => "Angled",
             TileDots::No => "No",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }
 

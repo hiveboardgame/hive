@@ -102,7 +102,7 @@ async fn accept_challenge(
             );
 
             if let Err(e) = Busybee::msg(challenger_id, msg).await {
-                println!("Failed to send Busybee message: {}", e);
+                println!("Failed to send Busybee message: {e}");
             }
         }
     };

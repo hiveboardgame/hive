@@ -1,13 +1,11 @@
 use crate::api::v1::auth::auth::Auth;
 use crate::api::v1::messages::send::send_messages;
-use crate::common::ServerResult;
-use crate::websocket::ClientActorMessage;
+use crate::websocket::busybee::Busybee;
 use crate::websocket::WsServer;
 use actix::Addr;
 use actix_web::web::{Data, Json};
 use actix_web::{post, HttpResponse};
 use anyhow::{anyhow, Result};
-use codee::binary::MsgpackSerdeCodec;
 use db_lib::{
     get_conn,
     models::{Game, User},
@@ -20,7 +18,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use shared_types::{GameId, TimeMode};
 use std::str::FromStr;
-use crate::websocket::busybee::Busybee;
 
 #[derive(Serialize, Deserialize)]
 struct PlayRequest {
@@ -72,10 +69,11 @@ async fn play_move(
         let position = Position::initial_spawn_position();
         (piece, position)
     } else {
-        let (piece_str, pos_str) = play.piece_pos
+        let (piece_str, pos_str) = play
+            .piece_pos
             .split_once(' ')
             .ok_or_else(|| anyhow!("Invalid move format: expected 'piece position'"))?;
-        
+
         let piece = Piece::from_str(piece_str)?;
         let position = Position::from_string(pos_str, &state.board)?;
         (piece, position)
@@ -109,7 +107,7 @@ async fn play_move(
                         );
 
                         if let Err(e) = Busybee::msg(opponent_id, msg).await {
-                            println!("Failed to send Busybee message: {}", e);
+                            println!("Failed to send Busybee message: {e}");
                         }
                     }
                 };

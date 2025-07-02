@@ -112,7 +112,7 @@ fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                                     })
                             }
                         >
-                            {format!("{}. {} {}", turn, piece, position)}
+                            {format!("{turn}. {piece} {position}")}
                         </div>
                     }
                 );

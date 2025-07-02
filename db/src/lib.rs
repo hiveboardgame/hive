@@ -18,6 +18,6 @@ pub async fn get_pool(db_uri: &str) -> Result<DbPool, PoolError> {
     Pool::builder().build(manager).await
 }
 
-pub async fn get_conn(pool: &DbPool) -> Result<DbConn, DieselError> {
+pub async fn get_conn(pool: &DbPool) -> Result<DbConn<'_>, DieselError> {
     pool.get().await.map_err(|e| QueryBuilderError(e.into()))
 }

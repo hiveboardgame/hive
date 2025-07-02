@@ -192,8 +192,8 @@ impl Board {
         writeln!(
             writer,
             "<g transform=\"translate({} {})\">",
-            -1.0 * min_x + space_around,
-            -1.0 * min_y + space_around
+            -min_x + space_around,
+            -min_y + space_around
         )?;
 
         for (position, piece) in positions_piece.iter() {
@@ -227,7 +227,7 @@ impl Board {
             )?;
             // dots
             if piece.order() > 0 {
-                writeln!(writer, "  <g fill=\"{}\">", dot_color)?;
+                writeln!(writer, "  <g fill=\"{dot_color}\">")?;
                 writeln!(
                     writer,
                     "    <use href=\"#a{}\" x=\"{}\" y=\"{}\"></use>",
@@ -459,8 +459,7 @@ impl Board {
             }
         }
         panic!(
-            "{} Finding From position: {} to piece: {} failed.",
-            self, from, to
+            "{self} Finding From position: {from} to piece: {to} failed."
         );
     }
 

@@ -34,7 +34,7 @@ pub fn ThumbnailPieces(board: StoredValue<Board>) -> impl IntoView {
             SvgPos::center_for_level(board.get_value().center_coordinates(), 0, straight());
         let x_transform = -(svg_pos.0 - (width / 2.0));
         let y_transform = -(svg_pos.1 - (height / 2.0));
-        format!("translate({},{})", x_transform, y_transform)
+        format!("translate({x_transform},{y_transform})")
     };
 
     view! {

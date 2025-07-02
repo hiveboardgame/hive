@@ -44,7 +44,7 @@ fn valid_username_char(c: char) -> bool {
 
 fn validate_email(email: &str) -> Result<(), DbError> {
     if !EMAIL_RE.is_match(email) {
-        let reason = format!("invalid e-mail address: {:?}", email);
+        let reason = format!("invalid e-mail address: {email:?}");
         return Err(DbError::InvalidInput {
             info: String::from("E-mail address is invalid"),
             error: reason,
@@ -55,21 +55,21 @@ fn validate_email(email: &str) -> Result<(), DbError> {
 
 fn validate_username(username: &str) -> Result<(), DbError> {
     if !username.chars().all(valid_username_char) {
-        let reason = format!("invalid username characters: {:?}", username);
+        let reason = format!("invalid username characters: {username:?}");
         return Err(DbError::InvalidInput {
             info: String::from("Username has invalid characters"),
             error: reason,
         });
     }
     if username.len() > MAX_USERNAME_LENGTH {
-        let reason = format!("username must be <= {} chars", MAX_USERNAME_LENGTH);
+        let reason = format!("username must be <= {MAX_USERNAME_LENGTH} chars");
         return Err(DbError::InvalidInput {
             info: String::from("Username is too long."),
             error: reason,
         });
     }
     if username.len() < MIN_USERNAME_LENGTH {
-        let reason = format!("username must be >= {} chars", MAX_USERNAME_LENGTH);
+        let reason = format!("username must be >= {MAX_USERNAME_LENGTH} chars");
         return Err(DbError::InvalidInput {
             info: String::from("Username is too short."),
             error: reason,
@@ -206,7 +206,7 @@ impl User {
             return Ok(vec![]);
         }
         Ok(users_table
-            .filter(normalized_username.ilike(format!("%{}%", pattern)))
+            .filter(normalized_username.ilike(format!("%{pattern}%")))
             .load(conn)
             .await?)
     }

@@ -43,7 +43,7 @@ pub fn HistoryMove(
         let base_class = "col-span-2 p-1 h-auto max-h-6 leading-6 transition-transform duration-300 transform odd:ml-1 odd:justify-self-start even:mr-1 even:justify-self-end hover:bg-pillbug-teal active:scale-95";
         if let Some(history_turn) = history_turn() {
             if turn == history_turn {
-                return format!("{} bg-orange-twilight", base_class);
+                return format!("{base_class} bg-orange-twilight");
             }
         }
         base_class.to_string()
@@ -73,7 +73,7 @@ pub fn HistoryMove(
         if seconds > 60.0 {
             Some(format!(" ({:.1} m)", seconds / 60.0))
         } else {
-            Some(format!(" ({:.2} s)", seconds))
+            Some(format!(" ({seconds:.2} s)"))
         }
     };
     view! {
