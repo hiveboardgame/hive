@@ -281,7 +281,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
             }>
                 {move || {
                     user.get()
-                        .as_deref()
+                        .as_ref()
                         .map(|user| {
                             if let Ok(user) = user {
                                 Either::Left(

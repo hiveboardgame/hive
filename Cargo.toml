@@ -37,24 +37,24 @@ indoc = "2"
 itertools = "0.14.0"
 jsonwebtoken = { version = "9.3.1" }
 lazy_static = "1.5"
-leptos = { version = "0.7", features = ["nightly"] }
-leptos-use = { version = "0.15" }
-leptos_actix =  { version = "0.7" }
-leptos_i18n = {version=  "0.5", features = ["suppress_key_warnings", "plurals", "interpolate_display"] }
-leptos_icons = { version = "0.5"}
-leptos_meta =  { version = "0.7"}
-leptos_router =  { version = "0.7", features = ["nightly"] }
+leptos = { version = "0.8", features = ["nightly"] }
+leptos-use = { version = "0.16.2" }
+leptos_actix =  { version = "0.8" }
+leptos_i18n = { version = "0.6.0-rc.2", features = ["plurals"] }
+leptos_icons = { version = "0.6"}
+leptos_meta =  { version = "0.8"}
+leptos_router =  { version = "0.8", features = ["nightly"] }
 log = "0.4.22"
 markdown = "1.0.0-alpha"
 nanoid = "0.4"
 rand = "0.9"
 regex = "1.10"
-reactive_stores = { version = "0.1" }
+reactive_stores = { version = "0.2" }
 reqwest = { version = "0.12.12", features = ["json"] }
 serde = { version = "1" }
 serde_json = { version = "1" }
 serde_with = { version = "3.9" }
-server_fn = { version = "0.7", features = ["cbor"] }
+server_fn = { version = "0.8", features = ["cbor"] }
 sha2 = "0.10"
 send_wrapper = "0.6"
 simple_logger = "5.0"

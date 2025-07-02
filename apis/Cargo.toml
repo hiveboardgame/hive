@@ -176,3 +176,6 @@ lib-default-features = false
 #
 # Optional. Defaults to "release".
 lib-profile-release = "wasm-release"
+
+[build-dependencies]
+leptos_i18n_build = "0.6.0-rc"
