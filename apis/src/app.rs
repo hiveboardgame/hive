@@ -30,14 +30,14 @@ use crate::{
         online_users::provide_users, provide_alerts, provide_api_requests, provide_auth,
         provide_challenge_params, provide_config, provide_notifications, provide_ping,
         provide_referer, provide_server_updates, provide_sounds, refocus::provide_refocus,
-        schedules::provide_schedules, websocket::provide_websocket,
+        schedules::provide_schedules, websocket::provide_websocket, AuthContext,
     },
 };
 use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
 use leptos_router::{
-    components::{Outlet, ParentRoute, Route, Router, Routes},
+    components::{Outlet, ParentRoute, ProtectedRoute, Route, Router, Routes},
     path,
 };
 use leptos_use::SameSite;
@@ -77,6 +77,9 @@ pub fn App() -> impl IntoView {
 
     //expects auth, api_requests, gameStateSignal
     provide_chat();
+    let auth = expect_context::<AuthContext>();
+    let is_logged_in = move || auth.user.get().is_some().into();
+    let is_admin = move || Some(auth.user.get().is_some_and(|v| v.user.admin));
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)
@@ -127,16 +130,28 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/register") view=|| view! { <Register /> } />
                         <Route path=path!("/top_players") view=|| view! { <TopPlayers /> } />
                         <Route path=path!("/login") view=|| view! { <Login /> } />
-                        <Route path=path!("/account") view=|| view! { <Account /> } />
+                        <ProtectedRoute
+                            condition=is_logged_in
+                            path=path!("/account")
+                            redirect_path=|| "/login"
+                            view=|| view! { <Account /> }
+                        />
                         <Route
                             path=path!("/challenge/:nanoid")
                             view=|| view! { <ChallengeView /> }
                         />
                         <Route path=path!("/analysis") view=|| view! { <Analysis /> } />
-                        <Route path=path!("/config") view=|| view! { <Config /> } />
+                        <ProtectedRoute
+                            condition=is_logged_in
+                            path=path!("/config")
+                            redirect_path=|| "/login"
+                            view=|| view! { <Config /> }
+                        />
                         <Route path=path!("/tournament/:nanoid") view=|| view! { <Tournament /> } />
-                        <Route
+                        <ProtectedRoute
+                            condition=is_logged_in
                             path=path!("/tournaments/create")
+                            redirect_path=|| "/login"
                             view=|| view! { <TournamentCreate /> }
                         />
                         <Route path=path!("/tournaments") view=|| view! { <Tournaments /> } />
@@ -149,7 +164,12 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/tutorial") view=|| view! { <Tutorial /> } />
                         <Route path=path!("/rules_summary") view=|| view! { <RulesSummary /> } />
                         <Route path=path!("/game/:nanoid") view=|| view! { <Play /> } />
-                        <Route path=path!("/admin") view=|| view! { <Admin /> } />
+                        <ProtectedRoute
+                            condition=is_admin
+                            path=path!("/admin")
+                            redirect_path=|| "/"
+                            view=|| view! { <Admin /> }
+                        />
                     </ParentRoute>
                 </Routes>
             </Router>
