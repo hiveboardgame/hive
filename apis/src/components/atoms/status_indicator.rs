@@ -6,7 +6,6 @@ use crate::{
 };
 use chrono::Utc;
 use leptos::prelude::*;
-use leptos_icons::*;
 use leptos_use::core::ConnectionReadyState;
 
 #[component]
@@ -46,5 +45,16 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
         format!("{base_classes}{extra_classes}")
     };
 
-    view! { <Icon icon=icondata::BiCircleSolid attr:class=icon_style /> }
+    view! {
+        <svg
+            width="1em"
+            height="1em"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            role="graphics-symbol"
+            class=icon_style
+        >
+            <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2z"></path>
+        </svg>
+    }
 }
