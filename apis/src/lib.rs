@@ -7,7 +7,8 @@ pub mod pages;
 pub mod providers;
 pub mod responses;
 pub mod websocket;
-leptos_i18n::load_locales!();
+// leptos_i18n::load_locales!();
+include!(concat!(env!("OUT_DIR"), "/i18n/mod.rs"));
 
 use cfg_if::cfg_if;
 
