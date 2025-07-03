@@ -1035,6 +1035,22 @@ impl Game {
         Ok(())
     }
 
+    pub async fn delete_old_and_unstarted(conn: &mut DbConn<'_>) -> Result<(), DbError> {
+        let cutoff = Utc::now() - Duration::from_secs(60 * 60 * 12);
+        diesel::delete(
+            games::table.filter(
+                games::game_status
+                    .eq(GameStatus::NotStarted.to_string())
+                    .and(games::speed.ne(GameSpeed::Correspondence.to_string()))
+                    .and(games::tournament_id.eq(None::<Uuid>))
+                    .and(games::created_at.lt(cutoff)),
+            ),
+        )
+        .execute(conn)
+        .await?;
+        Ok(())
+    }
+
     pub async fn get_ongoing_ids_for_tournament(
         tournament_id_: Uuid,
         conn: &mut DbConn<'_>,
