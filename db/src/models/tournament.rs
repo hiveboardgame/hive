@@ -185,7 +185,8 @@ impl Tournament {
 
     pub async fn delete(&mut self, user_id: Uuid, conn: &mut DbConn<'_>) -> Result<(), DbError> {
         self.ensure_not_started()?;
-        self.ensure_user_is_organizer(&user_id, conn).await?;
+        self.ensure_user_is_organizer_or_admin(&user_id, conn)
+            .await?;
         diesel::delete(tournaments::table.find(self.id))
             .execute(conn)
             .await?;
@@ -252,13 +253,13 @@ impl Tournament {
         Ok(())
     }
 
-    pub async fn ensure_user_is_organizer(
+    pub async fn ensure_user_is_organizer_or_admin(
         &self,
         user_id: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<(), DbError> {
         let organizers = self.organizers(conn).await?;
-        if organizers.iter().any(|o| o.id == *user_id) {
+        if organizers.iter().any(|o| o.id == *user_id) || User::is_admin(user_id, conn).await? {
             return Ok(());
         }
         Err(DbError::Unauthorized)
@@ -275,7 +276,8 @@ impl Tournament {
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
         self.ensure_not_started()?;
-        self.ensure_user_is_organizer(user_id, conn).await?;
+        self.ensure_user_is_organizer_or_admin(user_id, conn)
+            .await?;
         if TournamentInvitation::exists(&self.id, invitee, conn).await? {
             return Ok(self.clone());
         }
@@ -290,7 +292,8 @@ impl Tournament {
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
         self.ensure_inprogress()?;
-        self.ensure_user_is_organizer(user_id, conn).await?;
+        self.ensure_user_is_organizer_or_admin(user_id, conn)
+            .await?;
         self.ensure_games_finished(conn).await?;
         let tournament = diesel::update(tournaments::table.find(self.id))
             .set((
@@ -309,7 +312,8 @@ impl Tournament {
         conn: &mut DbConn<'_>,
     ) -> Result<Tournament, DbError> {
         self.ensure_not_started()?;
-        self.ensure_user_is_organizer(user_id, conn).await?;
+        self.ensure_user_is_organizer_or_admin(user_id, conn)
+            .await?;
         if let Ok(invitation) = TournamentInvitation::find_by_ids(&self.id, invitee, conn).await {
             invitation.delete(conn).await?;
             Ok(self.clone())
@@ -411,7 +415,8 @@ impl Tournament {
         conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
         self.ensure_not_started()?;
-        self.ensure_user_is_organizer(organizer, conn).await?;
+        self.ensure_user_is_organizer_or_admin(organizer, conn)
+            .await?;
         TournamentUser::delete(self.id, *player, conn).await?;
         Ok(diesel::update(tournaments::table.find(self.id))
             .set(updated_at.eq(Utc::now()))
@@ -498,7 +503,8 @@ impl Tournament {
         organizer: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<(Tournament, Vec<Game>, Vec<Uuid>), DbError> {
-        self.ensure_user_is_organizer(organizer, conn).await?;
+        self.ensure_user_is_organizer_or_admin(organizer, conn)
+            .await?;
         self.start(conn).await
     }
 

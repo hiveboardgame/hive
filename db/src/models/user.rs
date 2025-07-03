@@ -219,6 +219,14 @@ impl User {
         .await?)
     }
 
+    pub async fn is_admin(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<bool, DbError> {
+        Ok(select(exists(
+            users_table.filter(users::id.eq(uuid).and(users::admin.eq(true))),
+        ))
+        .get_result(conn)
+        .await?)
+    }
+
     pub async fn find_by_email(email: &str, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         Ok(users_table
             .filter(email_field.eq(email.to_lowercase()))
