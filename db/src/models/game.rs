@@ -1205,7 +1205,9 @@ impl Game {
         }
         if let Some(tid) = self.tournament_id {
             let tournament = Tournament::find(tid, conn).await?;
-            tournament.ensure_user_is_organizer(user_id, conn).await?;
+            tournament
+                .ensure_user_is_organizer_or_admin(user_id, conn)
+                .await?;
             let con = match new_result {
                 TournamentGameResult::DoubeForfeit => Conclusion::Forfeit,
                 TournamentGameResult::Unknown => Conclusion::Unknown,
