@@ -30,3 +30,5 @@ engine/perf.data
 # PostgreSQL dev DB
 .pg
 logs
+
+CLAUDE.md
