@@ -40,7 +40,14 @@ async fn get_token_helper(
     pool: Data<DbPool>,
 ) -> Result<String> {
     let mut conn = get_conn(&pool).await?;
-    let user = User::find_by_email(&bot.email, &mut conn).await?;
+
+    let user_result = User::find_by_email(&bot.email, &mut conn).await?
+    let user = if let Ok(user) = user_result {
+        user
+    } else {
+        User::find_by_username(&bot.email, &mut conn).await?
+    };
+
     if !user.bot {
         return Err(anyhow!("Not a bot"));
     }
