@@ -12,7 +12,9 @@ use leptos::either::Either;
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::{params::Params, *};
-use leptos_use::{use_infinite_scroll_with_options, UseInfiniteScrollOptions};
+use leptos_use::{
+    use_element_bounding, use_infinite_scroll_with_options, UseInfiniteScrollOptions,
+};
 use shared_types::{BatchInfo, GameProgress, GameSpeed, GamesQueryOptions, ResultType};
 
 #[derive(Debug, Clone, Default)]
@@ -30,10 +32,32 @@ struct ProfileGamesContext {
     pub next_batch: ServerAction<GetBatchFromOptions>,
     pub is_first_batch: StoredValue<bool>,
     pub has_more: StoredValue<bool>,
+    pub initial_batch_size: Signal<usize>,
+    pub games_container_ref: NodeRef<html::Div>,
 }
 #[derive(Params, PartialEq, Eq)]
 struct UsernameParams {
     username: String,
+}
+
+fn calculate_initial_batch_size(container_height: f64, container_width: f64) -> usize {
+    // Container layout: 1 column on mobile, 2 columns on sm, 3 columns on lg
+    let columns = if container_width < 640.0 {
+        1 // mobile
+    } else if container_width < 1024.0 {
+        2 // sm to lg
+    } else {
+        3 // lg and above
+    };
+
+    // GameRow heights: 160px (h-40) on mobile, 224px (sm:h-56) on desktop
+    let card_height = if container_width < 640.0 {
+        160.0
+    } else {
+        224.0
+    };
+    let rows_with_buffer = (container_height / card_height).floor() as usize + 1;
+    rows_with_buffer * columns
 }
 
 fn load_games(
@@ -41,13 +65,15 @@ fn load_games(
     username: String,
     batch_info: Option<BatchInfo>,
     action: ServerAction<GetBatchFromOptions>,
+    initial_batch_size: Option<usize>,
 ) {
     let user_info = (username, controls.color, controls.result);
     let batch_size = if batch_info.is_none() {
-        Some(6)
+        initial_batch_size
     } else {
         Some(4)
     };
+
     let options = GamesQueryOptions {
         players: vec![user_info],
         speeds: controls.speeds,
@@ -60,7 +86,7 @@ fn load_games(
 
 #[component]
 fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
-    let username = Signal::derive(move || username.clone());
+    let username = StoredValue::new(username);
     let controls = ctx.controls;
     let i18n = use_i18n();
     let toggle_classes = |active| {
@@ -72,7 +98,14 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
     let set_first_batch = move || {
         ctx.has_more.set_value(true);
         ctx.is_first_batch.set_value(true);
-        load_games(ctx.controls.get(), username(), None, ctx.next_batch);
+        let batch_size = ctx.initial_batch_size.get();
+        load_games(
+            ctx.controls.get(),
+            username.get_value(),
+            None,
+            ctx.next_batch,
+            Some(batch_size),
+        );
     };
     let toggle_speeds = move |speed| {
         controls.update(|c| {
@@ -88,19 +121,19 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
         <div class="flex flex-col m-1 text-md sm:text-lg">
             <div class="flex flex-wrap gap-1">
                 <a
-                    href=format!("/@/{}/unstarted", username())
+                    href=format!("/@/{}/unstarted", username.get_value())
                     class=move || radio_classes(controls().tab_view == GameProgress::Unstarted)
                 >
                     {t!(i18n, profile.game_buttons.unstarted)}
                 </a>
                 <a
-                    href=format!("/@/{}/playing", username())
+                    href=format!("/@/{}/playing", username.get_value())
                     class=move || radio_classes(controls().tab_view == GameProgress::Playing)
                 >
                     {t!(i18n, profile.game_buttons.playing)}
                 </a>
                 <a
-                    href=format!("/@/{}/finished", username())
+                    href=format!("/@/{}/finished", username.get_value())
                     class=move || radio_classes(controls().tab_view == GameProgress::Finished)
                 >
                     {t!(i18n, profile.game_buttons.finished)}
@@ -241,6 +274,14 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let username =
         move || params.with(|p| p.as_ref().map(|p| p.username.clone()).unwrap_or_default());
     let user = LocalResource::new(move || get_profile(username()));
+
+    let games_container_ref = NodeRef::<html::Div>::new();
+    let bounding = use_element_bounding(games_container_ref);
+
+    let initial_batch_size = Signal::derive(move || {
+        calculate_initial_batch_size(bounding.height.get(), bounding.width.get())
+    });
+
     provide_context(ProfileGamesContext {
         controls: RwSignal::new(ProfileControls {
             speeds: GameSpeed::all_games(),
@@ -250,12 +291,14 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
         has_more: StoredValue::new(true),
         next_batch: ServerAction::new(),
         is_first_batch: StoredValue::new(true),
+        initial_batch_size,
+        games_container_ref,
     });
     let ctx = expect_context::<ProfileGamesContext>();
     Effect::watch(
         ctx.next_batch.version(),
         move |_, _, _| {
-            let next_batch = if let Some(Ok(next_batch)) = ctx.next_batch.value().get_untracked() {
+            let next_batch = if let Some(Ok(next_batch)) = ctx.next_batch.value().get() {
                 next_batch
             } else {
                 vec![]
@@ -281,7 +324,6 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
             }>
                 {move || {
                     user.get()
-                        .as_ref()
                         .map(|user| {
                             if let Ok(user) = user {
                                 Either::Left(
@@ -296,7 +338,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                         <div class="flex flex-col-reverse m-1 w-full sm:flex-row">
                                             <Controls username=user.username.clone() ctx=ctx.clone() />
                                             <div class="text-md sm:w-2/3 sm:text-lg">
-                                                <DisplayProfile user=user.clone() />
+                                                <DisplayProfile user />
                                             </div>
                                         </div>
                                         {children()}
@@ -316,20 +358,41 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
 pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     let ctx = expect_context::<ProfileGamesContext>();
     let params = use_params::<UsernameParams>();
-    let username =
-        move || params.with(|p| p.as_ref().map(|p| p.username.clone()).unwrap_or_default());
-    let el = NodeRef::<html::Div>::new();
-    el.on_load(move |_| {
-        ctx.controls.update(|c| {
-            c.tab_view = tab_view;
-            if tab_view != GameProgress::Finished {
-                c.result = None;
-            };
-        });
-        ctx.has_more.set_value(true);
-        ctx.is_first_batch.set_value(true);
-        ctx.games.set(vec![]);
+    let username = Signal::derive(move || {
+        params.with(|p| p.as_ref().map(|p| p.username.clone()).unwrap_or_default())
     });
+    let el = ctx.games_container_ref;
+    Effect::watch(
+        move || (),
+        move |_, _, _| {
+            //TODO: figure out a less hacky way
+            // Uses requestAnimationFrame twice to ensure the element is fully rendered and measured
+            request_animation_frame(move || {
+                request_animation_frame(move || {
+                    ctx.controls.update(|c| {
+                        c.tab_view = tab_view;
+                        if tab_view != GameProgress::Finished {
+                            c.result = None;
+                        };
+                    });
+                    ctx.has_more.set_value(true);
+                    ctx.is_first_batch.set_value(true);
+                    ctx.games.set(vec![]);
+
+                    let initial_batch_size = ctx.initial_batch_size.get();
+                    load_games(
+                        ctx.controls.get(),
+                        username(),
+                        None,
+                        ctx.next_batch,
+                        Some(initial_batch_size),
+                    );
+                });
+            });
+        },
+        true,
+    );
+
     let _ = use_infinite_scroll_with_options(
         el,
         move |_| {
@@ -344,7 +407,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 if !ctx.has_more.get_value() || ctx.next_batch.pending().get() {
                     return;
                 }
-                load_games(controls, username, batch_info, ctx.next_batch);
+                load_games(controls, username, batch_info, ctx.next_batch, Some(4));
             }
         },
         UseInfiniteScrollOptions::default()
@@ -354,7 +417,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     view! {
         <div
             node_ref=el
-            class="overflow-x-hidden items-center h-full sm:grid sm:grid-cols-2 sm:gap-1"
+            class="overflow-y-auto overflow-x-hidden h-full sm:grid sm:grid-cols-2 sm:content-start lg:grid-cols-3"
         >
             {move || {
                 ctx.games.get().into_iter().map(|game| view! { <GameRow game /> }).collect_view()
