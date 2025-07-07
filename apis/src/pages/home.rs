@@ -1,9 +1,8 @@
 use crate::components::atoms::logo::Logo;
 use crate::components::atoms::play_bot::PlayBot;
+use crate::components::molecules::online_users::OnlineUsers;
 use crate::components::molecules::rl_banner::RlBanner;
-use crate::components::organisms::{
-    challenges::Challenges, online_users::OnlineUsers, quickplay::QuickPlay, tv::Tv,
-};
+use crate::components::organisms::{challenges::Challenges, quickplay::QuickPlay, tv::Tv};
 use crate::functions::home_banner;
 use leptos::prelude::*;
 use leptos_use::use_media_query;

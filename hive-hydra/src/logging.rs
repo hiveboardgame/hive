@@ -3,8 +3,7 @@ use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::{self, time::UtcTime},
     layer::SubscriberExt,
-    Registry,
-    EnvFilter,
+    EnvFilter, Registry,
 };
 
 pub fn setup_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -23,8 +22,7 @@ pub fn setup_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     );
 
     // Create env filter from RUST_LOG environment variable (defaults to info if not set)
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     // Console layer with colored output and local time
     let console_layer = fmt::layer()

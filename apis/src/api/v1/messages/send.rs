@@ -1,4 +1,7 @@
-use crate::common::{GameUpdate, ServerMessage, ServerResult, GameReaction, GameActionResponse, ChallengeUpdate};
+use crate::common::{
+    ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult,
+};
+use crate::responses::GameResponse;
 use crate::websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer};
 use actix::Addr;
 use actix_web::web::Data;
@@ -10,9 +13,8 @@ use db_lib::{
     DbPool,
 };
 use hive_lib::Turn;
-use shared_types::{GameId, ChallengeId};
 use shared_types::TimeMode;
-use crate::responses::GameResponse;
+use shared_types::{ChallengeId, GameId};
 
 pub async fn send_messages(
     ws_server: Data<Addr<WsServer>>,

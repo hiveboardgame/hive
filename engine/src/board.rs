@@ -458,9 +458,7 @@ impl Board {
                 }
             }
         }
-        panic!(
-            "{self} Finding From position: {from} to piece: {to} failed."
-        );
+        panic!("{self} Finding From position: {from} to piece: {to} failed.");
     }
 
     pub fn explore_sextant_level(

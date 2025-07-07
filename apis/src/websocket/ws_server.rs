@@ -24,11 +24,11 @@ use db_lib::{
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::GameStatus;
+use log::{error, warn};
 use rand::Rng;
 use shared_types::{GameId, TimeMode};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use log::{error, warn};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -246,9 +246,7 @@ impl Handler<Connect> for WsServer {
                     }
 
                     // Send games which require input from the user
-                    let game_ids_result = user
-                        .get_urgent_nanoids(&mut conn)
-                        .await;
+                    let game_ids_result = user.get_urgent_nanoids(&mut conn).await;
                     let game_ids = match game_ids_result {
                         Ok(ids) => ids,
                         Err(e) => {
@@ -398,9 +396,14 @@ impl Handler<ClientActorMessage> for WsServer {
                 }
                 // Send the message to everyone
                 if let Some(users) = self.games_users.get(&GameId(self.id.clone())) {
-                    users.iter().for_each(|client| self.send_message(&cam.serialized, client));
+                    users
+                        .iter()
+                        .for_each(|client| self.send_message(&cam.serialized, client));
                 } else {
-                    warn!("Game '{}' not found in games_users when sending global message", self.id);
+                    warn!(
+                        "Game '{}' not found in games_users when sending global message",
+                        self.id
+                    );
                 }
             }
             MessageDestination::Game(ref game_id) => {
@@ -413,7 +416,9 @@ impl Handler<ClientActorMessage> for WsServer {
                 }
                 // Send the message to everyone
                 if let Some(users) = self.games_users.get(game_id) {
-                    users.iter().for_each(|client| self.send_message(&cam.serialized, client));
+                    users
+                        .iter()
+                        .for_each(|client| self.send_message(&cam.serialized, client));
                 } else {
                     warn!("Game '{game_id}' not found in games_users when sending game message");
                 }

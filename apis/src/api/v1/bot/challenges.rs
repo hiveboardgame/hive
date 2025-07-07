@@ -1,8 +1,8 @@
 use crate::api::v1::auth::auth::Auth;
-use crate::responses::{ChallengeResponse, GameResponse};
-use crate::websocket::WsServer;
 use crate::api::v1::messages::send::send_challenge_messages;
+use crate::responses::{ChallengeResponse, GameResponse};
 use crate::websocket::busybee::Busybee;
+use crate::websocket::WsServer;
 use actix::Addr;
 use actix_web::{
     get,
@@ -15,9 +15,9 @@ use db_lib::{
     models::{Challenge, Game, NewGame, User},
     DbPool,
 };
+use rand::random;
 use serde_json::json;
 use shared_types::{ChallengeId, TimeMode};
-use rand::random;
 use std::str::FromStr;
 
 #[get("/api/v1/bot/challenges/")]
@@ -87,9 +87,9 @@ async fn accept_challenge(
     let new_game = NewGame::new(white_id, black_id, &challenge);
     let (game, deleted_challenges) =
         Game::create_and_delete_challenges(new_game, &mut conn).await?;
-    
+
     send_challenge_messages(ws_server, deleted_challenges, &game, &bot, &pool).await?;
-    
+
     match TimeMode::from_str(&game.time_mode) {
         Ok(TimeMode::RealTime) | Err(_) => {}
         _ => {
@@ -106,7 +106,7 @@ async fn accept_challenge(
             }
         }
     };
-    
+
     let response = GameResponse::from_model(&game, &mut conn).await?;
     Ok(response)
 }
