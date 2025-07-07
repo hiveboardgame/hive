@@ -49,5 +49,12 @@
         "classic": "Classic",
         "correspondence": "Correspondence",
         "untimed": "Untimed"
-    }
+    },
+    "tournament_ready_title": "Tournament Game Ready!",
+    "tournament_ready_opponent": "Your opponent",
+    "tournament_ready_message": "is ready to start the tournament game. You have 30 seconds to accept and start the game.",
+    "tournament_ready_accept": "Accept Game",
+    "tournament_ready_view_game": "View Game",
+    "tournament_ready_close": "Close",
+    "tournament_ready_timeout": "This notification will auto-close in 30 seconds."
 }

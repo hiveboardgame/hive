@@ -25,6 +25,7 @@ pub mod simple_hex_stack;
 pub mod thumbnail_pieces;
 pub mod time_row;
 pub mod tournament_invitation_notification;
+pub mod tournament_ready_popup;
 pub mod tournament_row;
 pub mod tournament_status_notification;
 pub mod unplayed_game_row;

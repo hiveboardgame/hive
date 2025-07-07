@@ -64,16 +64,33 @@ impl StartHandler {
                     ))),
                 });
             } else {
+                let game_response = GameResponse::from_model(&self.game, &mut conn).await?;
+                let game_action_response = GameActionResponse {
+                    game_id: GameId(self.game.nanoid.to_owned()),
+                    game: game_response,
+                    game_action: GameReaction::Ready,
+                    user_id: self.user_id.to_owned(),
+                    username: self.username.to_owned(),
+                };
+
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
                     message: ServerMessage::Game(Box::new(GameUpdate::Reaction(
-                        GameActionResponse {
-                            game_id: GameId(self.game.nanoid.to_owned()),
-                            game: GameResponse::from_model(&self.game, &mut conn).await?,
-                            game_action: GameReaction::Ready,
-                            user_id: self.user_id.to_owned(),
-                            username: self.username.to_owned(),
-                        },
+                        game_action_response.clone(),
+                    ))),
+                });
+
+                // Also send Ready message to the opponent user (for popup notification)
+                let opponent_id = if self.game.white_id == self.user_id {
+                    self.game.black_id
+                } else {
+                    self.game.white_id
+                };
+
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::User(opponent_id),
+                    message: ServerMessage::Game(Box::new(GameUpdate::Reaction(
+                        game_action_response,
                     ))),
                 });
             }
