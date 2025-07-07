@@ -1,7 +1,7 @@
+use crate::config::BotConfig;
 use crate::hivegame_bot_api::HiveGameApi;
 use crate::turn_tracker::{TurnTracker, TurnTracking};
 use crate::BotGameTurn;
-use crate::config::BotConfig;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{mpsc, Mutex, Semaphore};
@@ -11,10 +11,7 @@ use tracing::{debug, error, info};
 const LOGIN_RETRY_INTERVAL_SECS: u64 = 10;
 const TOKEN_REFRESH_INTERVAL_SECS: u64 = 3600; // Refresh token every 60 minutes
 
-async fn auth(
-    api: &HiveGameApi,
-    bot: &BotConfig,
-) -> String {
+async fn auth(api: &HiveGameApi, bot: &BotConfig) -> String {
     // Authenticate to get token with retry logic
     loop {
         match api.auth(&bot.email, &bot.password).await {
@@ -46,7 +43,9 @@ pub async fn producer_task(
 
     loop {
         // Check if token needs to be refreshed (after refresh interval) or is empty
-        if token.is_empty() || token_time.elapsed() > Duration::from_secs(TOKEN_REFRESH_INTERVAL_SECS) {
+        if token.is_empty()
+            || token_time.elapsed() > Duration::from_secs(TOKEN_REFRESH_INTERVAL_SECS)
+        {
             token = auth(&api, &bot).await;
             token_time = Instant::now();
         }

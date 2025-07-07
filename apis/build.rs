@@ -21,4 +21,4 @@ fn main() {
     translations_infos
         .generate_i18n_module(i18n_mod_directory)
         .unwrap();
-} 
+}

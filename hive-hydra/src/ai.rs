@@ -1,6 +1,6 @@
 use std::io::Write;
 use std::process::{Child, Command, Stdio};
-use tracing::{info};
+use tracing::info;
 
 #[derive(Debug)]
 pub enum AiError {
