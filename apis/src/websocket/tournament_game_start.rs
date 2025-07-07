@@ -28,7 +28,7 @@ impl TournamentGameStart {
                     games_date.insert(GameId(game.nanoid.clone()), (user_id, Utc::now()));
                     return Ok(false);
                 }
-                if since < 30 {
+                if since < 35 {
                     return Ok(true);
                 }
             }

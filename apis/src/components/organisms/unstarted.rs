@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::components::layouts::base_layout::OrientationSignal;
 use crate::i18n::*;
 use crate::providers::game_state::GameStateSignal;
@@ -12,7 +14,7 @@ pub fn Unstarted(
     game_id: Memo<GameId>,
     white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)>,
     user_is_player: Signal<bool>,
-    ready: RwSignal<(GameId, Uuid)>,
+    ready: RwSignal<HashMap<GameId, Vec<(Uuid, String)>>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -28,8 +30,20 @@ pub fn Unstarted(
             .as_ref()
             .map(|gr| gr.black_player.username.clone()),)
     });
-    let icon_for_color = move |id| {
-        let icon = if ready().0 == game_id() && Some(ready().1) == id {
+    let icon_for_color = move |id: Option<Uuid>| {
+        let ready_map = ready.get();
+        let current_game_id = game_id.get();
+
+        let is_ready = if let Some(user_id) = id {
+            ready_map
+                .get(&current_game_id)
+                .map(|users| users.iter().any(|(id, _)| *id == user_id))
+                .unwrap_or(false)
+        } else {
+            false
+        };
+
+        let icon = if is_ready {
             icondata::AiCheckOutlined
         } else {
             icondata::IoCloseSharp

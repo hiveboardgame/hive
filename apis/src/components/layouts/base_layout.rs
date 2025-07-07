@@ -1,10 +1,11 @@
 use crate::components::atoms::{og::OG, title::Title};
 use crate::components::molecules::alert::Alert;
+use crate::components::molecules::tournament_ready_popup::TournamentReadyPopup;
 use crate::components::organisms::header::Header;
 use crate::providers::Config;
 use crate::providers::{
     game_state::GameStateSignal, refocus::RefocusSignal, websocket::WebsocketContext, AuthContext,
-    PingContext,
+    PingContext, UpdateNotifier,
 };
 use cfg_if::cfg_if;
 use chrono::Utc;
@@ -48,6 +49,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let gamestate = expect_context::<GameStateSignal>();
     let mut refocus = expect_context::<RefocusSignal>();
+    let update_notifier = expect_context::<UpdateNotifier>();
     let vertical = use_media_query("(min-height: 100vw)");
     let chat_dropdown_open = RwSignal::new(false);
     let orientation_vertical = Signal::derive(move || vertical() || chat_dropdown_open());
@@ -175,6 +177,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         }>
             <Header />
             <Alert />
+            <TournamentReadyPopup ready_signal=update_notifier.tournament_ready />
             <Show when=move || ws_ready() != ConnectionReadyState::Open>
                 <div class="flex absolute top-1/2 left-1/2 gap-2 items-center transform -translate-x-1/2 -translate-y-1/2">
                     <div class="w-10 h-10 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
