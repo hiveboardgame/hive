@@ -49,7 +49,7 @@ pub fn UserWithRating(
                         <ProfileLink
                             patreon=patreon()
                             username=username()
-                            bot = bot()
+                            bot=bot()
                             extend_tw_classes=text_color
                         />
                     </div>

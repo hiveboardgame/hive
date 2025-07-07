@@ -37,7 +37,6 @@ pub fn TileDesignToggle() -> impl IntoView {
 
 #[component]
 pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
-    let i18n = use_i18n();
     let tile_design = Signal::derive(move || tile_design.clone());
     let Config(config, set_cookie) = expect_context();
     let is_active = move || {
@@ -53,7 +52,7 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
             <button
                 class=move || {
                     format!(
-                        "w-full h-full transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer {}",
+                        "w-full h-full transform transition-transform duration-300 active:scale-95 font-bold py-2 px-4 rounded focus:outline-none cursor-pointer {}",
                         is_active(),
                     )
                 }
@@ -67,18 +66,48 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
                         });
                 }
             >
-
-                {move || match tile_design() {
-                    TileDesign::Official => t_string!(i18n, user_config.style_buttons.official),
-                    TileDesign::Flat => t_string!(i18n, user_config.style_buttons.flat),
-                    TileDesign::ThreeD => t_string!(i18n, user_config.style_buttons.three_d),
-                    TileDesign::HighContrast => {
-                        t_string!(i18n, user_config.style_buttons.high_contrast)
-                    }
-                    TileDesign::Community => t_string!(i18n, user_config.style_buttons.community),
-                }}
-
+                <TilePreview tile_design=tile_design() />
             </button>
+        </div>
+    }
+}
+
+#[component]
+pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
+    let design_folder = match tile_design {
+        TileDesign::Official => "official",
+        TileDesign::Flat => "flat",
+        TileDesign::ThreeD => "3d",
+        TileDesign::HighContrast => "high-contrast",
+        TileDesign::Community => "community",
+    };
+
+    // For other styles, show background + piece
+    let piece_name = match tile_design {
+        TileDesign::ThreeD => "whiteAnt.svg", // 3D folder uses different naming
+        _ => "Ant.svg",                       // All other folders use standard naming
+    };
+
+    view! {
+        <div class="relative w-12 h-12">
+            // Background tile - white for light mode, black for dark mode
+            <img
+                src=format!("/assets/tiles/{}/white.svg", design_folder)
+                alt="White Background"
+                class="absolute inset-0 w-full h-full object-contain dark:hidden"
+            />
+            <img
+                src=format!("/assets/tiles/{}/black.svg", design_folder)
+                alt="Black Background"
+                class="absolute inset-0 w-full h-full object-contain hidden dark:block"
+            />
+
+            // Piece overlay
+            <img
+                src=format!("/assets/tiles/{}/{}", design_folder, piece_name)
+                alt=format!("{:?} Ant", tile_design)
+                class="absolute inset-0 w-full h-full object-contain"
+            />
         </div>
     }
 }

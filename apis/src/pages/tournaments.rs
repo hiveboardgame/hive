@@ -110,7 +110,12 @@ pub fn Tournaments() -> impl IntoView {
                                                             match filter.get() {
                                                                 TournamentFilter::All => true,
                                                                 TournamentFilter::Status(status) => t.status == status,
-                                                                TournamentFilter::MyTournaments => auth_context.user.get_untracked().is_some_and(|u|t.player_list.contains(&u.id)),
+                                                                TournamentFilter::MyTournaments => {
+                                                                    auth_context
+                                                                        .user
+                                                                        .get_untracked()
+                                                                        .is_some_and(|u| t.player_list.contains(&u.id))
+                                                                }
                                                             }
                                                         })
                                                         .collect();
