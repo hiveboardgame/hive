@@ -1,6 +1,7 @@
 use crate::responses::AccountResponse;
 use leptos::prelude::*;
 use shared_types::Takeback;
+use crate::functions::auth::register::validate_password;
 
 #[server]
 pub async fn edit_account(
@@ -20,9 +21,7 @@ pub async fn edit_account(
     use db_lib::get_conn;
     use db_lib::models::User;
 
-    if new_password != new_password_confirmation {
-        return Err(ServerFnError::new("Passwords don't match."));
-    }
+    validate_password(&new_password, &new_password_confirmation).map_err(ServerFnError::new)?;
     let uuid = uuid().await?;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;

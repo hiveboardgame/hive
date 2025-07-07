@@ -1,10 +1,13 @@
+use crate::components::update_from_event::update_from_input;
 use crate::functions::accounts::edit::EditAccount;
 use crate::functions::oauth::get_discord_handle;
+use crate::providers::ApiRequestsProvider;
 use crate::providers::RefererContext;
-use crate::{providers::ApiRequestsProvider, providers::AuthContext};
 use leptos::form::ActionForm;
+use leptos::leptos_dom::helpers::debounce;
 use leptos::*;
 use leptos::{html, prelude::*};
+use std::time::Duration;
 
 #[component]
 pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
@@ -16,59 +19,54 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
 
+    let current_password = RwSignal::new(String::new());
+    let new_password = RwSignal::new(String::new());
+    let confirm_password = RwSignal::new(String::new());
+
+    let password_invalid = move || {
+        let new_pw = new_password();
+        let confirm_pw = confirm_password();
+        !(new_pw.len() > 7 && new_pw == confirm_pw)
+    };
+
+    let form_invalid = move || current_password().len() < 8 || password_invalid();
+
+    let display_account_error = move || account_action.value().get().is_some_and(|v| v.is_err());
+
     let api = expect_context::<ApiRequestsProvider>();
 
     let oauth = move |_| {
         api.0.get().link_discord();
     };
-    let auth_context = expect_context::<AuthContext>();
     let discord_name = Action::new(move |_: &()| async { get_discord_handle().await });
     Effect::new(move |_| {
         discord_name.dispatch(());
     });
 
     view! {
-        <Show 
-            when=move || auth_context.user.get().is_some()
-            fallback=|| view! {
-                <div class="mx-auto max-w-md pt-20 text-center">
-                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg shadow-lg bg-stone-300 dark:bg-slate-800 border border-stone-400 dark:border-slate-600">
-                        <h2 class="text-xl font-bold mb-4 text-gray-700 dark:text-gray-300">
-                            "🔒 Account Access"
-                        </h2>
-                        <p class="text-gray-600 dark:text-gray-400">
-                            "Please log in to access your account settings."
-                        </p>
-                    </div>
-                </div>
-            }
-        >
-            <div class=format!("mx-auto max-w-md pt-20 {extend_tw_classes}")>
-                // Discord Integration Section
-                <div class="px-8 pt-6 pb-8 mb-6 rounded-lg shadow-lg bg-stone-300 dark:bg-slate-800 border border-stone-400 dark:border-slate-600">
+            <div class=format!("mx-auto w-full max-w-md px-4 pt-20 pb-20 sm:max-w-lg md:max-w-xl pt-20 pb-20 {extend_tw_classes}")>
+                <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
                     <div class="mb-6">
-                        <h2 class="text-xl font-bold mb-4 text-center text-indigo-600 dark:text-indigo-400">
+                        <h2 class="mb-4 text-xl font-bold text-center text-indigo-600 dark:text-indigo-400">
                             "🤖 Discord Integration"
                         </h2>
-                        
-                        // Busybee Messages Info
-                        <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
-                            <h3 class="font-semibold mb-2 text-blue-800 dark:text-blue-200">
+
+                        <div class="p-4 mb-6 bg-blue-50 rounded-lg border border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
+                            <h3 class="mb-2 font-semibold text-blue-800 dark:text-blue-200">
                                 "📬 Busybee Messages"
                             </h3>
-                            <p class="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                            <p class="mb-3 text-sm text-blue-700 dark:text-blue-300">
                                 "Get instant notifications about tournament starts, game updates, and important events directly in Discord!"
                             </p>
-                            <div class="text-xs text-blue-600 dark:text-blue-400 mb-3">
+                            <div class="mb-3 text-xs text-blue-600 dark:text-blue-400">
                                 "⚠️ To receive busybee messages, you must:"
                             </div>
-                            <ul class="text-xs text-blue-600 dark:text-blue-400 ml-4 space-y-1">
+                            <ul class="ml-4 space-y-1 text-xs text-blue-600 dark:text-blue-400">
                                 <li>"• Join our Discord server"</li>
                                 <li>"• Link your Discord account below"</li>
                             </ul>
                         </div>
 
-                        // Discord Server Invite
                         <div class="mb-6 text-center">
                             <div class="mb-3">
                                 <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -76,10 +74,10 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                                 </span>
                             </div>
                             <a
-                                href="https://discord.gg/bCe4HC9G"
+                                href="https://discord.gg/7EwNTJnfab"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="inline-flex items-center px-4 py-2 font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-all duration-300 transform cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 shadow-lg"
+                                class="inline-flex items-center px-4 py-2 font-bold text-white bg-purple-600 rounded-lg shadow-lg transition-all duration-300 transform cursor-pointer no-link-style hover:bg-purple-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                             >
                                 <span class="mr-2 text-white">"💬"</span>
                                 <span class="text-white">"Join HiveGame Discord"</span>
@@ -87,12 +85,11 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                             </a>
                         </div>
 
-                        // Current Discord Account
                         <div class="mb-4">
                             <label class="block mb-2 font-semibold text-gray-700 dark:text-gray-300">
                                 "🔗 Linked Discord Account"
                             </label>
-                            <div class="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg border">
+                            <div class="p-3 bg-gray-100 rounded-lg border dark:bg-gray-700">
                                 {move || {
                                     match discord_name.value().get() {
                                         Some(Ok(name)) => view! {
@@ -101,12 +98,12 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                                             </span>
                                         }.into_any(),
                                         Some(Err(_)) => view! {
-                                            <span class="text-red-500 dark:text-red-400 italic">
+                                            <span class="italic text-red-500 dark:text-red-400">
                                                 "Error loading Discord name"
                                             </span>
                                         }.into_any(),
                                         None => view! {
-                                            <span class="text-gray-500 dark:text-gray-400 italic">
+                                            <span class="italic text-gray-500 dark:text-gray-400">
                                                 "No Discord account linked"
                                             </span>
                                         }.into_any()
@@ -115,10 +112,9 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                             </div>
                         </div>
 
-                        // Link Discord Button
                         <div class="text-center">
                             <button
-                                class="w-full px-4 py-3 font-bold text-white rounded-lg transition-all duration-300 transform cursor-pointer bg-purple-600 hover:bg-purple-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                                class="px-4 py-3 w-full font-bold text-white bg-purple-600 rounded-lg transition-all duration-300 transform cursor-pointer hover:bg-purple-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                                 on:click=oauth
                             >
                                 <span class="mr-2">"🔗"</span>
@@ -131,34 +127,24 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     </div>
                 </div>
 
-                // Password Change Section
-                <div class="px-8 pt-6 pb-8 mb-4 rounded-lg shadow-lg bg-stone-300 dark:bg-slate-800 border border-stone-400 dark:border-slate-600">
-                    <h2 class="text-xl font-bold mb-4 text-center text-gray-700 dark:text-gray-300">
+                <div class="px-8 pt-6 pb-8 mb-4 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+                    <h2 class="mb-4 text-xl font-bold text-center text-gray-700 dark:text-gray-300">
                         "🔐 Change Password"
                     </h2>
                     <ActionForm
                         action=account_action
                     >
-                        <label class="hidden mb-2 font-bold" for="email">
-                            New Email
-                        </label>
-                        <input
-                            class="hidden px-3 py-2 leading-tight rounded border shadow appearance-none focus:outline-none"
-                            id="email"
-                            name="new_email"
-                            type="email"
-                            autocomplete="off"
-                            placeholder="New email"
-                        />
                         <label class="block mb-2 font-semibold text-gray-700 dark:text-gray-300" for="old_password">
                             Current Password
                         </label>
                         <input
                             node_ref=my_input
+                            on:input=debounce(Duration::from_millis(350), update_from_input(current_password))
                             class="px-3 py-2 mb-3 w-full leading-tight rounded-lg border shadow appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             id="old_password"
                             name="password"
                             type="password"
+                            prop:value=current_password
                             autocomplete="current-password"
                             placeholder="Current password"
                         />
@@ -166,33 +152,51 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                             New Password
                         </label>
                         <input
+                            on:input=debounce(Duration::from_millis(350), update_from_input(new_password))
                             class="px-3 py-2 mb-3 w-full leading-tight rounded-lg border shadow appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             name="new_password"
                             id="new_password"
                             type="password"
+                            prop:value=new_password
                             autocomplete="new-password"
                             placeholder="New password"
+                            minlength="8"
+                            maxlength="128"
                         />
                         <label class="block mb-2 font-semibold text-gray-700 dark:text-gray-300" for="confirm_password">
                             Confirm Password
                         </label>
                         <input
-                            class="px-3 py-2 mb-4 w-full leading-tight rounded-lg border shadow appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            on:input=debounce(Duration::from_millis(350), update_from_input(confirm_password))
+                            class="px-3 py-2 mb-3 w-full leading-tight rounded-lg border shadow appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                             id="confirm_password"
                             name="new_password_confirmation"
                             type="password"
+                            prop:value=confirm_password
                             autocomplete="new-password"
                             placeholder="New password (again)"
+                            minlength="8"
+                            maxlength="128"
                         />
+                        <Show when=move || password_invalid() && !new_password().is_empty()>
+                            <small class="block mb-3 text-ladybug-red">
+                                "Password must be at least 8 characters and match confirmation"
+                            </small>
+                        </Show>
                         <input type="hidden" name="pathname" value=pathname.get_value() />
                         <input
                             type="submit"
-                            class="w-full px-4 py-3 font-bold text-white rounded-lg transition-all duration-300 transform cursor-pointer bg-green-600 hover:bg-green-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                            disabled=form_invalid
+                            class="px-4 py-3 w-full font-bold text-white bg-green-600 rounded-lg transition-all duration-300 transform cursor-pointer hover:bg-green-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-green-600"
                             value="💾 Save Changes"
                         />
+                        <Show when=display_account_error>
+                            <small class="block mt-2 text-ladybug-red">
+                                "Error updating password. Please check your current password and try again."
+                            </small>
+                        </Show>
                     </ActionForm>
                 </div>
             </div>
-        </Show>
     }
 }
