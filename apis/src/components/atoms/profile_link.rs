@@ -1,6 +1,7 @@
 use crate::components::molecules::hover_ratings::HoverRating;
 use crate::responses::UserResponse;
 use leptos::prelude::*;
+use leptos::html;
 use leptos_icons::*;
 
 #[component]
@@ -15,10 +16,12 @@ pub fn ProfileLink(
     let hover_show = RwSignal::new(false);
     let patreon = RwSignal::new(patreon);
     let bot = RwSignal::new(bot);
+    let link_ref = NodeRef::<html::A>::new();
     view! {
         <div class="relative w-full">
             <a
                 class="z-20 font-bold duration-300 no-link-style hover:text-pillbug-teal"
+                node_ref=link_ref
                 on:mouseover=move |_| {
                     if user_is_hoverable().is_some() {
                         hover_show.set(true);
@@ -40,7 +43,10 @@ pub fn ProfileLink(
                 </div>
             </a>
             <Show when=move || user_is_hoverable().is_some() && hover_show()>
-                <HoverRating user=user_is_hoverable().expect("Showing because it's some") />
+                <HoverRating
+                    user=user_is_hoverable().expect("Showing because it's some")
+                    anchor_ref=link_ref
+                />
             </Show>
         </div>
     }
