@@ -95,7 +95,10 @@ fn send_action(
 
 pub fn set_timer_from_response(game_state_signal: GameStateSignal, timer: TimerSignal) {
     game_state_signal.signal.with(|gs| {
-        if !matches!(gs.state.game_status, GameStatus::Finished(_)) {
+        if !matches!(
+            gs.state.game_status,
+            GameStatus::Finished(_) | GameStatus::Adjudicated
+        ) {
             return;
         }
         let turn = gs.history_turn.unwrap_or_default();

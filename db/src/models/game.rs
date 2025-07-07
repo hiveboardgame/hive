@@ -1234,6 +1234,7 @@ impl Game {
                 .set((
                     finished.eq(fin),
                     conclusion.eq(con.to_string()),
+                    game_status.eq(GameStatus::Adjudicated.to_string()),
                     tournament_game_result.eq(new_result.to_string()),
                     updated_at.eq(Utc::now()),
                     last_interaction.eq(Utc::now()),

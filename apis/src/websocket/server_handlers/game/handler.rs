@@ -120,7 +120,9 @@ impl GameActionHandler {
     }
 
     fn ensure_not_finished(&self) -> Result<()> {
-        if let GameStatus::Finished(_) = GameStatus::from_str(&self.game.game_status).unwrap() {
+        if let GameStatus::Finished(_) | GameStatus::Adjudicated =
+            GameStatus::from_str(&self.game.game_status).unwrap()
+        {
             Err(GameError::GameIsOver {
                 username: self.username.to_owned(),
                 game: self.game.nanoid.to_owned(),

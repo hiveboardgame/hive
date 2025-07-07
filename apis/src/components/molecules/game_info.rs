@@ -79,7 +79,7 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 _ => String::new(),
             }
         }
-        (GameStatus::NotStarted, Some(result)) => {
+        (GameStatus::Adjudicated, Some(result)) => {
             let conclusion = game_conclusion();
 
             match (result, conclusion) {

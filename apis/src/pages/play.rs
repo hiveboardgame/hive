@@ -28,7 +28,7 @@ use crate::{
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map, use_query_map};
-use shared_types::{GameId, GameStart, TournamentGameResult};
+use shared_types::{GameId, GameStart};
 use uuid::Uuid;
 use wasm_bindgen_futures::spawn_local;
 
@@ -104,9 +104,7 @@ pub fn Play() -> impl IntoView {
 
     let show_board = create_read_slice(game_state.signal, |gs| {
         !gs.game_response.as_ref().is_some_and(|gr| {
-            gr.game_start == GameStart::Ready
-                && matches!(gr.game_status, GameStatus::NotStarted)
-                && gr.tournament_game_result == TournamentGameResult::Unknown
+            gr.game_start == GameStart::Ready && matches!(gr.game_status, GameStatus::NotStarted)
         })
     });
 

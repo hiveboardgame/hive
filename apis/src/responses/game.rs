@@ -100,7 +100,9 @@ impl GameResponse {
 
     pub fn create_state(&self) -> State {
         let result = match &self.game_status {
-            &GameStatus::NotStarted | &GameStatus::InProgress => GameResult::Unknown,
+            &GameStatus::NotStarted | &GameStatus::InProgress | &GameStatus::Adjudicated => {
+                GameResult::Unknown
+            }
             GameStatus::Finished(result) => result.clone(),
         };
         State::new_from_history(&History::new_from_gamestate(

@@ -84,7 +84,7 @@ pub fn Board() -> impl IntoView {
     let history_style = move || match board_view() {
         View::Game => "",
         View::History => match game_status() {
-            GameStatus::Finished(_) => "",
+            GameStatus::Finished(_) | GameStatus::Adjudicated => "",
             _ => {
                 if last_turn() {
                     ""

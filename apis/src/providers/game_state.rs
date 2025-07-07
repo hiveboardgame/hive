@@ -193,7 +193,10 @@ impl GameStateSignal {
 
     pub fn is_finished(&self) -> Memo<bool> {
         let game_status_finished = create_read_slice(self.signal, |game_state| {
-            matches!(game_state.state.game_status, GameStatus::Finished(_))
+            matches!(
+                game_state.state.game_status,
+                GameStatus::Finished(_) | GameStatus::Adjudicated
+            )
         });
         let game_response_finished = create_read_slice(self.signal, |game_state| {
             game_state
@@ -327,7 +330,10 @@ impl GameState {
         if analysis {
             return true;
         }
-        if matches!(self.state.game_status, GameStatus::Finished(_)) {
+        if matches!(
+            self.state.game_status,
+            GameStatus::Finished(_) | GameStatus::Adjudicated
+        ) {
             return false;
         }
         user().is_some_and(|user| {

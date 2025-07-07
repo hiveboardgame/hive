@@ -11,6 +11,7 @@ pub enum GameStatus {
     NotStarted,
     InProgress,
     Finished(GameResult),
+    Adjudicated,
 }
 
 impl fmt::Display for GameStatus {
@@ -19,6 +20,7 @@ impl fmt::Display for GameStatus {
             Self::NotStarted => "NotStarted".to_owned(),
             Self::InProgress => "InProgress".to_owned(),
             Self::Finished(result) => format!("Finished({})", result.clone()),
+            Self::Adjudicated => "Adjudicated".to_owned(),
         };
         write!(f, "{game_status}")
     }
@@ -35,6 +37,7 @@ impl FromStr for GameStatus {
             "Finished(1-0)" => Ok(GameStatus::Finished(GameResult::Winner(Color::White))),
             "Finished(½-½)" => Ok(GameStatus::Finished(GameResult::Draw)),
             "Finished(Unknown)" => Ok(GameStatus::Finished(GameResult::Unknown)),
+            "Adjudicated" => Ok(GameStatus::Adjudicated),
             any => Err(GameError::ParsingError {
                 found: any.to_string(),
                 typ: "GameStatus string".to_string(),
@@ -56,6 +59,7 @@ mod tests {
             GameStatus::Finished(GameResult::Winner(Color::Black)),
             GameStatus::Finished(GameResult::Draw),
             GameStatus::Finished(GameResult::Unknown),
+            GameStatus::Adjudicated,
         ]
         .iter()
         {
