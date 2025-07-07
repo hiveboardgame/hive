@@ -42,7 +42,10 @@ fn piece_active(
         return false;
     };
     // game is over and not in analysis
-    if matches!(game_status, GameStatus::Finished(_)) {
+    if matches!(
+        game_status,
+        GameStatus::Finished(_) | GameStatus::Adjudicated
+    ) {
         return analysis;
     }
     true

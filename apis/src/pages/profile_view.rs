@@ -354,7 +354,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
     view! {
         <div
             node_ref=el
-            class="overflow-x-hidden items-center h-full sm:grid sm:grid-cols-2 sm:gap-1"
+            class="overflow-y-auto overflow-x-hidden h-full sm:grid sm:grid-cols-2 sm:content-start lg:grid-cols-3"
         >
             {move || {
                 ctx.games.get().into_iter().map(|game| view! { <GameRow game /> }).collect_view()

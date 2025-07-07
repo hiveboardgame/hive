@@ -305,7 +305,7 @@ impl State {
     }
 
     fn play_turn(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {
-        if let GameStatus::Finished(_) = self.game_status {
+        if let GameStatus::Finished(_) | GameStatus::Adjudicated = self.game_status {
             return Err(GameError::InvalidMove {
                 piece: piece.to_string(),
                 from: "NA".to_string(),

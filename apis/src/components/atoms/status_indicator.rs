@@ -30,7 +30,7 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     };
 
     let icon_style = move || {
-        let base_classes = "mr-1 pb-[2px]";
+        let base_classes = "mx-1 pb-[2px]";
 
         let extra_classes = match (user_is_player(), user_has_ws()) {
             (true, true) => " fill-grasshopper-green",
