@@ -41,7 +41,7 @@ async fn get_token_helper(
 ) -> Result<String> {
     let mut conn = get_conn(&pool).await?;
 
-    let user_result = User::find_by_email(&bot.email, &mut conn).await?
+    let user_result = User::find_by_email(&bot.email, &mut conn).await;
     let user = if let Ok(user) = user_result {
         user
     } else {
