@@ -13,18 +13,19 @@ pub fn UndoButton() -> impl IntoView {
     let is_disabled = move || analysis.get_value().0.get().current_node.is_none();
     let undo = move |_| {
         analysis.get_value().0.update(|a| {
-            if let Some(node) = a.current_node.clone() {
+            if let Some(node) = &a.current_node {
+                let node_id = node.get_node_id();
                 let new_current = node.get_parent_id();
                 if let Some(new_current) = new_current {
                     a.update_node(new_current, Some(game_state));
-                    if let Ok(tree) = a.tree.get_subtree(&node.get_node_id(), None) {
+                    if let Ok(tree) = a.tree.get_subtree(&node_id, None) {
                         tree.get_nodes().iter().for_each(|n| {
                             a.hashes.remove_by_right(&n.get_node_id());
                         });
                     };
                     a.tree
                         .remove_node(
-                            &node.get_node_id(),
+                            &node_id,
                             tree_ds::prelude::NodeRemovalStrategy::RemoveNodeAndChildren,
                         )
                         .unwrap();
@@ -87,14 +88,15 @@ pub fn HistoryButton(
         })
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        let current_node = analysis().current_node.clone();
-        let updated_node_id = current_node.and_then(|n| match action {
-            HistoryNavigation::First => analysis()
+        let updated_node_id = analysis.with(|a| {
+            a.current_node.as_ref().and_then(|n| match action {
+            HistoryNavigation::First => a
                 .tree
                 .get_ancestor_ids(&n.get_node_id())
                 .map_or(None, |ids| ids.last().cloned()),
             HistoryNavigation::Next => n.get_children_ids().first().cloned(),
             HistoryNavigation::Previous => n.get_parent_id(),
+        })
         });
         if let Some(updated_node_id) = updated_node_id {
             analysis.update(|a| {

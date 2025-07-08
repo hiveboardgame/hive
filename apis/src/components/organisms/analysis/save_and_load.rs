@@ -61,11 +61,9 @@ pub fn LoadTree() -> impl IntoView {
             .as_string()
             .and_then(|string| History::from_pgn_str(string).ok())
             .and_then(|history| hive_lib::State::new_from_history(&history).ok())
-            .and_then(|state| {
-                game_state.signal.update(|gs| gs.state = state);
-                AnalysisTree::from_state(game_state)
-            })
-            .map(|tree| {
+            .map(|state| {
+                game_state.signal.update(|gs| gs.state = state.clone());
+                let tree = AnalysisTree::from_loaded_state(game_state, &state);
                 analysis.set(LocalStorage::wrap(tree));
             })
     };

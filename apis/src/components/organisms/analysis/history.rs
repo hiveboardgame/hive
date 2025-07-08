@@ -18,28 +18,29 @@ const BTN_CLASS: &str = "flex z-20 justify-center items-center m-1 w-44 h-10 tex
 #[component]
 pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let current_node = move || analysis.get().current_node.clone();
     let get_tree = move || {
-        let t = analysis.get();
-        let out = AnalysisTree {
-            current_node: t.current_node.clone(),
-            tree: t.tree.clone(),
-            hashes: t.hashes.clone(),
-            game_type: t.game_type,
-        };
-        serde_json::to_string(&out).unwrap()
+        analysis.with(|a| {
+            let out = AnalysisTree {
+                current_node: a.current_node.clone(),
+                tree: a.tree.clone(),
+                hashes: a.hashes.clone(),
+                game_type: a.game_type,
+            };
+            serde_json::to_string(&out).unwrap()
+        })
     };
     let current_path = Memo::new(move |_| {
-        let mut current_path = vec![];
-        if let Some(current_node) = current_node() {
-            let current_id = current_node.get_node_id();
-            current_path.push(current_id);
-            let analysis = analysis.get_untracked();
-            if let Ok(a) = analysis.tree.get_ancestor_ids(&current_id) {
-                current_path.extend(a);
+        analysis.with(|a| {
+            let mut current_path = vec![];
+            if let Some(current_node) = &a.current_node {
+                let current_id = current_node.get_node_id();
+                current_path.push(current_id);
+                if let Ok(ancestors) = a.tree.get_ancestor_ids(&current_id) {
+                    current_path.extend(ancestors);
+                }
             }
-        };
-        current_path
+            current_path
+        })
     });
     let promote_variation = move |promote_all: bool| {
         analysis.update(|a| {
@@ -109,66 +110,68 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         }))
     };
     let walk_tree = move || {
-        let tree = analysis.get().tree.clone();
-        let root = tree.get_root_node()?;
-        //Post order traversal ensures all children are processed before their parents
-        let node_order = tree
-            .traverse(&root.get_node_id(), TraversalStrategy::PostOrder)
-            .ok()?;
-        let mut content = "".into_any();
-        let mut branches = HashMap::<i32, AnyView>::new();
-        for node_id in node_order {
-            let node = tree.get_node_by_id(&node_id)?;
-            let children_ids = node.get_children_ids();
-            let siblings_ids = tree.get_sibling_ids(&node_id, true).ok()?;
-            let parent_deg = siblings_ids.len();
-            let not_first_sibling = siblings_ids.first().is_none_or(|s| *s != node_id);
-            content = if children_ids.len() > 1 {
-                /* == More than one child ==
-                gather all children but the first (secondary variations)
-                and place them inside a collapsible
-                then place the first child (main variation) at the same level as the parent
-                */
-                let inner = children_ids
-                    .iter()
-                    .skip(1)
-                    .map(|c| branches.remove(c))
-                    .collect::<Vec<_>>()
-                    .into_any();
-                view! {
-                    <CollapsibleMove current_path node inner />
-                    {branches.remove(&children_ids[0])}
+        analysis.with(|a| {
+            let tree = &a.tree;
+            let root = tree.get_root_node()?;
+            //Post order traversal ensures all children are processed before their parents
+            let node_order = tree
+                .traverse(&root.get_node_id(), TraversalStrategy::PostOrder)
+                .ok()?;
+            let mut content = "".into_any();
+            let mut branches = HashMap::<i32, AnyView>::new();
+            for node_id in node_order {
+                let node = tree.get_node_by_id(&node_id)?;
+                let children_ids = node.get_children_ids();
+                let siblings_ids = tree.get_sibling_ids(&node_id, true).ok()?;
+                let parent_deg = siblings_ids.len();
+                let not_first_sibling = siblings_ids.first().is_none_or(|s| *s != node_id);
+                content = if children_ids.len() > 1 {
+                    /* == More than one child ==
+                    gather all children but the first (secondary variations)
+                    and place them inside a collapsible
+                    then place the first child (main variation) at the same level as the parent
+                    */
+                    let inner = children_ids
+                        .iter()
+                        .skip(1)
+                        .map(|c| branches.remove(c))
+                        .collect::<Vec<_>>()
+                        .into_any();
+                    view! {
+                        <CollapsibleMove current_path node inner />
+                        {branches.remove(&children_ids[0])}
+                    }
+                    .into_any()
+                } else if parent_deg > 2 && not_first_sibling && children_ids.len() == 1 {
+                    /* We make a colapsible for nodes with one child
+                    for aesthetic reasons, to hide its content.
+                    it must be that parent has already a "seccondary variation"
+                    (else a toggle would not be needed)
+                    and this must not be the "main variation" (first child)
+                    */
+                    //let static_cont = StoredValue::new(content);
+                    view! { <CollapsibleMove current_path node inner=content /> }.into_any()
+                } else {
+                    /* All other nodes are placed at the same level as the parent
+                    in a regular HistoryMove node */
+                    view! {
+                        <HistoryMove current_path node has_children=false />
+                        {content}
+                    }
+                    .into_any()
+                };
+                /* We are start of a new branch so clear the content
+                to process either the next sibling or tho parent */
+                if parent_deg > 1 {
+                    //save the branch only when its the start
+                    branches.insert(node_id, content);
+                    content = "".into_any();
                 }
-                .into_any()
-            } else if parent_deg > 2 && not_first_sibling && children_ids.len() == 1 {
-                /* We make a colapsible for nodes with one child
-                for aesthetic reasons, to hide its content.
-                it must be that parent has already a "seccondary variation"
-                (else a toggle would not be needed)
-                and this must not be the "main variation" (first child)
-                */
-                //let static_cont = StoredValue::new(content);
-                view! { <CollapsibleMove current_path node inner=content /> }.into_any()
-            } else {
-                /* All other nodes are placed at the same level as the parent
-                in a regular HistoryMove node */
-                view! {
-                    <HistoryMove current_path node has_children=false />
-                    {content}
-                }
-                .into_any()
-            };
-            /* We are start of a new branch so clear the content
-            to process either the next sibling or tho parent */
-            if parent_deg > 1 {
-                //save the branch only when its the start
-                branches.insert(node_id, content);
-                content = "".into_any();
             }
-        }
-        //all branches are processed
-        debug_assert!(branches.is_empty());
-        Some(content)
+            //all branches are processed
+            debug_assert!(branches.is_empty());
+            Some(content)
+        })
     };
     let viewbox_str = "-32 -40 250 120";
     view! {

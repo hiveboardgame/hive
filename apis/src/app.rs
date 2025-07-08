@@ -141,6 +141,7 @@ pub fn App() -> impl IntoView {
                             view=|| view! { <ChallengeView /> }
                         />
                         <Route path=path!("/analysis") view=|| view! { <Analysis /> } />
+                        <Route path=path!("/analysis/:nanoid") view=|| view! { <Analysis /> } />
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/config")

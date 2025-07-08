@@ -6,6 +6,7 @@ use crate::providers::timer::TimerSignal;
 use hive_lib::GameStatus;
 use leptos::{html, prelude::*};
 use leptos_icons::*;
+use leptos_router::hooks::{use_params_map, use_query_map};
 use shared_types::{PrettyString, TimeMode};
 
 static NANOS_IN_SECOND: u64 = 1000000000_u64;
@@ -87,6 +88,8 @@ pub fn HistoryMove(
 #[component]
 pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let game_state = expect_context::<game_state::GameStateSignal>();
+    let params = use_params_map();
+    let queries = use_query_map();
     let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
     let repetitions = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().map(|gr| gr.repetitions.clone())
@@ -122,6 +125,20 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             false
         }
     };
+
+    let analysis_url = move || {
+        if let Some(nanoid) = params.get().get("nanoid") {
+            let mut url = format!("/analysis/{nanoid}");
+
+            if let Some(move_param) = queries.get().get("move") {
+                url = format!("{url}?move={move_param}");
+            }
+
+            url
+        } else {
+            "/analysis".to_string()
+        }
+    };
     view! {
         <div class=format!("h-full flex flex-col pb-4 {extend_tw_classes}")>
 
@@ -142,7 +159,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <div class="col-span-4 text-center">{game_result}</div>
                     <div class="col-span-4 text-center">{conclusion}</div>
                     <a
-                        href="/analysis"
+                        href=analysis_url
                         class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
                     >
                         <div class="flex gap-1 justify-center items-center">
