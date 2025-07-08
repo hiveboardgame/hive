@@ -1,6 +1,7 @@
 use crate::providers::game_state::{GameState, GameStateSignal};
+use crate::responses::GameResponse;
 use bimap::BiMap;
-use hive_lib::{GameStatus, GameType, History, State};
+use hive_lib::{GameType, History, State};
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use serde::{Deserialize, Serialize};
@@ -26,12 +27,28 @@ pub struct AnalysisTree {
 }
 
 impl AnalysisTree {
-    pub fn from_state(game_state: GameStateSignal) -> Option<Self> {
-        let gs = game_state.signal.get_untracked();
+    pub fn new_blank_analysis(game_state: GameStateSignal, game_type: GameType) -> Self {
+        let tree = Tree::new(Some("analysis"));
+        let hashes = BiMap::new();
+        game_state.signal.update(|gs| {
+            *gs = GameState::new_with_game_type(game_type);
+            gs.view = game_state::View::Game;
+        });
+
+        Self {
+            current_node: None,
+            tree,
+            hashes,
+            game_type,
+        }
+    }
+
+    pub fn from_loaded_state(game_state: GameStateSignal, state: &State) -> Self {
         let mut tree = Tree::new(Some("analysis"));
         let mut hashes = BiMap::new();
         let mut previous = None;
-        for (i, (piece, position)) in gs.state.history.moves.iter().enumerate() {
+
+        for (i, (piece, position)) in state.history.moves.iter().enumerate() {
             let new_node = Node::new(
                 i as i32,
                 Some(TreeNode {
@@ -41,27 +58,73 @@ impl AnalysisTree {
                 }),
             );
             let new_id = new_node.get_node_id();
-            let hash = gs.state.history.hashes[i];
+            let hash = state.history.hashes[i];
+            tree.add_node(new_node, previous.as_ref()).ok();
+            hashes.insert(hash, new_id);
+            previous = Some(new_id);
+        }
+
+        let current_node = previous.and_then(|p| tree.get_node_by_id(&p));
+
+        game_state.signal.update(|gs| {
+            gs.view = game_state::View::Game;
+        });
+
+        Self {
+            current_node,
+            tree,
+            hashes,
+            game_type: state.game_type,
+        }
+    }
+
+    pub fn from_game_response(
+        game_response: &GameResponse,
+        game_state: GameStateSignal,
+        move_number: Option<usize>,
+    ) -> Option<Self> {
+        let state = game_response.create_state();
+        let mut tree = Tree::new(Some("analysis"));
+        let mut hashes = BiMap::new();
+        let mut previous = None;
+
+        for (i, (piece, position)) in state.history.moves.iter().enumerate() {
+            let new_node = Node::new(
+                i as i32,
+                Some(TreeNode {
+                    turn: i + 1,
+                    piece: piece.to_string(),
+                    position: position.to_string(),
+                }),
+            );
+            let new_id = new_node.get_node_id();
+            let hash = state.history.hashes[i];
             tree.add_node(new_node, previous.as_ref()).ok()?;
             hashes.insert(hash, new_id);
             previous = Some(new_id);
         }
         let current_node = previous.and_then(|p| tree.get_node_by_id(&p));
-        let mut tree = Self {
+        let mut analysis_tree = Self {
             current_node,
             tree,
             hashes,
-            game_type: gs.state.game_type,
+            game_type: state.game_type,
         };
-        game_state.signal.update(|s| {
-            s.view = game_state::View::Game;
-            s.game_id = None;
-            s.state.game_status = GameStatus::InProgress;
-            s.black_id = None;
-            s.white_id = None;
+
+        let move_count = state.history.moves.len();
+
+        game_state.signal.update(|gs| {
+            gs.view = game_state::View::Game;
+            gs.game_id = Some(game_response.game_id.clone());
+            gs.state = state;
+            gs.game_response = Some(game_response.clone());
+            gs.black_id = Some(game_response.black_player.uid);
+            gs.white_id = Some(game_response.white_player.uid);
         });
-        tree.update_node(gs.history_turn.unwrap_or(0) as i32, Some(game_state));
-        Some(tree)
+
+        let target_move_id = move_number.unwrap_or(move_count.saturating_sub(1)) as i32;
+        analysis_tree.update_node(target_move_id, Some(game_state));
+        Some(analysis_tree)
     }
 
     pub fn update_node(&mut self, node_id: i32, game: Option<GameStateSignal>) -> Option<()> {
@@ -85,8 +148,7 @@ impl AnalysisTree {
         })
         .ok()?;
 
-        self.current_node
-            .clone_from(&self.tree.get_node_by_id(&node_id));
+        self.current_node = self.tree.get_node_by_id(&node_id);
 
         let history_turn = self
             .current_node
@@ -146,9 +208,11 @@ impl AnalysisTree {
     pub fn reset(&mut self) {
         self.current_node = None;
         self.tree = Tree::new(Some("analysis"));
+        self.hashes.clear();
         let game_state = expect_context::<GameStateSignal>();
         game_state.signal.update(|gs| {
             *gs = GameState::new_with_game_type(self.game_type);
+            gs.view = game_state::View::Game;
         });
     }
 }
