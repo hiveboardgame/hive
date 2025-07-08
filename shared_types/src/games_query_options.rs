@@ -78,6 +78,6 @@ pub struct GamesQueryOptions {
     pub players: Vec<(String, Option<Color>, Option<ResultType>)>,
     pub speeds: Vec<GameSpeed>,
     pub current_batch: Option<BatchInfo>,
-    pub batch_size: Option<usize>,
+    pub batch_size: usize,
     pub game_progress: GameProgress,
 }
