@@ -93,15 +93,8 @@ fn is_compatible(
             ColorChoice::Black => challenge.color_choice == ColorChoice::White,
         }
         && challenge.challenger.username != challenger_name
-        && match (details.band_lower, details.band_upper) {
-            (None, None) => true,
-            (Some(lower), None) => lower as u64 <= challenge.challenger_rating,
-            (None, Some(upper)) => upper as u64 >= challenge.challenger_rating,
-            (Some(lower), Some(upper)) => {
-                lower as u64 <= challenge.challenger_rating
-                    && upper as u64 >= challenge.challenger_rating
-            }
-        }
+        && (details.band_lower, details.band_upper) == (None, None)
+        && (challenge.band_lower, challenge.band_upper) == (None, None)
 }
 
 fn has_same_details(

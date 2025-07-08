@@ -61,7 +61,7 @@ impl AcceptHandler {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(self.user_id),
                     message: ServerMessage::Error(format!(
-                        "{rating} is above the rating band of {band_lower}"
+                        "{rating} is below the rating band of {band_lower}"
                     )),
                 });
                 return Ok(messages);
