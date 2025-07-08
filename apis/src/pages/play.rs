@@ -27,7 +27,7 @@ use crate::{
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
 use leptos::prelude::*;
-use leptos_router::hooks::{use_navigate, use_params_map, use_query_map};
+use leptos_router::hooks::{use_params_map, use_query_map};
 use shared_types::{GameId, GameStart};
 use uuid::Uuid;
 use wasm_bindgen_futures::spawn_local;
@@ -222,11 +222,8 @@ pub fn Play() -> impl IntoView {
                                 GameControl::TakebackRequest(_)
                                 | GameControl::DrawOffer(_)
                                 | GameControl::DrawReject(_)
-                                | GameControl::TakebackReject(_) => {}
-                                GameControl::Abort(_) => {
-                                    let navigate = use_navigate();
-                                    navigate("/", Default::default());
-                                }
+                                | GameControl::TakebackReject(_)
+                                | GameControl::Abort(_) => {}
                             };
                         }
                         GameReaction::Started => {

@@ -82,7 +82,13 @@ pub fn UserSearch(
                     </Show>
                 </div>
             </div>
-            <Transition>
+            <Suspense fallback=move || {
+                view! {
+                    <div class="h-5">
+                        <p class="text-xs text-gray-500">"Searching..."</p>
+                    </div>
+                }
+            }>
                 <div class="h-5">
                     <Show when=move || {
                         pattern_len() < MIN_SEARCH_LENGTH && show_count.is_some()
@@ -98,7 +104,7 @@ pub fn UserSearch(
                         </span>
                     </Show>
                 </div>
-            </Transition>
+            </Suspense>
             <Transition>
                 <div class="overflow-y-auto max-h-96">
                     <For each=users key=move |(_, user)| user.uid let:user>

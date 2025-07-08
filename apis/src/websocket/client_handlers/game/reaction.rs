@@ -8,7 +8,7 @@ use crate::{
 };
 use hive_lib::GameControl;
 use leptos::prelude::*;
-use leptos_router::hooks::use_navigate;
+use leptos_router::hooks::{use_location, use_navigate};
 use shared_types::{GameStart, TimeMode};
 
 pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
@@ -25,8 +25,15 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
                     gar.username
                 )));
             });
-            let navigate = leptos_router::hooks::use_navigate();
-            navigate("/", Default::default());
+
+            let location = use_location();
+            let current_path = location.pathname.get();
+            let game_path = format!("/game/{}", gar.game.game_id);
+
+            if current_path.starts_with(&game_path) {
+                let navigate = use_navigate();
+                navigate("/", Default::default());
+            }
         }
         GameControl::DrawAccept(_) => {
             games.own_games_remove(&gar.game.game_id);
@@ -66,11 +73,15 @@ pub fn handle_new_game(game_response: GameResponse) {
         let user_uuid = Signal::derive(move || auth_context.user.get().map(|user| user.id));
         if let Some(id) = user_uuid() {
             if id == game_response.white_player.uid || id == game_response.black_player.uid {
-                let navigate = use_navigate();
-                navigate(
-                    &format!("/game/{}", game_response.game_id),
-                    Default::default(),
-                );
+                let location = use_location();
+                let current_path = location.pathname.get();
+                if !current_path.starts_with("/analysis") {
+                    let navigate = use_navigate();
+                    navigate(
+                        &format!("/game/{}", game_response.game_id),
+                        Default::default(),
+                    );
+                }
             }
         }
     }
