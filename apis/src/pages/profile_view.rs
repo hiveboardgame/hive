@@ -33,6 +33,7 @@ struct ProfileGamesContext {
     pub is_first_batch: StoredValue<bool>,
     pub has_more: StoredValue<bool>,
     pub initial_batch_size: Signal<usize>,
+    pub infinite_scroll_batch_size: Signal<usize>,
     pub games_container_ref: NodeRef<html::Div>,
 }
 #[derive(Params, PartialEq, Eq)]
@@ -65,14 +66,9 @@ fn load_games(
     username: String,
     batch_info: Option<BatchInfo>,
     action: ServerAction<GetBatchFromOptions>,
-    initial_batch_size: Option<usize>,
+    batch_size: usize,
 ) {
     let user_info = (username, controls.color, controls.result);
-    let batch_size = if batch_info.is_none() {
-        initial_batch_size
-    } else {
-        Some(4)
-    };
 
     let options = GamesQueryOptions {
         players: vec![user_info],
@@ -104,7 +100,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
             username.get_value(),
             None,
             ctx.next_batch,
-            Some(batch_size),
+            batch_size,
         );
     };
     let toggle_speeds = move |speed| {
@@ -282,6 +278,17 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
         calculate_initial_batch_size(bounding.height.get(), bounding.width.get())
     });
 
+    let infinite_scroll_batch_size = Signal::derive(move || {
+        let container_width = bounding.width.get();
+        if container_width < 640.0 {
+            3 // mobile (1 column)
+        } else if container_width < 1024.0 {
+            4 // sm to lg (2 columns)
+        } else {
+            6 // lg and above (3 columns)
+        }
+    });
+
     provide_context(ProfileGamesContext {
         controls: RwSignal::new(ProfileControls {
             speeds: GameSpeed::all_games(),
@@ -292,6 +299,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
         next_batch: ServerAction::new(),
         is_first_batch: StoredValue::new(true),
         initial_batch_size,
+        infinite_scroll_batch_size,
         games_container_ref,
     });
     let ctx = expect_context::<ProfileGamesContext>();
@@ -385,7 +393,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                         username(),
                         None,
                         ctx.next_batch,
-                        Some(initial_batch_size),
+                        initial_batch_size,
                     );
                 });
             });
@@ -407,7 +415,13 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                 if !ctx.has_more.get_value() || ctx.next_batch.pending().get() {
                     return;
                 }
-                load_games(controls, username, batch_info, ctx.next_batch, Some(4));
+                load_games(
+                    controls,
+                    username,
+                    batch_info,
+                    ctx.next_batch,
+                    ctx.infinite_scroll_batch_size.get(),
+                );
             }
         },
         UseInfiniteScrollOptions::default()

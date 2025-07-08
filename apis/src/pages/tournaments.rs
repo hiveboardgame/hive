@@ -39,7 +39,7 @@ pub fn Tournaments() -> impl IntoView {
                     on:input=move |ev| search.set(event_target_value(&ev))
                     value=search
                 />
-                <div class="flex justify-center content-center -mx-2 mb-4 space-x-4 w-full">
+                <div class="flex flex-wrap justify-center content-center -mx-2 mb-4 space-x-4 w-full">
                     <button
                         class=move || get_button_classes(TournamentFilter::All, filter.get())
                         on:click=move |_| filter.set(TournamentFilter::All)

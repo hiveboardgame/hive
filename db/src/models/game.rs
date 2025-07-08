@@ -1199,9 +1199,7 @@ impl Game {
                 ),
             ));
         }
-        if let Some(batch_size) = options.batch_size {
-            query = query.limit(batch_size as i64);
-        }
+        query = query.limit(options.batch_size as i64);
         Ok(query.select(games::all_columns).get_results(conn).await?)
     }
 
