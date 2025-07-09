@@ -57,6 +57,9 @@ async fn play_move(
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
     let game = Game::find_by_game_id(&play.game_id, &mut conn).await?;
+    if game.finished {
+        return Err(anyhow!("Game is finished"));
+    }
     let bot = User::find_by_email(email, &mut conn).await?;
     if game.current_player_id != bot.id {
         return Err(anyhow!("Not your turn"));
