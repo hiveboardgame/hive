@@ -5,7 +5,7 @@ use crate::providers::analysis::AnalysisSignal;
 use crate::providers::config::TileOptions;
 use crate::providers::game_state::GameStateSignal;
 use crate::providers::{ApiRequestsProvider, AuthContext};
-use hive_lib::{Bug, Piece, Position};
+use hive_lib::{Bug, Color, Piece, Position};
 use leptos::either::Either;
 use leptos::prelude::*;
 use web_sys::MouseEvent;
@@ -58,6 +58,12 @@ pub fn PieceWithoutOnClick(
             Bug::Spider => "color: #d66138",
             _ => "color: #FF0000",
         },
+        TileDesign::Pride => match color {
+            // For white tiles (#ead9b6), use dark color for dots
+            Color::White => "color: #3a3a3a",
+            // For black tiles (#3a3a3a), use light color for dots
+            Color::Black => "color: #ead9b6",
+        },
     };
 
     let top_piece = game_state
@@ -75,7 +81,8 @@ pub fn PieceWithoutOnClick(
             TileDesign::Community
             | TileDesign::HighContrast
             | TileDesign::Official
-            | TileDesign::Flat => "/assets/tiles/common/all.svg#drop_shadow",
+            | TileDesign::Flat
+            | TileDesign::Pride => "/assets/tiles/common/all.svg#drop_shadow",
         };
         if let Some((active, _)) = active_piece() {
             if active == piece {
@@ -110,6 +117,7 @@ pub fn PieceWithoutOnClick(
             bug.name()
         ),
         TileDesign::Community => format!("/assets/tiles/community/community.svg#{}", bug.name()),
+        TileDesign::Pride => format!("/assets/tiles/lgbtq/lgbtq.svg#{}{}", color.name(), bug.name()),
     };
 
     let tile_svg = move || match tile_opts.get_value().design {
@@ -121,6 +129,7 @@ pub fn PieceWithoutOnClick(
             color.name(),
         ),
         TileDesign::Community => format!("/assets/tiles/community/community.svg#{}", color.name(),),
+        TileDesign::Pride => format!("/assets/tiles/lgbtq/lgbtq.svg#{}", color.name()),
     };
 
     view! {
