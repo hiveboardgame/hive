@@ -128,7 +128,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
             Color::White => turn % 2 == 0,
             Color::Black => turn % 2 == 1,
         };
-        
+
         if is_active && is_current_turn {
             format!("{base_class} border-2 border-pillbug-teal/30 rounded-lg")
         } else {

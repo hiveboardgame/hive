@@ -8,8 +8,9 @@ use crate::components::{
     organisms::{
         chat::ChatWindow, standings::Standings, tournament_admin::TournamentAdminControls,
     },
+    update_from_event::update_from_input,
 };
-use crate::functions::tournaments::get_complete;
+use crate::functions::tournaments::{get_complete, UpdateDescription};
 use crate::providers::AuthContext;
 use crate::providers::{ApiRequestsProvider, UpdateNotifier, websocket::WebsocketContext};
 use crate::responses::{GameResponse, TournamentResponse};
@@ -225,7 +226,26 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             })
             .collect::<Vec<GameResponse>>()
     });
-    let markdown_desc = move || markdown_to_html(&tournament().description);
+    let current_description = RwSignal::new(String::new());
+    let markdown_desc = move || markdown_to_html(&current_description());
+    let editing_description = RwSignal::new(false);
+    let previewing_description = RwSignal::new(false);
+    let description_text = RwSignal::new(String::new());
+    let update_desc_action = ServerAction::<UpdateDescription>::new();
+
+    // Initialize current description from tournament data
+    Effect::new(move |_| {
+        current_description.set(tournament().description.clone());
+    });
+
+    // Close edit mode and optimistically update description on successful submission
+    Effect::new(move |_| {
+        if let Some(Ok(())) = update_desc_action.value().get() {
+            current_description.set(description_text.get_untracked());
+            editing_description.set(false);
+            previewing_description.set(false);
+        }
+    });
     let unplayed_games = Memo::new(move |_| {
         let mut result = tournament()
             .games
@@ -265,7 +285,92 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             <h1 class="w-full max-w-full text-3xl font-bold text-center whitespace-normal break-words">
                 {move || tournament().name}
             </h1>
-            <div class="p-4 w-full break-words prose dark:prose-invert" inner_html=markdown_desc />
+            <Show
+                when=move || editing_description()
+                fallback=move || {
+                    view! {
+                        <div
+                            class="p-4 w-full break-words prose dark:prose-invert"
+                            inner_html=markdown_desc
+                        />
+                        <Show when=user_is_organizer_or_admin>
+                            <button
+                                class="px-4 py-2 mb-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                                on:click=move |_| {
+                                    description_text.set(current_description.get_untracked());
+                                    editing_description.set(true);
+                                    previewing_description.set(false);
+                                }
+                            >
+                                "Edit Description"
+                            </button>
+                        </Show>
+                    }
+                }
+            >
+                <ActionForm action=update_desc_action>
+                    <input
+                        type="hidden"
+                        name="tournament_id"
+                        value=move || tournament().tournament_id.0.clone()
+                    />
+                    <Show
+                        when=move || previewing_description()
+                        fallback=move || {
+                            view! {
+                                <textarea
+                                    class="px-3 py-2 m-2 w-full h-32 leading-tight rounded border shadow appearance-none focus:outline-none"
+                                    name="description"
+                                    prop:value=description_text
+                                    on:input=update_from_input(description_text)
+                                    maxlength="2000"
+                                    placeholder="At least 50 characters required"
+                                ></textarea>
+                            }
+                        }
+                    >
+                        <div
+                            class="p-4 m-2 w-full break-words rounded border prose dark:prose-invert"
+                            inner_html=move || markdown_to_html(&description_text())
+                        />
+                    </Show>
+                    <div class="flex flex-row gap-2 p-2">
+                        <button
+                            type="submit"
+                            class=BUTTON_STYLE
+                            prop:disabled=move || {
+                                !(50..=2000).contains(&description_text().len())
+                            }
+                        >
+                            "Update Description"
+                        </button>
+                        <button
+                            type="button"
+                            class=BUTTON_STYLE
+                            on:click=move |_| {
+                                editing_description.set(false);
+                                previewing_description.set(false);
+                            }
+                        >
+                            "Cancel"
+                        </button>
+                        <button
+                            type="button"
+                            class=BUTTON_STYLE
+                            on:click=move |_| previewing_description.update(|b| *b = !*b)
+                        >
+                            {move || if previewing_description() { "Edit" } else { "Preview" }}
+                        </button>
+                        <a
+                            class="font-bold text-blue-500 hover:underline"
+                            href="https://commonmark.org/help/"
+                            target="_blank"
+                        >
+                            "Markdown Cheat Sheet"
+                        </a>
+                    </div>
+                </ActionForm>
+            </Show>
         </div>
         <div class=tournament_style>
             <div class="m-2 h-fit">
