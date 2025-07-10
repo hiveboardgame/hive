@@ -4,13 +4,14 @@ use crate::components::organisms::darkmode_toggle::DarkModeToggle;
 use crate::components::organisms::header::set_redirect;
 use crate::components::organisms::logout::Logout;
 use crate::i18n::*;
-use crate::providers::RefererContext;
+use crate::providers::{AuthContext, RefererContext};
 use leptos::prelude::*;
 
 #[component]
 pub fn UserDropdown(username: String) -> impl IntoView {
     let i18n = use_i18n();
     let pathname = expect_context::<RefererContext>().pathname;
+    let auth_context = expect_context::<AuthContext>();
     let hamburger_show = RwSignal::new(false);
     let onclick_close = move || hamburger_show.update(|b| *b = false);
     view! {
@@ -45,6 +46,16 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             >
                 {t!(i18n, header.user_menu.config)}
             </a>
+            <Show when=move || auth_context.user.get().is_some_and(|v| v.user.admin)>
+                <a
+                    class=COMMON_LINK_STYLE
+                    href="/admin"
+
+                    on:click=move |_| onclick_close()
+                >
+                    Admin
+                </a>
+            </Show>
             <DarkModeToggle />
             <Logout on:submit=move |_| onclick_close() />
             <Ping />
