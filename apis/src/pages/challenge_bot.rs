@@ -68,9 +68,7 @@ pub fn ChallengeBot() -> impl IntoView {
     view! {
         <div class="flex flex-col items-center w-72 xs:m-2 xs:w-80 sm:w-96">
             <div class="flex gap-1 p-1">Play an unrated game vs our bot</div>
-            <div class="flex gap-1 p-1">
-                Base <SimpleSwitch checked=expansions />MLP
-            </div>
+            <div class="flex gap-1 p-1">Base <SimpleSwitch checked=expansions />MLP</div>
 
             <div class="flex flex-col items-center">
                 <div class="flex gap-2 justify-center p-2">

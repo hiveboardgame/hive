@@ -1,7 +1,6 @@
 use crate::responses::AccountResponse;
 use leptos::prelude::*;
 use shared_types::Takeback;
-use crate::functions::auth::register::validate_password;
 
 #[server]
 pub async fn edit_account(
@@ -11,6 +10,7 @@ pub async fn edit_account(
     pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
     use crate::functions::auth::identity::uuid;
+    use crate::functions::auth::register::validate_password;
     use crate::functions::db::pool;
     use argon2::{
         password_hash::{

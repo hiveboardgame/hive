@@ -164,10 +164,13 @@ pub fn TournamentReadyPopup(
                     <Show when=move || !is_on_game_page.get()>
                         <button
                             on:click=move |_| {
-                                if let Some((game_id, opponent_id, _)) = current_popup_candidate.get() {
-                                    closed_popups.update(|set| {
-                                        set.insert((game_id.clone(), opponent_id));
-                                    });
+                                if let Some((game_id, opponent_id, _)) = current_popup_candidate
+                                    .get()
+                                {
+                                    closed_popups
+                                        .update(|set| {
+                                            set.insert((game_id.clone(), opponent_id));
+                                        });
                                     let navigate = use_navigate();
                                     navigate(&format!("/game/{}", game_id.0), Default::default());
                                 }
