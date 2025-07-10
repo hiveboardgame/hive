@@ -52,7 +52,6 @@ fn MySchedulesInner(
     let get_schedules = move |game_id: GameId| {
         own_slice()
             .get(&game_id)
-            //context has all my games so this should never fail
             .unwrap_or(&HashMap::new())
             .values()
             .filter(|s| s.start_t + Duration::hours(1) > Utc::now())
@@ -121,7 +120,7 @@ fn MySchedulesInner(
                             </For>
                             <ProposeDateControls game_id=game_id() />
                             <a
-                                class="flex gap-1 justify-center items-center place-self-center px-4 py-2 w-2/5 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                class="flex gap-1 justify-center items-center place-self-center px-4 py-2 w-2/5 font-bold text-white rounded no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                 href=format!("/game/{}", &game_id())
                             >
                                 "Join Game"

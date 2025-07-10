@@ -11,12 +11,13 @@ use crate::components::{
 };
 use crate::functions::tournaments::get_complete;
 use crate::providers::AuthContext;
-use crate::providers::{ApiRequestsProvider, UpdateNotifier};
+use crate::providers::{ApiRequestsProvider, UpdateNotifier, websocket::WebsocketContext};
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
+use leptos_use::core::ConnectionReadyState;
 use shared_types::{
     Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentId,
     TournamentStatus,
@@ -74,6 +75,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let tournament = Signal::derive(move || tournament.clone());
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
+    let websocket = expect_context::<WebsocketContext>();
     let account = auth_context.user;
     let user_id = Signal::derive(move || account().map(|a| a.user.uid));
     let time_info = Signal::derive(move || {
@@ -86,7 +88,9 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     });
     let tournament_id = Memo::new(move |_| tournament().tournament_id);
     Effect::new(move |_| {
-        if tournament().status != TournamentStatus::NotStarted {
+        let ready_state = websocket.ready_state.get();
+        if tournament().status != TournamentStatus::NotStarted 
+            && ready_state == ConnectionReadyState::Open {
             let api = api.get();
             api.schedule_action(ScheduleAction::TournamentPublic(tournament_id()));
             if user_id().is_some() {
