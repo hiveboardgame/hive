@@ -87,12 +87,15 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                                 game_state,
                                 move_number.get_value(),
                             );
-                            AnalysisSignal(RwSignal::new(LocalStorage::wrap(
-                                analysis_tree.unwrap_or_default(),
-                            )))
+                            AnalysisSignal(
+                                RwSignal::new(LocalStorage::wrap(analysis_tree.unwrap_or_default())),
+                            )
                         }
                         _ => {
-                            let analysis_tree = AnalysisTree::new_blank_analysis(game_state, GameType::MLP);
+                            let analysis_tree = AnalysisTree::new_blank_analysis(
+                                game_state,
+                                GameType::MLP,
+                            );
                             AnalysisSignal(RwSignal::new(LocalStorage::wrap(analysis_tree)))
                         }
                     };
@@ -114,14 +117,20 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             <div class="flex flex-col h-[85dvh]">
                                 <div class="flex flex-col flex-grow shrink">
                                     <div class="flex justify-between h-full max-h-16">
-                                        <Reserve alignment=Alignment::SingleRow color=Color::White />
+                                        <Reserve
+                                            alignment=Alignment::SingleRow
+                                            color=Color::White
+                                        />
                                     </div>
                                 </div>
                                 <AnalysisInfo />
                                 <Board />
                                 <div class="flex flex-col flex-grow shrink">
                                     <div class="flex justify-between h-full max-h-16">
-                                        <Reserve alignment=Alignment::SingleRow color=Color::Black />
+                                        <Reserve
+                                            alignment=Alignment::SingleRow
+                                            color=Color::Black
+                                        />
                                     </div>
                                 </div>
                             </div>

@@ -29,4 +29,5 @@ pub use game_updater::{provide_server_updates, UpdateNotifier};
 pub use notifications::{provide_notifications, NotificationContext};
 pub use ping::{provide_ping, PingContext};
 pub use referer::{provide_referer, RefererContext};
+pub use schedules::{provide_schedules, SchedulesContext};
 pub use sounds::{provide_sounds, SoundType, Sounds};

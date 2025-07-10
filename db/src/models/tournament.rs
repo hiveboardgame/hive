@@ -653,6 +653,20 @@ impl Tournament {
         Ok(started_tournaments)
     }
 
+    pub async fn find_by_tournament_ids(
+        tournament_ids: &[TournamentId],
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Tournament>, DbError> {
+        let nanoids: Vec<&str> = tournament_ids
+            .iter()
+            .map(|TournamentId(id)| id.as_str())
+            .collect();
+        Ok(tournaments::table
+            .filter(nanoid_field.eq_any(nanoids))
+            .get_results(conn)
+            .await?)
+    }
+
     pub async fn get_all(
         sort_order: TournamentSortOrder,
         conn: &mut DbConn<'_>,
