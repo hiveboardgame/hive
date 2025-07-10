@@ -9,7 +9,7 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::{spawn_local, JsFuture};
 use web_sys::{js_sys::Array, Blob, Url};
 
-const BTN_CLASS: &str = "z-20 content-center text-center m-1 w-1/3 h-7 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
+const BTN_CLASS: &str = "z-20 content-center text-center m-1 w-1/3 h-7 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
 
 #[component]
 pub fn DownloadTree(tree: String) -> impl IntoView {

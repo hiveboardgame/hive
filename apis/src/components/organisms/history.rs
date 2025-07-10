@@ -41,7 +41,7 @@ pub fn HistoryMove(
             .is_some_and(|gr| gr.time_mode == TimeMode::RealTime)
     });
     let get_class = move || {
-        let base_class = "col-span-2 p-1 h-auto max-h-6 leading-6 transition-transform duration-300 transform odd:ml-1 odd:justify-self-start even:mr-1 even:justify-self-end hover:bg-pillbug-teal active:scale-95";
+        let base_class = "col-span-2 p-1 h-auto max-h-6 leading-6 transition-transform duration-300 transform odd:ml-1 odd:justify-self-start even:mr-1 even:justify-self-end hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
         if let Some(history_turn) = history_turn() {
             if turn == history_turn {
                 return format!("{base_class} bg-orange-twilight");
@@ -160,7 +160,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <div class="col-span-4 text-center">{conclusion}</div>
                     <a
                         href=analysis_url
-                        class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+                        class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
                     >
                         <div class="flex gap-1 justify-center items-center">
                             <Icon icon=icondata::TbMicroscope attr:class="py-1 w-7 h-7" />

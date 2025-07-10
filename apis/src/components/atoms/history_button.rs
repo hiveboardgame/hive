@@ -28,7 +28,7 @@ pub fn HistoryButton(
     let is_last_turn = game_state_signal.is_last_turn_as_signal();
     let is_first_turn = game_state_signal.is_first_turn_as_signal();
     let cloned_action = action.clone();
-    let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+    let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
         HistoryNavigation::First => icondata::AiFastBackwardFilled,
         HistoryNavigation::Last | HistoryNavigation::MobileLast => icondata::AiFastForwardFilled,

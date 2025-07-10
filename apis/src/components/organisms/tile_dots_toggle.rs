@@ -23,7 +23,7 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
         if config().tile.dots == tile_dots() {
             "bg-pillbug-teal"
         } else {
-            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
         }
     };
 

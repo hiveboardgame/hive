@@ -62,10 +62,11 @@ pub fn ChallengeRow(
             .expect("div_ref to be loaded by now")
             .class_list();
         class_list
-            .remove_3(
+            .remove_4(
                 "dark:bg-button-twilight",
                 "bg-button-dawn",
                 "hover:bg-pillbug-teal",
+                "dark:hover:bg-pillbug-teal",
             )
             .expect("tw classes to exist");
         class_list
@@ -175,7 +176,7 @@ pub fn ChallengeRow(
                                     <button
                                         node_ref=button_ref
                                         on:click=copy
-                                        class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
+                                        class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
                                     >
                                         <Icon icon=icondata::AiCopyOutlined attr:class="w-6 h-6" />
                                     </button>
@@ -198,7 +199,7 @@ pub fn ChallengeRow(
                                 api.get().challenge_accept(challenge_id.get_value());
                             }
 
-                            class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
+                            class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
                         >
                             <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
 

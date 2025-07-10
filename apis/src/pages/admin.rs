@@ -47,7 +47,7 @@ fn EditBanner() -> impl IntoView {
                         view! {
                             <button
                                 on:click=move |_| show_preview.update(|b| *b = !*b)
-                                class="flex gap-1 justify-center items-center px-4 m-4 h-7 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                class="flex gap-1 justify-center items-center px-4 m-4 h-7 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                             >
                                 {move || {
                                     if !show_preview() { "Preview Banner" } else { "Edit Banner" }
@@ -95,7 +95,7 @@ fn EditBanner() -> impl IntoView {
 
                                     <button
                                         type="submit"
-                                        class="flex gap-1 justify-center items-center px-4 h-7 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                        class="flex gap-1 justify-center items-center px-4 h-7 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                     >
                                         "Submit"
                                     </button>

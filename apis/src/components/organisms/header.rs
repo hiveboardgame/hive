@@ -67,7 +67,7 @@ fn GuestActions() -> impl IntoView {
             <LocaleDropdown />
             <DarkModeToggle extend_tw_classes="max-h-6 sm:max-h-7" />
             <a
-                class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
                 href="/login"
                 on:focus=move |_| set_redirect(referrer)
             >

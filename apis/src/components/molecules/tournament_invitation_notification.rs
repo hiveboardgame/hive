@@ -54,7 +54,7 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
                     title="Accept Invitation"
                     on:click=accept
                     prop:disabled=seats_full
-                    class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
                     <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
                 </button>

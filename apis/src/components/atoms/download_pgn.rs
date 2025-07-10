@@ -42,7 +42,7 @@ pub fn DownloadPgn(
     view! {
         <Show when=move || maybe_game().is_some()>
             <button
-                class="flex z-20 justify-center items-center m-1 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                class="flex z-20 justify-center items-center m-1 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
                 on:click=download
             >
                 <Icon icon=icondata::AiDownloadOutlined attr:class="py-1 w-7 h-7" />

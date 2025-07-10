@@ -35,7 +35,7 @@ pub fn ToggleControls() -> impl IntoView {
             on:click=toggle_controls
             class=move || {
                 format!(
-                    "{} px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform hover:bg-pillbug-teal active:scale-95",
+                    "{} px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95",
                     button_color(),
                 )
             }

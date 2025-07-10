@@ -29,7 +29,7 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> im
         MoveConfirm::Single => ("Single click", icondata::TbHandFinger),
     };
     let is_active = move || {
-        let inactive_class = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal";
+        let inactive_class = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal";
         config()
             .confirm_mode
             .get(&game_speed())

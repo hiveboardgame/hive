@@ -36,7 +36,7 @@ fn Button(takeback: Takeback) -> impl IntoView {
         if user().is_some_and(|user| user.user.takeback == takeback.get_value()) {
             "bg-pillbug-teal"
         } else {
-            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
         }
     };
     let value = match takeback.get_value() {
