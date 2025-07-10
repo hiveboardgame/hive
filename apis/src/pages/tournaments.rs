@@ -1,160 +1,177 @@
-use crate::functions::tournaments::get_all_abstract;
-use crate::pages::tournament::BUTTON_STYLE;
-use crate::{components::molecules::tournament_row::TournamentRow, providers::AuthContext};
+use crate::components::molecules::tournament_row::TournamentRow;
+use crate::functions::tournaments::{
+    get_by_status, get_hosting_tournaments, get_joined_tournaments,
+};
+use crate::providers::AuthContext;
+use crate::responses::TournamentAbstractResponse;
 use leptos::either::Either;
 use leptos::prelude::*;
+use leptos_router::hooks::use_location;
 use shared_types::{TournamentSortOrder, TournamentStatus};
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-enum TournamentFilter {
-    All,
-    Status(TournamentStatus),
-    MyTournaments,
-}
+fn get_button_classes(current_path: &str, target_path: &str) -> String {
+    let base_classes = "no-link-style px-4 py-2 rounded";
+    let is_active = current_path == target_path
+        || (current_path == "/tournaments" && target_path == "/tournaments/future");
 
-fn get_button_classes(current: TournamentFilter, selected: TournamentFilter) -> &'static str {
-    if current == selected {
-        return "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600";
+    if is_active {
+        format!("{base_classes} bg-blue-500 text-white hover:bg-blue-600")
+    } else {
+        format!("{base_classes} font-bold text-white hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 bg-button-dawn dark:bg-button-twilight")
     }
-
-    // default state
-    BUTTON_STYLE
 }
 
 #[component]
-pub fn Tournaments() -> impl IntoView {
+pub fn Tournaments(children: Children) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
+    let location = use_location();
     let logged_in = move || auth_context.user.get().is_some();
-    let filter = RwSignal::new(TournamentFilter::Status(TournamentStatus::NotStarted));
-    let search = RwSignal::new("".to_string());
-    let tournament_resource =
-        OnceResource::new(get_all_abstract(TournamentSortOrder::CreatedAtDesc));
+
     view! {
         <div class="pt-10">
-            <div class="container px-4 mx-auto">
-                <input
-                    type="text"
-                    class="items-center p-2 mx-2 my-2 w-5/6"
-                    placeholder="Search tournaments by name"
-                    on:input=move |ev| search.set(event_target_value(&ev))
-                    value=search
-                />
-                <div class="flex flex-wrap justify-center content-center -mx-2 mb-4 space-x-4 w-full">
-                    <button
-                        class=move || get_button_classes(TournamentFilter::All, filter.get())
-                        on:click=move |_| filter.set(TournamentFilter::All)
-                    >
-                        "All"
-                    </button>
-                    <button
+            <div class="container flex flex-col items-center px-4 mx-auto">
+                <div class="flex flex-wrap gap-1 justify-center content-center m-4 w-full">
+                    <a
+                        href="/tournaments/future"
                         class=move || get_button_classes(
-                            TournamentFilter::Status(TournamentStatus::NotStarted),
-                            filter.get(),
+                            &location.pathname.get(),
+                            "/tournaments/future",
                         )
-                        on:click=move |_| {
-                            filter.set(TournamentFilter::Status(TournamentStatus::NotStarted))
-                        }
                     >
                         "Future"
-                    </button>
-                    <button
+                    </a>
+                    <a
+                        href="/tournaments/inprogress"
                         class=move || get_button_classes(
-                            TournamentFilter::Status(TournamentStatus::InProgress),
-                            filter.get(),
+                            &location.pathname.get(),
+                            "/tournaments/inprogress",
                         )
-                        on:click=move |_| {
-                            filter.set(TournamentFilter::Status(TournamentStatus::InProgress))
-                        }
                     >
                         {"In\u{00A0}Progress"}
-                    </button>
-                    <button
+                    </a>
+                    <a
+                        href="/tournaments/finished"
                         class=move || get_button_classes(
-                            TournamentFilter::Status(TournamentStatus::Finished),
-                            filter.get(),
+                            &location.pathname.get(),
+                            "/tournaments/finished",
                         )
-                        on:click=move |_| {
-                            filter.set(TournamentFilter::Status(TournamentStatus::Finished))
-                        }
                     >
                         "Completed"
-                    </button>
+                    </a>
                     <Show when=logged_in>
-                        <button
+                        <a
+                            href="/tournaments/joined"
                             class=move || get_button_classes(
-                                TournamentFilter::MyTournaments,
-                                filter.get(),
+                                &location.pathname.get(),
+                                "/tournaments/joined",
                             )
-                            on:click=move |_| { filter.set(TournamentFilter::MyTournaments) }
                         >
-                            {"My\u{00A0}Tournaments"}
-                        </button>
+                            "Joined"
+                        </a>
+                        <a
+                            href="/tournaments/hosting"
+                            class=move || get_button_classes(
+                                &location.pathname.get(),
+                                "/tournaments/hosting",
+                            )
+                        >
+                            "Hosting"
+                        </a>
                     </Show>
                 </div>
-                <Transition fallback=move || {
-                    view! { <div class="flex justify-center">"Loading tournaments..."</div> }
-                }>
-                    {move || {
-                        tournament_resource
-                            .get()
-                            .map(|tournaments| {
-                                if let Ok(tournaments) = tournaments {
+                {children()}
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn TournamentList(
+    tournament_resource: OnceResource<Result<Vec<TournamentAbstractResponse>, ServerFnError>>,
+) -> impl IntoView {
+    let search = RwSignal::new(String::new());
+
+    view! {
+        <div class="flex flex-col items-center w-full">
+            <input
+                type="text"
+                class="items-center p-2 mx-2 my-2 w-5/6"
+                placeholder="Search tournaments by name"
+                on:input=move |ev| search.set(event_target_value(&ev))
+                prop:value=search
+            />
+            <Transition fallback=move || {
+                view! { <div class="flex justify-center">"Loading tournaments..."</div> }
+            }>
+                {move || {
+                    tournament_resource
+                        .get()
+                        .map(|tournaments| {
+                            match tournaments {
+                                Ok(tournaments) => {
+                                    let search_term = search.get();
                                     Either::Left(
+
                                         view! {
                                             <For
                                                 each=move || {
-                                                    let mut v: Vec<_> = tournaments
-                                                        .clone()
-                                                        .into_iter()
+                                                    tournaments
+                                                        .iter()
                                                         .filter(|t| {
-                                                            match filter.get() {
-                                                                TournamentFilter::All => true,
-                                                                TournamentFilter::Status(status) => t.status == status,
-                                                                TournamentFilter::MyTournaments => {
-                                                                    auth_context
-                                                                        .user
-                                                                        .get_untracked()
-                                                                        .is_some_and(|u| t.player_list.contains(&u.id))
-                                                                }
-                                                            }
+                                                            search_term.is_empty()
+                                                                || t
+                                                                    .name
+                                                                    .to_lowercase()
+                                                                    .contains(&search_term.to_lowercase())
                                                         })
-                                                        .collect();
-                                                    v.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-                                                    v
+                                                        .cloned()
+                                                        .collect::<Vec<_>>()
                                                 }
-                                                key=move |tournament| {
-                                                    (tournament.updated_at, search(), filter.get())
-                                                }
+                                                key=|tournament| tournament.tournament_id.clone()
                                                 children=move |tournament| {
-                                                    if search().is_empty()
-                                                        || tournament
-                                                            .name
-                                                            .to_lowercase()
-                                                            .contains(&search().to_lowercase())
-                                                    {
-                                                        Either::Left(
-                                                            view! { <TournamentRow tournament=tournament.clone() /> },
-                                                        )
-                                                    } else {
-                                                        Either::Right("")
-                                                    }
+                                                    view! { <TournamentRow tournament /> }
                                                 }
                                             />
                                         },
                                     )
-                                } else {
+                                }
+                                Err(_) => {
                                     Either::Right(
                                         view! {
                                             <div class="flex justify-center">
-                                                {"Error loading tournaments"}
+                                                "Error loading tournaments"
                                             </div>
                                         },
                                     )
                                 }
-                            })
-                    }}
-                </Transition>
-            </div>
+                            }
+                        })
+                }}
+            </Transition>
         </div>
     }
+}
+
+#[component]
+pub fn TournamentsByStatus(status: TournamentStatus) -> impl IntoView {
+    let tournament_resource =
+        OnceResource::new(get_by_status(status, TournamentSortOrder::CreatedAtDesc));
+
+    view! { <TournamentList tournament_resource /> }
+}
+
+#[component]
+pub fn JoinedTournaments() -> impl IntoView {
+    let tournament_resource =
+        OnceResource::new(get_joined_tournaments(TournamentSortOrder::CreatedAtDesc));
+
+    view! { <TournamentList tournament_resource /> }
+}
+
+#[component]
+pub fn HostingTournaments() -> impl IntoView {
+    let tournament_resource =
+        OnceResource::new(get_hosting_tournaments(TournamentSortOrder::CreatedAtDesc));
+
+    view! { <TournamentList tournament_resource /> }
 }

@@ -179,11 +179,14 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                                 />
                             </div>
                             <Show when=move || finished fallback=move || white_rating>
-                                <RatingAndChange ratings side=Color::White/>
+                                <RatingAndChange ratings side=Color::White />
                             </Show>
                         </div>
 
-                        <Icon icon=icondata::RiSwordOthersLine attr:class="flex-shrink-0 mx-1 text-sm" />
+                        <Icon
+                            icon=icondata::RiSwordOthersLine
+                            attr:class="flex-shrink-0 mx-1 text-sm"
+                        />
 
                         <div class="flex flex-col items-center min-w-0 w-[45%] overflow-hidden">
                             <div class=player_class(Color::Black)>

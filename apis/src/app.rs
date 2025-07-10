@@ -22,7 +22,7 @@ use crate::{
         top_players::TopPlayers,
         tournament::Tournament,
         tournament_create::TournamentCreate,
-        tournaments::Tournaments,
+        tournaments::{HostingTournaments, JoinedTournaments, Tournaments, TournamentsByStatus},
         tutorial::Tutorial,
     },
     providers::{
@@ -41,7 +41,7 @@ use leptos_router::{
     path,
 };
 use leptos_use::SameSite;
-use shared_types::GameProgress;
+use shared_types::{GameProgress, TournamentStatus};
 
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
@@ -155,7 +155,61 @@ pub fn App() -> impl IntoView {
                             redirect_path=|| "/login"
                             view=|| view! { <TournamentCreate /> }
                         />
-                        <Route path=path!("/tournaments") view=|| view! { <Tournaments /> } />
+                        <ParentRoute
+                            path=path!("/tournaments")
+                            view=|| {
+                                view! {
+                                    <Tournaments>
+                                        <Outlet />
+                                    </Tournaments>
+                                }
+                            }
+                        >
+                            <Route
+                                path=path!("")
+                                view=|| {
+                                    view! {
+                                        <TournamentsByStatus status=TournamentStatus::NotStarted />
+                                    }
+                                }
+                            />
+                            <Route
+                                path=path!("future")
+                                view=|| {
+                                    view! {
+                                        <TournamentsByStatus status=TournamentStatus::NotStarted />
+                                    }
+                                }
+                            />
+                            <Route
+                                path=path!("inprogress")
+                                view=|| {
+                                    view! {
+                                        <TournamentsByStatus status=TournamentStatus::InProgress />
+                                    }
+                                }
+                            />
+                            <Route
+                                path=path!("finished")
+                                view=|| {
+                                    view! {
+                                        <TournamentsByStatus status=TournamentStatus::Finished />
+                                    }
+                                }
+                            />
+                            <ProtectedRoute
+                                condition=is_logged_in
+                                path=path!("joined")
+                                redirect_path=|| "/login"
+                                view=|| view! { <JoinedTournaments /> }
+                            />
+                            <ProtectedRoute
+                                condition=is_logged_in
+                                path=path!("hosting")
+                                redirect_path=|| "/login"
+                                view=|| view! { <HostingTournaments /> }
+                            />
+                        </ParentRoute>
                         <Route path=path!("/donate") view=|| view! { <Donate /> } />
                         <Route path=path!("/faq") view=|| view! { <Faq /> } />
                         <Route path=path!("/puzzles") view=|| view! { <Puzzles /> } />

@@ -1,4 +1,3 @@
-use crate::functions::auth::register::validate_password;
 use crate::responses::AccountResponse;
 use leptos::prelude::*;
 use shared_types::Takeback;

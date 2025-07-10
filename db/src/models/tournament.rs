@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use super::{Game, NewGame, TournamentInvitation};
 use crate::{
     db_error::DbError,
@@ -26,6 +24,7 @@ use shared_types::{
     TimeMode, TournamentDetails, TournamentId, TournamentMode, TournamentSortOrder,
     TournamentStatus,
 };
+use std::str::FromStr;
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -666,5 +665,79 @@ impl Tournament {
             TournamentSortOrder::StartedAtAsc => query.order(tournaments::started_at.asc()),
         };
         Ok(sorted_query.get_results(conn).await?)
+    }
+
+    pub async fn get_by_status(
+        status: TournamentStatus,
+        sort_order: TournamentSortOrder,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Tournament>, DbError> {
+        let query = tournaments::table
+            .filter(status_column.eq(status.to_string()))
+            .into_boxed();
+        let sorted_query = match sort_order {
+            TournamentSortOrder::CreatedAtDesc => query.order(tournaments::created_at.desc()),
+            TournamentSortOrder::CreatedAtAsc => query.order(tournaments::created_at.asc()),
+            TournamentSortOrder::StartedAtDesc => query.order(tournaments::started_at.desc()),
+            TournamentSortOrder::StartedAtAsc => query.order(tournaments::started_at.asc()),
+        };
+        Ok(sorted_query.get_results(conn).await?)
+    }
+
+    pub async fn get_hosting_tournaments(
+        user_id: &Uuid,
+        sort_order: TournamentSortOrder,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Tournament>, DbError> {
+        let mut query = tournaments::table
+            .inner_join(tournaments_organizers::table)
+            .filter(tournaments_organizers::organizer_id.eq(user_id))
+            .select(tournaments::all_columns)
+            .order_by(tournaments::status.eq("NotStarted").desc())
+            .then_order_by(tournaments::status.eq("InProgress").desc())
+            .then_order_by(tournaments::status.eq("Finished").desc())
+            .into_boxed();
+
+        query = match sort_order {
+            TournamentSortOrder::CreatedAtDesc => {
+                query.then_order_by(tournaments::created_at.desc())
+            }
+            TournamentSortOrder::CreatedAtAsc => query.then_order_by(tournaments::created_at.asc()),
+            TournamentSortOrder::StartedAtDesc => {
+                query.then_order_by(tournaments::started_at.desc())
+            }
+            TournamentSortOrder::StartedAtAsc => query.then_order_by(tournaments::started_at.asc()),
+        };
+
+        Ok(query.get_results(conn).await?)
+    }
+
+    pub async fn get_joined_tournaments(
+        user_id: &Uuid,
+        sort_order: TournamentSortOrder,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Tournament>, DbError> {
+        use crate::schema::tournaments_users;
+        let mut query = tournaments::table
+            .inner_join(tournaments_users::table)
+            .filter(tournaments_users::user_id.eq(user_id))
+            .select(tournaments::all_columns)
+            .order_by(tournaments::status.eq("NotStarted").desc())
+            .then_order_by(tournaments::status.eq("InProgress").desc())
+            .then_order_by(tournaments::status.eq("Finished").desc())
+            .into_boxed();
+
+        query = match sort_order {
+            TournamentSortOrder::CreatedAtDesc => {
+                query.then_order_by(tournaments::created_at.desc())
+            }
+            TournamentSortOrder::CreatedAtAsc => query.then_order_by(tournaments::created_at.asc()),
+            TournamentSortOrder::StartedAtDesc => {
+                query.then_order_by(tournaments::started_at.desc())
+            }
+            TournamentSortOrder::StartedAtAsc => query.then_order_by(tournaments::started_at.asc()),
+        };
+
+        Ok(query.get_results(conn).await?)
     }
 }

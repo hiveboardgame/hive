@@ -199,7 +199,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <input
                     type="submit"
                     disabled=conditionally_disable
-                    class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 focus:outline-none disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                     value=move || t_string!(i18n, user_config.create_account.signup_button)
                 />
                 <Show when=display_register_error>

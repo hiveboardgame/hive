@@ -23,7 +23,7 @@ pub fn TileRotationButton(tile_rotation: TileRotation) -> impl IntoView {
         if config().tile.rotation == tile_rotation.get_value() {
             "bg-pillbug-teal"
         } else {
-            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
         }
     };
     view! {

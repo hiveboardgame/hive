@@ -38,7 +38,7 @@ pub fn UndoButton() -> impl IntoView {
 
     view! {
         <button
-            class="flex justify-center place-items-center m-1 h-7 rounded-md border-2 border-cyan-500 drop-shadow-lg transition-transform duration-300 transform hover:bg-pillbug-teal active:scale-95 dark:border-button-twilight disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            class="flex justify-center place-items-center m-1 h-7 rounded-md border-2 border-cyan-500 drop-shadow-lg transition-transform duration-300 transform hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 dark:border-button-twilight disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             on:click=undo
             prop:disabled=is_disabled
         >
@@ -64,7 +64,7 @@ pub fn HistoryButton(
     let analysis = expect_context::<AnalysisSignal>().0;
     let game_state = expect_context::<GameStateSignal>();
     let cloned_action = action.clone();
-    let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+    let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
         HistoryNavigation::First => icondata::AiFastBackwardFilled,
         HistoryNavigation::Next => icondata::AiStepForwardFilled,
@@ -139,7 +139,7 @@ pub fn HistoryMove(
         } else {
             ""
         };
-        format!("{margin}w-fit transition-transform duration-300 transform hover:bg-pillbug-teal {bg_color}active:scale-95")
+        format!("{margin}w-fit transition-transform duration-300 transform hover:bg-pillbug-teal dark:hover:bg-pillbug-teal {bg_color}active:scale-95")
     };
     let onclick = move |_| {
         analysis.update(|a| {

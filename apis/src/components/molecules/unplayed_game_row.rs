@@ -7,7 +7,7 @@ use hive_lib::Color;
 use leptos::prelude::*;
 use shared_types::{GameStart, PrettyString, TournamentGameResult};
 
-pub const BUTTON_STYLE: &str = "no-link-style flex justify-center items-center min-w-fit px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+pub const BUTTON_STYLE: &str = "no-link-style flex justify-center items-center min-w-fit px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
 #[component]
 pub fn UnplayedGameRow(
@@ -158,7 +158,7 @@ pub fn UnplayedGameRow(
                         fallback=move || {
                             view! {
                                 <button
-                                    class="flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-ladybug-red hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                    class="flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-ladybug-red hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                     on:click=toggle_adjudicate
                                 >
                                     {"Cancel"}
@@ -167,7 +167,7 @@ pub fn UnplayedGameRow(
                         }
                     >
                         <button
-                            class="flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-ladybug-red hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                            class="flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-ladybug-red hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                             on:click=move |_| adjudicate(TournamentGameResult::Unknown)
                         >
                             {"Delete"}

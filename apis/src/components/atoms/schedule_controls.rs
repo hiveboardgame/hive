@@ -41,7 +41,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             <Show when=move || !agreed && proposer_id != player_id>
                 <button
                     on:click=move |_| accept.run((id,))
-                    class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
 
                     "Accept"
@@ -82,7 +82,7 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
             />
 
             <button
-                class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 on:click=move |_| propose.run((selected_time.get(),))
             >
 

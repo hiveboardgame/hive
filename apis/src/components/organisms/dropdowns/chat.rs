@@ -22,11 +22,11 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
     };
     let button_color = move || {
         if hamburger_show() {
-            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
         } else if chat.has_messages(game_id()) {
             "bg-ladybug-red"
         } else {
-            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
         }
     };
 

@@ -26,7 +26,7 @@ pub enum QuickPlayTimeControl {
     Classic30p30,
 }
 use QuickPlayTimeControl::*;
-const BUTTON_STYLE: &str = "flex w-full gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95";
+const BUTTON_STYLE: &str = "flex w-full gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
 
 #[component]
 pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
