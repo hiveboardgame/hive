@@ -70,6 +70,7 @@ pub enum TileDesign {
     ThreeD,
     HighContrast,
     Community,
+    Pride,
 }
 
 impl fmt::Display for TileDesign {
@@ -80,6 +81,7 @@ impl fmt::Display for TileDesign {
             TileDesign::ThreeD => "ThreeD",
             TileDesign::HighContrast => "HighContrast",
             TileDesign::Community => "Community",
+            TileDesign::Pride => "Pride",
         };
         write!(f, "{name}")
     }
@@ -95,6 +97,7 @@ impl FromStr for TileDesign {
             "ThreeD" => Ok(TileDesign::ThreeD),
             "HighContrast" => Ok(TileDesign::HighContrast),
             "Community" => Ok(TileDesign::Community),
+            "Pride" => Ok(TileDesign::Pride),
             _ => Err(()),
         }
     }
