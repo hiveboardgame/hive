@@ -1,7 +1,7 @@
+use crate::functions::auth::register::validate_password;
 use crate::responses::AccountResponse;
 use leptos::prelude::*;
 use shared_types::Takeback;
-use crate::functions::auth::register::validate_password;
 
 #[server]
 pub async fn edit_account(

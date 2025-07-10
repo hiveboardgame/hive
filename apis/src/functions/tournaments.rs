@@ -40,3 +40,38 @@ pub async fn get_complete(tournament_id: String) -> Result<TournamentResponse, S
         Err(ServerFnError::new("Could not find tournament"))
     }
 }
+
+#[server]
+pub async fn update_description(
+    tournament_id: String,
+    description: String,
+) -> Result<(), ServerFnError> {
+    use crate::functions::auth::identity::uuid;
+    use crate::functions::db::pool;
+    use db_lib::get_conn;
+    use db_lib::models::Tournament;
+
+    if description.len() < 50 {
+        return Err(ServerFnError::new(
+            "Description must be at least 50 characters long",
+        ));
+    }
+
+    if description.len() > 2000 {
+        return Err(ServerFnError::new(
+            "Description must be at most 2000 characters long",
+        ));
+    }
+
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    let tournament_id = shared_types::TournamentId(tournament_id);
+    let user_id = uuid().await?;
+
+    let tournament = Tournament::find_by_tournament_id(&tournament_id, &mut conn).await?;
+    tournament
+        .update_description(&user_id, &description, &mut conn)
+        .await?;
+
+    Ok(())
+}

@@ -408,6 +408,24 @@ impl Tournament {
             .await?)
     }
 
+    pub async fn update_description(
+        &self,
+        user_id: &Uuid,
+        description: &str,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Self, DbError> {
+        self.ensure_user_is_organizer_or_admin(user_id, conn)
+            .await?;
+
+        Ok(diesel::update(tournaments::table.find(self.id))
+            .set((
+                tournaments::description.eq(description),
+                updated_at.eq(Utc::now()),
+            ))
+            .get_result(conn)
+            .await?)
+    }
+
     pub async fn kick(
         &self,
         organizer: &Uuid,

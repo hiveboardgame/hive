@@ -1,7 +1,7 @@
 use crate::components::molecules::hover_ratings::HoverRating;
 use crate::responses::UserResponse;
-use leptos::prelude::*;
 use leptos::html;
+use leptos::prelude::*;
 use leptos_icons::*;
 
 #[component]
