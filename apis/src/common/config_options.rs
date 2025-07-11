@@ -72,6 +72,7 @@ pub enum TileDesign {
     Community,
     Pride,
     Carbon3D,
+    Carbon,
 }
 
 impl fmt::Display for TileDesign {
@@ -84,6 +85,7 @@ impl fmt::Display for TileDesign {
             TileDesign::Community => "Community",
             TileDesign::Pride => "Pride",
             TileDesign::Carbon3D => "Carbon3D",
+            TileDesign::Carbon => "Carbon",
         };
         write!(f, "{name}")
     }
@@ -101,6 +103,7 @@ impl FromStr for TileDesign {
             "Community" => Ok(TileDesign::Community),
             "Pride" => Ok(TileDesign::Pride),
             "Carbon3D" => Ok(TileDesign::Carbon3D),
+            "Carbon" => Ok(TileDesign::Carbon),
             _ => Err(()),
         }
     }

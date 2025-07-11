@@ -70,6 +70,12 @@ pub fn PieceWithoutOnClick(
             // For black tiles (dark gray background), use light gray for dots (matches converted black bugs)
             Color::Black => "color: #dcdcdc",
         },
+        TileDesign::Carbon => match color {
+            // For white tiles (white background), use dark gray for dots (matches converted white bugs)
+            Color::White => "color: #2d2d2d",
+            // For black tiles (dark gray background), use light gray for dots (matches converted black bugs)
+            Color::Black => "color: #dcdcdc",
+        },
     };
 
     let top_piece = game_state
@@ -88,7 +94,8 @@ pub fn PieceWithoutOnClick(
             | TileDesign::HighContrast
             | TileDesign::Official
             | TileDesign::Flat
-            | TileDesign::Pride => "/assets/tiles/common/all.svg#drop_shadow",
+            | TileDesign::Pride
+            | TileDesign::Carbon => "/assets/tiles/common/all.svg#drop_shadow",
         };
         if let Some((active, _)) = active_piece() {
             if active == piece {
@@ -125,6 +132,7 @@ pub fn PieceWithoutOnClick(
         TileDesign::Community => format!("/assets/tiles/community/community.svg#{}", bug.name()),
         TileDesign::Pride => format!("/assets/tiles/lgbtq/lgbtq.svg#{}{}", color.name(), bug.name()),
         TileDesign::Carbon3D => format!("/assets/tiles/carbon-3d/carbon-3d.svg#{}{}", color.name(), bug.name()),
+        TileDesign::Carbon => format!("/assets/tiles/carbon/carbon.svg#{}{}", color.name(), bug.name()),
     };
 
     let tile_svg = move || match tile_opts.get_value().design {
@@ -138,6 +146,7 @@ pub fn PieceWithoutOnClick(
         TileDesign::Community => format!("/assets/tiles/community/community.svg#{}", color.name(),),
         TileDesign::Pride => format!("/assets/tiles/lgbtq/lgbtq.svg#{}", color.name()),
         TileDesign::Carbon3D => format!("/assets/tiles/carbon-3d/carbon-3d.svg#{}", color.name()),
+        TileDesign::Carbon => format!("/assets/tiles/carbon/carbon.svg#{}", color.name()),
     };
 
     view! {

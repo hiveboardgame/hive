@@ -33,6 +33,7 @@ pub fn TileDesignToggle() -> impl IntoView {
             <TileDesignButton tile_design=TileDesign::HighContrast />
             <TileDesignButton tile_design=TileDesign::Community />
             <TileDesignButton tile_design=TileDesign::Pride />
+            <TileDesignButton tile_design=TileDesign::Carbon />
         </div>
     }
 }
@@ -84,11 +85,12 @@ pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
         TileDesign::Community => "community",
         TileDesign::Pride => "lgbtq",
         TileDesign::Carbon3D => "carbon-3d",
+        TileDesign::Carbon => "carbon",
     };
 
     // For other styles, show background + piece
     let piece_name = match tile_design {
-        TileDesign::ThreeD | TileDesign::Pride | TileDesign::Carbon3D => "whiteAnt.svg", // 3D, Pride, and Carbon3D folders use different naming
+        TileDesign::ThreeD | TileDesign::Pride | TileDesign::Carbon3D | TileDesign::Carbon => "whiteAnt.svg", // 3D, Pride, Carbon3D, and Carbon folders use different naming
         _ => "Ant.svg",                       // All other folders use standard naming
     };
 
