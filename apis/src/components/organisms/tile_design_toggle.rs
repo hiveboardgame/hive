@@ -89,9 +89,11 @@ pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
     };
 
     // For other styles, show background + piece
-    let piece_name = match tile_design {
-        TileDesign::ThreeD | TileDesign::Pride | TileDesign::Carbon3D | TileDesign::Carbon => "whiteAnt.svg", // 3D, Pride, Carbon3D, and Carbon folders use different naming
-        _ => "Ant.svg",                       // All other folders use standard naming
+    let (light_piece_name, dark_piece_name) = match tile_design {
+        TileDesign::ThreeD | TileDesign::Pride | TileDesign::Carbon3D | TileDesign::Carbon => {
+            ("whiteAnt.svg", "blackAnt.svg") // whiteAnt.svg is actually dark colored, blackAnt.svg is actually light colored
+        }
+        _ => ("Ant.svg", "Ant.svg"), // All other folders use standard naming (no theme switching needed)
     };
 
     view! {
@@ -108,11 +110,16 @@ pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
                 class="absolute inset-0 w-full h-full object-contain hidden dark:block"
             />
 
-            // Piece overlay
+            // Piece overlay - black piece for light mode, white piece for dark mode
             <img
-                src=format!("/assets/tiles/{}/{}", design_folder, piece_name)
-                alt=format!("{:?} Ant", tile_design)
-                class="absolute inset-0 w-full h-full object-contain"
+                src=format!("/assets/tiles/{}/{}", design_folder, light_piece_name)
+                alt=format!("{:?} Ant (Light Mode)", tile_design)
+                class="absolute inset-0 w-full h-full object-contain dark:hidden"
+            />
+            <img
+                src=format!("/assets/tiles/{}/{}", design_folder, dark_piece_name)
+                alt=format!("{:?} Ant (Dark Mode)", tile_design)
+                class="absolute inset-0 w-full h-full object-contain hidden dark:block"
             />
         </div>
     }
