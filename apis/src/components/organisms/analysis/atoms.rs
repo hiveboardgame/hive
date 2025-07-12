@@ -90,13 +90,13 @@ pub fn HistoryButton(
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
         let updated_node_id = analysis.with(|a| {
             a.current_node.as_ref().and_then(|n| match action {
-            HistoryNavigation::First => a
-                .tree
-                .get_ancestor_ids(&n.get_node_id())
-                .map_or(None, |ids| ids.last().cloned()),
-            HistoryNavigation::Next => n.get_children_ids().first().cloned(),
-            HistoryNavigation::Previous => n.get_parent_id(),
-        })
+                HistoryNavigation::First => a
+                    .tree
+                    .get_ancestor_ids(&n.get_node_id())
+                    .map_or(None, |ids| ids.last().cloned()),
+                HistoryNavigation::Next => n.get_children_ids().first().cloned(),
+                HistoryNavigation::Previous => n.get_parent_id(),
+            })
         });
         if let Some(updated_node_id) = updated_node_id {
             analysis.update(|a| {

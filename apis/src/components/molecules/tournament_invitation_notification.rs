@@ -9,7 +9,6 @@ use shared_types::TimeInfo;
 #[component]
 pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) -> impl IntoView {
     let tournament_id = StoredValue::new(tournament.tournament_id.clone());
-    let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let api = expect_context::<ApiRequestsProvider>().0;
     let seats_taken = format!("{}/{}", tournament.players, tournament.seats);
     let seats_full = tournament.players as i32 >= tournament.seats;
@@ -33,15 +32,16 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
     };
 
     view! {
-        <div class="flex items-center text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
-            <div class="flex relative">
-                <div class=div_class>
-                    <div>{tournament.name}</div>
+        <div class="flex items-center justify-between text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light w-full p-2">
+            <div class="flex relative flex-grow">
+                <div class="xs:py-1 xs:px-1 sm:py-2 sm:px-2">
+                    <div class="text-sm font-medium">Tournament Invitation</div>
+                    <div class="font-bold">{tournament.name}</div>
                 </div>
-                <div class=div_class>
+                <div class="xs:py-1 xs:px-1 sm:py-2 sm:px-2">
                     <TimeRow time_info />
                 </div>
-                <div class=div_class>
+                <div class="xs:py-1 xs:px-1 sm:py-2 sm:px-2">
                     <div>Players: {seats_taken}</div>
                 </div>
                 <a
@@ -49,19 +49,19 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
                     href=format!("/tournament/{}", tournament_id.get_value())
                 ></a>
             </div>
-            <div class=div_class>
+            <div class="flex gap-2">
                 <button
                     title="Accept Invitation"
                     on:click=accept
                     prop:disabled=seats_full
-                    class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    class="z-20 p-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
                     <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
                 </button>
                 <button
                     title="Decline Invitation"
                     on:click=decline
-                    class="z-20 p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95"
+                    class="z-20 p-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95"
                 >
                     <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
                 </button>

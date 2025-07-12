@@ -12,7 +12,7 @@ use crate::components::{
 };
 use crate::functions::tournaments::{get_complete, UpdateDescription};
 use crate::providers::AuthContext;
-use crate::providers::{ApiRequestsProvider, UpdateNotifier, websocket::WebsocketContext};
+use crate::providers::{websocket::WebsocketContext, ApiRequestsProvider, UpdateNotifier};
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
@@ -39,11 +39,8 @@ pub fn Tournament() -> impl IntoView {
             .get("nanoid")
             .map(|s| TournamentId(s.to_string()))
     };
-    let current_tournament = Action::new(move |_: &()| async move {
-        get_complete(tournament_id().unwrap().to_string())
-            .await
-            .ok()
-    });
+    let current_tournament =
+        Action::new(move |_: &()| async move { get_complete(tournament_id().unwrap()).await.ok() });
     Effect::watch(
         update_notification,
         move |needs_update, _, _| {
@@ -90,8 +87,9 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let tournament_id = Memo::new(move |_| tournament().tournament_id);
     Effect::new(move |_| {
         let ready_state = websocket.ready_state.get();
-        if tournament().status != TournamentStatus::NotStarted 
-            && ready_state == ConnectionReadyState::Open {
+        if tournament().status != TournamentStatus::NotStarted
+            && ready_state == ConnectionReadyState::Open
+        {
             let api = api.get();
             api.schedule_action(ScheduleAction::TournamentPublic(tournament_id()));
             if user_id().is_some() {
