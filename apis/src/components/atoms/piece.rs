@@ -64,6 +64,12 @@ pub fn PieceWithoutOnClick(
             // For black tiles (#3a3a3a), use light color for dots
             Color::Black => "color: #ead9b6",
         },
+        TileDesign::Carbon3D => match color {
+            // For white tiles (white background), use dark gray for dots (matches converted white bugs)
+            Color::White => "color: #2d2d2d",
+            // For black tiles (dark gray background), use light gray for dots (matches converted black bugs)
+            Color::Black => "color: #dcdcdc",
+        },
     };
 
     let top_piece = game_state
@@ -77,7 +83,7 @@ pub fn PieceWithoutOnClick(
     let active_piece = create_read_slice(game_state.signal, |gs| gs.move_info.active);
     let show_ds = move || {
         let shadow = match tile_opts.get_value().design {
-            TileDesign::ThreeD => "/assets/tiles/3d/shadow.svg#dshadow",
+            TileDesign::ThreeD | TileDesign::Carbon3D => "/assets/tiles/3d/shadow.svg#dshadow",
             TileDesign::Community
             | TileDesign::HighContrast
             | TileDesign::Official
@@ -118,6 +124,7 @@ pub fn PieceWithoutOnClick(
         ),
         TileDesign::Community => format!("/assets/tiles/community/community.svg#{}", bug.name()),
         TileDesign::Pride => format!("/assets/tiles/lgbtq/lgbtq.svg#{}{}", color.name(), bug.name()),
+        TileDesign::Carbon3D => format!("/assets/tiles/carbon-3d/carbon-3d.svg#{}{}", color.name(), bug.name()),
     };
 
     let tile_svg = move || match tile_opts.get_value().design {
@@ -130,6 +137,7 @@ pub fn PieceWithoutOnClick(
         ),
         TileDesign::Community => format!("/assets/tiles/community/community.svg#{}", color.name(),),
         TileDesign::Pride => format!("/assets/tiles/lgbtq/lgbtq.svg#{}", color.name()),
+        TileDesign::Carbon3D => format!("/assets/tiles/carbon-3d/carbon-3d.svg#{}", color.name()),
     };
 
     view! {

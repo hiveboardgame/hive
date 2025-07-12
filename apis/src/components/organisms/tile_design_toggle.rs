@@ -28,6 +28,7 @@ pub fn TileDesignToggle() -> impl IntoView {
             <TileDesignButton tile_design=TileDesign::Flat />
             <Show when=good_software>
                 <TileDesignButton tile_design=TileDesign::ThreeD />
+                <TileDesignButton tile_design=TileDesign::Carbon3D />
             </Show>
             <TileDesignButton tile_design=TileDesign::HighContrast />
             <TileDesignButton tile_design=TileDesign::Community />
@@ -82,11 +83,12 @@ pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
         TileDesign::HighContrast => "high-contrast",
         TileDesign::Community => "community",
         TileDesign::Pride => "lgbtq",
+        TileDesign::Carbon3D => "carbon-3d",
     };
 
     // For other styles, show background + piece
     let piece_name = match tile_design {
-        TileDesign::ThreeD | TileDesign::Pride => "whiteAnt.svg", // 3D and Pride folders use different naming
+        TileDesign::ThreeD | TileDesign::Pride | TileDesign::Carbon3D => "whiteAnt.svg", // 3D, Pride, and Carbon3D folders use different naming
         _ => "Ant.svg",                       // All other folders use standard naming
     };
 
