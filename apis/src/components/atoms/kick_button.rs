@@ -14,13 +14,9 @@ pub fn KickButton(user_id: Uuid, tournament: TournamentResponse) -> impl IntoVie
     let tournament = StoredValue::new(tournament);
 
     let is_organizer = move || {
-        if let Some(current_user) = auth_context.user.get() {
-            current_user.id != user_id
-                && tournament
-                    .get_value()
-                    .organizers
-                    .iter()
-                    .any(|o| o.uid == current_user.id)
+        if let Some(current_id) = auth_context.user.with(|a| a.as_ref().map(|u| u.id)) {
+            current_id != user_id
+                && tournament.with_value(|t| t.organizers.iter().any(|o| o.uid == current_id))
         } else {
             false
         }
@@ -29,7 +25,7 @@ pub fn KickButton(user_id: Uuid, tournament: TournamentResponse) -> impl IntoVie
     let kick = move |_| {
         let api = api.get();
         api.tournament(TournamentAction::Kick(
-            tournament.get_value().tournament_id,
+            tournament.with_value(|t| t.tournament_id.clone()),
             user_id,
         ));
     };

@@ -23,7 +23,7 @@ pub fn ProfileLink(
                 class="z-20 font-bold duration-300 no-link-style hover:text-pillbug-teal"
                 node_ref=link_ref
                 on:mouseover=move |_| {
-                    if user_is_hoverable().is_some() {
+                    if user_is_hoverable.with(|u| u.is_some()) {
                         hover_show.set(true);
                     }
                 }
@@ -42,7 +42,7 @@ pub fn ProfileLink(
                     </Show>
                 </div>
             </a>
-            <Show when=move || user_is_hoverable().is_some() && hover_show()>
+            <Show when=move || user_is_hoverable.with(|u| u.is_some()) && hover_show()>
                 <HoverRating
                     user=user_is_hoverable().expect("Showing because it's some")
                     anchor_ref=link_ref

@@ -32,10 +32,7 @@ pub fn Hex(
         HexType::Active(active_state) => {
             let level = if game_state
                 .signal
-                .get_untracked()
-                .move_info
-                .target_position
-                .is_none()
+                .with_untracked(|gs| gs.move_info.target_position.is_none())
                 || hex.level == 0
             {
                 expanded_level.get_untracked()

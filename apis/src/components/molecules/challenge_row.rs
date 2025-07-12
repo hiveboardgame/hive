@@ -25,20 +25,23 @@ pub fn ChallengeRow(
     let api = expect_context::<ApiRequestsProvider>().0;
     let challenge_id = StoredValue::new(challenge.challenge_id);
     let visibility = StoredValue::new(challenge.visibility);
-    let icon_data = move || match challenge.color_choice {
-        ColorChoice::Random => (icondata::BsHexagonHalf, "pb-[2px]"),
-        ColorChoice::White => {
-            if config().prefers_dark {
-                (icondata::BsHexagonFill, "fill-white pb-[2px]")
-            } else {
-                (icondata::BsHexagon, "stroke-black pb-[2px]")
+    let icon_data = move || {
+        let prefers_dark = config.with(|c| c.prefers_dark);
+        match challenge.color_choice {
+            ColorChoice::Random => (icondata::BsHexagonHalf, "pb-[2px]"),
+            ColorChoice::White => {
+                if prefers_dark {
+                    (icondata::BsHexagonFill, "fill-white pb-[2px]")
+                } else {
+                    (icondata::BsHexagon, "stroke-black pb-[2px]")
+                }
             }
-        }
-        ColorChoice::Black => {
-            if config().prefers_dark {
-                (icondata::BsHexagon, "stroke-white pb-[2px]")
-            } else {
-                (icondata::BsHexagonFill, "fill-black pb-[2px]")
+            ColorChoice::Black => {
+                if prefers_dark {
+                    (icondata::BsHexagon, "stroke-white pb-[2px]")
+                } else {
+                    (icondata::BsHexagonFill, "fill-black pb-[2px]")
+                }
             }
         }
     };
@@ -78,7 +81,8 @@ pub fn ChallengeRow(
     let time_mode = challenge.time_mode;
 
     let challenger_username = StoredValue::new(challenge.challenger.username);
-    let (username, patreon, bot, rating) =
+    let (username, patreon, bot, rating) = {
+        let challenger_username = challenger_username.get_value();
         if let (Some(uid), Some(opponent)) = (uid, challenge.opponent.clone()) {
             if challenge.challenger.uid == uid {
                 let opp = opponent.username.clone();
@@ -90,7 +94,7 @@ pub fn ChallengeRow(
                 )
             } else {
                 (
-                    challenger_username.get_value(),
+                    challenger_username,
                     challenge.challenger.patreon,
                     challenge.challenger.bot,
                     challenge.challenger_rating,
@@ -98,12 +102,13 @@ pub fn ChallengeRow(
             }
         } else {
             (
-                challenger_username.get_value(),
+                challenger_username,
                 challenge.challenger.patreon,
                 challenge.challenger.bot,
                 challenge.challenger_rating,
             )
-        };
+        }
+    };
 
     let time_info = TimeInfo {
         mode: time_mode,
@@ -170,7 +175,7 @@ pub fn ChallengeRow(
                         fallback=move || {
                             view! {
                                 <Show when=move || {
-                                    visibility.get_value() == ChallengeVisibility::Private
+                                    visibility.with_value(|v| *v == ChallengeVisibility::Private)
                                         && !single
                                 }>
                                     <button

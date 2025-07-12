@@ -104,16 +104,17 @@ impl ApiRequests {
 
     pub fn challenge(&self, challenge_action: ChallengeAction) {
         let challenge_action = match challenge_action {
-            ChallengeAction::Create(details) => {
-                let account = self.user.get();
-                if let Some(account) = account {
-                    let challenges = self.challenges.signal.get_untracked();
-                    let challenges = challenges.challenges.into_values().collect();
-                    create_challenge_handler(account.user.username, details, challenges)
+            ChallengeAction::Create(details) => self.user.with(|a| {
+                if let Some(account) = a {
+                    let challenges = self
+                        .challenges
+                        .signal
+                        .with_untracked(|c| c.challenges.clone().into_values().collect::<Vec<_>>());
+                    create_challenge_handler(account.user.username.clone(), details, challenges)
                 } else {
                     None
                 }
-            }
+            }),
             other => Some(other),
         };
         if let Some(challenge_action) = challenge_action {

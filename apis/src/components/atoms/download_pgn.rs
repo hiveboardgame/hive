@@ -15,7 +15,11 @@ pub fn DownloadPgn(
         if let Some(game) = game {
             Some(game)
         } else {
-            (game_state.signal)().game_response.map(StoredValue::new)
+            game_state.signal.with(|gs| {
+                gs.game_response
+                    .as_ref()
+                    .map(|v| StoredValue::new(v.clone()))
+            })
         }
     };
     let download = move |_| {
@@ -52,45 +56,50 @@ pub fn DownloadPgn(
 }
 
 fn blob_and_filename(game: StoredValue<GameResponse>) -> (Blob, String) {
-    let game = game.get_value();
-    let date = game.created_at.format("%d-%b-%Y_%H:%M:%S").to_string();
-    let game_result = match game.game_status {
-        GameStatus::Finished(result) => match result {
-            GameResult::Draw => "Draw".to_owned(),
-            GameResult::Unknown => "Unkown".to_owned(),
-            GameResult::Winner(Color::White) => "WhiteWins".to_owned(),
-            GameResult::Winner(Color::Black) => "BlackWins".to_owned(),
-        },
-        _ => game.game_status.to_string(),
-    };
-    let mut file: Vec<String> = Vec::new();
-    let header = format!(
-        "[GameType \"{}\"]\n\
-    [Date \"{}\"]\n\
-    [Site \"hivegame.com\"]\n\
-    [White \"{}\"]\n\
-    [Black \"{}\"]\n\
-    [Result \"{}\"]\n\n",
-        game.game_type, date, game.white_player.username, game.black_player.username, game_result
-    );
-    file.push(header);
-    let mut history = game
-        .history
-        .iter()
-        .enumerate()
-        .map(|(i, (mv, dest))| format!("{}. {} {}\n", i + 1, mv, dest))
-        .collect::<Vec<String>>();
-    file.append(&mut history);
-    if game.finished {
-        file.push(format!("\n{game_result}\n"));
-    }
-    let file = file.into_iter().map(JsValue::from).collect::<Array>();
-    let date = game.created_at.format("%+").to_string();
-    (
-        Blob::new_with_u8_array_sequence(&file).unwrap(),
-        format!(
-            "{}_{}_vs_{}.pgn",
-            date, game.white_player.username, game.black_player.username
-        ),
-    )
+    game.with_value(|game| {
+        let date = game.created_at.format("%d-%b-%Y_%H:%M:%S").to_string();
+        let game_result = match &game.game_status {
+            GameStatus::Finished(result) => match result {
+                GameResult::Draw => "Draw".to_owned(),
+                GameResult::Unknown => "Unkown".to_owned(),
+                GameResult::Winner(Color::White) => "WhiteWins".to_owned(),
+                GameResult::Winner(Color::Black) => "BlackWins".to_owned(),
+            },
+            _ => game.game_status.to_string(),
+        };
+        let mut file: Vec<String> = Vec::new();
+        let header = format!(
+            "[GameType \"{}\"]\n\
+             [Date \"{}\"]\n\
+             [Site \"hivegame.com\"]\n\
+             [White \"{}\"]\n\
+             [Black \"{}\"]\n\
+             [Result \"{}\"]\n\n",
+            game.game_type,
+            date,
+            game.white_player.username,
+            game.black_player.username,
+            game_result
+        );
+        file.push(header);
+        let mut history = game
+            .history
+            .iter()
+            .enumerate()
+            .map(|(i, (mv, dest))| format!("{}. {} {}\n", i + 1, mv, dest))
+            .collect::<Vec<String>>();
+        file.append(&mut history);
+        if game.finished {
+            file.push(format!("\n{game_result}\n"));
+        }
+        let file = file.into_iter().map(JsValue::from).collect::<Array>();
+        let date = game.created_at.format("%+").to_string();
+        (
+            Blob::new_with_u8_array_sequence(&file).unwrap(),
+            format!(
+                "{}_{}_vs_{}.pgn",
+                date, game.white_player.username, game.black_player.username
+            ),
+        )
+    })
 }

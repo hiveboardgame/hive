@@ -26,7 +26,11 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
             .map(|s| GameId(s.to_owned()))
             .unwrap_or_default()
     };
-    let user_id = Signal::derive(move || auth_context.user.get_untracked().map(|user| user.id));
+    let user_id = Signal::derive(move || {
+        auth_context
+            .user
+            .with_untracked(|a| a.as_ref().map(|user| user.id))
+    });
     let user_color = game_state.user_color_as_signal(user_id);
     let in_progress = create_read_slice(game_state.signal, |gs| {
         gs.game_response
@@ -56,7 +60,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         timer
             .with(|t| in_progress() && (side() == Color::White) == (t.turn % 2 == 0) && !t.finished)
     });
-    let time_is_zero = Signal::derive(move || timer().time_left(side()).is_zero());
+    let time_is_zero = Signal::derive(move || timer.with(|t| t.time_left(side()).is_zero()));
     let user_needs_warning = Signal::derive(move || {
         user_color().is_some_and(|color| {
             timer.with(|t| {
@@ -131,9 +135,11 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
             }
         >
             {move || {
-                let timer = timer();
-                let time_left = timer.time_left(side());
-                timer.time_mode.time_remaining(time_left)
+                timer
+                    .with(|t| {
+                        let time_left = t.time_left(side());
+                        t.time_mode.time_remaining(time_left)
+                    })
             }}
 
         </div>

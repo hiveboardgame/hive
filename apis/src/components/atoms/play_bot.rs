@@ -17,8 +17,7 @@ pub fn PlayBot() -> impl IntoView {
         <button
             title="Play vs bot"
             on:click=move |_| {
-                let account = auth_context.user.get();
-                if account.is_some() {
+                if auth_context.user.with(|a| a.is_some()) {
                     if let Some(dialog_el) = dialog_el.get() {
                         let _ = dialog_el.show_modal();
                     }

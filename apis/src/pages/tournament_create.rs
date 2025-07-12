@@ -108,7 +108,6 @@ pub fn TournamentCreate() -> impl IntoView {
         move || tournament.name.get().len() < 4 || tournament.description.get().len() < 50;
 
     let create = move |_| {
-        let account = auth_context.user.get();
         tournament
             .time_mode
             .update_untracked(|v| *v = params.time_signals().time_mode().get_untracked());
@@ -190,7 +189,7 @@ pub fn TournamentCreate() -> impl IntoView {
                 None
             },
         };
-        if account.is_some() {
+        if auth_context.user.with(|a| a.is_some()) {
             let api = api.get();
             let action = TournamentAction::Create(Box::new(details));
             api.tournament(action);

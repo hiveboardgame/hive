@@ -390,7 +390,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                     let initial_batch_size = ctx.initial_batch_size.get();
                     load_games(
                         ctx.controls.get(),
-                        username(),
+                        username.get_untracked(),
                         None,
                         ctx.next_batch,
                         initial_batch_size,

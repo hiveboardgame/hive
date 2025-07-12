@@ -35,7 +35,7 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let game_state = use_context::<GameStateSignal>();
-    let turn = move || game_state.map(|gs| gs.signal.get().state.turn);
+    let turn = move || game_state.map(|gs| gs.signal.with(|state| state.state.turn));
     let send = move || {
         let message = chat.typed_message.get();
         if !message.is_empty() {
@@ -89,21 +89,13 @@ pub fn ChatWindow(
     let chat = expect_context::<Chat>();
     let auth_context = expect_context::<AuthContext>();
     let game_state = expect_context::<GameStateSignal>();
-    let uid = auth_context.user.get_untracked().map(|user| user.user.uid);
-    let white_id = move || {
-        game_state
-            .signal
-            .get()
-            .white_id
-            .expect("Game has white player")
-    };
-    let black_id = move || {
-        game_state
-            .signal
-            .get()
-            .black_id
-            .expect("Game has black player")
-    };
+    let uid = auth_context
+        .user
+        .with_untracked(|a| a.as_ref().map(|user| user.user.uid));
+    let white_id = create_read_slice(game_state.signal, |gs| gs.white_id);
+    let black_id = create_read_slice(game_state.signal, |gs| gs.black_id);
+    let white_id = move || white_id().expect("Game has white player");
+    let black_id = move || black_id().expect("Game has black player");
 
     let correspondant_id = Signal::derive(move || correspondant_id.map_or(Uuid::new_v4(), |id| id));
     let correspondant_username = Signal::derive(move || correspondant_username.clone());
@@ -123,7 +115,7 @@ pub fn ChatWindow(
 
     let actual_destination = Signal::derive(move || match destination.clone() {
         SimpleDestination::Game => {
-            if game_state.signal.get().uid_is_player(uid) {
+            if game_state.signal.with(|gs| gs.uid_is_player(uid)) {
                 ChatDestination::GamePlayers(game_id(), white_id(), black_id())
             } else {
                 ChatDestination::GameSpectators(game_id(), white_id(), black_id())

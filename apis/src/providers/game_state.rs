@@ -49,9 +49,10 @@ impl GameStateSignal {
         create_read_slice(self.signal, move |gamestate| {
             match (gamestate.white_id, gamestate.black_id) {
                 (Some(w), Some(b)) => {
-                    if user_id() == Some(b) {
+                    let current_user_id = user_id();
+                    if current_user_id == Some(b) {
                         Some(Color::Black)
-                    } else if user_id() == Some(w) {
+                    } else if current_user_id == Some(w) {
                         Some(Color::White)
                     } else {
                         None
@@ -94,9 +95,18 @@ impl GameStateSignal {
     }
 
     pub fn send_game_control(&self, game_control: GameControl, user: Uuid) {
-        self.signal
-            .get_untracked()
-            .send_game_control(game_control, user)
+        let api = expect_context::<ApiRequestsProvider>().0;
+        self.signal.with_untracked(|gs| {
+            if let Some(color) = gs.user_color(user) {
+                if color != game_control.color() {
+                    log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
+                } else if let Some(ref game_id) = gs.game_id {
+                    api.get().game_control(game_id.to_owned(), game_control);
+                } else {
+                    log!("This is a bug, there should be a game_id");
+                }
+            }
+        })
     }
 
     pub fn set_state(&mut self, state: State, black_id: Uuid, white_id: Uuid) {
@@ -133,7 +143,8 @@ impl GameStateSignal {
     }
 
     pub fn is_move_allowed(&self, in_analysis: bool) -> bool {
-        self.signal.get_untracked().is_move_allowed(in_analysis)
+        self.signal
+            .with_untracked(|gs| gs.is_move_allowed(in_analysis))
     }
 
     pub fn show_moves(&mut self, piece: Piece, position: Position) {
@@ -311,19 +322,6 @@ impl GameState {
         self.move_info.target_position = Some(position);
     }
 
-    pub fn send_game_control(&mut self, game_control: GameControl, user_id: Uuid) {
-        let api = expect_context::<ApiRequestsProvider>().0.get();
-        if let Some(color) = self.user_color(user_id) {
-            if color != game_control.color() {
-                log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
-            } else if let Some(ref game_id) = self.game_id {
-                api.game_control(game_id.to_owned(), game_control);
-            } else {
-                log!("This is a bug, there should be a game_id");
-            }
-        }
-    }
-
     pub fn is_move_allowed(&self, analysis: bool) -> bool {
         let auth_context = expect_context::<AuthContext>();
         let user = auth_context.user;
@@ -336,15 +334,17 @@ impl GameState {
         ) {
             return false;
         }
-        user().is_some_and(|user| {
-            let turn = self.state.turn;
-            let black_id = self.black_id;
-            let white_id = self.white_id;
-            if turn % 2 == 0 {
-                white_id.is_some_and(|white| white == user.id)
-            } else {
-                black_id.is_some_and(|black| black == user.id)
-            }
+        user.with(|a| {
+            a.as_ref().is_some_and(|user| {
+                let turn = self.state.turn;
+                let black_id = self.black_id;
+                let white_id = self.white_id;
+                if turn % 2 == 0 {
+                    white_id.is_some_and(|white| white == user.id)
+                } else {
+                    black_id.is_some_and(|black| black == user.id)
+                }
+            })
         })
     }
 
@@ -356,9 +356,8 @@ impl GameState {
                 log!("Could not play turn: {} {} {}", active, position, e);
             } else if let Some(analysis) = analysis {
                 analysis.0.update(|analysis| {
-                    let state = self.state.clone();
-                    let moves = state.history.moves;
-                    let hashes = state.hashes;
+                    let moves = self.state.history.moves.clone();
+                    let hashes = self.state.hashes.clone();
                     let last_index = moves.len() - 1;
                     if moves[last_index].0 == "pass" {
                         //if move is pass, add prev move
@@ -389,15 +388,14 @@ impl GameState {
 
     pub fn show_spawns(&mut self, piece: Piece, position: Position) {
         self.move_info.reset();
-        self.move_info.target_positions = self
-            .state
-            .board
-            .spawnable_positions(self.state.turn_color)
+        let turn_color = self.state.turn_color;
+        let board = &self.state.board;
+        let game_type = self.state.game_type;
+
+        self.move_info.target_positions = board
+            .spawnable_positions(turn_color)
             .collect::<Vec<Position>>();
-        let reserve = self
-            .state
-            .board
-            .reserve(self.state.turn_color, self.state.game_type);
+        let reserve = board.reserve(turn_color, game_type);
         if let Some(pieces) = reserve.get(&piece.bug()) {
             if let Some(piece) = pieces.first() {
                 if let Ok(piece) = Piece::from_str(piece) {

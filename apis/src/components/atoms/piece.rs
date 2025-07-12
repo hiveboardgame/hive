@@ -4,7 +4,7 @@ use crate::pages::play::CurrentConfirm;
 use crate::providers::analysis::AnalysisSignal;
 use crate::providers::config::TileOptions;
 use crate::providers::game_state::GameStateSignal;
-use crate::providers::{ApiRequestsProvider, AuthContext, Config};
+use crate::providers::{ApiRequestsProvider, AuthContext};
 use hive_lib::{Bug, Color, Piece, Position};
 use leptos::either::Either;
 use leptos::prelude::*;
@@ -20,13 +20,13 @@ pub fn PieceWithoutOnClick(
     let game_state = expect_context::<GameStateSignal>();
     let piece = piece.get_untracked();
     let tile_opts = StoredValue::new(tile_opts);
-    let three_d = move || tile_opts.get_value().is_three_d();
+    let three_d = move || tile_opts.read_value().is_three_d();
     let center = move || SvgPos::center_for_level(position, level(), three_d());
     let order = piece.order();
     let ds_transform = move || format!("translate({},{})", center().0, center().1);
     let position_transform = move || format!("translate({},{})", center().0, center().1,);
     let rotate_transform = move || {
-        if tile_opts.get_value().rotation == TileRotation::No {
+        if tile_opts.with_value(|t| t.rotation.clone()) == TileRotation::No {
             String::new()
         } else {
             format!("rotate({})", order.saturating_sub(1) * 60)
@@ -36,7 +36,7 @@ pub fn PieceWithoutOnClick(
     let bug = piece.bug();
     let color = piece.color();
 
-    let dot_color = move || match tile_opts.get_value().design {
+    let dot_color = move || match tile_opts.with_value(|t| t.design.clone()) {
         TileDesign::Official | TileDesign::ThreeD => match bug {
             Bug::Ant => "color: #289ee0",
             Bug::Beetle => "color: #9a7fc7",
@@ -78,17 +78,13 @@ pub fn PieceWithoutOnClick(
         },
     };
 
-    let top_piece = game_state
-        .signal
-        .get_untracked()
-        .state
-        .board
-        .top_piece(position)
-        .unwrap_or(piece);
-
     let active_piece = create_read_slice(game_state.signal, |gs| gs.move_info.active);
+    let last_move = create_read_slice(game_state.signal, |gs| gs.state.board.last_move);
+    let board_state = create_read_slice(game_state.signal, |gs| gs.state.board.clone());
+    let top_piece = move || board_state.with(|board| board.top_piece(position).unwrap_or(piece));
     let show_ds = move || {
-        let shadow = match tile_opts.get_value().design {
+        let top_piece = top_piece();
+        let shadow = match tile_opts.with_value(|t| t.design.clone()) {
             TileDesign::ThreeD | TileDesign::Carbon3D => "/assets/tiles/3d/shadow.svg#dshadow",
             TileDesign::Community
             | TileDesign::HighContrast
@@ -103,7 +99,7 @@ pub fn PieceWithoutOnClick(
             }
             return shadow;
         };
-        if match game_state.signal.get_untracked().state.board.last_move {
+        if match last_move() {
             (Some(_), Some(pos)) => position != pos || piece != top_piece,
             (Some(pos), None) => position != pos || piece != top_piece,
             (None, Some(pos)) => position != pos || piece != top_piece,
@@ -115,13 +111,13 @@ pub fn PieceWithoutOnClick(
         }
     };
 
-    let dots = move || match tile_opts.get_value().dots {
+    let dots = move || match tile_opts.with_value(|t| t.dots.clone()) {
         TileDots::No => String::new(),
         TileDots::Angled => format!("/assets/tiles/common/all.svg#a{order}"),
         TileDots::Vertical => format!("/assets/tiles/common/all.svg#v{order}"),
     };
 
-    let bug_svg = move || match tile_opts.get_value().design {
+    let bug_svg = move || match tile_opts.with_value(|t| t.design.clone()) {
         TileDesign::Official => format!("/assets/tiles/official/official.svg#{}", bug.name()),
         TileDesign::Flat => format!("/assets/tiles/flat/flat.svg#{}", bug.name()),
         TileDesign::ThreeD => format!("/assets/tiles/3d/3d.svg#{}{}", color.name(), bug.name()),
@@ -130,12 +126,24 @@ pub fn PieceWithoutOnClick(
             bug.name()
         ),
         TileDesign::Community => format!("/assets/tiles/community/community.svg#{}", bug.name()),
-        TileDesign::Pride => format!("/assets/tiles/lgbtq/lgbtq.svg#{}{}", color.name(), bug.name()),
-        TileDesign::Carbon3D => format!("/assets/tiles/carbon-3d/carbon-3d.svg#{}{}", color.name(), bug.name()),
-        TileDesign::Carbon => format!("/assets/tiles/carbon/carbon.svg#{}{}", color.name(), bug.name()),
+        TileDesign::Pride => format!(
+            "/assets/tiles/lgbtq/lgbtq.svg#{}{}",
+            color.name(),
+            bug.name()
+        ),
+        TileDesign::Carbon3D => format!(
+            "/assets/tiles/carbon-3d/carbon-3d.svg#{}{}",
+            color.name(),
+            bug.name()
+        ),
+        TileDesign::Carbon => format!(
+            "/assets/tiles/carbon/carbon.svg#{}{}",
+            color.name(),
+            bug.name()
+        ),
     };
 
-    let tile_svg = move || match tile_opts.get_value().design {
+    let tile_svg = move || match tile_opts.with_value(|t| t.design.clone()) {
         TileDesign::Official => format!("/assets/tiles/official/official.svg#{}", color.name()),
         TileDesign::Flat => format!("/assets/tiles/flat/flat.svg#{}", color.name()),
         TileDesign::ThreeD => format!("/assets/tiles/3d/3d.svg#{}", color.name()),
@@ -195,10 +203,11 @@ pub fn PieceWithOnClick(
             piece_type,
             PieceType::Inactive | PieceType::Board | PieceType::Reserve
         );
-        let is_current_player = game_state
-            .signal
-            .get_untracked()
-            .uid_is_player(auth_context.user.get_untracked().map(|u| u.id));
+        let is_current_player = game_state.signal.with_untracked(|gs| {
+            auth_context
+                .user
+                .with_untracked(|a| gs.uid_is_player(a.as_ref().map(|u| u.id)))
+        });
         if game_state.is_move_allowed(in_analysis) {
             match piece_type {
                 PieceType::Board => {

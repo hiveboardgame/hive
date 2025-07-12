@@ -23,47 +23,38 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth_context = expect_context::<AuthContext>();
     let opponent = StoredValue::new(opponent);
+    let opponent_exists = opponent.with_value(|o| o.is_some());
     let create_challenge = Callback::new(move |color_choice| {
         let api = api.get();
-        let account = auth_context.user;
 
-        let upper_rating = move || {
-            if let Some(account) = account() {
+        let (upper_rating, lower_rating) = auth_context.user.with(|acc_opt| {
+            if let Some(account) = acc_opt {
+                let time_data = params.time_signals().get();
+                let game_speed =
+                    GameSpeed::from_base_increment(time_data.base(), time_data.increment());
+                let rating = account.user.rating_for_speed(&game_speed);
+
                 let upper_slider = params.upper_slider().get();
-                if upper_slider > 500 || opponent.get_value().is_some() {
-                    return None;
+                let upper = if upper_slider > 500 || opponent_exists {
+                    None
+                } else {
+                    // TODO: Make rating update in realtime, currently it becomes stale
+                    Some((rating as i32).saturating_add(upper_slider))
                 };
-                // TODO: Make rating update in realtime, currently it becomes stale
-                let rating = account
-                    .user
-                    .rating_for_speed(&GameSpeed::from_base_increment(
-                        params.time_signals().get().base(),
-                        params.time_signals().get().increment(),
-                    ));
-                Some((rating as i32).saturating_add(upper_slider))
-            } else {
-                None
-            }
-        };
 
-        let lower_rating = move || {
-            if let Some(account) = account() {
                 let lower_slider = params.lower_slider().get();
-                if lower_slider < -500 || opponent.get_value().is_some() {
-                    return None;
+                let lower = if lower_slider < -500 || opponent_exists {
+                    None
+                } else {
+                    // TODO: Make rating update in realtime, currently it becomes stale
+                    Some((rating as i32).saturating_add(lower_slider))
                 };
-                // TODO: Make rating update in realtime, currently it becomes stale
-                let rating = account
-                    .user
-                    .rating_for_speed(&GameSpeed::from_base_increment(
-                        params.time_signals().get().base(),
-                        params.time_signals().get().increment(),
-                    ));
-                Some((rating as i32).saturating_add(lower_slider))
+
+                (upper, lower)
             } else {
-                None
+                (None, None)
             }
-        };
+        });
         let details = ChallengeDetails {
             rated: params.rated().get_untracked(),
             game_type: if params.with_expansions().get_untracked() {
@@ -71,7 +62,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
             } else {
                 GameType::Base
             },
-            visibility: if opponent.get_value().is_none() {
+            visibility: if !opponent_exists {
                 if params.is_public().get_untracked() {
                     ChallengeVisibility::Public
                 } else {
@@ -83,10 +74,10 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
             opponent: opponent.get_value(),
             color_choice,
             time_mode: params.time_signals().time_mode().get_untracked(),
-            time_base: params.time_signals().get().base(),
-            time_increment: params.time_signals().get().increment(),
-            band_upper: upper_rating(),
-            band_lower: lower_rating(),
+            time_base: params.time_signals().with(|ts| ts.base()),
+            time_increment: params.time_signals().with(|ts| ts.increment()),
+            band_upper: upper_rating,
+            band_lower: lower_rating,
         };
         let challenge_action = ChallengeAction::Create(details);
         api.challenge(challenge_action);
@@ -147,7 +138,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
     });
     view! {
         <div class="flex flex-col items-center w-72 xs:m-2 xs:w-80 sm:w-96">
-            <Show when=move || opponent.get_value().is_some()>
+            <Show when=move || opponent_exists>
                 <div class="block">"Opponent: " {opponent.get_value()}</div>
             </Show>
             <div class="flex flex-col items-center">
@@ -169,7 +160,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
                 />MLP
             </div>
 
-            <Show when=move || opponent.get_value().is_none()>
+            <Show when=move || !opponent_exists>
                 <div class="flex gap-1 p-1">
                     {t!(i18n, home.custom_game.private)}
                     <SimpleSwitchWithCallback
