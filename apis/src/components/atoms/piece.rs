@@ -4,7 +4,7 @@ use crate::pages::play::CurrentConfirm;
 use crate::providers::analysis::AnalysisSignal;
 use crate::providers::config::TileOptions;
 use crate::providers::game_state::GameStateSignal;
-use crate::providers::{ApiRequestsProvider, AuthContext};
+use crate::providers::{ApiRequestsProvider, AuthContext, Config};
 use hive_lib::{Bug, Color, Piece, Position};
 use leptos::either::Either;
 use leptos::prelude::*;
