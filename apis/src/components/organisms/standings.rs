@@ -6,14 +6,25 @@ const TH_CLASS: &str = "py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase";
 
 #[component]
 pub fn Standings(tournament: Signal<TournamentResponse>) -> impl IntoView {
-    let tiebreakers_view = tournament
-        .get_untracked()
-        .tiebreakers
+    let tiebreakers = tournament.with_untracked(|t| t.tiebreakers.clone());
+    let tiebreakers_view = tiebreakers
         .iter()
         .map(|tiebreaker| {
             view! { <th class=TH_CLASS>{tiebreaker.pretty_str().to_owned()}</th> }
         })
         .collect_view();
+
+    let standings_data = move || {
+        tournament.with(|t| {
+            t.standings
+                .results()
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+        })
+    };
+    let players_map = tournament.with_untracked(|t| t.players.clone());
+
     view! {
         <table class="m-2 table-fixed max-w-fit h-fit">
             <thead>
@@ -26,7 +37,7 @@ pub fn Standings(tournament: Signal<TournamentResponse>) -> impl IntoView {
             </thead>
             <tbody>
                 <For
-                    each=move || tournament().standings.results().into_iter().flatten()
+                    each=standings_data
                     key=|(uuid, position, finished, hash)| (
                         *uuid,
                         position.clone(),
@@ -38,20 +49,14 @@ pub fn Standings(tournament: Signal<TournamentResponse>) -> impl IntoView {
 
                     {
                         let (uuid, position, finished, hash) = player_at_position;
-                        let uuid = StoredValue::new(uuid);
-                        let user = StoredValue::new(
-                            tournament()
-                                .players
-                                .get(&uuid.get_value())
-                                .expect("User in tournament")
-                                .clone(),
-                        );
+                        let user = players_map.get(&uuid).expect("User in tournament").clone();
+
                         view! {
                             <ScoreRow
-                                user=user.get_value()
+                                user
                                 standing=position
                                 finished
-                                tiebreakers=tournament().tiebreakers
+                                tiebreakers=tiebreakers.clone()
                                 scores=hash
                             />
                         }

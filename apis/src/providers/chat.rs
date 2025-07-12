@@ -43,14 +43,10 @@ impl Chat {
 
     pub fn has_messages(&self, game_id: GameId) -> bool {
         self.games_public_new_messages
-            .get()
-            .get(&game_id)
-            .is_some_and(|v| *v)
+            .with(|m| m.get(&game_id).is_some_and(|v| *v))
             || self
                 .games_private_new_messages
-                .get()
-                .get(&game_id)
-                .is_some_and(|v| *v)
+                .with(|m| m.get(&game_id).is_some_and(|v| *v))
     }
 
     pub fn seen_messages(&self, game_id: GameId) {
@@ -65,30 +61,33 @@ impl Chat {
     }
 
     pub fn send(&self, message: &str, destination: ChatDestination, turn: Option<usize>) {
-        if let Some(account) = self.user.get_untracked() {
-            let id = account.user.uid;
-            let name = account.user.username;
-            let turn = match destination {
-                ChatDestination::GamePlayers(_, _, _)
-                | ChatDestination::GameSpectators(_, _, _) => turn,
-                _ => None,
-            };
-            let msg = ChatMessage::new(name, id, message, None, turn);
-            let container = ChatMessageContainer::new(destination, &msg);
-            self.api.get().chat(&container);
-        }
+        self.user.with_untracked(|a| {
+            if let Some(account) = a {
+                let id = account.user.uid;
+                let name = account.user.username.clone();
+                let turn = match destination {
+                    ChatDestination::GamePlayers(_, _, _)
+                    | ChatDestination::GameSpectators(_, _, _) => turn,
+                    _ => None,
+                };
+                let msg = ChatMessage::new(name, id, message, None, turn);
+                let container = ChatMessageContainer::new(destination, &msg);
+                self.api.get_untracked().chat(&container);
+            }
+        });
     }
 
     pub fn recv(&mut self, containers: &[ChatMessageContainer]) {
         if let Some(last_message) = containers.last() {
             match &last_message.destination {
                 ChatDestination::TournamentLobby(id) => {
-                    if let Some(messages) = self.tournament_lobby_messages.get_untracked().get(id) {
-                        if let Some(last_vec_message) = messages.last() {
-                            if last_message.message == *last_vec_message {
-                                return;
-                            }
-                        }
+                    let is_duplicate = self.tournament_lobby_messages.with_untracked(|messages| {
+                        messages.get(id).and_then(|msgs| msgs.last()).is_some_and(
+                            |last_vec_message| last_message.message == *last_vec_message,
+                        )
+                    });
+                    if is_duplicate {
+                        return;
                     }
                     self.tournament_lobby_messages.update(|tournament| {
                         tournament
@@ -104,12 +103,13 @@ impl Chat {
                 }
 
                 ChatDestination::User((id, _name)) => {
-                    if let Some(messages) = self.users_messages.get_untracked().get(id) {
-                        if let Some(last_vec_message) = messages.last() {
-                            if last_message.message == *last_vec_message {
-                                return;
-                            }
-                        }
+                    let is_duplicate = self.users_messages.with_untracked(|messages| {
+                        messages.get(id).and_then(|msgs| msgs.last()).is_some_and(
+                            |last_vec_message| last_message.message == *last_vec_message,
+                        )
+                    });
+                    if is_duplicate {
+                        return;
                     }
 
                     self.users_messages.update(|users| {
@@ -125,12 +125,13 @@ impl Chat {
                     });
                 }
                 ChatDestination::GamePlayers(id, ..) => {
-                    if let Some(messages) = self.games_private_messages.get_untracked().get(id) {
-                        if let Some(last_vec_message) = messages.last() {
-                            if last_message.message == *last_vec_message {
-                                return;
-                            }
-                        }
+                    let is_duplicate = self.games_private_messages.with_untracked(|messages| {
+                        messages.get(id).and_then(|msgs| msgs.last()).is_some_and(
+                            |last_vec_message| last_message.message == *last_vec_message,
+                        )
+                    });
+                    if is_duplicate {
+                        return;
                     }
 
                     self.games_private_messages.update(|games| {
@@ -146,12 +147,13 @@ impl Chat {
                     });
                 }
                 ChatDestination::GameSpectators(id, ..) => {
-                    if let Some(messages) = self.games_public_messages.get_untracked().get(id) {
-                        if let Some(last_vec_message) = messages.last() {
-                            if last_message.message == *last_vec_message {
-                                return;
-                            }
-                        }
+                    let is_duplicate = self.games_public_messages.with_untracked(|messages| {
+                        messages.get(id).and_then(|msgs| msgs.last()).is_some_and(
+                            |last_vec_message| last_message.message == *last_vec_message,
+                        )
+                    });
+                    if is_duplicate {
+                        return;
                     }
 
                     self.games_public_messages.update(|games| {

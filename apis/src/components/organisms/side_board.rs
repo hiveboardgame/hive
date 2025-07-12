@@ -45,16 +45,17 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
     view! {
         <div
             on:click=move |_| {
-                let gs = game_state.signal.get_untracked();
                 if tab() == TabView::Chat {
                     chat.seen_messages(game_id());
-                    if gs.view == View::Game {
+                    let is_game_view = game_state.signal.with_untracked(|gs| gs.view == View::Game);
+                    if is_game_view {
                         set_move.set(None);
                     }
                 }
                 if name == TabView::History {
                     game_state.view_history();
-                    set_move.set(gs.history_turn.map(|v| v + 1));
+                    let history_turn = game_state.signal.with_untracked(|gs| gs.history_turn);
+                    set_move.set(history_turn.map(|v| v + 1));
                 } else if name == TabView::Reserve {
                     game_state.view_game();
                     set_move.set(None);

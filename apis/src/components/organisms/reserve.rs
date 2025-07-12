@@ -90,7 +90,11 @@ pub fn Reserve(
             .as_ref()
             .map_or(GameStatus::NotStarted, |g| g.game_status.clone())
     });
-    let user_id = Signal::derive(move || auth_context.user.get_untracked().map(|user| user.id));
+    let user_id = Signal::derive(move || {
+        auth_context
+            .user
+            .with_untracked(|a| a.as_ref().map(|user| user.id))
+    });
     let user_color = game_state.user_color_as_signal(user_id);
     let tournament = create_read_slice(game_state.signal, |gs| {
         gs.game_response
@@ -98,80 +102,85 @@ pub fn Reserve(
             .is_some_and(|gr| gr.tournament.is_some())
     });
     let stacked_pieces = move || {
-        let board_view = board_view();
         let reserve_color = color();
-        let move_info = move_info();
-        let history_turn = history_turn();
-        let state = state();
-        let status = status();
         let tournament = tournament.get_untracked();
         let last_turn = last_turn.get_untracked();
-        let reserve = match board_view {
-            View::Game => state.board.reserve(reserve_color, state.game_type),
-            View::History => {
-                let mut history = History::new();
-                if let Some(turn) = history_turn {
-                    if turn < state.history.moves.len() {
-                        history.moves = state.history.moves[0..=turn].into();
-                    }
-                }
-                let history_state =
-                    State::new_from_history(&history).expect("Got state from history");
-                history_state.board.reserve(reserve_color, state.game_type)
-            }
-        };
-        let mut clicked_position = None;
-        if user_color().is_some_and(|uc| uc == reserve_color) {
-            clicked_position = move_info.reserve_position;
-        }
-        let mut seen = -1;
-        let mut res = Vec::new();
-        for bug in Bug::all().into_iter() {
-            if let Some(piece_strings) = reserve.get(&bug) {
-                seen += 1;
-                let position = if alignment == Alignment::SingleRow {
-                    Position::new(seen, 0)
-                } else {
-                    Position::new(seen % 4, seen / 4)
-                };
-                let bs = BugStack::new();
-                let mut hs = HexStack::new(&bs, position);
-                for (i, piece_str) in piece_strings.iter().rev().enumerate() {
-                    let piece = Piece::from_str(piece_str).expect("Parsed piece");
-                    let piece_type = if piece_active(
-                        status.clone(),
-                        &state,
-                        &board_view,
-                        &piece,
-                        tournament,
-                        last_turn,
-                        analysis,
-                    ) {
-                        PieceType::Reserve
-                    } else {
-                        PieceType::Inactive
-                    };
-                    hs.hexes.push(Hex {
-                        kind: HexType::Tile(piece, piece_type),
-                        position,
-                        level: i,
-                    });
-                }
-                if let Some(click) = clicked_position {
-                    if click == position {
-                        if move_info.target_position.is_some() {
-                            hs.add_active(true);
-                        } else {
-                            hs.add_active(false);
+        let board_view = board_view();
+        let status = status();
+        let history_turn = history_turn();
+
+        move_info.with(|move_info| {
+            state.with(|state| {
+                let reserve = match board_view {
+                    View::Game => state.board.reserve(reserve_color, state.game_type),
+                    View::History => {
+                        let mut history = History::new();
+                        if let Some(turn) = history_turn {
+                            if turn < state.history.moves.len() {
+                                history.moves = state.history.moves[0..=turn].into();
+                            }
                         }
+                        let history_state =
+                            State::new_from_history(&history).expect("Got state from history");
+                        history_state.board.reserve(reserve_color, state.game_type)
+                    }
+                };
+
+                let mut clicked_position = None;
+                if user_color().is_some_and(|uc| uc == reserve_color) {
+                    clicked_position = move_info.reserve_position;
+                }
+
+                let mut seen = -1;
+                let mut res = Vec::new();
+                for bug in Bug::all().into_iter() {
+                    if let Some(piece_strings) = reserve.get(&bug) {
+                        seen += 1;
+                        let position = if alignment == Alignment::SingleRow {
+                            Position::new(seen, 0)
+                        } else {
+                            Position::new(seen % 4, seen / 4)
+                        };
+                        let bs = BugStack::new();
+                        let mut hs = HexStack::new(&bs, position);
+                        for (i, piece_str) in piece_strings.iter().rev().enumerate() {
+                            let piece = Piece::from_str(piece_str).expect("Parsed piece");
+                            let piece_type = if piece_active(
+                                status.clone(),
+                                state,
+                                &board_view,
+                                &piece,
+                                tournament,
+                                last_turn,
+                                analysis,
+                            ) {
+                                PieceType::Reserve
+                            } else {
+                                PieceType::Inactive
+                            };
+                            hs.hexes.push(Hex {
+                                kind: HexType::Tile(piece, piece_type),
+                                position,
+                                level: i,
+                            });
+                        }
+                        if let Some(click) = clicked_position {
+                            if click == position {
+                                if move_info.target_position.is_some() {
+                                    hs.add_active(true);
+                                } else {
+                                    hs.add_active(false);
+                                }
+                            }
+                        }
+                        res.push(hs);
+                    } else if alignment == Alignment::DoubleRow {
+                        seen += 1;
                     }
                 }
-                res.push(hs);
-            } else if alignment == Alignment::DoubleRow {
-                seen += 1;
-            }
-        }
-        res
+                res
+            })
+        })
     };
 
     let pieces_view = move || {

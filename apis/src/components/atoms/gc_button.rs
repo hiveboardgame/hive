@@ -52,7 +52,7 @@ pub fn ConfirmButton(
 ) -> impl IntoView {
     let game_state = StoredValue::new(expect_context::<GameStateSignal>());
     let (icon, title) = get_icon_and_title(game_control.get_value());
-    let color = game_control.get_value().color();
+    let color = game_control.with_value(|g| g.color());
     let is_clicked = RwSignal::new(false);
     let interval = StoredValue::new(Arc::new(use_interval_with_options(
         5000,
@@ -60,28 +60,30 @@ pub fn ConfirmButton(
     )));
 
     let onclick_confirm = move |_| {
+        let interval = interval.get_value();
         if is_clicked() {
             game_state
-                .get_value()
+                .read_value()
                 .send_game_control(game_control.get_value(), user_id);
             is_clicked.update(|v| *v = false);
-            (interval.get_value().reset)();
-            (interval.get_value().pause)();
+            (interval.reset)();
+            (interval.pause)();
         } else {
             is_clicked.update(|v| *v = true);
-            (interval.get_value().resume)();
+            (interval.resume)();
         }
     };
 
     Effect::new_isomorphic(move |_| {
-        if (interval.get_value().counter)() >= 1 {
+        let interval = interval.get_value();
+        if (interval.counter)() >= 1 {
             is_clicked.update(|v| *v = false);
-            (interval.get_value().reset)();
-            (interval.get_value().pause)();
+            (interval.reset)();
+            (interval.pause)();
         }
     });
 
-    let pending_slice = create_read_slice(game_state.get_value().signal, |gs| {
+    let pending_slice = create_read_slice(game_state.with_value(|gs| gs.signal), |gs| {
         gs.game_control_pending.clone()
     });
 
@@ -102,11 +104,14 @@ pub fn ConfirmButton(
         _ => false,
     };
 
-    let turn = create_read_slice(game_state.get_value().signal, |gs| gs.state.turn as i32);
+    let turn = create_read_slice(game_state.with_value(|gs| gs.signal), |gs| {
+        gs.state.turn as i32
+    });
 
     let disabled = move || {
-        if game_control.get_value().allowed_on_turn(turn()) {
-            !matches!(game_control.get_value(), GameControl::Resign(_))
+        let game_control = game_control.get_value();
+        if game_control.allowed_on_turn(turn()) {
+            !matches!(game_control, GameControl::Resign(_))
                 && (pending(GameControl::DrawOffer(color))
                     || pending(GameControl::TakebackRequest(color)))
         } else {

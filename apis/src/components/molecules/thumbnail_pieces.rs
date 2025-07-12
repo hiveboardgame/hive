@@ -9,29 +9,30 @@ use leptos::prelude::*;
 #[component]
 pub fn ThumbnailPieces(board: StoredValue<Board>) -> impl IntoView {
     let thumbnail_pieces = move || {
-        let board = board.get_value();
-        let mut pieces = Vec::new();
-        for r in 0..32 {
-            for q in 0..32 {
-                let position = Position::new(q, r);
-                let bug_stack = board.board.get(position);
-                if !bug_stack.is_empty() {
-                    pieces.push(HexStack::new_history(bug_stack, position));
+        board.with_value(|board| {
+            let mut pieces = Vec::new();
+            for r in 0..32 {
+                for q in 0..32 {
+                    let position = Position::new(q, r);
+                    let bug_stack = board.board.get(position);
+                    if !bug_stack.is_empty() {
+                        pieces.push(HexStack::new_history(bug_stack, position));
+                    }
                 }
             }
-        }
-        pieces
+            pieces
+        })
     };
 
     let config = expect_context::<Config>().0;
-    let tile_opts = Signal::derive(move || config().tile);
-    let straight = move || config().tile.design == TileDesign::ThreeD;
+    let tile_opts = Signal::derive(move || config.with(|c| c.tile.clone()));
+    let straight = move || config.with(|c| c.tile.design == TileDesign::ThreeD);
 
     let (width, height) = (400.0_f32, 510.0_f32);
     // TODO: because Thumbnail pieces is used in two places, this leads to weirdness in the TV
     let transform = move || {
         let svg_pos =
-            SvgPos::center_for_level(board.get_value().center_coordinates(), 0, straight());
+            SvgPos::center_for_level(board.read_value().center_coordinates(), 0, straight());
         let x_transform = -(svg_pos.0 - (width / 2.0));
         let y_transform = -(svg_pos.1 - (height / 2.0));
         format!("translate({x_transform},{y_transform})")

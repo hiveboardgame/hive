@@ -13,15 +13,15 @@ pub fn ScoreRow(
     tiebreakers: Vec<Tiebreaker>,
     scores: PlayerScores,
 ) -> impl IntoView {
-    let user = Signal::derive(move || user.clone());
+    let user = StoredValue::new(user);
     let profile_link = move || {
         view! {
             <ProfileLink
-                patreon=user().patreon
-                bot=user().bot
-                username=user().username
+                patreon=user.with_value(|u| u.patreon)
+                bot=user.with_value(|u| u.bot)
+                username=user.with_value(|u| u.username.clone())
                 extend_tw_classes="truncate max-w-[120px]"
-                user_is_hoverable=user.into()
+                user_is_hoverable=user.get_value().into()
             />
         }
     };
@@ -45,7 +45,7 @@ pub fn ScoreRow(
             </td>
             <td class=td_class>
                 <div class="flex items-center">
-                    <StatusIndicator username=user().username />
+                    <StatusIndicator username=user.with_value(|u| u.username.clone()) />
                     {profile_link()}
                 </div>
             </td>

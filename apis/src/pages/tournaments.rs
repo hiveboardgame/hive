@@ -25,7 +25,7 @@ fn get_button_classes(current_path: &str, target_path: &str) -> String {
 pub fn Tournaments(children: Children) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let location = use_location();
-    let logged_in = move || auth_context.user.get().is_some();
+    let logged_in = move || auth_context.user.with(|a| a.is_some());
 
     view! {
         <div class="pt-10">

@@ -9,13 +9,12 @@ use leptos::prelude::*;
 pub fn OnlineUsers() -> impl IntoView {
     let i18n = use_i18n();
     let online_users = expect_context::<OnlineUsersSignal>();
-    let fallback_users = Signal::derive(move || online_users.signal.get().username_user);
+    let fallback_users =
+        Signal::derive(move || online_users.signal.with(|ou| ou.username_user.clone()));
     let show_count = Signal::derive(move || {
-        t_string!(
-            i18n,
-            home.online_players,
-            count = online_users.signal.get().username_user.len()
-        )
+        online_users
+            .signal
+            .with(|ou| t_string!(i18n, home.online_players, count = ou.username_user.len()))
     });
 
     view! {

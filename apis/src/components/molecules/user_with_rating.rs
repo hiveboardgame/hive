@@ -18,24 +18,31 @@ pub fn UserWithRating(
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let game_response = create_read_slice(game_state.signal, |gs| gs.game_response.clone());
-    let player = move || match side() {
-        Color::White => game_response().map(|g| g.white_player),
-        Color::Black => game_response().map(|g| g.black_player),
-    };
+    let player = Signal::derive(move || match side() {
+        Color::White => game_response.with(|g| g.as_ref().map(|g| g.white_player.clone())),
+        Color::Black => game_response.with(|g| g.as_ref().map(|g| g.black_player.clone())),
+    });
     let speed = move || {
-        game_response().map(|resp| match resp.speed {
-            GameSpeed::Untimed => GameSpeed::Correspondence,
-            _ => resp.speed,
+        game_response.with(|g| {
+            g.as_ref().map(|resp| match resp.speed {
+                GameSpeed::Untimed => GameSpeed::Correspondence,
+                _ => resp.speed.clone(),
+            })
         })
     };
-    let username = Signal::derive(move || player().map_or(String::new(), |p| p.username));
-    let patreon = move || player().is_some_and(|p| p.patreon);
-    let bot = move || player().is_some_and(|p| p.bot);
-    let rating = move || match (player(), speed()) {
-        (Some(player), Some(speed)) => Either::Left(
-            view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> },
-        ),
-        _ => Either::Right(view! { "" }),
+    let username = Signal::derive(move || {
+        player.with(|p| p.as_ref().map_or(String::new(), |p| p.username.clone()))
+    });
+    let patreon = move || player.with(|p| p.as_ref().is_some_and(|p| p.patreon));
+    let bot = move || player.with(|p| p.as_ref().is_some_and(|p| p.bot));
+    let rating = move || {
+        player.with(|p| {
+            p.as_ref().and_then(|player| {
+                speed().map(|speed| {
+                    Either::Left(view! { <Rating rating=player.ratings.get(&speed).expect("Valid rating from speed").clone() /> })
+                })
+            }).unwrap_or_else(|| Either::Right(view! { "" }))
+        })
     };
     view! {
         <div class=format!(

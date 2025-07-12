@@ -17,11 +17,11 @@ pub fn ControlButtons() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let user_id = move || {
-        auth_context
-            .user
-            .get_untracked()
-            .map(|account| account.id)
-            .expect("Control buttons show only for logged in players")
+        auth_context.user.with_untracked(|a| {
+            a.as_ref()
+                .map(|account| account.id)
+                .expect("Control buttons show only for logged in players")
+        })
     };
 
     let color = Signal::derive(move || {
@@ -45,13 +45,10 @@ pub fn ControlButtons() -> impl IntoView {
                 "/tournament/{}",
                 game_state
                     .signal
-                    .get()
-                    .game_response
-                    .as_ref()
-                    .map_or(String::new(), |gr| gr
+                    .with(|gs| gs.game_response.as_ref().map_or(String::new(), |gr| gr
                         .tournament
                         .as_ref()
-                        .map_or(String::new(), |t| t.tournament_id.to_string()))
+                        .map_or(String::new(), |t| t.tournament_id.to_string())))
             ),
             Default::default(),
         );
@@ -69,53 +66,55 @@ pub fn ControlButtons() -> impl IntoView {
     };
 
     let new_opponent = move |_| {
-        if let Some(game) = game_state.signal.get_untracked().game_response {
-            let details = ChallengeDetails {
-                rated: game.rated,
-                game_type: game.game_type,
-                visibility: ChallengeVisibility::Public,
-                opponent: None,
-                color_choice: ColorChoice::Random,
-                time_mode: game.time_mode,
-                time_base: game.time_base,
-                time_increment: game.time_increment,
-                band_upper: None,
-                band_lower: None,
-            };
-            let challenge_action = ChallengeAction::Create(details);
-            let api = api.get();
-            let navigate = leptos_router::hooks::use_navigate();
-            api.challenge(challenge_action);
-            navigate("/", Default::default());
-        }
+        game_state.signal.with_untracked(|gs| {
+            if let Some(game) = &gs.game_response {
+                let details = ChallengeDetails {
+                    rated: game.rated,
+                    game_type: game.game_type,
+                    visibility: ChallengeVisibility::Public,
+                    opponent: None,
+                    color_choice: ColorChoice::Random,
+                    time_mode: game.time_mode,
+                    time_base: game.time_base,
+                    time_increment: game.time_increment,
+                    band_upper: None,
+                    band_lower: None,
+                };
+                let challenge_action = ChallengeAction::Create(details);
+                let api = api.get();
+                let navigate = leptos_router::hooks::use_navigate();
+                api.challenge(challenge_action);
+                navigate("/", Default::default());
+            }
+        });
     };
 
     let rematch_present = move || {
         let challenge_state_signal = expect_context::<ChallengeStateSignal>();
-        let game_state = game_state.signal.get();
-        if let Some(game_response) = game_state.game_response {
-            challenge_state_signal
-                .signal
-                .get()
-                .challenges
-                .values()
-                .find(|challenge| {
-                    challenge.visibility == ChallengeVisibility::Direct
-                        && challenge.opponent.clone().is_some_and(|ref opponent| {
-                            opponent.uid == game_response.black_player.uid
-                                || opponent.uid == game_response.white_player.uid
+        game_state.signal.with(|gs| {
+            if let Some(game_response) = &gs.game_response {
+                challenge_state_signal.signal.with(|cs| {
+                    cs.challenges
+                        .values()
+                        .find(|challenge| {
+                            challenge.visibility == ChallengeVisibility::Direct
+                                && challenge.opponent.clone().is_some_and(|ref opponent| {
+                                    opponent.uid == game_response.black_player.uid
+                                        || opponent.uid == game_response.white_player.uid
+                                })
+                                && (challenge.challenger.uid == game_response.black_player.uid
+                                    || challenge.challenger.uid == game_response.white_player.uid)
+                                && challenge.game_type == game_response.game_type.to_string()
+                                && challenge.time_mode == game_response.time_mode
+                                && challenge.time_base == game_response.time_base
+                                && challenge.time_increment == game_response.time_increment
                         })
-                        && (challenge.challenger.uid == game_response.black_player.uid
-                            || challenge.challenger.uid == game_response.white_player.uid)
-                        && challenge.game_type == game_response.game_type.to_string()
-                        && challenge.time_mode == game_response.time_mode
-                        && challenge.time_base == game_response.time_base
-                        && challenge.time_increment == game_response.time_increment
+                        .cloned()
                 })
-                .cloned()
-        } else {
-            None
-        }
+            } else {
+                None
+            }
+        })
     };
 
     let sent_challenge = move || {
@@ -150,32 +149,34 @@ pub fn ControlButtons() -> impl IntoView {
         if let Some(challenge) = rematch_present() {
             let api = api.get();
             api.challenge_accept(challenge.challenge_id);
-        } else if let Some(user) = auth_context.user.get() {
-            if let Some(game) = game_state.signal.get_untracked().game_response {
-                // TODO: color and opponent
-                let (color_choice, opponent) = if user.id == game.black_player.uid {
-                    (ColorChoice::White, Some(game.white_player.username))
-                } else if user.id == game.white_player.uid {
-                    (ColorChoice::Black, Some(game.black_player.username))
-                } else {
-                    unreachable!();
-                };
-                let details = ChallengeDetails {
-                    rated: game.rated,
-                    game_type: game.game_type,
-                    visibility: ChallengeVisibility::Direct,
-                    opponent,
-                    color_choice,
-                    time_mode: game.time_mode,
-                    time_base: game.time_base,
-                    time_increment: game.time_increment,
-                    band_upper: None,
-                    band_lower: None,
-                };
-                let challenge_action = ChallengeAction::Create(details);
-                let api = api.get();
-                api.challenge(challenge_action);
-            }
+        } else if let Some(user_id) = auth_context.user.with(|a| a.as_ref().map(|u| u.id)) {
+            game_state.signal.with_untracked(|gs| {
+                if let Some(game) = &gs.game_response {
+                    // TODO: color and opponent
+                    let (color_choice, opponent) = if user_id == game.black_player.uid {
+                        (ColorChoice::White, Some(game.white_player.username.clone()))
+                    } else if user_id == game.white_player.uid {
+                        (ColorChoice::Black, Some(game.black_player.username.clone()))
+                    } else {
+                        unreachable!();
+                    };
+                    let details = ChallengeDetails {
+                        rated: game.rated,
+                        game_type: game.game_type,
+                        visibility: ChallengeVisibility::Direct,
+                        opponent,
+                        color_choice,
+                        time_mode: game.time_mode,
+                        time_base: game.time_base,
+                        time_increment: game.time_increment,
+                        band_upper: None,
+                        band_lower: None,
+                    };
+                    let challenge_action = ChallengeAction::Create(details);
+                    let api = api.get();
+                    api.challenge(challenge_action);
+                }
+            });
         }
     };
 
@@ -193,7 +194,7 @@ pub fn ControlButtons() -> impl IntoView {
                                             game_control=StoredValue::new(GameControl::Abort(color()))
                                             user_id=user_id()
                                             hidden=memo_for_hidden_class(move || {
-                                                (game_state.signal)().state.turn > 1
+                                                game_state.signal.with(|gs| gs.state.turn > 1)
                                             })
                                         />
                                         <Show when=takeback_allowed>
@@ -204,7 +205,8 @@ pub fn ControlButtons() -> impl IntoView {
 
                                                 user_id=user_id()
                                                 hidden=memo_for_hidden_class(move || {
-                                                    pending_takeback() || (game_state.signal)().state.turn < 2
+                                                    pending_takeback()
+                                                        || game_state.signal.with(|gs| gs.state.turn < 2)
                                                 })
                                             />
 

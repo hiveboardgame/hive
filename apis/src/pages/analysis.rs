@@ -46,15 +46,15 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     let vertical = expect_context::<OrientationSignal>().orientation_vertical;
 
     let should_block_analysis = move |game_response: &GameResponse| -> bool {
-        let Some(user) = auth_context.user.get() else {
+        let Some(user_id) = auth_context.user.with(|u| u.as_ref().map(|u| u.id)) else {
             return false;
         };
 
         game_response.rated
             && matches!(game_response.game_status, GameStatus::InProgress)
             && game_response.time_mode == TimeMode::RealTime
-            && (Some(user.id) == Some(game_response.white_player.uid)
-                || Some(user.id) == Some(game_response.black_player.uid))
+            && (Some(user_id) == Some(game_response.white_player.uid)
+                || Some(user_id) == Some(game_response.black_player.uid))
     };
 
     let game_resource = Resource::new(game_id, move |game_id| async move {
@@ -80,22 +80,32 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 view! { <div>"Loading analysis..."</div> }
             }>
                 {move || {
-                    let analysis_signal = match game_resource.get() {
-                        Some(Ok(game_response)) if !should_block_analysis(&game_response) => {
-                            let analysis_tree = AnalysisTree::from_game_response(
-                                &game_response,
-                                game_state,
-                                move_number.get_value(),
-                            );
-                            AnalysisSignal(RwSignal::new(LocalStorage::wrap(
-                                analysis_tree.unwrap_or_default(),
-                            )))
-                        }
-                        _ => {
-                            let analysis_tree = AnalysisTree::new_blank_analysis(game_state, GameType::MLP);
-                            AnalysisSignal(RwSignal::new(LocalStorage::wrap(analysis_tree)))
-                        }
-                    };
+                    let analysis_signal = game_resource
+                        .with(|gr| {
+                            match gr {
+                                Some(
+                                    Ok(game_response),
+                                ) if !should_block_analysis(game_response) => {
+                                    let analysis_tree = AnalysisTree::from_game_response(
+                                        game_response,
+                                        game_state,
+                                        move_number.get_value(),
+                                    );
+                                    AnalysisSignal(
+                                        RwSignal::new(
+                                            LocalStorage::wrap(analysis_tree.unwrap_or_default()),
+                                        ),
+                                    )
+                                }
+                                _ => {
+                                    let analysis_tree = AnalysisTree::new_blank_analysis(
+                                        game_state,
+                                        GameType::MLP,
+                                    );
+                                    AnalysisSignal(RwSignal::new(LocalStorage::wrap(analysis_tree)))
+                                }
+                            }
+                        });
                     provide_context(analysis_signal);
 
                     view! {
@@ -114,14 +124,20 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             <div class="flex flex-col h-[85dvh]">
                                 <div class="flex flex-col flex-grow shrink">
                                     <div class="flex justify-between h-full max-h-16">
-                                        <Reserve alignment=Alignment::SingleRow color=Color::White />
+                                        <Reserve
+                                            alignment=Alignment::SingleRow
+                                            color=Color::White
+                                        />
                                     </div>
                                 </div>
                                 <AnalysisInfo />
                                 <Board />
                                 <div class="flex flex-col flex-grow shrink">
                                     <div class="flex justify-between h-full max-h-16">
-                                        <Reserve alignment=Alignment::SingleRow color=Color::Black />
+                                        <Reserve
+                                            alignment=Alignment::SingleRow
+                                            color=Color::Black
+                                        />
                                     </div>
                                 </div>
                             </div>

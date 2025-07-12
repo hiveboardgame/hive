@@ -14,9 +14,13 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
 
                 <button
                     on:click=move |_| {
-                        if let Some(user) = auth_context.user.get() {
-                            online_users.remove(user.username);
-                        }
+                        auth_context
+                            .user
+                            .with(|a| {
+                                if let Some(account) = a {
+                                    online_users.remove(account.user.username.clone());
+                                }
+                            });
                     }
 
                     class="flex place-content-start px-4 py-2 w-full h-full font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red active:scale-95"

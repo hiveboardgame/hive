@@ -12,7 +12,7 @@ pub fn SelectOption<T: ToString + Clone + 'static + Send + Sync, S: IntoView + '
         Either::Right(is.into_view())
     };
     view! {
-        <option value=is selected=move || value.get().to_string() == is>
+        <option value=is selected=move || value.with(|v| v.to_string() == is)>
             {show}
         </option>
     }

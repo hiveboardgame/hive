@@ -8,24 +8,26 @@ use leptos::prelude::*;
 fn filter_challenges(challenges: &mut Vec<ChallengeResponse>) {
     let auth_context = expect_context::<AuthContext>();
     let account = auth_context.user;
-    if let Some(account) = account() {
-        challenges.retain(|challenge| {
-            if challenge.challenger.uid == account.id {
-                return true;
-            }
-            if let Some(upper) = challenge.band_upper {
-                if account.user.rating_for_speed(&challenge.speed) > upper as u64 {
-                    return false;
+    account.with(|account| {
+        if let Some(account) = account {
+            challenges.retain(|challenge| {
+                if challenge.challenger.uid == account.id {
+                    return true;
                 }
-            }
-            if let Some(lower) = challenge.band_lower {
-                if account.user.rating_for_speed(&challenge.speed) < lower as u64 {
-                    return false;
+                if let Some(upper) = challenge.band_upper {
+                    if account.user.rating_for_speed(&challenge.speed) > upper as u64 {
+                        return false;
+                    }
                 }
-            }
-            true
-        });
-    }
+                if let Some(lower) = challenge.band_lower {
+                    if account.user.rating_for_speed(&challenge.speed) < lower as u64 {
+                        return false;
+                    }
+                }
+                true
+            });
+        }
+    });
 }
 
 pub fn handle_challenge(challenge: ChallengeUpdate) {
@@ -36,17 +38,19 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
     match challenge {
         ChallengeUpdate::Challenges(mut new_challanges) => {
             filter_challenges(&mut new_challanges);
-            if let Some(account) = account() {
-                for challenge in &new_challanges {
-                    if let Some(ref opponent) = challenge.opponent {
-                        if opponent.uid == account.user.uid {
-                            notifications.challenges.update(|challenges| {
-                                challenges.insert(challenge.challenge_id.clone());
-                            })
+            account.with(|account| {
+                if let Some(account) = account {
+                    for challenge in &new_challanges {
+                        if let Some(ref opponent) = challenge.opponent {
+                            if opponent.uid == account.user.uid {
+                                notifications.challenges.update(|challenges| {
+                                    challenges.insert(challenge.challenge_id.clone());
+                                })
+                            }
                         }
                     }
                 }
-            }
+            });
             challenges.add(new_challanges);
         }
         ChallengeUpdate::Removed(challenge_id) => {
@@ -57,15 +61,17 @@ pub fn handle_challenge(challenge: ChallengeUpdate) {
             })
         }
         ChallengeUpdate::Created(challenge) | ChallengeUpdate::Direct(challenge) => {
-            if let Some(account) = account() {
-                if let Some(ref opponent) = challenge.opponent {
-                    if opponent.uid == account.user.uid {
-                        notifications.challenges.update(|challenges| {
-                            challenges.insert(challenge.challenge_id.clone());
-                        })
+            account.with(|account| {
+                if let Some(account) = account {
+                    if let Some(ref opponent) = challenge.opponent {
+                        if opponent.uid == account.user.uid {
+                            notifications.challenges.update(|challenges| {
+                                challenges.insert(challenge.challenge_id.clone());
+                            })
+                        }
                     }
                 }
-            }
+            });
             let mut new_challenges = vec![challenge];
             filter_challenges(&mut new_challenges);
             challenges.add(new_challenges);

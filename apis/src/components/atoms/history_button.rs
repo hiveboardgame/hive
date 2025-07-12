@@ -48,12 +48,11 @@ pub fn HistoryButton(
         if let Some(post_action) = post_action {
             post_action.run(())
         }
-        let game_state = game_state_signal.signal.get_untracked();
-        let turn = match action {
-            HistoryNavigation::Last => Some(game_state.state.turn),
+        let turn = game_state_signal.signal.with_untracked(|gs| match action {
+            HistoryNavigation::Last => Some(gs.state.turn),
             HistoryNavigation::MobileLast => None,
-            _ => game_state.history_turn.map(|v| v + 1),
-        };
+            _ => gs.history_turn.map(|v| v + 1),
+        });
         set_move.set(turn);
     });
     let _definite_node_ref = node_ref.unwrap_or_default();
@@ -82,7 +81,10 @@ fn send_action(
         HistoryNavigation::Next => game_state_signal.next_history_turn(),
         HistoryNavigation::Previous => game_state_signal.previous_history_turn(),
         HistoryNavigation::MobileLast => {
-            if game_state_signal.signal.get_untracked().state.turn > 0 {
+            if game_state_signal
+                .signal
+                .with_untracked(|gs| gs.state.turn > 0)
+            {
                 game_state_signal
                     .signal
                     .update_untracked(|s| s.history_turn = Some(s.state.turn - 1));
