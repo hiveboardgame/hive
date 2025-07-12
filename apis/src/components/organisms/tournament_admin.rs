@@ -6,29 +6,30 @@ use leptos::prelude::*;
 #[component]
 pub fn TournamentAdminControls(
     user_is_organizer: bool,
-    tournament: TournamentResponse,
+    tournament: StoredValue<TournamentResponse>,
 ) -> impl IntoView {
-    let tournament = Signal::derive(move || tournament.clone());
     let user_kick = move || {
         if user_is_organizer {
-            vec![UserAction::Kick(Box::new(tournament()))]
+            vec![UserAction::Kick(Box::new(tournament.get_value()))]
         } else {
             vec![]
         }
     };
     let user_uninvite = move || {
         if user_is_organizer {
-            vec![UserAction::Uninvite(tournament().tournament_id)]
+            vec![UserAction::Uninvite(
+                tournament.with_value(|t| t.tournament_id.clone()),
+            )]
         } else {
             vec![]
         }
     };
     view! {
         <div class="flex flex-col items-center px-1 w-72">
-            <Show when=move || !tournament().players.is_empty()>
+            <Show when=move || tournament.with_value(|t| !t.players.is_empty())>
                 <p class="font-bold">Players</p>
                 <For
-                    each=move || { tournament().players }
+                    each=move || { tournament.with_value(|t| t.players.clone()) }
 
                     key=|(id, _)| (*id)
                     let:user
@@ -38,15 +39,19 @@ pub fn TournamentAdminControls(
             </Show>
         </div>
         <div class="flex flex-col items-center px-1 w-72">
-            <Show when=move || !tournament().invitees.is_empty()>
+            <Show when=move || tournament.with_value(|t| !t.invitees.is_empty())>
                 <p class="font-bold">Invitees</p>
-                <For each=move || { tournament().invitees } key=|users| (users.uid) let:user>
+                <For
+                    each=move || { tournament.with_value(|t| t.invitees.clone()) }
+                    key=|users| (users.uid)
+                    let:user
+                >
                     <UserRow actions=user_uninvite() user />
                 </For>
             </Show>
             <Show when=move || user_is_organizer>
                 <p class="font-bold">Invite players</p>
-                <InviteUser tournament=tournament() />
+                <InviteUser tournament />
             </Show>
         </div>
     }

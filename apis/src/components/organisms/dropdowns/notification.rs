@@ -15,12 +15,12 @@ use std::collections::HashMap;
 #[component]
 pub fn NotificationDropdown() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let uid = move || auth_context.user.get().map(|user| user.id);
+    let uid = move || auth_context.user.with(|a| a.as_ref().map(|user| user.id));
     let hamburger_show = RwSignal::new(false);
     let onclick_close = move |_| hamburger_show.update(|b| *b = false);
     let notifications_context = StoredValue::new(expect_context::<NotificationContext>());
     let challenges = expect_context::<ChallengeStateSignal>();
-    let has_notifications = move || !notifications_context.get_value().is_empty();
+    let has_notifications = move || !notifications_context.read_value().is_empty();
     let icon_style = move || {
         if has_notifications() {
             "w-4 h-4 fill-ladybug-red"

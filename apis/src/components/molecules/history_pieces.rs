@@ -11,27 +11,37 @@ pub fn HistoryPieces(
     tile_opts: TileOptions,
     target_stack: RwSignal<Option<Position>>,
 ) -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
-    let history_pieces = move || {
-        let mut history_pieces = Vec::new();
-        let game_state = (game_state_signal.signal)();
-        let mut history = History::new();
-        if let Some(turn) = game_state.history_turn {
-            if turn < game_state.state.history.moves.len() {
-                history.moves = game_state.state.history.moves[0..=turn].into();
-            }
-        }
-        let state = State::new_from_history(&history).expect("Got state from history");
-        for r in 0..32 {
-            for q in 0..32 {
-                let position = Position::new(q, r);
-                let bug_stack = state.board.board.get(position).clone();
-                if !bug_stack.is_empty() {
-                    history_pieces.push(HexStack::new_history(&bug_stack, position));
+    let game_state = expect_context::<GameStateSignal>();
+
+    let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
+    let history_moves = create_read_slice(game_state.signal, |gs| gs.state.history.moves.clone());
+
+    let history_state = Memo::new(move |_| {
+        history_moves.with(|moves| {
+            let mut history = History::new();
+            if let Some(turn) = history_turn() {
+                if turn < moves.len() {
+                    history.moves = moves[0..=turn].into();
                 }
             }
-        }
-        history_pieces
+            State::new_from_history(&history).expect("Got state from history")
+        })
+    });
+
+    let history_pieces = move || {
+        history_state.with(|state| {
+            let mut pieces = Vec::new();
+            for r in 0..32 {
+                for q in 0..32 {
+                    let position = Position::new(q, r);
+                    let bug_stack = state.board.board.get(position);
+                    if !bug_stack.is_empty() {
+                        pieces.push(HexStack::new_history(bug_stack, position));
+                    }
+                }
+            }
+            pieces
+        })
     };
 
     move || {

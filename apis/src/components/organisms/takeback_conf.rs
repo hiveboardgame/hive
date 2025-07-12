@@ -33,7 +33,10 @@ fn Button(takeback: Takeback) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
     let is_active = move || {
-        if user().is_some_and(|user| user.user.takeback == takeback.get_value()) {
+        if user.with(|u| {
+            u.as_ref()
+                .is_some_and(|user| user.user.takeback == takeback.get_value())
+        }) {
             "bg-pillbug-teal"
         } else {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"

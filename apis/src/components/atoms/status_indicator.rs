@@ -18,8 +18,7 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
     let user_is_player = move || {
         auth_context
             .user
-            .get()
-            .is_some_and(|user| user.username == cloned)
+            .with(|u| u.as_ref().is_some_and(|user| user.username == cloned))
     };
     let user_has_ws = move || {
         Utc::now()
@@ -35,7 +34,10 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
         let extra_classes = match (user_is_player(), user_has_ws()) {
             (true, true) => " fill-grasshopper-green",
             (true, false) => " w-6 h-6 fill-ladybug-red",
-            _ => match (online_users.signal)().username_status.get(&username) {
+            _ => match online_users
+                .signal
+                .with(|o| o.username_status.get(&username).cloned())
+            {
                 Some(UserStatus::Online) => " fill-grasshopper-green",
                 // TODO: Handle `Some(UserStatus::Away)`
                 _ => " fill-slate-400",

@@ -18,7 +18,7 @@ pub fn Admin() -> impl IntoView {
     view! {
         <div class="pt-20">
             <Show when=move || {
-                auth_context.user.get().is_some_and(|account| account.user.admin)
+                auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
             }>
                 <div class=LINE_CLASS>Send Global Warning</div>
                 <ChatWindow destination=SimpleDestination::Global />

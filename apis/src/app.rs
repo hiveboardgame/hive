@@ -78,8 +78,8 @@ pub fn App() -> impl IntoView {
     //expects auth, api_requests, gameStateSignal
     provide_chat();
     let auth = expect_context::<AuthContext>();
-    let is_logged_in = move || auth.user.get().is_some().into();
-    let is_admin = move || Some(auth.user.get().is_some_and(|v| v.user.admin));
+    let is_logged_in = move || auth.user.with(|a| a.is_some()).into();
+    let is_admin = move || Some(auth.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin)));
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)

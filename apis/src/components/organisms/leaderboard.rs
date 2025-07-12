@@ -25,7 +25,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                         }
                         Ok(users) => {
                             let users = StoredValue::new(users);
-                            let is_empty = move || users.get_value().is_empty();
+                            let is_empty = move || users.with_value(|u| u.is_empty());
                             Either::Right(
                                 view! {
                                     <div class="flex flex-col m-2 w-fit">

@@ -12,7 +12,7 @@ use crate::components::{
 };
 use crate::functions::tournaments::{get_complete, UpdateDescription};
 use crate::providers::AuthContext;
-use crate::providers::{ApiRequestsProvider, UpdateNotifier, websocket::WebsocketContext};
+use crate::providers::{websocket::WebsocketContext, ApiRequestsProvider, UpdateNotifier};
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
@@ -71,60 +71,66 @@ pub fn Tournament() -> impl IntoView {
     }
 }
 
+//TODO: Bring back fine grained reactivity. All the "signals" we had in here weren't really signals as they all depended on static data
 #[component]
 fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
-    let tournament = Signal::derive(move || tournament.clone());
+    let tournament = StoredValue::new(tournament);
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let websocket = expect_context::<WebsocketContext>();
     let account = auth_context.user;
-    let user_id = Signal::derive(move || account().map(|a| a.user.uid));
-    let time_info = Signal::derive(move || {
-        let tournament = tournament();
-        TimeInfo {
-            mode: tournament.time_mode,
-            base: tournament.time_base,
-            increment: tournament.time_increment,
-        }
+    let user_id = Signal::derive(move || account.with(|a| a.as_ref().map(|a| a.user.uid)));
+    let time_info = tournament.with_value(|t| TimeInfo {
+        mode: t.time_mode,
+        base: t.time_base,
+        increment: t.time_increment,
     });
-    let tournament_id = Memo::new(move |_| tournament().tournament_id);
+    let tournament_id = StoredValue::new(tournament.with_value(|t| t.tournament_id.clone()));
     Effect::new(move |_| {
         let ready_state = websocket.ready_state.get();
-        if tournament().status != TournamentStatus::NotStarted 
-            && ready_state == ConnectionReadyState::Open {
+        if tournament.with_value(|t| t.status.clone()) != TournamentStatus::NotStarted
+            && ready_state == ConnectionReadyState::Open
+        {
             let api = api.get();
-            api.schedule_action(ScheduleAction::TournamentPublic(tournament_id()));
+            api.schedule_action(ScheduleAction::TournamentPublic(tournament_id.get_value()));
             if user_id().is_some() {
-                api.schedule_action(ScheduleAction::TournamentOwn(tournament_id()));
+                api.schedule_action(ScheduleAction::TournamentOwn(tournament_id.get_value()));
             }
         }
     });
 
-    let games_hashmap = Memo::new(move |_| {
+    let games_hashmap = StoredValue::new({
         let mut games_hashmap = HashMap::new();
-        if tournament().status != TournamentStatus::NotStarted {
-            for game in tournament().games {
-                games_hashmap.insert(game.game_id.clone(), game);
-            }
+        if tournament.with_value(|t| t.status.clone()) != TournamentStatus::NotStarted {
+            tournament.with_value(|t| {
+                for game in &t.games {
+                    games_hashmap.insert(game.game_id.clone(), game.clone());
+                }
+            });
         }
         games_hashmap
     });
 
-    let number_of_players = Memo::new(move |_| tournament().players.len() as i32);
+    let number_of_players = tournament.with_value(|t| t.players.len() as i32);
     let user_joined = move || {
-        if let Some(account) = account() {
-            tournament().players.iter().any(|(id, _)| *id == account.id)
-        } else {
-            false
-        }
+        account.with(|a| {
+            if let Some(account) = a.as_ref() {
+                tournament.with_value(|t| t.players.iter().any(|(id, _)| *id == account.id))
+            } else {
+                false
+            }
+        })
     };
 
     let user_is_organizer_or_admin = Signal::derive(move || {
-        if let Some(account) = account() {
-            account.user.admin || tournament().organizers.iter().any(|p| p.uid == account.id)
-        } else {
-            false
-        }
+        account.with(|a| {
+            if let Some(account) = a.as_ref() {
+                account.user.admin
+                    || tournament.with_value(|t| t.organizers.iter().any(|p| p.uid == account.id))
+            } else {
+                false
+            }
+        })
     });
     let send_action = move |action: TournamentAction| {
         let api = api.get();
@@ -132,62 +138,58 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     };
     let delete = move |_| {
         if user_is_organizer_or_admin() {
-            send_action(TournamentAction::Delete(tournament_id()));
+            send_action(TournamentAction::Delete(tournament_id.get_value()));
             let navigate = use_navigate();
             navigate("/tournaments", Default::default());
         }
     };
     let finish = move |_| {
         if user_is_organizer_or_admin() {
-            send_action(TournamentAction::Finish(tournament_id()));
+            send_action(TournamentAction::Finish(tournament_id.get_value()));
         }
     };
     let start = move |_| {
         if user_is_organizer_or_admin() {
-            send_action(TournamentAction::Start(tournament_id()));
+            send_action(TournamentAction::Start(tournament_id.get_value()));
         }
     };
-    let start_disabled = move || tournament().min_seats > number_of_players();
+    let start_disabled = move || tournament.with_value(|t| t.min_seats) > number_of_players;
     let join_disabled = move || {
-        let tournament = tournament();
-        if tournament.seats <= number_of_players() {
+        if tournament.with_value(|t| t.seats) <= number_of_players {
             return true;
         }
-        if let Some(account) = account() {
-            let user = account.user;
-            if tournament.invite_only {
-                if tournament
-                    .invitees
-                    .iter()
-                    .any(|invitee| invitee.uid == user.uid)
-                {
-                    return false;
-                }
-                if tournament
-                    .organizers
-                    .iter()
-                    .any(|organizer| organizer.uid == user.uid)
-                {
-                    return false;
-                }
-                return true;
+        account.with(|a| {
+            if let Some(account) = a.as_ref() {
+                let user = &account.user;
+                tournament.with_value(|t| {
+                    if t.invite_only {
+                        if t.invitees.iter().any(|invitee| invitee.uid == user.uid) {
+                            return false;
+                        }
+                        if t.organizers
+                            .iter()
+                            .any(|organizer| organizer.uid == user.uid)
+                        {
+                            return false;
+                        }
+                        return true;
+                    }
+                    let game_speed = GameSpeed::from_base_increment(t.time_base, t.time_increment);
+                    let rating = user.rating_for_speed(&game_speed) as i32;
+                    match (t.band_lower, t.band_upper) {
+                        (None, None) => false,
+                        (None, Some(upper)) => rating >= upper,
+                        (Some(lower), None) => rating <= lower,
+                        (Some(lower), Some(upper)) => rating <= lower || rating >= upper,
+                    }
+                })
+            } else {
+                true
             }
-            let game_speed =
-                GameSpeed::from_base_increment(tournament.time_base, tournament.time_increment);
-            let rating = user.rating_for_speed(&game_speed) as i32;
-            match (tournament.band_lower, tournament.band_upper) {
-                (None, None) => false,
-                (None, Some(upper)) => rating >= upper,
-                (Some(lower), None) => rating <= lower,
-                (Some(lower), Some(upper)) => rating <= lower || rating >= upper,
-            }
-        } else {
-            true
-        }
+        })
     };
 
-    let starts = move || {
-        let tournament = tournament();
+    let starts = tournament.with_value(|tournament| {
         if matches!(tournament.status, TournamentStatus::NotStarted) {
             match tournament.starts_at {
                 None => "Start up to organizer".to_string(),
@@ -208,23 +210,23 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                 pretty
             }
         }
-    };
-    let total_games = move || tournament().games.len();
-    let finished_games =
-        Signal::derive(move || tournament().games.iter().filter(|g| g.finished).count());
-    let not_started = Memo::new(move |_| tournament().status == TournamentStatus::NotStarted);
-    let inprogress = Memo::new(move |_| tournament().status == TournamentStatus::InProgress);
-    let finished = Memo::new(move |_| tournament().status == TournamentStatus::Finished);
+    });
+    let total_games = tournament.with_value(|t| t.games.len());
+    let finished_games = tournament.with_value(|t| t.games.iter().filter(|g| g.finished).count());
+    let not_started = tournament.with_value(|t| t.status == TournamentStatus::NotStarted);
+    let inprogress = tournament.with_value(|t| t.status == TournamentStatus::InProgress);
+    let finished = tournament.with_value(|t| t.status == TournamentStatus::Finished);
 
     let game_previews = Callback::new(move |()| {
-        games_hashmap
-            .get()
-            .iter()
-            .filter_map(|(_, g)| match g.game_status {
-                GameStatus::NotStarted => None,
-                _ => Some(g.clone()),
-            })
-            .collect::<Vec<GameResponse>>()
+        games_hashmap.with_value(|hashmap| {
+            hashmap
+                .iter()
+                .filter_map(|(_, g)| match g.game_status {
+                    GameStatus::NotStarted => None,
+                    _ => Some(g.clone()),
+                })
+                .collect::<Vec<GameResponse>>()
+        })
     });
     let current_description = RwSignal::new(String::new());
     let markdown_desc = move || markdown_to_html(&current_description());
@@ -233,12 +235,10 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let description_text = RwSignal::new(String::new());
     let update_desc_action = ServerAction::<UpdateDescription>::new();
 
-    // Initialize current description from tournament data
     Effect::new(move |_| {
-        current_description.set(tournament().description.clone());
+        current_description.set(tournament.with_value(|t| t.description.clone()));
     });
 
-    // Close edit mode and optimistically update description on successful submission
     Effect::new(move |_| {
         if let Some(Ok(())) = update_desc_action.value().get() {
             current_description.set(description_text.get_untracked());
@@ -246,44 +246,43 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             previewing_description.set(false);
         }
     });
-    let unplayed_games = Memo::new(move |_| {
-        let mut result = tournament()
-            .games
-            .into_iter()
-            .filter(|g| {
-                g.conclusion == Conclusion::Unknown
-                    || g.conclusion == Conclusion::Committee
-                    || g.conclusion == Conclusion::Forfeit
-            })
-            .collect::<Vec<GameResponse>>();
+    let unplayed_games = StoredValue::new({
+        let mut result = tournament.with_value(|t| {
+            t.games
+                .iter()
+                .filter(|g| {
+                    g.conclusion == Conclusion::Unknown
+                        || g.conclusion == Conclusion::Committee
+                        || g.conclusion == Conclusion::Forfeit
+                })
+                .cloned()
+                .collect::<Vec<GameResponse>>()
+        });
         result.sort();
         result
     });
-    let tournament_lacks_results = move || {
-        tournament()
-            .games
+    let tournament_lacks_results = tournament.with_value(|t| {
+        t.games
             .iter()
             .any(|e| (e.tournament_game_result == TournamentGameResult::Unknown))
-    };
+    });
     let unplayed_games_string = move || {
-        let nr = unplayed_games().len();
+        let nr = unplayed_games.with_value(|games| games.len());
         if nr == 1 {
             String::from("1 unplayed game")
         } else {
             format!("{nr} unplayed games")
         }
     };
-    let tournament_style = move || {
-        if not_started() {
-            "flex flex-col gap-1 w-full items-center justify-center"
-        } else {
-            "flex flex-col gap-1 w-full sm:flex-row sm:flex-wrap justify-center"
-        }
+    let tournament_style = if not_started {
+        "flex flex-col gap-1 w-full items-center justify-center"
+    } else {
+        "flex flex-col gap-1 w-full sm:flex-row sm:flex-wrap justify-center"
     };
     view! {
         <div class="flex flex-col items-center p-2 w-full">
             <h1 class="w-full max-w-full text-3xl font-bold text-center whitespace-normal break-words">
-                {move || tournament().name}
+                {tournament.with_value(|t| t.name.clone())}
             </h1>
             <Show
                 when=move || editing_description()
@@ -312,7 +311,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     <input
                         type="hidden"
                         name="tournament_id"
-                        value=move || tournament().tournament_id.0.clone()
+                        value=tournament.with_value(|t| t.tournament_id.0.clone())
                     />
                     <Show
                         when=move || previewing_description()
@@ -383,12 +382,12 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     <span class="font-bold">"Players: "</span>
                     {number_of_players}
                     /
-                    {move || tournament().seats}
+                    {tournament.with_value(|t| t.seats)}
                 </div>
-                <Show when=not_started>
+                <Show when=move || not_started>
                     <div class="m-2">
                         <span class="font-bold">"Minimum players: "</span>
-                        {move || tournament().min_seats}
+                        {tournament.with_value(|t| t.min_seats)}
                     </div>
                 </Show>
                 <div class="m-2 font-bold">{starts}</div>
@@ -396,7 +395,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     <div class="flex flex-col items-center mb-2">
                         <p class="font-bold">Organized by:</p>
                         <For
-                            each=move || { tournament().organizers }
+                            each=move || { tournament.with_value(|t| t.organizers.clone()) }
 
                             key=|users| (users.uid)
                             let:user
@@ -407,8 +406,8 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         </For>
                     </div>
                 </div>
-                <ProgressBar current=finished_games total=total_games() />
-                <Show when=not_started>
+                <ProgressBar current=finished_games.into() total=total_games />
+                <Show when=move || not_started>
                     <div class="flex gap-1 justify-center items-center pb-2">
                         <Show
                             when=user_joined
@@ -418,7 +417,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                                         prop:disabled=join_disabled
                                         class=BUTTON_STYLE
                                         on:click=move |_| send_action(
-                                            TournamentAction::Join(tournament_id()),
+                                            TournamentAction::Join(tournament_id.get_value()),
                                         )
                                     >
                                         Join
@@ -430,7 +429,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                             <button
                                 class=BUTTON_STYLE
                                 on:click=move |_| send_action(
-                                    TournamentAction::Leave(tournament_id()),
+                                    TournamentAction::Leave(tournament_id.get_value()),
                                 )
                             >
                                 Leave
@@ -447,12 +446,12 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     </div>
                     <TournamentAdminControls
                         user_is_organizer=user_is_organizer_or_admin()
-                        tournament=tournament()
+                        tournament
                     />
                 </Show>
                 <Show when=user_is_organizer_or_admin>
                     <div class="flex gap-1 justify-center items-center p-2">
-                        <Show when=inprogress>
+                        <Show when=move || inprogress>
                             <button
                                 class=BUTTON_STYLE
                                 on:click=finish
@@ -464,17 +463,17 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     </div>
                 </Show>
             </div>
-            <Show when=move || !not_started()>
-                <Standings tournament />
+            <Show when=move || !not_started>
+                <Standings tournament=Signal::derive(move || tournament.get_value()) />
             </Show>
         </div>
         <div class="flex flex-col flex-wrap gap-1 justify-center mx-auto w-full sm:flex-row">
-            <MySchedules games_hashmap user_id />
-            <Show when=move || !unplayed_games().is_empty()>
+            <MySchedules games_hashmap=Memo::new(move |_| games_hashmap.get_value()) user_id />
+            <Show when=move || !unplayed_games.with_value(|games| games.is_empty())>
                 <details class=DETAILS_STYLE>
                     <summary class=INFO_STYLE>{unplayed_games_string}</summary>
                     <For
-                        each=move || unplayed_games()
+                        each=move || unplayed_games.get_value()
 
                         key=|game| (
                             game.game_id.clone(),
@@ -503,7 +502,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         <Show when=move || user_is_organizer_or_admin() || user_joined()>
             <div class="p-3 m-2 w-full max-w-full h-60 whitespace-normal break-words sm:w-2/3 bg-even-light dark:bg-even-dark">
                 <ChatWindow destination=shared_types::SimpleDestination::Tournament(
-                    tournament().tournament_id,
+                    tournament_id.get_value(),
                 ) />
             </div>
         </Show>

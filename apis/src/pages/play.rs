@@ -66,32 +66,37 @@ pub fn Play() -> impl IntoView {
     });
     let tab = RwSignal::new(TabView::Reserve);
     let current_confirm = Memo::new(move |_| {
-        let preferred_confirms = config().confirm_mode;
-        game_state
-            .signal
-            .get()
-            .get_game_speed()
-            .and_then(|game_speed| preferred_confirms.get(&game_speed).cloned())
-            .unwrap_or_default()
+        config.with(|cfg| {
+            let preferred_confirms = &cfg.confirm_mode;
+            game_state
+                .signal
+                .with(|gs| gs.get_game_speed())
+                .and_then(|game_speed| preferred_confirms.get(&game_speed).cloned())
+                .unwrap_or_default()
+        })
     });
     provide_context(CurrentConfirm(current_confirm));
     let user = auth_context.user;
     let white_and_black_ids = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
     let user_is_player = Signal::derive(move || {
-        if let Some(user) = user() {
-            let (white_id, black_id) = white_and_black_ids();
-            Some(user.id) == white_id || Some(user.id) == black_id
-        } else {
-            false
-        }
+        user.with(|a| {
+            if let Some(user) = a {
+                let (white_id, black_id) = white_and_black_ids();
+                Some(user.id) == white_id || Some(user.id) == black_id
+            } else {
+                false
+            }
+        })
     });
     let player_color = Memo::new(move |_| {
-        user().map_or(Color::White, |user| {
-            let black_id = white_and_black_ids().1;
-            match Some(user.id) == black_id {
-                true => Color::Black,
-                false => Color::White,
-            }
+        user.with(|a| {
+            a.as_ref().map_or(Color::White, |user| {
+                let black_id = white_and_black_ids().1;
+                match Some(user.id) == black_id {
+                    true => Color::Black,
+                    false => Color::White,
+                }
+            })
         })
     });
     let parent_container_style = move || {
@@ -138,10 +143,11 @@ pub fn Play() -> impl IntoView {
                             _ => {}
                         }
                     }
-                    if move_number
-                        .get_value()
-                        .is_some_and(|v| v < game_state.signal.get_untracked().state.turn - 1)
-                    {
+                    if move_number.get_value().is_some_and(|v| {
+                        game_state
+                            .signal
+                            .with_untracked(|gs| v < gs.state.turn.saturating_sub(1))
+                    }) {
                         game_state.signal.update(|s| {
                             s.history_turn = move_number.get_value();
                             s.view = View::History;
@@ -167,18 +173,20 @@ pub fn Play() -> impl IntoView {
                             game_state.clear_gc();
                             game_state.set_game_response(gar.game.clone());
                             sounds.play_sound(SoundType::Turn);
-                            let pos = game_state.signal.get_untracked().move_info.current_position;
-                            let reserve_pos =
-                                game_state.signal.get_untracked().move_info.reserve_position;
-                            if game_state.signal.get_untracked().state.history.moves
-                                != gar.game.history
-                            {
+                            let (pos, reserve_pos, history_moves, active) =
+                                game_state.signal.with_untracked(|gs| {
+                                    (
+                                        gs.move_info.current_position,
+                                        gs.move_info.reserve_position,
+                                        gs.state.history.moves.clone(),
+                                        gs.move_info.active,
+                                    )
+                                });
+                            if history_moves != gar.game.history {
                                 match turn {
                                     Turn::Move(piece, position) => {
                                         game_state.play_turn(piece, position);
-                                        if let Some((piece, piece_type)) =
-                                            game_state.signal.get_untracked().move_info.active
-                                        {
+                                        if let Some((piece, piece_type)) = active {
                                             match piece_type {
                                                 PieceType::Board => {
                                                     if let Some(position) = pos {
@@ -341,7 +349,7 @@ fn VerticalLayout(
     let controls_signal = expect_context::<ControlsSignal>();
     let vertical = true;
     let go_to_game = Callback::new(move |()| {
-        if game_state.signal.get_untracked().is_last_turn() {
+        if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
             game_state.view_game();
         }
     });

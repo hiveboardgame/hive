@@ -43,60 +43,65 @@ pub fn Challenges() -> impl IntoView {
     let online_users = expect_context::<OnlineUsersSignal>().signal;
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
-    let uid = move || auth_context.user.get().map(|user| user.id);
+    let uid = move || auth_context.user.with(|a| a.as_ref().map(|user| user.id));
     let direct = Signal::derive(move || {
-        let mut ret = if let Some(user) = user() {
+        let mut ret = if user.with(|u| u.is_some()) {
             // Get the challenges direct at the current user
-            challenges
-                .get()
-                .challenges
-                .values()
-                .filter(|&challenge| challenge.clone().opponent.is_some_and(|o| o.uid == user.id))
-                .cloned()
-                .collect::<Vec<ChallengeResponse>>()
+            challenges.with(|c| {
+                c.challenges
+                    .values()
+                    .filter(|&challenge| {
+                        challenge
+                            .opponent
+                            .as_ref()
+                            .is_some_and(|o| o.uid == uid().unwrap())
+                    })
+                    .cloned()
+                    .collect::<Vec<ChallengeResponse>>()
+            })
         } else {
-            challenges
-                .get()
-                .challenges
-                .values()
-                .cloned()
-                .collect::<Vec<ChallengeResponse>>()
+            challenges.with(|c| {
+                c.challenges
+                    .values()
+                    .cloned()
+                    .collect::<Vec<ChallengeResponse>>()
+            })
         };
-        ret.sort_by(|a, b| challenge_order(a, b, &online_users.get()));
+        online_users.with(|ou| ret.sort_by(|a, b| challenge_order(a, b, ou)));
         ret
     });
 
     let own = Signal::derive(move || {
-        let mut ret = if let Some(user) = user() {
-            challenges
-                .get()
-                .challenges
-                .values()
-                .filter(|&challenge| challenge.challenger.uid == user.id)
-                .cloned()
-                .collect::<Vec<ChallengeResponse>>()
+        let mut ret = if user.with(|u| u.is_some()) {
+            challenges.with(|c| {
+                c.challenges
+                    .values()
+                    .filter(|&challenge| challenge.challenger.uid == uid().unwrap())
+                    .cloned()
+                    .collect::<Vec<ChallengeResponse>>()
+            })
         } else {
             Vec::new()
         };
-        ret.sort_by(|a, b| challenge_order(a, b, &online_users.get()));
+        online_users.with(|ou| ret.sort_by(|a, b| challenge_order(a, b, ou)));
         ret
     });
 
     let public = Signal::derive(move || {
-        let mut ret = if let Some(user) = user() {
-            challenges
-                .get()
-                .challenges
-                .values()
-                .filter(|&challenge| {
-                    challenge.clone().opponent.is_none() && challenge.challenger.uid != user.id
-                })
-                .cloned()
-                .collect::<Vec<ChallengeResponse>>()
+        let mut ret = if user.with(|u| u.is_some()) {
+            challenges.with(|c| {
+                c.challenges
+                    .values()
+                    .filter(|&challenge| {
+                        challenge.opponent.is_none() && challenge.challenger.uid != uid().unwrap()
+                    })
+                    .cloned()
+                    .collect::<Vec<ChallengeResponse>>()
+            })
         } else {
             Vec::new()
         };
-        ret.sort_by(|a, b| challenge_order(a, b, &online_users.get()));
+        online_users.with(|ou| ret.sort_by(|a, b| challenge_order(a, b, ou)));
         ret
     });
     let has_games = |list: &Vec<ChallengeResponse>| !list.is_empty();
@@ -118,16 +123,16 @@ pub fn Challenges() -> impl IntoView {
                 </tr>
             </thead>
             <tbody>
-                <For each=direct key=|c| c.challenge_id.to_owned() let(challenge)>
-                    <ChallengeRow challenge=challenge.to_owned() single=false uid=uid() />
+                <For each=direct key=|c| c.challenge_id.clone() let(challenge)>
+                    <ChallengeRow challenge=challenge single=false uid=uid() />
                 </For>
                 <tr class="h-2"></tr>
-                <For each=own key=|c| c.challenge_id.to_owned() let(challenge)>
-                    <ChallengeRow challenge=challenge.to_owned() single=false uid=uid() />
+                <For each=own key=|c| c.challenge_id.clone() let(challenge)>
+                    <ChallengeRow challenge=challenge single=false uid=uid() />
                 </For>
                 <tr class="h-2"></tr>
-                <For each=public key=|c| c.challenge_id.to_owned() let(challenge)>
-                    <ChallengeRow challenge=challenge.to_owned() single=false uid=uid() />
+                <For each=public key=|c| c.challenge_id.clone() let(challenge)>
+                    <ChallengeRow challenge=challenge single=false uid=uid() />
                 </For>
             </tbody>
         </table>

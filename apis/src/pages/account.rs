@@ -5,20 +5,13 @@ use crate::providers::ApiRequestsProvider;
 use crate::providers::RefererContext;
 use leptos::form::ActionForm;
 use leptos::leptos_dom::helpers::debounce;
-use leptos::*;
-use leptos::{html, prelude::*};
+use leptos::prelude::*;
 use std::time::Duration;
 
 #[component]
 pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let account_action = ServerAction::<EditAccount>::new();
     let pathname = expect_context::<RefererContext>().pathname;
-    let my_input = NodeRef::<html::Input>::new();
-
-    Effect::new(move |_| {
-        let _ = my_input.get_untracked().map(|el| el.focus());
-    });
-
     let current_password = RwSignal::new(String::new());
     let new_password = RwSignal::new(String::new());
     let confirm_password = RwSignal::new(String::new());
@@ -29,9 +22,13 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         !(new_pw.len() > 7 && new_pw == confirm_pw)
     };
 
-    let form_invalid = move || current_password().len() < 8 || password_invalid();
+    let form_invalid = move || current_password.with(|c| c.len() < 8) || password_invalid();
 
-    let display_account_error = move || account_action.value().get().is_some_and(|v| v.is_err());
+    let display_account_error = move || {
+        account_action
+            .value()
+            .with(|a| a.as_ref().is_some_and(|v| v.is_err()))
+    };
     let api = expect_context::<ApiRequestsProvider>();
 
     let oauth = move |_: leptos::ev::MouseEvent| {
@@ -149,7 +146,6 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                         Current Password
                     </label>
                     <input
-                        node_ref=my_input
                         on:input=debounce(
                             Duration::from_millis(350),
                             update_from_input(current_password),

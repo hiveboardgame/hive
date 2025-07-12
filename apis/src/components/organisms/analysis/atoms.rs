@@ -10,7 +10,7 @@ pub fn UndoButton() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
     let game_state = expect_context::<GameStateSignal>();
     let analysis = StoredValue::new(analysis.clone());
-    let is_disabled = move || analysis.get_value().0.get().current_node.is_none();
+    let is_disabled = move || analysis.get_value().0.with(|a| a.current_node.is_none());
     let undo = move |_| {
         analysis.get_value().0.update(|a| {
             if let Some(node) = &a.current_node {
@@ -90,13 +90,13 @@ pub fn HistoryButton(
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
         let updated_node_id = analysis.with(|a| {
             a.current_node.as_ref().and_then(|n| match action {
-            HistoryNavigation::First => a
-                .tree
-                .get_ancestor_ids(&n.get_node_id())
-                .map_or(None, |ids| ids.last().cloned()),
-            HistoryNavigation::Next => n.get_children_ids().first().cloned(),
-            HistoryNavigation::Previous => n.get_parent_id(),
-        })
+                HistoryNavigation::First => a
+                    .tree
+                    .get_ancestor_ids(&n.get_node_id())
+                    .map_or(None, |ids| ids.last().cloned()),
+                HistoryNavigation::Next => n.get_children_ids().first().cloned(),
+                HistoryNavigation::Previous => n.get_parent_id(),
+            })
         });
         if let Some(updated_node_id) = updated_node_id {
             analysis.update(|a| {
@@ -134,7 +134,7 @@ pub fn HistoryMove(
     let node_id = node.get_node_id();
     let class = move || {
         let margin = if has_children { "" } else { "ml-[15px] " };
-        let bg_color = if current_path.get().first() == Some(&node_id) {
+        let bg_color = if current_path.with(|path| path.first() == Some(&node_id)) {
             "bg-orange-twilight "
         } else {
             ""
@@ -150,7 +150,9 @@ pub fn HistoryMove(
     let game_state = expect_context::<GameStateSignal>();
     let repetitions = create_read_slice(game_state.signal, |gs| gs.state.repeating_moves.clone());
     let rep = move || {
-        if repetitions.get().contains(&history_index) && current_path.get().contains(&node_id) {
+        if repetitions.with(|r| r.contains(&history_index))
+            && current_path.with(|p| p.contains(&node_id))
+        {
             String::from(" ↺")
         } else {
             String::new()

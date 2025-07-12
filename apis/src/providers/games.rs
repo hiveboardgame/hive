@@ -27,10 +27,11 @@ impl GamesSignal {
     }
 
     pub fn visit(&mut self, time_mode: TimeMode, game_id: GameId) -> Option<GameId> {
-        if let Some(user) = self.user.get_untracked() {
+        let user_id = self.user.with_untracked(|u| u.as_ref().map(|user| user.id));
+        if let Some(user_id) = user_id {
             self.own.update(|s| {
                 if let Some(game) = s.untimed.get(&game_id) {
-                    if game.current_player_id == user.id {
+                    if game.current_player_id == user_id {
                         if let Some(gp) = s
                             .next_untimed
                             .clone()
@@ -49,7 +50,7 @@ impl GamesSignal {
                         }
                     }
                 } else if let Some(game) = s.realtime.get(&game_id) {
-                    if game.current_player_id == user.id {
+                    if game.current_player_id == user_id {
                         if let Some(gp) = s
                             .next_realtime
                             .clone()
@@ -68,7 +69,7 @@ impl GamesSignal {
                         }
                     }
                 } else if let Some(game) = s.correspondence.get(&game_id) {
-                    if game.current_player_id == user.id {
+                    if game.current_player_id == user_id {
                         if let Some(gp) = s
                             .next_correspondence
                             .clone()
@@ -88,26 +89,13 @@ impl GamesSignal {
                     }
                 }
             });
-            return match time_mode {
-                TimeMode::RealTime => self
-                    .own
-                    .get_untracked()
-                    .next_realtime
-                    .peek()
-                    .map(|gp| gp.game_id.clone()),
-                TimeMode::Correspondence => self
-                    .own
-                    .get_untracked()
-                    .next_correspondence
-                    .peek()
-                    .map(|gp| gp.game_id.clone()),
-                TimeMode::Untimed => self
-                    .own
-                    .get_untracked()
-                    .next_untimed
-                    .peek()
-                    .map(|gp| gp.game_id.clone()),
-            };
+            return self.own.with_untracked(|s| match time_mode {
+                TimeMode::RealTime => s.next_realtime.peek().map(|gp| gp.game_id.clone()),
+                TimeMode::Correspondence => {
+                    s.next_correspondence.peek().map(|gp| gp.game_id.clone())
+                }
+                TimeMode::Untimed => s.next_untimed.peek().map(|gp| gp.game_id.clone()),
+            });
         };
         None
     }
@@ -115,14 +103,16 @@ impl GamesSignal {
     pub fn own_games_add(&mut self, game: GameResponse) {
         let mut next_required = false;
         let mut player_color = Color::White;
-        if let Some(user) = self.user.get_untracked() {
-            if game.current_player_id == user.id {
-                next_required = true;
+        self.user.with_untracked(|a| {
+            if let Some(user) = a {
+                if game.current_player_id == user.id {
+                    next_required = true;
+                }
+                if game.black_player.uid == user.id {
+                    player_color = Color::Black;
+                }
             }
-            if game.black_player.uid == user.id {
-                player_color = Color::Black;
-            }
-        }
+        });
         if let Some(last) = game.game_control_history.last() {
             match &last.1 {
                 GameControl::DrawOffer(color) | GameControl::TakebackRequest(color) => {
@@ -224,11 +214,13 @@ impl GamesSignal {
 
     pub fn live_games_add(&mut self, game: GameResponse) {
         let mut should_show = true;
-        if let Some(user) = self.user.get_untracked() {
-            if game.black_player.uid == user.id || game.white_player.uid == user.id {
-                should_show = false;
+        self.user.with_untracked(|a| {
+            if let Some(user) = a {
+                if game.black_player.uid == user.id || game.white_player.uid == user.id {
+                    should_show = false;
+                }
             }
-        }
+        });
         if game.finished {
             self.live_games_remove(&game.game_id);
         } else if should_show {

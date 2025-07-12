@@ -72,7 +72,7 @@ pub fn UserRow(
                         user_is_hoverable=user_is_hoverable.into()
                     />
                 </div>
-                <Show when=move || { rating.get_value().is_some() }>
+                <Show when=move || { rating.with_value(|r| r.is_some()) }>
                     <Rating rating=rating.get_value().expect("Rating is some") />
                 </Show>
 

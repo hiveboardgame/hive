@@ -18,26 +18,27 @@ pub fn GamePreviews(
                                         bp: StoredValue<UserResponse>,
                                         base: Option<i32>,
                                         inc: Option<i32>| {
-        let white = wp.get_value();
-        let black = bp.get_value();
+        let (white_username, white_rating) = wp.with_value(|u| {
+            (
+                u.username.clone(),
+                u.ratings
+                    .get(&GameSpeed::from_base_increment(base, inc))
+                    .expect("Has a rating")
+                    .rating,
+            )
+        });
+        let (black_username, black_rating) = bp.with_value(|u| {
+            (
+                u.username.clone(),
+                u.ratings
+                    .get(&GameSpeed::from_base_increment(base, inc))
+                    .expect("Has a rating")
+                    .rating,
+            )
+        });
         view! {
             <div class="flex flex-wrap gap-1 justify-center p-1 text-center">
-                {format!(
-                    "{} {} vs {} {}",
-                    white.username,
-                    white
-                        .ratings
-                        .get(&GameSpeed::from_base_increment(base, inc))
-                        .expect("White has a rating")
-                        .rating,
-                    black.username,
-                    black
-                        .ratings
-                        .get(&GameSpeed::from_base_increment(base, inc))
-                        .expect("Black has a rating")
-                        .rating,
-                )}
-
+                {format!("{white_username} {white_rating} vs {black_username} {black_rating}")}
             </div>
         }
     };

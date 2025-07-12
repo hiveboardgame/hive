@@ -21,81 +21,91 @@ pub fn TournamentReadyPopup(
     let closed_popups = RwSignal::new(HashSet::<(GameId, Uuid)>::new());
 
     let current_popup_candidate = Memo::new(move |_| {
-        let ready_map = ready_signal.get();
-        let current_user_id = auth_context.user.get().map(|u| u.id);
-        let closed_set = closed_popups.get();
-
-        if let Some(user_id) = current_user_id {
-            for (ready_game_id, ready_users) in ready_map.iter() {
-                for (ready_user_id, ready_username) in ready_users {
-                    if *ready_user_id != user_id {
-                        let candidate_key = (ready_game_id.clone(), *ready_user_id);
-                        if !closed_set.contains(&candidate_key) {
-                            return Some((
-                                ready_game_id.clone(),
-                                *ready_user_id,
-                                ready_username.clone(),
-                            ));
+        ready_signal.with(|ready_map| {
+            auth_context.user.with(|a| {
+                let current_user_id = a.as_ref().map(|u| u.id);
+                closed_popups.with(|closed_set| {
+                    if let Some(user_id) = current_user_id {
+                        for (ready_game_id, ready_users) in ready_map.iter() {
+                            for (ready_user_id, ready_username) in ready_users {
+                                if *ready_user_id != user_id {
+                                    let candidate_key = (ready_game_id.clone(), *ready_user_id);
+                                    if !closed_set.contains(&candidate_key) {
+                                        return Some((
+                                            ready_game_id.clone(),
+                                            *ready_user_id,
+                                            ready_username.clone(),
+                                        ));
+                                    }
+                                }
+                            }
                         }
                     }
-                }
-            }
-        }
-        None
+                    None
+                })
+            })
+        })
     });
 
     Effect::new(move |_| {
-        let ready_map = ready_signal.get();
-        closed_popups.update(|closed_set| {
-            closed_set.retain(|(game_id, user_id)| {
-                ready_map
-                    .get(game_id)
-                    .map(|users| users.iter().any(|(id, _)| id == user_id))
-                    .unwrap_or(false)
+        ready_signal.with(|ready_map| {
+            closed_popups.update(|closed_set| {
+                closed_set.retain(|(game_id, user_id)| {
+                    ready_map
+                        .get(game_id)
+                        .map(|users| users.iter().any(|(id, _)| id == user_id))
+                        .unwrap_or(false)
+                });
             });
         });
     });
 
-    let is_visible = Signal::derive(move || current_popup_candidate.get().is_some());
+    let is_visible = Signal::derive(move || current_popup_candidate.with(|opt| opt.is_some()));
 
     let opponent_name = Signal::derive(move || {
-        current_popup_candidate
-            .get()
-            .map(|(_, _, username)| username)
-            .unwrap_or_else(|| "Unknown Player".to_string())
+        current_popup_candidate.with(|opt| {
+            opt.as_ref()
+                .map(|(_, _, username)| username.clone())
+                .unwrap_or_else(|| "Unknown Player".to_string())
+        })
     });
 
     let current_game_id = Signal::derive(move || params.get().get("nanoid").unwrap_or_default());
 
     let is_on_game_page = Signal::derive(move || {
-        current_popup_candidate
-            .get()
-            .map(|(game_id, _, _)| current_game_id.get() == game_id.0)
-            .unwrap_or(false)
+        current_popup_candidate.with(|opt| {
+            opt.as_ref()
+                .map(|(game_id, _, _)| current_game_id.get() == game_id.0)
+                .unwrap_or(false)
+        })
     });
 
     let accept_game = move |_| {
-        if let Some((game_id, opponent_id, _)) = current_popup_candidate.get() {
-            let api = api.get();
-            api.tournament_game_start(game_id.clone());
+        current_popup_candidate.with(|opt| {
+            if let Some((game_id, opponent_id, _)) = opt.as_ref() {
+                let api = api.get();
+                api.tournament_game_start(game_id.clone());
 
-            closed_popups.update(|set| {
-                set.insert((game_id.clone(), opponent_id));
-            });
+                closed_popups.update(|set| {
+                    set.insert((game_id.clone(), *opponent_id));
+                });
 
-            if !is_on_game_page.get() {
-                let navigate = use_navigate();
-                navigate(&format!("/game/{}", game_id.0), Default::default());
+                if !is_on_game_page.get() {
+                    let navigate = use_navigate();
+                    navigate(&format!("/game/{}", game_id.0), Default::default());
+                }
             }
-        }
+        })
     };
 
     let close_popup = move |_| {
-        if let Some((game_id, opponent_id, _)) = current_popup_candidate.get() {
-            closed_popups.update(|set| {
-                set.insert((game_id, opponent_id));
-            });
-        }
+        current_popup_candidate.with(|opt| {
+            if let Some((game_id, opponent_id, _)) = opt.as_ref() {
+                closed_popups.update(|set| {
+                    set.insert((game_id.clone(), *opponent_id));
+                });
+            }
+        })
     };
 
     let interval = use_interval_fn_with_options(
@@ -112,11 +122,13 @@ pub fn TournamentReadyPopup(
 
     let UseTimeoutFnReturn { start, stop, .. } = use_timeout_fn(
         move |_: ()| {
-            if let Some((game_id, opponent_id, _)) = current_popup_candidate.get() {
-                closed_popups.update(|set| {
-                    set.insert((game_id, opponent_id));
-                });
-            }
+            current_popup_candidate.with(|opt| {
+                if let Some((game_id, opponent_id, _)) = opt.as_ref() {
+                    closed_popups.update(|set| {
+                        set.insert((game_id.clone(), *opponent_id));
+                    });
+                }
+            })
         },
         30_000.0,
     );

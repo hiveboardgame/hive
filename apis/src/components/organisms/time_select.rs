@@ -22,15 +22,18 @@ pub fn TimeSelect(
         }
     };
     let time_mode = move || params.time_signals().time_mode().get();
-    let corr_mode = move || params.time_signals().corr_mode().read();
+    let corr_mode = move || params.time_signals().corr_mode().get();
     let gamespeed_icon = move || {
         let speed = match time_mode() {
             TimeMode::Untimed => GameSpeed::Untimed,
             TimeMode::Correspondence => GameSpeed::Correspondence,
-            TimeMode::RealTime => GameSpeed::from_base_increment(
-                Some(params.time_signals().get().total_seconds()),
-                Some(params.time_signals().get().sec_per_move()),
-            ),
+            TimeMode::RealTime => {
+                let time_data = params.time_signals().get();
+                GameSpeed::from_base_increment(
+                    Some(time_data.total_seconds()),
+                    Some(time_data.sec_per_move()),
+                )
+            }
         };
         view! { <Icon width="50" height="50" attr:class="p-2" icon=icon_for_speed(&speed) /> }
     };
@@ -101,7 +104,7 @@ pub fn TimeSelect(
                     <div>
                         {t!(
                             i18n, home.custom_game.mode.real_time.minutes_per_side, count = move ||
-                                    params.time_signals().get().total_seconds() / 60
+                                    params.time_signals().with(|ts| ts.total_seconds() / 60)
                         )}
 
                     </div>
@@ -118,7 +121,7 @@ pub fn TimeSelect(
                     <div>
                         {t!(
                             i18n, home.custom_game.mode.real_time.increment_in_seconds, count = move
-                                    || params.time_signals().get().sec_per_move()
+                                    || params.time_signals().with(|ts| ts.sec_per_move())
                         )}
 
                     </div>

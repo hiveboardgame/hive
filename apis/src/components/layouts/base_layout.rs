@@ -79,7 +79,11 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         }
     }
 
-    let user_id = Signal::derive(move || auth_context.user.get_untracked().map(|user| user.id));
+    let user_id = Signal::derive(move || {
+        auth_context
+            .user
+            .with_untracked(|a| a.as_ref().map(|user| user.id))
+    });
     let user_color = gamestate.user_color_as_signal(user_id);
     let has_gamecontrol = create_read_slice(gamestate.signal, move |gs| {
         if let Some(color) = user_color() {
@@ -162,10 +166,11 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         <Meta name="apple-mobile-web-app-status-bar-style" content="black" />
         <Script src="/assets/js/pwa.js" />
         <Html attr:class=move || {
-            match config.get().prefers_dark {
-                true => "dark",
-                false => "",
-            }
+            config
+                .with(|cfg| match cfg.prefers_dark {
+                    true => "dark",
+                    false => "",
+                })
         } />
 
         <Body />

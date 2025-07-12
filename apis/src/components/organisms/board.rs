@@ -23,7 +23,7 @@ use leptos_use::{
 };
 use std::time::Duration;
 use wasm_bindgen::JsCast;
-use web_sys::{DomRectReadOnly, PointerEvent, SvgPoint, SvgRect, TouchEvent, WheelEvent};
+use web_sys::{DomRectReadOnly, PointerEvent, SvgPoint, TouchEvent, WheelEvent};
 
 #[derive(Debug, Clone)]
 struct ViewBoxControls {
@@ -53,6 +53,14 @@ impl ViewBoxControls {
             drag_start_y: 0.0,
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct BoundingBox {
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
 }
 
 #[component]
@@ -95,35 +103,22 @@ pub fn Board() -> impl IntoView {
         },
     };
 
-    let viewbox_string = move || {
-        format!(
-            "{} {} {} {}",
-            viewbox_signal().x,
-            viewbox_signal().y,
-            viewbox_signal().width,
-            viewbox_signal().height
-        )
-    };
+    let viewbox_string =
+        move || viewbox_signal.with(|vb| format!("{} {} {} {}", vb.x, vb.y, vb.width, vb.height));
 
     let transform = move || {
-        format!(
-            "translate({},{})",
-            viewbox_signal().x_transform,
-            viewbox_signal().y_transform
-        )
+        viewbox_signal.with(|vb| format!("translate({},{})", vb.x_transform, vb.y_transform))
     };
 
     let current_center = move || {
         game_state
             .signal
-            .get_untracked()
-            .state
-            .board
-            .center_coordinates()
+            .with_untracked(|gs| gs.state.board.center_coordinates())
     };
 
-    let straight = Signal::derive(move || config().tile.design == TileDesign::ThreeD);
-    let tile_opts = Signal::derive(move || config().tile);
+    let straight = Signal::derive(move || config.with(|c| c.tile.design == TileDesign::ThreeD));
+    let tile_opts = Signal::derive(move || config.with(|c| c.tile.clone()));
+    let g_bbox = Memo::new(move |_| get_bbox(g_ref));
     Effect::watch(
         move || (),
         move |_, _, _| {
@@ -149,10 +144,12 @@ pub fn Board() -> impl IntoView {
             let svg = viewbox_ref.get_untracked().expect("It exists");
             // if user has zoomed, keep their scale when resizing board
             let (current_x_scale, current_y_scale) = if has_zoomed.get_untracked() {
-                (
-                    svg.client_width() as f32 / viewbox_signal.get_untracked().width,
-                    svg.client_height() as f32 / viewbox_signal.get_untracked().height,
-                )
+                viewbox_signal.with_untracked(|vb| {
+                    (
+                        svg.client_width() as f32 / vb.width,
+                        svg.client_height() as f32 / vb.height,
+                    )
+                })
             } else {
                 (1.0, 1.0)
             };
@@ -200,7 +197,6 @@ pub fn Board() -> impl IntoView {
     _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
         if is_panning.get_untracked() && target_stack.with_untracked(|v| v.is_none()) {
             let moved_point = svg_point_from_pointer(viewbox_ref, &evt);
-            let g_bbox = get_bbox(g_ref);
             let mut future_viewbox = viewbox_signal.get_untracked();
             future_viewbox.x -= moved_point.x() - future_viewbox.drag_start_x;
             future_viewbox.y -= moved_point.y() - future_viewbox.drag_start_y;
@@ -209,7 +205,7 @@ pub fn Board() -> impl IntoView {
                     viewbox_controls.x = future_viewbox.x;
                     viewbox_controls.y = future_viewbox.y
                 });
-            } else if will_svg_be_visible(g_bbox, &future_viewbox) {
+            } else if will_svg_be_visible(g_bbox(), &future_viewbox) {
                 viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                     viewbox_controls.x = future_viewbox.x;
                     viewbox_controls.y = future_viewbox.y
@@ -225,7 +221,6 @@ pub fn Board() -> impl IntoView {
             if !is_panning.get_untracked() {
                 let initial_point = svg_point_from_wheel(viewbox_ref, &evt);
                 let scale: f32 = if evt.delta_y() > 0.0 { 0.09 } else { -0.09 };
-                let g_bbox = get_bbox(g_ref);
                 let mut future_viewbox = viewbox_signal.get_untracked();
                 let initial_height = future_viewbox.height;
                 let initial_width = future_viewbox.width;
@@ -244,7 +239,7 @@ pub fn Board() -> impl IntoView {
                             *viewbox_controls = future_viewbox;
                         });
                         has_zoomed.set(true);
-                    } else if will_svg_be_visible(g_bbox, &future_viewbox) {
+                    } else if will_svg_be_visible(g_bbox(), &future_viewbox) {
                         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                             *viewbox_controls = future_viewbox;
                         });
@@ -281,7 +276,6 @@ pub fn Board() -> impl IntoView {
                 let current_point_1 = svg_point_from_touch(viewbox_ref, &evt, 1);
                 let current_distance = get_touch_distance(current_point_0.clone(), current_point_1);
                 let scale = current_distance / initial_touch_distance();
-                let g_bbox = get_bbox(g_ref);
                 let mut future_viewbox = viewbox_signal.get_untracked();
                 let intermediate_height = future_viewbox.height / scale;
                 future_viewbox.width /= scale;
@@ -296,7 +290,7 @@ pub fn Board() -> impl IntoView {
                             *viewbox_controls = future_viewbox
                         });
                         has_zoomed.set(true);
-                    } else if will_svg_be_visible(g_bbox, &future_viewbox) {
+                    } else if will_svg_be_visible(g_bbox(), &future_viewbox) {
                         viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
                             *viewbox_controls = future_viewbox
                         });
@@ -406,9 +400,9 @@ fn get_touch_distance(point_0: SvgPoint, point_1: SvgPoint) -> f32 {
     (distance_x * distance_x + distance_y * distance_y).sqrt()
 }
 
-fn will_svg_be_visible(bbox: SvgRect, viewbox: &ViewBoxControls) -> bool {
-    let bbox_mid_x = bbox.x() + viewbox.x_transform + bbox.width() / 2.0;
-    let bbox_mid_y = bbox.y() + viewbox.y_transform + bbox.height() / 2.0;
+fn will_svg_be_visible(bbox: BoundingBox, viewbox: &ViewBoxControls) -> bool {
+    let bbox_mid_x = bbox.x + viewbox.x_transform + bbox.width / 2.0;
+    let bbox_mid_y = bbox.y + viewbox.y_transform + bbox.height / 2.0;
     let viewbox_right = viewbox.x + viewbox.width;
     let viewbox_bottom = viewbox.y + viewbox.height;
 
@@ -418,11 +412,18 @@ fn will_svg_be_visible(bbox: SvgRect, viewbox: &ViewBoxControls) -> bool {
         && (bbox_mid_y < viewbox_bottom)
 }
 
-fn get_bbox(g_ref: NodeRef<svg::G>) -> SvgRect {
-    g_ref
+fn get_bbox(g_ref: NodeRef<svg::G>) -> BoundingBox {
+    let svg = g_ref
         .get_untracked()
         .expect("G exists")
         .unchecked_ref::<web_sys::SvgGraphicsElement>()
         .get_b_box()
-        .expect("Rect")
+        .expect("Rect");
+
+    BoundingBox {
+        x: svg.x(),
+        y: svg.y(),
+        width: svg.width(),
+        height: svg.height(),
+    }
 }

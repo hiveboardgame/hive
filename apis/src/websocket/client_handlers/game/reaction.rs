@@ -70,11 +70,12 @@ pub fn handle_new_game(game_response: GameResponse) {
     };
     if should_navigate {
         let auth_context = expect_context::<AuthContext>();
-        let user_uuid = Signal::derive(move || auth_context.user.get().map(|user| user.id));
+        let user_uuid =
+            Signal::derive(move || auth_context.user.with(|a| a.as_ref().map(|user| user.id)));
         if let Some(id) = user_uuid() {
             if id == game_response.white_player.uid || id == game_response.black_player.uid {
                 let location = use_location();
-                let current_path = location.pathname.get();
+                let current_path = location.pathname.get_untracked();
                 if !current_path.starts_with("/analysis") {
                     let navigate = use_navigate();
                     navigate(

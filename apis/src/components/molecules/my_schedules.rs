@@ -23,10 +23,12 @@ pub fn MySchedules(
 ) -> impl IntoView {
     let has_schedules = move || {
         user_id().is_some_and(|user_id| {
-            games_hashmap.get().iter().any(|(_game_id, game)| {
-                game.game_status == GameStatus::NotStarted
-                    && (game.white_player.uid == user_id || game.black_player.uid == user_id)
-                    && game.conclusion == Conclusion::Unknown
+            games_hashmap.with(|games| {
+                games.iter().any(|(_game_id, game)| {
+                    game.game_status == GameStatus::NotStarted
+                        && (game.white_player.uid == user_id || game.black_player.uid == user_id)
+                        && game.conclusion == Conclusion::Unknown
+                })
             })
         })
     };
@@ -47,26 +49,29 @@ fn MySchedulesInner(
     user_id: Signal<Uuid>,
 ) -> impl IntoView {
     let ctx = expect_context::<SchedulesContext>();
-    let get_game = move |game_id: GameId| games_hashmap().get(&game_id).cloned();
-    let own_slice = move || ctx.own.get();
+    let get_game = move |game_id: GameId| games_hashmap.with(|games| games.get(&game_id).cloned());
     let get_schedules = move |game_id: GameId| {
-        own_slice()
-            .get(&game_id)
-            .unwrap_or(&HashMap::new())
-            .values()
-            .filter(|s| s.start_t + Duration::hours(1) > Utc::now())
-            .cloned()
-            .collect::<Vec<ScheduleResponse>>()
+        ctx.own.with(|own| {
+            own.get(&game_id)
+                .unwrap_or(&HashMap::new())
+                .values()
+                .cloned()
+                .collect::<Vec<_>>()
+                .into_iter()
+                .filter(|s| s.start_t + Duration::hours(1) > Utc::now())
+        })
     };
     let my_schedules = move || {
         let mut ret = Vec::new();
         let user_id = user_id();
-        own_slice().iter().for_each(|(key, value)| {
-            if let Some(game) = get_game(key.clone()) {
-                if game.white_player.uid == user_id || game.black_player.uid == user_id {
-                    ret.push((game, value.len()))
+        ctx.own.with(|own| {
+            own.iter().for_each(|(key, value)| {
+                if let Some(game) = get_game(key.clone()) {
+                    if game.white_player.uid == user_id || game.black_player.uid == user_id {
+                        ret.push((game, value.len()))
+                    }
                 }
-            }
+            });
         });
         ret
     };

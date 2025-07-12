@@ -46,7 +46,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             >
                 {t!(i18n, header.user_menu.config)}
             </a>
-            <Show when=move || auth_context.user.get().is_some_and(|v| v.user.admin)>
+            <Show when=move || auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))>
                 <a
                     class=COMMON_LINK_STYLE
                     href="/admin"

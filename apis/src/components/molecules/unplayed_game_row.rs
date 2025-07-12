@@ -19,28 +19,30 @@ pub fn UnplayedGameRow(
     let api = expect_context::<ApiRequestsProvider>().0;
     let game = StoredValue::new(game);
     let schedule: Signal<Option<DateTime<Utc>>> = Signal::derive(move || {
-        schedules_signal
-            .tournament
-            .get()
-            .get(&game.get_value().game_id)
-            .and_then(|schedules| {
-                schedules
-                    .values()
-                    .find(|s| s.agreed && (s.start_t + Duration::hours(1)) > Utc::now())
-                    .map(|s| s.start_t)
-            })
+        schedules_signal.tournament.with(|tournament| {
+            tournament
+                .get(&game.with_value(|game| game.game_id.clone()))
+                .and_then(|schedules| {
+                    schedules
+                        .values()
+                        .find(|s| s.agreed && (s.start_t + Duration::hours(1)) > Utc::now())
+                        .map(|s| s.start_t)
+                })
+        })
     });
     let progress_info = move || {
-        if game.get_value().game_start != GameStart::Ready {
-            "In progress".to_owned()
-        } else if let Some(time) = schedule() {
-            format!(
-                "Scheduled at {}",
-                time.with_timezone(&Local).format("%Y-%m-%d %H:%M"),
-            )
-        } else {
-            "Not yet scheduled".to_owned()
-        }
+        game.with_value(|game| {
+            if game.game_start != GameStart::Ready {
+                "In progress".to_owned()
+            } else if let Some(time) = schedule() {
+                format!(
+                    "Scheduled at {}",
+                    time.with_timezone(&Local).format("%Y-%m-%d %H:%M"),
+                )
+            } else {
+                "Not yet scheduled".to_owned()
+            }
+        })
     };
     let show_adjudicate_menu = RwSignal::new(false);
     let toggle_adjudicate = move |_| {
@@ -48,8 +50,9 @@ pub fn UnplayedGameRow(
     };
     let adjudicate = move |result| {
         if user_is_organizer() {
-            let action =
-                TournamentAction::AdjudicateResult(game.get_value().game_id.clone(), result);
+            let action = game.with_value(|game| {
+                TournamentAction::AdjudicateResult(game.game_id.clone(), result)
+            });
             let api = api.get();
             api.tournament(action);
             show_adjudicate_menu.update(|b| *b = !*b);
@@ -67,38 +70,50 @@ pub fn UnplayedGameRow(
             <div class="flex flex-col flex-wrap gap-1 justify-between items-center sm:flex-row h-fit grow">
                 <div class="flex gap-1 items-center p-1">
                     <div class="flex shrink">
-                        <ProfileLink
-                            patreon=game.get_value().white_player.patreon
-                            bot=game.get_value().white_player.bot
-                            username=game.get_value().white_player.username.clone()
-                            extend_tw_classes="truncate max-w-[120px]"
-                        />
-                        {format!("({})", game.get_value().white_rating())}
+                        {game
+                            .with_value(|game| {
+                                view! {
+                                    <ProfileLink
+                                        patreon=game.white_player.patreon
+                                        bot=game.white_player.bot
+                                        username=game.white_player.username.clone()
+                                        extend_tw_classes="truncate max-w-[120px]"
+                                    />
+                                    {format!("({})", game.white_rating())}
+                                }
+                            })}
                     </div>
                     vs.
                     <div class="flex shrink">
-                        <ProfileLink
-                            patreon=game.get_value().black_player.patreon
-                            bot=game.get_value().black_player.bot
-                            username=game.get_value().black_player.username.clone()
-                            extend_tw_classes="truncate max-w-[120px]"
-                        />
-                        {format!("({})", game.get_value().black_rating())}
+                        {game
+                            .with_value(|game| {
+                                view! {
+                                    <ProfileLink
+                                        patreon=game.black_player.patreon
+                                        bot=game.black_player.bot
+                                        username=game.black_player.username.clone()
+                                        extend_tw_classes="truncate max-w-[120px]"
+                                    />
+                                    {format!("({})", game.black_rating())}
+                                }
+                            })}
                     </div>
                 </div>
                 <div class=move || {
                     format!("flex p-1 {}", if schedule().is_some() { "font-bold" } else { "" })
                 }>
                     <Show
-                        when=move || !game.get_value().finished
+                        when=move || game.with_value(|game| !game.finished)
                         fallback=move || {
-                            view! {
-                                {format!(
-                                    "{} {}",
-                                    game.get_value().conclusion.pretty_string(),
-                                    game.get_value().tournament_game_result,
-                                )}
-                            }
+                            game.with_value(|game| {
+                                view! {
+                                    {format!(
+                                        "{} {}",
+                                        game.conclusion.pretty_string(),
+                                        game.tournament_game_result,
+                                    )}
+                                }
+                            })
                         }
                     >
                         {progress_info}
@@ -108,19 +123,29 @@ pub fn UnplayedGameRow(
 
             <div class=buttons_container_class>
                 <Show when=move || !show_adjudicate_menu()>
-                    <Show when=move || !tournament_finished()>
-                        <a class=BUTTON_STYLE href=format!("/game/{}", &game.get_value().game_id)>
-                            {if game.get_value().tournament_game_result
-                                == TournamentGameResult::Unknown
-                            {
-                                "Join Game"
-                            } else {
-                                "View Game"
-                            }}
-                        </a>
+                    <Show when=move || {
+                        !tournament_finished()
+                    }>
+                        {game
+                            .with_value(|game| {
+                                view! {
+                                    <a class=BUTTON_STYLE href=format!("/game/{}", &game.game_id)>
+                                        {if game.tournament_game_result
+                                            == TournamentGameResult::Unknown
+                                        {
+                                            "Join Game"
+                                        } else {
+                                            "View Game"
+                                        }}
+                                    </a>
+                                }
+                            })}
                     </Show>
                     <Show when=tournament_finished>
-                        {format!("Adjudicated result: {}", game.get_value().tournament_game_result)}
+                        {game
+                            .with_value(|game| {
+                                format!("Adjudicated result: {}", game.tournament_game_result)
+                            })}
                     </Show>
                     <Show when=move || user_is_organizer() && !tournament_finished()>
                         <button class=BUTTON_STYLE on:click=toggle_adjudicate>
@@ -154,7 +179,7 @@ pub fn UnplayedGameRow(
                         {"Draw"}
                     </button>
                     <Show
-                        when=move || game.get_value().finished
+                        when=move || game.with_value(|game| game.finished)
                         fallback=move || {
                             view! {
                                 <button

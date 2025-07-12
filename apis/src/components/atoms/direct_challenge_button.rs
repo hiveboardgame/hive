@@ -11,10 +11,10 @@ pub fn DirectChallengeButton(user_id: Uuid, opponent: String) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let dialog_el = NodeRef::<Dialog>::new();
     let logged_in_and_not_user = move || {
-        auth_context
-            .user
-            .get()
-            .is_some_and(|current_user| current_user.id != user_id)
+        auth_context.user.with(|a| {
+            a.as_ref()
+                .is_some_and(|current_user| current_user.id != user_id)
+        })
     };
 
     view! {

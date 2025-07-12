@@ -17,14 +17,14 @@ pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoV
     };
     let next_games = move || {
         let game_id = game_id();
-        match time_mode.get_value() {
-            TimeMode::Untimed => games.own.get().next_untimed,
-            TimeMode::RealTime => games.own.get().next_realtime,
-            TimeMode::Correspondence => games.own.get().next_correspondence,
-        }
-        .iter()
-        .filter(|gp| gp.game_id != game_id)
-        .count()
+        games.own.with(|own| {
+            let games_list = match time_mode.get_value() {
+                TimeMode::Untimed => &own.next_untimed,
+                TimeMode::RealTime => &own.next_realtime,
+                TimeMode::Correspondence => &own.next_correspondence,
+            };
+            games_list.iter().filter(|gp| gp.game_id != game_id).count()
+        })
     };
     let icon = move || match time_mode.get_value() {
         TimeMode::Untimed => icondata::BiInfiniteRegular,
@@ -39,13 +39,14 @@ pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoV
     };
     let text = move || format!(": {}", next_games());
     let game_id = move || {
-        match time_mode.get_value() {
-            TimeMode::Untimed => games.own.get().next_untimed,
-            TimeMode::RealTime => games.own.get().next_realtime,
-            TimeMode::Correspondence => games.own.get().next_correspondence,
-        }
-        .peek()
-        .map(|gp| gp.game_id.clone())
+        games.own.with(|own| {
+            let games_list = match time_mode.get_value() {
+                TimeMode::Untimed => &own.next_untimed,
+                TimeMode::RealTime => &own.next_realtime,
+                TimeMode::Correspondence => &own.next_correspondence,
+            };
+            games_list.peek().map(|gp| gp.game_id.clone())
+        })
     };
 
     let href_game_id = move || game_id().map(|id| format!("/game/{id}"));

@@ -10,10 +10,9 @@ pub fn TimeRow(
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let time_mode = Signal::derive(move || time_info.get_untracked().mode);
     let icon = move || {
         let time_info = time_info();
-        let speed = match time_mode() {
+        let speed = match time_info.mode {
             TimeMode::Untimed => GameSpeed::Untimed,
             TimeMode::Correspondence => GameSpeed::Correspondence,
             TimeMode::RealTime => {
@@ -24,7 +23,7 @@ pub fn TimeRow(
     };
     let text = move || {
         let time_info = time_info();
-        match time_mode() {
+        match time_info.mode {
             TimeMode::Untimed => EitherOf3::A("No time limit".to_owned()),
             TimeMode::RealTime => EitherOf3::A(format!(
                 "{} + {}",

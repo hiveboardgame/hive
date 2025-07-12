@@ -54,7 +54,7 @@ pub fn ChallengeView() -> impl IntoView {
             .add_2("bg-grasshopper-green", "hover:bg-green-500")
             .expect("tw classes to be added");
     };
-    let uid = move || auth_context.user.get().map(|user| user.id);
+    let uid = move || auth_context.user.with(|a| a.as_ref().map(|user| user.id));
     view! {
         <div class="flex flex-col items-center pt-20 mx-auto">
             <Transition>
@@ -70,8 +70,11 @@ pub fn ChallengeView() -> impl IntoView {
                                 Either::Right(
                                     view! {
                                         <Show when=move || {
-                                            user()
-                                                .is_some_and(|user| user.id == challenge.challenger.uid)
+                                            user.with(|a| {
+                                                a
+                                                    .as_ref()
+                                                    .is_some_and(|user| user.id == challenge.challenger.uid)
+                                            })
                                         }>
                                             <p>"To invite someone to play, give this URL:"</p>
                                             <div class="flex">
