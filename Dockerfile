@@ -24,8 +24,9 @@ RUN LEPTOS_TAILWIND_VERSION=v3.4.1 LEPTOS_HASH_FILES=true cargo leptos build -r 
 
 FROM debian:bookworm-slim AS runner
 # Copy the server binary to the /app directory
-COPY --from=builder /app/target/release/apis /app/
-COPY --from=builder /app/target/release/hash.txt /app/
+COPY --from=builder /app/target/ /app/
+COPY --from=builder /app/.cargo/target/release/apis /app/
+COPY --from=builder /app/.cargo/target/release/hash.txt /app/
 # /target/site contains our JS/WASM/CSS, etc.
 COPY --from=builder /app/target/site /app/site
 # Copy Cargo.toml if it’s needed at runtime
