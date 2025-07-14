@@ -1,7 +1,7 @@
 use crate::common::{
     ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult,
 };
-use crate::responses::GameResponse;
+use crate::responses::{ChallengeResponse, GameResponse};
 use crate::websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer};
 use actix::Addr;
 use actix_web::web::Data;
@@ -13,8 +13,7 @@ use db_lib::{
     DbPool,
 };
 use hive_lib::Turn;
-use shared_types::TimeMode;
-use shared_types::{ChallengeId, GameId};
+use shared_types::{ChallengeId, ChallengeVisibility, GameId, TimeMode};
 
 pub async fn send_messages(
     ws_server: Data<Addr<WsServer>>,
@@ -122,5 +121,53 @@ pub async fn send_challenge_messages(
             ws_server.do_send(cam);
         };
     }
+    Ok(())
+}
+
+pub async fn send_challenge_creation_message(
+    ws_server: Data<Addr<WsServer>>,
+    challenge_response: &ChallengeResponse,
+    visibility: &ChallengeVisibility,
+    opponent_id: Option<uuid::Uuid>,
+) -> Result<()> {
+    let mut messages = Vec::new();
+
+    match visibility {
+        ChallengeVisibility::Public => {
+            messages.push(InternalServerMessage {
+                destination: MessageDestination::Global,
+                message: ServerMessage::Challenge(ChallengeUpdate::Created(
+                    challenge_response.clone(),
+                )),
+            });
+        }
+        ChallengeVisibility::Direct => {
+            if let Some(opponent_id) = opponent_id {
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::User(opponent_id),
+                    message: ServerMessage::Challenge(ChallengeUpdate::Direct(
+                        challenge_response.clone(),
+                    )),
+                });
+            }
+        }
+        ChallengeVisibility::Private => {
+            // Do private challenges even make sense for bots?
+        }
+    }
+
+    // Send all messages
+    for message in messages {
+        let serialized = ServerResult::Ok(Box::new(message.message));
+        if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+            let cam = ClientActorMessage {
+                destination: message.destination,
+                serialized,
+                from: Some(challenge_response.challenger.uid),
+            };
+            ws_server.do_send(cam);
+        }
+    }
+
     Ok(())
 }
