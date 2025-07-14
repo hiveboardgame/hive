@@ -68,7 +68,8 @@ async fn main() -> std::io::Result<()> {
     jobs::tournament_start(pool.clone(), Data::clone(&websocket_server));
     jobs::heartbeat(Data::clone(&websocket_server));
     jobs::ping(Data::clone(&websocket_server));
-    jobs::cleanup(pool.clone());
+    jobs::game_cleanup(pool.clone());
+    jobs::challenge_cleanup(pool.clone());
 
     println!("listening on http://{}", &addr);
 

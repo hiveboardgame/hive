@@ -1,8 +1,10 @@
-pub mod cleanup;
+pub mod challenge_cleanup;
+pub mod game_cleanup;
 pub mod heartbeat;
 pub mod ping;
 pub mod tournament_start;
-pub use cleanup::run as cleanup;
+pub use challenge_cleanup::run as challenge_cleanup;
+pub use game_cleanup::run as game_cleanup;
 pub use heartbeat::run as heartbeat;
 pub use ping::run as ping;
 pub use tournament_start::run as tournament_start;
