@@ -13,7 +13,7 @@ use diesel::{dsl::exists, prelude::*, select};
 use diesel_async::RunQueryDsl;
 use nanoid::nanoid;
 use serde::Serialize;
-use shared_types::{ChallengeDetails, ChallengeId, TimeMode};
+use shared_types::{ChallengeDetails, ChallengeId, ChallengeVisibility, TimeMode};
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -207,6 +207,21 @@ impl Challenge {
         diesel::delete(challenges::table.find(self.id))
             .execute(conn)
             .await?;
+        Ok(())
+    }
+
+    pub async fn delete_old_non_public_challenges(conn: &mut DbConn<'_>) -> Result<(), DbError> {
+        use std::time::Duration;
+        let cutoff = Utc::now() - Duration::from_secs(60 * 60 * 24 * 7);
+        diesel::delete(
+            challenges::table.filter(
+                challenges::visibility
+                    .ne(ChallengeVisibility::Public.to_string())
+                    .and(challenges::created_at.lt(cutoff)),
+            ),
+        )
+        .execute(conn)
+        .await?;
         Ok(())
     }
 }

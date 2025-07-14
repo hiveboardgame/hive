@@ -1042,7 +1042,7 @@ impl Game {
                 games::game_status
                     .eq(GameStatus::NotStarted.to_string())
                     .and(games::speed.ne(GameSpeed::Correspondence.to_string()))
-                    .and(games::tournament_id.eq(None::<Uuid>))
+                    .and(games::tournament_id.is_null())
                     .and(games::created_at.lt(cutoff)),
             ),
         )
