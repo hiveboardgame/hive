@@ -39,11 +39,8 @@ pub fn Tournament() -> impl IntoView {
             .get("nanoid")
             .map(|s| TournamentId(s.to_string()))
     };
-    let current_tournament = Action::new(move |_: &()| async move {
-        get_complete(tournament_id().unwrap().to_string())
-            .await
-            .ok()
-    });
+    let current_tournament =
+        Action::new(move |_: &()| async move { get_complete(tournament_id().unwrap()).await.ok() });
     Effect::watch(
         update_notification,
         move |needs_update, _, _| {
@@ -195,7 +192,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                 None => "Start up to organizer".to_string(),
                 Some(time) => time
                     .with_timezone(&Local)
-                    .format("Starts: %d/%m/%Y %H:%M")
+                    .format("Starts: %d/%m/%Y %H:%M %Z")
                     .to_string(),
             }
         } else {
@@ -203,7 +200,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             if let Some(started_at) = tournament.started_at {
                 let start = started_at
                     .with_timezone(&Local)
-                    .format("started: %d/%m/%Y %H:%M")
+                    .format("started: %d/%m/%Y %H:%M %Z")
                     .to_string();
                 format!("{pretty}, {start}")
             } else {

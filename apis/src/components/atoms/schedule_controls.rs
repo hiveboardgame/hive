@@ -25,7 +25,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             to_date.num_days(),
             to_date.num_hours() % 24,
             to_date.num_minutes() % 60,
-            time.with_timezone(&Local).format("%m-%d %H:%M")
+            time.with_timezone(&Local).format("%m-%d %H:%M %Z")
         )
     };
     let accept = Callback::from(move |id| {

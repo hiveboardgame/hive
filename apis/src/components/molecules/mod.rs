@@ -21,6 +21,7 @@ pub mod online_users;
 pub mod ping;
 pub mod rating_and_change;
 pub mod rl_banner;
+pub mod schedule_notification;
 pub mod score_row;
 pub mod simple_hex_stack;
 pub mod thumbnail_pieces;

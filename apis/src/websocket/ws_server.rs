@@ -3,11 +3,12 @@ use super::WebsocketData;
 use super::{messages::MessageDestination, messages::Ping};
 use crate::{
     common::{
-        ChallengeUpdate, GameUpdate, ServerMessage, ServerResult, TournamentUpdate, UserStatus,
-        UserUpdate,
+        ChallengeUpdate, GameUpdate, ScheduleUpdate, ServerMessage, ServerResult, TournamentUpdate,
+        UserStatus, UserUpdate,
     },
     responses::{
-        ChallengeResponse, GameResponse, HeartbeatResponse, TournamentResponse, UserResponse,
+        ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse, TournamentResponse,
+        UserResponse,
     },
     websocket::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
 };
@@ -19,7 +20,7 @@ use codee::binary::MsgpackSerdeCodec;
 use codee::Encoder;
 use db_lib::{
     get_conn,
-    models::{Challenge, Game, Tournament, TournamentInvitation, User},
+    models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
     DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
@@ -300,6 +301,36 @@ impl Handler<Connect> for WsServer {
                                     ServerResult::Ok(Box::new(ServerMessage::Tournament(
                                         TournamentUpdate::Invited(response.tournament_id.clone()),
                                     )));
+                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
+                                    let cam = ClientActorMessage {
+                                        destination: MessageDestination::User(user_id),
+                                        serialized,
+                                        from: Some(user_id),
+                                    };
+                                    address.do_send(cam);
+                                };
+                            }
+                        }
+                    }
+
+                    // send schedule notifications
+                    if let Ok(schedules) =
+                        Schedule::find_user_notifications(user.id, &mut conn).await
+                    {
+                        for schedule in schedules {
+                            let is_opponent = schedule.opponent_id == user.id;
+                            if let Ok(response) =
+                                ScheduleResponse::from_model(schedule, &mut conn).await
+                            {
+                                let schedule_update = if is_opponent {
+                                    ScheduleUpdate::Proposed(response)
+                                } else {
+                                    ScheduleUpdate::Accepted(response)
+                                };
+
+                                let message = ServerResult::Ok(Box::new(ServerMessage::Schedule(
+                                    schedule_update,
+                                )));
                                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                                     let cam = ClientActorMessage {
                                         destination: MessageDestination::User(user_id),

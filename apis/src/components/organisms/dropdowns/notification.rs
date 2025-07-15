@@ -1,26 +1,44 @@
 use crate::components::molecules::{
-    challenge_row::ChallengeRow, hamburger::Hamburger,
+    challenge_row::ChallengeRow,
+    hamburger::Hamburger,
+    schedule_notification::{AcceptanceNotification, ProposalNotification},
     tournament_invitation_notification::TournamentInvitationNotification,
     tournament_status_notification::TournamentStatusNotification,
 };
-use crate::functions::tournaments::get_all_abstract;
+use crate::functions::tournaments::get_abstracts_by_ids;
 use crate::providers::challenges::ChallengeStateSignal;
-use crate::providers::{AuthContext, NotificationContext};
-use crate::responses::TournamentAbstractResponse;
+use crate::providers::{AuthContext, NotificationContext, SchedulesContext};
+use crate::responses::ScheduleResponse;
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::TournamentSortOrder;
-use std::collections::HashMap;
+use shared_types::GameId;
+use std::collections::{HashMap, HashSet};
+use uuid::Uuid;
+
+fn get_schedule_details(
+    schedules: RwSignal<HashMap<GameId, HashMap<Uuid, ScheduleResponse>>>,
+    schedule_id: Uuid,
+) -> Option<ScheduleResponse> {
+    schedules.with(|schedules| {
+        for (_, game_schedules) in schedules.iter() {
+            if let Some(schedule) = game_schedules.get(&schedule_id) {
+                return Some(schedule.clone());
+            }
+        }
+        None
+    })
+}
 
 #[component]
 pub fn NotificationDropdown() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let uid = move || auth_context.user.with(|a| a.as_ref().map(|user| user.id));
     let hamburger_show = RwSignal::new(false);
-    let onclick_close = move |_| hamburger_show.update(|b| *b = false);
-    let notifications_context = StoredValue::new(expect_context::<NotificationContext>());
+    let notifications_context = expect_context::<NotificationContext>();
     let challenges = expect_context::<ChallengeStateSignal>();
-    let has_notifications = move || !notifications_context.read_value().is_empty();
+    let schedules_context = expect_context::<SchedulesContext>();
+    let has_notifications = move || !notifications_context.is_empty();
+
     let icon_style = move || {
         if has_notifications() {
             "w-4 h-4 fill-ladybug-red"
@@ -29,9 +47,42 @@ pub fn NotificationDropdown() -> impl IntoView {
         }
     };
 
-    //TODO: Getting all tournaments each time when has_notifications changes is not good longterm
-    let tournaments_resource = Resource::new(has_notifications, move |_| {
-        get_all_abstract(TournamentSortOrder::CreatedAtDesc)
+    let has_tournament_notifications = move || {
+        !notifications_context
+            .tournament_invitations
+            .with(|v| v.is_empty())
+            || !notifications_context
+                .tournament_started
+                .with(|v| v.is_empty())
+            || !notifications_context
+                .tournament_finished
+                .with(|v| v.is_empty())
+    };
+
+    let tournaments_resource = Resource::new(has_tournament_notifications, move |_| {
+        let mut tournament_ids = HashSet::new();
+        tournament_ids.extend(
+            notifications_context
+                .tournament_invitations
+                .get()
+                .iter()
+                .cloned(),
+        );
+        tournament_ids.extend(
+            notifications_context
+                .tournament_started
+                .get()
+                .iter()
+                .cloned(),
+        );
+        tournament_ids.extend(
+            notifications_context
+                .tournament_finished
+                .get()
+                .iter()
+                .cloned(),
+        );
+        get_abstracts_by_ids(tournament_ids)
     });
 
     view! {
@@ -48,101 +99,159 @@ pub fn NotificationDropdown() -> impl IntoView {
                     view! { "No notifications right now" }
                 }
             >
-                <Transition>
-                    {move || Suspend::new(async move {
-                        let tournaments: StoredValue<HashMap<_, _>> = StoredValue::new(
-                            tournaments_resource
+                <For
+                    each=move || notifications_context.challenges.get()
+                    key=|c| c.clone()
+                    let:challenge_id
+                >
+                    <div >
+                        <table class="border-collapse table-auto">
+                            <tbody>
+                                <ChallengeRow
+                                    challenge=challenges
+                                        .signal
+                                        .get_untracked()
+                                        .challenges
+                                        .get(&challenge_id)
+                                        .expect("Challenge exists")
+                                        .clone()
+                                    single=false
+                                    uid=uid()
+                                    attr:class="p-2 text-sm rounded dark:bg-header-twilight bg-odd-light"
+                                />
+                            </tbody>
+                        </table>
+                    </div>
+                </For>
+
+                <For
+                    each=move || notifications_context.schedule_proposals.get()
+                    key=|id| *id
+                    let:schedule_id
+                >
+                    {move || {
+                        get_schedule_details(schedules_context.own, schedule_id)
+                            .map(|schedule| {
+                                view! {
+                                    <div >
+                                        <ProposalNotification
+                                            schedule_id=schedule.id
+                                            proposer_username=schedule.proposer_username
+                                            tournament_id=schedule.tournament_id
+                                            start_time=schedule.start_t
+                                        />
+                                    </div>
+                                }
+                            })
+                    }}
+                </For>
+
+                <For
+                    each=move || notifications_context.schedule_acceptances.get()
+                    key=|id| *id
+                    let:schedule_id
+                >
+                    {move || {
+                        get_schedule_details(schedules_context.own, schedule_id)
+                            .map(|schedule| {
+                                view! {
+                                    <div >
+                                        <AcceptanceNotification
+                                            tournament_name=schedule.tournament_name
+                                            schedule_id=schedule.id
+                                            accepter_username=schedule.opponent_username
+                                            tournament_id=schedule.tournament_id
+                                            start_time=schedule.start_t
+                                        />
+                                    </div>
+                                }
+                            })
+                    }}
+                </For>
+
+                <Show when=has_tournament_notifications>
+                    <Transition fallback=|| {
+                        view! { <div>"Loading tournaments..."</div> }
+                    }>
+                        {move || Suspend::new(async move {
+                            let tournaments: HashMap<_, _> = tournaments_resource
                                 .await
                                 .unwrap_or_default()
                                 .into_iter()
                                 .map(|t| (t.tournament_id.clone(), t))
-                                .collect(),
-                        );
-                        let each_tournament = move || {
-                            notifications_context
-                                .get_value()
-                                .tournament_invitations
-                                .get()
-                                .iter()
-                                .filter_map(move |id| { tournaments.get_value().get(id).cloned() })
-                                .collect::<Vec<TournamentAbstractResponse>>()
-                        };
+                                .collect();
+                            let tournaments = StoredValue::new(tournaments);
 
-                        view! {
-                            <For
-                                each=move || notifications_context.get_value().challenges.get()
-                                key=|c| { c.clone() }
-                                let:challenge_id
-                            >
-                                <div on:click=onclick_close>
-                                    <ChallengeRow
-                                        challenge=challenges
-                                            .signal
-                                            .get_untracked()
-                                            .challenges
-                                            .get(&challenge_id)
-                                            .expect("Challenge exists")
-                                            .clone()
-                                        single=false
-                                        uid=uid()
-                                    />
-                                </div>
-                            </For>
-
-                            <For
-                                each=each_tournament
-                                key=|t| { (t.id, t.players, t.seats) }
-                                let:tournament
-                            >
-                                <div on:click=onclick_close>
-                                    <TournamentInvitationNotification tournament />
-                                </div>
-                            </For>
-
-                            <For
-                                each=move || {
-                                    notifications_context.get_value().tournament_started.get()
-                                }
-                                key=|c| { c.clone() }
-                                let:tournament_id
-                            >
-                                <div on:click=onclick_close>
-                                    <TournamentStatusNotification
-                                        tournament_id=tournament_id.clone()
-                                        tournament_name=tournaments
+                            view! {
+                                <For
+                                    each=move || notifications_context.tournament_invitations.get()
+                                    key=|id| id.clone()
+                                    let:tournament_id
+                                >
+                                    {move || {
+                                        tournaments
                                             .get_value()
                                             .get(&tournament_id)
-                                            .expect("tournament exists")
-                                            .name
-                                            .clone()
-                                        finished=false
-                                    />
-                                </div>
-                            </For>
+                                            .map(|tournament| {
+                                                view! {
+                                                    <div >
+                                                        <TournamentInvitationNotification tournament=tournament
+                                                            .clone() />
+                                                    </div>
+                                                }
+                                            })
+                                    }}
+                                </For>
 
-                            <For
-                                each=move || {
-                                    notifications_context.get_value().tournament_finished.get()
-                                }
-                                key=|c| { c.clone() }
-                                let:tournament_id
-                            >
-                                <div on:click=onclick_close>
-                                    <TournamentStatusNotification
-                                        tournament_id=tournament_id.clone()
-                                        tournament_name=tournaments
+                                <For
+                                    each=move || notifications_context.tournament_started.get()
+                                    key=|id| id.clone()
+                                    let:tournament_id
+                                >
+                                    {move || {
+                                        tournaments
                                             .get_value()
                                             .get(&tournament_id)
-                                            .expect("tournament exists")
-                                            .name
-                                            .clone()
-                                        finished=true
-                                    />
-                                </div>
-                            </For>
-                        }
-                    })}
-                </Transition>
+                                            .map(|tournament| {
+                                                view! {
+                                                    <div >
+                                                        <TournamentStatusNotification
+                                                            tournament_id=tournament_id.clone()
+                                                            tournament_name=tournament.name.clone()
+                                                            finished=false
+                                                        />
+                                                    </div>
+                                                }
+                                            })
+                                    }}
+                                </For>
+
+                                <For
+                                    each=move || notifications_context.tournament_finished.get()
+                                    key=|id| id.clone()
+                                    let:tournament_id
+                                >
+                                    {move || {
+                                        tournaments
+                                            .get_value()
+                                            .get(&tournament_id)
+                                            .map(|tournament| {
+                                                view! {
+                                                    <div >
+                                                        <TournamentStatusNotification
+                                                            tournament_id=tournament_id.clone()
+                                                            tournament_name=tournament.name.clone()
+                                                            finished=true
+                                                        />
+                                                    </div>
+                                                }
+                                            })
+                                    }}
+                                </For>
+                            }
+                        })}
+                    </Transition>
+                </Show>
             </Show>
         </Hamburger>
     }
