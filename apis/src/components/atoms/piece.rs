@@ -202,11 +202,12 @@ pub fn PieceWithOnClick(
         let in_analysis = analysis.is_some();
         let current_turn_color = game_state.signal.with_untracked(|gs| gs.state.turn_color);
 
-        let is_selectable_piece = config().allow_preselect && match piece_type {
-            PieceType::Board => true,
-            PieceType::Inactive | PieceType::Reserve => !piece().is_color(current_turn_color),
-            _ => false,
-        };
+        let is_selectable_piece = config().allow_preselect
+            && match piece_type {
+                PieceType::Board => true,
+                PieceType::Inactive | PieceType::Reserve => !piece().is_color(current_turn_color),
+                _ => false,
+            };
         let is_current_player = game_state.signal.with_untracked(|gs| {
             auth_context
                 .user

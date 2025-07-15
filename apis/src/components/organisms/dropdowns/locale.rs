@@ -21,7 +21,7 @@ pub fn LocaleDropdown() -> impl IntoView {
             id="locale_dropdown"
             content=move || i18n.get_locale().to_string()
         >
-            <For each=Locale::get_all key=move |locale| (locale.to_string()) let:locale>
+            <For each=Locale::get_all key=move |locale| locale.to_string() let:locale>
                 <a class=COMMON_LINK_STYLE on:click=move |_| onclick_close(*locale)>
                     {locale.to_string()}
                 </a>

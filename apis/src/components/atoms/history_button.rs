@@ -122,7 +122,7 @@ pub fn set_timer_from_response(game_state_signal: GameStateSignal, timer: TimerS
                 let curr_time_left = Duration::from_nanos(*curr_time_left as u64);
                 let prev_time_left = Duration::from_nanos(*prev_time_left as u64);
                 timer.signal.update(|t| {
-                    if turn % 2 == 0 {
+                    if turn.is_multiple_of(2) {
                         t.white_time_left = Some(curr_time_left);
                         t.black_time_left = Some(prev_time_left);
                     } else {

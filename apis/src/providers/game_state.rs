@@ -339,7 +339,7 @@ impl GameState {
                 let turn = self.state.turn;
                 let black_id = self.black_id;
                 let white_id = self.white_id;
-                if turn % 2 == 0 {
+                if turn.is_multiple_of(2) {
                     white_id.is_some_and(|white| white == user.id)
                 } else {
                     black_id.is_some_and(|black| black == user.id)

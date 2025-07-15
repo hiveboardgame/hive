@@ -71,8 +71,7 @@ pub fn ChallengeView() -> impl IntoView {
                                     view! {
                                         <Show when=move || {
                                             user.with(|a| {
-                                                a
-                                                    .as_ref()
+                                                a.as_ref()
                                                     .is_some_and(|user| user.id == challenge.challenger.uid)
                                             })
                                         }>

@@ -1,4 +1,4 @@
-use crate::api::v1::auth::auth::Auth;
+use crate::api::v1::auth::Auth;
 use crate::api::v1::messages::send::send_challenge_messages;
 use crate::responses::{ChallengeResponse, GameResponse};
 use crate::websocket::busybee::Busybee;

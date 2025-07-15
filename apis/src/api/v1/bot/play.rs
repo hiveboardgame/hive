@@ -1,4 +1,4 @@
-use crate::api::v1::auth::auth::Auth;
+use crate::api::v1::auth::Auth;
 use crate::api::v1::messages::send::send_messages;
 use crate::websocket::WsServer;
 use actix::Addr;

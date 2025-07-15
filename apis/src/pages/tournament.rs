@@ -264,7 +264,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let tournament_lacks_results = tournament.with_value(|t| {
         t.games
             .iter()
-            .any(|e| (e.tournament_game_result == TournamentGameResult::Unknown))
+            .any(|e| e.tournament_game_result == TournamentGameResult::Unknown)
     });
     let unplayed_games_string = move || {
         let nr = unplayed_games.with_value(|games| games.len());
@@ -397,7 +397,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         <For
                             each=move || { tournament.with_value(|t| t.organizers.clone()) }
 
-                            key=|users| (users.uid)
+                            key=|users| users.uid
                             let:user
                         >
                             <div>

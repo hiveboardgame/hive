@@ -24,7 +24,11 @@ impl Hasher {
     }
 
     pub fn clear(&mut self, turn: usize) {
-        let black_to_move = if turn % 2 == 0 { *BLACK_TO_MOVE } else { 0 };
+        let black_to_move = if turn.is_multiple_of(2) {
+            *BLACK_TO_MOVE
+        } else {
+            0
+        };
         self.hash = 0;
         self.hashes = [black_to_move, black_to_move];
         self.stunned = None;

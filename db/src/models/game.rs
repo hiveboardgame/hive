@@ -549,7 +549,7 @@ impl Game {
         if self.time_mode != TimeMode::Untimed.to_string() {
             if !state.history.last_move_is_pass() {
                 // Not a shutout so we just add the players time
-                if state.turn % 2 == 0 {
+                if state.turn.is_multiple_of(2) {
                     new_move_times.push(time_info.black_time_left);
                 } else {
                     new_move_times.push(time_info.white_time_left);
@@ -558,13 +558,13 @@ impl Game {
                 // A shutout has happened, so state.turn was incremented twice so the "previous/not
                 // shutout" player's time has to be added first. Note that we need to do it the
                 // other way round than in if it's not a shutout
-                if state.turn % 2 == 0 {
+                if state.turn.is_multiple_of(2) {
                     new_move_times.push(time_info.white_time_left);
                 } else {
                     new_move_times.push(time_info.black_time_left);
                 }
                 // Now the shutout player's time can be added
-                if state.turn % 2 == 0 {
+                if state.turn.is_multiple_of(2) {
                     new_move_times.push(time_info.black_time_left);
                 } else {
                     new_move_times.push(time_info.white_time_left);
@@ -613,7 +613,7 @@ impl Game {
             new_conclusion = Conclusion::Repetition;
         }
 
-        let next_player = if state.turn % 2 == 0 {
+        let next_player = if state.turn.is_multiple_of(2) {
             self.white_id
         } else {
             self.black_id

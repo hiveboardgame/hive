@@ -57,7 +57,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
         match timer.finished {
             true => "bg-stone-200 dark:bg-reserve-twilight",
             false => {
-                if (side() == Color::White) == (timer.turn % 2 == 0) {
+                if (side() == Color::White) == timer.turn.is_multiple_of(2) {
                     "bg-grasshopper-green"
                 } else {
                     "bg-stone-200 dark:bg-reserve-twilight"

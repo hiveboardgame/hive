@@ -31,7 +31,7 @@ pub fn TournamentAdminControls(
                 <For
                     each=move || { tournament.with_value(|t| t.players.clone()) }
 
-                    key=|(id, _)| (*id)
+                    key=|(id, _)| *id
                     let:user
                 >
                     <UserRow actions=user_kick() user=user.1 />
@@ -43,7 +43,7 @@ pub fn TournamentAdminControls(
                 <p class="font-bold">Invitees</p>
                 <For
                     each=move || { tournament.with_value(|t| t.invitees.clone()) }
-                    key=|users| (users.uid)
+                    key=|users| users.uid
                     let:user
                 >
                     <UserRow actions=user_uninvite() user />

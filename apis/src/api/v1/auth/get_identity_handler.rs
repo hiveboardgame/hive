@@ -1,4 +1,4 @@
-use super::auth::Auth;
+use super::Auth;
 use actix_web::get;
 use actix_web::HttpResponse;
 use serde_json::json;
