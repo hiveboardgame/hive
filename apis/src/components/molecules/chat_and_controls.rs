@@ -6,18 +6,19 @@ use crate::{
     providers::game_state::GameStateSignal,
 };
 use leptos::prelude::*;
-use leptos_router::hooks::use_params_map;
-use shared_types::{GameId, SimpleDestination};
+use leptos_router::hooks::use_location;
+use shared_types::SimpleDestination;
 
 #[component]
 pub fn ChatAndControls() -> impl IntoView {
-    let params = use_params_map();
-    let game_id = move || params.get().get("nanoid").map(|s| GameId(s.to_owned()));
+    let location = use_location();
     let gamestate = expect_context::<GameStateSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let is_finished = gamestate.is_finished();
-    let in_mobile_game =
-        move || orientation_signal.orientation_vertical.get() && game_id().is_some();
+    let in_mobile_game = move || {
+        orientation_signal.orientation_vertical.get()
+            && location.pathname.with(|l| l.starts_with("/game/"))
+    };
     view! {
         <Show when=in_mobile_game>
             <Show when=move || !is_finished()>
