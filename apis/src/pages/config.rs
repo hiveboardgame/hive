@@ -2,9 +2,9 @@ use crate::components::{
     atoms::{rating::icon_for_speed, select_options::SelectOption},
     organisms::{
         confirm_mode_toggle::ConfirmModeToggle, darkmode_toggle::DarkModeToggle,
-        preview_tiles::PreviewTiles, takeback_conf::TakebackConf,
-        tile_design_toggle::TileDesignToggle, tile_dots_toggle::TileDotsToggle,
-        tile_rotation_toggle::TileRotationToggle,
+        preselect_toggle::PreSelectToggle, preview_tiles::PreviewTiles,
+        takeback_conf::TakebackConf, tile_design_toggle::TileDesignToggle,
+        tile_dots_toggle::TileDotsToggle, tile_rotation_toggle::TileRotationToggle,
     },
 };
 use crate::i18n::*;
@@ -112,6 +112,17 @@ pub fn Config() -> impl IntoView {
                     </select>
                 </label>
                 {toggle}
+            </div>
+
+            // Preselect Card
+            <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+                <h2 class="mb-4 text-xl font-bold text-center text-purple-600 dark:text-purple-400">
+                    "🚀 Allow Preselect"
+                </h2>
+                <p class="mb-3 text-sm text-gray-700 dark:text-gray-300">
+                    "Enables selecting a piece on opponent turn to move faster"
+                </p>
+                <PreSelectToggle />
             </div>
 
             // Color Scheme Card
