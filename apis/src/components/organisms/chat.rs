@@ -15,7 +15,7 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
         .timestamp
         .unwrap()
         .with_timezone(&Local)
-        .format(" %d/%m/%Y %H:%M")
+        .format(" %d/%m/%Y %H:%M %Z")
         .to_string();
     let turn = message.turn.map(|turn| (format!(" on turn {turn}:")));
 

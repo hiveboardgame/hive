@@ -290,4 +290,12 @@ impl User {
             .load::<(User, Rating)>(conn)
             .await?)
     }
+
+    pub async fn get_username_by_id(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<String, DbError> {
+        Ok(users_table
+            .select(users::username)
+            .filter(users::id.eq(uuid))
+            .first(conn)
+            .await?)
+    }
 }

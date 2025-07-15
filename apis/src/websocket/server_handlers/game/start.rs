@@ -9,7 +9,11 @@ use crate::{
     },
 };
 use anyhow::Result;
-use db_lib::{get_conn, models::Game, DbPool};
+use db_lib::{
+    get_conn,
+    models::{Game, Schedule},
+    DbPool,
+};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use shared_types::GameId;
@@ -48,7 +52,20 @@ impl StartHandler {
             if should_start {
                 let game = conn
                     .transaction::<_, anyhow::Error, _>(move |tc| {
-                        async move { Ok(self.game.start(tc).await?) }.scope_boxed()
+                        async move {
+                            let started_game = self.game.start(tc).await?;
+
+                            if let Err(e) = Schedule::delete_all_for_game(started_game.id, tc).await
+                            {
+                                println!(
+                                    "Failed to delete schedules for game {}: {}",
+                                    started_game.id, e
+                                );
+                            }
+
+                            Ok(started_game)
+                        }
+                        .scope_boxed()
                     })
                     .await?;
                 messages.push(InternalServerMessage {

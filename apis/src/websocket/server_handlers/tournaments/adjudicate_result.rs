@@ -5,7 +5,7 @@ use crate::{
 use anyhow::Result;
 use db_lib::{
     get_conn,
-    models::{Game, Tournament},
+    models::{Game, Schedule, Tournament},
     DbPool,
 };
 use diesel_async::scoped_futures::ScopedFutureExt;
@@ -43,6 +43,11 @@ impl AdjudicateResultHandler {
                     let game = Game::find_by_game_id(&self.game_id, tc).await?;
                     game.adjudicate_tournament_result(&self.user_id, &self.new_result, tc)
                         .await?;
+
+                    if let Err(e) = Schedule::delete_all_for_game(game.id, tc).await {
+                        println!("Failed to delete schedules for game {}: {}", game.id, e);
+                    }
+
                     let id = game.tournament_id.expect("Have a tournament_id");
                     Ok(Tournament::find(id, tc).await?)
                 }

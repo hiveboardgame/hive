@@ -52,7 +52,6 @@ pub fn handle_tournament(tournament: TournamentUpdate) {
             notifications.tournament_started.update(|tournaments| {
                 tournaments.insert(tournament_id.clone());
             });
-            // TODO: Inform users the tournament started
         }
         TournamentUpdate::Finished(tournament_id) => {
             notify_update.set(tournament_id.clone());

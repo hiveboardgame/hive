@@ -1,5 +1,5 @@
 use super::Game;
-use crate::schema::schedules;
+use crate::schema::{schedules, tournaments};
 use crate::DbConn;
 use crate::{db_error::DbError, schema::games};
 use chrono::{DateTime, Utc};
@@ -18,6 +18,7 @@ pub struct NewSchedule {
     start_t: DateTime<Utc>,
     opponent_id: Uuid,
     agreed: bool,
+    notified: bool,
 }
 
 impl NewSchedule {
@@ -49,6 +50,7 @@ impl NewSchedule {
             start_t,
             opponent_id,
             agreed: false,
+            notified: false,
         })
     }
 }
@@ -66,6 +68,7 @@ pub struct Schedule {
     pub opponent_id: Uuid,
     pub start_t: DateTime<Utc>,
     pub agreed: bool,
+    pub notified: bool,
 }
 
 impl Schedule {
@@ -73,18 +76,15 @@ impl Schedule {
         if self.opponent_id != user_id {
             return Err(DbError::Unauthorized);
         }
-        //unset all schedules for this game
-        diesel::update(schedules::table.filter(schedules::game_id.eq(self.game_id)))
-            .set(schedules::agreed.eq(false))
+
+        // Update all schedules for this game in one query
+        let ret = diesel::update(schedules::table.filter(schedules::game_id.eq(self.game_id)))
+            .set(schedules::agreed.eq(schedules::id.eq(self.id)))
             .execute(conn)
             .await?;
-        //set this schedule only
-        let ret = Ok(diesel::update(schedules::table.find(self.id))
-            .set(schedules::agreed.eq(true))
-            .execute(conn)
-            .await?);
+
         self.agreed = true;
-        ret
+        Ok(ret)
     }
 
     pub async fn create(
@@ -139,5 +139,58 @@ impl Schedule {
 
     fn is_player(&self, user_id: Uuid) -> bool {
         user_id == self.proposer_id || user_id == self.opponent_id
+    }
+
+    pub async fn mark_notified(
+        schedule_id: Uuid,
+        user_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
+        let rows_affected = diesel::update(schedules::table.find(schedule_id))
+            .filter(schedules::proposer_id.eq(user_id))
+            .set(schedules::notified.eq(true))
+            .execute(conn)
+            .await?;
+        if rows_affected == 0 {
+            return Err(DbError::Unauthorized);
+        }
+
+        Ok(())
+    }
+
+    pub async fn find_user_notifications(
+        user_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Self>, DbError> {
+        Ok(schedules::table
+            .inner_join(tournaments::table)
+            .filter(
+                tournaments::status
+                    .eq("InProgress")
+                    .and(tournaments::time_mode.eq("Real Time"))
+                    .and(
+                        schedules::opponent_id
+                            .eq(user_id)
+                            .and(schedules::agreed.eq(false))
+                            .or(schedules::proposer_id
+                                .eq(user_id)
+                                .and(schedules::agreed.eq(true))
+                                .and(schedules::notified.eq(false))),
+                    ),
+            )
+            .select(schedules::all_columns)
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn delete_all_for_game(
+        game_id: Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<usize, DbError> {
+        Ok(
+            diesel::delete(schedules::table.filter(schedules::game_id.eq(game_id)))
+                .execute(conn)
+                .await?,
+        )
     }
 }

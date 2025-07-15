@@ -99,6 +99,7 @@ diesel::table! {
         opponent_id -> Uuid,
         start_t -> Timestamptz,
         agreed -> Bool,
+        notified -> Bool,
     }
 }
 

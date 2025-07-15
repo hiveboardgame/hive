@@ -4,7 +4,10 @@ use crate::{
         ScheduleUpdate, ServerMessage,
     },
     responses::ScheduleResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        busybee::Busybee,
+        messages::{InternalServerMessage, MessageDestination},
+    },
 };
 use anyhow::Result;
 use db_lib::{
@@ -40,8 +43,22 @@ impl ScheduleHandler {
                     Ok(match self.action.clone() {
                         Accept(id) => {
                             let mut schedule = Schedule::from_id(id, tc).await?;
+                            let proposer_id = schedule.proposer_id;
                             schedule.accept(self.user_id, tc).await?;
                             let schedule = ScheduleResponse::from_model(schedule, tc).await?;
+                            
+                            let msg = format!(
+                                "[Schedule Accepted](<https://hivegame.com/tournament/{}>) - {} accepted your proposed game time: {} for [your game](<https://hivegame.com/game/{}>)",
+                                schedule.tournament_id,
+                                schedule.opponent_username,
+                                schedule.start_t.format("%Y-%m-%d %H:%M UTC"),
+                                schedule.game_id
+                            );
+                            
+                            if let Err(e) = Busybee::msg(proposer_id, msg).await {
+                                println!("Failed to send schedule acceptance notification: {e}");
+                            }
+                            
                             (
                                 ScheduleUpdate::Accepted(schedule),
                                 vec![MessageDestination::Global],
@@ -61,12 +78,25 @@ impl ScheduleHandler {
                                 NewSchedule::new(self.user_id, &game_id, date, tc).await?;
                             let schedule = Schedule::create(schedule, self.user_id, tc).await?;
                             let opponent_id = schedule.opponent_id;
-                            let schedule = ScheduleResponse::from_model(schedule, tc).await?;
+                            let schedule_response = ScheduleResponse::from_model(schedule, tc).await?;
+                            
+                            let msg = format!(
+                                "[Schedule Proposal](<https://hivegame.com/tournament/{}>) - {} proposed a game time: {} for [your game](<https://hivegame.com/game/{}>)",
+                                schedule_response.tournament_id,
+                                schedule_response.proposer_username,
+                                schedule_response.start_t.format("%Y-%m-%d %H:%M UTC"),
+                                schedule_response.game_id
+                            );
+                            
+                            if let Err(e) = Busybee::msg(opponent_id, msg).await {
+                                println!("Failed to send schedule proposal notification: {e}");
+                            }
+                            
                             let destinations = vec![
                                 MessageDestination::User(self.user_id),
                                 MessageDestination::User(opponent_id),
                             ];
-                            (ScheduleUpdate::Proposed(schedule), destinations)
+                            (ScheduleUpdate::Proposed(schedule_response), destinations)
                         }
                         TournamentPublic(id) => {
                             let tournament = Tournament::from_nanoid(&id.to_string(), tc).await?;

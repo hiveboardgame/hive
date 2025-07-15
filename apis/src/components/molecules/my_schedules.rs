@@ -125,7 +125,7 @@ fn MySchedulesInner(
                             </For>
                             <ProposeDateControls game_id=game_id() />
                             <a
-                                class="flex gap-1 justify-center items-center place-self-center px-4 py-2 w-2/5 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                class="flex gap-1 justify-center items-center place-self-center px-4 py-2 w-2/5 font-bold text-white rounded no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                 href=format!("/game/{}", &game_id())
                             >
                                 "Join Game"

@@ -14,7 +14,7 @@ pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
                 None => "Start up to organizer".to_string(),
                 Some(time) => time
                     .with_timezone(&Local)
-                    .format("Start: %d/%m/%Y %H:%M")
+                    .format("Start: %d/%m/%Y %H:%M %Z")
                     .to_string(),
             }
         } else {
