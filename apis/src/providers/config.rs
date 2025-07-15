@@ -30,6 +30,7 @@ pub struct ConfigOpts {
     pub tile: TileOptions,
     pub prefers_sound: bool,
     pub prefers_dark: bool,
+    pub allow_preselect: bool,
 }
 
 impl Default for ConfigOpts {
@@ -46,6 +47,7 @@ impl Default for ConfigOpts {
             tile: TileOptions::default(),
             prefers_sound: false,
             prefers_dark: false,
+            allow_preselect: false,
         }
     }
 }
