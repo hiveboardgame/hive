@@ -42,7 +42,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     let Pausable { pause, resume, .. } = use_interval_fn_with_options(
         move || {
             timer.update(|t| {
-                if t.turn % 2 == 0 {
+                if t.turn.is_multiple_of(2) {
                     t.white_time_left = t
                         .white_time_left
                         .map(|t| t.checked_sub(tick_rate).unwrap_or_default());
@@ -57,8 +57,9 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         UseIntervalFnOptions::default().immediate(false),
     );
     let should_resume = Signal::derive(move || {
-        timer
-            .with(|t| in_progress() && (side() == Color::White) == (t.turn % 2 == 0) && !t.finished)
+        timer.with(|t| {
+            in_progress() && (side() == Color::White) == (t.turn.is_multiple_of(2)) && !t.finished
+        })
     });
     let time_is_zero = Signal::derive(move || timer.with(|t| t.time_left(side()).is_zero()));
     let user_needs_warning = Signal::derive(move || {

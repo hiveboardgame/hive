@@ -44,7 +44,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                             <For
                                                 each=move || { users.get_value() }
 
-                                                key=|users| (users.uid)
+                                                key=|users| users.uid
                                                 let:user
                                             >
                                                 <UserRow

@@ -142,7 +142,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
 
             <HistoryControls parent=parent.into() />
             <div node_ref=parent class="grid overflow-auto grid-cols-4 gap-1 mb-8 max-h-full h-fit">
-                <For each=history_moves key=|history_move| (history_move.0) let:history_move>
+                <For each=history_moves key=|history_move| history_move.0 let:history_move>
 
                     <HistoryMove
                         turn=history_move.0

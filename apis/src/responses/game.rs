@@ -125,7 +125,7 @@ impl GameResponse {
                 .to_std()?);
         }
         if let Some(interaction) = self.last_interaction {
-            let left = if self.turn % 2 == 0 {
+            let left = if self.turn.is_multiple_of(2) {
                 chrono::Duration::from_std(
                     self.white_time_left.context("white_time_left not some")?,
                 )

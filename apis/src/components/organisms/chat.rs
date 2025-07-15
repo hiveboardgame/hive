@@ -17,7 +17,7 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
         .with_timezone(&Local)
         .format(" %d/%m/%Y %H:%M")
         .to_string();
-    let turn = message.turn.map(|turn| (format!(" on turn {turn}:")));
+    let turn = message.turn.map(|turn| format!(" on turn {turn}:"));
 
     view! {
         <div class="flex flex-col items-start mb-1 w-full">

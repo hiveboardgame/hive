@@ -36,13 +36,13 @@ pub fn TimeRow(
                     EitherOf3::B(t!(
                         i18n,
                         game.time_mode.correspondence.days_side,
-                        count = move || (base / 86400)
+                        count = move || base / 86400
                     ))
                 } else if let Some(increment) = time_info.increment {
                     EitherOf3::C(t!(
                         i18n,
                         game.time_mode.correspondence.days_move,
-                        count = move || (increment / 86400)
+                        count = move || increment / 86400
                     ))
                 } else {
                     EitherOf3::A("".to_string())

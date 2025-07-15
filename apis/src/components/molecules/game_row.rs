@@ -125,7 +125,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
             GameStatus::InProgress | GameStatus::NotStarted
         );
         let is_current_turn = match color {
-            Color::White => turn % 2 == 0,
+            Color::White => turn.is_multiple_of(2),
             Color::Black => turn % 2 == 1,
         };
 
