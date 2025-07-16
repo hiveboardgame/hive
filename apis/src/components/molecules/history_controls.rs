@@ -48,13 +48,9 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
     });
     let if_last_go_to_end = Callback::new(move |()| {
         focus.run(());
-        game_state.signal.with_untracked(|gs| {
-            if let Some(turn) = gs.history_turn {
-                if turn == gs.state.turn - 1 {
-                    go_to_end.run(());
-                }
-            }
-        });
+        if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
+            go_to_end.run(());
+        }
     });
     view! {
         <div>
