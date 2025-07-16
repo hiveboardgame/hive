@@ -1,104 +1,192 @@
 {
     "title": "Häufig gestellte Fragen",
-    "what_is_hivegame": {
-        "question": "Was ist hivegame.com?",
-        "answer": "hivegame.com ist eine Gemeinschaftsinitiative zur Schaffung einer neuen Online-Plattform, um Hive® kostenlos zu spielen. hivegame.com ist werbefrei, Open Source, wird von Mitgliedern der Gemeinschaft entwickelt und wird offiziell vom Erfinder von Hive®, John Yianni, unterstützt."
+    "sections": {
+        "getting_started": "Erste Schritte",
+        "game_settings": "Spieleinstellungen",
+        "tournaments": "Turniere",
+        "account_configuration": "Kontoeinstellungen",
+        "more_features": "Weitere Funktionen",
+        "community_support": "Community & Support",
+        "donating": "Spenden an Hivegame.com"
     },
     "how_to_help": {
-        "question": "Wie kann ich diesem Projekt helfen, erfolgreich zu sein?",
+        "question": "Wie kann ich die Seite unterstützen?",
         "answers": {
-            "item1": "Du kannst uns helfen, indem du mit <source_link>programmierst</source_link>",
-            "item2": "Du kannst uns mit Ideen, Feedback und Grafiken auf <discord_link>Discord</discord_link> unterstützen.",
-            "item3": "Du kannst mit einer <donate_link>Spende</donate_link> helfen, die Hosting Kosten (und vielleicht irgendwann mal die Entwickler) zu bezahlen."
+            "item1": "Verbreite die Nachricht, um mehr Spieler hierher zu bringen!",
+            "item2": "Trage zur Website-Entwicklung, Verbesserungen, Fehlerbehebungen oder Wartung über <github_link>GitHub</github_link> bei",
+            "item3": "Geldspenden - siehe den Abschnitt Spenden an Hivegame.com in den FAQ"
         }
     },
-    "how_does_it_operate": {
-        "question": "Wie funktioniert hivegame.com?",
-        "answer": "Es wird von Mitgliedern der Gemeinschaft entwickelt und basiert zu 100% auf Spenden. hivegame.com wird niemals Benutzerdaten sammeln, Werbung anzeigen oder irgendetwas implementieren, das dich vom Spiel ablenkt oder sonst irgendwie Geld einbringt."
-    },
     "how_to_get_crown": {
-        "question": "Wie bekomme ich eine 👑 neben meinem Benutzernamen?",
-        "answer": "Wenn du an das Projekt spendest!"
+        "question": "Warum haben einige Benutzer das Symbol 👑 neben ihrem Namen?",
+        "answer": "Benutzer, die eine freiwillige und optionale Geldspende zur Unterstützung von Hivegame.com leisten, erhalten ein Kronensymbol neben ihrem Namen. Abgesehen vom Symbol neben ihrem Namen erhalten Spender keine zusätzlichen Privilegien."
     },
     "what_is_hive": {
         "question": "Was ist Hive?",
-        "answer": "Hive ist ein preisgekröntes abstraktes Strategiespiel, das 2000 von John Yianni entworfen und von <gen42_link>Gen42</gen42_link> verkauft wird."
+        "answer": "Hive ist ein schnelles, abstraktes Strategiespiel, das mit sechseckigen Steinen gespielt wird. Stell es dir wie Schach vor... mit Käfern. Und denk daran: Beschütze immer deine Königin. Du kannst ein physisches Hive-Set auf der Website des Verlags <gen42_link>Gen42</gen42_link> kaufen"
     },
-    "how_to_play_with_friends": {
-        "question": "Wie kann ich ein Spiel mit einer/m Freund:in spielen?",
-        "answers": {
-            "item1": "Du kannst ein Spiel erstellen, indem du auf die Schaltfläche 'Spiel erstellen' auf der Hauptseite klickst, dann die Option 'privat' wählst und danach den Link mit einer/m Freund*in teilst. Sie/Er muss ein Konto haben oder erstellen, um zu spielen.",
-            "item2": "Alternativ kannst du eine 'direkte Herausforderung' senden, indem du auf das Symbol mit den 'gekreuzten Schwertern' neben jeder/m BenutzerIn klickst, das eine direkte Herausforderung an diese(n) bestimmte(n) Benutzer_in sendet.",
-            "item3": "Natürlich kannst du auch eine offene Herausforderung einrichten, die von allen im Elo-Bereich akzeptiert werden kann, und einfach hoffen, dass sie/er als erstes dein Spiel annimmt."
-        }
+    "hive_rules": {
+        "question": "Wie sind die Regeln von Hive?",
+        "answer": "Jeder Spieler platziert oder bewegt abwechselnd Steine mit dem Ziel, die Königin-Biene des Gegners zu umzingeln. Die vollständigen Regeln findest du <rules_link>hier als PDF</rules_link> oder wenn du ein Video bevorzugst, kannst du dir <video_link>hier ein kurzes YouTube-Video</video_link> ansehen."
     },
-    "how_to_check_stack": {
-        "question": "Wie kann ich sehen, was unter einem Stein ist?",
-        "answers": {
-            "item1": "Auf mobilen Geräten drücke lange auf den Stapel, um ihn auszuklappen. Nachdem er ausgeklappt wurde, kannst du deinen Finger aus dem Bildschirm bewegen, um den untersten Stein ebenfalls zu sehen.",
-            "item2": "Auf dem Desktop klicke mit der rechten Maustaste auf den Stapel, und er bleibt erweitert, bis du loslässt."
-        }
+    "expansions_supported": {
+        "question": "Welche Erweiterungen werden unterstützt?",
+        "answer": "Alle drei offiziellen: Moskito: Kopiert die Fähigkeiten benachbarter Käfer. Marienkäfer: Bewegt sich genau 2 Schritte auf den Bienenstock, 1 Schritt nach unten. Pillbug: Wirft benachbarte Steine einmal pro Zug."
     },
-    "what_are_cornfirmation_modes": {
-        "question": "Was bedeuten die verschiedenen Bestätigungsmodi?",
-        "description": "Beim Ziehen gibt es drei Modi:",
-        "answers": {
-            "item1": "Doppelklick - Der Standardmodus, der erste Klick platziert den Stein und der zweite Klick führt den Zug aus.",
-            "item2": "Einzelklick - Der schnelle Modus, wenn du in schnellen Spielen keine Zeit verlieren möchtest. Vorsichtig, denn der einzige Klick führt sofort den Zug aus.",
-            "item3": "Uhr-Bestätigung - Der sichere Modus, wenn du vermeiden möchtest, Züge versehentlich zu machen. Zuerst klickst du, wo du platzieren/ziehen möchtest, und dann musst du auf deinen eigenen Timer klicken, um den Zug zu bestätigen."
-        }
+    "resign_ok": {
+        "question": "Ist es in Ordnung, ein Spiel aufzugeben, von dem ich sicher bin, dass ich es verliere?",
+        "answer": "Ja. Genau wie beim Schach ist es völlig in Ordnung, ein Spiel aufzugeben, ohne es auf dem Brett zu Ende zu spielen, wenn du denkst, dass du keine Chance auf einen Sieg hast."
     },
-    "can_i_play_base_game": {
-        "question": "Kann ich das Basisspiel ohne Erweiterungen spielen?",
-        "answer": "Ja, aber warum solltest du? Spaß beiseite, aber beim Basisspiel gibt es keine ELO Bewertung. Hive PLM (alle drei Erweiterungen: Pillbug, Ladybug, Mosquito) ist das offizielle Format, das in Turnieren verwendet wird. Es ist auch die herausforderndste und spaßigste Variante!"
+    "signup_required": {
+        "question": "Kann ich spielen, ohne mich anzumelden?",
+        "answer": "Nein. Aber ein Konto zu erstellen ist kostenlos und einfach."
     },
-    "what_rating_system": {
-        "question": "Welches Bewertungssystem verwendet hivegame.com?",
-        "answer": "Wir verwenden das <glicko2_link>Glicko-2</glicko2_link>-System. Parametrisiert wie Lichess."
+    "mobile_friendly": {
+        "question": "Ist es mobilfreundlich?",
+        "answer": "Absolut. Hivegame.com läuft reibungslos auf Mobilgeräten, Tablets und Desktops. Nur aufpassen mit rutschigen Fingern mitten im Spiel."
     },
-    "how_to_recover_password": {
-        "question": "Was kann ich tun, wenn ich mein Passwort vergessen habe?",
-        "answer": "Wir haben noch keine automatische Passwortwiederherstellung. Du kannst uns über Discord @klautcomputing / @ionoi kontaktieren und uns bitten, dein Passwort zurückzusetzen."
+    "mobile_app": {
+        "question": "Gibt es eine mobile App?",
+        "answer": "Noch nicht. Hivegame.com ist als progressive Web-App verfügbar. Füge sie einfach zum Startbildschirm deines Mobilgeräts hinzu für ein App-ähnliches Erlebnis."
     },
-    "why_basic_chat": {
-        "question": "Warum ist der Chat einfach weg/nicht besser/...?",
-        "details": "Die Chatfunktion ist noch in der Entwicklung. Wir sind uns bewusst, dass sie Probleme hat, wichtige Dinge, die du bei der Nutzung beachten solltest:",
-        "answers": {
-            "item1": "Aktuell wird der Chat nicht in der Datenbank gespeichert, sodass deine Chatnachrichten bei jedem Update verloren gehen!",
-            "item2": "Derzeit ist es nur möglich, im Spiel zu chatten (Direktnachrichten und andere Möglichkeiten werden noch hinzugefügt). Zuschauer*innen sehen den Spieler*innen-Chat nicht und die Spieler*innen sehen den Zuschauer*innen-Chat nicht.",
-            "item3": "Manchmal zeigt die rote Chatbenachrichtigung neue Nachrichten an, obwohl keine vorhanden sind."
-        }
+    "profile_navigation": {
+        "question": "Wie navigiere ich zu meiner Profilseite?",
+        "answer": "Wenn du angemeldet bist, klicke auf deinen Benutzernamen oben rechts auf dem Bildschirm, um zur Profilseite zu gelangen."
     },
-    "opponent_is_abusive": {
-        "question": "Was kann ich tun, wenn mein/e Gegner:in im Spiel/Chat beleidigend oder störend ist oder einen unangemessenen Benutzernamen hat?",
-        "answer": "Mach einen Screenshot des Verhaltens und kontaktiere uns über Discord @klautcomputing / @ionoi."
+    "game_types": {
+        "question": "Sind Spiele Korrespondenz oder Echtzeit?",
+        "answer": "Hivegame.com unterstützt beides. Du kannst ein Live-Spiel spielen oder stunden später zu deinem Tab zurückkehren, basierend auf den Zeiteinstellungen, die beim Einrichten eines Spiels verwendet wurden."
     },
-    "where_to_meet_other_players": {
-        "question": "Wo kann ich den Rest der Gemeinschaft kennenlernen, die Hive® auf der ganzen Welt spielt?",
-        "answer": "Du findest Links zu unseren sozialen Medien <resources_link>hier</resources_link>. Die Hive®-Gemeinschaft ist sehr freundlich und du wirst sicherlich jemanden in deiner Nähe finden, um persönlich zu spielen!"
+    "start_game": {
+        "question": "Wie starte ich ein Spiel?",
+        "answer": "Klicke auf der Startseite auf eine der sechs Zeitkontroll-Einstellungen, um ein Spiel zu starten, oder auf die Schaltfläche 'Benutzerdefiniert', um andere Einstellungen zu wählen."
+    },
+    "time_controls": {
+        "question": "Was bedeuten die Zeitkontroll-Einstellungen auf der Startseite?",
+        "answer": "Die Zeitkontroll-Einstellungen bestimmen die Spielgeschwindigkeit. Zur Veranschaulichung: 3+3 bedeutet, dass jede Person beim Spielstart insgesamt 3 Minuten hat. Wenn sie am Zug ist, beginnt die Zeit herunterzuzählen. Wenn ein Zug abgeschlossen ist, werden 3 Sekunden zur verfügbaren Zeit am Ende des Zugs hinzugefügt. Alle anderen Zeitformate funktionieren ähnlich."
+    },
+    "realtime_vs_correspondence": {
+        "question": "Was ist der Unterschied zwischen Echtzeit-, Korrespondenz- und zeitlosen Spielen?",
+        "answer": "Echtzeit-Spiele müssen innerhalb der gewählten Zeiteinstellungen beendet werden, erfordern also typischerweise, dass beide Spieler gleichzeitig online sind. Korrespondenz-Spiele erstrecken sich im Allgemeinen über mehrere Tage oder mit mindestens 1 Zug alle x Tage. Wenn du deinen Zug nicht innerhalb der Zeit spielst, verlierst du das Spiel. Zeitlose Spiele erklären sich selbst."
+    },
+    "casual_vs_rated": {
+        "question": "Was ist der Unterschied zwischen Casual- und bewerteten Spielen?",
+        "answer": "Du kannst wählen, dass dein Spiel bewertet wird (Glicko-2-System) und dadurch eine Einschätzung deiner Fähigkeiten erhalten und den Fortschritt über die Zeit verfolgen. Neulinge beginnen mit einer Bewertung von 1500. Im Allgemeinen erhöht das Gewinnen deine Bewertung, das Verlieren eines Spiels verringert sie. Höhere Bewertung bedeutet höhere Fähigkeiten. Das Gewinnen von Spielen gegen viel niedriger bewertete Gegner erhöht deine Bewertung nicht wesentlich. Aber das Gewinnen von Spielen gegen einen höher bewerteten Gegner kann deine Bewertung erheblich steigern. Das Gewinnen oder Verlieren von Casual-Spielen hat keine Auswirkung auf deine Bewertung. Erinnerung: Bewertete Spiele sind nur verfügbar, wenn alle drei Erweiterungen verwendet werden (MLP-Format)."
     },
     "why_elo_has_questionmark": {
-        "question": "Warum hat meine Elo Bewertung ein “?” dahinter?",
-        "answer": "Das passiert, während deine Bewertung noch unsicher ist. Es verschwindet, sobald du genügend Spiele gespielt hast. Solange du ein ? hast, kannst du nicht auf den Bestenlisten erscheinen."
+        "question": "Warum steht ein ? neben meiner Bewertung?",
+        "answer": "Ein ? neben deiner Bewertung zeigt an, dass deine Bewertung vorläufig ist, d.h. du solltest eine höhere Volatilität der Bewertungen erwarten, bis du eine statistisch signifikante Anzahl von Spielen gespielt hast, damit das System deine Bewertung mit höherer Genauigkeit bestimmen kann."
+    },
+    "base_vs_mlp": {
+        "question": "Was ist der Unterschied zwischen dem Basis- und MLP-Format?",
+        "answer": "MLP ist die Standard-Wettkampf-Einstellung und verwendet die Steine Moskito, Marienkäfer und Pillbug (auch bekannt als MLP). Das Basisspiel hat diese 3 Käfer nicht."
+    },
+    "private_vs_public": {
+        "question": "Was ist der Unterschied zwischen privat und öffentlich?",
+        "answer": "Ein öffentliches Spiel ist auf der Startseite verfügbar, damit jeder andere Spieler beitreten kann. Ein privates Spiel gibt dir einen Link, den du an einen anderen Spieler senden kannst."
+    },
+    "rating_range": {
+        "question": "Was ist der Bewertungsbereich?",
+        "answer": "Diese Einstellung ermöglicht es nur Gegnern innerhalb einer bestimmten Bereichsvariation deiner Bewertung, das Spiel zu akzeptieren. Dies stellt sicher, dass du Gegner wählen kannst, die so nah (oder nicht!) an deiner Bewertung sind, wie du es bevorzugst."
+    },
+    "color_selection": {
+        "question": "Was ist das Weiß-, Zufalls-, Schwarz-Sechseck?",
+        "answer": "Wenn du ein Spiel einrichtest, wählst du, ob du als Weiß, Schwarz oder wie vom System zufällig bestimmt beginnen möchtest."
+    },
+    "how_to_check_stack": {
+        "question": "Wie sehe ich, was unter einem Stein ist?",
+        "answer": "Rechtsklick oder Tippen (auf Mobilgeräten) auf einen gestapelten Stein, um ihn zu erweitern. Du siehst die Steine darunter, während du hältst."
+    },
+    "spectate_games": {
+        "question": "Kann ich Spiele zuschauen?",
+        "answer": "Ja! Laufende Echtzeit-Spiele sind auf der Startseite sichtbar. Klicke auf eines, um zuzuschauen."
+    },
+    "turn_alerts": {
+        "question": "Bekomme ich eine Benachrichtigung, wenn ich am Zug bin (für rundenbasierte Spiele)?",
+        "answer": "Ja, du siehst ein rotes Nachrichten-Symbol oben auf der Seite mit einer Nummer, die angibt, wie viele Spiele du am Zug hast. Alternativ navigiere zu deiner Profilseite und du kannst nach derzeit Spielenden, Nicht gestarteten Turnier- und Beendeten Spielen filtern."
+    },
+    "correspondence_notifications": {
+        "question": "Kann ich benachrichtigt werden, wenn ich in einem Korrespondenz-Spiel am Zug bin?",
+        "answer": "Du kannst dein Discord-Konto mit deinem Hivegame.com-Profil verbinden und Benachrichtigungen vom busybee-Bot erhalten. Klicke auf deine Profil-Schaltfläche oben rechts und klicke auf 'Konto bearbeiten'"
+    },
+    "chat_basics": {
+        "question": "Wie funktioniert der Chat?",
+        "answer": "Die Chat-Funktion ist noch sehr in Arbeit; wir sind uns bewusst, dass sie Probleme hat, also wichtige Dinge, die beim Verwenden zu beachten sind: 1. Derzeit bleibt der Chat nicht in der Datenbank bestehen, sodass deine Chat-Nachrichten verloren gehen, wenn wir ein Update einsetzen! 2. Vorerst ist es nur möglich, in einem Spiel zu chatten (Direktnachrichten und andere Wege werden in Zukunft hinzugefügt), Zuschauer sehen den Spieler-Chat nicht, noch sehen die Spieler den Zuschauer-Chat. 3. Manchmal zeigt die rote Chat-Benachrichtigung neue Nachrichten an, wenn es keine gibt."
+    },
+    "tournament_entry": {
+        "question": "Kann jeder an einem Turnier teilnehmen? Gibt es eine Teilnahmegebühr? Was ist mit Preisen?",
+        "answer": "Ja, du kannst an einem Turnier teilnehmen, auch wenn du Anfänger bist. Allerdings können einige Turniere durch Bewertung beschränkt sein oder nur auf Einladung stattfinden, wie vom Turnierorganisator entschieden. Zum Zeitpunkt des Schreibens gibt es keine Teilnahmegebühren und keine Preise (außer Prahlrechten und Bewertungspunkte-Erhöhungen!)"
+    },
+    "tournament_duration": {
+        "question": "Wie lange dauert ein Turnier? Wie viele Spiele? Wie koordiniere ich Zeitpläne?",
+        "answer": "Die Turnierseite sollte typischerweise all diese Details umreißen. Wenn du Fragen hast, kontaktiere den Turnierorganisator. Derzeit sind nur Round-Robin-Turniere verfügbar, aber weitere Formate werden bald hinzugefügt."
+    },
+    "tournament_stats": {
+        "question": "In einer Turnierergebnis-Tabelle, was ist H2H, WB, SB, Beendet?",
+        "answer": "H2H - Head-to-Head-Rekord, was das erste Tiebreak-Kriterium ist. WB - Sieg als Schwarz, was das zweite Tiebreak-Kriterium ist. SB - Sonnebron-Berger-Punktzahl, was das dritte Tiebreak-Kriterium ist. Beendet - Anzahl der beendeten Spiele."
+    },
+    "tournament_games": {
+        "question": "Wo sehe ich meine laufenden / noch nicht gestarteten Spiele?",
+        "answer": "Navigiere zu deiner Profilseite und du wirst Filter für deine derzeit Spielenden und Nicht gestarteten Turnierspiele sehen."
+    },
+    "change_password": {
+        "question": "Wie ändere ich mein Passwort?",
+        "answer": "Navigiere zu Profil > Konto bearbeiten oder <edit_link>verwende diesen Link</edit_link>"
+    },
+    "move_confirmation": {
+        "question": "Was bedeuten die verschiedenen Zugbestätigungsmodi?",
+        "answer": "Beim Ziehen gibt es 3 Modi: 1. Einzelklick - Der schnelle: wenn du in schnellen Spielen keine Zeit verlieren willst. Sei vorsichtig, einen Stein nicht falsch zu platzieren oder falsch zu bewegen, da ein einzelner Klick sofort den Zug macht und bestätigt. 2. Doppelklick - Der Standard: der erste Klick zum Platzieren/Bewegen des Steins und der zweite Klick bestätigt den Zug. 3. Uhr-Bestätigung - Der sichere: erster Klick zum Platzieren/Bewegen und dann zum Bestätigen des Zugs klickst du auf deinen eigenen Timer. Doppelklick- oder Uhr-Bestätigungsmodi werden empfohlen."
+    },
+    "game_analysis": {
+        "question": "Kann ich beendete Spiele mit einem Analysetool überprüfen?",
+        "answer": "Ja, beendete Spiele haben ein Mikroskop-Symbol, das das Spiel in den Analysemodus lädt, aber diese Funktion ist derzeit in der Entwicklung, also erwarte noch nicht zu viel davon."
+    },
+    "play_bots": {
+        "question": "Kann ich gegen einen Bot spielen?",
+        "answer": "Ja, klicke auf die Schaltfläche 'Bot spielen' auf der Startseite und wähle den Bot aus, gegen den du spielen möchtest. Ein zeitloses Spiel beginnt sofort."
+    },
+    "get_better": {
+        "question": "Wie kann ich besser in Hive werden?",
+        "answer": "Schaue dir den <resources_link>Ressourcen-Bereich</resources_link> der Seite für eine kuratierte Liste von Ressourcen zum Einstieg an."
+    },
+    "community_forum": {
+        "question": "Gibt es ein Community-Forum?",
+        "answer": "Ja! Tritt dem World Hive Community Discord-Server <discord_link>hier</discord_link> bei - voller freundlicher Spieler und Strategie-Gespräche."
+    },
+    "play_specific_players": {
+        "question": "Kann ich mit bestimmten Spielern nur spielen?",
+        "answer": "Natürlich! Du kannst das gekreuzte Schwerter-Symbol neben dem Namen eines Spielers verwenden, um ihn direkt herauszufordern. Alternativ erstelle ein privates Spiel (klicke auf die Schaltfläche 'Benutzerdefiniert' auf der Startseite) und teile den Link privat. Nur ein Spieler mit dem Link kann beitreten."
+    },
+    "report_bugs": {
+        "question": "Wo kann ich Fehler melden oder neue Funktionen vorschlagen?",
+        "answer": "Tritt dem Hivegame.com Discord-Server <discord_link>hier</discord_link> bei und du kannst den Entwicklern über die entsprechenden Kanäle schreiben."
+    },
+    "opponent_is_abusive": {
+        "question": "Was kann ich tun, wenn mein Gegner beleidigend oder störend im Spiel/Chat ist oder einen unangemessenen Benutzernamen hat?",
+        "answer": "Mach einen Screenshot des Verhaltens und kontaktiere uns über Discord @klautcomputing / @ionoi und wir werden es klären."
     },
     "why_not_in_top_players": {
         "question": "Warum erscheine ich nicht in den bestplatzierten Spielern?",
-        "answer": "Du hast noch nicht genügend Spiele gespielt, damit das System wirklich sicher sein kann, wie genau deine Bewertung ist. Spiel einfach noch ein paar Spiele mehr, gewinne sie hoffentlich und du wirst erscheinen."
+        "answer": "Du hast noch nicht genügend Spiele gespielt, damit das System wirklich sicher sein kann, wie genau deine Bewertung ist. Spiele einfach noch ein paar Spiele mehr, gewinne sie hoffentlich und du wirst erscheinen."
     },
-    "how_to_review_games": {
-        "question": "Kann ich beendete Spiele mit einem Analysetool überprüfen?",
-        "answer": "Ja, beendete Spiele haben ein Mikroskop-Symbol, das das Spiel in den Analysemodus lädt, aber dieses Feature befindet sich derzeit in der Entwicklung, also erwarte noch nicht zu viel."
+    "can_i_play_base_game": {
+        "question": "Kann ich ohne Erweiterungen spielen?",
+        "answer": "Ja. Du kannst umschalten, ob Erweiterungen beim Erstellen eines Spiels verwendet werden, und das Spielen ohne Erweiterungen ist gut für Anfänger! Bewertete Spiele sind nur verfügbar, wenn Erweiterungen verwendet werden, da es das offizielle Wettkampfformat ist."
     },
-    "where_to_learn_more": {
-        "question": "Wie kann ich mehr über die Strategie von Hive lernen?",
-        "answer": "Wir planen, ein interaktives Tutorial hinzuzufügen, um dir zu helfen, alle strategischen Ideen hinter dem Spiel zu lernen und zu verstehen. In Zukunft schaue im <resources_link>Ressourcen</resources_link>-Bereich nach Büchern, Videos und dem Discord!"
+    "how_to_recover_password": {
+        "question": "Ich habe mein Passwort vergessen! Was jetzt?",
+        "answer": "Sende eine E-Mail an leex@klautcomputing.de von derselben E-Mail-Adresse, die du auf Hivegame.com verwendest, und bitte um ein Passwort-Reset."
     },
     "can_i_set_up_a_tournament": {
-        "question": "Kann ich ein Turnier einrichten?",
-        "answer": "Ja, aber wir arbeiten noch daran arbeiten. Bis jetzt gibt es noch nicht alle Tuniermodi"
+        "question": "Kann ich mein eigenes Turnier erstellen?",
+        "answer": "Ja! Klicke einfach auf Turnier erstellen und der Rest sollte selbsterklärend sein."
     },
-    "can_i_play_with_bots": {
-        "question": "Kann ich gegen einen Bot spielen?",
-        "answer": "Dieses Feature wird noch nicht unterstützt, könnte aber bald verfügbar sein (kontaktiere uns, wenn du helfen möchtest, dies zu programmieren)."
+    "donation_amount": {
+        "question": "Wie hoch ist der empfohlene Spendenbetrag?",
+        "answer": "Alle Spenden, groß und klein, helfen dabei, Hivegame.com am Laufen zu halten und werden dankbar angenommen. Unter Berücksichtigung von Kreditkarten- und Banktransaktionsgebühren wird eine Mindestspende von 5 EUR vorgeschlagen."
+    },
+    "how_donate": {
+        "question": "Wie spende ich?",
+        "answer": "Klicke auf Spenden in der Navigationsleiste oder <donate_link>verwende diesen Link</donate_link>"
     }
 }

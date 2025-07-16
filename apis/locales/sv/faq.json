@@ -1,6 +1,192 @@
 {
-    "what_is_hivegame": {
-        "question": "Vad är hivegame.com?"
+    "title": "Vanliga frågor",
+    "sections": {
+        "getting_started": "Komma igång",
+        "game_settings": "Spelinställningar",
+        "tournaments": "Turneringar",
+        "account_configuration": "Kontokonfiguration",
+        "more_features": "Fler funktioner",
+        "community_support": "Gemenskap & Support",
+        "donating": "Donationer till Hivegame.com"
     },
-    "title": "Vanliga frågor"
+    "how_to_help": {
+        "question": "Hur kan jag stödja webbplatsen?",
+        "answers": {
+            "item1": "Sprid ordet för att få fler spelare hit!",
+            "item2": "Bidra till webbutveckling, förbättringar, buggfixar eller underhåll via <github_link>GitHub</github_link>",
+            "item3": "Monetära donationer - se avsnittet Donationer till Hivegame.com i FAQ"
+        }
+    },
+    "how_to_get_crown": {
+        "question": "Varför har vissa användare symbolen 👑 bredvid sitt namn?",
+        "answer": "Användare som gör en frivillig och valfri monetär donation för att stödja Hivegame.com får en kronasymbol bredvid sitt namn. Förutom symbolen bredvid namnet får donatorer inga ytterligare privilegier."
+    },
+    "what_is_hive": {
+        "question": "Vad är Hive?",
+        "answer": "Hive är ett snabbt abstrakt strategispel spelat med hexagonala brickor. Tänk på det som schack... med insekter. Och kom ihåg: skydda alltid din drottning. Du kan köpa ett fysiskt Hive-set på utgivarens webbplats <gen42_link>Gen42</gen42_link>"
+    },
+    "hive_rules": {
+        "question": "Vad är reglerna för Hive?",
+        "answer": "Varje spelare turas om att placera eller flytta brickor med målet att omringa motståndarens bidrottning. De fullständiga reglerna finns <rules_link>här i PDF-format</rules_link> eller om du föredrar en video kan du titta på en <video_link>kort YouTube-video här</video_link>."
+    },
+    "expansions_supported": {
+        "question": "Vilka expansioner stöds?",
+        "answer": "Alla tre officiella: Mygg: Kopierar förmågorna hos närliggande insekter. Nyckelpiga: Rör sig exakt 2 steg ovanpå bikupan, 1 steg ner. Gråsugga: Kastar närliggande pjäser en gång per tur."
+    },
+    "resign_ok": {
+        "question": "Är det acceptabelt att ge upp i ett spel som jag är säker på att jag kommer att förlora?",
+        "answer": "Ja. Precis som i schack är det helt acceptabelt att ge upp en match utan att spela den till slutet på brädet om du tror att du inte har någon chans att vinna."
+    },
+    "signup_required": {
+        "question": "Kan jag spela utan att registrera mig?",
+        "answer": "Nej. Men att skapa ett konto är gratis och enkelt."
+    },
+    "mobile_friendly": {
+        "question": "Är det mobilvänligt?",
+        "answer": "Absolut. Hivegame.com fungerar smidigt på mobil, surfplatta och desktop. Var bara försiktig med hala fingrar mitt i matchen."
+    },
+    "mobile_app": {
+        "question": "Finns det en mobilapp?",
+        "answer": "Inte än. Hivegame.com är tillgänglig som en progressiv webbapp. Lägg bara till den på din mobils hemskärm för en app-liknande upplevelse."
+    },
+    "profile_navigation": {
+        "question": "Hur navigerar jag till min profilsida?",
+        "answer": "När du är inloggad, klicka på ditt användarnamn i övre högra hörnet av skärmen för att gå till profilsidan."
+    },
+    "game_types": {
+        "question": "Är spel korrespondens eller realtid?",
+        "answer": "Hivegame.com stöder båda. Du kan spela en live-match eller återvända till din flik timmar senare, baserat på tidsinställningarna som används vid uppsättning av ett spel."
+    },
+    "start_game": {
+        "question": "Hur startar jag ett spel?",
+        "answer": "På hemsidan, klicka på en av de sex tidskontrollinställningarna för att starta ett spel eller knappen 'anpassad' för att välja olika inställningar."
+    },
+    "time_controls": {
+        "question": "Vad betyder tidskontrollinställningarna på hemsidan?",
+        "answer": "Tidskontrollinställningarna dikterar hastigheten på spelet. För att illustrera betyder 3+3 att när spelet börjar har varje person totalt 3 minuter. När det är deras tur börjar tiden räkna ner. När ett drag är slutfört läggs 3 sekunder till den tillgängliga tiden i slutet av draget. Alla andra tidsformat fungerar liknande."
+    },
+    "realtime_vs_correspondence": {
+        "question": "Vad är skillnaden mellan realtid, korrespondens och tidlösa spel?",
+        "answer": "Realtidsspel måste slutföras inom de valda tidsinställningarna, därför kräver de vanligtvis att båda spelarna är online samtidigt. Korrespondensspel sträcker sig i allmänhet över flera dagar eller med minst 1 drag varje x dagar. Om du inte spelar ditt drag i tid kommer du att förlora spelet. Tidlösa spel förklarar sig själva."
+    },
+    "casual_vs_rated": {
+        "question": "Vad är skillnaden mellan casual och rankade spel?",
+        "answer": "Du kan välja att ha ditt spel rankat (Glicko-2-system) och därmed få en uppskattning av din skicklighet och följa framsteg över tid. Nybörjare börjar med en rating på 1500. Generellt ökar vinster din rating, att förlora ett spel minskar den. Högre rating innebär högre skicklighet. Att vinna spel mot mycket lägre rankade motståndare ökar inte din rating väsentligt. Men att vinna spel mot en högre rankad motståndare kan öka din rating betydligt. Att vinna eller förlora casual-spel har ingen effekt på din rating. Påminnelse: Rankade spel är endast tillgängliga om alla tre expansioner används (MLP-format)."
+    },
+    "why_elo_has_questionmark": {
+        "question": "Varför finns det ett ? bredvid min rating?",
+        "answer": "Ett ? bredvid din rating indikerar att din rating är preliminär, det vill säga du bör förvänta dig högre volatilitet i ratings tills du har spelat ett statistiskt signifikant antal spel för att systemet ska kunna bestämma din rating med högre noggrannhet."
+    },
+    "base_vs_mlp": {
+        "question": "Vad är skillnaden mellan bas- och MLP-format?",
+        "answer": "MLP är standardtävlingsinställningen och använder pjäserna mygg, nyckelpiga och gråsugga (aka MLP). Basspelet har inte dessa 3 insekter."
+    },
+    "private_vs_public": {
+        "question": "Vad är skillnaden mellan privat och offentligt?",
+        "answer": "Ett offentligt spel är tillgängligt på hemsidan för alla andra spelare att gå med i. Ett privat spel ger dig en länk som du kan skicka till en annan spelare."
+    },
+    "rating_range": {
+        "question": "Vad är ratingintervallet?",
+        "answer": "Denna inställning tillåter endast motståndare inom en specifik intervallvariation av din rating att acceptera matchen. Detta säkerställer att du kan välja motståndare som är så nära (eller inte!) din rating som du föredrar."
+    },
+    "color_selection": {
+        "question": "Vad är hexagonen vit, slumpmässig, svart?",
+        "answer": "När du ställer in ett spel väljer du om du vill börja som vit, svart, eller som slumpmässigt bestämt av systemet."
+    },
+    "how_to_check_stack": {
+        "question": "Hur ser jag vad som finns under en bricka?",
+        "answer": "Högerklicka eller tryck (på mobil) en staplade bricka för att expandera. Du kommer att se brickorna under så länge du håller."
+    },
+    "spectate_games": {
+        "question": "Kan jag titta på spel?",
+        "answer": "Ja! Pågående realtidsspel är synliga på hemsidan. Klicka på vilket som helst för att titta."
+    },
+    "turn_alerts": {
+        "question": "Kommer jag att få en varning när det är min tur (för turbaserade spel)?",
+        "answer": "Ja, du kommer att se en röd meddelandeikon längst upp på sidan med ett nummer som indikerar hur många spel du har på tur. Alternativt navigera till din profilsida och du kan filtrera efter för närvarande spelande, icke-startade turneringar och avslutade spel."
+    },
+    "correspondence_notifications": {
+        "question": "Kan jag få en avisering när det är min tur att spela i ett korrespondensspel?",
+        "answer": "Du kan koppla ditt Discord-konto till din Hivegame.com-profil och ta emot aviseringar från busybee-boten. Klicka på din profilknapp i övre högra hörnet och klicka på 'Redigera konto'"
+    },
+    "chat_basics": {
+        "question": "Hur fungerar chatten?",
+        "answer": "Chattfunktionen är mycket under utveckling; vi är medvetna om att den har problem, så viktiga saker att komma ihåg när du använder den: 1. För närvarande finns chatten inte kvar i databasen, så varje gång vi distribuerar en uppdatering kommer dina chattmeddelanden att gå förlorade! 2. Just nu är det bara möjligt att chatta i ett spel (direktmeddelanden och andra sätt kommer att läggas till i framtiden), åskådare ser inte spelarnas chatt, och spelarna ser inte åskådarnas chatt. 3. Ibland visar den röda chattaviseringen nya meddelanden när det inte finns några."
+    },
+    "tournament_entry": {
+        "question": "Kan vem som helst gå med i en turnering? Finns det en anmälningsavgift? Vad sägs om priser?",
+        "answer": "Ja, du kan gå med i en turnering även om du är nybörjare. Dock kan vissa turneringar vara begränsade av rating eller kan vara endast på inbjudan som bestäms av turneringsarrangören. Vid tidpunkten för skrivandet finns det inga anmälningsavgifter och inga priser (förutom skryträttigheter och ratingpoängökningar!)"
+    },
+    "tournament_duration": {
+        "question": "Vad är varaktigheten av en turnering? Hur många spel? Hur koordinerar jag scheman?",
+        "answer": "Turneringssidan bör typiskt beskriva alla dessa detaljer. Om du har frågor, kontakta turneringsarrangören. För närvarande är endast Round-Robin-turneringar tillgängliga, men fler format kommer att läggas till snart."
+    },
+    "tournament_stats": {
+        "question": "I en turneringsresultattabell, vad är H2H, WB, SB, avslutad?",
+        "answer": "H2H - Head-to-head-rekord, vilket är det första tiebreak-kriteriet. WB - Vinst som svart, vilket är det andra tiebreak-kriteriet. SB - Sonnebron-Berger-poäng, vilket är det tredje tiebreak-kriteriet. Avslutad - antal avslutade spel."
+    },
+    "tournament_games": {
+        "question": "Var ser jag mina pågående / ännu inte startade spel?",
+        "answer": "Navigera till din profilsida och du kommer att se filter för dina för närvarande spelande och icke-startade turneringsspel."
+    },
+    "change_password": {
+        "question": "Hur ändrar jag mitt lösenord?",
+        "answer": "Navigera till profil > Redigera konto eller <edit_link>använd denna länk</edit_link>"
+    },
+    "move_confirmation": {
+        "question": "Vad betyder de olika dragbekräftelselägena?",
+        "answer": "När du gör ett drag finns det 3 lägen: 1. Enkelklick - Det snabba: om du inte vill förlora tid i snabba spel. Var försiktig så att du inte placerar fel eller flyttar fel pjäs eftersom ett enkelklick omedelbart gör och bekräftar draget. 2. Dubbelklick - Standarden: första klicket för att placera/flytta pjäsen och andra klicket bekräftar draget. 3. Klockbekräftelse - Det säkra: första klicket för att placera/flytta och sedan för att bekräfta draget klickar du på din egen timer. Dubbelklick eller klockbekräftelselägen rekommenderas."
+    },
+    "game_analysis": {
+        "question": "Kan jag granska avslutade spel med ett analysverktyg?",
+        "answer": "Ja, avslutade spel har en mikroskopikon som kommer att ladda spelet i analysläge men denna funktion är för närvarande under utveckling så förvänta dig inte för mycket än."
+    },
+    "play_bots": {
+        "question": "Kan jag spela mot en bot?",
+        "answer": "Ja, klicka på knappen 'Spela bot' på hemsidan och välj boten du vill spela mot. Ett tidlöst spel kommer att börja omedelbart."
+    },
+    "get_better": {
+        "question": "Hur kan jag bli bättre på Hive?",
+        "answer": "Kolla in <resources_link>resurssektionen</resources_link> på webbplatsen för en utvald lista med resurser för att komma igång."
+    },
+    "community_forum": {
+        "question": "Finns det ett gemenskapsforum?",
+        "answer": "Ja! Gå med i World Hive Community Discord-servern <discord_link>här</discord_link> - full av vänliga spelare och strategiska konversationer."
+    },
+    "play_specific_players": {
+        "question": "Kan jag bara spela med specifika spelare?",
+        "answer": "Absolut! Du kan använda ikonen med korsade svärd bredvid en spelares namn för att utmana dem direkt. Alternativt skapa ett privat spel (klicka på knappen 'Custom' på hemsidan) och dela länken privat. Endast en spelare med länken kan gå med."
+    },
+    "report_bugs": {
+        "question": "Var kan jag rapportera buggar eller föreslå nya funktioner?",
+        "answer": "Gå med i Hivegame.com Discord-servern <discord_link>här</discord_link> och du kan skicka meddelanden till utvecklarna med lämpliga kanaler."
+    },
+    "opponent_is_abusive": {
+        "question": "Vad kan jag göra om min motståndare är kränkande eller störande i spelet/chatten eller har ett olämpligt användarnamn?",
+        "answer": "Ta en skärmdump av beteendet och kontakta oss via Discord @klautcomputing / @ionoi så löser vi det."
+    },
+    "why_not_in_top_players": {
+        "question": "Varför visas jag inte bland de högst rankade spelarna?",
+        "answer": "Du har inte spelat tillräckligt många spel än för att systemet ska vara riktigt säkert på hur exakt din rating är. Fortsätt bara spela några fler spel, vinn dem förhoppningsvis och du kommer att visas."
+    },
+    "can_i_play_base_game": {
+        "question": "Kan jag spela utan expansioner?",
+        "answer": "Ja. Du kan växla om expansioner används när du skapar ett spel, och att spela utan expansioner är bra för nybörjare! Rankade spel är endast tillgängliga om expansioner används, eftersom det är det officiella tävlingsformatet."
+    },
+    "how_to_recover_password": {
+        "question": "Jag har glömt mitt lösenord! Vad gör jag nu?",
+        "answer": "Skicka ett e-postmeddelande till leex@klautcomputing.de från samma e-postadress som du använder på Hivegame.com och begär en lösenordsåterställning."
+    },
+    "can_i_set_up_a_tournament": {
+        "question": "Kan jag skapa min egen turnering?",
+        "answer": "Ja! Klicka bara på Skapa turnering och resten borde vara självförklarande."
+    },
+    "donation_amount": {
+        "question": "Vad är den rekommenderade donationsbeloppet?",
+        "answer": "Alla donationer, stora och små, hjälper till att hålla Hivegame.com igång och tas emot med tacksamhet. Med tanke på kreditkorts- och banktransaktionsavgifter föreslås en minsta donation på 5 EUR."
+    },
+    "how_donate": {
+        "question": "Hur donerar jag?",
+        "answer": "Klicka på Donera i navigeringsfältet eller <donate_link>använd denna länk</donate_link>"
+    }
 }

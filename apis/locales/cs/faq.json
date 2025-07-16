@@ -1,1 +1,192 @@
-{}
+{
+    "title": "Často kladené otázky",
+    "sections": {
+        "getting_started": "Začínáme",
+        "game_settings": "Nastavení hry",
+        "tournaments": "Turnaje",
+        "account_configuration": "Konfigurace účtu",
+        "more_features": "Další funkce",
+        "community_support": "Komunita & Podpora",
+        "donating": "Dary pro Hivegame.com"
+    },
+    "how_to_help": {
+        "question": "Jak mohu podpořit stránku?",
+        "answers": {
+            "item1": "Šiřte povědomí a přiveďte zde více hráčů!",
+            "item2": "Přispívejte k vývoji webu, vylepšením, opravám chyb nebo údržbě přes <github_link>GitHub</github_link>",
+            "item3": "Peněžní dary - viz sekce Dárky pro Hivegame.com v FAQ"
+        }
+    },
+    "how_to_get_crown": {
+        "question": "Proč mají někteří uživatelé symbol 👑 vedle svého jména?",
+        "answer": "Uživatelé, kteří učiní dobrovolný a volitelný peněžní dar na podporu Hivegame.com, získají symbol koruny vedle svého jména. Kromě symbolu vedle jména nedostávají dárci žádné další výhody."
+    },
+    "what_is_hive": {
+        "question": "Co je Hive?",
+        "answer": "Hive je rychlá abstraktní strategická hra hraná s šestihranými kameny. Představte si to jako šachy... s hmyzem. A pamatujte: vždy chraňte svou královnu. Fyzickou sadu Hive si můžete koupit na webu vydavatele <gen42_link>Gen42</gen42_link>"
+    },
+    "hive_rules": {
+        "question": "Jaká jsou pravidla Hive?",
+        "answer": "Každý hráč se střídá v umísťování nebo pohybu kamenů s cílem obklíčit královnu včelu soupeře. Kompletní pravidla jsou <rules_link>zde v PDF</rules_link> nebo pokud dáváte přednost videu, můžete se podívat na <video_link>krátké YouTube video zde</video_link>."
+    },
+    "expansions_supported": {
+        "question": "Která rozšíření jsou podporována?",
+        "answer": "Všechna tři oficiální: Komár: Kopíruje schopnosti sousedních hmyzů. Beruška: Pohybuje se přesně 2 kroky na vrchol úlu, 1 krok dolů. Pillbug: Vrhá sousední kameny jednou za tah."
+    },
+    "resign_ok": {
+        "question": "Je v pořádku vzdát hru, kterou určitě prohraju?",
+        "answer": "Ano. Stejně jako v šachách je naprosto v pořádku vzdát zápas, aniž byste ho dohráli na desce, pokud si myslíte, že nemáte šanci na výhru."
+    },
+    "signup_required": {
+        "question": "Mohu hrát bez registrace?",
+        "answer": "Ne. Ale vytvoření účtu je zdarma a jednoduché."
+    },
+    "mobile_friendly": {
+        "question": "Je to kompatibilní s mobily?",
+        "answer": "Absolutně. Hivegame.com běží hladce na mobilech, tabletech i počítačích. Jen si dejte pozor na sklouznutí prstů uprostřed hry."
+    },
+    "mobile_app": {
+        "question": "Je k dispozici mobilní aplikace?",
+        "answer": "Zatím ne. Hivegame.com je dostupné jako progresivní webová aplikace. Stačí ji přidat na domovskou obrazovku vašeho mobilu pro zážitek podobný aplikaci."
+    },
+    "profile_navigation": {
+        "question": "Jak se dostanu na svou profilovou stránku?",
+        "answer": "Když jste přihlášeni, klikněte na své uživatelské jméno v pravém horním rohu obrazovky a dostanete se na profilovou stránku."
+    },
+    "game_types": {
+        "question": "Jsou hry korespondenční nebo v reálném čase?",
+        "answer": "Hivegame.com podporuje obojí. Můžete hrát živou hru nebo se k vaší kartě vrátit o hodiny později, podle nastavení času použitého při nastavování hry."
+    },
+    "start_game": {
+        "question": "Jak začnu hru?",
+        "answer": "Na hlavní stránce klikněte na jedno ze šesti nastavení časové kontroly pro začátek hry nebo na tlačítko 'vlastní' pro výběr jiných nastavení."
+    },
+    "time_controls": {
+        "question": "Co znamenají nastavení časové kontroly na hlavní stránce?",
+        "answer": "Nastavení časové kontroly určuje rychlost hry. Například 3+3 znamená, že když hra začne, má každá osoba celkem 3 minuty. Když je na tahu, čas začne odpočítávat. Když se tah dokončí, přidají se 3 sekundy k dostupnému času na konci tahu. Všechny ostatní formáty času fungují podobně."
+    },
+    "realtime_vs_correspondence": {
+        "question": "Jaký je rozdíl mezi hrami v reálném čase, korespondenčními a bez času?",
+        "answer": "Hry v reálném čase musí být dokončeny v rámci zvoleného časového nastavení, takže obvykle vyžadují, aby oba hráči byli současně online. Korespondenční hry se obecně rozkládají na několik dní nebo s alespoň 1 tahem každých x dní. Pokud nevyhrajete svůj tah v čase, prohrajete hru. Hry bez času se vysvětlují samy."
+    },
+    "casual_vs_rated": {
+        "question": "Jaký je rozdíl mezi casualními a hodnocenými hrami?",
+        "answer": "Můžete si zvolit, aby vaše hra byla hodnocena (systém Glicko-2) a tím získat odhad vaší zdatnosti a sledovat progres v čase. Nováčci začínají s hodnocením 1500. Obecně výhra zvyšuje vaše hodnocení, prohra hru snižuje. Vyšší hodnocení znamená vyšší zdatnost. Výhra her proti mnohem níže hodnoceným soupeřům nezvyšuje vaše hodnocení materiálně. Ale výhra her proti výše hodnocenému soupeři může vaše hodnocení významně zvýšit. Výhra nebo prohra casualních her nemá žádný vliv na vaše hodnocení. Připomínka: Hodnocené hry jsou dostupné pouze pokud se používají všechna tři rozšíření (formát MLP)."
+    },
+    "why_elo_has_questionmark": {
+        "question": "Proč je vedle mého hodnocení otazník?",
+        "answer": "Otazník vedle vašeho hodnocení označuje, že vaše hodnocení je prozatímní, tj. měli byste očekávat vyšší volatilitu hodnocení, dokud neodehrajete statisticky významný počet her, aby systém mohl určit vaše hodnocení s vyšší přesností."
+    },
+    "base_vs_mlp": {
+        "question": "Jaký je rozdíl mezi základním formátem a MLP?",
+        "answer": "MLP je výchozí soutěžní nastavení a používá kameny Komár, Beruška a Pillbug (aka MLP). Základní hra tyto 3 hmyzy nemá."
+    },
+    "private_vs_public": {
+        "question": "Jaký je rozdíl mezi soukromým a veřejným?",
+        "answer": "Veřejná hra je dostupná na hlavní stránce pro připojení jakéhokoli dalšího hráče. Soukromá hra vám poskytuje odkaz, který můžete poslat jinému hráči."
+    },
+    "rating_range": {
+        "question": "Co je rozsah hodnocení?",
+        "answer": "Toto nastavení umožňuje pouze soupeřům v rámci specifického rozsahu variace vašeho hodnocení přijmout zápas. Tím zajišťuje, že si můžete vybrat soupeře, kteří jsou tak blízko (nebo ne!) k vašemu hodnocení podle vašich preferencí."
+    },
+    "color_selection": {
+        "question": "Co je šestiúhelník Bílá, Náhodná, Černá?",
+        "answer": "Když nastavujete hru, vybíráte si, zda chcete začít jako bílý, černý, nebo jak to systém určí náhodně."
+    },
+    "how_to_check_stack": {
+        "question": "Jak vidím, co je pod kamenem?",
+        "answer": "Pravým klikem nebo dotykem (na mobilu) na navrstvený kámen ho rozbalíte. Uvidíte kameny pod ním, dokud držíte."
+    },
+    "spectate_games": {
+        "question": "Mohu sledovat hry?",
+        "answer": "Ano! Probíhající hry v reálném čase jsou viditelné na hlavní stránce. Klikněte na kteroukoliv pro sledování."
+    },
+    "turn_alerts": {
+        "question": "Dostanu upozornění, když je můj tah (pro tahové hry)?",
+        "answer": "Ano, uvidíte červenou ikonu zprávy v horní části stránky s číslem označujícím, kolik her máte na tahu. Alternativně přejděte na svou profilovou stránku a můžete filtrovat aktuálně hrané, nezačaté turnajové a dokončené hry."
+    },
+    "correspondence_notifications": {
+        "question": "Mohu být upozorněn, když je můj tah hrát v korespondenční hře?",
+        "answer": "Můžete připojit svůj Discord účet k vašemu profilu Hivegame.com a dostávat oznámení od bota busybee. Klikněte na tlačítko profilu v pravém horním rohu a klikněte na 'Upravit účet'"
+    },
+    "chat_basics": {
+        "question": "Jak funguje chat?",
+        "answer": "Funkce chatu je velmi v procesu vývoje; jsme si vědomi, že má problémy, takže důležité věci, které je třeba mít na paměti při jeho používání: 1. Momentálně chat nepřetrvává v databázi, takže kdykoli nasadíme aktualizaci, vaše chatové zprávy se ztratí! 2. Zatím je možné chatovat pouze ve hře (přímé zprávy a jiné způsoby budou přidány v budoucnu), diváci nevidí chat hráčů, ani hráči nevidí chat diváků. 3. Někdy červené upozornění chatu zobrazí nové zprávy, když tam žádné nejsou."
+    },
+    "tournament_entry": {
+        "question": "Může se kdokoli připojit k turnaji? Je vstupní poplatek? Co odměny?",
+        "answer": "Ano, můžete se připojit k turnaji, i když jste začátečník. Nicméně některé turnaje mohou být omezeny hodnocením nebo mohou být pouze na pozvání podle rozhodnutí organizátora turnaje. V době psaní nejsou žádné vstupní poplatky ani odměny (kromě práv na chvástání a zvýšení bodů hodnocení!)"
+    },
+    "tournament_duration": {
+        "question": "Jaká je doba trvání turnaje? Kolik her? Jak koordinovat rozvrhy?",
+        "answer": "Stránka turnaje by měla typicky nastínit všechny tyto detaily. Pokud máte nějaké otázky, kontaktujte organizátora turnaje. Momentálně jsou k dispozici pouze Round-Robin turnaje, ale brzy budou přidány další formáty."
+    },
+    "tournament_stats": {
+        "question": "V tabulce výsledků turnaje, co je H2H, WB, SB, Dokončeno?",
+        "answer": "H2H - Vzájemný zápas, což je první kritérium pro vyřešení nerozhodného stavu. WB - Výhra jako černý, což je druhé kritérium pro vyřešení nerozhodného stavu. SB - Skóre Sonnebron-Berger, což je třetí kritérium pro vyřešení nerozhodného stavu. Dokončeno - počet dokončených her."
+    },
+    "tournament_games": {
+        "question": "Kde vidím své probíhající / ještě nezačaté hry?",
+        "answer": "Přejděte na svou profilovou stránku a uvidíte filtry pro vaše aktuálně hrané a nezačaté turnajové hry."
+    },
+    "change_password": {
+        "question": "Jak změním své heslo?",
+        "answer": "Přejděte na profil > Upravit účet nebo <edit_link>použijte tento odkaz</edit_link>"
+    },
+    "move_confirmation": {
+        "question": "Co znamenají různé režimy potvrzení tahu?",
+        "answer": "Při provádění tahu existují 3 režimy: 1. Jeden klik - rychlý: pokud nechcete ztrácet čas v rychlých hrách. Dávejte pozor, abyste nepoložili špatně nebo nepohnuli špatně kamenem, protože jeden klik okamžitě provede a potvrdí tah. 2. Dvojklik - výchozí: první klik pro umístění / pohyb kamene a druhý klik potvrdí tah. 3. Potvrzení hodinami - bezpečný: první klik pro umístění / pohyb a pak pro potvrzení tahu kliknete na své vlastní hodiny. Doporučují se režimy dvojkliku nebo potvrzení hodinami."
+    },
+    "game_analysis": {
+        "question": "Mohu zkontrolovat dokončené hry s analytickým nástrojem?",
+        "answer": "Ano, dokončené hry mají ikonu mikroskopu, která načte hru do analytického režimu, ale tato funkce je v současné době ve vývoji, takže ještě od ní moc nečekejte."
+    },
+    "play_bots": {
+        "question": "Mohu hrát proti botovi?",
+        "answer": "Ano, klikněte na tlačítko 'Hrát Bot' na hlavní stránce a vyberte bota, proti kterému chcete hrát. Okamžitě začne hra bez času."
+    },
+    "get_better": {
+        "question": "Jak se mohu zlepšit v Hive?",
+        "answer": "Podívejte se na <resources_link>sekci zdrojů</resources_link> stránky pro kurátoovaný seznam zdrojů pro začátek."
+    },
+    "community_forum": {
+        "question": "Existuje komunitní fórum?",
+        "answer": "Ano! Připojte se k Discord serveru Světové komunity Hive <discord_link>zde</discord_link> - plný přátelských hráčů a strategických rozhovorů."
+    },
+    "play_specific_players": {
+        "question": "Mohu hrát s konkrétními hráči pouze?",
+        "answer": "Samozřejmě! Můžete použít ikonu zkřížených mečů vedle jména hráče pro přímé vyzvání. Alternativně vytvořte soukromou hru (klikněte na tlačítko 'Custom' na hlavní stránce) a sdílejte odkaz soukromě. Připojit se může pouze hráč s odkazem."
+    },
+    "report_bugs": {
+        "question": "Kde mohu nahlásit chyby nebo navrhnout nové funkce?",
+        "answer": "Připojte se k Discord serveru Hivegame.com <discord_link>zde</discord_link> a můžete poslat zprávy vývojářům pomocí příslušných kanálů."
+    },
+    "opponent_is_abusive": {
+        "question": "Co mohu dělat, když můj soupeř je urážlivý nebo rušivý ve hře/chatu nebo má nevhodné uživatelské jméno?",
+        "answer": "Udělejte snímek obrazovky chování a kontaktujte nás přes Discord @klautcomputing / @ionoi a vyřešíme to."
+    },
+    "why_not_in_top_players": {
+        "question": "Proč se neobjevuji v žebříčku nejlepších hráčů?",
+        "answer": "Ještě jste nehráli dostatek her, aby si systém byl jist přesností vašeho hodnocení. Pokračujte v hraní několika dalších her, snad je vyhrajete a objevíte se."
+    },
+    "can_i_play_base_game": {
+        "question": "Mohu hrát bez rozšíření?",
+        "answer": "Ano. Můžete přepnout, zda se rozšíření používají při vytváření hry, a hraní bez rozšíření je dobré pro začátečníky! Hodnocené hry jsou dostupné pouze pokud se používají rozšíření, protože je to oficiální soutěžní formát."
+    },
+    "how_to_recover_password": {
+        "question": "Zapomněl jsem heslo! Co teď?",
+        "answer": "Pošlete mail na leex@klautcomputing.de ze stejné emailové adresy, kterou používáte na Hivegame.com s požadavkem na reset hesla."
+    },
+    "can_i_set_up_a_tournament": {
+        "question": "Mohu vytvořit vlastní turnaj?",
+        "answer": "Ano! Stačí kliknout na Vytvořit turnaj a zbytek by měl být samovysvětlující."
+    },
+    "donation_amount": {
+        "question": "Jaká je doporučená výše daru?",
+        "answer": "Všechny dary, velké i malé, pomáhají udržet Hivegame.com v provozu a jsou vděčně přijímány. Vzhledem k poplatkům za kreditní karty a bankovní transakce se doporučuje minimální dar 5 EUR."
+    },
+    "how_donate": {
+        "question": "Jak mohu darovat?",
+        "answer": "Klikněte na Darovat v navigační liště nebo <donate_link>použijte tento odkaz</donate_link>"
+    }
+}
