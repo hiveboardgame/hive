@@ -1,104 +1,192 @@
 {
     "title": "Foire Aux Questions",
-    "what_is_hivegame": {
-        "question": "Qu'est-ce que hivegame.com ?",
-        "answer": "hivegame.com est un projet communautaire visant à créer une nouvelle plateforme en ligne pour jouer à Hive® gratuitement. hivegame.com est sans publicité, open source, développé par les membres de la communauté, et officiellement soutenu par le créateur de Hive® John Yianni."
+    "sections": {
+        "getting_started": "Premiers pas",
+        "game_settings": "Paramètres du jeu",
+        "tournaments": "Tournois",
+        "account_configuration": "Configuration du compte",
+        "more_features": "Plus de fonctionnalités",
+        "community_support": "Communauté & Support",
+        "donating": "Faire un don à Hivegame.com"
     },
     "how_to_help": {
-        "question": "Comment puis-je contribuer à la réussite de ce projet ?",
+        "question": "Comment puis-je soutenir le site ?",
         "answers": {
-            "item1": "Vous pouvez nous aider en contribuant à la <source_link>base de code.</source_link>",
-            "item2": "Vous pouvez nous aider en nous faisant part de vos idées, de vos commentaires et en vérifiant les illustrations sur <discord_link>Discord</discord_link>",
-            "item3": "Vous pouvez nous soutenir en faisant un <donate_link>don</donate_link>. Votre don permet de faire vivre le projet et soutenir les développeurs."
+            "item1": "Faites passer le mot pour amener plus de joueurs ici !",
+            "item2": "Contribuez au développement du site web, aux améliorations, aux corrections de bugs ou à la maintenance via <github_link>GitHub</github_link>",
+            "item3": "Dons monétaires - voir la section Faire un don à Hivegame.com dans la FAQ"
         }
-    },
-    "how_does_it_operate": {
-        "question": "Comment fonctionne hivegame.com ?",
-        "answer": "Il est développé par les membres de la communauté, et 100% basé sur les dons. hivegame.com ne collectera jamais de données sur les utilisateurs, ne montrera jamais de publicités ou n'implémentera rien d'autre qui puisse vous distraire du jeu ou faire de l'argent."
     },
     "how_to_get_crown": {
-        "question": "Comment obtenir 👑 à côté de mon nom d'utilisateur ?",
-        "answer": "En faisant un don au projet !"
+        "question": "Pourquoi certains utilisateurs ont-ils le symbole 👑 à côté de leur nom ?",
+        "answer": "Les utilisateurs qui font un don monétaire volontaire et optionnel pour soutenir Hivegame.com obtiennent un symbole de couronne à côté de leur nom. À part le symbole à côté de leur nom, les donateurs n'obtiennent aucun privilège supplémentaire."
     },
     "what_is_hive": {
-        "question": "Qu'est-ce que Hive ?",
-        "answer": "Hive est un jeu de stratégie abstrait primé, conçu par John Yianni en 2000 et édité par <gen42_link>Gen42</gen42_link>."
+        "question": "Qu'est-ce que Hive ?",
+        "answer": "Hive est un jeu de stratégie abstrait au rythme rapide joué avec des tuiles hexagonales. Pensez-y comme aux échecs... avec des insectes. Et rappelez-vous : protégez toujours votre Reine. Vous pouvez acheter un jeu physique de Hive sur le site web de l'éditeur <gen42_link>Gen42</gen42_link>"
     },
-    "how_to_play_with_friends": {
-        "question": "Puis-je organiser une partie avec un(e) ami(e) ?",
-        "answers": {
-            "item1": "Oui, vous pouvez créer une partie en cliquant sur le bouton « Créer une partie » de la page principale, puis sélectionner l'option « Privé » et ensuite partager le lien avec un(e) ami(e). Il/Elle devra posséder/créer un compte pour pouvoir jouer.",
-            "item2": "Vous pouvez également envoyer une provocation directe en utilisant l'icône « épées croisées » à côté de chaque utilisateur.",
-            "item3": "Bien entendu, vous pouvez également lancer un défi ouvert qui peut être accepté par n'importe qui dans la fourchette de critères Elo et espérer qu'il soit le premier à accepter votre partie."
-        }
+    "hive_rules": {
+        "question": "Quelles sont les règles de Hive ?",
+        "answer": "Chaque joueur place ou déplace alternativement des tuiles dans le but d'encercler la reine abeille de l'adversaire. Les règles complètes sont <rules_link>ici en format PDF</rules_link> ou si vous préférez une vidéo, vous pouvez regarder une <video_link>courte vidéo YouTube ici</video_link>."
     },
-    "how_to_check_stack": {
-        "question": "Comment puis-je voir ce qui se trouve sous une pièce ?",
-        "answers": {
-            "item1": "Sur mobile, appuyez longuement sur la pile pour l'agrandir. Une fois qu'elle est développée, vous pouvez déplacer votre doigt hors de l'écran pour voir également la pièce la plus basse.",
-            "item2": "Sur ordinateur de bureau, cliquez avec le bouton droit de la souris sur la pile et elle restera développée jusqu'à ce que vous la relâchiez."
-        }
+    "expansions_supported": {
+        "question": "Quelles extensions sont supportées ?",
+        "answer": "Toutes les trois officielles : Moustique : Copie les capacités des insectes adjacents. Coccinelle : Se déplace exactement de 2 pas sur la ruche, 1 pas vers le bas. Cloporte : Lance les pièces adjacentes une fois par tour."
     },
-    "what_are_cornfirmation_modes": {
-        "question": "Que signifient les différents modes de confirmation ?",
-        "description": "Il existe trois modes de déplacement :",
-        "answers": {
-            "item3": "Confirmation par horloge : Le plus sûr, si vous voulez éviter de faire des mouvements par erreur. Cliquez d'abord sur l'endroit à placer/déplacer, puis pour confirmer et effectuer le déplacement, vous devez cliquer sur votre propre horloge.",
-            "item1": "Double clic : Par défaut, le premier clic place la pièce et le second clic effectue le déplacement.",
-            "item2": "Simple clic : Le plus rapide, si vous voulez ne pas perdre de temps dans les parties rapides. Attention à ne pas vous tromper de place, car le seul et unique clic déclenche immédiatement le déplacement."
-        }
+    "resign_ok": {
+        "question": "Est-il acceptable d'abandonner un jeu que je suis sûr de perdre ?",
+        "answer": "Oui. Tout comme aux échecs, il est parfaitement acceptable de concéder une partie sans la jouer jusqu'à la conclusion sur le plateau si vous pensez que vous n'avez aucune chance de victoire."
     },
-    "can_i_play_base_game": {
-        "answer": "Oui, mais pourquoi le feriez-vous ? Blague à part, le jeu de base est limité au jeu sans échanges. Hive PLM (les trois extensions : Pillbug, Ladybug, Mosquito) est le format officiel utilisé dans les tournois. C'est aussi le plus difficile et le plus amusant !",
-        "question": "Puis-je jouer au jeu de base sans les extensions ?"
+    "signup_required": {
+        "question": "Puis-je jouer sans m'inscrire ?",
+        "answer": "Non. Mais créer un compte est gratuit et simple."
     },
-    "what_rating_system": {
-        "question": "Quel est le système d'évaluation utilisé par hivegame.com ?",
-        "answer": "Nous utilisons le système <glicko2_link>Glicko-2</glicko2_link>. Paramétré comme Lichess."
+    "mobile_friendly": {
+        "question": "Est-ce compatible avec les mobiles ?",
+        "answer": "Absolument. Hivegame.com fonctionne parfaitement sur mobile, tablette et ordinateur de bureau. Attention juste aux doigts glissants en plein match."
     },
-    "how_to_recover_password": {
-        "question": "Que faire si j'ai oublié mon mot de passe ?",
-        "answer": "Nous n'avons pas encore de système de récupération automatique des mots de passe, vous pouvez nous contacter via Discord @klautcomputing / @ionoi et nous demander de réinitialiser votre mot de passe."
+    "mobile_app": {
+        "question": "Y a-t-il une application mobile ?",
+        "answer": "Pas encore. Hivegame.com est disponible comme application web progressive. Ajoutez-la simplement à l'écran d'accueil de votre mobile pour une expérience similaire à une application."
     },
-    "why_basic_chat": {
-        "question": "Pourquoi le chat est-il si basique ?",
-        "details": "La fonctionnalité de chat est en cours d'élaboration, nous sommes conscients qu'elle présente des problèmes et qu'il est important de garder à l'esprit lors de son utilisation :",
-        "answers": {
-            "item2": "Pour l'instant, il n'est possible de chatter que dans une partie (des messages directs et d'autres modes seront ajoutés), les spectateurs ne voient pas le chat des joueurs et les joueurs ne voient pas le chat des spectateurs.",
-            "item3": "Parfois, la notification de chat rouge affiche de nouveaux messages alors qu'il n'y en a pas.",
-            "item1": "Actuellement, le chat n'est pas conservé dans la base de données. Par conséquent, lorsque nous effectuerons une mise à jour, vos messages de chat seront perdus !"
-        }
+    "profile_navigation": {
+        "question": "Comment naviguer vers ma Page de Profil ?",
+        "answer": "Quand vous êtes connecté, cliquez sur votre nom d'utilisateur en haut à droite de l'écran pour aller à la Page de Profil."
     },
-    "where_to_meet_other_players": {
-        "answer": "Retrouvez les liens vers nos réseaux sociaux <resources_link>ici</resources_link>. La communauté Hive® est très amicale et vous trouverez sûrement quelqu'un près de chez vous pour jouer en face à face !",
-        "question": "Où puis-je rencontrer le reste de la communauté qui joue à Hive® dans le monde entier ?"
+    "game_types": {
+        "question": "Les jeux sont-ils par correspondance ou en temps réel ?",
+        "answer": "Hivegame.com supporte les deux. Vous pouvez jouer un match en direct ou revenir à votre onglet des heures plus tard, selon les paramètres de temps utilisés lors de la configuration d'un jeu."
+    },
+    "start_game": {
+        "question": "Comment commencer un jeu ?",
+        "answer": "Sur la page d'accueil, cliquez sur l'un des six paramètres de Contrôle du Temps pour commencer un jeu ou le bouton 'personnalisé' pour choisir différents paramètres."
+    },
+    "time_controls": {
+        "question": "Que signifient les paramètres de Contrôle du Temps sur la page d'accueil ?",
+        "answer": "Les paramètres de contrôle du temps dictent la vitesse du jeu. Pour illustrer, 3+3 signifie que quand le jeu commence, chaque personne a un total de 3 minutes. Quand c'est son tour, le temps commence à décompter. Quand un tour est terminé, 3 secondes sont ajoutées au temps disponible à la fin du tour. Tous les autres formats de temps fonctionnent de manière similaire."
+    },
+    "realtime_vs_correspondence": {
+        "question": "Quelle est la différence entre les jeux en Temps Réel, par Correspondance et Sans Temps ?",
+        "answer": "Les jeux en temps réel doivent être terminés dans les paramètres de temps choisis, nécessitant donc typiquement que les deux joueurs soient en ligne simultanément. Les jeux par correspondance s'étendent généralement sur plusieurs jours ou avec au moins 1 coup tous les x jours. Si vous ne jouez pas votre coup dans les temps, vous perdrez le jeu. Les jeux sans temps sont auto-explicatifs."
+    },
+    "casual_vs_rated": {
+        "question": "Quelle est la différence entre les jeux Casual et Classés ?",
+        "answer": "Vous pouvez choisir que votre jeu soit classé (système Glicko-2) et ainsi obtenir une estimation de votre compétence et suivre la progression dans le temps. Les nouveaux commencent avec un classement de 1500. En général, gagner augmente votre classement, perdre un jeu le diminue. Un classement plus élevé implique une compétence plus élevée. Gagner des jeux contre des adversaires beaucoup moins bien classés n'augmente pas votre classement matériellement. Mais gagner des jeux contre un adversaire mieux classé peut augmenter votre classement significativement. Gagner ou perdre des jeux Casual n'a aucun effet sur votre classement. Rappel : Les jeux classés ne sont disponibles que si les trois extensions sont utilisées (format MLP)."
     },
     "why_elo_has_questionmark": {
-        "question": "Pourquoi mon elo est-il suivi d'un « ? » ?",
-        "answer": "Cela se produit alors que votre elo est encore incertain. Il disparaît lorsque vous avez joué suffisamment de parties et, une fois qu'il a disparu, vous pouvez également apparaître dans les classements."
+        "question": "Pourquoi y a-t-il un ? à côté de mon classement ?",
+        "answer": "Un ? à côté de votre classement indique que votre classement est provisoire, c'est-à-dire que vous devriez vous attendre à une volatilité plus élevée des classements jusqu'à ce que vous ayez joué un nombre statistiquement significatif de jeux pour que le système détermine votre classement avec une précision plus élevée."
     },
-    "why_not_in_top_players": {
-        "question": "Pourquoi ne suis-je pas dans le classement des meilleurs joueurs ?",
-        "answer": "Vous n'avez pas encore joué suffisamment de parties pour que le système soit vraiment en mesure de déterminer la précision de votre classement. Continuez à jouer quelques parties de plus, essayez de les gagner et vous verrez."
+    "base_vs_mlp": {
+        "question": "Quelle est la différence entre le format Base et MLP ?",
+        "answer": "MLP est la configuration compétitive par défaut et utilise les pièces Moustique, Coccinelle et Cloporte (aka MLP). Le jeu de base n'a pas ces 3 insectes."
     },
-    "can_i_set_up_a_tournament": {
-        "question": "Puis-je organiser un tournoi ?",
-        "answer": "Oui, mais nous y travaillons encore. Vous pouvez nous contacter via Discord si vous souhaitez nous aider."
+    "private_vs_public": {
+        "question": "Quelle est la différence entre privé et public ?",
+        "answer": "Un jeu public est disponible sur la page d'accueil pour que n'importe quel autre joueur puisse se joindre. Un jeu privé vous fournit un lien que vous pouvez envoyer à un autre joueur."
     },
-    "can_i_play_with_bots": {
-        "question": "Puis-je jouer contre un robot ?",
-        "answer": "Cette fonctionnalité n'est pas encore prise en charge, mais elle pourrait l'être bientôt (contactez-nous si vous voulez nous aider à développer cette fonctionnalité)."
+    "rating_range": {
+        "question": "Qu'est-ce que la plage de classement ?",
+        "answer": "Ce paramètre permet seulement aux adversaires dans une variation de plage spécifique de votre classement d'accepter le match. Cela assure que vous puissiez choisir des adversaires qui sont aussi proches (ou pas !) de votre classement selon votre préférence."
+    },
+    "color_selection": {
+        "question": "Qu'est-ce que l'hexagone Blanc, Aléatoire, Noir ?",
+        "answer": "Quand vous configurez un jeu, vous choisissez si vous voulez commencer comme Blanc, Noir, ou comme déterminé aléatoirement par le système."
+    },
+    "how_to_check_stack": {
+        "question": "Comment voir ce qui est sous une tuile ?",
+        "answer": "Clic droit ou toucher (sur mobile) une tuile empilée pour l'étendre. Vous verrez les tuiles en dessous tant que vous maintenez."
+    },
+    "spectate_games": {
+        "question": "Puis-je regarder des jeux ?",
+        "answer": "Oui ! Les jeux en temps réel en cours sont visibles sur la page d'accueil. Cliquez sur n'importe lequel pour regarder."
+    },
+    "turn_alerts": {
+        "question": "Vais-je recevoir une alerte quand c'est mon tour (pour les jeux par tours) ?",
+        "answer": "Oui, vous verrez une icône de message rouge en haut de la page avec un numéro indiquant combien de jeux vous avez en cours. Alternativement, naviguez vers votre Page de Profil et vous pouvez filtrer par jeux actuellement En Cours, Tournois Non Commencés et jeux Terminés."
+    },
+    "correspondence_notifications": {
+        "question": "Puis-je être notifié quand c'est mon tour de jouer dans un jeu par correspondance ?",
+        "answer": "Vous pouvez connecter votre compte Discord à votre profil Hivegame.com et recevoir des notifications du bot busybee. Cliquez sur votre bouton de profil en haut à droite et cliquez sur 'Modifier le Compte'"
+    },
+    "chat_basics": {
+        "question": "Comment fonctionne le chat ?",
+        "answer": "La fonctionnalité de chat est très en cours de développement ; nous sommes conscients qu'elle a des problèmes, donc des choses importantes à garder à l'esprit lors de son utilisation : 1. Actuellement le chat ne persiste pas dans la base de données donc à chaque fois que nous déployons une mise à jour vos messages de chat seront perdus ! 2. Pour l'instant, il n'est possible de chatter que dans un jeu (messages directs et autres moyens seront ajoutés à l'avenir), les spectateurs ne voient pas le chat des joueurs, ni les joueurs ne voient le chat des spectateurs. 3. Parfois la notification rouge du chat montrera de nouveaux messages quand il n'y en a pas."
+    },
+    "tournament_entry": {
+        "question": "N'importe qui peut-il rejoindre un tournoi ? Y a-t-il des frais d'entrée ? Qu'en est-il des prix ?",
+        "answer": "Oui, vous pouvez rejoindre un tournoi même si vous êtes débutant. Cependant, certains tournois peuvent être restreints par classement ou pourraient être sur invitation seulement selon la décision de l'organisateur du tournoi. Au moment de l'écriture, il n'y a pas de frais d'entrée et pas de prix (à part les droits de vantardise et les augmentations de points de classement !)"
+    },
+    "tournament_duration": {
+        "question": "Quelle est la durée d'un tournoi ? Combien de jeux ? Comment coordonner les horaires ?",
+        "answer": "La page du tournoi devrait typiquement esquisser tous ces détails. Si vous avez des questions, contactez l'organisateur du tournoi. Actuellement, seuls les tournois Round-Robin sont disponibles, mais plus de formats seront ajoutés bientôt."
+    },
+    "tournament_stats": {
+        "question": "Dans un tableau de résultats de tournoi, qu'est-ce que H2H, WB, SB, Terminé ?",
+        "answer": "H2H - Record Face à Face, qui est le premier critère de départage. WB - Victoire en tant que Noir, qui est le deuxième critère de départage. SB - Score Sonnebron-Berger, qui est le troisième critère de départage. Terminé - nombre de jeux terminés."
+    },
+    "tournament_games": {
+        "question": "Où voir mes jeux en cours / pas encore commencés ?",
+        "answer": "Naviguez vers votre page de profil et vous verrez des filtres pour vos jeux actuellement En Cours et Jeux de Tournoi Non Commencés."
+    },
+    "change_password": {
+        "question": "Comment changer mon mot de passe ?",
+        "answer": "Naviguez vers profil > Modifier le Compte ou <edit_link>utilisez ce lien</edit_link>"
+    },
+    "move_confirmation": {
+        "question": "Que signifient les différents modes de Confirmation de Coup ?",
+        "answer": "En faisant un coup il y a 3 modes : 1. Simple clic - Le rapide : si vous ne voulez pas perdre de temps dans les jeux rapides. Attention à ne pas mal placer ou mal bouger la pièce car un simple clic fait et confirme immédiatement le coup. 2. Double clic - Le par défaut : le premier clic pour placer/bouger la pièce et le second clic confirme le coup. 3. Confirmation d'horloge - Le sécurisé : premier clic pour placer/bouger et ensuite pour confirmer le coup, vous cliquez sur votre propre minuteur. Les modes double clic ou confirmation d'horloge sont recommandés."
+    },
+    "game_analysis": {
+        "question": "Puis-je revoir les jeux terminés avec un outil d'analyse ?",
+        "answer": "Oui, les jeux terminés ont une icône de microscope qui chargera le jeu en mode analyse mais cette fonctionnalité est actuellement en développement, donc n'en attendez pas trop encore."
+    },
+    "play_bots": {
+        "question": "Puis-je jouer contre un bot ?",
+        "answer": "Oui, cliquez sur le bouton 'Jouer Bot' sur la page d'accueil et sélectionnez le bot contre lequel vous voulez jouer. Un jeu sans temps commencera immédiatement."
+    },
+    "get_better": {
+        "question": "Comment m'améliorer à Hive ?",
+        "answer": "Consultez la <resources_link>Section Ressources</resources_link> du site pour une liste curatée de ressources pour commencer."
+    },
+    "community_forum": {
+        "question": "Y a-t-il un forum communautaire ?",
+        "answer": "Oui ! Rejoignez le serveur Discord de la Communauté Mondiale Hive <discord_link>ici</discord_link> - plein de joueurs amicaux et de discussions stratégiques."
+    },
+    "play_specific_players": {
+        "question": "Puis-je jouer avec des joueurs spécifiques seulement ?",
+        "answer": "Bien sûr ! Vous pouvez utiliser l'icône d'épées croisées à côté du nom d'un joueur pour le défier directement. Alternativement, créez un jeu privé (cliquez sur le bouton 'Personnalisé' sur la page d'accueil) et partagez le lien en privé. Seul un joueur avec le lien peut se joindre."
+    },
+    "report_bugs": {
+        "question": "Où puis-je signaler des bugs ou suggérer de nouvelles fonctionnalités ?",
+        "answer": "Rejoignez le serveur Discord Hivegame.com <discord_link>ici</discord_link> et vous pouvez envoyer des messages aux développeurs en utilisant les canaux correspondants."
     },
     "opponent_is_abusive": {
-        "question": "Que puis-je faire si mon adversaire est violent ou perturbe le jeu/le chat ou s'il a un nom d'utilisateur inapproprié ?",
-        "answer": "Faites une capture d'écran du comportement et contactez-nous via Discord @klautcomputing / @ionoi, nous réglerons le problème."
+        "question": "Que puis-je faire si mon adversaire est abusif ou perturbateur dans le jeu/chat ou a un nom d'utilisateur inapproprié ?",
+        "answer": "Faites une capture d'écran du comportement et contactez-nous via Discord @klautcomputing / @ionoi et nous le résoudrons."
     },
-    "how_to_review_games": {
-        "question": "Puis-je revoir les parties terminées à l'aide d'un outil d'analyse ?",
-        "answer": "Oui, les parties terminées ont une icône de microscope qui charge le jeu en mode analyse, mais cette fonction est actuellement en cours de développement, alors soyez indulgents."
+    "why_not_in_top_players": {
+        "question": "Pourquoi n'apparais-je pas dans les meilleurs joueurs classés ?",
+        "answer": "Vous n'avez pas encore joué assez de jeux pour que le système soit vraiment sûr de la précision de votre classement. Continuez juste à jouer quelques jeux de plus, gagnez-les avec un peu de chance et vous apparaîtrez."
     },
-    "where_to_learn_more": {
-        "question": "Comment puis-je en savoir plus sur la stratégie de Hive ?",
-        "answer": "Nous prévoyons d'ajouter un tutoriel interactif pour vous aider à apprendre et à comprendre toutes les idées stratégiques derrière le jeu, à l'avenir, consultez la section <resources_link>ressources</resources_link> pour des livres, des vidéos et le Discord !"
+    "can_i_play_base_game": {
+        "question": "Puis-je jouer sans extensions ?",
+        "answer": "Oui. Vous pouvez basculer si les extensions sont utilisées lors de la création d'un jeu, et jouer sans extensions est bon pour les débutants ! Les jeux classés ne sont disponibles que si les extensions sont utilisées, car c'est le format compétitif officiel."
+    },
+    "how_to_recover_password": {
+        "question": "J'ai oublié mon mot de passe ! Que faire maintenant ?",
+        "answer": "Envoyez un mail à leex@klautcomputing.de depuis la même adresse email que vous utilisez sur Hivegame.com en demandant une réinitialisation de mot de passe."
+    },
+    "can_i_set_up_a_tournament": {
+        "question": "Puis-je créer mon propre tournoi ?",
+        "answer": "Oui ! Cliquez simplement sur Créer un Tournoi et le reste devrait être auto-explicatif."
+    },
+    "donation_amount": {
+        "question": "Quel est le montant de don recommandé ?",
+        "answer": "Tous les dons, grands et petits, aident à maintenir Hivegame.com en marche et sont reçus avec gratitude. Considérant les frais de cartes de crédit et de transactions bancaires, un don minimum de 5 EUR est suggéré."
+    },
+    "how_donate": {
+        "question": "Comment faire un don ?",
+        "answer": "Cliquez sur Faire un Don dans la barre de navigation ou <donate_link>utilisez ce lien</donate_link>"
     }
 }

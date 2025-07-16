@@ -1,1 +1,192 @@
-{}
+{
+    "title": "Veelgestelde Vragen",
+    "sections": {
+        "getting_started": "Aan de slag",
+        "game_settings": "Spelinstellingen",
+        "tournaments": "Toernooien",
+        "account_configuration": "Accountconfiguratie",
+        "more_features": "Meer functies",
+        "community_support": "Gemeenschap & Ondersteuning",
+        "donating": "Doneren aan Hivegame.com"
+    },
+    "how_to_help": {
+        "question": "Hoe kan ik de site ondersteunen?",
+        "answers": {
+            "item1": "Verspreid het woord om meer spelers hier te krijgen!",
+            "item2": "Draag bij aan website-ontwikkeling, verbeteringen, bugfixes of onderhoud via <github_link>GitHub</github_link>",
+            "item3": "Geldelijke donaties - zie de sectie Donaties aan Hivegame.com in de FAQ"
+        }
+    },
+    "how_to_get_crown": {
+        "question": "Waarom hebben sommige gebruikers het symbool 👑 naast hun naam?",
+        "answer": "Gebruikers die een vrijwillige en optionele geldelijke donatie doen om Hivegame.com te ondersteunen, krijgen een kroonsymbool naast hun naam. Behalve het symbool naast hun naam, krijgen donateurs geen extra privileges."
+    },
+    "what_is_hive": {
+        "question": "Wat is Hive?",
+        "answer": "Hive is een snelle abstracte strategiegame gespeeld met zeshoekige stenen. Zie het als schaak... met insecten. En onthoud: bescherm altijd je Koningin. Je kunt een fysieke Hive-set kopen op de website van uitgever <gen42_link>Gen42</gen42_link>"
+    },
+    "hive_rules": {
+        "question": "Wat zijn de regels van Hive?",
+        "answer": "Elke speler plaatst of beweegt om de beurt stenen met het doel de bijenkoningin van de tegenstander te omsingelen. De complete regels zijn <rules_link>hier in PDF-formaat</rules_link> of als je video's prefereert, kun je een <video_link>korte YouTube-video hier</video_link> bekijken."
+    },
+    "expansions_supported": {
+        "question": "Welke uitbreidingen worden ondersteund?",
+        "answer": "Alle drie de officiële: Mug: Kopieert vaardigheden van aangrenzende insecten. Lieveheersbeestje: Beweegt precies 2 stappen bovenop de korf, 1 stap naar beneden. Pissebedkever: Gooit aangrenzende stukken één keer per beurt."
+    },
+    "resign_ok": {
+        "question": "Is het acceptabel om opgave te doen in een spel waarvan ik zeker weet dat ik ga verliezen?",
+        "answer": "Ja. Net als bij schaken is het volkomen acceptabel om een wedstrijd op te geven zonder het uit te spelen op het bord als je denkt dat je geen kans hebt om te winnen."
+    },
+    "signup_required": {
+        "question": "Kan ik spelen zonder me te registreren?",
+        "answer": "Nee. Maar een account aanmaken is gratis en eenvoudig."
+    },
+    "mobile_friendly": {
+        "question": "Is het mobiel-vriendelijk?",
+        "answer": "Absoluut. Hivegame.com werkt soepel op mobiel, tablet en desktop. Pas alleen op voor gladde vingers midden in een wedstrijd."
+    },
+    "mobile_app": {
+        "question": "Is er een mobiele app?",
+        "answer": "Nog niet. Hivegame.com is beschikbaar als een progressieve webapplicatie. Voeg het gewoon toe aan je mobiele beginscherm voor een app-achtige ervaring."
+    },
+    "profile_navigation": {
+        "question": "Hoe navigeer ik naar mijn Profielpagina?",
+        "answer": "Wanneer je bent ingelogd, klik op je gebruikersnaam in de rechterbovenhoek van het scherm om naar de Profielpagina te gaan."
+    },
+    "game_types": {
+        "question": "Zijn spellen correspondentie of realtime?",
+        "answer": "Hivegame.com ondersteunt beide. Je kunt een live wedstrijd spelen of uren later terugkeren naar je tabblad, gebaseerd op de tijdinstellingen die gebruikt worden bij het instellen van een spel."
+    },
+    "start_game": {
+        "question": "Hoe start ik een spel?",
+        "answer": "Op de homepage, klik op een van de zes Tijdcontrole-instellingen om een spel te starten of de 'aangepaste' knop om verschillende instellingen te kiezen."
+    },
+    "time_controls": {
+        "question": "Wat betekenen de Tijdcontrole-instellingen op de homepage?",
+        "answer": "De tijdcontrole-instellingen bepalen de snelheid van het spel. Ter illustratie betekent 3+3 dat wanneer het spel begint, elke persoon in totaal 3 minuten heeft. Wanneer het hun beurt is, begint de tijd af te tellen. Wanneer een beurt is voltooid, worden 3 seconden toegevoegd aan de beschikbare tijd aan het einde van de beurt. Alle andere tijdformaten werken op vergelijkbare wijze."
+    },
+    "realtime_vs_correspondence": {
+        "question": "Wat is het verschil tussen Realtime, Correspondentie en Tijdloze spellen?",
+        "answer": "Realtime-spellen moeten binnen de gekozen tijdinstellingen worden voltooid, waardoor typisch vereist is dat beide spelers gelijktijdig online zijn. Correspondentie-spellen strekken zich over het algemeen uit over meerdere dagen of met minstens 1 zet elke x dagen. Als je je zet niet op tijd speelt, verlies je het spel. Tijdloze spellen spreken voor zich."
+    },
+    "casual_vs_rated": {
+        "question": "Wat is het verschil tussen Casual en Gerangschikt spellen?",
+        "answer": "Je kunt ervoor kiezen om je spel gerangschikt te laten zijn (Glicko-2 systeem) en zo een schatting van je vaardigheid te krijgen en vooruitgang in de tijd te volgen. Nieuwelingen beginnen met een rating van 1500. Over het algemeen verhoogt winnen je rating, het verliezen van een spel verlaagt het. Hogere rating impliceert hogere vaardigheid. Het winnen van spellen tegen veel lager gerangschikte tegenstanders verhoogt je rating niet materieel. Maar het winnen van spellen tegen een hoger gerangschikte tegenstander kan je rating aanzienlijk verhogen. Het winnen of verliezen van Casual-spellen heeft geen effect op je rating. Herinnering: Gerangschikte spellen zijn alleen beschikbaar als alle drie de uitbreidingen worden gebruikt (MLP-formaat)."
+    },
+    "why_elo_has_questionmark": {
+        "question": "Waarom staat er een ? naast mijn rating?",
+        "answer": "Een ? naast je rating geeft aan dat je rating voorlopig is, d.w.z. je zou een hogere volatiliteit in ratings moeten verwachten totdat je een statistisch significant aantal spellen hebt gespeeld voordat het systeem je rating met hogere nauwkeurigheid kan bepalen."
+    },
+    "base_vs_mlp": {
+        "question": "Wat is het verschil tussen Base en MLP-formaat?",
+        "answer": "MLP is de standaard competitie-instelling en gebruikt de Mug, Lieveheersbeestje en Pissebedkever stukken (aka MLP). Het basisspel heeft deze 3 insecten niet."
+    },
+    "private_vs_public": {
+        "question": "Wat is het verschil tussen privé en openbaar?",
+        "answer": "Een openbaar spel is beschikbaar op de homepage zodat elke andere speler kan deelnemen. Een privé spel geeft je een link die je naar een andere speler kunt sturen."
+    },
+    "rating_range": {
+        "question": "Wat is het rating-bereik?",
+        "answer": "Deze instelling staat alleen tegenstanders binnen een specifieke bereikvariatie van je rating toe om de wedstrijd te accepteren. Dit zorgt ervoor dat je tegenstanders kunt kiezen die zo dicht (of niet!) bij je rating zijn als je prefereert."
+    },
+    "color_selection": {
+        "question": "Wat is de Wit, Willekeurig, Zwart zeshoek?",
+        "answer": "Wanneer je een spel instelt, kies je of je wilt beginnen als Wit, Zwart, of zoals willekeurig bepaald door het systeem."
+    },
+    "how_to_check_stack": {
+        "question": "Hoe zie ik wat er onder een steen zit?",
+        "answer": "Rechtsklik of tik (op mobiel) op een gestapelde steen om uit te klappen. Je ziet de stenen eronder terwijl je vasthoudt."
+    },
+    "spectate_games": {
+        "question": "Kan ik spellen bekijken?",
+        "answer": "Ja! Lopende realtime spellen zijn zichtbaar op de homepage. Klik op een willekeurig spel om te kijken."
+    },
+    "turn_alerts": {
+        "question": "Krijg ik een waarschuwing wanneer het mijn beurt is (voor beurt-gebaseerde spellen)?",
+        "answer": "Ja, je ziet een rood berichtpictogram bovenaan de pagina met een nummer dat aangeeft hoeveel spellen je aan de beurt hebt. Alternatief navigeer je naar je Profielpagina en je kunt filteren op momenteel Spelend, Niet-gestarte Toernooi en Voltooide spellen."
+    },
+    "correspondence_notifications": {
+        "question": "Kan ik een melding krijgen wanneer het mijn beurt is om te spelen in een correspondentie-spel?",
+        "answer": "Je kunt je Discord-account verbinden met je Hivegame.com-profiel en meldingen ontvangen van de busybee-bot. Klik op je profielknop in de rechterbovenhoek en klik op 'Account Bewerken'"
+    },
+    "chat_basics": {
+        "question": "Hoe werkt de chat?",
+        "answer": "De chatfunctie is zeer in ontwikkeling; we zijn ons ervan bewust dat het problemen heeft, dus belangrijke dingen om in gedachten te houden bij het gebruik: 1. Momenteel blijft de chat niet bestaan in de database, dus elke keer dat we een update uitrollen, gaan je chatberichten verloren! 2. Voor nu is het alleen mogelijk om te chatten in een spel (directe berichten en andere manieren worden in de toekomst toegevoegd), toeschouwers zien de chat van spelers niet, noch zien spelers de chat van toeschouwers. 3. Soms toont de rode chatmelding nieuwe berichten wanneer er geen zijn."
+    },
+    "tournament_entry": {
+        "question": "Kan iedereen deelnemen aan een toernooi? Is er een inschrijfgeld? Hoe zit het met prijzen?",
+        "answer": "Ja, je kunt deelnemen aan een toernooi zelfs als je een beginner bent. Sommige toernooien kunnen echter beperkt zijn op rating of alleen op uitnodiging zijn zoals beslist door de toernooiorganisator. Op het moment van schrijven zijn er geen inschrijfgelden en geen prijzen (behalve opscheprechten en rating-puntverhogingen!)"
+    },
+    "tournament_duration": {
+        "question": "Wat is de duur van een toernooi? Hoeveel spellen? Hoe coördineer ik roosters?",
+        "answer": "De toernooipagina zou typisch al deze details moeten schetsen. Als je vragen hebt, neem contact op met de toernooiorganisator. Momenteel zijn alleen Round-Robin toernooien beschikbaar, maar meer formaten worden binnenkort toegevoegd."
+    },
+    "tournament_stats": {
+        "question": "In een toernooi resultatentabel, wat is H2H, WB, SB, Voltooid?",
+        "answer": "H2H - Hoofd-tot-hoofd record, wat het eerste tiebreak-criterium is. WB - Winnen als Zwart, wat het tweede tiebreak-criterium is. SB - Sonnebron-Berger Score, wat het derde tiebreak-criterium is. Voltooid - aantal voltooide spellen."
+    },
+    "tournament_games": {
+        "question": "Waar zie ik mijn lopende / nog niet gestarte spellen?",
+        "answer": "Navigeer naar je profielpagina en je ziet filters voor je momenteel Spelende en Niet-gestarte Toernooispellen."
+    },
+    "change_password": {
+        "question": "Hoe verander ik mijn wachtwoord?",
+        "answer": "Navigeer naar profiel > Account Bewerken of <edit_link>gebruik deze link</edit_link>"
+    },
+    "move_confirmation": {
+        "question": "Wat betekenen de verschillende Zet Bevestigingsmodi?",
+        "answer": "Bij het doen van een zet zijn er 3 modi: 1. Enkele klik - De snelle: als je geen tijd wilt verspillen in snelle spellen. Wees voorzichtig om het stuk niet verkeerd te plaatsen of te bewegen omdat een enkele klik onmiddellijk de zet doet en bevestigt. 2. Dubbele klik - De standaard: de eerste klik om het stuk te plaatsen/bewegen en de tweede klik bevestigt de zet. 3. Klok bevestiging - De veilige: eerste klik om te plaatsen/bewegen en dan om de zet te bevestigen klik je op je eigen timer. Dubbele klik of klok bevestigingsmodi worden aanbevolen."
+    },
+    "game_analysis": {
+        "question": "Kan ik voltooide spellen bekijken met een analysetool?",
+        "answer": "Ja, voltooide spellen hebben een microscooppictogram dat het spel in analysemodus laadt, maar deze functie is momenteel in ontwikkeling, dus verwacht er nog niet te veel van."
+    },
+    "play_bots": {
+        "question": "Kan ik tegen een bot spelen?",
+        "answer": "Ja, klik op de 'Speel Bot' knop op de homepage en selecteer de bot tegen wie je wilt spelen. Een tijdloos spel zal onmiddellijk beginnen."
+    },
+    "get_better": {
+        "question": "Hoe kan ik beter worden in Hive?",
+        "answer": "Bekijk de <resources_link>Resources Sectie</resources_link> van de site voor een samengestelde lijst van bronnen om te beginnen."
+    },
+    "community_forum": {
+        "question": "Is er een communityforum?",
+        "answer": "Ja! Sluit je aan bij de World Hive Community Discord-server <discord_link>hier</discord_link> - vol met vriendelijke spelers en strategische gesprekken."
+    },
+    "play_specific_players": {
+        "question": "Kan ik alleen met specifieke spelers spelen?",
+        "answer": "Zeker! Je kunt het gekruiste zwaarden-pictogram naast de naam van een speler gebruiken om hem direct uit te dagen. Alternatief maak een privé spel aan (klik op de 'Custom' knop op de homepage) en deel de link privé. Alleen een speler met de link kan deelnemen."
+    },
+    "report_bugs": {
+        "question": "Waar kan ik bugs rapporteren of nieuwe functies voorstellen?",
+        "answer": "Sluit je aan bij de Hivegame.com Discord-server <discord_link>hier</discord_link> en je kunt berichten sturen naar de ontwikkelaars via de juiste kanalen."
+    },
+    "opponent_is_abusive": {
+        "question": "Wat kan ik doen als mijn tegenstander beledigend of verstorend is in het spel/chat of een ongepaste gebruikersnaam heeft?",
+        "answer": "Maak een screenshot van het gedrag en neem contact met ons op via Discord @klautcomputing / @ionoi en we zullen het oplossen."
+    },
+    "why_not_in_top_players": {
+        "question": "Waarom verschijn ik niet in de hoogst gerangschikte spelers?",
+        "answer": "Je hebt nog niet genoeg spellen gespeeld voor het systeem om echt zeker te zijn van hoe nauwkeurig je rating is. Blijf gewoon nog een paar spellen spelen, win ze hopelijk en je zult verschijnen."
+    },
+    "can_i_play_base_game": {
+        "question": "Kan ik spelen zonder uitbreidingen?",
+        "answer": "Ja. Je kunt omschakelen of uitbreidingen worden gebruikt bij het maken van een spel, en spelen zonder uitbreidingen is goed voor beginners! Gerangschikte spellen zijn alleen beschikbaar als uitbreidingen worden gebruikt, omdat dit het officiële competitieformaat is."
+    },
+    "how_to_recover_password": {
+        "question": "Ik ben mijn wachtwoord vergeten! Wat moet ik nu doen?",
+        "answer": "Stuur een e-mail naar leex@klautcomputing.de vanaf hetzelfde e-mailadres dat je gebruikt op Hivegame.com en vraag om een wachtwoord reset."
+    },
+    "can_i_set_up_a_tournament": {
+        "question": "Kan ik mijn eigen toernooi opzetten?",
+        "answer": "Ja! Klik gewoon op Toernooi Maken en de rest zou vanzelfsprekend moeten zijn."
+    },
+    "donation_amount": {
+        "question": "Wat is het aanbevolen donatiebedrag?",
+        "answer": "Alle donaties, groot en klein, helpen Hivegame.com draaiende te houden en worden met dankbaarheid ontvangen. Gezien creditcard- en banktransactiekosten wordt een minimum donatie van 5 EUR voorgesteld."
+    },
+    "how_donate": {
+        "question": "Hoe doneer ik?",
+        "answer": "Klik op Doneren in de navigatiebalk of <donate_link>gebruik deze link</donate_link>"
+    }
+}

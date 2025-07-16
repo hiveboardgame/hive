@@ -1,104 +1,192 @@
 {
     "title": "Preguntes freqüents",
-    "what_is_hivegame": {
-        "question": "Què és hivegame.com?",
-        "answer": "hivegame.com és un esforç comunitari per crear una nova plataforma online per jugar al Hive® de manera gratuïta. hivegame.com no conté anuncis, és de codi lliure, desenvolupat per membres de la comunitat i amb el suport oficial del creador del joc Hive®, John Yianni."
+    "sections": {
+        "getting_started": "Primers Passos",
+        "game_settings": "Configuració del Joc",
+        "tournaments": "Torneigs",
+        "account_configuration": "Configuració del Compte",
+        "more_features": "Més Funcions",
+        "community_support": "Comunitat i Suport",
+        "donating": "Donacions a Hivegame.com"
     },
     "how_to_help": {
-        "question": "Com puc ajudar a fer prosperar el projecte?",
+        "question": "Com puc donar suport al lloc web?",
         "answers": {
-            "item2": "Pots ajudar-nos amb les teves idees, comentaris i gràfics a <discord_link>Discord</discord_link>",
-            "item3": "Pots mantenir les llums enceses fent una <donate_link>donació.</donate_link> I un cop les llums estiguin sempre enceses, la teva donació ajudarà a mantenir enceses les llums dels desenvolupadors.",
-            "item1": "Pots ajudar-nos contribuint al <source_link>codi font.</source_link>"
+            "item1": "Escampa la veu per aconseguir més jugadors aquí!",
+            "item2": "Contribueix al desenvolupament del lloc web, millores, correccions d'errors o manteniment via <github_link>GitHub</github_link>",
+            "item3": "Donacions monetàries - veure la secció Donacions a Hivegame.com de les FAQ"
         }
     },
-    "how_does_it_operate": {
-        "question": "Com funciona hivegame.com?",
-        "answer": "És desenvolupat per membres de la comunitat i financiat 100% per les donacions. hivegame.com mai recopilarà dades dels usuaris, mostrarà anuncis o implementarà cap altra cosa que distregui del joc o generi diners."
-    },
     "how_to_get_crown": {
-        "question": "Com puc aconseguir una 👑 al meu nom d'usuari?",
-        "answer": "Fent una donació al projecte!"
+        "question": "Per què alguns usuaris tenen el símbol 👑 al costat del seu nom?",
+        "answer": "Els usuaris que fan una donació monetària voluntària i opcional per donar suport a Hivegame.com obtenen un símbol de corona al costat del seu nom. A part del símbol al costat del seu nom, els donants no obtenen cap privilegi addicional."
     },
     "what_is_hive": {
         "question": "Què és el Hive?",
-        "answer": "El Hive és un premiat joc d'estratègia abstracta dissenyat per John Yianni l'any 2000 i publicat per <gen42_link>Gen42</gen42_link>."
+        "answer": "El Hive és un joc d'estratègia abstracta de ritme ràpid que es juga amb fitxes hexagonals. Pensa en ell com els escacs... amb insectes. I recorda: sempre protegeix la teva Reina. Pots comprar un joc físic de Hive al lloc web de l'editor <gen42_link>Gen42</gen42_link>"
     },
-    "how_to_play_with_friends": {
-        "answers": {
-            "item2": "També pots enviar un repte directe clicant a les \"espases creuades\" al costat de cada nom d'usuari. Això envia directament un repte a aquest usuari concret.",
-            "item1": "Sí, pots crear una partida clicant al botó 'Crear una partida' a la pàgina principal, llavors seleccionar l'opció 'Privada' i després compartir el link amb un amic que haurà de tenir o crear un compte per jugar.",
-            "item3": "Per descomptat, també pots crear un repte obert que podrà ser acceptat per qualsevol jugador que compleixi el criteri de puntuació (ELO) i esperar que el teu amic sigui el primer en acceptar la partida."
-        },
-        "question": "Puc crear una patida amb un amic?"
+    "hive_rules": {
+        "question": "Quines són les regles del Hive?",
+        "answer": "Cada jugador fa torns col·locant o movent fitxes amb l'objectiu d'envoltar la reina abella de l'oponent. Les regles completes estan <rules_link>aquí en format PDF</rules_link> o si prefereixes un vídeo, pots veure un <video_link>vídeo curt de YouTube aquí</video_link>."
     },
-    "how_to_check_stack": {
-        "question": "Com puc veure el què hi ha sota una peça?",
-        "answers": {
-            "item1": "En un dispositiu mòbil, mantén el dit sobre la torre de peces per expandir-la. Un cop expandida pots moure el dit per veure la peça de sota de tot.",
-            "item2": "En un ordinador, mantenint pressionat el botó dret sobre la torre la farà expandir."
-        }
+    "expansions_supported": {
+        "question": "Quines expansions estan suportades?",
+        "answer": "Totes les tres oficials: Mosquit: Copia les habilitats dels insectes adjacents. Marieta: Es mou exactament 2 passos sobre el rusc, 1 pas cap avall. Pillbug: Llança peces adjacents un cop per torn."
     },
-    "what_are_cornfirmation_modes": {
-        "question": "Com funcionen els diferents modes de confirmació de moviments?",
-        "description": "Per fer un moviment hi han 3 modes:",
-        "answers": {
-            "item2": "Un sol clic : El mode ràpid, si no vols perdre temps en les partides ràpides. Compte de no errar en el moviment perque un únic clic immediatament executa i confirma el moviment.",
-            "item3": "Clic al rellotge : El mode segur, si vols evitar equivocacions al fer moviments. Primer clica per col·locar o moure i seguidament clica al teu propi rellotge per confirmar el moviment.",
-            "item1": "Doble clic : El mode per defecte, el primer clic col·loca la peça i el segon clic confirma el moviment."
-        }
+    "resign_ok": {
+        "question": "És correcte rendir-se en una partida que estic segur que perdré?",
+        "answer": "Sí. Igual que en els escacs, està totalment bé concedir una partida sense jugar-la fins a la conclusió al tauler si creus que no tens cap possibilitat de victòria."
     },
-    "can_i_play_base_game": {
-        "question": "Puc jugar al joc base sense les expansions?",
-        "answer": "Sí però, ho vols fer de veritat? Bromes a part, el joc base està restringit a partides no puntuades. El Hive PLM (amb totes les tres expansions) és el format oficial que es fa servir en els tornejos. I és també el més desafiant i divertit!"
+    "signup_required": {
+        "question": "Puc jugar sense registrar-me?",
+        "answer": "No. Però crear un compte és gratuït i senzill."
     },
-    "what_rating_system": {
-        "question": "Quin sistema de puntuació es fa servir a hivegame.com?",
-        "answer": "Fem servir el sistema <glicko2_link>Glicko-2</glicko2_link>. Amb els paràmetres de Lichess."
+    "mobile_friendly": {
+        "question": "És compatible amb mòbils?",
+        "answer": "Absolutament. Hivegame.com funciona sense problemes en mòbil, tauleta i ordinador. Només compte amb els dits relliscosos a mig partit."
     },
-    "how_to_recover_password": {
-        "answer": "Encara no tenim sistema automàtic per restablir contrassenyes. Ens pots contactar per Discord @klautcomputing / @ionoi i t'ajudarem a restablir-la.",
-        "question": "Què puc fer si he oblidat la meva contrassenya?"
+    "mobile_app": {
+        "question": "Hi ha una aplicació mòbil?",
+        "answer": "Encara no. Hivegame.com està disponible com una aplicació web progressiva. Només afegeix-la a la pantalla d'inici del teu mòbil per una experiència similar a una aplicació."
     },
-    "why_basic_chat": {
-        "question": "Per què el chat és tan bàsic?",
-        "answers": {
-            "item1": "Actualment el chat no perdura a la base de dades, així que cada cop que actualitzem la web els missatges del chat es perden!",
-            "item2": "Ara per ara només és possible de fer servir el chat dins una partida (en un futur afegirem els missatges directes i altres modes). Els espectadors no poden veure el chat dels jugadors, ni els jugadors el dels espectadors.",
-            "item3": "A vegades la notificació vermella del chat s'activa encara que no hi hagin pas missatges nous."
-        },
-        "details": "Estem encara treballant en la funció del chat, estem al corrent de que hi han qüestions a resoldre. Les coses importants que cal recordar quan el fem servir:"
+    "profile_navigation": {
+        "question": "Com navego a la meva Pàgina de Perfil?",
+        "answer": "Quan estiguis connectat, fes clic al teu nom d'usuari a la part superior dreta de la pantalla per anar a la Pàgina de Perfil."
     },
-    "opponent_is_abusive": {
-        "answer": "Captura en pantalla el comportament i contacta'ns per Discord @klautcomputing / @ionoi i ho arreglarem.",
-        "question": "Què puc fer si el meu oponent abusa o pertorba la partida o el chat o té un nom d'usuari inapropiat o ofensiu?"
+    "game_types": {
+        "question": "Les partides són de correspondència o temps real?",
+        "answer": "Hivegame.com suporta ambdues. Pots jugar una partida en directe o tornar a la teva pestanya hores després, segons la configuració de temps utilitzada en configurar una partida."
+    },
+    "start_game": {
+        "question": "Com començo una partida?",
+        "answer": "A la pàgina principal, fes clic en una de les sis configuracions de Control de Temps per començar una partida o el botó 'personalitzat' per triar configuracions diferents."
+    },
+    "time_controls": {
+        "question": "Què signifiquen les configuracions de Control de Temps a la pàgina principal?",
+        "answer": "Les configuracions de control de temps determinen la velocitat del joc. Per il·lustrar, 3+3 significa que quan comença la partida cada persona té un total de 3 minuts. Quan és el seu torn, el temps comença a fer compte enrere. Quan s'acaba un torn, s'afegeixen 3 segons al temps disponible al final del torn. Tots els altres formats de temps funcionen de manera similar."
+    },
+    "realtime_vs_correspondence": {
+        "question": "Quina és la diferència entre partides de Temps Real, Correspondència i Sense Temps?",
+        "answer": "Les partides de temps real han d'acabar-se dins la configuració de temps triada, així que normalment requereix que tots dos jugadors estiguin connectats simultàniament. Les partides de correspondència generalment s'estenen durant diversos dies o amb almenys 1 moviment cada x dies. Si no jugues el teu moviment dins el temps, perdràs la partida. Les partides sense temps s'expliquen per si mateixes."
+    },
+    "casual_vs_rated": {
+        "question": "Quina diferència hi ha entre partides Casuals i Puntuades?",
+        "answer": "Pots triar que la teva partida sigui puntuada (sistema Glicko-2) i així obtenir una estimació de la teva competència i seguir la progressió al llarg del temps. Els nouvinguts comencen amb una puntuació de 1500. En general, guanyar augmenta la teva puntuació, perdre una partida la disminueix. Una puntuació més alta implica més competència. Guanyar partides contra oponents de puntuació molt baixa no augmenta la teva puntuació materialment. Però guanyar partides contra un oponent de puntuació més alta pot augmentar la teva puntuació significativament. Guanyar o perdre partides Casuals no té cap efecte sobre la teva puntuació. Recordatori: Les partides puntuades només estan disponibles si s'utilitzen les tres expansions (format MLP)."
     },
     "why_elo_has_questionmark": {
-        "question": "Per què la meva puntuació (ELO) té un \"?\" al darrera?",
-        "answer": "Això passa quan la teva puntuació encara no està clara. Desapareixarà quan hagis jugat prous partides i aleshores ja podràs aparèixer a les llistes dels millor jugadors."
+        "question": "Per què hi ha un ? al costat de la meva puntuació?",
+        "answer": "Un ? al costat de la teva puntuació indica que la teva puntuació és provisional, és a dir, hauries d'esperar una major volatilitat en les puntuacions fins que hagis jugat un nombre estadísticament significatiu de partides perquè el sistema determini la teva puntuació amb major precisió."
+    },
+    "base_vs_mlp": {
+        "question": "Quina diferència hi ha entre el format Base i MLP?",
+        "answer": "MLP és la configuració competitiva per defecte i utilitza les peces Mosquit, Marieta i Pillbug (també conegut com MLP). El joc base no té aquests 3 insectes."
+    },
+    "private_vs_public": {
+        "question": "Quina diferència hi ha entre privat i públic?",
+        "answer": "Una partida pública està disponible a la pàgina principal perquè qualsevol altre jugador s'hi uneixi. Una partida privada et proporciona un enllaç que pots enviar a un altre jugador."
+    },
+    "rating_range": {
+        "question": "Què és el rang de puntuació?",
+        "answer": "Aquesta configuració permet que només els oponents dins d'una variació de rang específica de la teva puntuació acceptin la partida. Això assegura que puguis triar oponents que siguin tan a prop (o no!) de la teva puntuació segons la teva preferència."
+    },
+    "color_selection": {
+        "question": "Què és l'hexàgon Blanc, Aleatori, Negre?",
+        "answer": "Quan configures una partida, tries si vols començar com a Blanc, Negre o com el sistema ho determini aleatòriament."
+    },
+    "how_to_check_stack": {
+        "question": "Com veig el què hi ha sota una fitxa?",
+        "answer": "Fes clic dret o toca (en mòbil) una fitxa apilada per expandir-la. Veuràs les fitxes que hi ha sota mentre mantinguis premut."
+    },
+    "spectate_games": {
+        "question": "Puc observar partides?",
+        "answer": "Sí! Les partides de temps real en curs són visibles a la pàgina principal. Fes clic a qualsevol per observar."
+    },
+    "turn_alerts": {
+        "question": "Rebré un avís quan sigui el meu torn (per a partides per torns)?",
+        "answer": "Sí, veuràs una icona de missatge vermell a la part superior de la pàgina amb un número indicant quantes partides tens per jugar. Alternativament, navega a la teva Pàgina de Perfil i pots filtrar per partides actualment En Joc, Torneigs No Iniciats i partides Acabades."
+    },
+    "correspondence_notifications": {
+        "question": "Puc ser notificat quan sigui el meu torn de jugar en una partida de correspondència?",
+        "answer": "Pots connectar el teu compte de Discord al teu perfil de Hivegame.com i rebre notificacions del bot busybee. Fes clic al botó del teu perfil a la part superior dreta i fes clic a 'Editar Compte'"
+    },
+    "chat_basics": {
+        "question": "Com funciona el xat?",
+        "answer": "La funció del xat és molt un treball en progrés; som conscients que té problemes, així que coses importants a tenir en compte quan l'utilitzis: 1. Actualment el xat no persisteix a la base de dades, així que cada cop que despleguem una actualització els teus missatges de xat es perdran! 2. Per ara, només és possible xatejar en una partida (missatges directes i altres maneres s'afegiran en el futur), els espectadors no veuen el xat dels jugadors, ni els jugadors veuen el xat dels espectadors. 3. A vegades la notificació vermella del xat mostrarà missatges nous quan no n'hi ha cap."
+    },
+    "tournament_entry": {
+        "question": "Pot qualsevol unir-se a un torneig? Hi ha una tarifa d'entrada? Què passa amb els premis?",
+        "answer": "Sí, pots unir-te a un torneig fins i tot si ets principiant. No obstant això, alguns torneigs poden estar restringits per puntuació o podrien ser només per invitació segons decideixi l'organitzador del torneig. En el moment d'escriure això, no hi ha tarifes d'entrada ni premis (a part dels drets de presumir i augments de punts de puntuació!)"
+    },
+    "tournament_duration": {
+        "question": "Quina és la durada d'un torneig? Quantes partides? Com coordino horaris?",
+        "answer": "La pàgina del torneig hauria d'esbossar típicament tots aquests detalls. Si tens alguna pregunta, contacta l'organitzador del torneig. Actualment, només estan disponibles els torneigs Round-Robin, però s'afegiran més formats aviat."
+    },
+    "tournament_stats": {
+        "question": "En una taula de resultats de torneig, què és H2H, WB, SB, Acabades?",
+        "answer": "H2H - Historial Cap a Cap, que és el primer criteri de desempat. WB - Victòria com a Negre, que és el segon criteri de desempat. SB - Puntuació Sonnebron-Berger, que és el tercer criteri de desempat. Acabades - nombre de partides acabades."
+    },
+    "tournament_games": {
+        "question": "On veig les meves partides en progrés / que han de començar?",
+        "answer": "Navega a la teva pàgina de perfil i veuràs filtres per a les teves partides actualment En Joc i Partides de Torneig No Iniciades."
+    },
+    "change_password": {
+        "question": "Com canvio la meva contrasenya?",
+        "answer": "Navega a perfil > Editar Compte o <edit_link>utilitza aquest enllaç</edit_link>"
+    },
+    "move_confirmation": {
+        "question": "Què signifiquen els diferents modes de Confirmació de Moviment?",
+        "answer": "Quan fas un moviment hi ha 3 modes: 1. Un clic - El ràpid: si no vols perdre temps en partides ràpides. Vés amb compte de no col·locar malament o moure malament la peça ja que un sol clic immediatament fa i confirma el moviment. 2. Doble clic - El per defecte: el primer clic per col·locar / moure la peça i el segon clic confirma el moviment. 3. Confirmació de rellotge - El segur: primer clic per col·locar / moure i després per confirmar el moviment, fas clic al teu propi cronòmetre. Es recomanen els modes de doble clic o confirmació de rellotge."
+    },
+    "game_analysis": {
+        "question": "Puc revisar partides acabades amb una eina d'anàlisi?",
+        "answer": "Sí, les partides acabades tenen una icona de microscopi que carregarà la partida al mode d'anàlisi però aquesta funció està actualment en desenvolupament, així que no n'esperis massa encara."
+    },
+    "play_bots": {
+        "question": "Puc jugar contra un bot?",
+        "answer": "Sí, fes clic al botó 'Jugar Bot' a la pàgina principal i selecciona el bot contra el qual vols jugar. Una partida sense temps començarà immediatament."
+    },
+    "get_better": {
+        "question": "Com puc millorar al Hive?",
+        "answer": "Consulta la <resources_link>Secció de Recursos</resources_link> del lloc per a una llista curada de recursos per començar."
+    },
+    "community_forum": {
+        "question": "Hi ha un fòrum de la comunitat?",
+        "answer": "Sí! Uneix-te al servidor de Discord de la Comunitat Mundial de Hive <discord_link>aquí</discord_link> - ple de jugadors amigables i converses d'estratègia."
+    },
+    "play_specific_players": {
+        "question": "Puc jugar amb jugadors específics només?",
+        "answer": "Per descomptat! Pots utilitzar la icona d'espases creuades al costat del nom d'un jugador per desafiar-lo directament. Alternativament, crea una partida privada (fes clic al botó 'Personalitzada' a la pàgina principal) i comparteix l'enllaç privadament. Només un jugador amb l'enllaç pot unir-s'hi."
+    },
+    "report_bugs": {
+        "question": "On puc reportar errors o suggerir noves funcions?",
+        "answer": "Uneix-te al servidor de Discord de Hivegame.com <discord_link>aquí</discord_link> i pots enviar missatges als desenvolupadors utilitzant els canals corresponents."
+    },
+    "opponent_is_abusive": {
+        "question": "Què puc fer si el meu oponent abusa o pertorba la partida o el xat o té un nom d'usuari inapropiat?",
+        "answer": "Captura en pantalla el comportament i contacta'ns per Discord @klautcomputing / @ionoi i ho arreglarem."
     },
     "why_not_in_top_players": {
-        "question": "Per què no aparec a les llistes dels millor jugadors?",
+        "question": "Per què no aparec a les llistes dels millors jugadors?",
         "answer": "Encara no has jugat prous partides per que el sistema estigui segur de la teva puntuació. Continua jugant unes quantes partides més, amb sort, guanyant-les i ja hi apareixeràs."
     },
-    "how_to_review_games": {
-        "question": "Puc revisar partides ja finalitzades amb l'eina d'anàlisis?",
-        "answer": "Sí, les partides finalitzades tenen una icona de microscopi que carregarà la partida al mode d'anàlisis. Aquesta funció està actualment en desenvolupament, no n'espereu massa encara."
+    "can_i_play_base_game": {
+        "question": "Puc jugar sense expansions?",
+        "answer": "Sí. Pots alternar si s'utilitzen expansions en crear una partida, i jugar sense expansions és bo per a principiants! Les partides puntuades només estan disponibles si s'utilitzen expansions, ja que és el format competitiu oficial."
     },
-    "where_to_meet_other_players": {
-        "question": "On puc conèixer la resta de la comunitat de jugadors de Hive® d'arreu del món?",
-        "answer": "Busca els enllaços a les nostres xarxes socials <resources_link>aquí</resources_link>. La comunitat de Hive® és molt amigable i segur que trobes algú a prop teu per poder jugar també cara a cara!"
-    },
-    "where_to_learn_more": {
-        "question": "Com puc aprendre més sobre l'estratègia del Hive®?",
-        "answer": "Tenim pensat afegir un tutorial interactiu per ajudar a aprendre i entendre totes les idees estratègiques dins el joc. Revisa la secció de <resources_link>recursos</resources_link> on pots trobar llibres, videos i el canal de Discord!"
+    "how_to_recover_password": {
+        "question": "He oblidat la meva contrasenya! Què faig ara?",
+        "answer": "Envia un correu a leex@klautcomputing.de des de la mateixa adreça de correu electrònic que utilitzes a Hivegame.com sol·licitant un restabliment de contrasenya."
     },
     "can_i_set_up_a_tournament": {
-        "question": "Puc crear un torneig?",
-        "answer": "Sí, tot i que encara hi estem treballant. Pots contactar-nos a través de Discord si ens vols ajudar."
+        "question": "Puc crear el meu propi torneig?",
+        "answer": "Sí! Només fes clic a Crear Torneig i la resta hauria de ser autoexplicatiu."
     },
-    "can_i_play_with_bots": {
-        "question": "Puc jugar contra un bot?",
-        "answer": "Aquesta funció encara no està implementada, però podria estar-ho ben aviat (posa't en contacte amb nosaltres si ens vols ajudar)."
+    "donation_amount": {
+        "question": "Quina és la quantitat de donació recomanada?",
+        "answer": "Totes les donacions, grans i petites, ajuden a mantenir Hivegame.com en funcionament i són rebudes amb gratitud. Considerant les càrregues de targetes de crèdit i transaccions bancàries, es suggereix una donació mínima de 5 EUR."
+    },
+    "how_donate": {
+        "question": "Com faig una donació?",
+        "answer": "Fes clic a Donar a la barra de navegació o <donate_link>utilitza aquest enllaç</donate_link>"
     }
 }
