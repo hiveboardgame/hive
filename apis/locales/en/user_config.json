@@ -18,6 +18,7 @@
         "angled": "Angled",
         "vertical": "Vertical"
     },
+    "background_color": "Background Color",
     "game_speed": "Game speed:",
     "move_confirm": "Move confirmation:",
     "color_scheme": "Color scheme:",

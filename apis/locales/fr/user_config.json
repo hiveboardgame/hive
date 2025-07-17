@@ -15,6 +15,7 @@
         "angled": "En angle",
         "vertical": "Verticalement"
     },
+    "background_color": "Couleur d'Arrière-plan",
     "rotation": "Rotation",
     "game_speed": "Vitesse du jeu :",
     "move_confirm": "Confirmation des mouvements :",

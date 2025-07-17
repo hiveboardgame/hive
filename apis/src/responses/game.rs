@@ -9,6 +9,7 @@ use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
+#[allow(dead_code)]
 pub struct GameAbstractResponse {
     pub tournament: Option<TournamentAbstractResponse>,
     pub game_id: GameId,

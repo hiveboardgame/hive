@@ -1,10 +1,11 @@
 use crate::components::{
     atoms::{rating::icon_for_speed, select_options::SelectOption},
     organisms::{
-        confirm_mode_toggle::ConfirmModeToggle, darkmode_toggle::DarkModeToggle,
-        preselect_toggle::PreSelectToggle, preview_tiles::PreviewTiles,
-        takeback_conf::TakebackConf, tile_design_toggle::TileDesignToggle,
-        tile_dots_toggle::TileDotsToggle, tile_rotation_toggle::TileRotationToggle,
+        background_color_toggle::BackgroundColorToggle, confirm_mode_toggle::ConfirmModeToggle,
+        darkmode_toggle::DarkModeToggle, preselect_toggle::PreSelectToggle,
+        preview_tiles::PreviewTiles, takeback_conf::TakebackConf,
+        tile_design_toggle::TileDesignToggle, tile_dots_toggle::TileDotsToggle,
+        tile_rotation_toggle::TileRotationToggle,
     },
 };
 use crate::i18n::*;
@@ -35,10 +36,7 @@ pub fn Config() -> impl IntoView {
                 <TileDesignToggle />
                 <TileRotationToggle />
                 <TileDotsToggle />
-            </div>
-
-            // Preview Card
-            <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+                <BackgroundColorToggle />
                 <h2 class="mb-4 text-xl font-bold text-center text-orange-600 dark:text-orange-400">
                     "👁️ " {t!(i18n, user_config.preview)}
                 </h2>

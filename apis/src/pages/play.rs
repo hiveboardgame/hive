@@ -326,10 +326,15 @@ fn HorizontalLayout(
     tab: RwSignal<TabView>,
 ) -> impl IntoView {
     let vertical = false;
+    let config = expect_context::<Config>().0;
+    let background_style = Signal::derive(move || {
+        let bg = config.with(|c| c.tile.get_effective_background_color(c.prefers_dark));
+        format!("background-color: {}", bg)
+    });
     view! {
-        <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight" />
+        <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-transparent" />
         <BoardOrUnstarted show_board user_is_player game_id white_and_black_ids />
-        <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full">
+        <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full" style=background_style >
             <DisplayTimer placement=Placement::Top vertical />
             <SideboardTabs player_color tab />
             <DisplayTimer placement=Placement::Bottom vertical />

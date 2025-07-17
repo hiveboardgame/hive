@@ -68,7 +68,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
     view! {
         <div class=move || {
             format!(
-                "pt-12 bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
+                "pt-10 bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
                 if vertical() {
                     "flex flex-col h-full"
                 } else {
@@ -113,7 +113,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             when=vertical
                             fallback=move || {
                                 view! {
-                                    <AnalysisInfo extend_tw_classes="absolute pl-4 pt-2 bg-board-dawn dark:bg-board-twilight" />
+                                    <AnalysisInfo extend_tw_classes="absolute pl-4 pt-2 bg-transparent" />
                                     <Board />
                                     <div class="flex flex-col col-span-2 row-span-6 p-1 h-full border-2 border-black select-none dark:border-white">
                                         <History />

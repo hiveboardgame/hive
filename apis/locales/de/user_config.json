@@ -16,6 +16,7 @@
         "angled": "Schräg",
         "vertical": "Vertikal"
     },
+    "background_color": "Hintergrundfarbe",
     "game_speed": "Spielgeschwindigkeit:",
     "move_confirm": "Zugbestätigung:",
     "color_scheme": "Farbschema:",
