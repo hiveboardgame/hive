@@ -104,7 +104,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                     key=|c| c.clone()
                     let:challenge_id
                 >
-                    <div >
+                    <div>
                         <table class="border-collapse table-auto">
                             <tbody>
                                 <ChallengeRow
@@ -133,7 +133,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                         get_schedule_details(schedules_context.own, schedule_id)
                             .map(|schedule| {
                                 view! {
-                                    <div >
+                                    <div>
                                         <ProposalNotification
                                             schedule_id=schedule.id
                                             proposer_username=schedule.proposer_username
@@ -155,7 +155,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                         get_schedule_details(schedules_context.own, schedule_id)
                             .map(|schedule| {
                                 view! {
-                                    <div >
+                                    <div>
                                         <AcceptanceNotification
                                             tournament_name=schedule.tournament_name
                                             schedule_id=schedule.id
@@ -194,7 +194,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                                             .get(&tournament_id)
                                             .map(|tournament| {
                                                 view! {
-                                                    <div >
+                                                    <div>
                                                         <TournamentInvitationNotification tournament=tournament
                                                             .clone() />
                                                     </div>
@@ -214,7 +214,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                                             .get(&tournament_id)
                                             .map(|tournament| {
                                                 view! {
-                                                    <div >
+                                                    <div>
                                                         <TournamentStatusNotification
                                                             tournament_id=tournament_id.clone()
                                                             tournament_name=tournament.name.clone()
@@ -237,7 +237,7 @@ pub fn NotificationDropdown() -> impl IntoView {
                                             .get(&tournament_id)
                                             .map(|tournament| {
                                                 view! {
-                                                    <div >
+                                                    <div>
                                                         <TournamentStatusNotification
                                                             tournament_id=tournament_id.clone()
                                                             tournament_name=tournament.name.clone()

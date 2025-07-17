@@ -11,16 +11,49 @@ const USER_CONFIG_COOKIE: &str = "user_config";
 // 1 year in milliseconds
 const CONF_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
 
+// Background color constants
+const LIGHT_DEFAULT_BG: &str = "#edebe9"; // board-dawn color (light mode)
+const DARK_DEFAULT_BG: &str = "#47545a"; // board-twilight color (dark mode)
+
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct TileOptions {
     pub design: TileDesign,
     pub rotation: TileRotation,
     pub dots: TileDots,
+    pub background_color: Option<String>,
 }
 
 impl TileOptions {
     pub fn is_three_d(&self) -> bool {
         self.design == TileDesign::ThreeD
+    }
+
+    pub fn is_using_custom_background(&self, is_dark_mode: bool) -> bool {
+        match &self.background_color {
+            None => false,
+            Some(color) => {
+                let current_theme_default = if is_dark_mode {
+                    DARK_DEFAULT_BG
+                } else {
+                    LIGHT_DEFAULT_BG
+                };
+                color != current_theme_default
+            }
+        }
+    }
+
+    pub fn get_effective_background_color(&self, is_dark_mode: bool) -> String {
+        self.background_color
+            .clone()
+            .unwrap_or_else(|| Self::get_theme_default_background_color(is_dark_mode))
+    }
+
+    pub fn get_theme_default_background_color(is_dark_mode: bool) -> String {
+        if is_dark_mode {
+            DARK_DEFAULT_BG.to_string()
+        } else {
+            LIGHT_DEFAULT_BG.to_string()
+        }
     }
 }
 

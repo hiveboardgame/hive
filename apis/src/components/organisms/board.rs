@@ -118,6 +118,11 @@ pub fn Board() -> impl IntoView {
 
     let straight = Signal::derive(move || config.with(|c| c.tile.design == TileDesign::ThreeD));
     let tile_opts = Signal::derive(move || config.with(|c| c.tile.clone()));
+
+    let background_style = Signal::derive(move || {
+        let bg = config.with(|c| c.tile.get_effective_background_color(c.prefers_dark));
+        format!("background-color: {}", bg)
+    });
     let g_bbox = Memo::new(move |_| get_bbox(g_ref));
     Effect::watch(
         move || (),
@@ -327,7 +332,7 @@ pub fn Board() -> impl IntoView {
         }
     });
     view! {
-        <div node_ref=div_ref class=board_style>
+        <div node_ref=div_ref class=board_style style=background_style>
 
             <svg
                 width="100%"

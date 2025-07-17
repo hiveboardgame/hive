@@ -123,12 +123,17 @@ pub fn AcceptanceNotification(
                             href=format!("/tournament/{}", &tournament_id.to_string())
                             class="text-blue-600 dark:text-blue-400 hover:underline"
                         >
-                            "View Tournament:" {tournament_name}
+                            "View Tournament:"
+                            {tournament_name}
                         </a>
                     </div>
                 </div>
                 <ActionForm action=mark_seen_action on:submit=dismiss>
-                    <input type="hidden" name="schedule_id" value=schedule_id.get_value().to_string() />
+                    <input
+                        type="hidden"
+                        name="schedule_id"
+                        value=schedule_id.get_value().to_string()
+                    />
                     <button
                         type="submit"
                         title="Dismiss"

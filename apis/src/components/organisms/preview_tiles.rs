@@ -10,6 +10,28 @@ pub fn PreviewTiles() -> impl IntoView {
     let state = State::new_from_str(moves, &GameType::MLP.to_string()).unwrap();
     let config = expect_context::<Config>().0;
     let tile_opts = Signal::derive(move || config().tile);
+
+    // Background styling logic
+    let background_style = Signal::derive(move || {
+        let is_dark_mode = config().prefers_dark;
+        format!(
+            "background-color: {}",
+            config().tile.get_effective_background_color(is_dark_mode)
+        )
+    });
+
+    let is_using_custom =
+        Signal::derive(move || config.with(|c| !c.tile.is_using_custom_background(c.prefers_dark)));
+
+    let container_classes = Signal::derive(move || {
+        let base_classes = "flex relative flex-col items-center mx-1 my-2 w-72 h-36 rounded sm:h-40 sm:w-80 place-self-center";
+        if is_using_custom() {
+            base_classes.to_string()
+        } else {
+            format!("{base_classes} dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light")
+        }
+    });
+
     let thumbnail_pieces = move || {
         let mut pieces = Vec::new();
         for r in 0..32 {
@@ -34,7 +56,7 @@ pub fn PreviewTiles() -> impl IntoView {
     };
 
     view! {
-        <div class="flex relative flex-col items-center mx-1 my-2 w-72 h-36 rounded sm:h-40 sm:w-80 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
+        <div class=container_classes style=background_style>
             <svg
                 viewBox="1159 695 225 100"
                 class="w-full h-full touch-none"
