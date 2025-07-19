@@ -65,7 +65,7 @@ impl NewTournament {
             });
         }
 
-        // TOOD: @leex add some more validations
+        // TODO: @leex add some more validations
         if details.tiebreakers.is_empty() {
             return Err(DbError::InvalidTournamentDetails {
                 info: String::from("No tiebreaker set"),
@@ -80,7 +80,7 @@ impl NewTournament {
 
         if details.seats < details.min_seats {
             return Err(DbError::InvalidTournamentDetails {
-                info: String::from("Seats is less than minimun number of seats"),
+                info: String::from("Seats is less than minimum number of seats"),
             });
         }
 
@@ -192,7 +192,7 @@ impl Tournament {
         Ok(())
     }
 
-    async fn ensure_not_inivte_only(
+    async fn ensure_not_invite_only(
         &self,
         user_id: &Uuid,
         conn: &mut DbConn<'_>,
@@ -379,7 +379,7 @@ impl Tournament {
     pub async fn join(&self, user_id: &Uuid, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
         self.ensure_not_started()?;
         self.ensure_not_full(conn).await?;
-        self.ensure_not_inivte_only(user_id, conn).await?;
+        self.ensure_not_invite_only(user_id, conn).await?;
         let players = self.players(conn).await?;
         if players.len() == self.seats as usize {
             return Ok(self.clone());
@@ -447,6 +447,16 @@ impl Tournament {
 
     pub async fn find_by_uuid(uuid: Uuid, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
         Ok(tournaments::table.find(uuid).first(conn).await?)
+    }
+
+    pub async fn find_by_uuids(
+        uuids: &[Uuid],
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Tournament>, DbError> {
+        Ok(tournaments::table
+            .filter(tournaments::id.eq_any(uuids))
+            .load(conn)
+            .await?)
     }
 
     pub async fn from_nanoid(nano: &str, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {

@@ -191,6 +191,16 @@ impl User {
         Ok(users_table.find(uuid).first(conn).await?)
     }
 
+    pub async fn find_by_uuids(
+        uuids: &[Uuid],
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<User>, DbError> {
+        Ok(users_table
+            .filter(users::id.eq_any(uuids))
+            .load(conn)
+            .await?)
+    }
+
     pub async fn find_by_username(username: &str, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         Ok(users_table
             .filter(normalized_username.eq(username.to_lowercase()))

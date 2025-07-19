@@ -15,7 +15,6 @@ pub mod logo;
 pub mod next_game_button;
 pub mod og;
 pub mod piece;
-pub mod play_bot;
 pub mod profile_link;
 pub mod progress_bar;
 pub mod rating;

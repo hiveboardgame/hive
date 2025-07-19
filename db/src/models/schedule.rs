@@ -193,4 +193,20 @@ impl Schedule {
                 .await?,
         )
     }
+
+    pub async fn get_upcoming_agreed_games(
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<(Uuid, DateTime<Utc>)>, DbError> {
+        let now = chrono::Utc::now();
+        let one_week_later = now + chrono::Duration::weeks(1);
+
+        let results = schedules::table
+            .filter(schedules::agreed.eq(true))
+            .filter(schedules::start_t.between(now, one_week_later))
+            .select((schedules::game_id, schedules::start_t))
+            .load::<(Uuid, DateTime<Utc>)>(conn)
+            .await?;
+
+        Ok(results)
+    }
 }
