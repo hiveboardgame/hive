@@ -1028,6 +1028,23 @@ impl Game {
         }
     }
 
+    pub async fn find_by_game_ids(
+        game_ids: &[Uuid],
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        let found_games: Vec<Game> = games::table.filter(id.eq_any(game_ids)).load(conn).await?;
+
+        let mut checked_games = Vec::new();
+        for game in found_games {
+            if !game.finished && TimeMode::from_str(&game.time_mode)? != TimeMode::Untimed {
+                checked_games.push(game.check_time(conn).await?);
+            } else {
+                checked_games.push(game);
+            }
+        }
+        Ok(checked_games)
+    }
+
     pub async fn delete(&self, conn: &mut DbConn<'_>) -> Result<(), DbError> {
         diesel::delete(games::table.find(self.id))
             .execute(conn)

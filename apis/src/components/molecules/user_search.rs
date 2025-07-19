@@ -67,7 +67,7 @@ pub fn UserSearch(
         <div class="flex flex-col m-2 w-fit">
             <div class="relative">
                 <input
-                    class="p-1 w-64"
+                    class="p-1 w-64 rounded-lg"
                     type="text"
                     on:input=debounced_search
                     placeholder=input_placeholder
@@ -106,7 +106,7 @@ pub fn UserSearch(
                 </div>
             </Suspense>
             <Transition>
-                <div class="overflow-y-auto max-h-96">
+                <div class="overflow-y-auto max-h-96 rounded-lg">
                     <For each=users key=move |(_, user)| user.uid let:user>
                         <UserRow actions=actions.clone() user=user.1 />
                     </For>

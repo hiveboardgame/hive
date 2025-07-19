@@ -95,7 +95,7 @@ pub fn GamePreviews(
                     let white_player = StoredValue::new(game.white_player.clone());
                     let black_player = StoredValue::new(game.black_player.clone());
                     view! {
-                        <div class="flex relative flex-col items-center m-2 w-60 h-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+                        <div class="flex relative flex-col items-center m-2 w-60 h-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900 rounded-lg">
                             <div class="flex flex-col items-center w-full">
                                 <Show
                                     when=finished

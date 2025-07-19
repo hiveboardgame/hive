@@ -108,33 +108,56 @@ pub fn Challenges() -> impl IntoView {
     let not_hidden =
         Memo::new(move |_| has_games(&direct()) || has_games(&own()) || has_games(&public()));
     view! {
-        <table class=move || {
-            format!("table-fixed max-w-fit m-2 {}", if not_hidden() { "" } else { "hidden" })
+        <div class=move || {
+            format!(
+                "w-full m-2 overflow-hidden flex justify-center {}",
+                if not_hidden() { "" } else { "hidden" },
+            )
         }>
-            <thead>
-                <tr>
-                    <th class=th_class></th>
-                    <th class=th_class>{t!(i18n, home.challenge_details.player)}</th>
-                    <th class=th_class>Elo</th>
-                    <th class=th_class>Plm</th>
-                    <th class=th_class>{t!(i18n, home.challenge_details.time)}</th>
-                    <th class=th_class>{t!(i18n, home.challenge_details.rated.title)}</th>
-                    <th class=th_class></th>
-                </tr>
-            </thead>
-            <tbody>
-                <For each=direct key=|c| c.challenge_id.clone() let(challenge)>
-                    <ChallengeRow challenge=challenge single=false uid=uid() />
-                </For>
-                <tr class="h-2"></tr>
-                <For each=own key=|c| c.challenge_id.clone() let(challenge)>
-                    <ChallengeRow challenge=challenge single=false uid=uid() />
-                </For>
-                <tr class="h-2"></tr>
-                <For each=public key=|c| c.challenge_id.clone() let(challenge)>
-                    <ChallengeRow challenge=challenge single=false uid=uid() />
-                </For>
-            </tbody>
-        </table>
+            <div class="overflow-y-auto max-w-screen-md max-h-96 rounded-lg border border-gray-200 dark:border-gray-700">
+                <table class="w-full min-w-0 table-fixed">
+                    <thead class="sticky top-0 z-10 bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                        <tr>
+                            <th class=format!("{} w-6 min-w-0", th_class)></th>
+                            <th class=format!(
+                                "{} w-16 xs:w-20 sm:w-24 md:w-32 lg:w-40 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>{t!(i18n, home.challenge_details.player)}</th>
+                            <th class=format!(
+                                "{} w-12 xs:w-14 sm:w-16 md:w-16 lg:w-20 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>Elo</th>
+                            <th class=format!(
+                                "{} w-8 xs:w-10 sm:w-12 md:w-14 lg:w-16 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>Plm</th>
+                            <th class=format!(
+                                "{} w-12 xs:w-14 sm:w-16 md:w-20 lg:w-24 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>{t!(i18n, home.challenge_details.time)}</th>
+                            <th class=format!(
+                                "{} w-8 xs:w-10 sm:w-12 md:w-14 lg:w-16 min-w-0 text-xs sm:text-sm",
+                                th_class,
+                            )>{t!(i18n, home.challenge_details.rated.title)}</th>
+                            <th class=format!(
+                                "{} w-12 xs:w-14 sm:w-16 md:w-18 lg:w-20 min-w-0",
+                                th_class,
+                            )></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <For each=direct key=|c| c.challenge_id.clone() let(challenge)>
+                            <ChallengeRow challenge=challenge single=false uid=uid() />
+                        </For>
+                        <For each=own key=|c| c.challenge_id.clone() let(challenge)>
+                            <ChallengeRow challenge=challenge single=false uid=uid() />
+                        </For>
+                        <For each=public key=|c| c.challenge_id.clone() let(challenge)>
+                            <ChallengeRow challenge=challenge single=false uid=uid() />
+                        </For>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     }
 }

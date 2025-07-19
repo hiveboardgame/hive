@@ -31,6 +31,7 @@ pub mod tournament_ready_popup;
 pub mod tournament_row;
 pub mod tournament_status_notification;
 pub mod unplayed_game_row;
+pub mod upcoming_game_row;
 pub mod user_row;
 pub mod user_search;
 pub mod user_with_rating;

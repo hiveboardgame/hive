@@ -121,7 +121,7 @@ pub fn Board() -> impl IntoView {
 
     let background_style = Signal::derive(move || {
         let bg = config.with(|c| c.tile.get_effective_background_color(c.prefers_dark));
-        format!("background-color: {}", bg)
+        format!("background-color: {bg}")
     });
     let g_bbox = Memo::new(move |_| get_bbox(g_ref));
     Effect::watch(
