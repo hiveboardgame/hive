@@ -84,7 +84,7 @@ pub fn provide_websocket(url: &str) {
         &url,
         UseWebSocketOptions::default()
             .on_message(move |ms| owner.with(|| on_message_callback(ms)))
-            .immediate(false),
+            .immediate(true),
     );
     provide_context(WebsocketContext::new(
         message,
