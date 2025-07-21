@@ -54,6 +54,8 @@ impl TimerSignal {
 pub struct Timer {
     pub game_id: GameId,
     pub finished: bool,
+    pub white_timed_out: bool,
+    pub black_timed_out: bool,
     pub turn: usize,
     pub white_time_left: Option<Duration>,
     pub black_time_left: Option<Duration>,
@@ -68,6 +70,8 @@ impl Timer {
         Self {
             game_id: GameId(String::new()),
             finished: false,
+            white_timed_out: false,
+            black_timed_out: false,
             turn: 0,
             white_time_left: None,
             black_time_left: None,
