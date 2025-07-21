@@ -51,13 +51,13 @@ pub fn Play() -> impl IntoView {
     let ws_ready = ws.ready_state;
     let params = use_params_map();
     let queries = use_query_map();
-    let move_number = StoredValue::new(
+    let move_number = Signal::derive(move || {
         queries
-            .get_untracked()
+            .get()
             .get("move")
             .and_then(|s| s.parse::<usize>().ok())
-            .map(|n| n.saturating_sub(1)),
-    );
+            .map(|n| n.saturating_sub(1))
+    });
     let game_id = Memo::new(move |_| {
         params()
             .get("nanoid")
@@ -143,13 +143,14 @@ pub fn Play() -> impl IntoView {
                             _ => {}
                         }
                     }
-                    if move_number.get_value().is_some_and(|v| {
+                    let url_number = move_number.get_untracked();
+                    if url_number.is_some_and(|v| {
                         game_state
                             .signal
                             .with_untracked(|gs| v < gs.state.turn.saturating_sub(1))
                     }) {
                         game_state.signal.update(|s| {
-                            s.history_turn = move_number.get_value();
+                            s.history_turn = url_number;
                             s.view = View::History;
                         });
                         controls_signal.hidden.set(false);
@@ -334,7 +335,10 @@ fn HorizontalLayout(
     view! {
         <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-transparent" />
         <BoardOrUnstarted show_board user_is_player game_id white_and_black_ids />
-        <div class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full" style=background_style >
+        <div
+            class="grid grid-cols-2 col-span-2 col-start-9 grid-rows-6 row-span-full"
+            style=background_style
+        >
             <DisplayTimer placement=Placement::Top vertical />
             <SideboardTabs player_color tab />
             <DisplayTimer placement=Placement::Bottom vertical />
