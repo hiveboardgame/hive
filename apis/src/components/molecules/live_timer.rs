@@ -89,6 +89,17 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         })
     });
 
+    //For styling timer updated by history navigation
+    let timed_out = Signal::derive(move || {
+        timer.with(|t| {
+            if side() == Color::White {
+                t.white_timed_out
+            } else {
+                t.black_timed_out
+            }
+        })
+    });
+
     let _ = watch_with_options(
         should_resume,
         move |v, _, _| {
@@ -131,7 +142,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
             class=move || {
                 format!(
                     "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
-                    if time_is_zero() { "bg-ladybug-red" } else { "" },
+                    if time_is_zero() || timed_out() { "bg-ladybug-red" } else { "" },
                 )
             }
         >

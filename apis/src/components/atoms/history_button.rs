@@ -1,11 +1,14 @@
 use crate::{
     components::organisms::side_board::move_query_signal,
-    providers::{game_state::GameStateSignal, timer::TimerSignal},
+    providers::{
+        game_state::GameStateSignal,
+        timer::{Timer, TimerSignal},
+    },
 };
-use hive_lib::GameStatus;
+use hive_lib::{Color, GameResult, GameStatus};
 use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
 use leptos_icons::*;
-use shared_types::TimeMode;
+use shared_types::{Conclusion, TimeMode};
 use std::time::Duration;
 #[derive(Clone)]
 pub enum HistoryNavigation {
@@ -105,15 +108,31 @@ pub fn set_timer_from_response(game_state_signal: GameStateSignal, timer: TimerS
         }
         let turn = gs.history_turn.unwrap_or_default();
         let response = gs.game_response.as_ref();
+        let timed_out = turn == gs.state.turn - 1
+            && response.is_some_and(|r| r.conclusion == Conclusion::Timeout);
         if let Some(response) = response {
             if !matches!(response.time_mode, TimeMode::RealTime) {
                 return;
             }
+
+            let set_timeout_flags = |t: &mut Timer| {
+                if timed_out {
+                    if let GameStatus::Finished(GameResult::Winner(color)) = response.game_status {
+                        t.white_timed_out = color == Color::Black;
+                        t.black_timed_out = color == Color::White;
+                    }
+                } else {
+                    t.white_timed_out = false;
+                    t.black_timed_out = false;
+                }
+            };
+
             if turn == 0 {
                 let base = response.time_base.unwrap_or(0);
                 timer.signal.update(|t| {
                     t.white_time_left = Some(Duration::from_secs(base as u64));
                     t.black_time_left = Some(Duration::from_secs(base as u64));
+                    set_timeout_flags(t);
                 });
             } else if let (Some(Some(curr_time_left)), Some(Some(prev_time_left))) = (
                 response.move_times.get(turn),
@@ -129,6 +148,7 @@ pub fn set_timer_from_response(game_state_signal: GameStateSignal, timer: TimerS
                         t.black_time_left = Some(curr_time_left);
                         t.white_time_left = Some(prev_time_left);
                     }
+                    set_timeout_flags(t);
                 });
             }
         }
