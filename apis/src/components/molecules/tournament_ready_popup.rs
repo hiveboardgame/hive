@@ -81,21 +81,19 @@ pub fn TournamentReadyPopup(
     });
 
     let accept_game = move |_| {
-        current_popup_candidate.with(|opt| {
-            if let Some((game_id, opponent_id, _)) = opt.as_ref() {
-                let api = api.get();
-                api.tournament_game_start(game_id.clone());
-
+        if let Some(game_id) = current_popup_candidate.with(|opt| {
+            opt.as_ref().map(|(game_id, opponent_id, _)| {
+                api.get().tournament_game_start(game_id.clone());
                 closed_popups.update(|set| {
                     set.insert((game_id.clone(), *opponent_id));
                 });
-
-                if !is_on_game_page.get() {
-                    let navigate = use_navigate();
-                    navigate(&format!("/game/{}", game_id.0), Default::default());
-                }
-            }
+                game_id.clone()
+            })
         })
+        .filter(|_| !is_on_game_page.get_untracked()) {
+            let navigate = use_navigate();
+            navigate(&format!("/game/{}", game_id.0), Default::default());
+        }
     };
 
     let close_popup = move |_| {
@@ -105,7 +103,21 @@ pub fn TournamentReadyPopup(
                     set.insert((game_id.clone(), *opponent_id));
                 });
             }
-        })
+        });
+    };
+
+    let view_game = move |_| {
+        if let Some(game_id) = current_popup_candidate.with(|opt| {
+            opt.as_ref().map(|(game_id, opponent_id, _)| {
+                closed_popups.update(|set| {
+                    set.insert((game_id.clone(), *opponent_id));
+                });
+                game_id.clone()
+            })
+        }) {
+            let navigate = use_navigate();
+            navigate(&format!("/game/{}", game_id.0), Default::default());
+        }
     };
 
     let interval = use_interval_fn_with_options(
@@ -175,18 +187,7 @@ pub fn TournamentReadyPopup(
 
                     <Show when=move || !is_on_game_page.get()>
                         <button
-                            on:click=move |_| {
-                                if let Some((game_id, opponent_id, _)) = current_popup_candidate
-                                    .get()
-                                {
-                                    closed_popups
-                                        .update(|set| {
-                                            set.insert((game_id.clone(), opponent_id));
-                                        });
-                                    let navigate = use_navigate();
-                                    navigate(&format!("/game/{}", game_id.0), Default::default());
-                                }
-                            }
+                            on:click=view_game
                             class="px-4 py-2 font-bold text-white bg-blue-600 rounded transition-transform duration-300 transform hover:bg-blue-700 active:scale-95"
                         >
                             {t!(i18n, game.tournament_ready_view_game)}

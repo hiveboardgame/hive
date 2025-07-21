@@ -329,7 +329,7 @@ fn HorizontalLayout(
     let config = expect_context::<Config>().0;
     let background_style = Signal::derive(move || {
         let bg = config.with(|c| c.tile.get_effective_background_color(c.prefers_dark));
-        format!("background-color: {}", bg)
+        format!("background-color: {bg}")
     });
     view! {
         <GameInfo extend_tw_classes="absolute pl-4 pt-2 bg-transparent" />
