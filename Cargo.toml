@@ -15,24 +15,35 @@ actix-identity = { version = "0.8" }
 actix-rt = "2.10.0"
 actix-session = { version = "0.10", features = ["cookie-session"] }
 actix-web = { version = "4",  features = ["macros"] }
-actix-web-actors = { version  = "4.3.0" }
+actix-web-actors = { version  = "4.3.1" }
 anyhow = "1"
 argon2 = "0.5"
-bb8 = { version = "0.8" }
+bb8 = { version = "0.9" }
 bimap = {version = "0.6.3", features = ["serde"] }
-cfg-if = "1.0.0"
+cfg-if = "1.0.1"
 chrono = { version = "0.4", features = ["serde"] }
 codee = { version = "0.3", features = ["msgpack_serde", "base64"] }
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 cookie = "0.18"
 diesel = { version = "2.2", features = ["postgres", "chrono", "uuid", "serde_json"] }
-diesel-async = { version = "0.5", features = ["postgres", "bb8"] }
+diesel-async = { version = "0.6", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.2", features = ["postgres"]}
 dotenvy = "0.15"
-http = "1.1.0"
+http = "1.3.1"
 http-serde = { version = "2" }
-icondata = {version = "0.5"}
+icondata_core = "0.1"
+icondata_tb = "0.1"
+icondata_bi = "0.1"
+icondata_ai = "0.1"
+icondata_fa = "0.1"
+icondata_io = "0.1"
+icondata_bs = "0.1"
+icondata_ch = "0.1"
+icondata_lu = "0.1"
+icondata_ri = "0.1"
+icondata_ti = "0.1"
+icondata_mdi = "0.1"
 indoc = "2"
 itertools = "0.14.0"
 jsonwebtoken = { version = "9.3.1" }
@@ -44,25 +55,25 @@ leptos_i18n = { version = "0.6.0-rc.2", features = ["plurals"] }
 leptos_icons = { version = "0.6"}
 leptos_meta =  { version = "0.8"}
 leptos_router =  { version = "0.8", features = ["nightly"] }
-log = "0.4.22"
-markdown = "1.0.0-alpha"
+log = "0.4.27"
+markdown = "1.0.0"
 nanoid = "0.4"
 rand = "0.9"
-regex = "1.10"
+regex = "1.11"
 reactive_stores = { version = "0.2" }
-reqwest = { version = "0.12.12", features = ["json"] }
+reqwest = { version = "0.12.22", features = ["json"] }
 serde = { version = "1" }
 serde_json = { version = "1" }
-serde_with = { version = "3.9" }
+serde_with = { version = "3.14" }
 server_fn = { version = "0.8", features = ["cbor"] }
 sha2 = "0.10"
 send_wrapper = "0.6"
 simple_logger = "5.0"
 skillratings = "0.27"
 thiserror = "2"
-tokio = { version = "1.44.0", features = ["full"] }
-tree-ds = {version = "0.1.6", features = ["serde", "compact_serde"] }
-uuid = { version = "1.15", features = ["v4", "js", "serde"] }
+tokio = { version = "1.46.1", features = ["full"] }
+tree-ds = {version = "0.2.0", features = ["serde", "compact_serde"] }
+uuid = { version = "1.17", features = ["v4", "js", "serde"] }
 walkdir = "2.5"
 wasm-bindgen = "0.2.100"
 wasm-bindgen-futures = "0.4"

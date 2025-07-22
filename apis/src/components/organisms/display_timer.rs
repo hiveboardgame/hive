@@ -114,7 +114,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                     fallback=|| {
                         view! {
                             <Icon
-                                icon=icondata::BiInfiniteRegular
+                                icon=icondata_bi::BiInfiniteRegular
                                 attr:class="w-full h-full bg-inherit"
                             />
                         }

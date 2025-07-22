@@ -161,7 +161,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                         class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
                     >
                         <div class="flex gap-1 justify-center items-center">
-                            <Icon icon=icondata::TbMicroscope attr:class="py-1 w-7 h-7" />
+                            <Icon icon=icondata_tb::TbMicroscopeOutline attr:class="py-1 w-7 h-7" />
                             "Analyze here"
                         </div>
                     </a>

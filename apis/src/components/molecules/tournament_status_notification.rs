@@ -46,7 +46,7 @@ pub fn TournamentStatusNotification(
                     on:click=dismiss
                     class="z-20 p-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95"
                 >
-                    <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
+                    <Icon icon=icondata_io::IoCloseSharp attr:class="w-6 h-6" />
                 </button>
             </div>
         </div>

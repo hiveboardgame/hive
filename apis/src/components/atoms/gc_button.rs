@@ -1,6 +1,6 @@
 use crate::providers::game_state::GameStateSignal;
 use hive_lib::GameControl;
-use icondata::Icon;
+use icondata_core;
 use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::{use_interval_with_options, UseIntervalOptions};
@@ -168,22 +168,22 @@ pub fn ConfirmButton(
                     on:click=cancel
                     class="absolute ml-1 bg-red-700 rounded-sm duration-300 aspect-square hover:bg-ladybug-red"
                 >
-                    <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6 lg:h-8 lg:w-8" />
+                    <Icon icon=icondata_io::IoCloseSharp attr:class="w-6 h-6 lg:h-8 lg:w-8" />
                 </button>
             </Show>
         </div>
     }
 }
 
-fn get_icon_and_title(game_control: GameControl) -> (Icon, &'static str) {
+fn get_icon_and_title(game_control: GameControl) -> (&'static icondata_core::IconData, &'static str) {
     match game_control {
-        GameControl::Abort(_) => (icondata::AiStopOutlined, "Abort"),
-        GameControl::DrawAccept(_) => (icondata::FaHandshakeSimpleSolid, "Accept Draw"),
-        GameControl::DrawOffer(_) => (icondata::FaHandshakeSimpleSolid, "Offer Draw"),
-        GameControl::DrawReject(_) => (icondata::FaHandshakeSimpleSolid, "Reject Draw"),
-        GameControl::Resign(_) => (icondata::AiFlagOutlined, "Resign"),
-        GameControl::TakebackAccept(_) => (icondata::BiUndoRegular, "Accept Takeback"),
-        GameControl::TakebackReject(_) => (icondata::BiUndoRegular, "Reject Takeback"),
-        GameControl::TakebackRequest(_) => (icondata::BiUndoRegular, "Request Takeback"),
+        GameControl::Abort(_) => (icondata_ai::AiStopOutlined, "Abort"),
+        GameControl::DrawAccept(_) => (icondata_fa::FaHandshakeSimpleSolid, "Accept Draw"),
+        GameControl::DrawOffer(_) => (icondata_fa::FaHandshakeSimpleSolid, "Offer Draw"),
+        GameControl::DrawReject(_) => (icondata_fa::FaHandshakeSimpleSolid, "Reject Draw"),
+        GameControl::Resign(_) => (icondata_ai::AiFlagOutlined, "Resign"),
+        GameControl::TakebackAccept(_) => (icondata_bi::BiUndoRegular, "Accept Takeback"),
+        GameControl::TakebackReject(_) => (icondata_bi::BiUndoRegular, "Reject Takeback"),
+        GameControl::TakebackRequest(_) => (icondata_bi::BiUndoRegular, "Request Takeback"),
     }
 }

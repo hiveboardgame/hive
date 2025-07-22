@@ -199,13 +199,14 @@ pub fn PieceWithOnClick(
     let config = expect_context::<Config>().0;
     let onclick = move |evt: MouseEvent| {
         evt.stop_propagation();
+        let piece_value = piece.get_untracked();
         let in_analysis = analysis.is_some();
         let current_turn_color = game_state.signal.with_untracked(|gs| gs.state.turn_color);
 
-        let is_selectable_piece = config().allow_preselect
+        let is_selectable_piece = config.get_untracked().allow_preselect
             && match piece_type {
                 PieceType::Board => true,
-                PieceType::Inactive | PieceType::Reserve => !piece().is_color(current_turn_color),
+                PieceType::Inactive | PieceType::Reserve => !piece_value.is_color(current_turn_color),
                 _ => false,
             };
         let is_current_player = game_state.signal.with_untracked(|gs| {
@@ -216,21 +217,21 @@ pub fn PieceWithOnClick(
         if game_state.is_move_allowed(in_analysis) {
             match piece_type {
                 PieceType::Board => {
-                    game_state.show_moves(piece(), position);
+                    game_state.show_moves(piece_value, position);
                 }
                 PieceType::Reserve => {
-                    game_state.show_spawns(piece(), position);
+                    game_state.show_spawns(piece_value, position);
                 }
                 PieceType::Move | PieceType::Spawn => {
-                    if matches!(current_confirm(), MoveConfirm::Double) {
-                        game_state.move_active(None, api.get());
+                    if matches!(current_confirm.get_untracked(), MoveConfirm::Double) {
+                        game_state.move_active(None, api.get_untracked());
                     }
                 }
                 _ => {}
             };
         } else if !in_analysis && is_current_player && is_selectable_piece {
             game_state.signal.update(|v| {
-                v.move_info.active = Some((piece(), piece_type));
+                v.move_info.active = Some((piece_value, piece_type));
                 if piece_type == PieceType::Board {
                     v.move_info.current_position = Some(position);
                 } else {

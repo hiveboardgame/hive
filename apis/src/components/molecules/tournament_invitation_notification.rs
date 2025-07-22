@@ -56,14 +56,14 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
                     prop:disabled=seats_full
                     class="z-20 p-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
-                    <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
+                    <Icon icon=icondata_ai::AiCheckOutlined attr:class="w-6 h-6" />
                 </button>
                 <button
                     title="Decline Invitation"
                     on:click=decline
                     class="z-20 p-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95"
                 >
-                    <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
+                    <Icon icon=icondata_io::IoCloseSharp attr:class="w-6 h-6" />
                 </button>
             </div>
         </div>

@@ -24,9 +24,9 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> im
     let game_speed = Signal::derive(move || game_speed.clone());
     let Config(config, set_cookie) = expect_context();
     let (title, icon) = match move_confirm() {
-        MoveConfirm::Clock => ("Click on your clock", icondata::BiStopwatchRegular),
-        MoveConfirm::Double => ("Double click", icondata::TbHandTwoFingers),
-        MoveConfirm::Single => ("Single click", icondata::TbHandFinger),
+        MoveConfirm::Clock => ("Click on your clock", icondata_bi::BiStopwatchRegular),
+        MoveConfirm::Double => ("Double click", icondata_tb::TbHandTwoFingersOutline),
+        MoveConfirm::Single => ("Single click", icondata_tb::TbHandFingerOutline),
     };
     let is_active = move || {
         let inactive_class = "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal";

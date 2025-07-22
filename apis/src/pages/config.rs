@@ -19,7 +19,7 @@ pub fn Config() -> impl IntoView {
     let i18n = use_i18n();
     let game_speed = RwSignal::new(GameSpeed::Blitz);
     let icon = move || {
-        view! { <Icon width="50" height="50" attr:class="p-2" icon=icon_for_speed(&game_speed()) /> }
+        view! { <Icon width="50" height="50" attr:class="p-2" icon=icon_for_speed(game_speed()) /> }
     };
     let toggle = move || {
         let game_speed = game_speed();

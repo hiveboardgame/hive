@@ -7,9 +7,9 @@ pub fn SoundToggle() -> impl IntoView {
     let Config(config, set_cookie) = expect_context();
     let icon = move || {
         let icon = if config().prefers_sound {
-            icondata::BiVolumeFullRegular
+            icondata_bi::BiVolumeFullRegular
         } else {
-            icondata::BiVolumeMuteRegular
+            icondata_bi::BiVolumeMuteRegular
         };
         view! { <Icon icon attr:class="w-4 h-4" /> }
     };

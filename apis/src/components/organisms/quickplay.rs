@@ -32,13 +32,13 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let (display_text, icon_data, base, increment) = match time_control {
-        Bullet1p2 => ("1+2".to_owned(), icon_for_speed(&Bullet), 1, 2),
-        Blitz3p3 => ("3+3".to_owned(), icon_for_speed(&Blitz), 3, 3),
-        Blitz5p4 => ("5+4".to_owned(), icon_for_speed(&Blitz), 5, 4),
-        Rapid10p10 => ("10+10".to_owned(), icon_for_speed(&Rapid), 10, 10),
-        Rapid15p10 => ("15+10".to_owned(), icon_for_speed(&Rapid), 15, 10),
-        Classic20p20 => ("20+20".to_owned(), icon_for_speed(&Classic), 20, 20),
-        Classic30p30 => ("30+30".to_owned(), icon_for_speed(&Classic), 30, 30),
+        Bullet1p2 => ("1+2".to_owned(), icon_for_speed(Bullet), 1, 2),
+        Blitz3p3 => ("3+3".to_owned(), icon_for_speed(Blitz), 3, 3),
+        Blitz5p4 => ("5+4".to_owned(), icon_for_speed(Blitz), 5, 4),
+        Rapid10p10 => ("10+10".to_owned(), icon_for_speed(Rapid), 10, 10),
+        Rapid15p10 => ("15+10".to_owned(), icon_for_speed(Rapid), 15, 10),
+        Classic20p20 => ("20+20".to_owned(), icon_for_speed(Classic), 20, 20),
+        Classic30p30 => ("30+30".to_owned(), icon_for_speed(Classic), 30, 30),
     };
     view! {
         <button

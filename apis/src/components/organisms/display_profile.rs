@@ -25,7 +25,7 @@ pub fn DisplayProfile(user: UserResponse) -> impl IntoView {
             <For each=move || user_ratings.clone() key=|rating| rating.speed.clone() let:rating>
                 <tr>
                     <td class="text-center">
-                        <Icon icon=icon_for_speed(&rating.speed) />
+                        <Icon icon=icon_for_speed(rating.speed.clone()) />
                     </td>
                     <td class="text-center">
                         <Rating rating=rating.clone() />

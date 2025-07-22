@@ -52,9 +52,9 @@ pub fn UpcomingGameRow(
 
     view! {
         <div class="flex flex-col p-4 w-full rounded-lg duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
-            <div class="flex mb-3 text-center w-full">
+            <div class="flex mb-3 w-full text-center">
                 <a
-                    class="text-lg font-bold text-blue-500 hover:underline no-link-style break-words hyphens-auto w-full overflow-hidden"
+                    class="overflow-hidden w-full text-lg font-bold text-blue-500 break-words hover:underline no-link-style hyphens-auto"
                     href=format!("/tournament/{}", tournament_id)
                     title=tournament_name.get_value()
                 >
@@ -91,7 +91,7 @@ pub fn UpcomingGameRow(
                                 view! { "Join Game" }.into_any()
                             } else {
                                 view! {
-                                    <Icon icon=icondata::AiEyeOutlined attr:class="mr-1 w-4 h-4" />
+                                    <Icon icon=icondata_ai::AiEyeOutlined attr:class="mr-1 w-4 h-4" />
                                     "Watch"
                                 }
                                     .into_any()

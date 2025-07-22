@@ -29,7 +29,7 @@ pub fn Active(
             </g>
         }),
         ActiveState::Reserve => Either::Right(view! {
-            <g class=format!("{extend_tw_classes}")>
+            <g class=format!("{extend_tw_classes}") >
                 <Inner transform />
             </g>
         }),
@@ -38,10 +38,12 @@ pub fn Active(
 
 #[component]
 fn Inner(transform: TextProp) -> impl IntoView {
+    let href = || "/assets/tiles/common/all.svg#active";
+
     view! {
         <g id="Active" transform=transform>
             <use_
-                href="/assets/tiles/common/all.svg#active"
+                href=href
                 transform="scale(0.56, 0.56) translate(-46.608, -52.083)"
             ></use_>
         </g>

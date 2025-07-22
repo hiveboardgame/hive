@@ -27,7 +27,7 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
             });
 
             let location = use_location();
-            let current_path = location.pathname.get();
+            let current_path = location.pathname.get_untracked();
             let game_path = format!("/game/{}", gar.game.game_id);
 
             if current_path.starts_with(&game_path) {
@@ -72,7 +72,7 @@ pub fn handle_new_game(game_response: GameResponse) {
         let auth_context = expect_context::<AuthContext>();
         let user_uuid =
             Signal::derive(move || auth_context.user.with(|a| a.as_ref().map(|user| user.id)));
-        if let Some(id) = user_uuid() {
+        if let Some(id) = user_uuid.get_untracked() {
             if id == game_response.white_player.uid || id == game_response.black_player.uid {
                 let location = use_location();
                 let current_path = location.pathname.get_untracked();

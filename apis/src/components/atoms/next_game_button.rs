@@ -27,9 +27,9 @@ pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoV
         })
     };
     let icon = move || match time_mode.get_value() {
-        TimeMode::Untimed => icondata::BiInfiniteRegular,
-        TimeMode::RealTime => icondata::BiStopwatchRegular,
-        TimeMode::Correspondence => icondata::AiMailOutlined,
+        TimeMode::Untimed => icondata_bi::BiInfiniteRegular,
+        TimeMode::RealTime => icondata_bi::BiStopwatchRegular,
+        TimeMode::Correspondence => icondata_ai::AiMailOutlined,
     };
     let style = move || {
         match next_games() {
