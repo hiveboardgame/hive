@@ -315,11 +315,11 @@ mod tests {
     fn verify_auth_header(req: &Request, expected_key: &str) {
         let auth_header = req
             .headers
-            .get(&"Authorization".parse().unwrap())
+            .get("Authorization")
             .expect("Authorization header missing");
 
         let expected_value = format!("Bearer {expected_key}");
-        assert_eq!(auth_header[0], expected_value);
+        assert_eq!(auth_header.to_str().expect("Valid header string"), expected_value);
     }
 
     #[tokio::test]

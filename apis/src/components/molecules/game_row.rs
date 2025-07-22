@@ -184,7 +184,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                         </div>
 
                         <Icon
-                            icon=icondata::RiSwordOthersLine
+                            icon=icondata_ri::RiSwordOthersLine
                             attr:class="flex-shrink-0 mx-1 text-sm"
                         />
 

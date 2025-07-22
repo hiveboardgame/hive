@@ -57,11 +57,12 @@ impl AnalysisTree {
                     position: position.to_string(),
                 }),
             );
-            let new_id = new_node.get_node_id();
-            let hash = state.history.hashes[i];
-            tree.add_node(new_node, previous.as_ref()).ok();
-            hashes.insert(hash, new_id);
-            previous = Some(new_id);
+            if let Ok(new_id) = new_node.get_node_id() {
+                let hash = state.history.hashes[i];
+                tree.add_node(new_node, previous.as_ref()).ok();
+                hashes.insert(hash, new_id);
+                previous = Some(new_id);
+            }
         }
 
         let current_node = previous.and_then(|p| tree.get_node_by_id(&p));
@@ -97,11 +98,12 @@ impl AnalysisTree {
                     position: position.to_string(),
                 }),
             );
-            let new_id = new_node.get_node_id();
-            let hash = state.history.hashes[i];
-            tree.add_node(new_node, previous.as_ref()).ok()?;
-            hashes.insert(hash, new_id);
-            previous = Some(new_id);
+            if let Ok(new_id) = new_node.get_node_id() {
+                let hash = state.history.hashes[i];
+                tree.add_node(new_node, previous.as_ref()).ok()?;
+                hashes.insert(hash, new_id);
+                previous = Some(new_id);
+            }
         }
         let current_node = previous.and_then(|p| tree.get_node_by_id(&p));
         let mut analysis_tree = Self {
@@ -135,10 +137,11 @@ impl AnalysisTree {
             .into_iter()
             .rev()
             .chain(vec![node_id])
-            .map(|a| self.tree.get_node_by_id(&a)?.get_value())
-            .map(|a| {
-                let a = a.unwrap();
-                (a.piece, a.position)
+            .filter_map(|a| {
+                self.tree.get_node_by_id(&a)
+                    .and_then(|node| node.get_value().ok())
+                    .flatten()
+                    .map(|tree_node| (tree_node.piece, tree_node.position))
             })
             .collect::<Vec<_>>();
         let state = State::new_from_history(&History {
@@ -153,7 +156,9 @@ impl AnalysisTree {
         let history_turn = self
             .current_node
             .as_ref()
-            .and_then(|n| n.get_value().map(|v| v.turn));
+            .and_then(|n| n.get_value().ok())
+            .flatten()
+            .map(|v| v.turn);
 
         if let Some(g) = game {
             g.signal.update(|gs| {
@@ -170,17 +175,17 @@ impl AnalysisTree {
         let turn = self
             .current_node
             .as_ref()
-            .map_or(1, |n| 1 + n.get_value().unwrap().turn);
+            .and_then(|n| n.get_value().ok())
+            .flatten()
+            .map_or(1, |v| 1 + v.turn);
         let valid_trasposition = self
             .hashes
             .get_by_left(&hash)
             .and_then(|node_id| self.tree.get_node_by_id(node_id))
             .and_then(|node| {
-                //Turns must match if we will update the node
-                if node.get_value().unwrap().turn == turn {
-                    self.update_node(node.get_node_id(), None)
-                } else {
-                    None
+                match (node.get_value().ok().flatten(), node.get_node_id().ok()) {
+                    (Some(v), Some(node_id)) if v.turn == turn => self.update_node(node_id, None),
+                    _ => None,
                 }
             });
         if valid_trasposition.is_some() {
@@ -198,18 +203,21 @@ impl AnalysisTree {
                 position,
             }),
         );
-        let parent_id = self.current_node.as_ref().map(|n| n.get_node_id());
+        let parent_id = self.current_node.as_ref().and_then(|n| n.get_node_id().ok());
 
-        self.tree.add_node(new_node, parent_id.as_ref()).unwrap();
+        if let Some(parent_id) = parent_id {
+            let _ = self.tree.add_node(new_node, Some(&parent_id));
+        } else {
+            let _ = self.tree.add_node(new_node, None);
+        }
         self.hashes.insert(hash, new_id);
         self.current_node = self.tree.get_node_by_id(&new_id);
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self, game_state: GameStateSignal) {
         self.current_node = None;
         self.tree = Tree::new(Some("analysis"));
         self.hashes.clear();
-        let game_state = expect_context::<GameStateSignal>();
         game_state.signal.update(|gs| {
             *gs = GameState::new_with_game_type(self.game_type);
             gs.view = game_state::View::Game;

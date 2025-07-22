@@ -33,10 +33,10 @@ pub fn HistoryButton(
     let cloned_action = action.clone();
     let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
-        HistoryNavigation::First => icondata::AiFastBackwardFilled,
-        HistoryNavigation::Last | HistoryNavigation::MobileLast => icondata::AiFastForwardFilled,
-        HistoryNavigation::Next => icondata::AiStepForwardFilled,
-        HistoryNavigation::Previous => icondata::AiStepBackwardFilled,
+        HistoryNavigation::First => icondata_ai::AiFastBackwardFilled,
+        HistoryNavigation::Last | HistoryNavigation::MobileLast => icondata_ai::AiFastForwardFilled,
+        HistoryNavigation::Next => icondata_ai::AiStepForwardFilled,
+        HistoryNavigation::Previous => icondata_ai::AiStepBackwardFilled,
     };
 
     let is_disabled = move || match cloned_action {

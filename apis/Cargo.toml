@@ -29,7 +29,18 @@ diesel_migrations = { workspace = true, optional = true }
 hive = { path = "../engine" }
 http = { workspace = true }
 http-serde = { workspace = true }
-icondata = { workspace = true }
+icondata_core = { workspace = true }
+icondata_tb = { workspace = true }
+icondata_bi = { workspace = true }
+icondata_ai = { workspace = true }
+icondata_fa = { workspace = true }
+icondata_io = { workspace = true }
+icondata_bs = { workspace = true }
+icondata_ch = { workspace = true }
+icondata_lu = { workspace = true }
+icondata_mdi = { workspace = true }
+icondata_ri = { workspace = true }
+icondata_ti = { workspace = true }
 indoc = { workspace = true }
 jsonwebtoken = { workspace = true, optional = true }
 # jsonwebtoken = { workspace = true }
@@ -178,4 +189,4 @@ lib-default-features = false
 lib-profile-release = "wasm-release"
 
 [build-dependencies]
-leptos_i18n_build = "0.6.0-rc"
+leptos_i18n_build = "0.6.0-rc.2"

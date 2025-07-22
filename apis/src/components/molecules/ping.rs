@@ -18,18 +18,18 @@ pub fn Ping() -> impl IntoView {
             >= 5
         {
             Either::Left(
-                view! { <Icon attr:class="fill-ladybug-red" icon=icondata::BiNoSignalRegular /> },
+                view! { <Icon attr:class="fill-ladybug-red" icon=icondata_bi::BiNoSignalRegular /> },
             )
         } else {
             match websocket.ready_state.get() {
                 ConnectionReadyState::Open => Either::Right(view! {
                     <div class="flex items-center">
-                        <Icon attr:class="fill-grasshopper-green" icon=icondata::BiSignal5Regular />
+                        <Icon attr:class="fill-grasshopper-green" icon=icondata_bi::BiSignal5Regular />
                         {move || { format!("{:.0}ms", ping.ping.get()) }}
                     </div>
                 }),
                 _ => Either::Left(
-                    view! { <Icon attr:class="fill-ladybug-red" icon=icondata::BiNoSignalRegular /> },
+                    view! { <Icon attr:class="fill-ladybug-red" icon=icondata_bi::BiNoSignalRegular /> },
                 ),
             }
         }

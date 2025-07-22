@@ -160,18 +160,19 @@ fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             let mut moves = Vec::new();
             let sibling_nodes = a.current_node
                 .as_ref()
-                .and_then(|n| tree.get_sibling_ids(&n.get_node_id(), false).ok())
+                .and_then(|n| n.get_node_id().ok())
+                .and_then(|node_id| tree.get_sibling_ids(&node_id, false).ok())
                 .map_or(Vec::new(), |s| {
                     s.iter()
                         .filter_map(|id| tree.get_node_by_id(id))
                         .collect::<Vec<_>>()
                 });
             for s in sibling_nodes {
-                let TreeNode {
+                if let Ok(Some(TreeNode {
                     turn,
                     piece,
                     position,
-                } = s.get_value().unwrap();
+                })) = s.get_value() {
                 moves.push(
                         view! {
                             <div
@@ -179,7 +180,9 @@ fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                                 on:click=move |_| {
                                     analysis
                                         .update(|a| {
-                                            a.update_node(s.get_node_id(), Some(game_state));
+                                            if let Ok(node_id) = s.get_node_id() {
+                                                a.update_node(node_id, Some(game_state));
+                                            }
                                         })
                                 }
                             >
@@ -187,6 +190,7 @@ fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                             </div>
                         }
                     );
+                }
             }
             moves.collect_view()
         })

@@ -31,15 +31,17 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     };
     let current_path = Memo::new(move |_| {
         analysis.with(|a| {
-            let mut current_path = vec![];
-            if let Some(current_node) = &a.current_node {
-                let current_id = current_node.get_node_id();
-                current_path.push(current_id);
-                if let Ok(ancestors) = a.tree.get_ancestor_ids(&current_id) {
-                    current_path.extend(ancestors);
-                }
-            }
-            current_path
+            a.current_node
+                .as_ref()
+                .and_then(|node| node.get_node_id().ok())
+                .map(|current_id| {
+                    let mut path = vec![current_id];
+                    if let Ok(ancestors) = a.tree.get_ancestor_ids(&current_id) {
+                        path.extend(ancestors);
+                    }
+                    path
+                })
+                .unwrap_or_default()
         })
     });
     let promote_variation = move |promote_all: bool| {
@@ -49,28 +51,34 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 .iter()
                 .filter_map(|id| a.tree.get_node_by_id(id));
             for node in current_path {
-                if let Some(parent) = node
+                let Some((parent_id, current_id)) = node
                     .get_parent_id()
-                    .and_then(|id| a.tree.get_node_by_id(&id))
-                {
-                    let current_id = node.get_node_id();
-                    if parent
-                        .get_children_ids()
-                        .first()
-                        .is_some_and(|id| *id != current_id)
-                    {
-                        parent.sort_children(|a, b| {
-                            if a == &current_id {
-                                Ordering::Less
-                            } else if b == &current_id {
-                                Ordering::Greater
-                            } else {
-                                Ordering::Equal
-                            }
-                        });
-                        if !promote_all {
-                            break;
+                    .ok()
+                    .flatten()
+                    .zip(node.get_node_id().ok())
+                else {
+                    continue;
+                };
+
+                let Some(parent) = a.tree.get_node_by_id(&parent_id) else {
+                    continue;
+                };
+                let Ok(children) = parent.get_children_ids() else {
+                    continue;
+                };
+
+                if children.first().is_some_and(|id| *id != current_id) {
+                    let _ = parent.sort_children(|a, b| {
+                        if a == &current_id {
+                            Ordering::Less
+                        } else if b == &current_id {
+                            Ordering::Greater
+                        } else {
+                            Ordering::Equal
                         }
+                    });
+                    if !promote_all {
+                        break;
                     }
                 }
             }
@@ -113,62 +121,84 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
         analysis.with(|a| {
             let tree = &a.tree;
             let root = tree.get_root_node()?;
-            //Post order traversal ensures all children are processed before their parents
-            let node_order = tree
-                .traverse(&root.get_node_id(), TraversalStrategy::PostOrder)
-                .ok()?;
+
+            // Post order traversal ensures all children are processed before their parents
+            let root_id = root.get_node_id().ok()?;
+            let node_order = tree.traverse(&root_id, TraversalStrategy::PostOrder).ok()?;
+
             let mut content = "".into_any();
             let mut branches = HashMap::<i32, AnyView>::new();
+
             for node_id in node_order {
                 let node = tree.get_node_by_id(&node_id)?;
-                let children_ids = node.get_children_ids();
+                let children_ids = node.get_children_ids().ok()?;
                 let siblings_ids = tree.get_sibling_ids(&node_id, true).ok()?;
-                let parent_deg = siblings_ids.len();
-                let not_first_sibling = siblings_ids.first().is_none_or(|s| *s != node_id);
-                content = if children_ids.len() > 1 {
-                    /* == More than one child ==
-                    gather all children but the first (secondary variations)
-                    and place them inside a collapsible
-                    then place the first child (main variation) at the same level as the parent
-                    */
-                    let inner = children_ids
-                        .iter()
-                        .skip(1)
-                        .map(|c| branches.remove(c))
-                        .collect::<Vec<_>>()
-                        .into_any();
-                    view! {
-                        <CollapsibleMove current_path node inner />
-                        {branches.remove(&children_ids[0])}
+
+                let parent_degree = siblings_ids.len();
+                let is_main_variation = siblings_ids.first().is_some_and(|first| *first == node_id);
+
+                content = match children_ids.len() {
+                    // Multiple children: create collapsible for secondary variations
+                    n if n > 1 => {
+                        /* == More than one child ==
+                           gather all children but the first (secondary variations)
+                           and place them inside a collapsible
+                           then place the first child (main variation) at the same level as the parent
+                        */
+                        let secondary_variations = children_ids
+                            .iter()
+                            .skip(1)
+                            .filter_map(|c| branches.remove(c))
+                            .collect::<Vec<_>>()
+                            .into_any();
+
+                        if let Some(first_child) = children_ids.first() {
+                            view! {
+                                <CollapsibleMove current_path node inner=secondary_variations />
+                                {branches.remove(first_child)}
+                            }
+                            .into_any()
+                        } else {
+                            content
+                        }
                     }
-                    .into_any()
-                } else if parent_deg > 2 && not_first_sibling && children_ids.len() == 1 {
-                    /* We make a colapsible for nodes with one child
-                    for aesthetic reasons, to hide its content.
-                    it must be that parent has already a "seccondary variation"
-                    (else a toggle would not be needed)
-                    and this must not be the "main variation" (first child)
-                    */
-                    //let static_cont = StoredValue::new(content);
-                    view! { <CollapsibleMove current_path node inner=content /> }.into_any()
-                } else {
-                    /* All other nodes are placed at the same level as the parent
-                    in a regular HistoryMove node */
-                    view! {
-                        <HistoryMove current_path node has_children=false />
-                        {content}
+
+                    // Single child in non-main variation: create collapsible for aesthetics
+                    1 if parent_degree > 2 && !is_main_variation => {
+                        /* We make a collapsible for nodes with one child
+                           for aesthetic reasons, to hide its content.
+                           it must be that parent has already a "secondary variation"
+                           (else a toggle would not be needed)
+                           and this must not be the "main variation" (first child)
+                        */
+                        view! {
+                            <CollapsibleMove current_path node inner=content />
+                        }
+                        .into_any()
                     }
-                    .into_any()
+
+                    // Default case: regular node
+                    _ => {
+                        /* All other nodes are placed at the same level as the parent
+                        in a regular HistoryMove node */
+                        view! {
+                            <HistoryMove current_path node has_children=false />
+                            {content}
+                        }
+                        .into_any()
+                    }
                 };
+
                 /* We are start of a new branch so clear the content
-                to process either the next sibling or tho parent */
-                if parent_deg > 1 {
-                    //save the branch only when its the start
+                to process either the next sibling or the parent */
+                if parent_degree > 1 {
+                    // save the branch only when its the start
                     branches.insert(node_id, content);
                     content = "".into_any();
                 }
             }
-            //all branches are processed
+
+            // all branches are processed
             debug_assert!(branches.is_empty());
             Some(content)
         })

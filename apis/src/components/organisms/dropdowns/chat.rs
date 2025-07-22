@@ -46,7 +46,7 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
             })
 
             dropdown_style=chat_style
-            content=view! { <Icon icon=icondata::BiChatRegular attr:class="w-4 h-4" /> }
+            content=view! { <Icon icon=icondata_bi::BiChatRegular attr:class="w-4 h-4" /> }
             id="chat"
         >
             <ChatWindow destination=destination.clone() />

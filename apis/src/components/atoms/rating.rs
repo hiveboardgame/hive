@@ -1,5 +1,5 @@
 use crate::responses::RatingResponse;
-use icondata::Icon;
+use icondata_core;
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{Certainty, GameSpeed};
@@ -21,7 +21,7 @@ pub fn RatingWithIcon(rating: StoredValue<RatingResponse>) -> impl IntoView {
     view! {
         <div class="flex flex-row gap-1 items-center">
             <Icon
-                icon=icon_for_speed(&rating.with_value(|r| r.speed.clone()))
+                icon=icon_for_speed(rating.with_value(|r| r.speed.clone()))
                 attr:class="w-4 h-4"
             />
             <Rating rating=rating.get_value() />
@@ -29,14 +29,14 @@ pub fn RatingWithIcon(rating: StoredValue<RatingResponse>) -> impl IntoView {
     }
 }
 
-pub fn icon_for_speed(speed: &GameSpeed) -> Icon {
+pub fn icon_for_speed(speed: GameSpeed) -> &'static icondata_core::IconData {
     match speed {
-        GameSpeed::Untimed => icondata::BiInfiniteRegular,
-        GameSpeed::Blitz => icondata::BsLightningFill,
-        GameSpeed::Bullet => icondata::FaGunSolid,
-        GameSpeed::Rapid => icondata::LuRabbit,
-        GameSpeed::Classic => icondata::LuTurtle,
-        GameSpeed::Correspondence => icondata::AiMailOutlined,
-        GameSpeed::Puzzle => icondata::TiPuzzle,
+        GameSpeed::Untimed => icondata_bi::BiInfiniteRegular,
+        GameSpeed::Blitz => icondata_bs::BsLightningFill,
+        GameSpeed::Bullet => icondata_fa::FaGunSolid,
+        GameSpeed::Rapid => icondata_lu::LuRabbit,
+        GameSpeed::Classic => icondata_lu::LuTurtle,
+        GameSpeed::Correspondence => icondata_ai::AiMailOutlined,
+        GameSpeed::Puzzle => icondata_ti::TiPuzzle,
     }
 }

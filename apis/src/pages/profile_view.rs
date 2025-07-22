@@ -215,7 +215,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
                     }
                     class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Bullet))
                 >
-                    <Icon icon=icon_for_speed(&GameSpeed::Bullet) />
+                    <Icon icon=icon_for_speed(GameSpeed::Bullet) />
                 </button>
                 <button
                     on:click=move |_| {
@@ -223,7 +223,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
                     }
                     class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Blitz))
                 >
-                    <Icon icon=icon_for_speed(&GameSpeed::Blitz) />
+                    <Icon icon=icon_for_speed(GameSpeed::Blitz) />
                 </button>
                 <button
                     on:click=move |_| {
@@ -231,7 +231,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
                     }
                     class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Rapid))
                 >
-                    <Icon icon=icon_for_speed(&GameSpeed::Rapid) />
+                    <Icon icon=icon_for_speed(GameSpeed::Rapid) />
                 </button>
                 <button
                     on:click=move |_| {
@@ -239,7 +239,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
                     }
                     class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Classic))
                 >
-                    <Icon icon=icon_for_speed(&GameSpeed::Classic) />
+                    <Icon icon=icon_for_speed(GameSpeed::Classic) />
                 </button>
                 <button
                     on:click=move |_| {
@@ -249,7 +249,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
                         controls().speeds.contains(&GameSpeed::Correspondence),
                     )
                 >
-                    <Icon icon=icon_for_speed(&GameSpeed::Correspondence) />
+                    <Icon icon=icon_for_speed(GameSpeed::Correspondence) />
                 </button>
                 <button
                     on:click=move |_| {
@@ -257,7 +257,7 @@ fn Controls(username: String, ctx: ProfileGamesContext) -> impl IntoView {
                     }
                     class=move || toggle_classes(controls().speeds.contains(&GameSpeed::Untimed))
                 >
-                    <Icon icon=icon_for_speed(&GameSpeed::Untimed) />
+                    <Icon icon=icon_for_speed(GameSpeed::Untimed) />
                 </button>
             </div>
         </div>
@@ -306,7 +306,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     Effect::watch(
         ctx.next_batch.version(),
         move |_, _, _| {
-            let next_batch = if let Some(Ok(next_batch)) = ctx.next_batch.value().get() {
+            let next_batch = if let Some(Ok(next_batch)) = ctx.next_batch.value().get_untracked() {
                 next_batch
             } else {
                 vec![]
@@ -387,13 +387,12 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                     ctx.is_first_batch.set_value(true);
                     ctx.games.set(vec![]);
 
-                    let initial_batch_size = ctx.initial_batch_size.get();
                     load_games(
-                        ctx.controls.get(),
+                        ctx.controls.get_untracked(),
                         username.get_untracked(),
                         None,
                         ctx.next_batch,
-                        initial_batch_size,
+                        ctx.initial_batch_size.get_untracked(),
                     );
                 });
             });
@@ -406,9 +405,11 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
         move |_| {
             let controls = ctx.controls.get();
             let username = username();
-            let batch_info = ctx.games.get().last().map(|game| BatchInfo {
-                id: game.uuid,
-                timestamp: game.updated_at,
+            let batch_info = ctx.games.with(|g| {
+                g.last().map(|game| BatchInfo {
+                    id: game.uuid,
+                    timestamp: game.updated_at,
+                })
             });
             ctx.is_first_batch.set_value(batch_info.is_none());
             async move {

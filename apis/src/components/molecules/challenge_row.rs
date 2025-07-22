@@ -8,11 +8,13 @@ use crate::{
 };
 use hive_lib::ColorChoice;
 use leptos::either::Either;
-use leptos::{html, prelude::*};
+use leptos::prelude::*;
 use leptos_icons::*;
-use leptos_use::use_window;
+use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
 use shared_types::{ChallengeVisibility, TimeInfo};
 use uuid::Uuid;
+
+const BUTTON_BASE_CLASSES: &str = "px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform active:scale-95 focus:outline-none focus:shadow-outline font-bold";
 
 #[component]
 pub fn ChallengeRow(
@@ -25,22 +27,43 @@ pub fn ChallengeRow(
     let api = expect_context::<ApiRequestsProvider>().0;
     let challenge_id = StoredValue::new(challenge.challenge_id);
     let visibility = StoredValue::new(challenge.visibility);
-    let icon_data = move || {
+    let color_choice = StoredValue::new(challenge.color_choice);
+    let icon = move || {
         let prefers_dark = config.with(|c| c.prefers_dark);
-        match challenge.color_choice {
-            ColorChoice::Random => (icondata::BsHexagonHalf, "pb-[2px]"),
+        match color_choice.get_value() {
+            ColorChoice::Random => icondata_bs::BsHexagonHalf,
             ColorChoice::White => {
                 if prefers_dark {
-                    (icondata::BsHexagonFill, "fill-white pb-[2px]")
+                    icondata_bs::BsHexagonFill
                 } else {
-                    (icondata::BsHexagon, "stroke-black pb-[2px]")
+                    icondata_bs::BsHexagon
                 }
             }
             ColorChoice::Black => {
                 if prefers_dark {
-                    (icondata::BsHexagon, "stroke-white pb-[2px]")
+                    icondata_bs::BsHexagon
                 } else {
-                    (icondata::BsHexagonFill, "fill-black pb-[2px]")
+                    icondata_bs::BsHexagonFill
+                }
+            }
+        }
+    };
+    let icon_class = move || {
+        let prefers_dark = config.with(|c| c.prefers_dark);
+        match color_choice.get_value() {
+            ColorChoice::Random => "pb-[2px]",
+            ColorChoice::White => {
+                if prefers_dark {
+                    "fill-white pb-[2px]"
+                } else {
+                    "stroke-black pb-[2px]"
+                }
+            }
+            ColorChoice::Black => {
+                if prefers_dark {
+                    "stroke-white pb-[2px]"
+                } else {
+                    "fill-black pb-[2px]"
                 }
             }
         }
@@ -52,49 +75,52 @@ pub fn ChallengeRow(
             challenge_id.get_value()
         )
     };
-    let button_ref = NodeRef::<html::Button>::new();
+    let copy_state = RwSignal::new(false);
+
+    let interval = StoredValue::new(use_interval_fn_with_options(
+        move || copy_state.set(false),
+        2000, // 2 seconds
+        UseIntervalFnOptions::default().immediate(false),
+    ));
+
     let copy = move |_| {
+        let interval = interval.get_value();
         let clipboard = use_window()
             .as_ref()
             .expect("window to exist")
             .navigator()
             .clipboard();
         let _ = clipboard.write_text(&challenge_address());
-        let class_list = button_ref
-            .get_untracked()
-            .expect("div_ref to be loaded by now")
-            .class_list();
-        class_list
-            .remove_4(
-                "dark:bg-button-twilight",
-                "bg-button-dawn",
-                "hover:bg-pillbug-teal",
-                "dark:hover:bg-pillbug-teal",
-            )
-            .expect("tw classes to exist");
-        class_list
-            .add_2("bg-grasshopper-green", "hover:bg-green-500")
-            .expect("tw classes to be added");
+        copy_state.set(true);
+        (interval.pause)();
+        (interval.resume)();
+    };
+    let copy_button_class = move || {
+        if copy_state.get() {
+            format!("{BUTTON_BASE_CLASSES} bg-grasshopper-green hover:bg-green-500")
+        } else {
+            format!("{BUTTON_BASE_CLASSES} bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal")
+        }
     };
 
     let td_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
+    let accept_button_classes = StoredValue::new(format!("{BUTTON_BASE_CLASSES} bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"));
+    let cancel_button_classes = StoredValue::new(format!(
+        "{BUTTON_BASE_CLASSES} bg-ladybug-red hover:bg-red-400"
+    ));
     let time_mode = challenge.time_mode;
-
-    let challenger_username = StoredValue::new(challenge.challenger.username);
-    let (username, patreon, bot, rating) = {
-        let challenger_username = challenger_username.get_value();
-        if let (Some(uid), Some(opponent)) = (uid, challenge.opponent.clone()) {
+    let (username, patreon, bot, rating) =
+        if let (Some(uid), Some(ref opponent)) = (uid, &challenge.opponent) {
             if challenge.challenger.uid == uid {
-                let opp = opponent.username.clone();
                 (
-                    opp.clone(),
+                    opponent.username.as_str(),
                     opponent.patreon,
                     opponent.bot,
                     opponent.rating_for_speed(&challenge.speed),
                 )
             } else {
                 (
-                    challenger_username,
+                    challenge.challenger.username.as_str(),
                     challenge.challenger.patreon,
                     challenge.challenger.bot,
                     challenge.challenger_rating,
@@ -102,13 +128,12 @@ pub fn ChallengeRow(
             }
         } else {
             (
-                challenger_username,
+                challenge.challenger.username.as_str(),
                 challenge.challenger.patreon,
                 challenge.challenger.bot,
                 challenge.challenger_rating,
             )
-        }
-    };
+        };
 
     let time_info = TimeInfo {
         mode: time_mode,
@@ -119,15 +144,15 @@ pub fn ChallengeRow(
         <tr class="items-center text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
             <td class=td_class>
                 <div>
-                    <Icon icon=icon_data().0 attr:class=icon_data().1 />
+                    <Icon icon=Signal::derive(icon) attr:class=Signal::derive(icon_class) />
                 </div>
             </td>
             <td class=format!("w-10 sm:w-24 {td_class}")>
                 <div class="flex justify-center items-center">
                     <div class="flex items-center">
-                        <StatusIndicator username=username.clone() />
+                        <StatusIndicator username=username.to_string() />
                         <ProfileLink
-                            username
+                            username=username.to_string()
                             patreon
                             bot
                             extend_tw_classes="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[140px] lg:max-w-[160px]"
@@ -178,22 +203,17 @@ pub fn ChallengeRow(
                                     visibility.with_value(|v| *v == ChallengeVisibility::Private)
                                         && !single
                                 }>
-                                    <button
-                                        node_ref=button_ref
-                                        on:click=copy
-                                        class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
-                                    >
-                                        <Icon icon=icondata::AiCopyOutlined attr:class="w-6 h-6" />
+                                    <button on:click=copy class=copy_button_class>
+                                        <Icon icon=icondata_ai::AiCopyOutlined attr:class="w-6 h-6" />
                                     </button>
                                 </Show>
                                 <button
                                     on:click=move |_| {
                                         api.get().challenge_cancel(challenge_id.get_value())
                                     }
-
-                                    class="px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
+                                    class=cancel_button_classes.get_value()
                                 >
-                                    <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
+                                    <Icon icon=icondata_io::IoCloseSharp attr:class="w-6 h-6" />
                                 </button>
                             }
                         }
@@ -203,10 +223,9 @@ pub fn ChallengeRow(
                             on:click=move |_| {
                                 api.get().challenge_accept(challenge_id.get_value());
                             }
-
-                            class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none focus:shadow-outline"
+                            class=accept_button_classes.get_value()
                         >
-                            <Icon icon=icondata::AiCheckOutlined attr:class="w-6 h-6" />
+                            <Icon icon=icondata_ai::AiCheckOutlined attr:class="w-6 h-6" />
 
                         </button>
                         {if challenge.opponent.is_some() {
@@ -216,10 +235,9 @@ pub fn ChallengeRow(
                                         on:click=move |_| {
                                             api.get().challenge_cancel(challenge_id.get_value());
                                         }
-
-                                        class="px-1 py-1 m-1 font-bold text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95 focus:outline-none focus:shadow-outline"
+                                        class=cancel_button_classes.get_value()
                                     >
-                                        <Icon icon=icondata::IoCloseSharp attr:class="w-6 h-6" />
+                                        <Icon icon=icondata_io::IoCloseSharp attr:class="w-6 h-6" />
 
                                     </button>
                                 },

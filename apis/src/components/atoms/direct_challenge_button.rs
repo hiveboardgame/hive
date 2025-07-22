@@ -36,7 +36,7 @@ pub fn DirectChallengeButton(
                 }
                 class="p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
-                <Icon icon=icondata::RiSwordOthersLine attr:class="w-6 h-6" />
+                <Icon icon=icondata_ri::RiSwordOthersLine attr:class="w-6 h-6" />
             </button>
         </Show>
     }

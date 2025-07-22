@@ -38,7 +38,7 @@ pub fn AnalysisAndDownload() -> impl IntoView {
                     href=analysis_url
                     class="justify-self-end place-self-center m-1 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
                 >
-                    <Icon icon=icondata::TbMicroscope attr:class="py-1 w-7 h-7" />
+                    <Icon icon=icondata_tb::TbMicroscopeOutline attr:class="py-1 w-7 h-7" />
                 </a>
                 <DownloadPgn />
             </div>

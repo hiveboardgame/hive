@@ -8,9 +8,9 @@ pub fn ToggleControls() -> impl IntoView {
     let toggle_controls = move |_| controls_signal.hidden.update(|b| *b = !*b);
     let icon = move || {
         if controls_signal.hidden.get() {
-            view! { <Icon icon=icondata::BiDownArrowSolid attr:class="w-4 h-4" /> }
+            view! { <Icon icon=icondata_bi::BiDownArrowSolid attr:class="w-4 h-4" /> }
         } else {
-            view! { <Icon icon=icondata::BiUpArrowSolid attr:class="w-4 h-4" /> }
+            view! { <Icon icon=icondata_bi::BiUpArrowSolid attr:class="w-4 h-4" /> }
         }
     };
     let title = move || {

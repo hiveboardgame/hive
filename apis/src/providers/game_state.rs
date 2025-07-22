@@ -334,7 +334,7 @@ impl GameState {
         ) {
             return false;
         }
-        user.with(|a| {
+        user.with_untracked(|a| {
             a.as_ref().is_some_and(|user| {
                 let turn = self.state.turn;
                 let black_id = self.black_id;

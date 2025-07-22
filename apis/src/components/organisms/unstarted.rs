@@ -44,9 +44,9 @@ pub fn Unstarted(
         };
 
         let icon = if is_ready {
-            icondata::AiCheckOutlined
+            icondata_ai::AiCheckOutlined
         } else {
-            icondata::IoCloseSharp
+            icondata_io::IoCloseSharp
         };
         view! { <Icon icon attr:class="w-6 h-6" /> }
     };

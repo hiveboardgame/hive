@@ -19,7 +19,7 @@ pub fn TimeRow(
                 GameSpeed::from_base_increment(time_info.base, time_info.increment)
             }
         };
-        view! { <Icon icon=icon_for_speed(&speed) attr:class="w-4 h-4" /> }
+        view! { <Icon icon=icon_for_speed(speed) attr:class="w-4 h-4" /> }
     };
     let text = move || {
         let time_info = time_info();

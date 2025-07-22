@@ -67,7 +67,7 @@ pub fn ProposalNotification(
                     on:click=dismiss
                     class="z-20 p-1 mx-2 text-white bg-gray-500 rounded transition-transform duration-300 transform hover:bg-gray-400 active:scale-95"
                 >
-                    <Icon icon=icondata::IoCloseSharp attr:class="w-4 h-4" />
+                    <Icon icon=icondata_io::IoCloseSharp attr:class="w-4 h-4" />
                 </button>
             </div>
             <div class="flex gap-2 justify-center">
@@ -139,7 +139,7 @@ pub fn AcceptanceNotification(
                         title="Dismiss"
                         class="z-50 p-1 mx-2 text-white bg-gray-500 rounded transition-transform duration-300 transform hover:bg-gray-400 active:scale-95"
                     >
-                        <Icon icon=icondata::IoCloseSharp attr:class="w-4 h-4" />
+                        <Icon icon=icondata_io::IoCloseSharp attr:class="w-4 h-4" />
                     </button>
                 </ActionForm>
             </div>

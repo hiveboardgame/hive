@@ -16,13 +16,13 @@ path = "src/main.rs" # replace bin.rs with name of your file
 lazy_static = "*"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
-serde_with = "3.9.0"
+serde_with = "3.14.0"
 thiserror = "*"
-bitfield-struct = "0.8"
-itertools = "0.13"
-clap = { version = "4.5.30", features = ["derive"] }
+bitfield-struct = "0.11"
+itertools = "0.14"
+clap = { version = "4.5.41", features = ["derive"] }
 anyhow.workspace = true
-pest = "2.7.15"
-pest_derive = "2.7.15"
-resvg = "0.44"
-usvg = "0.44"
+pest = "2.8.1"
+pest_derive = "2.8.1"
+resvg = "0.45"
+usvg = "0.45"

@@ -90,7 +90,7 @@ pub fn NotificationDropdown() -> impl IntoView {
             hamburger_show=hamburger_show
             button_style="h-full p-2 transform transition-transform duration-300 active:scale-95 whitespace-nowrap block"
             dropdown_style="mr-1 items-center xs:mt-0 mt-1 flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md p-2 right-0"
-            content=view! { <Icon icon=icondata::IoNotifications attr:class=icon_style /> }
+            content=view! { <Icon icon=icondata_io::IoNotifications attr:class=icon_style /> }
             id="Notifications"
         >
             <Show

@@ -35,7 +35,7 @@ pub fn TimeSelect(
                 )
             }
         };
-        view! { <Icon width="50" height="50" attr:class="p-2" icon=icon_for_speed(&speed) /> }
+        view! { <Icon width="50" height="50" attr:class="p-2" icon=icon_for_speed(speed) /> }
     };
     let radio_style = |active| {
         format!("flex items-center p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded {}", 

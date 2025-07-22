@@ -24,17 +24,19 @@ pub fn Target(
     let onclick = move |_| {
         if game_state.is_move_allowed(analysis.is_some()) {
             game_state.set_target(position);
-            if current_confirm() == MoveConfirm::Single {
+            if current_confirm.get_untracked() == MoveConfirm::Single {
                 game_state.move_active(analysis.clone(), api());
             }
         }
     };
 
+    let href = || "/assets/tiles/common/all.svg#target";
+
     view! {
         <g on:click=onclick class=extend_tw_classes>
             <g id="Target" transform=transform>
                 <use_
-                    href="/assets/tiles/common/all.svg#target"
+                    href=href
                     transform="scale(0.56, 0.56) translate(-46.608, -52.083)"
                 ></use_>
             </g>
