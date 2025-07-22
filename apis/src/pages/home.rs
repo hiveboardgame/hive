@@ -1,8 +1,9 @@
 use crate::components::atoms::logo::Logo;
-use crate::components::atoms::play_bot::PlayBot;
 use crate::components::molecules::online_users::OnlineUsers;
 use crate::components::molecules::rl_banner::RlBanner;
-use crate::components::organisms::{challenges::Challenges, quickplay::QuickPlay, tv::Tv};
+use crate::components::organisms::{
+    calendar::Calendar, challenges::Challenges, quickplay::QuickPlay, tv::Tv,
+};
 use crate::functions::home_banner;
 use leptos::prelude::*;
 use leptos_use::use_media_query;
@@ -27,26 +28,39 @@ pub fn Home() -> impl IntoView {
                         })
                 }}
             </Transition>
-            <div class="container flex flex-col justify-center items-center lg:flex-row lg:items-start">
-                <div class="flex justify-center items-center">
-                    <Logo tw_class="flex lg:w-72 w-48" />
-                </div>
-                <div class="flex flex-col justify-center items-center w-full md:flex-row">
-                    <div class="flex flex-col items-center basis-2/3">
-                        <div class="flex flex-col justify-center items-center">
-                            <Challenges />
-                            <QuickPlay />
-                        </div>
-                        <PlayBot />
+            <Show when=in_column>
+                <div class="container flex flex-col justify-center items-center">
+                    <Logo tw_class="flex w-48" />
+                    <div class="flex flex-col items-center w-full">
+                        <QuickPlay />
+                        <Challenges />
+                    </div>
+                    <Tv />
+                    <OnlineUsers />
+                    <div class="mt-4 w-full max-w-md">
+                        <Calendar />
                     </div>
                 </div>
-                <Show when=in_column>
-                    <Tv />
-                </Show>
-                <OnlineUsers />
-            </div>
+            </Show>
             <Show when=move || !in_column()>
-                <Tv />
+                <div class="container grid grid-cols-[300px_1fr_300px] gap-6 items-start">
+                    <div class="flex flex-col items-center space-y-4">
+                        <Logo tw_class="flex w-72" />
+                        <div class="w-full max-w-md max-h-[50rem] overflow-y-auto">
+                            <Calendar />
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-center space-y-6">
+                        <QuickPlay />
+                        <Challenges />
+                        <Tv />
+                    </div>
+
+                    <div class="flex flex-col items-center">
+                        <OnlineUsers />
+                    </div>
+                </div>
             </Show>
         </div>
     }

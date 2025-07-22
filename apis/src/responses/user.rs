@@ -82,6 +82,16 @@ impl UserResponse {
         Self::from_model(&user, conn).await
     }
 
+    pub async fn from_uuids(ids: &[Uuid], conn: &mut DbConn<'_>) -> Result<HashMap<Uuid, Self>> {
+        let users = User::find_by_uuids(ids, conn).await?;
+        let mut result = HashMap::new();
+        for user in users {
+            let user_response = Self::from_model(&user, conn).await?;
+            result.insert(user.id, user_response);
+        }
+        Ok(result)
+    }
+
     pub async fn from_username(username: &str, conn: &mut DbConn<'_>) -> Result<Self> {
         let user = User::find_by_username(username, conn).await?;
         Self::from_model(&user, conn).await

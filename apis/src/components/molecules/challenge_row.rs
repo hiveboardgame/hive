@@ -122,7 +122,7 @@ pub fn ChallengeRow(
                     <Icon icon=icon_data().0 attr:class=icon_data().1 />
                 </div>
             </td>
-            <td class=format!("w-10 sm:w-36 {td_class}")>
+            <td class=format!("w-10 sm:w-24 {td_class}")>
                 <div class="flex justify-center items-center">
                     <div class="flex items-center">
                         <StatusIndicator username=username.clone() />
@@ -130,7 +130,7 @@ pub fn ChallengeRow(
                             username
                             patreon
                             bot
-                            extend_tw_classes="truncate max-w-[25px] xs:max-w-[75px] sm-max-w-[150px]"
+                            extend_tw_classes="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[140px] lg:max-w-[160px]"
                         />
                     </div>
                 </div>
@@ -149,7 +149,7 @@ pub fn ChallengeRow(
                 <div class="flex justify-center items-center">
                     <TimeRow
                         time_info
-                        extend_tw_classes="break-words max-w-[40px] sm:max-w-fit sm:whitespace-nowrap"
+                        extend_tw_classes="break-words text-xs sm:text-sm max-w-[40px] xs:max-w-[50px] sm:max-w-[60px] md:max-w-[80px] lg:max-w-[100px] whitespace-normal"
                     />
                 </div>
             </td>

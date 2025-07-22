@@ -3,10 +3,9 @@ use crate::providers::{challenge_params_cookie, ApiRequestsProvider, ChallengePa
 use crate::{
     common::ChallengeAction,
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
-    pages::challenge_create::ChallengeCreate,
+    pages::{challenge_bot::ChallengeBot, challenge_create::ChallengeCreate},
     providers::AuthContext,
 };
-use core::panic;
 use hive_lib::{ColorChoice, GameType};
 use leptos::{ev, html::Dialog, prelude::*};
 use leptos_icons::*;
@@ -77,6 +76,7 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
 pub fn QuickPlay() -> impl IntoView {
     let i18n = use_i18n();
     let dialog_el = NodeRef::<Dialog>::new();
+    let bot_dialog_el = NodeRef::<Dialog>::new();
     let auth_context = expect_context::<AuthContext>();
     let params = expect_context::<Store<ChallengeParams>>();
     let (_, set_cookie) = challenge_params_cookie();
@@ -88,10 +88,13 @@ pub fn QuickPlay() -> impl IntoView {
             <Modal dialog_el>
                 <ChallengeCreate />
             </Modal>
+            <Modal dialog_el=bot_dialog_el>
+                <ChallengeBot />
+            </Modal>
             <span class="flex justify-center mb-4 text-xl font-bold">
                 {t!(i18n, home.create_game)}
             </span>
-            <div class="grid grid-cols-2 gap-2 place-items-center w-full sm:gap-4 sm:grid-cols-3">
+            <div class="grid grid-cols-3 gap-2 sm:gap-4 w-full">
                 <GridButton time_control=Bullet1p2 />
                 <GridButton time_control=Blitz3p3 />
                 <GridButton time_control=Blitz5p4 />
@@ -112,6 +115,23 @@ pub fn QuickPlay() -> impl IntoView {
                 >
 
                     {t!(i18n, home.custom_game.button)}
+                </button>
+                <button
+                    class=format!("{} col-start-2", BUTTON_STYLE)
+                    title="Play vs bot"
+                    on:click=move |_| {
+                        if auth_context.user.with(|a| a.is_some()) {
+                            if let Some(dialog_el) = bot_dialog_el.get() {
+                                let _ = dialog_el.show_modal();
+                            }
+                        } else {
+                            let navigate = use_navigate();
+                            navigate("/login", Default::default());
+                        }
+                    }
+                >
+
+                    "Play bot"
                 </button>
             </div>
         </div>
