@@ -1,6 +1,7 @@
 pub mod analysis;
 pub mod background_color_toggle;
 pub mod board;
+pub mod calendar;
 pub mod challenges;
 pub mod chat;
 pub mod confirm_mode_toggle;

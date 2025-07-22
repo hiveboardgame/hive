@@ -23,7 +23,7 @@ pub fn ProposalNotification(
     let local_time = start_time.with_timezone(&Local);
     let notification_text = format!(
         "{proposer_username} proposed a game time: {}",
-        local_time.format("%Y-%m-%d %H:%M %Z")
+        local_time.format("%Y-%m-%d %H:%M UTC%Z")
     );
 
     let accept = move |_| {
@@ -102,7 +102,7 @@ pub fn AcceptanceNotification(
     let local_time = start_time.with_timezone(&Local);
     let notification_text = format!(
         "{accepter_username} accepted your proposed game time: {}",
-        local_time.format("%Y-%m-%d %H:%M %Z")
+        local_time.format("%Y-%m-%d %H:%M UTC%Z")
     );
 
     let mark_seen_action = ServerAction::<MarkScheduleSeen>::new();

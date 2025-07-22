@@ -6,7 +6,7 @@
 
   input,
   textarea {
-    @apply text-black dark:text-white bg-light dark:bg-gray-700;
+    @apply text-black dark:text-white bg-even-light dark:bg-gray-700;
   }
 
   a:not(.no-link-style) {

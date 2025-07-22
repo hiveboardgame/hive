@@ -28,7 +28,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                             let is_empty = move || users.with_value(|u| u.is_empty());
                             Either::Right(
                                 view! {
-                                    <div class="flex flex-col m-2 w-fit">
+                                    <div class="flex flex-col m-2 rounded-lg w-fit">
                                         <div class="flex gap-1 items-center">
                                             <Icon icon=icon_for_speed(&speed()) />
                                             {speed().to_string()}
@@ -40,7 +40,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                                 if !is_empty() { "hidden" } else { "flex" },
                                             )
                                         }>{move || if is_empty() { "No one yet" } else { "" }}</div>
-                                        <div>
+                                        <div class="rounded-lg overflow-hidden">
                                             <For
                                                 each=move || { users.get_value() }
 

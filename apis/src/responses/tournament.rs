@@ -77,6 +77,16 @@ impl TournamentAbstractResponse {
         Self::from_model(&tournament, conn).await
     }
 
+    pub async fn from_uuids(ids: &[Uuid], conn: &mut DbConn<'_>) -> Result<HashMap<Uuid, Self>> {
+        let tournaments = Tournament::find_by_uuids(ids, conn).await?;
+        let mut result = HashMap::new();
+        for tournament in tournaments {
+            let tournament_response = Self::from_model(&tournament, conn).await?;
+            result.insert(tournament.id, tournament_response);
+        }
+        Ok(result)
+    }
+
     pub async fn from_model(tournament: &Tournament, conn: &mut DbConn<'_>) -> Result<Self> {
         let player_list = tournament.players(conn).await?
         .iter()

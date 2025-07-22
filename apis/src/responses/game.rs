@@ -162,7 +162,7 @@ use hive_lib::{
     Color, GameStatus::Finished, Piece,
 };
 use shared_types::GamesQueryOptions;
-use std::str::FromStr;
+use std::{str::FromStr, collections::HashSet};
 
 impl GameResponse {
     pub async fn new_from_uuid(game_id: Uuid, conn: &mut DbConn<'_>) -> Result<Self> {
@@ -190,6 +190,49 @@ impl GameResponse {
         Ok(vec)
     }
 
+    pub async fn from_game_ids(game_ids: &[Uuid], conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
+        let games = Game::find_by_game_ids(game_ids, conn).await?;
+        let mut user_ids = HashSet::new();
+        let mut tournament_ids = HashSet::new();
+
+        for game in &games {
+            user_ids.insert(game.white_id);
+            user_ids.insert(game.black_id);
+            if let Some(tournament_id) = game.tournament_id {
+                tournament_ids.insert(tournament_id);
+            }
+        }
+
+        let user_ids_vec: Vec<Uuid> = user_ids.into_iter().collect();
+        let tournament_ids_vec: Vec<Uuid> = tournament_ids.into_iter().collect();
+
+        let users_map = UserResponse::from_uuids(&user_ids_vec, conn).await?;
+        let tournaments_map = if !tournament_ids_vec.is_empty() {
+            TournamentAbstractResponse::from_uuids(&tournament_ids_vec, conn).await?
+        } else {
+            HashMap::new()
+        };
+
+        let mut result = Vec::new();
+        for game in games {
+            let white_player = users_map.get(&game.white_id).ok_or_else(|| {
+                anyhow::anyhow!("White player not found for game {}", game.id)
+            })?;
+            let black_player = users_map.get(&game.black_id).ok_or_else(|| {
+                anyhow::anyhow!("Black player not found for game {}", game.id)
+            })?;
+
+            let tournament = game.tournament_id.and_then(|tid| tournaments_map.get(&tid));
+
+            let history = Box::new(History::new_from_str(&game.history)?);
+            let state = Box::new(State::new_from_history(&history)?);
+
+            result.push(Self::new_from_batch(&game, state, white_player.clone(), black_player.clone(), tournament.cloned()).await?);
+        }
+
+        Ok(result)
+    }
+
     async fn new_from(
         game: &Game,
         state: Box<State>,
@@ -197,6 +240,22 @@ impl GameResponse {
     ) -> Result<Self> {
         let white_player = UserResponse::from_uuid(&game.white_id, conn).await?;
         let black_player = UserResponse::from_uuid(&game.black_id, conn).await?;
+        let tournament = if let Some(tournament_id) = game.tournament_id {
+            Some(TournamentAbstractResponse::from_uuid(&tournament_id, conn).await?)
+        } else {
+            None
+        };
+
+        Self::new_from_batch(game, state, white_player, black_player, tournament).await
+    }
+
+    async fn new_from_batch(
+        game: &Game,
+        state: Box<State>,
+        white_player: UserResponse,
+        black_player: UserResponse,
+        tournament: Option<TournamentAbstractResponse>,
+    ) -> Result<Self> {
         let (white_rating, black_rating, white_rating_change, black_rating_change) = {
             if let Finished(_) = GameStatus::from_str(&game.game_status).expect("GameStatus parsed") {
                 (
@@ -216,12 +275,6 @@ impl GameResponse {
         };
         let white_time_left = game.white_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
         let black_time_left = game.black_time_left.map(|nanos| Duration::from_nanos(nanos as u64));
-        let mut tournament = None;
-         if game.tournament_id.is_some() {
-             if let Some(id) = game.tournament_id {
-                 tournament = Some(TournamentAbstractResponse::from_uuid(&id, conn).await?)
-             }
-         }
         Ok(Self {
             uuid: game.id,
             game_id: GameId(game.nanoid.clone()),
