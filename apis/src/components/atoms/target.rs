@@ -35,10 +35,7 @@ pub fn Target(
     view! {
         <g on:click=onclick class=extend_tw_classes>
             <g id="Target" transform=transform>
-                <use_
-                    href=href
-                    transform="scale(0.56, 0.56) translate(-46.608, -52.083)"
-                ></use_>
+                <use_ href=href transform="scale(0.56, 0.56) translate(-46.608, -52.083)"></use_>
             </g>
         </g>
     }

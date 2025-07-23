@@ -319,7 +319,10 @@ mod tests {
             .expect("Authorization header missing");
 
         let expected_value = format!("Bearer {expected_key}");
-        assert_eq!(auth_header.to_str().expect("Valid header string"), expected_value);
+        assert_eq!(
+            auth_header.to_str().expect("Valid header string"),
+            expected_value
+        );
     }
 
     #[tokio::test]

@@ -171,10 +171,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                            (else a toggle would not be needed)
                            and this must not be the "main variation" (first child)
                         */
-                        view! {
-                            <CollapsibleMove current_path node inner=content />
-                        }
-                        .into_any()
+                        view! { <CollapsibleMove current_path node inner=content /> }.into_any()
                     }
 
                     // Default case: regular node

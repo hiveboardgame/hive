@@ -16,12 +16,18 @@ pub fn CreateChallengeButton(
                 if cfg.prefers_dark {
                     (icondata_bs::BsHexagonFill, "w-full h-full fill-white")
                 } else {
-                    (icondata_bs::BsHexagon, "w-full h-full stroke-1 stroke-black")
+                    (
+                        icondata_bs::BsHexagon,
+                        "w-full h-full stroke-1 stroke-black",
+                    )
                 }
             }
             ColorChoice::Black => {
                 if cfg.prefers_dark {
-                    (icondata_bs::BsHexagon, "w-full h-full stroke-1 stroke-white")
+                    (
+                        icondata_bs::BsHexagon,
+                        "w-full h-full stroke-1 stroke-white",
+                    )
                 } else {
                     (icondata_bs::BsHexagonFill, "w-full h-full fill-black")
                 }

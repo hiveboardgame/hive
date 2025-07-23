@@ -206,7 +206,9 @@ pub fn PieceWithOnClick(
         let is_selectable_piece = config.get_untracked().allow_preselect
             && match piece_type {
                 PieceType::Board => true,
-                PieceType::Inactive | PieceType::Reserve => !piece_value.is_color(current_turn_color),
+                PieceType::Inactive | PieceType::Reserve => {
+                    !piece_value.is_color(current_turn_color)
+                }
                 _ => false,
             };
         let is_current_player = game_state.signal.with_untracked(|gs| {

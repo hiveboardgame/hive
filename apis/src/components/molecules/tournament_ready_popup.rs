@@ -81,16 +81,18 @@ pub fn TournamentReadyPopup(
     });
 
     let accept_game = move |_| {
-        if let Some(game_id) = current_popup_candidate.with(|opt| {
-            opt.as_ref().map(|(game_id, opponent_id, _)| {
-                api.get().tournament_game_start(game_id.clone());
-                closed_popups.update(|set| {
-                    set.insert((game_id.clone(), *opponent_id));
-                });
-                game_id.clone()
+        if let Some(game_id) = current_popup_candidate
+            .with(|opt| {
+                opt.as_ref().map(|(game_id, opponent_id, _)| {
+                    api.get().tournament_game_start(game_id.clone());
+                    closed_popups.update(|set| {
+                        set.insert((game_id.clone(), *opponent_id));
+                    });
+                    game_id.clone()
+                })
             })
-        })
-        .filter(|_| !is_on_game_page.get_untracked()) {
+            .filter(|_| !is_on_game_page.get_untracked())
+        {
             let navigate = use_navigate();
             navigate(&format!("/game/{}", game_id.0), Default::default());
         }

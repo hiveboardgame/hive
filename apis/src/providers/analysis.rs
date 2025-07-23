@@ -3,7 +3,6 @@ use crate::responses::GameResponse;
 use bimap::BiMap;
 use hive_lib::{GameType, History, State};
 use leptos::prelude::*;
-use send_wrapper::SendWrapper;
 use serde::{Deserialize, Serialize};
 use std::vec;
 use tree_ds::prelude::{Node, Tree};
@@ -16,7 +15,7 @@ pub struct TreeNode {
     pub position: String,
 }
 #[derive(Clone)]
-pub struct AnalysisSignal(pub RwSignal<SendWrapper<AnalysisTree>>);
+pub struct AnalysisSignal(pub RwSignal<AnalysisTree>);
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct AnalysisTree {
@@ -138,7 +137,8 @@ impl AnalysisTree {
             .rev()
             .chain(vec![node_id])
             .filter_map(|a| {
-                self.tree.get_node_by_id(&a)
+                self.tree
+                    .get_node_by_id(&a)
                     .and_then(|node| node.get_value().ok())
                     .flatten()
                     .map(|tree_node| (tree_node.piece, tree_node.position))
@@ -182,12 +182,12 @@ impl AnalysisTree {
             .hashes
             .get_by_left(&hash)
             .and_then(|node_id| self.tree.get_node_by_id(node_id))
-            .and_then(|node| {
-                match (node.get_value().ok().flatten(), node.get_node_id().ok()) {
+            .and_then(
+                |node| match (node.get_value().ok().flatten(), node.get_node_id().ok()) {
                     (Some(v), Some(node_id)) if v.turn == turn => self.update_node(node_id, None),
                     _ => None,
-                }
-            });
+                },
+            );
         if valid_trasposition.is_some() {
             return;
         }
@@ -203,7 +203,10 @@ impl AnalysisTree {
                 position,
             }),
         );
-        let parent_id = self.current_node.as_ref().and_then(|n| n.get_node_id().ok());
+        let parent_id = self
+            .current_node
+            .as_ref()
+            .and_then(|n| n.get_node_id().ok());
 
         if let Some(parent_id) = parent_id {
             let _ = self.tree.add_node(new_node, Some(&parent_id));
