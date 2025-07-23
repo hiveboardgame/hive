@@ -87,7 +87,7 @@ impl BotChallengeRequest {
                 }
                 (
                     TimeMode::RealTime,
-                    Some(*base as i32),
+                    Some((*base * 60) as i32),
                     Some(*increment as i32),
                 )
             }
