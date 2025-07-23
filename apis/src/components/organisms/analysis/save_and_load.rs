@@ -64,7 +64,7 @@ pub fn LoadTree() -> impl IntoView {
             .map(|state| {
                 game_state.signal.update(|gs| gs.state = state.clone());
                 let tree = AnalysisTree::from_loaded_state(game_state, &state);
-                analysis.set(LocalStorage::wrap(tree));
+                analysis.set(tree);
             })
     };
     let from_json = move |string: JsValue| {
@@ -72,7 +72,7 @@ pub fn LoadTree() -> impl IntoView {
             .as_string()
             .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
             .map(|tree| {
-                analysis.set(LocalStorage::wrap(tree.clone()));
+                analysis.set(tree.clone());
                 if let Some(node) = tree.current_node {
                     if let Ok(node_id) = node.get_node_id() {
                         analysis.update(|a| {

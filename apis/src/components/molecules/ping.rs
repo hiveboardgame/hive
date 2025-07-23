@@ -24,7 +24,10 @@ pub fn Ping() -> impl IntoView {
             match websocket.ready_state.get() {
                 ConnectionReadyState::Open => Either::Right(view! {
                     <div class="flex items-center">
-                        <Icon attr:class="fill-grasshopper-green" icon=icondata_bi::BiSignal5Regular />
+                        <Icon
+                            attr:class="fill-grasshopper-green"
+                            icon=icondata_bi::BiSignal5Regular
+                        />
                         {move || { format!("{:.0}ms", ping.ping.get()) }}
                     </div>
                 }),

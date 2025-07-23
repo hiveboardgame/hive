@@ -91,7 +91,10 @@ pub fn UpcomingGameRow(
                                 view! { "Join Game" }.into_any()
                             } else {
                                 view! {
-                                    <Icon icon=icondata_ai::AiEyeOutlined attr:class="mr-1 w-4 h-4" />
+                                    <Icon
+                                        icon=icondata_ai::AiEyeOutlined
+                                        attr:class="mr-1 w-4 h-4"
+                                    />
                                     "Watch"
                                 }
                                     .into_any()

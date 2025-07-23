@@ -175,7 +175,9 @@ pub fn ConfirmButton(
     }
 }
 
-fn get_icon_and_title(game_control: GameControl) -> (&'static icondata_core::IconData, &'static str) {
+fn get_icon_and_title(
+    game_control: GameControl,
+) -> (&'static icondata_core::IconData, &'static str) {
     match game_control {
         GameControl::Abort(_) => (icondata_ai::AiStopOutlined, "Abort"),
         GameControl::DrawAccept(_) => (icondata_fa::FaHandshakeSimpleSolid, "Accept Draw"),
