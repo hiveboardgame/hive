@@ -14,8 +14,18 @@ pub fn UpcomingGameRow(
 ) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let (start_time, game) = game_data;
-    let local_time = start_time.with_timezone(&Local);
-    let formatted_time = local_time.format("%Y-%m-%d %H:%M UTC%z").to_string();
+    let local_time = RwSignal::new(None::<DateTime<Local>>);
+    let formatted_time = Signal::derive(move || {
+        local_time
+            .get()
+            .map(|t| t.format("%Y-%m-%d %H:%M UTC%z").to_string())
+    });
+    Effect::watch(
+        move || (),
+        move |_, _, _| local_time.set(Some(start_time.with_timezone(&Local))),
+        true,
+    );
+
     let white_username = StoredValue::new(game.white_player.username.clone());
     let black_username = StoredValue::new(game.black_player.username.clone());
     let tournament_name = StoredValue::new(
@@ -37,9 +47,9 @@ pub fn UpcomingGameRow(
     };
 
     let show_button = move || {
-        let now = current_time.get();
-        let time_until_start = local_time.signed_duration_since(now);
-        time_until_start <= Duration::minutes(10)
+        local_time.get().is_some_and(|start| {
+            start.signed_duration_since(current_time.get()) <= Duration::minutes(10)
+        })
     };
 
     let user_is_player = move || {
