@@ -4,6 +4,7 @@ use crate::{
     providers::{game_state::GameStateSignal, games::GamesSignal, UpdateNotifier},
     responses::GameResponse,
 };
+use shared_types::ReadyUser;
 use hive_lib::{GameStatus, History, State};
 use leptos::{prelude::*, task::spawn_local};
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
@@ -57,11 +58,17 @@ fn handle_reaction(gar: GameActionResponse) {
             update_notifier.game_response.set(Some(gar.clone()));
         }
         GameReaction::Ready => {
+            let opponent_id = if gar.game.white_player.uid == gar.user_id {
+                gar.game.black_player.uid
+            } else {
+                gar.game.white_player.uid
+            };
             update_notifier.tournament_ready.update(|ready_map| {
-                ready_map
-                    .entry(gar.game_id.clone())
-                    .or_default()
-                    .push((gar.user_id, gar.username.clone()));
+                ready_map.entry(gar.game_id.clone()).or_default().push(ReadyUser {
+                    proposer_id: gar.user_id,
+                    proposer_username: gar.username.clone(),
+                    opponent_id,
+                });
                 ready_map.retain(|_, users| !users.is_empty());
             });
 
@@ -72,7 +79,7 @@ fn handle_reaction(gar: GameActionResponse) {
                     move |_: ()| {
                         update_notifier.tournament_ready.update(|ready_map| {
                             if let Some(users) = ready_map.get_mut(&game_id) {
-                                users.retain(|(id, _)| *id != user_id);
+                                users.retain(|ready_user| ready_user.proposer_id != user_id);
                                 if users.is_empty() {
                                     ready_map.remove(&game_id);
                                 }
