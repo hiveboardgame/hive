@@ -5,13 +5,13 @@ use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::{
     use_interval_fn_with_options, use_timeout_fn, UseIntervalFnOptions, UseTimeoutFnReturn,
 };
-use shared_types::GameId;
+use shared_types::{GameId, ReadyUser};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 #[component]
 pub fn TournamentReadyPopup(
-    ready_signal: RwSignal<HashMap<GameId, Vec<(Uuid, String)>>>,
+    ready_signal: RwSignal<HashMap<GameId, Vec<ReadyUser>>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -21,28 +21,27 @@ pub fn TournamentReadyPopup(
     let closed_popups = RwSignal::new(HashSet::<(GameId, Uuid)>::new());
 
     let current_popup_candidate = Memo::new(move |_| {
+        let current_user_id = auth_context.user.with(|user| user.as_ref().map(|u| u.id))?;
+
         ready_signal.with(|ready_map| {
-            auth_context.user.with(|a| {
-                let current_user_id = a.as_ref().map(|u| u.id);
-                closed_popups.with(|closed_set| {
-                    if let Some(user_id) = current_user_id {
-                        for (ready_game_id, ready_users) in ready_map.iter() {
-                            for (ready_user_id, ready_username) in ready_users {
-                                if *ready_user_id != user_id {
-                                    let candidate_key = (ready_game_id.clone(), *ready_user_id);
-                                    if !closed_set.contains(&candidate_key) {
-                                        return Some((
-                                            ready_game_id.clone(),
-                                            *ready_user_id,
-                                            ready_username.clone(),
-                                        ));
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    None
-                })
+            if ready_map.is_empty() {
+                return None;
+            }
+
+            closed_popups.with(|closed_set| {
+                ready_map
+                    .iter()
+                    .flat_map(|(game_id, users)| {
+                        users.iter().map(move |ready_user| {
+                            (game_id, ready_user)
+                        })
+                    })
+                    .find_map(|(game_id, ready_user)| {
+                        (ready_user.proposer_id != current_user_id
+                            && current_user_id == ready_user.opponent_id
+                            && !closed_set.contains(&(game_id.clone(), ready_user.proposer_id)))
+                        .then(|| (game_id.clone(), ready_user.proposer_id, ready_user.proposer_username.clone()))
+                    })
             })
         })
     });
@@ -53,7 +52,7 @@ pub fn TournamentReadyPopup(
                 closed_set.retain(|(game_id, user_id)| {
                     ready_map
                         .get(game_id)
-                        .map(|users| users.iter().any(|(id, _)| id == user_id))
+                        .map(|users| users.iter().any(|ready_user| ready_user.proposer_id == *user_id))
                         .unwrap_or(false)
                 });
             });
