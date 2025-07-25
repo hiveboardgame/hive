@@ -6,7 +6,7 @@ use crate::providers::game_state::GameStateSignal;
 use crate::providers::ApiRequestsProvider;
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::GameId;
+use shared_types::{GameId, ReadyUser};
 use uuid::Uuid;
 
 #[component]
@@ -14,7 +14,7 @@ pub fn Unstarted(
     game_id: Memo<GameId>,
     white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)>,
     user_is_player: Signal<bool>,
-    ready: RwSignal<HashMap<GameId, Vec<(Uuid, String)>>>,
+    ready: RwSignal<HashMap<GameId, Vec<ReadyUser>>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -37,7 +37,7 @@ pub fn Unstarted(
         let is_ready = if let Some(user_id) = id {
             ready_map
                 .get(&current_game_id)
-                .map(|users| users.iter().any(|(id, _)| *id == user_id))
+                .map(|users| users.iter().any(|ready_user| ready_user.proposer_id == user_id))
                 .unwrap_or(false)
         } else {
             false

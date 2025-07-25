@@ -1,7 +1,6 @@
 use leptos::prelude::{provide_context, RwSignal};
-use shared_types::{GameId, TournamentId};
+use shared_types::{GameId, ReadyUser, TournamentId};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 use crate::{common::GameActionResponse, responses::HeartbeatResponse};
 
@@ -9,7 +8,7 @@ use crate::{common::GameActionResponse, responses::HeartbeatResponse};
 pub struct UpdateNotifier {
     pub game_response: RwSignal<Option<GameActionResponse>>,
     pub heartbeat: RwSignal<HeartbeatResponse>,
-    pub tournament_ready: RwSignal<HashMap<GameId, Vec<(Uuid, String)>>>,
+    pub tournament_ready: RwSignal<HashMap<GameId, Vec<ReadyUser>>>,
     pub tournament_update: RwSignal<TournamentId>,
 }
 
