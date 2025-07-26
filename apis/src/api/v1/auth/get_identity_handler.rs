@@ -4,11 +4,12 @@ use actix_web::HttpResponse;
 use serde_json::json;
 
 #[get("/api/v1/auth/id")]
-pub async fn get_identity(Auth(email): Auth) -> HttpResponse {
+pub async fn get_identity(Auth(bot): Auth) -> HttpResponse {
     HttpResponse::Ok().json(json!({
       "success": true,
       "data": {
-        "bot": email,
+        "bot": bot.email,
+        "user_id": bot.id
       }
     }))
 }
