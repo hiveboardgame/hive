@@ -24,15 +24,16 @@ pub enum GameSelector {
 #[get("/api/v1/bot/game/{nanoid}")]
 pub async fn api_get_game(
     nanoid: Path<GameId>,
-    Auth(email): Auth,
+    Auth(bot): Auth,
     pool: Data<DbPool>,
 ) -> HttpResponse {
     let nanoid = nanoid.into_inner();
-    match get_games(&email, GameSelector::Specific(nanoid), pool).await {
+    match get_games(bot.clone(), GameSelector::Specific(nanoid), pool).await {
         Ok(games) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
-            "bot": email,
+            "bot": bot.email,
+            "bot_username": bot.username,
             "games": games,
           }
         })),
@@ -46,12 +47,13 @@ pub async fn api_get_game(
 }
 
 #[get("/api/v1/bot/games/ongoing")]
-pub async fn api_get_ongoing_games(Auth(email): Auth, pool: Data<DbPool>) -> HttpResponse {
-    match get_games(&email, GameSelector::Ongoing, pool).await {
+pub async fn api_get_ongoing_games(Auth(bot): Auth, pool: Data<DbPool>) -> HttpResponse {
+    match get_games(bot.clone(), GameSelector::Ongoing, pool).await {
         Ok(games) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
-            "bot": email,
+            "bot": bot.email,
+            "bot_username": bot.username,
             "games": games,
           }
         })),
@@ -65,12 +67,13 @@ pub async fn api_get_ongoing_games(Auth(email): Auth, pool: Data<DbPool>) -> Htt
 }
 
 #[get("/api/v1/bot/games/pending")]
-pub async fn api_get_pending_games(Auth(email): Auth, pool: Data<DbPool>) -> HttpResponse {
-    match get_games(&email, GameSelector::Pending, pool).await {
+pub async fn api_get_pending_games(Auth(bot): Auth, pool: Data<DbPool>) -> HttpResponse {
+    match get_games(bot.clone(), GameSelector::Pending, pool).await {
         Ok(games) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
-            "bot": email,
+            "bot": bot.email,
+            "bot_username": bot.username,
             "games": games,
           }
         })),
@@ -83,12 +86,11 @@ pub async fn api_get_pending_games(Auth(email): Auth, pool: Data<DbPool>) -> Htt
     }
 }
 
-async fn get_games(email: &str, selector: GameSelector, pool: Data<DbPool>) -> Result<Vec<Game>> {
+async fn get_games(bot: User, selector: GameSelector, pool: Data<DbPool>) -> Result<Vec<Game>> {
     let mut conn = get_conn(&pool).await?;
-    let user = User::find_by_email(email, &mut conn).await?;
     Ok(match selector {
-        GameSelector::Ongoing => user.get_ongoing_games(&mut conn).await?,
+        GameSelector::Ongoing => bot.get_ongoing_games(&mut conn).await?,
         GameSelector::Specific(id) => [Game::find_by_game_id(&id, &mut conn).await?].to_vec(),
-        GameSelector::Pending => user.get_games_with_notifications(&mut conn).await?,
+        GameSelector::Pending => bot.get_games_with_notifications(&mut conn).await?,
     })
 }

@@ -22,6 +22,7 @@ use shared_types::{
     ChallengeDetails, ChallengeId, ChallengeVisibility, CorrespondenceMode, TimeMode,
 };
 use std::str::FromStr;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum BotTimeControl {
@@ -126,12 +127,13 @@ impl BotChallengeRequest {
 }
 
 #[get("/api/v1/bot/challenges/")]
-pub async fn api_get_challenges(Auth(email): Auth, pool: Data<DbPool>) -> HttpResponse {
-    match get_challenges(&email, pool).await {
+pub async fn api_get_challenges(Auth(bot): Auth, pool: Data<DbPool>) -> HttpResponse {
+    match get_challenges(bot.id, pool).await {
         Ok(challenges) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
-            "bot": email,
+            "bot": bot.email,
+            "bot_username": bot.username,
             "challenges": challenges,
           }
         })),
@@ -147,16 +149,17 @@ pub async fn api_get_challenges(Auth(email): Auth, pool: Data<DbPool>) -> HttpRe
 #[get("/api/v1/bot/challenge/accept/{nanoid}")]
 pub async fn api_accept_challenge(
     nanoid: Path<ChallengeId>,
-    Auth(email): Auth,
+    Auth(bot): Auth,
     pool: Data<DbPool>,
     ws_server: Data<Addr<WsServer>>,
 ) -> HttpResponse {
     let nanoid = nanoid.into_inner();
-    match accept_challenge(nanoid, &email, pool, ws_server).await {
+    match accept_challenge(nanoid, bot.clone(), pool, ws_server).await {
         Ok(game) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
-            "bot": email,
+            "bot": bot.email,
+            "bot_username": bot.username,
             "game": game,
           }
         })),
@@ -172,7 +175,7 @@ pub async fn api_accept_challenge(
 #[post("/api/v1/bot/challenges/")]
 pub async fn api_create_challenge(
     Json(req): Json<BotChallengeRequest>,
-    Auth(email): Auth,
+    Auth(bot): Auth,
     pool: Data<DbPool>,
     ws_server: Data<Addr<WsServer>>,
 ) -> HttpResponse {
@@ -188,11 +191,12 @@ pub async fn api_create_challenge(
         }
     };
 
-    match create_challenge(challenge_details, &email, pool, ws_server).await {
+    match create_challenge(challenge_details, bot.id, pool, ws_server).await {
         Ok(challenge) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
-            "bot": email,
+            "bot": bot.email,
+            "bot_username": bot.username,
             "challenge": challenge,
           }
         })),
@@ -207,14 +211,12 @@ pub async fn api_create_challenge(
 
 async fn create_challenge(
     req: ChallengeDetails,
-    email: &str,
+    bot_id: Uuid,
     pool: Data<DbPool>,
     ws_server: Data<Addr<WsServer>>,
 ) -> Result<ChallengeResponse> {
     let mut conn = get_conn(&pool).await?;
-    let bot = User::find_by_email(email, &mut conn).await?;
 
-    // Handle opponent lookup for direct challenges (validation already done)
     let opponent_id = match (&req.visibility, &req.opponent) {
         (ChallengeVisibility::Direct, Some(username)) => {
             Some(User::find_by_username(username, &mut conn).await?.id)
@@ -222,12 +224,10 @@ async fn create_challenge(
         _ => None,
     };
 
-    // Create the challenge
-    let new_challenge = NewChallenge::new(bot.id, opponent_id, &req, &mut conn).await?;
+    let new_challenge = NewChallenge::new(bot_id, opponent_id, &req, &mut conn).await?;
     let challenge = Challenge::create(&new_challenge, &mut conn).await?;
     let challenge_response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
 
-    // Send websocket messages
     send_challenge_creation_message(ws_server, &challenge_response, &req.visibility, opponent_id)
         .await?;
 
@@ -236,12 +236,11 @@ async fn create_challenge(
 
 async fn accept_challenge(
     id: ChallengeId,
-    email: &str,
+    bot: User,
     pool: Data<DbPool>,
     ws_server: Data<Addr<WsServer>>,
 ) -> Result<GameResponse> {
     let mut conn = get_conn(&pool).await?;
-    let bot = User::find_by_email(email, &mut conn).await?;
     let challenge = Challenge::find_by_challenge_id(&id, &mut conn).await?;
     let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
         "black" => (bot.id, challenge.challenger_id),
@@ -281,11 +280,15 @@ async fn accept_challenge(
     Ok(response)
 }
 
-async fn get_challenges(email: &str, pool: Data<DbPool>) -> Result<Vec<ChallengeResponse>> {
+async fn get_challenges(user_id: Uuid, pool: Data<DbPool>) -> Result<Vec<ChallengeResponse>> {
     let mut responses = Vec::new();
     let mut conn = get_conn(&pool).await?;
-    let user = User::find_by_email(email, &mut conn).await?;
-    let challenges = Challenge::direct_challenges(user.id, &mut conn).await?;
+    let challenges = Challenge::direct_challenges(user_id, &mut conn).await?;
+    let own = Challenge::get_own(user_id, &mut conn).await?;
+    for challenge in own {
+        let response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
+        responses.push(response);
+    }
     for challenge in challenges {
         let response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
         responses.push(response);
