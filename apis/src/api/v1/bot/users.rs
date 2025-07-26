@@ -11,13 +11,22 @@ use serde_json::json;
 use uuid::Uuid;
 
 #[get("/api/v1/bot/user/{id}")]
-pub async fn api_get_user(id: Path<Uuid>, Auth(email): Auth, pool: Data<DbPool>) -> HttpResponse {
+pub async fn api_get_user(id: Path<Uuid>, Auth(bot): Auth, pool: Data<DbPool>) -> HttpResponse {
     let id = id.into_inner();
+    if id == bot.id {
+        return HttpResponse::Ok().json(json!({
+          "success": true,
+          "data": {
+            "bot": bot.email,
+            "user": bot,
+          }
+        }));
+    }
     match get_user(id, pool).await {
         Ok(user) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
-            "bot": email,
+            "bot": bot.email,
             "user": user,
           }
         })),

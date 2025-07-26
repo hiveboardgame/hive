@@ -27,15 +27,16 @@ struct PlayRequest {
 #[post("/api/v1/bot/games/play")]
 pub async fn api_play(
     Json(req): Json<PlayRequest>,
-    Auth(email): Auth,
+    Auth(bot): Auth,
     pool: Data<DbPool>,
     ws_server: Data<Addr<WsServer>>,
 ) -> HttpResponse {
-    match play_move(req, &email, pool, ws_server).await {
+    match play_move(req, bot.clone(), pool, ws_server).await {
         Ok((game, _turn)) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
-            "bot": email,
+            "bot": bot.email,
+            "bot_username": bot.username,
             "history": game.history,
           }
         })),
@@ -50,7 +51,7 @@ pub async fn api_play(
 
 async fn play_move(
     play: PlayRequest,
-    email: &str,
+    bot: User,
     pool: Data<DbPool>,
     ws_server: Data<Addr<WsServer>>,
 ) -> Result<(Game, Turn)> {
@@ -60,7 +61,6 @@ async fn play_move(
     if game.finished {
         return Err(anyhow!("Game is finished"));
     }
-    let bot = User::find_by_email(email, &mut conn).await?;
     if game.current_player_id != bot.id {
         return Err(anyhow!("Not your turn"));
     }
