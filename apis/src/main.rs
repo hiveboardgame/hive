@@ -71,6 +71,11 @@ async fn main() -> std::io::Result<()> {
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
 
+    // Run game statistics collection once at startup
+    if let Err(e) = jobs::game_stats(pool.clone()).await {
+        eprintln!("Failed to run game statistics job: {}", e);
+    }
+
     println!("listening on http://{}", &addr);
 
     HttpServer::new(move || {
