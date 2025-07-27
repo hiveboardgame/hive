@@ -1,6 +1,6 @@
 use crate::common::{markdown_to_html, ScheduleAction, TournamentAction};
 use crate::components::{
-    atoms::progress_bar::ProgressBar,
+    atoms::{progress_bar::ProgressBar, select_options::SelectOption},
     molecules::{
         game_previews::GamePreviews, my_schedules::MySchedules, time_row::TimeRow,
         unplayed_game_row::UnplayedGameRow, user_row::UserRow,
@@ -8,7 +8,7 @@ use crate::components::{
     organisms::{
         chat::ChatWindow, standings::Standings, tournament_admin::TournamentAdminControls,
     },
-    update_from_event::update_from_input,
+    update_from_event::{update_from_input, update_from_input_parsed},
 };
 use crate::functions::tournaments::{get_complete, UpdateDescription};
 use crate::providers::AuthContext;
@@ -20,7 +20,7 @@ use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::core::ConnectionReadyState;
 use shared_types::{
-    Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentId,
+    Conclusion, GameSpeed, PrettyString, ScoringMode, TimeInfo, TournamentGameResult, TournamentId,
     TournamentStatus,
 };
 use std::collections::HashMap;
@@ -28,6 +28,61 @@ use std::collections::HashMap;
 const DETAILS_STYLE: &str = "m-2 min-w-[320px]";
 const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 pub const INFO_STYLE: &str = "m-2 h-6 text-lg font-bold sm:place-self-center";
+
+#[component]
+fn ScoringModeControls(
+    tournament: StoredValue<TournamentResponse>,
+    user_is_organizer: bool,
+) -> impl IntoView {
+    let api = expect_context::<ApiRequestsProvider>().0;
+    let current_scoring = move || tournament.with_value(|t| t.scoring.clone());
+    let new_scoring = RwSignal::new(current_scoring());
+
+    // Update the signal when tournament data changes
+    Effect::new(move |_| {
+        new_scoring.set(current_scoring());
+    });
+
+    let update_scoring = move |_| {
+        if user_is_organizer && new_scoring.get() != current_scoring() {
+            let tournament_id = tournament.with_value(|t| t.tournament_id.clone());
+            let api = api.get();
+            let action = TournamentAction::UpdateScoringMode(tournament_id, new_scoring.get());
+            api.tournament(action);
+        }
+    };
+
+    let scoring_changed = move || new_scoring.get() != current_scoring();
+
+    view! {
+        <div class="flex items-center gap-2">
+            <select
+                class="px-2 py-1 text-sm border rounded bg-odd-light dark:bg-gray-700"
+                name="Scoring Mode"
+                on:change=update_from_input_parsed(new_scoring)
+            >
+                <SelectOption
+                    value=new_scoring
+                    is="Game"
+                    text=ScoringMode::Game.pretty_string()
+                />
+                <SelectOption
+                    value=new_scoring
+                    is="Match"
+                    text=ScoringMode::Match.pretty_string()
+                />
+            </select>
+            <Show when=move || scoring_changed()>
+                <button
+                    class="px-2 py-1 text-xs font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                    on:click=update_scoring
+                >
+                    "Update"
+                </button>
+            </Show>
+        </div>
+    }
+}
 
 #[component]
 pub fn Tournament() -> impl IntoView {
@@ -381,6 +436,23 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     /
                     {tournament.with_value(|t| t.seats)}
                 </div>
+                <div class="flex flex-col gap-2 m-2">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold">"Scoring Mode: "</span>
+                        <Show 
+                            when=move || user_is_organizer_or_admin()
+                            fallback=move || view! {
+                                <span>{tournament.with_value(|t| t.scoring.pretty_string())}</span>
+                            }
+                        >
+                            <ScoringModeControls tournament user_is_organizer=user_is_organizer_or_admin() />
+                        </Show>
+                    </div>
+                    <div class="text-xs text-gray-600 dark:text-gray-400">
+                        <p><strong>"Game Scoring:"</strong>" Each individual game counts (Win=1pt, Draw=0.5pt)"</p>
+                        <p><strong>"Match Scoring:"</strong>" Players' games are grouped into matches. Winner of each match gets 1pt, tied matches give 0.5pt each"</p>
+                    </div>
+                </div>
                 <Show when=move || not_started>
                     <div class="m-2">
                         <span class="font-bold">"Minimum players: "</span>
@@ -463,6 +535,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             <Show when=move || !not_started>
                 <Standings tournament=Signal::derive(move || tournament.get_value()) />
             </Show>
+
         </div>
         <div class="flex flex-col flex-wrap gap-1 justify-center mx-auto w-full sm:flex-row">
             <MySchedules games_hashmap=Memo::new(move |_| games_hashmap.get_value()) user_id />

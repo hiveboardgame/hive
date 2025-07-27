@@ -12,3 +12,4 @@ pub mod join;
 pub mod kick;
 pub mod leave;
 pub mod start;
+pub mod update_scoring_mode;

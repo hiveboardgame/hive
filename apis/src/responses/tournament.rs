@@ -148,7 +148,7 @@ impl TournamentResponse {
         }
         let games = tournament.games(conn).await?;
         let mut game_responses = Vec::new();
-        let mut standings = Standings::new();
+        let mut standings = Standings::new(ScoringMode::from_str(&tournament.scoring)?);
         for tiebreaker in tournament.tiebreaker.iter().flatten() {
             standings.add_tiebreaker(Tiebreaker::from_str(tiebreaker)?)
         }

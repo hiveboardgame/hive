@@ -323,9 +323,14 @@ pub fn TournamentCreate() -> impl IntoView {
                             on:change=update_from_input_parsed(tournament.scoring)
                         >
                             <SelectOption
-                                value=tournament.mode
+                                value=tournament.scoring
                                 is="Game"
                                 text=ScoringMode::Game.pretty_string()
+                            />
+                            <SelectOption
+                                value=tournament.scoring
+                                is="Match"
+                                text=ScoringMode::Match.pretty_string()
                             />
 
                         </select>

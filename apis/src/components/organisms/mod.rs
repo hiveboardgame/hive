@@ -26,5 +26,6 @@ pub mod tile_dots_toggle;
 pub mod tile_rotation_toggle;
 pub mod time_select;
 pub mod tournament_admin;
+pub mod tournament_settings;
 pub mod tv;
 pub mod unstarted;
