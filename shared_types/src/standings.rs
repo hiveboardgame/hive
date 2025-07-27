@@ -1,4 +1,4 @@
-use crate::{Tiebreaker, TournamentGameResult};
+use crate::{ScoringMode, Tiebreaker, TournamentGameResult};
 use hive_lib::Color;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -38,16 +38,18 @@ pub struct Standings {
     pub pairings: HashMap<Uuid, Vec<Pairing>>,
     pub tiebreakers: Vec<Tiebreaker>,
     pub players_standings: Vec<Vec<Uuid>>,
+    pub scoring_mode: ScoringMode,
 }
 
 impl Standings {
-    pub fn new() -> Self {
+    pub fn new(scoring_mode: ScoringMode) -> Self {
         Self {
             players: HashSet::new(),
             players_scores: HashMap::new(),
             pairings: HashMap::new(),
             tiebreakers: vec![Tiebreaker::RawPoints],
             players_standings: Vec::new(),
+            scoring_mode,
         }
     }
 
@@ -234,28 +236,89 @@ impl Standings {
     }
 
     pub fn get_raw_points(&self, player: Uuid) -> f32 {
+        match self.scoring_mode {
+            ScoringMode::Game => self.get_game_points(player),
+            ScoringMode::Match => self.get_match_points(player),
+        }
+    }
+
+    fn get_game_points(&self, player: Uuid) -> f32 {
         let mut points = 0.0;
         if let Some(pairings) = self.pairings.get(&player) {
             for pairing in pairings {
-                match pairing.result {
+                let pairing_points = match pairing.result {
                     TournamentGameResult::Draw => {
-                        points += 0.5;
+                        0.5
                     }
                     TournamentGameResult::Winner(Color::White) => {
                         if pairing.white_uuid == player {
-                            points += 1.0;
+                            1.0
+                        } else {
+                            0.0
                         }
                     }
                     TournamentGameResult::Winner(Color::Black) => {
                         if pairing.black_uuid == player {
-                            points += 1.0;
+                            1.0
+                        } else {
+                            0.0
                         }
+                    }
+                                         _ => 0.0
+                 };
+                 points += pairing_points;
+            }
+        }
+        points
+    }
+
+    fn get_match_points(&self, player: Uuid) -> f32 {
+        let mut match_points = 0.0;
+        let mut opponents = self.players.clone();
+        opponents.remove(&player);
+        
+        for opponent in opponents {
+            let pairings = self.pairings_between(player, opponent);
+            if pairings.is_empty() {
+                continue;
+            }
+            
+            let mut player_wins = 0;
+            let mut opponent_wins = 0;
+            
+            for pairing in pairings {
+                match pairing.result {
+                    TournamentGameResult::Winner(Color::White) => {
+                        if pairing.white_uuid == player {
+                            player_wins += 1;
+                        } else {
+                            opponent_wins += 1;
+                        }
+                    }
+                    TournamentGameResult::Winner(Color::Black) => {
+                        if pairing.black_uuid == player {
+                            player_wins += 1;
+                        } else {
+                            opponent_wins += 1;
+                        }
+                    }
+                    TournamentGameResult::Draw => {
+                        // Draws don't count toward match wins
                     }
                     _ => {}
                 }
             }
+            
+            // Award match points based on who won more games
+            if player_wins > opponent_wins {
+                match_points += 1.0;
+            } else if player_wins == opponent_wins {
+                match_points += 0.5;
+            }
+            // If opponent_wins > player_wins, player gets 0 points for this match
         }
-        points
+        
+        match_points
     }
 
     fn standings_by_tiebreakers(&self, tiebreakers: Vec<Tiebreaker>) -> Vec<Vec<Uuid>> {
@@ -348,7 +411,7 @@ impl Standings {
 
 impl Default for Standings {
     fn default() -> Self {
-        Self::new()
+        Self::new(ScoringMode::Game)
     }
 }
 
@@ -358,7 +421,7 @@ mod tests {
 
     #[test]
     fn tests_raw_points() {
-        let mut s = Standings::new();
+        let mut s = Standings::new(ScoringMode::Game);
         s.add_tiebreaker(Tiebreaker::WinsAsBlack);
         let one = Uuid::new_v4();
         let one_elo = 100.0;
@@ -385,7 +448,7 @@ mod tests {
 
     #[test]
     fn tests_all_even() {
-        let mut s = Standings::new();
+        let mut s = Standings::new(ScoringMode::Game);
         s.add_tiebreaker(Tiebreaker::HeadToHead);
         s.add_tiebreaker(Tiebreaker::WinsAsBlack);
         assert_eq!(
@@ -412,7 +475,7 @@ mod tests {
 
     #[test]
     fn tests_more_black_wins() {
-        let mut s = Standings::new();
+        let mut s = Standings::new(ScoringMode::Game);
         s.add_tiebreaker(Tiebreaker::WinsAsBlack);
         let one = Uuid::new_v4();
         let one_elo = 100.0;
@@ -439,7 +502,7 @@ mod tests {
 
     #[test]
     fn tests_sonneborn_berger() {
-        let mut s = Standings::new();
+        let mut s = Standings::new(ScoringMode::Game);
         s.add_tiebreaker(Tiebreaker::SonnebornBerger);
         let one = Uuid::new_v4();
         let one_elo = 100.0;
@@ -482,7 +545,7 @@ mod tests {
 
     #[test]
     fn tests_head2head() {
-        let mut s = Standings::new();
+        let mut s = Standings::new(ScoringMode::Game);
         s.add_tiebreaker(Tiebreaker::HeadToHead);
         let one = Uuid::new_v4();
         let one_elo = 100.0;
@@ -524,7 +587,7 @@ mod tests {
 
     #[test]
     fn tests_all_tiebreakers() {
-        let mut s = Standings::new();
+        let mut s = Standings::new(ScoringMode::Game);
         s.add_tiebreaker(Tiebreaker::RawPoints);
         s.add_tiebreaker(Tiebreaker::HeadToHead);
         s.add_tiebreaker(Tiebreaker::WinsAsBlack);
@@ -613,5 +676,229 @@ mod tests {
                 .unwrap(),
             1.0
         );
+    }
+
+    #[test]
+    fn tests_match_scoring_clear_winner() {
+        let mut s = Standings::new(ScoringMode::Match);
+        let one = Uuid::new_v4();
+        let one_elo = 100.0;
+        let two = Uuid::new_v4();
+        let two_elo = 200.0;
+        
+        // Player one wins 2 games, player two wins 1 game
+        s.add_result(one, two, one_elo, two_elo, TournamentGameResult::Winner(Color::White));
+        s.add_result(two, one, two_elo, one_elo, TournamentGameResult::Winner(Color::Black));
+        s.add_result(one, two, one_elo, two_elo, TournamentGameResult::Winner(Color::White));
+        
+        s.enforce_tiebreakers();
+        
+        // Player one should win the match and get 1 point
+        assert_eq!(s.get_raw_points(one), 1.0);
+        // Player two should lose the match and get 0 points
+        assert_eq!(s.get_raw_points(two), 0.0);
+    }
+
+    #[test]
+    fn tests_match_scoring_tied_match() {
+        let mut s = Standings::new(ScoringMode::Match);
+        let one = Uuid::new_v4();
+        let one_elo = 100.0;
+        let two = Uuid::new_v4();
+        let two_elo = 200.0;
+        
+        // Each player wins 1 game, with 1 draw
+        s.add_result(one, two, one_elo, two_elo, TournamentGameResult::Winner(Color::White));
+        s.add_result(two, one, two_elo, one_elo, TournamentGameResult::Winner(Color::White));
+        s.add_result(one, two, one_elo, two_elo, TournamentGameResult::Draw);
+        
+        s.enforce_tiebreakers();
+        
+        // Both players should get 0.5 points for tied match
+        assert_eq!(s.get_raw_points(one), 0.5);
+        assert_eq!(s.get_raw_points(two), 0.5);
+    }
+
+    #[test]
+    fn tests_match_scoring_vs_game_scoring() {
+        let one = Uuid::new_v4();
+        let one_elo = 100.0;
+        let two = Uuid::new_v4();
+        let two_elo = 200.0;
+        
+        // Test with game scoring
+        let mut game_standings = Standings::new(ScoringMode::Game);
+        game_standings.add_result(one, two, one_elo, two_elo, TournamentGameResult::Winner(Color::White));  // one wins as white
+        game_standings.add_result(one, two, one_elo, two_elo, TournamentGameResult::Winner(Color::Black));  // two wins as black (one is white, two is black)
+        game_standings.add_result(one, two, one_elo, two_elo, TournamentGameResult::Draw);
+        game_standings.enforce_tiebreakers();
+        
+        // In game scoring: one gets 1.5 points (1 win as white + 0.5 draw), two gets 1.5 points (1 win as black + 0.5 draw)
+        assert_eq!(game_standings.get_raw_points(one), 1.5);
+        assert_eq!(game_standings.get_raw_points(two), 1.5);
+        
+        // Test with match scoring
+        let mut match_standings = Standings::new(ScoringMode::Match);
+        match_standings.add_result(one, two, one_elo, two_elo, TournamentGameResult::Winner(Color::White));  // one wins as white
+        match_standings.add_result(one, two, one_elo, two_elo, TournamentGameResult::Winner(Color::Black));  // two wins as black
+        match_standings.add_result(one, two, one_elo, two_elo, TournamentGameResult::Draw);
+        match_standings.enforce_tiebreakers();
+        
+        // In match scoring: both get 0.5 points (tied 1-1, draw doesn't count)
+        assert_eq!(match_standings.get_raw_points(one), 0.5);
+        assert_eq!(match_standings.get_raw_points(two), 0.5);
+    }
+
+    #[test]
+    fn tests_match_scoring_three_players() {
+        let mut s = Standings::new(ScoringMode::Match);
+        let one = Uuid::new_v4();
+        let two = Uuid::new_v4();
+        let three = Uuid::new_v4();
+        let elo = 1500.0;
+        
+        // Player one vs two: one wins the match 2-1
+        s.add_result(one, two, elo, elo, TournamentGameResult::Winner(Color::White));
+        s.add_result(one, two, elo, elo, TournamentGameResult::Winner(Color::Black)); // two wins
+        s.add_result(one, two, elo, elo, TournamentGameResult::Winner(Color::White));
+        
+        // Player one vs three: three wins the match 2-0
+        s.add_result(one, three, elo, elo, TournamentGameResult::Winner(Color::Black)); // three wins
+        s.add_result(one, three, elo, elo, TournamentGameResult::Winner(Color::Black)); // three wins
+        
+        // Player two vs three: tied match 1-1
+        s.add_result(two, three, elo, elo, TournamentGameResult::Winner(Color::White)); // two wins
+        s.add_result(two, three, elo, elo, TournamentGameResult::Winner(Color::Black)); // three wins
+        
+        s.enforce_tiebreakers();
+        
+        // one: 1 match win vs two, 0 match wins vs three = 1.0 points
+        assert_eq!(s.get_raw_points(one), 1.0);
+        // two: 0 match wins vs one, 0.5 match points vs three = 0.5 points  
+        assert_eq!(s.get_raw_points(two), 0.5);
+        // three: 1 match win vs one, 0.5 match points vs two = 1.5 points
+        assert_eq!(s.get_raw_points(three), 1.5);
+    }
+
+    #[test]
+    fn tests_match_scoring_all_draws() {
+        let mut s = Standings::new(ScoringMode::Match);
+        let one = Uuid::new_v4();
+        let two = Uuid::new_v4();
+        let elo = 1500.0;
+        
+        // All games are draws
+        s.add_result(one, two, elo, elo, TournamentGameResult::Draw);
+        s.add_result(one, two, elo, elo, TournamentGameResult::Draw);
+        s.add_result(one, two, elo, elo, TournamentGameResult::Draw);
+        
+        s.enforce_tiebreakers();
+        
+        // In match scoring with all draws, both players get 0.5 points (tied 0-0)
+        assert_eq!(s.get_raw_points(one), 0.5);
+        assert_eq!(s.get_raw_points(two), 0.5);
+    }
+
+    #[test]
+    fn tests_match_scoring_no_games() {
+        let s = Standings::new(ScoringMode::Match);
+        let one = Uuid::new_v4();
+        
+        // Player with no games should have 0 points
+        assert_eq!(s.get_raw_points(one), 0.0);
+    }
+
+    #[test]
+    fn tests_match_scoring_asymmetric_games() {
+        let mut s = Standings::new(ScoringMode::Match);
+        let one = Uuid::new_v4();
+        let two = Uuid::new_v4();
+        let elo = 1500.0;
+        
+        // Player one wins 3 games, player two wins 1 game
+        s.add_result(one, two, elo, elo, TournamentGameResult::Winner(Color::White));
+        s.add_result(one, two, elo, elo, TournamentGameResult::Winner(Color::White));
+        s.add_result(one, two, elo, elo, TournamentGameResult::Winner(Color::White));
+        s.add_result(one, two, elo, elo, TournamentGameResult::Winner(Color::Black)); // two wins
+        
+        s.enforce_tiebreakers();
+        
+        // Player one wins the match 3-1
+        assert_eq!(s.get_raw_points(one), 1.0);
+        assert_eq!(s.get_raw_points(two), 0.0);
+    }
+
+    #[test]
+    fn tests_sonneborn_berger_with_match_scoring() {
+        let mut s = Standings::new(ScoringMode::Match);
+        s.add_tiebreaker(Tiebreaker::SonnebornBerger);
+        
+        let one = Uuid::new_v4();
+        let two = Uuid::new_v4();
+        let three = Uuid::new_v4();
+        let elo = 1500.0;
+        
+        // Set up a scenario where Sonneborn-Berger matters
+        // one beats two, three beats one, two beats three
+        s.add_result(one, two, elo, elo, TournamentGameResult::Winner(Color::White));
+        s.add_result(one, three, elo, elo, TournamentGameResult::Winner(Color::Black)); // three wins
+        s.add_result(two, three, elo, elo, TournamentGameResult::Winner(Color::White));
+        
+        s.enforce_tiebreakers();
+        
+        // Each player should have 1 match point
+        assert_eq!(s.get_raw_points(one), 1.0);
+        assert_eq!(s.get_raw_points(two), 1.0);
+        assert_eq!(s.get_raw_points(three), 1.0);
+        
+        // Sonneborn-Berger should be calculated correctly
+        // Each opponent has 1 point, so each player should have 1.0 SB points
+        assert_eq!(
+            *s.players_scores
+                .get(&one)
+                .unwrap()
+                .get(&Tiebreaker::SonnebornBerger)
+                .unwrap(),
+            1.0
+        );
+        assert_eq!(
+            *s.players_scores
+                .get(&two)
+                .unwrap()
+                .get(&Tiebreaker::SonnebornBerger)
+                .unwrap(),
+            1.0
+        );
+        assert_eq!(
+            *s.players_scores
+                .get(&three)
+                .unwrap()
+                .get(&Tiebreaker::SonnebornBerger)
+                .unwrap(),
+            1.0
+        );
+    }
+
+    #[test]
+    fn tests_match_scoring_single_game_matches() {
+        let mut s = Standings::new(ScoringMode::Match);
+        let one = Uuid::new_v4();
+        let two = Uuid::new_v4();
+        let three = Uuid::new_v4();
+        let elo = 1500.0;
+        
+        // Each pair plays only one game
+        s.add_result(one, two, elo, elo, TournamentGameResult::Winner(Color::White)); // one beats two
+        s.add_result(one, three, elo, elo, TournamentGameResult::Winner(Color::Black)); // three beats one
+        s.add_result(two, three, elo, elo, TournamentGameResult::Draw); // draw between two and three
+        
+        s.enforce_tiebreakers();
+        
+        // one: wins vs two (1), loses vs three (0) = 1.0 points
+        assert_eq!(s.get_raw_points(one), 1.0);
+        // two: loses vs one (0), draws vs three (0.5) = 0.5 points
+        assert_eq!(s.get_raw_points(two), 0.5);
+        // three: wins vs one (1), draws vs two (0.5) = 1.5 points
+        assert_eq!(s.get_raw_points(three), 1.5);
     }
 }

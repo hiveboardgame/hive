@@ -5,7 +5,7 @@ use super::{
     delete::DeleteHandler, finish::FinishHandler, invitation_accept::InvitationAccept,
     invitation_create::InvitationCreate, invitation_decline::InvitationDecline,
     invitation_retract::InvitationRetract, join::JoinHandler, kick::KickHandler,
-    leave::LeaveHandler, start::StartHandler,
+    leave::LeaveHandler, start::StartHandler, update_scoring_mode::UpdateScoringModeHandler,
 };
 use crate::{
     common::TournamentAction,
@@ -121,6 +121,12 @@ impl TournamentHandler {
             }
             TournamentAction::Finish(tournament_id) => {
                 FinishHandler::new(tournament_id, self.user_id, &self.pool)
+                    .await?
+                    .handle()
+                    .await?
+            }
+            TournamentAction::UpdateScoringMode(tournament_id, scoring_mode) => {
+                UpdateScoringModeHandler::new(tournament_id, scoring_mode, self.user_id, &self.pool)
                     .await?
                     .handle()
                     .await?

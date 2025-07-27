@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, TournamentDetails, TournamentGameResult, TournamentId};
+use shared_types::{GameId, ScoringMode, TournamentDetails, TournamentGameResult, TournamentId};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -25,4 +25,5 @@ pub enum TournamentAction {
     Leave(TournamentId),
     // TODO: RemoveFromSeries(TournamentId),
     Start(TournamentId),
+    UpdateScoringMode(TournamentId, ScoringMode),
 }

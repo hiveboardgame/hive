@@ -7,7 +7,7 @@ use crate::{
     schema::{
         games::{self, tournament_id as tournament_id_column},
         tournaments::{
-            self, ends_at, nanoid as nanoid_field, series as series_column, started_at, starts_at,
+            self, ends_at, nanoid as nanoid_field, scoring as scoring_column, series as series_column, started_at, starts_at,
             status as status_column, updated_at,
         },
         tournaments_organizers, users,
@@ -533,6 +533,26 @@ impl Tournament {
         self.ensure_user_is_organizer_or_admin(organizer, conn)
             .await?;
         self.start(conn).await
+    }
+
+    pub async fn update_scoring_mode_by_organizer(
+        &self,
+        new_scoring_mode: &shared_types::ScoringMode,
+        organizer: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Tournament, DbError> {
+        self.ensure_user_is_organizer_or_admin(organizer, conn)
+            .await?;
+        
+        let updated_tournament: Tournament = diesel::update(self)
+            .set((
+                updated_at.eq(Utc::now()),
+                scoring_column.eq(new_scoring_mode.to_string()),
+            ))
+            .get_result(conn)
+            .await?;
+            
+        Ok(updated_tournament)
     }
 
     pub async fn start(
