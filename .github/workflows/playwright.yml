@@ -1,0 +1,98 @@
+name: Playwright Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for running E2E tests'
+        required: false
+        default: 'Manual trigger'
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_USER: hive
+          POSTGRES_DB: hivedb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5433:5432
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: nightly
+        targets: wasm32-unknown-unknown
+    
+    - name: Install cargo-binstall, cargo-leptos, and diesel_cli
+      run: |
+        wget --progress=dot:giga https://github.com/cargo-bins/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-musl.tgz
+        tar -xvf cargo-binstall-x86_64-unknown-linux-musl.tgz
+        cp cargo-binstall ~/.cargo/bin/
+        cargo binstall cargo-leptos diesel_cli -y
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'apis/end2end/package-lock.json'
+    
+    - name: Install dependencies
+      working-directory: apis/end2end
+      run: npm ci
+    
+    - name: Install Playwright Browsers
+      working-directory: apis/end2end
+      run: |
+        npx playwright install --with-deps chromium firefox webkit
+        # Verify WebKit installation
+        npx playwright --version
+    
+    - name: Setup Database
+      run: |
+        cd db
+        diesel migration run
+        cd ..
+      env:
+        DATABASE_URL: postgres://hive:password@localhost:5433/hivedb
+    
+    - name: Build Rust project
+      run: |
+        LEPTOS_TAILWIND_VERSION=v3.4.1 cargo leptos build
+      env:
+        DATABASE_URL: postgres://hive:password@localhost:5433/hivedb
+    
+    - name: Run Playwright tests
+      working-directory: apis/end2end
+      run: npm test
+      env:
+        DATABASE_URL: postgres://hive:password@localhost:5433/hivedb
+        CI: true
+    
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report
+        path: apis/end2end/playwright-report/
+        retention-days: 30
+    
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: apis/end2end/test-results/
+        retention-days: 30
