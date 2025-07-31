@@ -1,5 +1,5 @@
 use crate::{
-    components::layouts::base_layout::BaseLayout,
+    components::{layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames},
     i18n::I18nContextProvider,
     pages::{
         account::Account,
@@ -12,7 +12,7 @@ use crate::{
         home::Home,
         login::Login,
         play::Play,
-        profile_view::{DisplayGames, ProfileView},
+        profile_view::ProfileView,
         puzzles::Puzzles,
         register::Register,
         resources::Resources,

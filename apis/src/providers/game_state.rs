@@ -458,7 +458,7 @@ impl GameState {
     }
 
     pub fn get_game_speed(&self) -> Option<GameSpeed> {
-        self.game_response.as_ref().map(|gr| gr.speed.clone())
+        self.game_response.as_ref().map(|gr| gr.speed)
     }
 
     pub fn takeback_allowed(&self) -> bool {

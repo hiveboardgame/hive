@@ -32,7 +32,7 @@ pub fn ProfileLink(
                 href=profile_link
             >
                 <div class=format!(
-                    "flex {}",
+                    "flex text-xs {}",
                     extend_tw_classes,
                 )>
                     {username} <Show when=patreon>

@@ -9,6 +9,7 @@ pub mod config;
 pub mod game_state;
 mod game_updater;
 pub mod games;
+mod games_search_context;
 mod notifications;
 pub mod online_users;
 mod ping;
@@ -26,6 +27,10 @@ pub use challenge_params::{
 };
 pub use config::{provide_config, Config};
 pub use game_updater::{provide_server_updates, UpdateNotifier};
+pub use games_search_context::{
+    calculate_initial_batch_size, load_games, provide_games_search_context, FilterState,
+    GamesSearchContext,
+};
 pub use notifications::{provide_notifications, NotificationContext};
 pub use ping::{provide_ping, PingContext};
 pub use referer::{provide_referer, RefererContext};
