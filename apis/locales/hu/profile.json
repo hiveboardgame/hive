@@ -1,7 +1,7 @@
 {
     "game_result": "Játék eredménye:",
     "game_buttons": {
-        "unstarted": "Kezdetlen versenymérkőzések",
+        "pending": "Függő",
         "playing": "Folyamatban lévő",
         "finished": "Befejezett"
     },

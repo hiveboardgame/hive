@@ -1,6 +1,6 @@
 {
     "game_buttons": {
-        "unstarted": "Partidas de torneos no iniciadas",
+        "pending": "Pendiente",
         "playing": "Jugando",
         "finished": "Finalizadas"
     },

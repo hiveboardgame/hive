@@ -9,7 +9,7 @@ use shared_types::GameSpeed;
 
 #[component]
 pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
-    let speed = Signal::derive(move || speed.clone());
+    let speed = Signal::derive(move || speed);
     let top_users = OnceResource::new(get_top_users(speed(), 10));
     view! {
         <Transition>

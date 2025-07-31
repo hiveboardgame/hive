@@ -21,7 +21,7 @@ pub fn RatingWithIcon(rating: StoredValue<RatingResponse>) -> impl IntoView {
     view! {
         <div class="flex flex-row gap-1 items-center">
             <Icon
-                icon=icon_for_speed(rating.with_value(|r| r.speed.clone()))
+                icon=icon_for_speed(rating.with_value(|r| r.speed))
                 attr:class="w-4 h-4"
             />
             <Rating rating=rating.get_value() />

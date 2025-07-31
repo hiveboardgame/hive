@@ -153,11 +153,11 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
                 /> {t!(i18n, home.custom_game.rated)}
             </div>
             <div class="flex gap-1 p-1">
-                Base
+                Basic
                 <SimpleSwitchWithCallback
                     checked=params.with_expansions().into()
                     action=with_expansions_callback
-                />MLP
+                />Full
             </div>
 
             <Show when=move || !opponent_exists>

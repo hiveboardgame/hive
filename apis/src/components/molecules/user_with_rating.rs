@@ -26,7 +26,7 @@ pub fn UserWithRating(
         game_response.with(|g| {
             g.as_ref().map(|resp| match resp.speed {
                 GameSpeed::Untimed => GameSpeed::Correspondence,
-                _ => resp.speed.clone(),
+                _ => resp.speed,
             })
         })
     };

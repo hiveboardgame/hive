@@ -74,10 +74,21 @@ pub struct BatchInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PlayerFilter {
+    pub username: String,
+    pub color: Option<Color>,
+    pub result: Option<ResultType>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GamesQueryOptions {
-    pub players: Vec<(String, Option<Color>, Option<ResultType>)>,
+    pub player1: Option<PlayerFilter>,
+    pub player2: Option<PlayerFilter>,
     pub speeds: Vec<GameSpeed>,
     pub current_batch: Option<BatchInfo>,
     pub batch_size: usize,
     pub game_progress: GameProgress,
+    pub expansions: Option<bool>,
+    pub rated: Option<bool>,
+    pub exclude_bots: bool,
 }

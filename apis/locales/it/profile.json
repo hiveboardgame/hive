@@ -1,8 +1,8 @@
 {
     "game_buttons": {
         "playing": "Giocare",
-        "finished": "Completato",
-        "unstarted": "Partite di Torneo da giocare"
+        "pending": "In attesa",
+        "finished": "Completato"
     },
     "color_buttons": {
         "both": "Entrambi",

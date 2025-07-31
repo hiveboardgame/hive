@@ -1,6 +1,6 @@
 {
     "game_buttons": {
-        "unstarted": "Jocuri de turneu neîncepute",
+        "pending": "În așteptare",
         "playing": "În desfășurare",
         "finished": "Finalizate"
     },

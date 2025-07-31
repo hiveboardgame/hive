@@ -8,7 +8,7 @@
     "game_result": "Результат партии:",
     "include_speeds": "Контроль времени:",
     "game_buttons": {
-        "unstarted": "Неначатые турнирные игры",
+        "pending": "В ожидании",
         "playing": "Активные игры",
         "finished": "Оконченные игры"
     },

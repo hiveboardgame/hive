@@ -16,8 +16,8 @@ use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    ChallengeId, Conclusion, GameId, GameProgress, GameSpeed, GameStart, GamesQueryOptions,
-    ResultType, TimeMode, TournamentGameResult,
+    BatchInfo, ChallengeId, Conclusion, GameId, GameProgress, GameSpeed, GameStart,
+    GamesQueryOptions, PlayerFilter, ResultType, TimeMode, TournamentGameResult,
 };
 use std::{str::FromStr, time::Duration};
 use uuid::Uuid;
@@ -1101,122 +1101,23 @@ impl Game {
             .await?)
     }
 
-    // TODO: refactor into smaller functions
     pub async fn get_rows_from_options(
         options: &GamesQueryOptions,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<Game>, DbError> {
-        let mut query = users::table
-            .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
-            .inner_join(games::table.on(games_users::game_id.eq(games::id)))
-            .into_boxed();
+        let query = GameQueryBuilder::new()
+            .player_filters(
+                options.player1.as_ref(),
+                options.player2.as_ref(),
+                options.exclude_bots,
+            )
+            .progress(&options.game_progress)
+            .speeds(&options.speeds)
+            .expansions(options.expansions)
+            .rated_filter(options.rated)
+            .paginate(options.current_batch.as_ref(), options.batch_size)
+            .build();
 
-        match options.game_progress {
-            GameProgress::Unstarted => {
-                query = query.filter(
-                    games::game_status
-                        .eq("NotStarted")
-                        .and(games::game_start.eq("Ready"))
-                        .and(games::conclusion.ne("Committee")),
-                );
-            }
-            GameProgress::Playing => {
-                query = query.filter(
-                    games::game_status.eq("InProgress").or(games::game_status
-                        .eq("NotStarted")
-                        .and(games::game_start.ne("Ready"))),
-                );
-            }
-            GameProgress::Finished => {
-                query = query.filter(games::finished.eq(true));
-            }
-            GameProgress::All => {}
-        }
-
-        //Selected speeds
-        let speeds: Vec<_> = options.speeds.iter().map(|s| s.to_string()).collect();
-        query = query.filter(games::speed.eq_any(speeds));
-
-        //Multiple usernames. For each choose color and result type
-        if !options.players.is_empty() {
-            use users::normalized_username as username;
-            let is_white = games::white_id.eq(users::id);
-            let is_black = games::black_id.eq(users::id);
-            let white_won = games::game_status
-                .eq(GameStatus::Finished(GameResult::Winner(Color::White)).to_string());
-            let black_won = games::game_status
-                .eq(GameStatus::Finished(GameResult::Winner(Color::Black)).to_string());
-            let is_draw = games::game_status.eq(GameStatus::Finished(GameResult::Draw).to_string());
-
-            let mut query_conditions: Vec<Box<dyn BoxableExpression<_, _, SqlType = _>>> =
-                Vec::new();
-
-            for (usern, color, result) in options.players.iter() {
-                let user_filter = username.eq(usern.to_lowercase());
-                let result_filter: Option<Box<dyn BoxableExpression<_, _, SqlType = _>>> =
-                    match result {
-                        Some(ResultType::Win) => Some(match color {
-                            Some(Color::White) => Box::new(white_won.clone().and(is_white)),
-                            Some(Color::Black) => Box::new(black_won.clone().and(is_black)),
-                            None => Box::new(
-                                (white_won.clone().and(is_white))
-                                    .or(black_won.clone().and(is_black)),
-                            ),
-                        }),
-                        Some(ResultType::Loss) => Some(match color {
-                            Some(Color::White) => Box::new(black_won.clone().and(is_white)),
-                            Some(Color::Black) => Box::new(white_won.clone().and(is_black)),
-                            None => Box::new(
-                                (white_won.clone().and(is_black))
-                                    .or(black_won.clone().and(is_white)),
-                            ),
-                        }),
-                        Some(ResultType::Draw) => Some(match color {
-                            Some(Color::White) => Box::new(is_white.and(is_draw.clone())),
-                            Some(Color::Black) => Box::new(is_black.and(is_draw.clone())),
-                            None => Box::new(
-                                (is_white.and(is_draw.clone())).or(is_black.and(is_draw.clone())),
-                            ),
-                        }),
-                        None => match color {
-                            Some(Color::White) => Some(Box::new(is_white)),
-                            Some(Color::Black) => Some(Box::new(is_black)),
-                            None => None,
-                        },
-                    };
-
-                let combined_filter: Box<dyn BoxableExpression<_, _, SqlType = _>> =
-                    match result_filter {
-                        Some(res) => Box::new(user_filter.and(res)),
-                        None => Box::new(user_filter),
-                    };
-
-                query_conditions.push(combined_filter);
-            }
-
-            if !query_conditions.is_empty() {
-                let combined_filter = query_conditions
-                    .into_iter()
-                    .reduce(|acc, cond| Box::new(acc.or(cond)));
-                if let Some(filter) = combined_filter {
-                    query = query.filter(filter);
-                }
-            }
-        }
-
-        query = query.order_by((games::updated_at.desc(), games::id.desc()));
-
-        //batching
-        if let Some(batch) = &options.current_batch {
-            query = query.filter(diesel::BoolExpressionMethods::or(
-                games::updated_at.lt(batch.timestamp),
-                diesel::BoolExpressionMethods::and(
-                    games::updated_at.eq(batch.timestamp),
-                    games::id.ne(batch.id),
-                ),
-            ));
-        }
-        query = query.limit(options.batch_size as i64);
         Ok(query.select(games::all_columns).get_results(conn).await?)
     }
 
@@ -1300,5 +1201,216 @@ impl Game {
             return self.white_id;
         }
         self.black_id
+    }
+}
+
+struct GameQueryBuilder {
+    query: games::BoxedQuery<'static, diesel::pg::Pg>,
+}
+
+impl GameQueryBuilder {
+    fn new() -> Self {
+        Self {
+            query: games::table.into_boxed(),
+        }
+    }
+
+    fn progress(mut self, progress: &GameProgress) -> Self {
+        self.query = match progress {
+            GameProgress::Unstarted => self.query.filter(
+                games::game_status
+                    .eq(GameStatus::NotStarted.to_string())
+                    .and(games::game_start.eq(GameStart::Ready.to_string()))
+                    .and(games::conclusion.ne(Conclusion::Committee.to_string())),
+            ),
+            GameProgress::Playing => self.query.filter(
+                games::game_status
+                    .eq(GameStatus::InProgress.to_string())
+                    .or(games::game_status
+                        .eq(GameStatus::NotStarted.to_string())
+                        .and(games::game_start.ne(GameStart::Ready.to_string()))),
+            ),
+            GameProgress::Finished => self.query.filter(games::finished.eq(true)),
+            GameProgress::All => self.query,
+        };
+        self
+    }
+
+    fn speeds(mut self, speeds: &[GameSpeed]) -> Self {
+        if !speeds.is_empty() && speeds.len() != GameSpeed::all_games().len() {
+            let speed_strings: Vec<String> = speeds.iter().map(|s| s.to_string()).collect();
+            self.query = self.query.filter(games::speed.eq_any(speed_strings));
+        }
+        self
+    }
+
+    fn expansions(mut self, expansions: Option<bool>) -> Self {
+        if let Some(has_expansions) = expansions {
+            let game_type_str = if has_expansions {
+                GameType::MLP.to_string()
+            } else {
+                GameType::Base.to_string()
+            };
+            self.query = self.query.filter(games::game_type.eq(game_type_str));
+        }
+        self
+    }
+
+    fn rated_filter(mut self, rated_option: Option<bool>) -> Self {
+        if let Some(is_rated) = rated_option {
+            self.query = self.query.filter(games::rated.eq(is_rated));
+        }
+        self
+    }
+
+    fn player_filters(
+        mut self,
+        player1: Option<&PlayerFilter>,
+        player2: Option<&PlayerFilter>,
+        exclude_bots: bool,
+    ) -> Self {
+        match (player1, player2) {
+            (None, None) => {
+                // 0 players: exclude bot games if requested
+                if exclude_bots {
+                    self = self.apply_bot_exclusion();
+                }
+            }
+            (Some(p1), None) | (None, Some(p1)) => {
+                // 1 player: show all games for this player
+                let condition = self.build_player_condition(&p1.username, p1.color, p1.result);
+                self.query = self.query.filter(condition);
+
+                // Apply bot filtering if requested
+                if exclude_bots {
+                    self = self.apply_bot_exclusion_for_player(&p1.username, p1.color);
+                }
+            }
+            (Some(p1), Some(p2)) => {
+                // 2 players: show games between these two players (AND logic)
+                // Bot filtering ignored for 2-player searches (explicit selection)
+                let condition1 = self.build_player_condition(&p1.username, p1.color, p1.result);
+                let condition2 = self.build_player_condition(&p2.username, p2.color, p2.result);
+                self.query = self.query.filter(condition1.and(condition2));
+            }
+        }
+        self
+    }
+
+    fn paginate(mut self, batch: Option<&BatchInfo>, size: usize) -> Self {
+        self.query = self
+            .query
+            .order_by((games::updated_at.desc(), games::id.desc()));
+        if let Some(batch) = batch {
+            self.query = self.query.filter(
+                games::updated_at.lt(batch.timestamp).or(games::updated_at
+                    .eq(batch.timestamp)
+                    .and(games::id.ne(batch.id))),
+            );
+        }
+        self.query = self.query.limit(size as i64);
+        self
+    }
+
+    fn build(self) -> games::BoxedQuery<'static, diesel::pg::Pg> {
+        self.query
+    }
+
+    fn build_player_condition(
+        &self,
+        username: &str,
+        color: Option<Color>,
+        result: Option<ResultType>,
+    ) -> Box<dyn BoxableExpression<games::table, diesel::pg::Pg, SqlType = diesel::sql_types::Bool>>
+    {
+        let user_subquery = users::table
+            .filter(users::normalized_username.eq(username.to_lowercase()))
+            .select(users::id);
+
+        let white_won = games::game_status
+            .eq(GameStatus::Finished(GameResult::Winner(Color::White)).to_string());
+        let black_won = games::game_status
+            .eq(GameStatus::Finished(GameResult::Winner(Color::Black)).to_string());
+        let is_draw = games::game_status.eq(GameStatus::Finished(GameResult::Draw).to_string());
+
+        let is_white = games::white_id.eq_any(user_subquery.clone());
+        let is_black = games::black_id.eq_any(user_subquery);
+
+        match (result, color) {
+            (Some(ResultType::Win), Some(Color::White)) => Box::new(is_white.and(white_won)),
+            (Some(ResultType::Win), Some(Color::Black)) => Box::new(is_black.and(black_won)),
+            (Some(ResultType::Win), None) => Box::new(
+                is_white
+                    .clone()
+                    .and(white_won)
+                    .or(is_black.clone().and(black_won)),
+            ),
+
+            (Some(ResultType::Loss), Some(Color::White)) => Box::new(is_white.and(black_won)),
+            (Some(ResultType::Loss), Some(Color::Black)) => Box::new(is_black.and(white_won)),
+            (Some(ResultType::Loss), None) => Box::new(
+                is_white
+                    .clone()
+                    .and(black_won)
+                    .or(is_black.clone().and(white_won)),
+            ),
+
+            (Some(ResultType::Draw), Some(Color::White)) => Box::new(is_white.and(is_draw)),
+            (Some(ResultType::Draw), Some(Color::Black)) => Box::new(is_black.and(is_draw)),
+            (Some(ResultType::Draw), None) => Box::new(
+                is_white
+                    .clone()
+                    .and(is_draw.clone())
+                    .or(is_black.clone().and(is_draw)),
+            ),
+
+            (None, Some(Color::White)) => Box::new(is_white),
+            (None, Some(Color::Black)) => Box::new(is_black),
+            (None, None) => Box::new(is_white.or(is_black)),
+        }
+    }
+
+    // Helper method to exclude all bot games
+    fn apply_bot_exclusion(mut self) -> Self {
+        let bot_subquery = users::table.filter(users::bot.eq(true)).select(users::id);
+
+        self.query = self.query.filter(
+            games::white_id
+                .ne_all(bot_subquery)
+                .and(games::black_id.ne_all(bot_subquery)),
+        );
+        self
+    }
+
+    // Helper method to exclude bot opponents for a specific player
+    fn apply_bot_exclusion_for_player(mut self, username: &str, color: Option<Color>) -> Self {
+        let bot_subquery = users::table.filter(users::bot.eq(true)).select(users::id);
+
+        let user_subquery = users::table
+            .filter(users::normalized_username.eq(username.to_lowercase()))
+            .select(users::id);
+
+        match color {
+            Some(Color::White) => {
+                // Player is white, exclude bot black opponents
+                self.query = self.query.filter(games::black_id.ne_all(bot_subquery));
+            }
+            Some(Color::Black) => {
+                // Player is black, exclude bot white opponents
+                self.query = self.query.filter(games::white_id.ne_all(bot_subquery));
+            }
+            None => {
+                // Player could be either color, exclude bot opponents in both cases
+                self.query = self.query.filter(
+                    (games::white_id
+                        .eq_any(user_subquery.clone())
+                        .and(games::black_id.ne_all(bot_subquery)))
+                    .or(games::black_id
+                        .eq_any(user_subquery)
+                        .and(games::white_id.ne_all(bot_subquery))),
+                );
+            }
+        }
+        self
     }
 }

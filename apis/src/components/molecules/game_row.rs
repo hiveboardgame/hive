@@ -142,7 +142,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                     <p class="flex gap-1 truncate">{rated_string} <TimeRow time_info /></p>
                     <p class="text-sm opacity-75">{ago}</p>
                 </div>
-                <div class="z-50">
+                <div class="z-30">
                     <DownloadPgn game=game_stored />
                 </div>
             </div>
@@ -157,7 +157,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                             <p class="flex gap-1 text-sm truncate">
                                 {t!(i18n, game.played_in)}
                                 <a
-                                    class="relative z-50 text-blue-500 truncate hover:underline"
+                                    class="relative z-30 text-blue-500 truncate hover:underline"
                                     href=format!("/tournament/{}", tournament_id)
                                 >
                                     {tournament_name.clone()}
@@ -175,7 +175,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                                     patreon=white_player.patreon
                                     username=white_player.username
                                     bot=white_player.bot
-                                    attr:class="truncate z-50 mr-1 max-w-full"
+                                    attr:class="truncate z-30 mr-1 max-w-full"
                                 />
                             </div>
                             <Show when=move || finished fallback=move || white_rating>
@@ -194,7 +194,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                                     username=black_player.username.clone()
                                     patreon=black_player.patreon
                                     bot=black_player.bot
-                                    attr:class="truncate z-50 ml-1 max-w-full"
+                                    attr:class="truncate z-30 ml-1 max-w-full"
                                 />
                                 <StatusIndicator username=black_player.username />
                             </div>
@@ -210,7 +210,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                 </div>
             </div>
             <a
-                class="absolute inset-0 z-20"
+                class="absolute inset-0 z-10"
                 href=format!("/game/{}", game.game_id)
                 aria-label="View game details"
             ></a>
