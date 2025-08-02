@@ -19,7 +19,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     use crate::websocket::{start_connection, WsServer};
-    use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::api_play, challenges::{api_accept_challenge, api_create_challenge, api_get_challenges}};
+    use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::{api_control, api_play}, challenges::{api_accept_challenge, api_create_challenge, api_get_challenges}};
     use api::v1::auth::get_token_handler::get_token;
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
@@ -95,6 +95,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_token)
             .service(get_identity)
             .service(api_play)
+            .service(api_control)
             .service(api_get_game)
             .service(api_get_ongoing_games)
             .service(api_get_pending_games)
