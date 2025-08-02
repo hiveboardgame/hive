@@ -253,7 +253,7 @@ async fn accept_challenge(
             }
         }
     };
-    let new_game = NewGame::new(white_id, black_id, &challenge);
+    let new_game = NewGame::new(white_id, black_id, &challenge)?;
     let (game, deleted_challenges) =
         Game::create_and_delete_challenges(new_game, &mut conn).await?;
 

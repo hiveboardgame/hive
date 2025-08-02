@@ -82,7 +82,7 @@ impl AcceptHandler {
         let (game, deleted_challenges, game_response) = conn
             .transaction::<_, anyhow::Error, _>(move |tc| {
                 async move {
-                    let new_game = NewGame::new(white_id, black_id, &challenge);
+                    let new_game = NewGame::new(white_id, black_id, &challenge)?;
                     let (game, deleted_challenges) =
                         Game::create_and_delete_challenges(new_game, tc).await?;
                     let game_response = GameResponse::from_model(&game, tc).await?;

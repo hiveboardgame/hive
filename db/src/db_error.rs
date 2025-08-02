@@ -7,11 +7,11 @@ pub enum DbError {
     NotEnoughPlayers,
     #[error("Tournament is full")]
     TournamentFull,
-    #[error("Internal database error")]
+    #[error("Cannot join an invite only tournament")]
     TournamentInviteOnly,
     #[error("Invalid TournamentDetails")]
     InvalidTournamentDetails { info: String },
-    #[error("Cannot join an invite only tournament")]
+    #[error("Internal database error")]
     InternalError,
     #[error("Invalid input")]
     InvalidInput { info: String, error: String },

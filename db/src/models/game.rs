@@ -140,7 +140,14 @@ impl NewGame {
         }
     }
 
-    pub fn new(white: Uuid, black: Uuid, challenge: &Challenge) -> Self {
+    pub fn new(white: Uuid, black: Uuid, challenge: &Challenge) -> Result<Self, DbError> {
+        if white == black {
+            return Err(DbError::InvalidInput {
+                info: "You can't play here with yourself.".to_string(),
+                error: String::new(),
+            });
+        }
+
         let time_left = match TimeMode::from_str(&challenge.time_mode).unwrap() {
             TimeMode::Untimed => None,
             TimeMode::RealTime => challenge
@@ -153,7 +160,7 @@ impl NewGame {
             },
         };
 
-        Self {
+        Ok(Self {
             nanoid: challenge.nanoid.to_owned(),
             current_player_id: white,
             black_id: black,
@@ -186,7 +193,7 @@ impl NewGame {
             tournament_game_result: TournamentGameResult::Unknown.to_string(),
             game_start: GameStart::Moves.to_string(),
             move_times: vec![],
-        }
+        })
     }
 }
 
