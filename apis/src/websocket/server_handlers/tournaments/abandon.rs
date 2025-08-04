@@ -8,7 +8,7 @@ use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use hive_lib::GameControl;
-use shared_types::{GameId, TournamentId};
+use shared_types::{TournamentGameResult, TournamentId};
 use uuid::Uuid;
 
 pub struct AbandonHandler {
@@ -56,16 +56,17 @@ impl AbandonHandler {
             })
             .await?;
 
-        for game in abandoned {
-            let game_response = GameResponse::from_model(&game, &mut conn).await?;
-            let color = game
-                .user_color(self.user_id)
-                .expect("User who aborted game to be player");
+        let game_responses = GameResponse::from_games_batch(abandoned, &mut conn).await?;
+        for game_response in game_responses {
+            let color = match game_response.tournament_game_result {
+                TournamentGameResult::Winner(color) => color.opposite_color(),
+                _ => unreachable!("Tournament game should have a winner when player abandons"),
+            };
             let game_control = GameControl::Resign(color);
             messages.push(InternalServerMessage {
-                destination: MessageDestination::Game(GameId(game.nanoid.clone())),
+                destination: MessageDestination::Game(game_response.game_id.clone()),
                 message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
-                    game_id: GameId(game.nanoid.to_owned()),
+                    game_id: game_response.game_id.clone(),
                     game: game_response.clone(),
                     game_action: GameReaction::Control(game_control),
                     user_id: self.user_id.to_owned(),

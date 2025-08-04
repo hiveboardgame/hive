@@ -147,12 +147,11 @@ impl TournamentResponse {
             organizers.push(UserResponse::from_model(&user, conn).await?);
         }
         let games = tournament.games(conn).await?;
-        let mut game_responses = Vec::new();
         let mut standings = Standings::new();
         for tiebreaker in tournament.tiebreaker.iter().flatten() {
             standings.add_tiebreaker(Tiebreaker::from_str(tiebreaker)?)
         }
-        for game in games {
+        for game in &games {
             standings.add_result(
                 game.white_id,
                 game.black_id,
@@ -160,8 +159,8 @@ impl TournamentResponse {
                 game.black_rating.unwrap_or(0.0),
                 TournamentGameResult::from_str(&game.tournament_game_result)?,
             );
-            game_responses.push(GameResponse::from_model(&game, conn).await?);
         }
+        let game_responses = GameResponse::from_games_batch(games, conn).await?;
         standings.enforce_tiebreakers();
         Ok(Box::new(Self {
             id: tournament.id,

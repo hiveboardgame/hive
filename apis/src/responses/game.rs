@@ -191,7 +191,7 @@ impl GameResponse {
         Self::from_games_batch(games, conn).await
     }
 
-    async fn from_games_batch(games: Vec<Game>, conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
+    pub async fn from_games_batch(games: Vec<Game>, conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
         let mut user_ids = HashSet::new();
         let mut tournament_ids = HashSet::new();
 

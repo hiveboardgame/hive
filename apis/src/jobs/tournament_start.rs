@@ -52,35 +52,35 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                         });
                                     }
 
-                                    for game in games {
-                                        let game_response =
-                                            GameResponse::from_model(&game, tc).await?;
-
+                                    let game_responses =
+                                        GameResponse::from_games_batch(games, tc).await?;
+                                    for game in game_responses {
                                         messages.push(InternalServerMessage {
-                                            destination: MessageDestination::User(game.white_id),
+                                            destination: MessageDestination::User(
+                                                game.white_player.uid,
+                                            ),
                                             message: ServerMessage::Game(Box::new(
                                                 GameUpdate::Reaction(GameActionResponse {
                                                     game_action: GameReaction::New,
-                                                    game: game_response.clone(),
-                                                    game_id: game_response.game_id.clone(),
-                                                    user_id: game.white_id,
-                                                    username: game_response
-                                                        .white_player
-                                                        .username
-                                                        .clone(),
+                                                    game: game.clone(),
+                                                    game_id: game.game_id.clone(),
+                                                    user_id: game.white_player.uid,
+                                                    username: game.white_player.username.clone(),
                                                 }),
                                             )),
                                         });
 
                                         messages.push(InternalServerMessage {
-                                            destination: MessageDestination::User(game.black_id),
+                                            destination: MessageDestination::User(
+                                                game.black_player.uid,
+                                            ),
                                             message: ServerMessage::Game(Box::new(
                                                 GameUpdate::Reaction(GameActionResponse {
                                                     game_action: GameReaction::New,
-                                                    game: game_response.clone(),
-                                                    game_id: game_response.game_id.clone(),
-                                                    user_id: game.black_id,
-                                                    username: game_response.black_player.username,
+                                                    game: game.clone(),
+                                                    game_id: game.game_id.clone(),
+                                                    user_id: game.black_player.uid,
+                                                    username: game.black_player.username,
                                                 }),
                                             )),
                                         });
