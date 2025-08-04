@@ -1,0 +1,8 @@
+{
+    "tiebreakers": {
+        "raw_points": "獲得したトーナメント総得点",
+        "head_to_head": "同点プレイヤー間の勝利数",
+        "wins_as_black": "黒の駒での勝利数",
+        "sonneborn_berger": "得点した対戦相手の獲得点数の合計"
+    }
+}
