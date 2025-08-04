@@ -37,7 +37,11 @@ pub fn Unstarted(
         let is_ready = if let Some(user_id) = id {
             ready_map
                 .get(&current_game_id)
-                .map(|users| users.iter().any(|ready_user| ready_user.proposer_id == user_id))
+                .map(|users| {
+                    users
+                        .iter()
+                        .any(|ready_user| ready_user.proposer_id == user_id)
+                })
                 .unwrap_or(false)
         } else {
             false

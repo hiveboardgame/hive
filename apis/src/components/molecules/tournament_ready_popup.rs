@@ -32,15 +32,19 @@ pub fn TournamentReadyPopup(
                 ready_map
                     .iter()
                     .flat_map(|(game_id, users)| {
-                        users.iter().map(move |ready_user| {
-                            (game_id, ready_user)
-                        })
+                        users.iter().map(move |ready_user| (game_id, ready_user))
                     })
                     .find_map(|(game_id, ready_user)| {
                         (ready_user.proposer_id != current_user_id
                             && current_user_id == ready_user.opponent_id
                             && !closed_set.contains(&(game_id.clone(), ready_user.proposer_id)))
-                        .then(|| (game_id.clone(), ready_user.proposer_id, ready_user.proposer_username.clone()))
+                        .then(|| {
+                            (
+                                game_id.clone(),
+                                ready_user.proposer_id,
+                                ready_user.proposer_username.clone(),
+                            )
+                        })
                     })
             })
         })
@@ -52,7 +56,11 @@ pub fn TournamentReadyPopup(
                 closed_set.retain(|(game_id, user_id)| {
                     ready_map
                         .get(game_id)
-                        .map(|users| users.iter().any(|ready_user| ready_user.proposer_id == *user_id))
+                        .map(|users| {
+                            users
+                                .iter()
+                                .any(|ready_user| ready_user.proposer_id == *user_id)
+                        })
                         .unwrap_or(false)
                 });
             });

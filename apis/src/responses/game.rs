@@ -183,15 +183,15 @@ impl GameResponse {
 
     pub async fn vec_from_options(options: GamesQueryOptions, conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
         let games = Game::get_rows_from_options(&options, conn).await?;
-        let mut vec = Vec::new();
-        for game in games {
-            vec.push(GameResponse::from_model(&game, conn).await?);
-        }
-        Ok(vec)
+        Self::from_games_batch(games, conn).await
     }
 
     pub async fn from_game_ids(game_ids: &[Uuid], conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
         let games = Game::find_by_game_ids(game_ids, conn).await?;
+        Self::from_games_batch(games, conn).await
+    }
+
+    async fn from_games_batch(games: Vec<Game>, conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
         let mut user_ids = HashSet::new();
         let mut tournament_ids = HashSet::new();
 

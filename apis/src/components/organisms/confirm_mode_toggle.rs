@@ -7,7 +7,7 @@ use shared_types::GameSpeed;
 #[component]
 pub fn ConfirmModeToggle(game_speed: GameSpeed) -> impl IntoView {
     let i18n = use_i18n();
-    let game_speed = Signal::derive(move || game_speed.clone());
+    let game_speed = Signal::derive(move || game_speed);
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.move_confirm)}</p>
         <div class="flex">
@@ -21,7 +21,7 @@ pub fn ConfirmModeToggle(game_speed: GameSpeed) -> impl IntoView {
 #[component]
 pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> impl IntoView {
     let move_confirm = Signal::derive(move || move_confirm.clone());
-    let game_speed = Signal::derive(move || game_speed.clone());
+    let game_speed = Signal::derive(move || game_speed);
     let Config(config, set_cookie) = expect_context();
     let (title, icon) = match move_confirm() {
         MoveConfirm::Clock => ("Click on your clock", icondata_bi::BiStopwatchRegular),
