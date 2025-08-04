@@ -9,7 +9,7 @@ pub mod websocket;
 use std::sync::Arc;
 
 use actix_session::config::PersistentSession;
-use actix_web::cookie::time::Duration;
+use actix_web::cookie::{time::Duration, SameSite};
 use actix_web::middleware::Compress;
 use leptos_meta::{HashedStylesheet, MetaTags};
 use websocket::WebsocketData;
@@ -132,11 +132,21 @@ async fn main() -> std::io::Result<()> {
             // Now SessionMiddleware, this is a bit confusing but actix invokes middlesware in
             // reverse order of registration and the IdentityMiddleware is based on the
             // SessionMiddleware so SessionMiddleware needs to be present
-            .wrap(
-                SessionMiddleware::builder(CookieSessionStore::default(), cookie_key.clone())
-                    .session_lifecycle(PersistentSession::default().session_ttl(Duration::weeks(1)))
-                    .build(),
-            )
+            .wrap({
+                let mut session_builder = SessionMiddleware::builder(
+                    CookieSessionStore::default(),
+                    cookie_key.clone()
+                )
+                .session_lifecycle(PersistentSession::default().session_ttl(Duration::weeks(12)));
+                if cfg!(debug_assertions) {
+                    // Development mode: allow HTTP and cross-origin for testing from different IPs
+                    session_builder = session_builder
+                        .cookie_secure(false)
+                        .cookie_same_site(SameSite::Lax);
+                }
+
+                session_builder.build()
+            })
             .wrap(Compress::default())
     })
     .bind(&addr)?
