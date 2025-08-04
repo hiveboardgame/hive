@@ -95,7 +95,7 @@
     },
     "turn_alerts": {
         "question": "Will I get an alert when it's my turn (for turn-based games)?",
-        "answer": "Yes, you will see a red message icon at the top of the page with a number indicating how many games you are on turn. Alternatively, navigate to your Profile Page and you can filter for currently Playing, Unstarted Tournament, and Finished games."
+        "answer": "Yes, you will see a red message icon at the top of the page with a number indicating how many games you are on turn. Alternatively, navigate to your Profile Page and you can filter for currently Playing, Pending, and Finished games."
     },
     "correspondence_notifications": {
         "question": "Can I get notified when it's my turn to play in a correspondence game?",
@@ -119,7 +119,7 @@
     },
     "tournament_games": {
         "question": "Where do I see my in-progress / yet-to-be-started games?",
-        "answer": "Navigate to your profile page and you will see filters to your currently Playing and Unstarted Tournament Games."
+        "answer": "Navigate to your profile page and you will see filters to your currently Playing and Pending."
     },
     "change_password": {
         "question": "How do I change my password?",

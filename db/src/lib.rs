@@ -7,6 +7,7 @@ use diesel_async::{
 
 pub mod config;
 pub mod db_error;
+pub mod helpers;
 pub mod models;
 pub mod schema;
 

@@ -1,11 +1,11 @@
 use crate::{
     db_error::DbError,
+    helpers::GameQueryBuilder,
     models::{Challenge, GameUser, Rating, Tournament},
     schema::{
         challenges::{self, nanoid as nanoid_field},
         games::{self, dsl::*, tournament_game_result},
         games_users,
-        users::{self},
     },
     DbConn,
 };
@@ -16,8 +16,8 @@ use diesel_async::RunQueryDsl;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    ChallengeId, Conclusion, GameId, GameProgress, GameSpeed, GameStart, GamesQueryOptions,
-    ResultType, TimeMode, TournamentGameResult,
+    ChallengeId, Conclusion, GameId, GameSpeed, GameStart, GamesQueryOptions, TimeMode,
+    TournamentGameResult,
 };
 use std::{str::FromStr, time::Duration};
 use uuid::Uuid;
@@ -1101,122 +1101,23 @@ impl Game {
             .await?)
     }
 
-    // TODO: refactor into smaller functions
     pub async fn get_rows_from_options(
         options: &GamesQueryOptions,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<Game>, DbError> {
-        let mut query = users::table
-            .inner_join(games_users::table.on(users::id.eq(games_users::user_id)))
-            .inner_join(games::table.on(games_users::game_id.eq(games::id)))
-            .into_boxed();
+        let query = GameQueryBuilder::new()
+            .player_filters(
+                options.player1.as_ref(),
+                options.player2.as_ref(),
+                options.exclude_bots,
+            )
+            .progress(&options.game_progress)
+            .speeds(&options.speeds)
+            .expansions(options.expansions)
+            .rated_filter(options.rated)
+            .paginate(options.current_batch.as_ref(), options.batch_size)
+            .build();
 
-        match options.game_progress {
-            GameProgress::Unstarted => {
-                query = query.filter(
-                    games::game_status
-                        .eq("NotStarted")
-                        .and(games::game_start.eq("Ready"))
-                        .and(games::conclusion.ne("Committee")),
-                );
-            }
-            GameProgress::Playing => {
-                query = query.filter(
-                    games::game_status.eq("InProgress").or(games::game_status
-                        .eq("NotStarted")
-                        .and(games::game_start.ne("Ready"))),
-                );
-            }
-            GameProgress::Finished => {
-                query = query.filter(games::finished.eq(true));
-            }
-            GameProgress::All => {}
-        }
-
-        //Selected speeds
-        let speeds: Vec<_> = options.speeds.iter().map(|s| s.to_string()).collect();
-        query = query.filter(games::speed.eq_any(speeds));
-
-        //Multiple usernames. For each choose color and result type
-        if !options.players.is_empty() {
-            use users::normalized_username as username;
-            let is_white = games::white_id.eq(users::id);
-            let is_black = games::black_id.eq(users::id);
-            let white_won = games::game_status
-                .eq(GameStatus::Finished(GameResult::Winner(Color::White)).to_string());
-            let black_won = games::game_status
-                .eq(GameStatus::Finished(GameResult::Winner(Color::Black)).to_string());
-            let is_draw = games::game_status.eq(GameStatus::Finished(GameResult::Draw).to_string());
-
-            let mut query_conditions: Vec<Box<dyn BoxableExpression<_, _, SqlType = _>>> =
-                Vec::new();
-
-            for (usern, color, result) in options.players.iter() {
-                let user_filter = username.eq(usern.to_lowercase());
-                let result_filter: Option<Box<dyn BoxableExpression<_, _, SqlType = _>>> =
-                    match result {
-                        Some(ResultType::Win) => Some(match color {
-                            Some(Color::White) => Box::new(white_won.clone().and(is_white)),
-                            Some(Color::Black) => Box::new(black_won.clone().and(is_black)),
-                            None => Box::new(
-                                (white_won.clone().and(is_white))
-                                    .or(black_won.clone().and(is_black)),
-                            ),
-                        }),
-                        Some(ResultType::Loss) => Some(match color {
-                            Some(Color::White) => Box::new(black_won.clone().and(is_white)),
-                            Some(Color::Black) => Box::new(white_won.clone().and(is_black)),
-                            None => Box::new(
-                                (white_won.clone().and(is_black))
-                                    .or(black_won.clone().and(is_white)),
-                            ),
-                        }),
-                        Some(ResultType::Draw) => Some(match color {
-                            Some(Color::White) => Box::new(is_white.and(is_draw.clone())),
-                            Some(Color::Black) => Box::new(is_black.and(is_draw.clone())),
-                            None => Box::new(
-                                (is_white.and(is_draw.clone())).or(is_black.and(is_draw.clone())),
-                            ),
-                        }),
-                        None => match color {
-                            Some(Color::White) => Some(Box::new(is_white)),
-                            Some(Color::Black) => Some(Box::new(is_black)),
-                            None => None,
-                        },
-                    };
-
-                let combined_filter: Box<dyn BoxableExpression<_, _, SqlType = _>> =
-                    match result_filter {
-                        Some(res) => Box::new(user_filter.and(res)),
-                        None => Box::new(user_filter),
-                    };
-
-                query_conditions.push(combined_filter);
-            }
-
-            if !query_conditions.is_empty() {
-                let combined_filter = query_conditions
-                    .into_iter()
-                    .reduce(|acc, cond| Box::new(acc.or(cond)));
-                if let Some(filter) = combined_filter {
-                    query = query.filter(filter);
-                }
-            }
-        }
-
-        query = query.order_by((games::updated_at.desc(), games::id.desc()));
-
-        //batching
-        if let Some(batch) = &options.current_batch {
-            query = query.filter(diesel::BoolExpressionMethods::or(
-                games::updated_at.lt(batch.timestamp),
-                diesel::BoolExpressionMethods::and(
-                    games::updated_at.eq(batch.timestamp),
-                    games::id.ne(batch.id),
-                ),
-            ));
-        }
-        query = query.limit(options.batch_size as i64);
         Ok(query.select(games::all_columns).get_results(conn).await?)
     }
 

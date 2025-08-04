@@ -1,7 +1,7 @@
 {
     "game_buttons": {
         "playing": "Em curso",
-        "unstarted": "Jogos de Torneio por começar",
+        "pending": "Pendente",
         "finished": "Acabados"
     },
     "color_buttons": {

@@ -1,6 +1,6 @@
 {
     "game_buttons": {
-        "unstarted": "Partides pendents en tonejos",
+        "pending": "Pendent",
         "finished": "Finalitzades",
         "playing": "Jugant"
     },

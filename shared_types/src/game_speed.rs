@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Debug, Serialize, PartialEq, Eq, Deserialize, Clone, Hash, PartialOrd, Ord)]
+#[derive(Debug, Serialize, PartialEq, Eq, Deserialize, Clone, Copy, Hash, PartialOrd, Ord)]
 pub enum GameSpeed {
     Bullet,
     Blitz,

@@ -4,10 +4,10 @@ use crate::{
     providers::{game_state::GameStateSignal, games::GamesSignal, UpdateNotifier},
     responses::GameResponse,
 };
-use shared_types::ReadyUser;
 use hive_lib::{GameStatus, History, State};
 use leptos::{prelude::*, task::spawn_local};
 use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
+use shared_types::ReadyUser;
 
 pub fn handle_game(game_update: GameUpdate) {
     let game_updater = expect_context::<UpdateNotifier>();
@@ -64,11 +64,14 @@ fn handle_reaction(gar: GameActionResponse) {
                 gar.game.white_player.uid
             };
             update_notifier.tournament_ready.update(|ready_map| {
-                ready_map.entry(gar.game_id.clone()).or_default().push(ReadyUser {
-                    proposer_id: gar.user_id,
-                    proposer_username: gar.username.clone(),
-                    opponent_id,
-                });
+                ready_map
+                    .entry(gar.game_id.clone())
+                    .or_default()
+                    .push(ReadyUser {
+                        proposer_id: gar.user_id,
+                        proposer_username: gar.username.clone(),
+                        opponent_id,
+                    });
                 ready_map.retain(|_, users| !users.is_empty());
             });
 

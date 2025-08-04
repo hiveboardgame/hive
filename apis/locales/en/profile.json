@@ -1,6 +1,6 @@
 {
     "game_buttons": {
-        "unstarted": "Unstarted Tournament Games",
+        "pending": "Pending",
         "playing": "Playing",
         "finished": "Finished"
     },
@@ -23,5 +23,12 @@
     },
     "player_color": "Player color:",
     "game_result": "Game result:",
-    "include_speeds": "Included speeds:"
+    "include_speeds": "Included speeds:",
+    "currently_applied": "Currently Applied",
+    "adjust_filters": "Adjust Filters",
+    "changes_pending": "Changes pending",
+    "apply_changes": "Apply Changes",
+    "reset_to_default": "Reset to Default",
+    "speeds": "Speeds",
+    "statistics": "Statistics"
 }

@@ -14,7 +14,6 @@ use shared_types::GameSpeed;
 pub fn UserRow(
     user: UserResponse,
     actions: Vec<UserAction>,
-    #[prop(optional)] end_str: String,
     #[prop(optional)] game_speed: Option<StoredValue<GameSpeed>>,
     #[prop(optional)] on_profile: bool,
 ) -> impl IntoView {
@@ -68,7 +67,7 @@ pub fn UserRow(
                         patreon=user.patreon
                         bot=user.bot
                         username=username.get_value()
-                        extend_tw_classes="truncate max-w-[125px]"
+                        extend_tw_classes="truncate max-w-[120px]"
                         user_is_hoverable=user_is_hoverable.into()
                     />
                 </div>
@@ -78,7 +77,6 @@ pub fn UserRow(
 
             </div>
             {display_actions}
-            {end_str}
         </div>
     }
 }
