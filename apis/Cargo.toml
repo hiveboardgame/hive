@@ -126,6 +126,7 @@ namespaces = [
   "profile", 
   "user_config", 
   "game", 
+  "tournaments",
   "donate"
 ]
 

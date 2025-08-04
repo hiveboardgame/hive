@@ -1,0 +1,8 @@
+{
+    "tiebreakers": {
+        "raw_points": "Pontos totais do torneio obtidos",
+        "head_to_head": "Jogos ganhos entre jogadores empatados",
+        "wins_as_black": "Jogos ganhos jogando com as pretas",
+        "sonneborn_berger": "Soma dos pontos dos oponentes contra os quais pontuou"
+    }
+}
