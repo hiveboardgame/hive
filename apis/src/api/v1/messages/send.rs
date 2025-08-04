@@ -75,29 +75,26 @@ pub async fn send_turn_messages(
     let mut conn = get_conn(pool).await?;
     let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
     let games = next_to_move.get_games_with_notifications(&mut conn).await?;
-    let mut game_responses = Vec::new();
+    let game_responses = GameResponse::from_games_batch(games, &mut conn).await?;
     let user_id = get_opponent_id(game, bot);
-    
-    for g in games {
-        game_responses.push(GameResponse::from_model(&g, &mut conn).await?);
-    }
-    
+
     messages.push(InternalServerMessage {
         destination: MessageDestination::User(game.current_player_id),
         message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
     });
-    
+
     let response = GameResponse::from_model(game, &mut conn).await?;
-    let action_response = create_game_action_response(response, GameReaction::Turn(played_turn), bot);
+    let action_response =
+        create_game_action_response(response, GameReaction::Turn(played_turn), bot);
     let game_id = action_response.game_id.clone();
-    
+
     maybe_add_tv_update(&mut messages, &action_response.game);
-    
+
     messages.push(InternalServerMessage {
         destination: MessageDestination::Game(game_id),
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
-    
+
     send_messages_batch(&ws_server, messages, Some(user_id));
     Ok(())
 }
@@ -163,7 +160,11 @@ pub async fn send_challenge_creation_message(
         }
     }
 
-    send_messages_batch(&ws_server, messages, Some(challenge_response.challenger.uid));
+    send_messages_batch(
+        &ws_server,
+        messages,
+        Some(challenge_response.challenger.uid),
+    );
     Ok(())
 }
 
@@ -176,10 +177,11 @@ pub async fn send_control_messages(
 ) -> Result<()> {
     let mut messages = Vec::new();
     let mut conn = get_conn(pool).await?;
-    
+
     let opponent_id = get_opponent_id(game, bot);
     let game_response = GameResponse::from_model(game, &mut conn).await?;
-    let action_response = create_game_action_response(game_response, GameReaction::Control(game_control), bot);
+    let action_response =
+        create_game_action_response(game_response, GameReaction::Control(game_control), bot);
     let game_id = action_response.game_id.clone();
 
     maybe_add_tv_update(&mut messages, &action_response.game);
@@ -188,7 +190,7 @@ pub async fn send_control_messages(
         destination: MessageDestination::Game(game_id),
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
-    
+
     send_messages_batch(&ws_server, messages, Some(opponent_id));
     Ok(())
 }
