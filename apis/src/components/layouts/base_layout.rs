@@ -36,7 +36,6 @@ pub struct ControlsSignal {
 
 #[derive(Clone)]
 pub struct OrientationSignal {
-    pub chat_dropdown_open: RwSignal<bool>,
     pub orientation_vertical: Signal<bool>,
 }
 
@@ -51,11 +50,8 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     let gamestate = expect_context::<GameStateSignal>();
     let mut refocus = expect_context::<RefocusSignal>();
     let update_notifier = expect_context::<UpdateNotifier>();
-    let vertical = use_media_query("(min-height: 100vw)");
-    let chat_dropdown_open = RwSignal::new(false);
-    let orientation_vertical = Signal::derive(move || vertical() || chat_dropdown_open());
+    let orientation_vertical = use_media_query("(orientation: portrait), (max-width: 640px)");
     provide_context(OrientationSignal {
-        chat_dropdown_open,
         orientation_vertical,
     });
 
