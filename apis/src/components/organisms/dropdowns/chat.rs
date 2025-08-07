@@ -1,4 +1,3 @@
-use crate::components::layouts::base_layout::OrientationSignal;
 use crate::components::molecules::hamburger::Hamburger;
 use crate::components::organisms::chat::ChatWindow;
 use crate::providers::chat::Chat;
@@ -10,7 +9,7 @@ use shared_types::{GameId, SimpleDestination};
 #[component]
 pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
     let chat = expect_context::<Chat>();
-    let hamburger_show = expect_context::<OrientationSignal>().chat_dropdown_open;
+    let hamburger_show = RwSignal::new(false);
     let chat_style = "absolute z-50 flex-col w-full h-[80dvh] max-w-screen bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md left-0 p-2";
     let params = use_params_map();
     let game_id = move || {
