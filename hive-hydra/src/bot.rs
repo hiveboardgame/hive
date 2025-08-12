@@ -212,14 +212,23 @@ async fn process_turn(
                     );
                 }
                 Err(e) => {
-                    error!("Failed to send move for bot {}: {}", turn.bot.name, e);
+                    error!(
+                        "Failed to send move for bot '{}' on game {}: '{}'",
+                        turn.bot.name, game_identifier, e
+                    );
                 }
             }
         }
         Err(e) => {
+            // Determine the game identifier to use (prefer nanoid, fall back to game_id)
+            let game_identifier = match &turn.game.nanoid {
+                Some(id) => id.clone(),
+                None => turn.game.game_id.clone(),
+            };
+
             error!(
-                "Error running AI commands for bot '{}': '{}'",
-                turn.bot.name, e
+                "Error running AI commands for bot '{}' on game {}: '{}'",
+                turn.bot.name, game_identifier, e
             );
         }
     }
