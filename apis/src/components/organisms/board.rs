@@ -10,32 +10,47 @@ use leptos::either::Either;
 use leptos::ev::{
     contextmenu, pointerdown, pointerleave, pointermove, pointerup, touchmove, touchstart, wheel,
 };
-use leptos::leptos_dom::helpers::debounce;
 use leptos::{
     html,
     prelude::*,
-    svg::{self, Svg},
+    svg,
 };
 use leptos_use::{
     on_click_outside, use_event_listener, use_event_listener_with_options,
-    use_intersection_observer_with_options, use_resize_observer, use_throttle_fn_with_arg,
+    use_intersection_observer_with_options, use_raf_fn, use_resize_observer,
     UseEventListenerOptions, UseIntersectionObserverOptions,
 };
-use std::time::Duration;
 use wasm_bindgen::JsCast;
-use web_sys::{DomRectReadOnly, PointerEvent, SvgPoint, TouchEvent, WheelEvent};
+use web_sys::{TouchEvent, WheelEvent};
+
+#[derive(Debug, Clone)]
+enum ViewBoxUpdateType {
+    Resize {
+        width: f32,
+        height: f32,
+    },
+    Pan {
+        delta_x: f32,
+        delta_y: f32,
+    },
+    Zoom {
+        center_x: f32,
+        center_y: f32,
+        scale: f32,
+    },
+}
 
 #[derive(Debug, Clone)]
 struct ViewBoxControls {
-    // The coordinates svg_pos gives to start spawn position at 16 16 that will scale based on initial size of the viewbox
-    x_transform: f32,
-    y_transform: f32,
-    // Min_x, min_y, width and height to be used for the viewbox
+    // ViewBox bounds (min_x, min_y, width, height for the viewbox)
     x: f32,
     y: f32,
-    height: f32,
     width: f32,
-    // Panning numbers
+    height: f32,
+    // Transform coordinates (svg_pos gives start spawn position at 16,16 that scales based on initial viewbox size)
+    x_transform: f32,
+    y_transform: f32,
+    // Panning state (drag start coordinates)
     drag_start_x: f32,
     drag_start_y: f32,
 }
@@ -43,24 +58,51 @@ struct ViewBoxControls {
 impl ViewBoxControls {
     pub fn new() -> Self {
         ViewBoxControls {
-            x_transform: 0.0,
-            y_transform: 0.0,
             x: 0.0,
             y: 0.0,
-            height: 550.0,
             width: 550.0,
+            height: 550.0,
+            x_transform: 0.0,
+            y_transform: 0.0,
             drag_start_x: 0.0,
             drag_start_y: 0.0,
         }
     }
+    
+    fn calculate_zoom(mut self, center_x: f32, center_y: f32, scale: f32) -> Self {
+        self.width /= scale;
+        self.height /= scale;
+        self.x = center_x - (center_x - self.x) / scale;
+        self.y = center_y - (center_y - self.y) / scale;
+        self
+    }
+    
+    fn calculate_pan(mut self, delta_x: f32, delta_y: f32) -> Self {
+        self.x -= delta_x;
+        self.y -= delta_y;
+        self
+    }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-struct BoundingBox {
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
+
+struct ViewBoxState {
+    is_panning: RwSignal<bool>,
+    has_zoomed: RwSignal<bool>,
+    is_visible: RwSignal<bool>,
+    zoom_in_limit: f32,
+    zoom_out_limit: f32,
+}
+
+impl ViewBoxState {
+    fn new() -> Self {
+        Self {
+            is_panning: RwSignal::new(false),
+            has_zoomed: RwSignal::new(false),
+            is_visible: RwSignal::new(true),
+            zoom_in_limit: 150.0,
+            zoom_out_limit: 2500.0,
+        }
+    }
 }
 
 #[component]
@@ -70,15 +112,13 @@ pub fn Board() -> impl IntoView {
     let orientation_signal = expect_context::<OrientationSignal>();
     let target_stack = RwSignal::new(None);
     let config = expect_context::<Config>().0;
-    let is_panning = RwSignal::new(false);
-    let has_zoomed = RwSignal::new(false);
+    let viewbox_state = ViewBoxState::new();
     let viewbox_signal = RwSignal::new(ViewBoxControls::new());
     let initial_touch_distance = RwSignal::<f32>::new(0.0);
+    let pending_update = RwSignal::new(None::<ViewBoxUpdateType>);
     let viewbox_ref = NodeRef::<svg::Svg>::new();
     let g_ref = NodeRef::<svg::G>::new();
     let div_ref = NodeRef::<html::Div>::new();
-    let zoom_in_limit = 150.0;
-    let zoom_out_limit = 2500.0;
     let last_turn = game_state.is_last_turn_as_signal();
     let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
     let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
@@ -110,76 +150,115 @@ pub fn Board() -> impl IntoView {
         viewbox_signal.with(|vb| format!("translate({},{})", vb.x_transform, vb.y_transform))
     };
 
-    let current_center = move || {
+    let current_center = 
         game_state
             .signal
-            .with_untracked(|gs| gs.state.board.center_coordinates())
-    };
+            .with_untracked(|gs| gs.state.board.center_coordinates());
 
-    let straight = Signal::derive(move || config.with(|c| c.tile.design == TileDesign::ThreeD));
+    let straight = config.with_untracked(|c| c.tile.design == TileDesign::ThreeD);
     let tile_opts = Signal::derive(move || config.with(|c| c.tile.clone()));
 
     let background_style = Signal::derive(move || {
         let bg = config.with(|c| c.tile.get_effective_background_color(c.prefers_dark));
         format!("background-color: {bg}")
     });
-    let g_bbox = Memo::new(move |_| get_bbox(g_ref));
+    
+
+    // Unified RAF-based viewbox update system
+    let update_viewbox_size = move |width: f32, height: f32, respect_zoom: bool| {
+        let svg_pos = SvgPos::center_for_level(current_center, 0, straight);
+        let (scale_x, scale_y) = if respect_zoom && viewbox_state.has_zoomed.get_untracked() {
+            let svg = viewbox_ref.get_untracked().expect("It exists");
+            viewbox_signal.with_untracked(|vb| {
+                (
+                    svg.client_width() as f32 / vb.width,
+                    svg.client_height() as f32 / vb.height,
+                )
+            })
+        } else {
+            (1.0, 1.0)
+        };
+
+        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+            viewbox_controls.x = 0.0;
+            viewbox_controls.y = 0.0;
+            viewbox_controls.width = width / scale_x;
+            viewbox_controls.height = height / scale_y;
+            viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
+            viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
+        });
+    };
+
+    let raf_controller = use_raf_fn(move |_| {
+        let update = pending_update.get_untracked();
+        if let Some(update) = update {
+            pending_update.set(None);
+            match update {
+                ViewBoxUpdateType::Resize { width, height } => {
+                    update_viewbox_size(width, height, true);
+                }
+                ViewBoxUpdateType::Pan { delta_x, delta_y } => {
+                    if viewbox_state.is_panning.get_untracked() && target_stack.with_untracked(|v| v.is_none()) {
+                        let future_viewbox = viewbox_signal.get_untracked().calculate_pan(delta_x, delta_y);
+                        if viewbox_state.is_visible.get() || will_svg_be_visible(g_ref, &future_viewbox) {
+                            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                                viewbox_controls.x = future_viewbox.x;
+                                viewbox_controls.y = future_viewbox.y;
+                            });
+                        }
+                    }
+                }
+                ViewBoxUpdateType::Zoom {
+                    center_x,
+                    center_y,
+                    scale,
+                } => {
+                    let future_viewbox = viewbox_signal.get_untracked().calculate_zoom(center_x, center_y, scale);
+                    let intermediate_height = future_viewbox.height;
+
+                    if (intermediate_height >= viewbox_state.zoom_in_limit && intermediate_height <= viewbox_state.zoom_out_limit)
+                        && (viewbox_state.is_visible.get() || will_svg_be_visible(g_ref, &future_viewbox))
+                    {
+                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
+                            *viewbox_controls = future_viewbox;
+                        });
+                        viewbox_state.has_zoomed.set(true);
+                    }
+                }
+            }
+        }
+    });
+
+    let queue_update = StoredValue::new(move |update_type: ViewBoxUpdateType| {
+        let was_empty = pending_update.get_untracked().is_none();
+        pending_update.set(Some(update_type));
+        if was_empty {
+            (raf_controller.resume)();
+        }
+    });
     Effect::watch(
         move || (),
         move |_, _, _| {
             let div = div_ref.get_untracked().expect("it exists");
             let rect = div.get_bounding_client_rect();
-            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight.get_untracked());
-            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                viewbox_controls.x = 0.0;
-                viewbox_controls.y = 0.0;
-                viewbox_controls.width = rect.width() as f32;
-                viewbox_controls.height = rect.height() as f32;
-                viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
-                viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
-            });
+            update_viewbox_size(rect.width() as f32, rect.height() as f32, false);
         },
         true,
     );
 
     //This handles board resizes
-    let throttled_resize = use_throttle_fn_with_arg(
-        move |rect: DomRectReadOnly| {
-            let svg_pos = SvgPos::center_for_level(current_center(), 0, straight.get_untracked());
-            let svg = viewbox_ref.get_untracked().expect("It exists");
-            // if user has zoomed, keep their scale when resizing board
-            let (current_x_scale, current_y_scale) = if has_zoomed.get_untracked() {
-                viewbox_signal.with_untracked(|vb| {
-                    (
-                        svg.client_width() as f32 / vb.width,
-                        svg.client_height() as f32 / vb.height,
-                    )
-                })
-            } else {
-                (1.0, 1.0)
-            };
-
-            viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                viewbox_controls.x = 0.0;
-                viewbox_controls.y = 0.0;
-                viewbox_controls.width = rect.width() as f32 / current_x_scale;
-                viewbox_controls.height = rect.height() as f32 / current_y_scale;
-                viewbox_controls.x_transform = -(svg_pos.0 - (viewbox_controls.width / 2.0));
-                viewbox_controls.y_transform = -(svg_pos.1 - (viewbox_controls.height / 2.0));
-            });
-        },
-        10.0,
-    );
     use_resize_observer(div_ref, move |entries, _observer| {
         let rect = entries[0].content_rect();
-        throttled_resize(rect);
+        queue_update.with_value(|f| f(ViewBoxUpdateType::Resize {
+            width: rect.width() as f32,
+            height: rect.height() as f32,
+        }));
     });
 
-    let is_visible = RwSignal::new(true);
     _ = use_intersection_observer_with_options(
         g_ref,
         move |entries, _| {
-            is_visible.set(entries[0].is_intersecting());
+            viewbox_state.is_visible.set(entries[0].is_intersecting());
         },
         UseIntersectionObserverOptions::default()
             .root(Some(viewbox_ref))
@@ -189,70 +268,40 @@ pub fn Board() -> impl IntoView {
     //Start panning and record point where it starts for mouse on left mouse button hold and touch
     _ = use_event_listener(viewbox_ref, pointerdown, move |evt| {
         if evt.button() == 0 {
-            is_panning.update_untracked(|b| *b = true);
-            let ref_point = svg_point_from_pointer(viewbox_ref, &evt);
+            viewbox_state.is_panning.update_untracked(|b| *b = true);
+            let (x, y) = screen_to_svg_coordinates(viewbox_ref, evt.x() as f32, evt.y() as f32);
             viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                viewbox_controls.drag_start_x = ref_point.x();
-                viewbox_controls.drag_start_y = ref_point.y();
+                viewbox_controls.drag_start_x = x;
+                viewbox_controls.drag_start_y = y;
             });
         }
     });
 
     //Keep panning while user drags around
     _ = use_event_listener(viewbox_ref, pointermove, move |evt| {
-        if is_panning.get_untracked() && target_stack.with_untracked(|v| v.is_none()) {
-            let moved_point = svg_point_from_pointer(viewbox_ref, &evt);
-            let mut future_viewbox = viewbox_signal.get_untracked();
-            future_viewbox.x -= moved_point.x() - future_viewbox.drag_start_x;
-            future_viewbox.y -= moved_point.y() - future_viewbox.drag_start_y;
-            if is_visible() {
-                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                    viewbox_controls.x = future_viewbox.x;
-                    viewbox_controls.y = future_viewbox.y
-                });
-            } else if will_svg_be_visible(g_bbox(), &future_viewbox) {
-                viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                    viewbox_controls.x = future_viewbox.x;
-                    viewbox_controls.y = future_viewbox.y
-                });
-            };
+        if viewbox_state.is_panning.get_untracked() && target_stack.with_untracked(|v| v.is_none()) {
+            let (x, y) = screen_to_svg_coordinates(viewbox_ref, evt.x() as f32, evt.y() as f32);
+            let current_viewbox = viewbox_signal.get_untracked();
+            let delta_x = x - current_viewbox.drag_start_x;
+            let delta_y = y - current_viewbox.drag_start_y;
+            queue_update.with_value(|f| f(ViewBoxUpdateType::Pan { delta_x, delta_y }));
         }
     });
 
     _ = use_event_listener_with_options(
         viewbox_ref,
         wheel,
-        debounce(Duration::from_millis(7), move |evt: WheelEvent| {
-            if !is_panning.get_untracked() {
-                let initial_point = svg_point_from_wheel(viewbox_ref, &evt);
-                let scale: f32 = if evt.delta_y() > 0.0 { 0.09 } else { -0.09 };
-                let mut future_viewbox = viewbox_signal.get_untracked();
-                let initial_height = future_viewbox.height;
-                let initial_width = future_viewbox.width;
-                future_viewbox.width += initial_width * scale;
-                future_viewbox.height += initial_height * scale;
-                future_viewbox.x = initial_point.x()
-                    - (initial_point.x() - future_viewbox.x) / initial_width * future_viewbox.width;
-                future_viewbox.y = initial_point.y()
-                    - (initial_point.y() - future_viewbox.y) / initial_height
-                        * future_viewbox.height;
-                if (scale < 0.0 && initial_height >= zoom_in_limit)
-                    || (scale > 0.0 && initial_height <= zoom_out_limit)
-                {
-                    if is_visible() {
-                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                            *viewbox_controls = future_viewbox;
-                        });
-                        has_zoomed.set(true);
-                    } else if will_svg_be_visible(g_bbox(), &future_viewbox) {
-                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                            *viewbox_controls = future_viewbox;
-                        });
-                        has_zoomed.set(true);
-                    }
-                }
+        move |evt: WheelEvent| {
+            if !viewbox_state.is_panning.get_untracked() {
+                let (x, y) = screen_to_svg_coordinates(viewbox_ref, evt.x() as f32, evt.y() as f32);
+                let scale: f32 = if evt.delta_y() > 0.0 { 1.09 } else { 0.91 };
+                queue_update.with_value(|f| f(ViewBoxUpdateType::Zoom {
+                    center_x: x,
+                    center_y: y,
+                    scale,
+                }));
             }
-        }),
+        },
         UseEventListenerOptions::default().passive(true),
     );
 
@@ -260,61 +309,41 @@ pub fn Board() -> impl IntoView {
     _ = use_event_listener_with_options(
         viewbox_ref,
         touchstart,
-        debounce(Duration::from_millis(1), move |evt: TouchEvent| {
+        move |evt: TouchEvent| {
             if evt.touches().length() == 2 {
-                is_panning.update_untracked(|b| *b = false);
-                let initial_point_0 = svg_point_from_touch(viewbox_ref, &evt, 0);
-                let initial_point_1 = svg_point_from_touch(viewbox_ref, &evt, 1);
+                viewbox_state.is_panning.update_untracked(|b| *b = false);
                 initial_touch_distance
-                    .update(move |v| *v = get_touch_distance(initial_point_0, initial_point_1));
+                    .update(move |v| *v = touch_distance_and_center(viewbox_ref, &evt).0);
             }
-        }),
+        },
         UseEventListenerOptions::default().passive(true),
     );
 
     _ = use_event_listener_with_options(
         viewbox_ref,
         touchmove,
-        debounce(Duration::from_millis(1), move |evt: TouchEvent| {
+        move |evt: TouchEvent| {
             if evt.touches().length() == 2 {
-                let current_point_0 = svg_point_from_touch(viewbox_ref, &evt, 0);
-                let current_point_1 = svg_point_from_touch(viewbox_ref, &evt, 1);
-                let current_distance = get_touch_distance(current_point_0.clone(), current_point_1);
+                let (current_distance, center) = touch_distance_and_center(viewbox_ref, &evt);
                 let scale = current_distance / initial_touch_distance();
-                let mut future_viewbox = viewbox_signal.get_untracked();
-                let intermediate_height = future_viewbox.height / scale;
-                future_viewbox.width /= scale;
-                future_viewbox.height /= scale;
-                future_viewbox.x =
-                    current_point_0.x() - (current_point_0.x() - future_viewbox.x) / scale;
-                future_viewbox.y =
-                    current_point_0.y() - (current_point_0.y() - future_viewbox.y) / scale;
-                if intermediate_height >= zoom_in_limit && intermediate_height <= zoom_out_limit {
-                    if is_visible() {
-                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                            *viewbox_controls = future_viewbox
-                        });
-                        has_zoomed.set(true);
-                    } else if will_svg_be_visible(g_bbox(), &future_viewbox) {
-                        viewbox_signal.update(|viewbox_controls: &mut ViewBoxControls| {
-                            *viewbox_controls = future_viewbox
-                        });
-                        has_zoomed.set(true);
-                    }
-                };
+                queue_update.with_value(|f| f(ViewBoxUpdateType::Zoom {
+                    center_x: center.0,
+                    center_y: center.1,
+                    scale,
+                }));
             }
-        }),
+        },
         UseEventListenerOptions::default().passive(true),
     );
 
     //Stop panning when user releases touch/click
     _ = use_event_listener(viewbox_ref, pointerup, move |_| {
-        is_panning.update_untracked(|b| *b = false);
+        viewbox_state.is_panning.update_untracked(|b| *b = false);
     });
 
     //Stop panning when pointer leaves board area
     _ = use_event_listener(viewbox_ref, pointerleave, move |_| {
-        is_panning.update_untracked(|b| *b = false);
+        viewbox_state.is_panning.update_untracked(|b| *b = false);
     });
 
     //Prevent right click/context menu on board
@@ -361,54 +390,50 @@ pub fn Board() -> impl IntoView {
     }
 }
 
-fn svg_point_from_touch(svg: NodeRef<Svg>, evt: &TouchEvent, ind: u32) -> web_sys::SvgPoint {
-    svg_point_from_coordinates(
-        svg,
-        evt.touches()
-            .get(ind)
-            .expect("It was called by a valid touch event")
-            .client_x() as f32,
-        evt.touches()
-            .get(ind)
-            .expect("It was called by a valid touch event")
-            .client_y() as f32,
-    )
+fn touch_distance_and_center(svg: NodeRef<svg::Svg>, evt: &TouchEvent) -> (f32, (f32, f32)) {
+    let touches = evt.touches();
+    let touch_0 = touches.get(0).expect("Should have first touch");
+    let touch_1 = touches.get(1).expect("Should have second touch");
+    
+    let point_0 = screen_to_svg_coordinates(svg, touch_0.client_x() as f32, touch_0.client_y() as f32);
+    let point_1 = screen_to_svg_coordinates(svg, touch_1.client_x() as f32, touch_1.client_y() as f32);
+    
+    let distance_x = point_0.0 - point_1.0;
+    let distance_y = point_0.1 - point_1.1;
+    let distance = distance_x.hypot(distance_y);
+    
+    let center = ((point_0.0 + point_1.0) / 2.0, (point_0.1 + point_1.1) / 2.0);
+    
+    (distance, center)
 }
 
-fn svg_point_from_pointer(svg: NodeRef<Svg>, evt: &PointerEvent) -> web_sys::SvgPoint {
-    svg_point_from_coordinates(svg, evt.x() as f32, evt.y() as f32)
-}
-
-fn svg_point_from_wheel(svg: NodeRef<Svg>, evt: &WheelEvent) -> web_sys::SvgPoint {
-    svg_point_from_coordinates(svg, evt.x() as f32, evt.y() as f32)
-}
-
-fn svg_point_from_coordinates(svg: NodeRef<Svg>, x: f32, y: f32) -> web_sys::SvgPoint {
+fn screen_to_svg_coordinates(svg: NodeRef<svg::Svg>, x: f32, y: f32) -> (f32, f32) {
     let svg = svg.get_untracked().expect("svg should exist already");
     let svg_graphics_element = svg.unchecked_ref::<web_sys::SvgGraphicsElement>();
     let svg_svg_element = svg.unchecked_ref::<web_sys::SvgsvgElement>();
-    let point: web_sys::SvgPoint = svg_svg_element.create_svg_point();
+    let point = svg_svg_element.create_svg_point();
     point.set_x(x);
     point.set_y(y);
-
-    point.matrix_transform(
+    let transformed_point = point.matrix_transform(
         &svg_graphics_element
             .get_screen_ctm()
             .expect("screen ctm missing")
             .inverse()
             .expect("matrix not inversed"),
-    )
+    );
+    (transformed_point.x(), transformed_point.y())
 }
 
-fn get_touch_distance(point_0: SvgPoint, point_1: SvgPoint) -> f32 {
-    let distance_x = point_0.x() - point_1.x();
-    let distance_y = point_0.y() - point_1.y();
-    (distance_x * distance_x + distance_y * distance_y).sqrt()
-}
-
-fn will_svg_be_visible(bbox: BoundingBox, viewbox: &ViewBoxControls) -> bool {
-    let bbox_mid_x = bbox.x + viewbox.x_transform + bbox.width / 2.0;
-    let bbox_mid_y = bbox.y + viewbox.y_transform + bbox.height / 2.0;
+fn will_svg_be_visible(g_ref: NodeRef<svg::G>, viewbox: &ViewBoxControls) -> bool {
+    let bbox = g_ref
+        .get_untracked()
+        .expect("G exists")
+        .unchecked_ref::<web_sys::SvgGraphicsElement>()
+        .get_b_box()
+        .expect("Rect");
+    
+    let bbox_mid_x = bbox.x() + viewbox.x_transform + bbox.width() / 2.0;
+    let bbox_mid_y = bbox.y() + viewbox.y_transform + bbox.height() / 2.0;
     let viewbox_right = viewbox.x + viewbox.width;
     let viewbox_bottom = viewbox.y + viewbox.height;
 
@@ -416,20 +441,4 @@ fn will_svg_be_visible(bbox: BoundingBox, viewbox: &ViewBoxControls) -> bool {
         && (bbox_mid_x < viewbox_right)
         && (bbox_mid_y > viewbox.y)
         && (bbox_mid_y < viewbox_bottom)
-}
-
-fn get_bbox(g_ref: NodeRef<svg::G>) -> BoundingBox {
-    let svg = g_ref
-        .get_untracked()
-        .expect("G exists")
-        .unchecked_ref::<web_sys::SvgGraphicsElement>()
-        .get_b_box()
-        .expect("Rect");
-
-    BoundingBox {
-        x: svg.x(),
-        y: svg.y(),
-        width: svg.width(),
-        height: svg.height(),
-    }
 }
