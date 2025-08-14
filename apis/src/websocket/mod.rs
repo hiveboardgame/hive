@@ -4,6 +4,7 @@ pub use chat::Chats;
 pub use lag_tracking::{Lags, Pings};
 pub mod busybee;
 pub mod client_handlers;
+pub mod new_style;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     mod messages;

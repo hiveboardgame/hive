@@ -1,5 +1,8 @@
 use crate::{
-    components::{layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames},
+    components::{
+        layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames,
+        test_ws_com::TestWsCom,
+    },
     i18n::I18nContextProvider,
     pages::{
         account::Account,
@@ -32,6 +35,7 @@ use crate::{
         provide_referer, provide_server_updates, provide_sounds, refocus::provide_refocus,
         schedules::provide_schedules, websocket::provide_websocket, AuthContext,
     },
+    websocket::new_style::ClientApi,
 };
 use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
@@ -77,6 +81,26 @@ pub fn App() -> impl IntoView {
 
     //expects auth, api_requests, gameStateSignal
     provide_chat();
+    // we'll only listen for websocket messages on the client
+    use futures::{channel::mpsc, StreamExt};
+    let (tx, rx) = mpsc::channel(1);
+
+    provide_context(ClientApi::new(tx));
+    let latest = expect_context::<ClientApi>().latest;
+    if cfg!(feature = "hydrate") {
+        use crate::websocket::new_style::websocket_fn;
+        leptos::task::spawn_local(async move {
+            match websocket_fn(rx.into()).await {
+                Ok(mut messages) => {
+                    while let Some(msg) = messages.next().await {
+                        leptos::logging::log!("{msg:?}");
+                        latest.set(msg);
+                    }
+                }
+                Err(e) => leptos::logging::warn!("{e}"),
+            }
+        });
+    }
     let auth = expect_context::<AuthContext>();
     let is_logged_in = move || auth.user.with(|a| a.is_some()).into();
     let is_admin = move || Some(auth.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin)));
@@ -99,6 +123,7 @@ pub fn App() -> impl IntoView {
                     >
 
                         <Route path=path!("") view=|| view! { <Home /> } />
+                        <Route path=path!("/test_new_ws") view=|| view! { <TestWsCom /> } />
                         <ParentRoute
                             path=path!("/@/:username")
                             view=|| {
