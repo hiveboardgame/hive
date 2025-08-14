@@ -14,6 +14,7 @@ pub enum ClientRequest {
     Tournament(TournamentAction),
     // leptos-use idle or window unfocused will send
     Away, // Online and Offline are not needed because they will be handled by the WS connection
-          // being established/torn down
-          // TODO: all the other things the API does right now
+    // being established/torn down
+    // TODO: all the other things the API does right now
+    DbgMsg(String),
 }

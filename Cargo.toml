@@ -35,6 +35,7 @@ diesel = { version = "2.2", features = [
 diesel-async = { version = "0.6", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.2", features = ["postgres"] }
 dotenvy = "0.15"
+futures = "0.3"
 http = "1.3.1"
 http-serde = { version = "2" }
 icondata_core = "0.1"
@@ -71,7 +72,7 @@ reqwest = { version = "0.12.22", features = ["json"] }
 serde = { version = "1" }
 serde_json = { version = "1" }
 serde_with = { version = "3.14" }
-server_fn = { version = "0.8", features = ["cbor"] }
+server_fn = { version = "0.8", features = ["cbor", "msgpack" ] }
 sha2 = "0.10"
 send_wrapper = "0.6"
 simple_logger = "5.0"

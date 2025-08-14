@@ -36,12 +36,13 @@ async fn main() -> std::io::Result<()> {
     use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
     use leptos::prelude::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
+    use websocket::new_style::ServerNotifications;
     use sha2::*;
 
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
-
+    let server_notifications = Data::new(ServerNotifications::default());
     simple_logger::init_with_level(log::Level::Warn).expect("couldn't initialize logging");
 
     let config = DbConfig::from_env().expect("Failed to load config from env");
@@ -80,6 +81,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(Data::new(pool.clone()))
             .app_data(Data::clone(&websocket_server))
+            .app_data(Data::clone(&server_notifications))
             .app_data(Data::clone(&data))
             .app_data(Data::clone(&jwt_key))
             .app_data(Data::new(site_root.to_string()))

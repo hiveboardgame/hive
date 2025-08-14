@@ -143,6 +143,10 @@ impl RequestHandler {
                     .handle()
                     .await?
             }
+            ClientRequest::DbgMsg(msg) => {
+                println!("Received debug message: {msg}");
+                vec![]
+            }
         };
         Ok(messages)
     }
