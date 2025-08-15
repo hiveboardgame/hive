@@ -82,24 +82,14 @@ pub fn App() -> impl IntoView {
     //expects auth, api_requests, gameStateSignal
     provide_chat();
     // we'll only listen for websocket messages on the client
-    use futures::{channel::mpsc, StreamExt};
+    use futures::channel::mpsc;
     let (tx, rx) = mpsc::channel(1);
 
     provide_context(ClientApi::new(tx));
-    let latest = expect_context::<ClientApi>().latest;
+    let client_api = expect_context::<ClientApi>();
     if cfg!(feature = "hydrate") {
-        use crate::websocket::new_style::websocket_fn;
-        leptos::task::spawn_local(async move {
-            match websocket_fn(rx.into()).await {
-                Ok(mut messages) => {
-                    while let Some(msg) = messages.next().await {
-                        leptos::logging::log!("{msg:?}");
-                        latest.set(msg);
-                    }
-                }
-                Err(e) => leptos::logging::warn!("{e}"),
-            }
-        });
+        use crate::websocket::new_style::client_handler;
+        leptos::task::spawn_local(client_handler(rx, client_api));
     }
     let auth = expect_context::<AuthContext>();
     let is_logged_in = move || auth.user.with(|a| a.is_some()).into();
