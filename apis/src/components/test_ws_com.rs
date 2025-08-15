@@ -32,10 +32,12 @@ pub fn TestWsCom() -> impl IntoView {
                     }
                 }>
                     <p>
-                        {if let Ok(msg) = latest() {
-                            format!("{msg:?}")
-                        } else {
-                            "BAD".to_string()
+                        {move || {
+                            if let Ok(msg) = latest() {
+                                format!("{msg:?}")
+                            } else {
+                                "BAD".to_string()
+                            }
                         }}
                     </p>
                 </ErrorBoundary>
