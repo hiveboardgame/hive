@@ -1,42 +1,46 @@
 use crate::functions::auth::identity::uuid;
+use crate::websocket::new_style::server_types::ClientSender;
+use crate::websocket::new_style::ServerData;
 use crate::{
     common::ServerMessage,
     websocket::{lag_tracking::PingStats, InternalServerMessage, MessageDestination},
 };
-use futures::{channel::mpsc::Sender, sink::SinkExt};
+use actix_web::web::Data;
 use rand::Rng;
-use server_fn::ServerFnError;
 use std::{ops::DerefMut, sync::Arc};
-use tokio::sync::{watch::Receiver, RwLock};
+use tokio::sync::RwLock;
 use tokio::time::{interval as interval_fn, Duration};
-
 pub async fn ping_client_every_ms(
     interval: u64,
-    mut client: Sender<Result<ServerMessage, ServerFnError>>,
-    server_data: Arc<RwLock<PingStats>>,
+    mut client: ClientSender,
+    pings: Arc<RwLock<PingStats>>,
+    server_data: Data<ServerData>,
 ) {
     let mut interval = interval_fn(Duration::from_millis(interval));
+    let mut x = 0;
     loop {
         interval.tick().await;
         let nonce = rand::rng().random();
-        let mut pings = server_data.write().await;
+        let mut pings = pings.write().await;
         pings.deref_mut().set_nonce(nonce);
         let message = ServerMessage::Ping {
             nonce,
             value: pings.deref_mut().value(),
         };
-        let res = client.send(Ok(message)).await;
-        if res.is_err() {
-            println!("Client disconected");
+        let id = *client.id.read().await;
+        leptos::logging::log!("{x} before ping send {id:?}");
+        let res = client.send(message, &server_data).await;
+        leptos::logging::log!("{x} after ping send {id:?}");
+        x += 1;
+        if let Err(res) = res {
+            leptos::logging::log!("{res}");
             break;
         }
     }
 }
 
-pub async fn handle_server_notificantions(
-    mut client: Sender<Result<ServerMessage, ServerFnError>>,
-    mut server_reciever: Receiver<InternalServerMessage>,
-) {
+pub async fn handle_server_notificantions(mut client: ClientSender, server_data: Data<ServerData>) {
+    let mut server_reciever = server_data.receiver();
     loop {
         if server_reciever.changed().await.is_ok() {
             let InternalServerMessage {
@@ -61,9 +65,10 @@ pub async fn handle_server_notificantions(
                 }
             };
             if let Some(response) = response {
-                let res = client.send(Ok(response)).await;
-                if res.is_err() {
-                    println!("Client {} disconnected", uuid().await.unwrap_or_default());
+                let res = client.send(response, &server_data).await;
+                if let Err(res) = res {
+                    leptos::logging::log!("{res}");
+                    break;
                 }
             }
         }
