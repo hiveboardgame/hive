@@ -36,13 +36,13 @@ async fn main() -> std::io::Result<()> {
     use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
     use leptos::prelude::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
-    use websocket::new_style::ServerNotifications;
+    use websocket::new_style::ServerData;
     use sha2::*;
 
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
-    let server_notifications = Data::new(ServerNotifications::default());
+    let server_notifications = Data::new(ServerData::default());
     simple_logger::init_with_level(log::Level::Warn).expect("couldn't initialize logging");
 
     let config = DbConfig::from_env().expect("Failed to load config from env");

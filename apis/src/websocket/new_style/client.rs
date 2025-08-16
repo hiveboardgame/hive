@@ -1,6 +1,6 @@
 use crate::{
     common::{ClientRequest, ServerMessage},
-    websocket::new_style::websocket_fn,
+    websocket::new_style::websocket_fn::websocket_fn,
 };
 use futures::channel::mpsc::{Receiver, Sender};
 use futures::StreamExt;
@@ -34,7 +34,7 @@ pub async fn client_handler(
     rx: Receiver<Result<ClientRequest, ServerFnError>>,
     client_api: ClientApi,
 ) {
-    match websocket_fn::websocket_fn(rx.into()).await {
+    match websocket_fn(rx.into()).await {
         Ok(mut messages) => {
             while let Some(msg) = messages.next().await {
                 //Debug
@@ -42,7 +42,7 @@ pub async fn client_handler(
                 match msg {
                     Ok(msg) => match msg {
                         ServerMessage::Ping { nonce, value } => {
-                            client_api.send(crate::common::ClientRequest::Pong(nonce));
+                            client_api.send(ClientRequest::Pong(nonce));
                         }
                         ServerMessage::Error(e) => {}
                         _ => todo!(),
