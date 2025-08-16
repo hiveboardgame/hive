@@ -147,6 +147,9 @@ impl RequestHandler {
                 println!("Received debug message: {msg}");
                 vec![]
             }
+            ClientRequest::UpdateId => {
+                vec![]
+            }
         };
         Ok(messages)
     }
