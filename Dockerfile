@@ -20,7 +20,7 @@ WORKDIR /app
 COPY . .
 
 # Build the app
-RUN LEPTOS_TAILWIND_VERSION=v3.4.1 LEPTOS_HASH_FILES=true cargo leptos build -r -P -vv
+RUN LEPTOS_HASH_FILES=true cargo leptos build -r -P -vv
 
 FROM debian:bookworm-slim AS runner
 # Copy the server binary to the /app directory

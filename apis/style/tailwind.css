@@ -1,8 +1,73 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Typography plugin via CSS to avoid JS requires */
+@plugin "@tailwindcss/typography";
+
+/* Tailwind v4 content sources (Rust + HTML) */
+@source "../src/**/*.rs";
+@source "../*.html";
+
+/* Custom raw-height variant as a media range for v4 (block form) */
+@custom-variant short {
+  @media (height <=700px) {
+    @slot;
+  }
+}
+
+/* Override dark mode to class strategy (respect .dark on root) */
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+}
+
+/* Theme tokens (pure CSS Tailwind v4) */
+@theme {
+  /* Custom breakpoint */
+  --breakpoint-xs: 360px;
+
+  /* Custom colors */
+  --color-board-twilight: #47545a;
+  --color-board-dawn: #edebe9;
+  --color-reserve-twilight: #212836;
+  --color-reserve-dawn: #edebe9;
+  --color-header-twilight: #2e3e48;
+  --color-header-dawn: #d1d5db;
+  --color-button-twilight: #7da1b2;
+  --color-button-dawn: #3574a5;
+  --color-orange-twilight: #e9ac43;
+  --color-orange-dawn: #f68c11;
+  --color-hive-black: #3a3a3a;
+  --color-hive-white: #f0ead6;
+  --color-light: #edebe9;
+  --color-odd-light: #f7f6f5;
+  --color-even-light: #ffffff;
+  --color-odd-dark: #302E2C;
+  --color-even-dark: #262421;
+  --color-pillbug-teal: #40afa1;
+  --color-ladybug-red: #d61a35;
+  --color-grasshopper-green: #3f9b3a;
+  --color-blue-light: #d1e4f6;
+  --color-blue-dark: #293a49;
+}
+
+/* Custom utilities for grid templates used in the board layout */
+@utility grid-cols-board {
+  grid-template-columns: repeat(8, minmax(0, 1fr)) repeat(2, minmax(170px, 1fr));
+}
+
+@utility grid-cols-board-xl {
+  grid-template-columns: repeat(8, minmax(0, 1fr)) repeat(2, minmax(0, 220px));
+}
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
 
   input,
   textarea {
@@ -11,5 +76,17 @@
 
   a:not(.no-link-style) {
     @apply text-blue-600 underline hover:text-blue-800;
+  }
+}
+
+@layer utilities {
+
+  /* Ensure Typography plugin link colors use our palette (wins over components layer) */
+  .prose {
+    --tw-prose-links: var(--color-blue-600);
+  }
+
+  .prose-invert {
+    --tw-prose-invert-links: var(--color-blue-600);
   }
 }
