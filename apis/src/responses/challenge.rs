@@ -77,66 +77,76 @@ impl ChallengeResponse {
 }
 
 fn is_compatible(
-    challenge: &ChallengeResponse,
-    details: &ChallengeDetails,
+    existing_challenge: &ChallengeResponse,
+    new_challenge_details: &ChallengeDetails,
     challenger_name: &str,
 ) -> bool {
-    challenge.opponent.is_none()
-        && details.game_type == GameType::from_str(&challenge.game_type).unwrap()
-        && details.rated == challenge.rated
-        && details.time_mode == challenge.time_mode
-        && details.time_base == challenge.time_base
-        && details.time_increment == challenge.time_increment
-        && match details.color_choice {
-            ColorChoice::Random => challenge.color_choice == ColorChoice::Random,
-            ColorChoice::White => challenge.color_choice == ColorChoice::Black,
-            ColorChoice::Black => challenge.color_choice == ColorChoice::White,
+    let opponent_matches = new_challenge_details
+        .opponent
+        .as_ref()
+        .is_none_or(|opponent_name| existing_challenge.challenger.username == *opponent_name);
+
+    opponent_matches
+        && new_challenge_details.game_type
+            == GameType::from_str(&existing_challenge.game_type).unwrap()
+        && new_challenge_details.rated == existing_challenge.rated
+        && new_challenge_details.time_mode == existing_challenge.time_mode
+        && new_challenge_details.time_base == existing_challenge.time_base
+        && new_challenge_details.time_increment == existing_challenge.time_increment
+        && match new_challenge_details.color_choice {
+            ColorChoice::Random => existing_challenge.color_choice == ColorChoice::Random,
+            ColorChoice::White => existing_challenge.color_choice == ColorChoice::Black,
+            ColorChoice::Black => existing_challenge.color_choice == ColorChoice::White,
         }
-        && challenge.challenger.username != challenger_name
-        && (details.band_lower, details.band_upper) == (None, None)
-        && (challenge.band_lower, challenge.band_upper) == (None, None)
+        && existing_challenge.challenger.username != challenger_name
+        && (
+            new_challenge_details.band_lower,
+            new_challenge_details.band_upper,
+        ) == (None, None)
+        && (existing_challenge.band_lower, existing_challenge.band_upper) == (None, None)
 }
 
 fn has_same_details(
-    challenge: &ChallengeResponse,
-    details: &ChallengeDetails,
+    existing_challenge: &ChallengeResponse,
+    new_challenge_details: &ChallengeDetails,
     challenger_name: &str,
 ) -> bool {
-    let challenge_opponent = challenge
+    let challenge_opponent = existing_challenge
         .opponent
         .as_ref()
         .map(|opponent| opponent.username.as_str());
 
-    details.game_type == GameType::from_str(&challenge.game_type).unwrap()
-        && details.rated == challenge.rated
-        && details.band_lower == challenge.band_upper
-        && details.band_upper == challenge.band_lower
-        && details.time_mode == challenge.time_mode
-        && details.time_base == challenge.time_base
-        && details.time_increment == challenge.time_increment
-        && details.color_choice == challenge.color_choice
-        && challenge_opponent == details.opponent.as_deref()
-        && challenge.challenger.username == challenger_name
+    new_challenge_details.game_type == GameType::from_str(&existing_challenge.game_type).unwrap()
+        && new_challenge_details.rated == existing_challenge.rated
+        && new_challenge_details.band_lower == existing_challenge.band_upper
+        && new_challenge_details.band_upper == existing_challenge.band_lower
+        && new_challenge_details.time_mode == existing_challenge.time_mode
+        && new_challenge_details.time_base == existing_challenge.time_base
+        && new_challenge_details.time_increment == existing_challenge.time_increment
+        && new_challenge_details.color_choice == existing_challenge.color_choice
+        && challenge_opponent == new_challenge_details.opponent.as_deref()
+        && existing_challenge.challenger.username == challenger_name
 }
 
 //TODO: Move this code that only gets used in the frontend
 pub fn create_challenge_handler(
     challenger_name: String,
-    details: ChallengeDetails,
+    new_challenge_details: ChallengeDetails,
     challenges: Vec<ChallengeResponse>,
 ) -> Option<ChallengeAction> {
-    if details.time_mode == TimeMode::RealTime
-        && challenges
-            .iter()
-            .any(|c| has_same_details(c, &details, &challenger_name))
+    if new_challenge_details.time_mode == TimeMode::RealTime
+        && challenges.iter().any(|existing_challenge| {
+            has_same_details(existing_challenge, &new_challenge_details, &challenger_name)
+        })
     {
         None
-    } else if let Some(challenge) = &challenges
-        .iter()
-        .find(|c| is_compatible(c, &details, &challenger_name))
-    {
-        Some(ChallengeAction::Accept(challenge.challenge_id.clone()))
+    } else if let Some(existing_challenge) = &challenges.iter().find(|existing_challenge| {
+        is_compatible(existing_challenge, &new_challenge_details, &challenger_name)
+    }) {
+        Some(ChallengeAction::Accept(
+            existing_challenge.challenge_id.clone(),
+        ))
     } else {
-        Some(ChallengeAction::Create(details))
+        Some(ChallengeAction::Create(new_challenge_details))
     }
 }
