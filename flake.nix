@@ -108,7 +108,7 @@
               postgresql
               flyctl
               cargo-leptos
-              tailwindcss
+              tailwindcss_4
               openssl
               nokamute # The AI used by hive-hydra
               (rust-bin.selectLatestNightlyWith (
