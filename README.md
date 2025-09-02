@@ -129,6 +129,13 @@ docker compose up -d
 
 This will create a database, apply migrations and run the app on localhost:3000.
 
+Once the containers are up, follow the app logs to watch cargo-leptos compile and see when the server is actually serving:
+
+```sh
+docker compose logs -f app
+```
+This shows the incremental build output and prints when the server binds to the port.
+
 ### Troubleshooting
 
 If you get an error of the form
