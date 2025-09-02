@@ -1,0 +1,8 @@
+{
+    "tiebreakers": {
+        "raw_points": "Celkové body turnaje",
+        "head_to_head": "Výhry mezi hráči se stejným počtem bodů",
+        "wins_as_black": "Výhry s černými kameny",
+        "sonneborn_berger": "Součet bodů soupeřů proti kterým jste bodovali"
+    }
+}

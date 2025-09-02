@@ -31,7 +31,7 @@
         "confirm_password_placeholder": "New password (again)",
         "save_button": "Save"
     },
-    "create_account": { 
+    "create_account": {
         "username": {
             "title": "Username",
             "description": "Please choose a family-friendly username. Any accounts with inappropriate usernames will be closed!",
@@ -47,8 +47,8 @@
             },
             "description": "We need your email address to send you a confirmation email when you create an account."
         },
-        "password": "Password", 
-        "confirm_password": "Confirm password", 
+        "password": "Password",
+        "confirm_password": "Confirm password",
         "password_requirements": "At least 8 characters",
         "password_error": "Password too short or does not match",
         "be_nice_checkbox": "I agree to be nice to other players and to report abuse on Discord",

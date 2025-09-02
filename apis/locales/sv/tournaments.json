@@ -1,0 +1,8 @@
+{
+    "tiebreakers": {
+        "raw_points": "Totala turneringspoäng erhållna",
+        "head_to_head": "Vunna spel mellan lika poäng spelare",
+        "wins_as_black": "Vunna spel med svarta pjäser",
+        "sonneborn_berger": "Summa av poäng från motståndare du poängterade mot"
+    }
+}
