@@ -1,0 +1,8 @@
+{
+    "tiebreakers": {
+        "raw_points": "Összesen szerzett versenypont",
+        "head_to_head": "Nyert játékok egyenpontszámú játékosok között",
+        "wins_as_black": "Fekete bábukkkal nyert játékok",
+        "sonneborn_berger": "Az ellenfelek pontjainak összege akik ellen pontot szereztél"
+    }
+}

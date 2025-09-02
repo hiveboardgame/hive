@@ -1,0 +1,8 @@
+{
+    "tiebreakers": {
+        "raw_points": "Punts totals del torneig obtinguts",
+        "head_to_head": "Partides guanyades entre jugadors empatats",
+        "wins_as_black": "Partides guanyades jugant amb negres",
+        "sonneborn_berger": "Suma de punts dels oponents contra els quals vas puntuar"
+    }
+}

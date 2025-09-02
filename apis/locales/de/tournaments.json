@@ -1,0 +1,8 @@
+{
+    "tiebreakers": {
+        "raw_points": "Gesamte Turnierpunkte erhalten",
+        "head_to_head": "Gewonnene Spiele zwischen punktgleichen Spielern",
+        "wins_as_black": "Gewonnene Spiele mit schwarzen Steinen",
+        "sonneborn_berger": "Summe der Punkte aller Gegner gegen die Sie punkteten"
+    }
+}

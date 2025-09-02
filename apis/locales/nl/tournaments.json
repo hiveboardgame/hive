@@ -1,0 +1,8 @@
+{
+    "tiebreakers": {
+        "raw_points": "Totale toernooipunten behaald",
+        "head_to_head": "Gewonnen spelen tussen gelijk spelende spelers",
+        "wins_as_black": "Gewonnen spelen met zwarte stenen",
+        "sonneborn_berger": "Som van punten van tegenstanders tegen wie je scoorde"
+    }
+}
