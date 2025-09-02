@@ -9,6 +9,7 @@ pub enum TournamentMode {
     #[default]
     DoubleRoundRobin,
     QuadrupleRoundRobin,
+    SextupleRoundRobin,
 }
 
 impl PrettyString for TournamentMode {
@@ -16,6 +17,7 @@ impl PrettyString for TournamentMode {
         match self {
             Self::DoubleRoundRobin => String::from("Double round robin"),
             Self::QuadrupleRoundRobin => String::from("Quadruple round robin"),
+            Self::SextupleRoundRobin => String::from("Sextuple round robin"),
         }
     }
 }
@@ -25,6 +27,7 @@ impl fmt::Display for TournamentMode {
         let game_status = match self {
             Self::DoubleRoundRobin => String::from("DoubleRoundRobin"),
             Self::QuadrupleRoundRobin => String::from("QuadrupleRoundRobin"),
+            Self::SextupleRoundRobin => String::from("SextupleRoundRobin"),
         };
         write!(f, "{game_status}")
     }
@@ -37,6 +40,7 @@ impl FromStr for TournamentMode {
         match s {
             "DoubleRoundRobin" => Ok(TournamentMode::DoubleRoundRobin),
             "QuadrupleRoundRobin" => Ok(TournamentMode::QuadrupleRoundRobin),
+            "SextupleRoundRobin" => Ok(TournamentMode::SextupleRoundRobin),
             _ => Err(anyhow::anyhow!("Invalid TournamentMode string")),
         }
     }
@@ -50,6 +54,20 @@ mod tests {
     fn tests_game_status() {
         {
             let ts = TournamentMode::DoubleRoundRobin;
+            assert_eq!(
+                ts.clone(),
+                TournamentMode::from_str(&format!("{ts}")).unwrap()
+            );
+        }
+        {
+            let ts = TournamentMode::QuadrupleRoundRobin;
+            assert_eq!(
+                ts.clone(),
+                TournamentMode::from_str(&format!("{ts}")).unwrap()
+            );
+        }
+        {
+            let ts = TournamentMode::SextupleRoundRobin;
             assert_eq!(
                 ts.clone(),
                 TournamentMode::from_str(&format!("{ts}")).unwrap()
