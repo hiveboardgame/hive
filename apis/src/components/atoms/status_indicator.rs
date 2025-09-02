@@ -33,7 +33,7 @@ pub fn StatusIndicator(username: String) -> impl IntoView {
 
         let extra_classes = match (user_is_player(), user_has_ws()) {
             (true, true) => " fill-grasshopper-green",
-            (true, false) => " w-6 h-6 fill-ladybug-red",
+            (true, false) => " size-6 fill-ladybug-red",
             _ => match online_users
                 .signal
                 .with(|o| o.username_status.get(&username).cloned())

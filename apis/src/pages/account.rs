@@ -75,7 +75,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                             href="https://discord.gg/7EwNTJnfab"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="inline-flex items-center px-4 py-2 font-bold text-white bg-purple-600 rounded-lg shadow-lg transition-all duration-300 transform cursor-pointer no-link-style hover:bg-purple-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                            class="inline-flex items-center px-4 py-2 font-bold text-white bg-purple-600 rounded-lg shadow-lg transition-all duration-300 cursor-pointer no-link-style hover:bg-purple-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                         >
                             <span class="mr-2 text-white">"💬"</span>
                             <span class="text-white">"Join HiveGame Discord"</span>
@@ -121,7 +121,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
 
                     <div class="text-center">
                         <button
-                            class="px-4 py-3 w-full font-bold text-white bg-purple-600 rounded-lg transition-all duration-300 transform cursor-pointer hover:bg-purple-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                            class="px-4 py-3 w-full font-bold text-white bg-purple-600 rounded-lg transition-all duration-300 cursor-pointer hover:bg-purple-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
                             on:click=oauth
                         >
                             <span class="mr-2">"🔗"</span>
@@ -209,7 +209,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <input
                         type="submit"
                         disabled=form_invalid
-                        class="px-4 py-3 w-full font-bold text-white bg-green-600 rounded-lg transition-all duration-300 transform cursor-pointer hover:bg-green-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-green-600"
+                        class="px-4 py-3 w-full font-bold text-white bg-green-600 rounded-lg transition-all duration-300 cursor-pointer hover:bg-green-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-25 disabled:cursor-not-allowed"
                         value="💾 Save Changes"
                     />
                     <Show when=display_account_error>

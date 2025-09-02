@@ -257,7 +257,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                                                 >
                                                     <Icon
                                                         icon=icon_for_speed(speed)
-                                                        attr:class="w-4 h-4 xs:w-5 xs:h-5 lg:w-5 lg:h-5"
+                                                        attr:class="size-4 xs:size-5 lg:size-5"
                                                     />
                                                 </FilterButton>
                                             }
@@ -395,7 +395,7 @@ fn ActiveFiltersDisplay(
 
                 <FilterPill>
                     <For each=move || ctx.filters.get().speeds key=|speed| *speed let:speed>
-                        <Icon icon=icon_for_speed(speed) attr:class="w-3 h-3" />
+                        <Icon icon=icon_for_speed(speed) attr:class="size-3" />
                     </For>
                 </FilterPill>
 
@@ -421,7 +421,7 @@ fn ActiveFiltersDisplay(
 
                 <Show when=move || !ctx.filters.with(|state| state.exclude_bots)>
                     <FilterPill>
-                        <Icon icon=icondata_mdi::MdiRobotHappy attr:class="w-3 h-3" />
+                        <Icon icon=icondata_mdi::MdiRobotHappy attr:class="size-3" />
                         <span>"Bots"</span>
                     </FilterPill>
                 </Show>

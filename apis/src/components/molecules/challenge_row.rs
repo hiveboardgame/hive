@@ -206,7 +206,7 @@ pub fn ChallengeRow(
                                     <button on:click=copy class=copy_button_class>
                                         <Icon
                                             icon=icondata_ai::AiCopyOutlined
-                                            attr:class="w-6 h-6"
+                                            attr:class="size-6"
                                         />
                                     </button>
                                 </Show>
@@ -216,7 +216,7 @@ pub fn ChallengeRow(
                                     }
                                     class=cancel_button_classes.get_value()
                                 >
-                                    <Icon icon=icondata_io::IoCloseSharp attr:class="w-6 h-6" />
+                                    <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
                                 </button>
                             }
                         }
@@ -228,7 +228,7 @@ pub fn ChallengeRow(
                             }
                             class=accept_button_classes.get_value()
                         >
-                            <Icon icon=icondata_ai::AiCheckOutlined attr:class="w-6 h-6" />
+                            <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
 
                         </button>
                         {if challenge.opponent.is_some() {
@@ -240,7 +240,7 @@ pub fn ChallengeRow(
                                         }
                                         class=cancel_button_classes.get_value()
                                     >
-                                        <Icon icon=icondata_io::IoCloseSharp attr:class="w-6 h-6" />
+                                        <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
 
                                     </button>
                                 },

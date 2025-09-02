@@ -30,7 +30,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                 .map(|rating| {
                     view! {
                         <button
-                            class="flex flex-col md:flex-row items-center gap-1 p-2 rounded-lg bg-gray-50 hover:bg-blue-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-all duration-200 cursor-pointer border border-gray-200 hover:border-blue-300 dark:border-gray-600 dark:hover:border-gray-500 shadow-sm hover:shadow-md transform hover:scale-[1.02] flex-shrink-0 w-fit"
+                            class="flex flex-col md:flex-row items-center gap-1 p-2 rounded-lg bg-gray-50 hover:bg-blue-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-all duration-200 cursor-pointer border border-gray-200 hover:border-blue-300 dark:border-gray-600 dark:hover:border-gray-500 shadow-sm hover:shadow-md hover:scale-[1.02] flex-shrink-0 w-fit"
                             on:click={
                                 let rating = rating.clone();
                                 move |_| {
@@ -44,7 +44,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                             <div class="flex flex-row gap-1 items-center">
                                 <Icon
                                     icon=icon_for_speed(rating.speed)
-                                    attr:class="flex-shrink-0 w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 lg:w-5 lg:h-5"
+                                    attr:class="flex-shrink-0 size-2 sm:size-3 md:size-4 lg:size-5"
                                 />
 
                                 <div class="text-xs font-bold sm:text-sm lg:text-lg text-pillbug-teal">
@@ -78,7 +78,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                         view! {
                             <div class="p-4 w-full max-w-md">
                                 <div class="flex gap-2 items-center mb-4">
-                                    <Icon icon=icon_for_speed(rating.speed) attr:class="w-6 h-6" />
+                                    <Icon icon=icon_for_speed(rating.speed) attr:class="size-6" />
                                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                                         {rating.speed.to_string()} " Statistics"
                                     </h3>

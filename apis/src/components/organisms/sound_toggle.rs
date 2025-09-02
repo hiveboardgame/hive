@@ -11,12 +11,12 @@ pub fn SoundToggle() -> impl IntoView {
         } else {
             icondata_bi::BiVolumeMuteRegular
         };
-        view! { <Icon icon attr:class="w-4 h-4" /> }
+        view! { <Icon icon attr:class="size-4" /> }
     };
     view! {
         <div class="inline-flex justify-center items-center m-1 rounded">
             <button
-                class="flex justify-center items-center px-1 py-2 w-full h-full"
+                class="flex justify-center items-center px-1 py-2 size-full"
                 on:click=move |_| {
                     set_cookie
                         .update(|c| {

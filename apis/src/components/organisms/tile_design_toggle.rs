@@ -42,7 +42,7 @@ pub fn TileDesignButton(tile_design: TileDesign) -> impl IntoView {
             <button
                 class=move || {
                     format!(
-                        "w-full h-full transform transition-transform duration-300 active:scale-95 font-bold py-2 px-4 rounded focus:outline-none cursor-pointer {}",
+                        "size-full transform transition-transform duration-300 active:scale-95 font-bold py-2 px-4 rounded focus:outline-none cursor-pointer {}",
                         is_active(),
                     )
                 }
@@ -84,29 +84,29 @@ pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
     };
 
     view! {
-        <div class="relative w-12 h-12">
+        <div class="relative size-12">
             // Background tile - white for light mode, black for dark mode
             <img
                 src=format!("/assets/tiles/{}/white.svg", design_folder)
                 alt="White Background"
-                class="absolute inset-0 w-full h-full object-contain dark:hidden"
+                class="absolute inset-0 size-full object-contain dark:hidden"
             />
             <img
                 src=format!("/assets/tiles/{}/black.svg", design_folder)
                 alt="Black Background"
-                class="absolute inset-0 w-full h-full object-contain hidden dark:block"
+                class="absolute inset-0 size-full object-contain hidden dark:block"
             />
 
             // Piece overlay - black piece for light mode, white piece for dark mode
             <img
                 src=format!("/assets/tiles/{}/{}", design_folder, light_piece_name)
                 alt=format!("{:?} Ant (Light Mode)", tile_design)
-                class="absolute inset-0 w-full h-full object-contain dark:hidden"
+                class="absolute inset-0 size-full object-contain dark:hidden"
             />
             <img
                 src=format!("/assets/tiles/{}/{}", design_folder, dark_piece_name)
                 alt=format!("{:?} Ant (Dark Mode)", tile_design)
-                class="absolute inset-0 w-full h-full object-contain hidden dark:block"
+                class="absolute inset-0 size-full object-contain hidden dark:block"
             />
         </div>
     }

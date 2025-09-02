@@ -30,7 +30,7 @@ pub fn Hamburger<T: IntoView + 'static>(
     });
 
     view! {
-        <div node_ref=target class=format!("inline-block {extend_tw_classes}")>
+        <div node_ref=target class=format!("relative inline-block {extend_tw_classes}")>
             <button
                 id=id
                 on:click=move |_| hamburger_show.update(|b| *b = !*b)

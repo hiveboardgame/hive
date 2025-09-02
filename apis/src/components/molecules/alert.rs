@@ -53,10 +53,10 @@ pub fn Alert() -> impl IntoView {
                 }}
 
             </span>
-            <span class="absolute top-0 right-0 bottom-0 px-3 py-2 border-y-2">
+            <span class="absolute top-0 right-0 bottom-0 px-3 py-2">
                 <button
                     on:click=close
-                    class="flex justify-center items-center w-6 h-6 rounded-full duration-300 hover:bg-red-400 active:scale-95"
+                    class="flex justify-center items-center size-6 rounded-full duration-300 hover:bg-red-400 active:scale-95"
                     aria-label="Close"
                 >
                     x

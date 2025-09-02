@@ -277,7 +277,7 @@ pub fn ControlButtons() -> impl IntoView {
                     fallback=move || {
                         view! {
                             <button
-                                class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 transform grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                                class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
                                 on:click=navigate_to_tournament
                             >
                                 View tournament
@@ -300,7 +300,7 @@ pub fn ControlButtons() -> impl IntoView {
                         {rematch_text}
                     </button>
                     <button
-                        class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 transform grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                        class="flex-shrink-0 px-2 py-1 m-1 h-7 font-bold text-white rounded transition-transform duration-300 grow bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
                         on:click=new_opponent
                     >
                         New Game

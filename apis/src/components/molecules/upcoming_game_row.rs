@@ -103,7 +103,7 @@ pub fn UpcomingGameRow(
                                 view! {
                                     <Icon
                                         icon=icondata_ai::AiEyeOutlined
-                                        attr:class="mr-1 w-4 h-4"
+                                        attr:class="mr-1 size-4"
                                     />
                                     "Watch"
                                 }

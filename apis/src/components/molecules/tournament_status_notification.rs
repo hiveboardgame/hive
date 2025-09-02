@@ -36,7 +36,7 @@ pub fn TournamentStatusNotification(
                     <div>{notification_text}</div>
                 </div>
                 <a
-                    class="absolute top-0 left-0 z-10 w-full h-full"
+                    class="absolute top-0 left-0 z-10 size-full"
                     href=format!("/tournament/{}", &tournament_id.get_value())
                 ></a>
             </div>
@@ -44,9 +44,9 @@ pub fn TournamentStatusNotification(
                 <button
                     title="Dismiss"
                     on:click=dismiss
-                    class="z-20 p-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95"
+                    class="z-20 p-1 text-white rounded transition-transform duration-300 bg-ladybug-red hover:bg-red-400 active:scale-95"
                 >
-                    <Icon icon=icondata_io::IoCloseSharp attr:class="w-6 h-6" />
+                    <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
                 </button>
             </div>
         </div>

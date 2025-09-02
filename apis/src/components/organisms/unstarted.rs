@@ -52,7 +52,7 @@ pub fn Unstarted(
         } else {
             icondata_io::IoCloseSharp
         };
-        view! { <Icon icon attr:class="w-6 h-6" /> }
+        view! { <Icon icon attr:class="size-6" /> }
     };
 
     let start = move |_| {

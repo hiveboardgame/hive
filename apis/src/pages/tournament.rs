@@ -26,7 +26,7 @@ use shared_types::{
 use std::collections::HashMap;
 
 const DETAILS_STYLE: &str = "m-2 min-w-[320px]";
-const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+const BUTTON_STYLE: &str = "flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed";
 pub const INFO_STYLE: &str = "m-2 h-6 text-lg font-bold sm:place-self-center";
 
 #[component]

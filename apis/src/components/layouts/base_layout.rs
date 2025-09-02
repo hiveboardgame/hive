@@ -26,7 +26,7 @@ cfg_if! { if #[cfg(not(feature = "ssr"))] {
 
 pub const COMMON_LINK_STYLE: &str = "no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 m-1 rounded";
 pub const DROPDOWN_BUTTON_STYLE: &str= "font-bold h-full p-2 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap block";
-pub const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md left-34 p-2 z-50";
+pub const DROPDOWN_MENU_STYLE: &str = "flex flex-col items-stretch absolute left-0 top-full mt-1 w-max bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md p-2 z-50";
 
 #[derive(Clone)]
 pub struct ControlsSignal {
@@ -181,8 +181,8 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             <Alert />
             <TournamentReadyPopup ready_signal=update_notifier.tournament_ready />
             <Show when=move || ws_ready() != ConnectionReadyState::Open>
-                <div class="flex absolute top-1/2 left-1/2 gap-2 items-center transform -translate-x-1/2 -translate-y-1/2 z-[60]">
-                    <div class="w-10 h-10 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
+                <div class="flex absolute top-1/2 left-1/2 gap-2 items-center -translate-x-1/2 -translate-y-1/2 z-[60]">
+                    <div class="size-10 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
                     <div class="text-lg font-bold text-ladybug-red">Connecting..</div>
                 </div>
             </Show>

@@ -59,7 +59,7 @@ pub fn PreviewTiles() -> impl IntoView {
         <div class=container_classes style=background_style>
             <svg
                 viewBox="1159 695 225 100"
-                class="w-full h-full touch-none"
+                class="size-full touch-none"
                 xmlns="http://www.w3.org/2000/svg"
             >
                 <g>{pieces}</g>

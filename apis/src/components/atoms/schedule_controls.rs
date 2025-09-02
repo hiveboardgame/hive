@@ -41,7 +41,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             <Show when=move || !agreed && proposer_id != player_id>
                 <button
                     on:click=move |_| accept.run((id,))
-                    class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                    class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
                 >
 
                     "Accept"
@@ -53,7 +53,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
                     api.schedule_action(ScheduleAction::Cancel(id));
                 }
 
-                class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95"
+                class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 bg-ladybug-red hover:bg-red-400 active:scale-95"
             >
                 {(if proposer_id == player_id || agreed { "Cancel" } else { "Reject" }).to_string()}
             </button>
@@ -82,7 +82,7 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
             />
 
             <button
-                class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
                 on:click=move |_| propose.run((selected_time.get(),))
             >
 

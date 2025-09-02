@@ -16,13 +16,13 @@ pub fn Modal(children: Children, dialog_el: NodeRef<Dialog>) -> impl IntoView {
     view! {
         <dialog
             node_ref=dialog_el
-            class="rounded-lg border shadow-xl drop-shadow-xl backdrop:backdrop-blur bg-stone-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+            class="m-auto rounded-lg border shadow-xl drop-shadow-xl backdrop:backdrop-blur bg-stone-300 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
         >
             <div node_ref=inner>
                 <div class="flex justify-end">
                     <form class="m-2" method="dialog">
                         <button
-                            class="flex justify-center items-center w-5 h-5 rounded-full duration-300 hover:bg-ladybug-red active:scale-95"
+                            class="flex justify-center items-center size-5 rounded-full duration-300 hover:bg-ladybug-red active:scale-95"
                             aria-label="Close"
                         >
                             x

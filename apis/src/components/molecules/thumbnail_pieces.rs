@@ -41,7 +41,7 @@ pub fn ThumbnailPieces(board: StoredValue<Board>) -> impl IntoView {
     view! {
         <svg
             viewBox=format!("0 0 {width} {height}")
-            class="w-full h-full touch-none"
+            class="size-full touch-none"
             xmlns="http://www.w3.org/2000/svg"
         >
             <g transform=transform>

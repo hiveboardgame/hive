@@ -13,7 +13,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use tree_ds::prelude::*;
 
-const BTN_CLASS: &str = "flex z-20 justify-center items-center m-1 w-44 h-10 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
+const BTN_CLASS: &str = "flex z-20 justify-center items-center m-1 w-44 h-10 text-white rounded-sm transition-transform duration-300 aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
 
 #[component]
 pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
@@ -202,7 +202,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     };
     let viewbox_str = "-32 -40 250 120";
     view! {
-        <div class="flex flex-col w-full h-full">
+        <div class="flex flex-col size-full">
             <div class="flex gap-1 min-h-0 [&>*]:grow">
                 <HistoryButton action=HistoryNavigation::First post_action=focus />
                 <HistoryButton
