@@ -57,7 +57,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                     </Show>
                 </p>
                 <input
-                    class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none"
+                    class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none"
                     type="submit"
                     value=move || t_string!(i18n, user_config.login.login_button)
                 />
@@ -66,7 +66,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 {t!(
                     i18n, user_config.login.no_account_prompt,
                     < register_link > =
-                    <a class="text-blue-500 transition-transform duration-300 transform hover:underline" href="/register"/>
+                    <a class="text-blue-500 transition-transform duration-300 hover:underline" href="/register"/>
                 )}
             </p>
         </div>

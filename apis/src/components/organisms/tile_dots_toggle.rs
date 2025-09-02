@@ -32,7 +32,7 @@ pub fn TileDotsButton(tile_dots: TileDots) -> impl IntoView {
             <button
                 class=move || {
                     format!(
-                        "w-full h-full transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer {}",
+                        "size-full transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer {}",
                         is_active(),
                     )
                 }

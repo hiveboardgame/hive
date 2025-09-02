@@ -189,7 +189,7 @@ pub fn TournamentReadyPopup(
                 <div class="flex gap-4 justify-center">
                     <button
                         on:click=accept_game
-                        class="px-4 py-2 font-bold text-white bg-green-600 rounded transition-transform duration-300 transform hover:bg-green-700 active:scale-95"
+                    class="px-4 py-2 font-bold text-white bg-green-600 rounded transition-transform duration-300 hover:bg-green-700 active:scale-95"
                     >
                         {t!(i18n, game.tournament_ready_accept)}
                     </button>
@@ -197,7 +197,7 @@ pub fn TournamentReadyPopup(
                     <Show when=move || !is_on_game_page.get()>
                         <button
                             on:click=view_game
-                            class="px-4 py-2 font-bold text-white bg-blue-600 rounded transition-transform duration-300 transform hover:bg-blue-700 active:scale-95"
+                            class="px-4 py-2 font-bold text-white bg-blue-600 rounded transition-transform duration-300 hover:bg-blue-700 active:scale-95"
                         >
                             {t!(i18n, game.tournament_ready_view_game)}
                         </button>
@@ -205,7 +205,7 @@ pub fn TournamentReadyPopup(
 
                     <button
                         on:click=close_popup
-                        class="px-4 py-2 font-bold text-white bg-gray-600 rounded transition-transform duration-300 transform hover:bg-gray-700 active:scale-95"
+                        class="px-4 py-2 font-bold text-white bg-gray-600 rounded transition-transform duration-300 hover:bg-gray-700 active:scale-95"
                     >
                         {t!(i18n, game.tournament_ready_close)}
                     </button>
@@ -219,7 +219,7 @@ pub fn TournamentReadyPopup(
 
         <div class=move || {
             format!(
-                "fixed inset-0 bg-black bg-opacity-50 z-40 {}",
+                "fixed inset-0 z-40 bg-black/50 backdrop-blur-sm {}",
                 if is_visible.get() { "block" } else { "hidden" },
             )
         }></div>

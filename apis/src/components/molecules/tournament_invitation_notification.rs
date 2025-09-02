@@ -45,7 +45,7 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
                     <div>Players: {seats_taken}</div>
                 </div>
                 <a
-                    class="absolute top-0 left-0 z-10 w-full h-full"
+                    class="absolute top-0 left-0 z-10 size-full"
                     href=format!("/tournament/{}", tournament_id.get_value())
                 ></a>
             </div>
@@ -54,16 +54,16 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
                     title="Accept Invitation"
                     on:click=accept
                     prop:disabled=seats_full
-                    class="z-20 p-1 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    class="z-20 p-1 text-white rounded transition-transform duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 >
-                    <Icon icon=icondata_ai::AiCheckOutlined attr:class="w-6 h-6" />
+                    <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
                 </button>
                 <button
                     title="Decline Invitation"
                     on:click=decline
-                    class="z-20 p-1 text-white rounded transition-transform duration-300 transform bg-ladybug-red hover:bg-red-400 active:scale-95"
+                    class="z-20 p-1 text-white rounded transition-transform duration-300 bg-ladybug-red hover:bg-red-400 active:scale-95"
                 >
-                    <Icon icon=icondata_io::IoCloseSharp attr:class="w-6 h-6" />
+                    <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
                 </button>
             </div>
         </div>

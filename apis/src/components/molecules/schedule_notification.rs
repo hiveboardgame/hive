@@ -65,21 +65,21 @@ pub fn ProposalNotification(
                 <button
                     title="Dismiss"
                     on:click=dismiss
-                    class="z-20 p-1 mx-2 text-white bg-gray-500 rounded transition-transform duration-300 transform hover:bg-gray-400 active:scale-95"
+                    class="z-20 p-1 mx-2 text-white bg-gray-500 rounded transition-transform duration-300 hover:bg-gray-400 active:scale-95"
                 >
-                    <Icon icon=icondata_io::IoCloseSharp attr:class="w-4 h-4" />
+                    <Icon icon=icondata_io::IoCloseSharp attr:class="size-4" />
                 </button>
             </div>
             <div class="flex gap-2 justify-center">
                 <button
                     on:click=accept
-                    class="px-3 py-1 text-white bg-green-600 rounded transition-transform duration-300 transform hover:bg-green-500 active:scale-95"
+                    class="px-3 py-1 text-white bg-green-600 rounded transition-transform duration-300 hover:bg-green-500 active:scale-95"
                 >
                     "Accept"
                 </button>
                 <button
                     on:click=decline
-                    class="px-3 py-1 text-white bg-red-600 rounded transition-transform duration-300 transform hover:bg-red-500 active:scale-95"
+                    class="px-3 py-1 text-white bg-red-600 rounded transition-transform duration-300 hover:bg-red-500 active:scale-95"
                 >
                     "Decline"
                 </button>
@@ -137,9 +137,9 @@ pub fn AcceptanceNotification(
                     <button
                         type="submit"
                         title="Dismiss"
-                        class="z-50 p-1 mx-2 text-white bg-gray-500 rounded transition-transform duration-300 transform hover:bg-gray-400 active:scale-95"
+                        class="z-50 p-1 mx-2 text-white bg-gray-500 rounded transition-transform duration-300 hover:bg-gray-400 active:scale-95"
                     >
-                        <Icon icon=icondata_io::IoCloseSharp attr:class="w-4 h-4" />
+                        <Icon icon=icondata_io::IoCloseSharp attr:class="size-4" />
                     </button>
                 </ActionForm>
             </div>

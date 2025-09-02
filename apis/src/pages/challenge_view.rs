@@ -128,7 +128,7 @@ pub fn ChallengeView() -> impl IntoView {
                                                     >
                                                         <Icon
                                                             icon=icondata_ai::AiCopyOutlined
-                                                            attr:class="w-6 h-6"
+                                                            attr:class="size-6"
                                                         />
                                                     </button>
                                                 </div>

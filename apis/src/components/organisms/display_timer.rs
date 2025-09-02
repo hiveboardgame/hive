@@ -49,7 +49,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
         false => ("grid grid-cols-2 grid-rows-2 col-span-2 row-span-1",
                 "border-y-2 border-l-2 col-span-1 row-span-2 md:row-span-1 short:row-span-2 border-black dark:border-white duration-300",
                 "h-full flex justify-center md:leading-4 row-span-2 md:row-span-1 short:row-span-2 short:text-xs items-center flex-col border-y-2 border-r-2 border-black dark:border-white select-none"),
-        true => ("flex grow justify-end items-center", "w-14 h-14 grow-0 duration-300",""),
+        true => ("flex grow justify-end items-center", "size-14 grow-0 duration-300",""),
     };
     let timer = expect_context::<TimerSignal>().signal;
     let active_side = Memo::new(move |_| {
@@ -115,7 +115,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
                         view! {
                             <Icon
                                 icon=icondata_bi::BiInfiniteRegular
-                                attr:class="w-full h-full bg-inherit"
+                                attr:class="size-full bg-inherit"
                             />
                         }
                     }
