@@ -557,6 +557,7 @@ impl Tournament {
         {
             TournamentMode::DoubleRoundRobin => self.double_round_robin_start(conn).await?,
             TournamentMode::QuadrupleRoundRobin => self.quad_round_robin_start(conn).await?,
+            TournamentMode::SextupleRoundRobin => self.sextuple_round_robin_start(conn).await?,
         };
         let tournament: Tournament = diesel::update(self)
             .set((
@@ -619,6 +620,32 @@ impl Tournament {
             let new_game = NewGame::new_from_tournament(black, white, self);
             let game = Game::create(new_game, conn).await?;
             games.push(game);
+        }
+        Ok(games)
+    }
+
+    pub async fn sextuple_round_robin_start(
+        &self,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        let mut games = Vec::new();
+        let players = self.players(conn).await?;
+        let combinations: Vec<Vec<User>> = players.into_iter().combinations(2).collect();
+        for combination in combinations {
+            let white = combination[0].id;
+            let black = combination[1].id;
+            
+            for _ in 0..3 {
+                let new_game = NewGame::new_from_tournament(white, black, self);
+                let game = Game::create(new_game, conn).await?;
+                games.push(game);
+            }
+            
+            for _ in 0..3 {
+                let new_game = NewGame::new_from_tournament(black, white, self);
+                let game = Game::create(new_game, conn).await?;
+                games.push(game);
+            }
         }
         Ok(games)
     }
