@@ -48,7 +48,7 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> im
             <button
                 class=move || {
                     format!(
-                        "w-full h-full transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer {}",
+                        "size-full transform transition-transform duration-300 active:scale-95 text-white font-bold py-2 px-4 rounded focus:outline-none cursor-pointer {}",
                         is_active(),
                     )
                 }
@@ -64,7 +64,7 @@ pub fn ConfirmModeButton(move_confirm: MoveConfirm, game_speed: GameSpeed) -> im
                 }
             >
 
-                <Icon icon=icon attr:class="w-6 h-6" />
+                <Icon icon=icon attr:class="size-6" />
             </button>
         </div>
     }

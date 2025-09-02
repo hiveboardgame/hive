@@ -186,7 +186,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <input
                         on:change=move |_| agree.update(|b| *b = !*b)
                         type="checkbox"
-                        class="w-4 h-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        class="size-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                         prop:value=agree
                     />
                     <label
@@ -199,7 +199,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <input
                     type="submit"
                     disabled=conditionally_disable
-                    class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 transform cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none disabled:opacity-25 disabled:cursor-not-allowed"
                     value=move || t_string!(i18n, user_config.create_account.signup_button)
                 />
                 <Show when=display_register_error>
@@ -213,7 +213,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 {t!(
                     i18n, user_config.create_account.existing_account_prompt,
                     < login_link > =
-                    <a class="text-blue-500 transition-transform duration-300 transform hover:underline" href="/login"/>
+                    <a class="text-blue-500 transition-transform duration-300 hover:underline" href="/login"/>
                 )}
             </p>
         </div>

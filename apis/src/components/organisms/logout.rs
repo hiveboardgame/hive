@@ -23,7 +23,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             });
                     }
 
-                    class="flex place-content-start px-4 py-2 w-full h-full font-bold text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red active:scale-95"
+                    class="flex place-content-start px-4 py-2 size-full font-bold text-white rounded transition-transform duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red active:scale-95"
                     type="submit"
                 >
                     {t!(i18n, header.user_menu.logout)}

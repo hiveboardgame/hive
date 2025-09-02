@@ -27,7 +27,7 @@ fn PreSelectButton(enabled: bool) -> impl IntoView {
             <button
                 class=move || {
                     format!(
-                        "w-full h-full text-white transform transition-transform duration-300 active:scale-95 font-bold py-2 px-4 rounded focus:outline-none cursor-pointer {}",
+                        "size-full text-white transform transition-transform duration-300 active:scale-95 font-bold py-2 px-4 rounded focus:outline-none cursor-pointer {}",
                         is_active(),
                     )
                 }

@@ -32,14 +32,14 @@ pub fn AcceptDenyGc(
             on:click=on_click
             class=move || {
                 format!(
-                    "aspect-square rounded-sm transform transition-transform duration-300 active:scale-95 {} {}",
+                    "aspect-square rounded-sm transform transition-transform duration-300 active:scale-95 [&>svg]:size-6 lg:[&>svg]:size-8 {} {}",
                     button_style(),
                     hidden(),
                 )
             }
         >
 
-            <Icon icon=icon attr:class="w-6 h-6 lg:h-8 lg:w-8" />
+            <Icon icon=icon />
         </button>
     }
 }
@@ -148,18 +148,13 @@ pub fn ConfirmButton(
 
                 class=move || {
                     format!(
-                        "aspect-square rounded-sm relative transform transition-transform duration-300 active:scale-95 {}",
+                        "aspect-square rounded-sm relative transform transition-transform duration-300 active:scale-95 [&>svg]:size-6 lg:[&>svg]:size-8 {}",
                         conditional_button_style(),
                     )
                 }
             >
 
-                <Icon
-                    icon=icon
-                    attr:class=move || {
-                        format!("h-6 w-6 lg:h-8 lg:w-8 {}", conditional_icon_style())
-                    }
-                />
+                <Icon icon=icon attr:class=conditional_icon_style />
 
             </button>
             <Show when=is_clicked>
@@ -168,7 +163,7 @@ pub fn ConfirmButton(
                     on:click=cancel
                     class="absolute ml-1 bg-red-700 rounded-sm duration-300 aspect-square hover:bg-ladybug-red"
                 >
-                    <Icon icon=icondata_io::IoCloseSharp attr:class="w-6 h-6 lg:h-8 lg:w-8" />
+                    <Icon icon=icondata_io::IoCloseSharp attr:class="size-6 lg:size-8" />
                 </button>
             </Show>
         </div>

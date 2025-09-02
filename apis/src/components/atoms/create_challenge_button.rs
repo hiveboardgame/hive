@@ -11,14 +11,14 @@ pub fn CreateChallengeButton(
     let config = expect_context::<Config>().0;
     let icon_data = move |color_choice: ColorChoice| {
         config.with(|cfg| match color_choice {
-            ColorChoice::Random => (icondata_bs::BsHexagonHalf, "w-full h-full"),
+            ColorChoice::Random => (icondata_bs::BsHexagonHalf, "size-full"),
             ColorChoice::White => {
                 if cfg.prefers_dark {
-                    (icondata_bs::BsHexagonFill, "w-full h-full fill-white")
+                    (icondata_bs::BsHexagonFill, "size-full fill-white")
                 } else {
                     (
                         icondata_bs::BsHexagon,
-                        "w-full h-full stroke-1 stroke-black",
+                        "size-full stroke-1 stroke-black",
                     )
                 }
             }
@@ -26,10 +26,10 @@ pub fn CreateChallengeButton(
                 if cfg.prefers_dark {
                     (
                         icondata_bs::BsHexagon,
-                        "w-full h-full stroke-1 stroke-white",
+                        "size-full stroke-1 stroke-white",
                     )
                 } else {
-                    (icondata_bs::BsHexagonFill, "w-full h-full fill-black")
+                    (icondata_bs::BsHexagonFill, "size-full fill-black")
                 }
             }
         })

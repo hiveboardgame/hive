@@ -59,7 +59,7 @@ pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoV
 
     view! {
         <a class=style href=href_game_id on:click=onclick>
-            <Icon icon=icon() attr:class="w-4 h-4" />
+            <Icon icon=icon() attr:class="size-4" />
             {text}
         </a>
     }

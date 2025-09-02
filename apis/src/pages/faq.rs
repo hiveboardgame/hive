@@ -26,7 +26,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.what_is_hive.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -54,7 +54,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.hive_rules.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -84,7 +84,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.expansions_supported.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -108,7 +108,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.can_i_play_base_game.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -132,7 +132,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.resign_ok.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -156,7 +156,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.signup_required.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -180,7 +180,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.mobile_friendly.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -204,7 +204,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.mobile_app.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -228,7 +228,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.profile_navigation.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -259,7 +259,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.game_types.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -283,7 +283,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.start_game.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -307,7 +307,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.time_controls.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -331,7 +331,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.realtime_vs_correspondence.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -355,7 +355,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.casual_vs_rated.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -379,7 +379,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.why_elo_has_questionmark.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -403,7 +403,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.base_vs_mlp.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -427,7 +427,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.private_vs_public.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -451,7 +451,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.rating_range.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -475,7 +475,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.color_selection.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -499,7 +499,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.how_to_check_stack.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -523,7 +523,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.spectate_games.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -547,7 +547,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.turn_alerts.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -573,7 +573,7 @@ pub fn Faq() -> impl IntoView {
                                     </span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -597,7 +597,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.chat_basics.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -628,7 +628,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.can_i_set_up_a_tournament.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -652,7 +652,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.tournament_entry.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -676,7 +676,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.tournament_duration.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -700,7 +700,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.tournament_stats.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >
@@ -724,7 +724,7 @@ pub fn Faq() -> impl IntoView {
                                     <span>{t!(i18n, faq.tournament_games.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
                                         <svg
-                                            class="w-5 h-5"
+                                            class="size-5"
                                             viewBox="0 0 20 20"
                                             fill="currentColor"
                                         >

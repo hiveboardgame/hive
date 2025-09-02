@@ -38,11 +38,11 @@ pub fn UndoButton() -> impl IntoView {
 
     view! {
         <button
-            class="flex justify-center place-items-center m-1 h-7 rounded-md border-2 border-cyan-500 drop-shadow-lg transition-transform duration-300 transform hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 dark:border-button-twilight disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            class="flex justify-center place-items-center m-1 h-7 rounded-md border-2 border-cyan-500 drop-shadow-lg transition-transform duration-300 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 dark:border-button-twilight disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             on:click=undo
             prop:disabled=is_disabled
         >
-            <Icon icon=icondata_bi::BiUndoRegular attr:class="w-6 h-6" />
+            <Icon icon=icondata_bi::BiUndoRegular attr:class="size-6" />
         </button>
     }
 }

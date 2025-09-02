@@ -44,7 +44,7 @@ pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
     let total_games = tournament.games_total;
     let finished_games = Signal::derive(move || tournament.games_played);
     view! {
-        <article class="flex relative flex-col justify-between items-center px-2 py-4 mx-2 w-5/6 duration-300 h-33 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+        <article class="flex relative flex-col justify-between items-center px-2 py-4 mx-2 w-5/6 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="flex justify-center w-full font-bold break-words">{tournament.name}</div>
             <div class="flex flex-row justify-between w-full">
                 <div class="flex flex-col">
@@ -64,7 +64,7 @@ pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
             </div>
             <ProgressBar current=finished_games total=total_games />
             <a
-                class="absolute top-0 left-0 z-10 w-full h-full"
+                class="absolute top-0 left-0 z-10 size-full"
                 href=format!("/tournament/{}", tournament.tournament_id.0)
             ></a>
         </article>
