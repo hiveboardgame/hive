@@ -109,20 +109,22 @@ fn MySchedulesInner(
                                 </div>
                             </div>
 
-                            <For
-                                each=move || { get_schedules(game_id()) }
+                            <div class="flex flex-col gap-2">
+                                <For
+                                    each=move || { get_schedules(game_id()) }
 
-                                key=|schedule: &ScheduleResponse| (
-                                    schedule.id,
-                                    schedule.start_t,
-                                    schedule.agreed,
-                                )
+                                    key=|schedule: &ScheduleResponse| (
+                                        schedule.id,
+                                        schedule.start_t,
+                                        schedule.agreed,
+                                    )
 
-                                let:schedule
-                            >
-                                <GameDateControls player_id=user_id() schedule=schedule.clone() />
+                                    let:schedule
+                                >
+                                    <GameDateControls player_id=user_id() schedule=schedule.clone() />
 
-                            </For>
+                                </For>
+                            </div>
                             <ProposeDateControls game_id=game_id() />
                             <a
                                 class="flex gap-1 justify-center items-center place-self-center px-4 py-2 w-2/5 font-bold text-white rounded no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
