@@ -105,7 +105,7 @@ pub fn DisplayTimer(placement: Placement, vertical: bool) -> impl IntoView {
 
     view! {
         <div class=outer_container_style>
-            <button on:click=onclick class=button_class>
+            <button on:click=onclick class=button_class id="timer">
                 <Show
                     when=move || {
                         matches!(timer().time_mode, TimeMode::Correspondence | TimeMode::RealTime)
