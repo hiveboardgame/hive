@@ -325,9 +325,10 @@ pub fn Board() -> impl IntoView {
     _ = on_click_outside(g_ref, move |event| {
         let clicked_timer = event
             .target()
-            .map(|t| t.dyn_ref::<web_sys::HtmlElement>().map(|t| t.id()))
-            .map(|id| id.is_some_and(|id| id == "timer"));
-        if !clicked_timer.unwrap_or_default() {
+            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+            .and_then(|el| el.closest("#timer").ok().flatten())
+            .is_some();
+        if !clicked_timer {
             game_state.reset();
         }
     });
