@@ -33,7 +33,14 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
         api.schedule_action(ScheduleAction::Accept(id));
     });
     view! {
-        <div class="flex justify-between p-2">
+        <div class={format!(
+            "flex justify-between p-2 rounded text-gray-900 dark:text-gray-100 {}",
+            if agreed {
+                "bg-green-200 dark:bg-green-900"
+            } else {
+                "bg-yellow-200 dark:bg-yellow-600"
+            }
+        )}>
             <div class=format!(
                 "flex items-center {}",
                 if agreed { "font-bold" } else { "" },
