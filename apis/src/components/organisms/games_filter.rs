@@ -4,11 +4,14 @@ use crate::pages::profile_view::tab_from_path;
 use crate::providers::{load_games, FilterState, GamesSearchContext};
 use hive_lib::Color;
 use leptos::{html, prelude::*};
+use leptos::ev::Event;
+use leptos::leptos_dom::helpers::debounce;
 use leptos_i18n::I18nContext;
 use leptos_icons::*;
 use leptos_router::hooks::use_location;
 use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
 use shared_types::{GameProgress, GameSpeed, ResultType};
+use std::time::Duration;
 
 #[derive(Clone, Copy)]
 pub enum TriStateType {
@@ -56,6 +59,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
     let location = use_location();
     let current_tab = Signal::derive(move || tab_from_path(&location.pathname.get()));
     let pending = ctx.pending;
+    let opponent = RwSignal::new(String::new());
     let i18n = use_i18n();
 
     let dropdown_ref = NodeRef::<html::Details>::new();
@@ -168,6 +172,13 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
             FilterState::default()
         };
         current_filters == reset_target
+    });
+    let opponent_debounced_search = debounce(Duration::from_millis(100), 
+        move |ev: Event| {
+            opponent.set(event_target_value(&ev));
+    });
+    Effect::new(move |_| {
+        pending.update(|state| state.opponent = Some(opponent.get()));
     });
 
     view! {
@@ -304,6 +315,20 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                                         }
                                     }}
                                 </FilterButton>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 lg:block lg:space-y-4">
+                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 lg:text-sm">
+                                    "Opponent:"
+                                </label>
+                                <input
+                                    class="p-1 w-full rounded-lg"
+                                    type="text"
+                                    on:input=opponent_debounced_search
+                                    placeholder="Opponent username"
+                                    prop:value=opponent
+                                    maxlength="20"
+                                />
                             </div>
                         </div>
                     </div>
