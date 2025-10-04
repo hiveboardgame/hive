@@ -89,6 +89,16 @@ pub fn TournamentCreate() -> impl IntoView {
     let fixed_round_duration = RwSignal::new(false);
     let api = expect_context::<ApiRequestsProvider>().0;
     let auth_context = expect_context::<AuthContext>();
+    let account = auth_context.user;
+    let user_allowed_to_run_swiss = Signal::derive(move || {
+        account.with(|a| {
+            if let Some(account) = a.as_ref() {
+                account.user.admin || account.username == "stepanzo"
+            } else {
+                false
+            }
+        })
+    });
     let rating_string = move || {
         format!(
             "Min Rating: {}/ Max Rating: {}",
@@ -317,7 +327,13 @@ pub fn TournamentCreate() -> impl IntoView {
                                 is="SextupleRoundRobin"
                                 text=TournamentMode::SextupleRoundRobin.pretty_string()
                             />
-
+                            <Show when=user_allowed_to_run_swiss>
+                                <SelectOption
+                                    value=tournament.mode
+                                    is="DoubleSwiss"
+                                    text=TournamentMode::DoubleSwiss.pretty_string()
+                                />
+                            </Show>
                         </select>
                     </div>
                     <div>

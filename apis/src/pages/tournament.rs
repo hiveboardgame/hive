@@ -21,7 +21,7 @@ use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::core::ConnectionReadyState;
 use shared_types::{
     Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentId,
-    TournamentStatus,
+    TournamentMode, TournamentStatus,
 };
 use std::collections::HashMap;
 
@@ -145,6 +145,13 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             send_action(TournamentAction::Finish(tournament_id.get_value()));
         }
     };
+    let progress_to_next_round = move |_| {
+        if user_is_organizer_or_admin() {
+            send_action(TournamentAction::ProgressToNextRound(
+                tournament_id.get_value(),
+            ));
+        }
+    };
     let start = move |_| {
         if user_is_organizer_or_admin() {
             send_action(TournamentAction::Start(tournament_id.get_value()));
@@ -213,7 +220,8 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let not_started = tournament.with_value(|t| t.status == TournamentStatus::NotStarted);
     let inprogress = tournament.with_value(|t| t.status == TournamentStatus::InProgress);
     let finished = tournament.with_value(|t| t.status == TournamentStatus::Finished);
-
+    let tournament_is_swiss = tournament
+        .with_value(|t| t.mode.parse::<TournamentMode>().unwrap() == TournamentMode::DoubleSwiss);
     let game_previews = Callback::new(move |()| {
         games_hashmap.with_value(|hashmap| {
             hashmap
@@ -455,6 +463,21 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                                 prop:disabled=tournament_lacks_results
                             >
                                 {"Finish"}
+                            </button>
+                        </Show>
+                    </div>
+                </Show>
+                // only show if tournament is Swiss
+                <Show when=move || user_is_organizer_or_admin.get() && tournament_is_swiss>
+                    <div class="flex gap-1 justify-center items-center p-2">
+                        <Show when=move || inprogress>
+                            <button
+                                class=BUTTON_STYLE
+                                on:click=progress_to_next_round
+                                // this is also disabled as the Finish button until all existing games have results
+                                prop:disabled=tournament_lacks_results
+                            >
+                                {"Progress to next round"}
                             </button>
                         </Show>
                     </div>

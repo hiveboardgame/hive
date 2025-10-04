@@ -17,13 +17,17 @@ use crate::{
 use chrono::{prelude::*, TimeDelta};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use hive_lib::Color;
 use itertools::Itertools;
 use nanoid::nanoid;
+use rand::rng;
+use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    TimeMode, TournamentDetails, TournamentId, TournamentMode, TournamentSortOrder,
-    TournamentStatus,
+    Standings, Tiebreaker, TimeMode, TournamentDetails, TournamentGameResult, TournamentId,
+    TournamentMode, TournamentSortOrder, TournamentStatus,
 };
+use std::collections::VecDeque;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -558,6 +562,7 @@ impl Tournament {
             TournamentMode::DoubleRoundRobin => self.double_round_robin_start(conn).await?,
             TournamentMode::QuadrupleRoundRobin => self.quad_round_robin_start(conn).await?,
             TournamentMode::SextupleRoundRobin => self.sextuple_round_robin_start(conn).await?,
+            TournamentMode::DoubleSwiss => self.swiss_create_first_round(conn).await?,
         };
         let tournament: Tournament = diesel::update(self)
             .set((
@@ -634,18 +639,248 @@ impl Tournament {
         for combination in combinations {
             let white = combination[0].id;
             let black = combination[1].id;
-            
+
             for _ in 0..3 {
                 let new_game = NewGame::new_from_tournament(white, black, self);
                 let game = Game::create(new_game, conn).await?;
                 games.push(game);
             }
-            
+
             for _ in 0..3 {
                 let new_game = NewGame::new_from_tournament(black, white, self);
                 let game = Game::create(new_game, conn).await?;
                 games.push(game);
             }
+        }
+        Ok(games)
+    }
+
+    async fn swiss_create_first_round(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+        let mut players = self.players(conn).await?;
+        let mut games = Vec::new();
+
+        // if odd number of players, add a bye player
+        let bye_player = User::find_by_username("SwissByePlayer", conn).await?;
+        if players.len() % 2 != 0 && !players.iter().any(|p| p.id == bye_player.id) {
+            self.join(&bye_player.id, conn).await?;
+            players.push(bye_player.clone());
+        };
+        // shuffle players to create random pairings
+        {
+            let mut rng = rng();
+            players.shuffle(&mut rng);
+        }
+
+        // pair adjacent players
+        for pair in players.chunks(2) {
+            if pair.len() != 2 {
+                continue; // shouldn't happen since we handled odd number of players
+            }
+
+            let white = pair[0].id;
+            let black = pair[1].id;
+
+            // first game: white vs black
+            let new_game = NewGame::new_from_tournament(white, black, self);
+            let game = Game::create(new_game, conn).await?;
+            games.push(game);
+
+            // second game: black vs white
+            let new_game = NewGame::new_from_tournament(black, white, self);
+            let game = Game::create(new_game, conn).await?;
+            games.push(game);
+        }
+
+        Ok(games)
+    }
+
+    fn brute_force_pairings(
+        players: &[Uuid],
+        standings: &Standings,
+        attempt: usize,
+        max_attempts: usize,
+    ) -> Vec<(Uuid, Uuid)> {
+        // Base greedy pairing
+        let mut unpaired: VecDeque<Uuid> = players.iter().copied().collect();
+        let mut pairs = Vec::new();
+
+        while let Some(current) = unpaired.pop_front() {
+            if let Some((idx, _)) = unpaired
+                .iter()
+                .enumerate()
+                .find(|(_, opp)| standings.pairings_between(current, **opp).is_empty())
+            {
+                let opponent = unpaired.remove(idx).unwrap();
+                pairs.push((current, opponent));
+            } else if let Some(opponent) = unpaired.pop_front() {
+                // fallback: allow repeat
+                pairs.push((current, opponent));
+            }
+        }
+
+        let has_repeats = pairs
+            .iter()
+            .any(|(a, b)| !standings.pairings_between(*a, *b).is_empty());
+
+        if has_repeats && attempt < max_attempts && pairs.len() >= 2 {
+            // Shuffle bottom 4 and retry
+            let mut rng = rng();
+            let mut shuffled_players = players.to_vec();
+            let n = shuffled_players.len();
+            let start = n.saturating_sub(4);
+            shuffled_players[start..].shuffle(&mut rng);
+
+            return Tournament::brute_force_pairings(
+                &shuffled_players,
+                standings,
+                attempt + 1,
+                max_attempts,
+            );
+        }
+
+        if attempt >= max_attempts {
+            // max attempts reached -> shuffle all players and pair randomly
+            let mut rng = rng();
+            let mut shuffled_players = players.to_vec();
+            shuffled_players.shuffle(&mut rng);
+
+            return shuffled_players
+                .chunks(2)
+                .filter_map(|c| {
+                    if c.len() == 2 {
+                        Some((c[0], c[1]))
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+        }
+
+        pairs
+    }
+
+    /// Try to generate all pairings without repeats using backtracking
+    fn backtrack_pairings(
+        players: &[Uuid],
+        standings: &Standings,
+        used_pairs: &mut Vec<(Uuid, Uuid)>,
+    ) -> Option<Vec<(Uuid, Uuid)>> {
+        if players.is_empty() {
+            return Some(used_pairs.clone());
+        }
+
+        let current = players[0];
+        for (i, &opponent) in players.iter().enumerate().skip(1) {
+            // Skip if they've already played
+            if !standings.pairings_between(current, opponent).is_empty() {
+                continue;
+            }
+
+            // Choose this pairing
+            used_pairs.push((current, opponent));
+
+            // Remaining players (exclude current and opponent)
+            let mut remaining = players[1..].to_vec();
+            remaining.remove(i - 1);
+
+            if let Some(result) = Tournament::backtrack_pairings(&remaining, standings, used_pairs)
+            {
+                return Some(result);
+            }
+
+            // Undo choice
+            used_pairs.pop();
+        }
+
+        // If no valid opponent worked, fail this branch
+        None
+    }
+
+    pub async fn swiss_create_next_round(
+        &self,
+        user_id: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        let played_games = self.games(conn).await?;
+        let mut games = Vec::new();
+        let mut standings = Standings::new();
+
+        for tiebreaker in self.tiebreaker.iter().flatten() {
+            standings.add_tiebreaker(
+                Tiebreaker::from_str(tiebreaker).unwrap_or(Tiebreaker::SonnebornBerger),
+            );
+        }
+        for played_game in played_games {
+            let white_uuid = played_game.white_id;
+            let black_uuid = played_game.black_id;
+            let white_elo = played_game.white_rating;
+            let black_elo = played_game.black_rating;
+            let result = TournamentGameResult::from_str(&played_game.tournament_game_result)
+                .unwrap_or(TournamentGameResult::Unknown);
+            standings.add_result(
+                white_uuid,
+                black_uuid,
+                white_elo.unwrap_or(0.0),
+                black_elo.unwrap_or(0.0),
+                result,
+            );
+        }
+        standings.enforce_tiebreakers();
+
+        let flattened_players_standing: Vec<Uuid> = standings
+            .players_standings
+            .iter()
+            .flatten()
+            .cloned()
+            .collect();
+        let mut used_pairs = Vec::new();
+
+        // first try backtracking to find a solution without repeats
+        let pairings = Tournament::backtrack_pairings(
+            &flattened_players_standing,
+            &standings,
+            &mut used_pairs,
+        )
+        .unwrap_or_else(|| {
+            // and then fall back to greedy brute force (may repeat)
+            Tournament::brute_force_pairings(&flattened_players_standing, &standings, 0, 5)
+        });
+        let bye_player = User::find_by_username("SwissByePlayer", conn).await?;
+        for (a, b) in pairings {
+            let g1 = Game::create(NewGame::new_from_tournament(a, b, self), conn).await?;
+            let g2 = Game::create(NewGame::new_from_tournament(b, a, self), conn).await?;
+            // bye_player is white in g1 and black in g2
+            if a == bye_player.id {
+                g1.adjudicate_tournament_result(
+                    user_id,
+                    &TournamentGameResult::Winner(Color::Black),
+                    conn,
+                )
+                .await?;
+                g2.adjudicate_tournament_result(
+                    user_id,
+                    &TournamentGameResult::Winner(Color::White),
+                    conn,
+                )
+                .await?;
+            }
+            // bye_player is black in g1 and white in g2
+            if b == bye_player.id {
+                g1.adjudicate_tournament_result(
+                    user_id,
+                    &TournamentGameResult::Winner(Color::White),
+                    conn,
+                )
+                .await?;
+                g2.adjudicate_tournament_result(
+                    user_id,
+                    &TournamentGameResult::Winner(Color::Black),
+                    conn,
+                )
+                .await?;
+            }
+            games.push(g1);
+            games.push(g2);
         }
         Ok(games)
     }

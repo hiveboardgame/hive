@@ -10,6 +10,7 @@ pub enum TournamentMode {
     DoubleRoundRobin,
     QuadrupleRoundRobin,
     SextupleRoundRobin,
+    DoubleSwiss,
 }
 
 impl PrettyString for TournamentMode {
@@ -18,6 +19,7 @@ impl PrettyString for TournamentMode {
             Self::DoubleRoundRobin => String::from("Double round robin"),
             Self::QuadrupleRoundRobin => String::from("Quadruple round robin"),
             Self::SextupleRoundRobin => String::from("Sextuple round robin"),
+            Self::DoubleSwiss => String::from("Double Swiss"),
         }
     }
 }
@@ -28,6 +30,7 @@ impl fmt::Display for TournamentMode {
             Self::DoubleRoundRobin => String::from("DoubleRoundRobin"),
             Self::QuadrupleRoundRobin => String::from("QuadrupleRoundRobin"),
             Self::SextupleRoundRobin => String::from("SextupleRoundRobin"),
+            Self::DoubleSwiss => String::from("DoubleSwiss"),
         };
         write!(f, "{game_status}")
     }
@@ -41,6 +44,7 @@ impl FromStr for TournamentMode {
             "DoubleRoundRobin" => Ok(TournamentMode::DoubleRoundRobin),
             "QuadrupleRoundRobin" => Ok(TournamentMode::QuadrupleRoundRobin),
             "SextupleRoundRobin" => Ok(TournamentMode::SextupleRoundRobin),
+            "DoubleSwiss" => Ok(TournamentMode::DoubleSwiss),
             _ => Err(anyhow::anyhow!("Invalid TournamentMode string")),
         }
     }
