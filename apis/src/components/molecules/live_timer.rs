@@ -142,7 +142,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
             class=move || {
                 format!(
                     "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
-                    if time_is_zero() || timed_out() { "bg-ladybug-red" } else { "" },
+                    if timed_out() { "bg-ladybug-red" } else { "" },
                 )
             }
         >
