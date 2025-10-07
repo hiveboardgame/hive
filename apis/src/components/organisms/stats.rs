@@ -1,4 +1,5 @@
 use crate::components::atoms::rating::{icon_for_speed, Rating};
+use crate::components::atoms::rating_history::RatingGraph;
 use crate::components::molecules::modal::Modal;
 use crate::responses::{RatingResponse, UserResponse};
 use leptos::{html::Dialog, prelude::*};
@@ -143,6 +144,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                             </div>
                                         </div>
                                     </div>
+                                    <RatingGraph user_id=rating.user_uid game_speed=rating.speed />
                                 </div>
                             </div>
                         }

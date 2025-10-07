@@ -102,6 +102,27 @@ impl Rating {
             .await?)
     }
 
+    pub async fn history_for_uuid(
+        uuid: &Uuid,
+        game_speed: &GameSpeed,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Self>, DbError> {
+        let game_speed = match game_speed {
+            GameSpeed::Untimed => GameSpeed::Correspondence.to_string(),
+            _ => game_speed.to_string(),
+        };
+
+        // println!("Fetching history for UUID: {}, GameSpeed: {}", uuid, game_speed);
+
+        let rt = ratings_table
+            .filter(user_uid.eq(uuid).and(speed.eq(&game_speed)))
+            .load::<Self>(conn)
+            .await?;
+
+        // println!("Fetched {} rating entries", rt.len());
+        Ok(rt)
+    }
+
     pub async fn update(
         rated: bool,
         mut game_speed: String,
