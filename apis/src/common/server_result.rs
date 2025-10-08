@@ -94,9 +94,8 @@ pub enum ChallengeUpdate {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserUpdate {
     pub status: UserStatus,
-    pub user: Option<UserResponse>,
-    pub username: String,
-}
+    pub user: UserResponse,
+ }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UserStatus {

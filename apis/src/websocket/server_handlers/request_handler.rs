@@ -101,10 +101,6 @@ impl RequestHandler {
                 .handle()
                 .await?
             }
-            ClientRequest::Pong(nonce) => {
-                self.data.pings.update(self.user_id, nonce);
-                vec![]
-            }
             ClientRequest::Game {
                 action: game_action,
                 game_id,
@@ -143,11 +139,7 @@ impl RequestHandler {
                     .handle()
                     .await?
             }
-            ClientRequest::DbgMsg(msg) => {
-                println!("Received debug message: {msg}");
-                vec![]
-            }
-            ClientRequest::UpdateId => {
+            ClientRequest::Disconnect | ClientRequest::Pong(_) => {
                 vec![]
             }
         };

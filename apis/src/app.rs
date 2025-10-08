@@ -1,7 +1,7 @@
+use crate::websocket::new_style::client::{client_handler, ClientApi};
 use crate::{
     components::{
         layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames,
-        test_ws_com::TestWsCom,
     },
     i18n::I18nContextProvider,
     pages::{
@@ -35,7 +35,6 @@ use crate::{
         provide_referer, provide_server_updates, provide_sounds, refocus::provide_refocus,
         schedules::provide_schedules, websocket::provide_websocket, AuthContext,
     },
-    websocket::new_style::ClientApi,
 };
 use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
@@ -69,8 +68,10 @@ pub fn App() -> impl IntoView {
     provide_users();
     provide_challenges();
     provide_websocket("/ws/");
+    provide_context(ClientApi::new());
 
-    //expects websocket
+    //expects websocket, client_api
+
     provide_auth();
 
     //expects auth
@@ -81,15 +82,17 @@ pub fn App() -> impl IntoView {
 
     //expects auth, api_requests, gameStateSignal
     provide_chat();
-    // we'll only listen for websocket messages on the client
-    use futures::channel::mpsc;
-    let (tx, rx) = mpsc::channel(1);
-
-    provide_context(ClientApi::new(tx));
     let client_api = expect_context::<ClientApi>();
+    let ws_restart = client_api.signal_restart_ws();
     if cfg!(feature = "hydrate") {
-        use crate::websocket::new_style::client_handler;
-        leptos::task::spawn_local(client_handler(rx, client_api));
+        Effect::watch(
+            ws_restart,
+            move |_, _, _| {
+                leptos::task::spawn_local(client_handler());
+            },
+            false,
+        );
+        // we'll only listen for websocket messages on the client
     }
     let auth = expect_context::<AuthContext>();
     let is_logged_in = move || auth.user.with(|a| a.is_some()).into();
@@ -113,7 +116,6 @@ pub fn App() -> impl IntoView {
                     >
 
                         <Route path=path!("") view=|| view! { <Home /> } />
-                        <Route path=path!("/test_new_ws") view=|| view! { <TestWsCom /> } />
                         <ParentRoute
                             path=path!("/@/:username")
                             view=|| {
