@@ -1,14 +1,11 @@
 use super::messages::GameHB;
-use super::WebsocketData;
-use super::{messages::MessageDestination, messages::Ping};
+use super::messages::MessageDestination;
 use crate::{
     common::{
         ChallengeUpdate, GameUpdate, ScheduleUpdate, ServerMessage, ServerResult, TournamentUpdate,
-        UserStatus, UserUpdate,
     },
     responses::{
         ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse, TournamentResponse,
-        UserResponse,
     },
     websocket::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
 };
@@ -26,10 +23,8 @@ use db_lib::{
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::GameStatus;
 use log::{error, warn};
-use rand::Rng;
 use shared_types::{GameId, TimeMode};
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -38,19 +33,17 @@ pub struct WsServer {
     sessions: HashMap<Uuid, Vec<Recipient<WsMessage>>>, // user_id to (socket_)id
     games_users: HashMap<GameId, HashSet<Uuid>>,        // game_id to set of users
     users_games: HashMap<Uuid, HashSet<String>>,        // user_id to set of games
-    data: Arc<WebsocketData>,
     pool: DbPool,
 }
 
 impl WsServer {
-    pub fn new(data: Arc<WebsocketData>, pool: DbPool) -> WsServer {
+    pub fn new(pool: DbPool) -> WsServer {
         WsServer {
             // TODO: work on replacing the id here...
             id: String::from("lobby"),
             sessions: HashMap::new(),
             games_users: HashMap::new(),
             users_games: HashMap::new(),
-            data,
             pool,
         }
     }
@@ -68,25 +61,6 @@ impl WsServer {
 
 impl Actor for WsServer {
     type Context = Context<Self>;
-}
-
-impl Handler<Ping> for WsServer {
-    type Result = ();
-
-    fn handle(&mut self, _msg: Ping, _ctx: &mut Context<Self>) {
-        let mut rng = rand::rng();
-        for user_id in self.sessions.keys() {
-            let nonce = rng.random::<u64>();
-            self.data.pings.set_nonce(*user_id, nonce);
-            let message = ServerResult::Ok(Box::new(ServerMessage::Ping {
-                nonce,
-                value: self.data.pings.value(*user_id),
-            }));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_message(&serialized, user_id);
-            };
-        }
-    }
 }
 
 impl Handler<GameHB> for WsServer {
@@ -160,22 +134,7 @@ impl Handler<Disconnect> for WsServer {
                     }
                 }
             }
-            let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
-                status: UserStatus::Offline,
-                user: None,
-                username: msg.username,
-            })));
-            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                let game_id = GameId(self.id.clone());
-                if let Some(ws_server) = self.games_users.get_mut(&game_id) {
-                    ws_server.remove(&msg.user_id);
-                }
-                if let Some(ws_server) = self.games_users.get(&game_id) {
-                    ws_server
-                        .iter()
-                        .for_each(|user_id| self.send_message(&serialized, user_id));
-                }
-            };
+            //Remove from online users handled in v2
         }
     }
 }
@@ -199,53 +158,11 @@ impl Handler<Connect> for WsServer {
             .push(msg.addr.clone());
         let pool = self.pool.clone();
         let address = ctx.address().clone();
-        let games_users = self.games_users.clone();
-        let sessions = self.sessions.clone();
         let future = async move {
             if let Ok(mut conn) = get_conn(&pool).await {
-                //Get currently online users
-                for uuid in sessions.keys() {
-                    if let Ok(user_response) = UserResponse::from_uuid(uuid, &mut conn).await {
-                        let message =
-                            ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
-                                status: UserStatus::Online,
-                                user: Some(user_response.clone()),
-                                username: user_response.username,
-                            })));
-                        if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                            let cam = ClientActorMessage {
-                                destination: MessageDestination::User(user_id),
-                                serialized,
-                                from: Some(user_id),
-                            };
-                            address.do_send(cam);
-                        };
-                    }
-                }
+                //Loading online users for new connection handled in v2
 
                 let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
-                    if let Ok(user_response) = UserResponse::from_model(&user, &mut conn).await {
-                        let message =
-                            ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
-                                status: UserStatus::Online,
-                                user: Some(user_response),
-                                username: msg.username,
-                            })));
-                        if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                            // TODO: one needs to be a game::join to everyone in the game, the other one just to the
-                            // ws_server that the user came online
-                            if let Some(user_ids) = games_users.get(&GameId(msg.game_id)) {
-                                for id in user_ids {
-                                    if let Some(sockets) = sessions.get(id) {
-                                        for socket in sockets {
-                                            socket.do_send(WsMessage(serialized.clone()));
-                                        }
-                                    }
-                                }
-                            }
-                        };
-                    }
-
                     // Send games which require input from the user
                     let game_ids_result = user.get_urgent_nanoids(&mut conn).await;
                     let game_ids = match game_ids_result {
