@@ -6,7 +6,6 @@ pub mod jobs;
 pub mod providers;
 pub mod responses;
 pub mod websocket;
-use std::sync::Arc;
 
 use actix_session::config::PersistentSession;
 use actix_web::cookie::{time::Duration, SameSite};
@@ -36,13 +35,12 @@ async fn main() -> std::io::Result<()> {
     use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
     use leptos::prelude::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
-    use websocket::new_style::ServerData;
+    use websocket::new_style::server::ServerData;
     use sha2::*;
 
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
-    let server_notifications = Data::new(ServerData::default());
     simple_logger::init_with_level(log::Level::Warn).expect("couldn't initialize logging");
 
     let config = DbConfig::from_env().expect("Failed to load config from env");
@@ -62,13 +60,13 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Failed to get pool");
     let data = Data::new(WebsocketData::default());
-    let websocket_server = Data::new(WsServer::new(Arc::clone(&data), pool.clone()).start());
+    let websocket_server = Data::new(WsServer::new(pool.clone()).start());
+    let server_notifications = Data::new(ServerData::new(pool.clone()));
     let jwt_secret = JwtSecret::new(config.jwt_secret);
     let jwt_key = Data::new(jwt_secret);
 
     jobs::tournament_start(pool.clone(), Data::clone(&websocket_server));
     jobs::heartbeat(Data::clone(&websocket_server));
-    jobs::ping(Data::clone(&websocket_server));
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
 

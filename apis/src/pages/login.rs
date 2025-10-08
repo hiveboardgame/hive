@@ -1,7 +1,6 @@
 use crate::functions::auth::login::Login;
 use crate::i18n::*;
 use crate::providers::{AuthContext, RefererContext};
-use crate::websocket::new_style::ClientApi;
 use leptos::prelude::*;
 use leptos::{form::ActionForm, html};
 
@@ -14,13 +13,11 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
     let auth_context = expect_context::<AuthContext>();
-    let client_api = expect_context::<ClientApi>();
     let login = ServerAction::<Login>::new();
     Effect::watch(
         login.version(),
         move |_, _, _| {
             auth_context.refresh(true);
-            client_api.send(crate::common::ClientRequest::UpdateId)
         },
         false,
     );
