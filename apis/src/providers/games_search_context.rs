@@ -21,6 +21,7 @@ pub struct FilterState {
     pub expansions: Option<bool>,
     pub rated: Option<bool>,
     pub exclude_bots: bool,
+    pub opponent: Option<String>,
 }
 
 impl Default for FilterState {
@@ -32,6 +33,7 @@ impl Default for FilterState {
             expansions: None,    // Show both Base and MLP games by default
             rated: None,         // Show both rated and unrated
             exclude_bots: false, // Don't exclude bots by default
+            opponent: None,
         }
     }
 }
@@ -84,10 +86,11 @@ pub fn load_games(
         color: filters.color,
         result: filters.result,
     });
+    let player2 = filters.opponent.clone().map(|username| PlayerFilter { username, color: None, result: None });
 
     let options = GamesQueryOptions {
         player1,
-        player2: None,
+        player2,
         speeds: filters.speeds,
         current_batch: batch_info,
         batch_size,
