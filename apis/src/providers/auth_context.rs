@@ -21,7 +21,6 @@ impl AuthContext {
 pub fn provide_auth() {
     let websocket_context = expect_context::<WebsocketContext>();
     let client_api = expect_context::<ClientApi>();
-    let client_api2 = client_api.clone();
     let logout = ServerAction::<Logout>::new();
     let action = Action::new(move |_: &()| async { get_account().await });
 
@@ -47,6 +46,7 @@ pub fn provide_auth() {
                 websocket_context.close();
                 websocket_context.open();
             }
+            let client_api = client_api.clone();
             client_api.restart_ws();
         },
         false,
@@ -55,7 +55,6 @@ pub fn provide_auth() {
         ctx.logout.version(),
         move |_, _, _| {
             ctx.refresh(true);
-            client_api2.restart_ws();
         },
         false,
     );

@@ -1,5 +1,5 @@
-use crate::common::{ClientRequest, ServerMessage};
-use futures::{channel::mpsc, StreamExt};
+use crate::{common::{ClientRequest, ServerMessage}, functions::accounts::get::get_account};
+use futures::channel::mpsc;
 use leptos::prelude::*;
 use server_fn::{codec::MsgPackEncoding, BoxedStream, ServerFnError, Websocket};
 
@@ -7,70 +7,72 @@ use server_fn::{codec::MsgPackEncoding, BoxedStream, ServerFnError, Websocket};
 pub async fn websocket_fn(
     input: BoxedStream<ClientRequest, ServerFnError>,
 ) -> Result<BoxedStream<ServerMessage, ServerFnError>, ServerFnError> {
-    use crate::functions::auth::identity::uuid;
     use crate::websocket::{
-        new_style::server::{jobs, ClientData, ServerData},
+        new_style::server::{tasks, ClientData, ServerData, server_websocket_handler},
      };
+    use tokio::{task::spawn, select};
+    use tokio_util::sync::CancellationToken;
     use actix_web::web::Data;
 
-    let mut input = input;
     let req: actix_web::HttpRequest = leptos_actix::extract().await?;
+
 
     let server_data = req
         .app_data::<Data<ServerData>>()
         .ok_or("Failed to get server notifications")
-        .map_err(ServerFnError::new)?
-        .clone();
-    let id = uuid().await.ok();
+        .map_err(ServerFnError::new)?.clone();
+     let user = get_account().await.ok();
     // create a channel of outgoing websocket messages (from mpsc)
     let (tx, rx) = mpsc::channel(1);
-    let client_data = ClientData::new(tx, id);
 
-    //Load initial online users and add myself
-    leptos::task::spawn(
-        jobs::load_online_users(client_data.clone(), server_data.clone())
-    );
+    // Store the handle so we can stop it later    
+    let token = CancellationToken::new();
+    let token2 = token.clone();
+    let token3 = token.clone();
+    let token4 = token.clone();
+    let client_data = ClientData::new(tx, user, token.clone()); 
     //ping at a given interval
     const PING_INTERVAL_MS: u64 = 1000; //consistent with previous implementation
-    leptos::task::spawn(jobs::ping_client_ms(
+    let ping = tasks::ping_client_ms(
         PING_INTERVAL_MS,
         client_data.clone(),
         server_data.clone(),
-    ));
+    );
+    spawn(async move {
+        select! {
+            _ = token.cancelled() => {}
+            _ = ping => {}
+         }
+    });
 
+    
     //listens to the server notifications and sends them to the client
-    leptos::task::spawn(jobs::handle_server_notificantions(
+    let server_notifications = tasks::handle_server_notificantions(
         client_data.clone(),
         server_data.clone(),
-    ));
-    //recieves client requests and handles them
-    leptos::task::spawn(async move {
-        let mut client_data = client_data.clone();
-        while let Some(msg) = input.next().await {
-            match msg {
-                Ok(msg) => match msg {
-                    ClientRequest::Pong(nonce) => {
-                        client_data.update_pings(nonce).await;
-                    }
-                    ClientRequest::Disconnect => {
-                        let id = client_data.id;
-                        leptos::logging::log!("Got disconection request from {id:?}");
-                        client_data.close(&server_data).await;
-                    }
-                    c => {
-                        let msg = ServerMessage::Error(format!("{c:?} ISNT IMPLEMENTED"));
-                        client_data.send(msg, &server_data).await;
-                    }
-                },
-                Err(e) => {
-                    let msg = ServerMessage::Error(format!("Error: {e}"));
-                    client_data.send(msg, &server_data).await;
-                }
-            };
-            if client_data.is_closed().await {
-                break;
-            }
-        }
+    );
+    spawn(async move {
+        select! {
+            _ = token2.cancelled() => {}
+            _ = server_notifications => {}
+         }
+    });
+    
+    //Load initial online users and add myself
+    let load_users = tasks::load_online_users(client_data.clone(), server_data.clone());
+    spawn(async move {
+        select! {
+            _ = token3.cancelled() => {}
+            _ = load_users => {}
+         }
+    });
+    //main handler
+    let main_handler = server_websocket_handler(input, client_data, server_data);
+    spawn(async move {
+        select! {
+            _ = token4.cancelled() => {}
+            _ = main_handler => {}
+         }
     });
 
     Ok(rx.into())
