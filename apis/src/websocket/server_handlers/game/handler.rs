@@ -1,11 +1,10 @@
 use super::start::StartHandler;
 use super::{
-    control_handler::GameControlHandler, join_handler::JoinHandler,
+    control_handler::GameControlHandler,
     timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
 };
 use crate::common::GameAction;
-use crate::websocket::messages::{InternalServerMessage, WsMessage};
-use crate::websocket::WebsocketData;
+use crate::websocket::messages::InternalServerMessage;
 use anyhow::Result;
 use db_lib::get_conn;
 use db_lib::{models::Game, DbPool};
@@ -14,15 +13,12 @@ use diesel_async::AsyncConnection;
 use hive_lib::{GameError, GameStatus};
 use shared_types::GameId;
 use std::str::FromStr;
-use std::sync::Arc;
 use uuid::Uuid;
 pub struct GameActionHandler {
     game_action: GameAction,
     game: Game,
     pool: DbPool,
     user_id: Uuid,
-    received_from: actix::Recipient<WsMessage>,
-    data: Arc<WebsocketData>,
     username: String,
 }
 
@@ -30,9 +26,7 @@ impl GameActionHandler {
     pub async fn new(
         game_id: &GameId,
         game_action: GameAction,
-        received_from: actix::Recipient<WsMessage>,
         user_details: (&str, Uuid),
-        data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Result<Self> {
         let (username, user_id) = user_details;
@@ -47,9 +41,7 @@ impl GameActionHandler {
 
         Ok(Self {
             pool: pool.clone(),
-            data,
             game,
-            received_from,
             username: username.to_owned(),
             game_action,
             user_id,
@@ -71,7 +63,6 @@ impl GameActionHandler {
                     &self.game,
                     &self.username,
                     self.user_id,
-                    self.data.clone(),
                     &self.pool,
                 )
                 .handle()
@@ -91,16 +82,7 @@ impl GameActionHandler {
                 .await?
             }
             GameAction::Join => {
-                JoinHandler::new(
-                    &self.game,
-                    &self.username,
-                    self.user_id,
-                    self.received_from.clone(),
-                    self.data.clone(),
-                    &self.pool,
-                )
-                .handle()
-                .await?
+                vec![]
             }
             GameAction::Start => {
                 self.ensure_not_finished()?;
@@ -109,7 +91,6 @@ impl GameActionHandler {
                     &self.game,
                     self.user_id,
                     self.username.clone(),
-                    self.data.clone(),
                     &self.pool,
                 )
                 .handle()

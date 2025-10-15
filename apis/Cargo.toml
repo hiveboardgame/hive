@@ -69,6 +69,7 @@ shared_types = { path = "../shared_types" }
 simple_logger = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, optional = true }
+tokio-util = { workspace = true, optional = true }
 tree-ds = {workspace = true}
 uuid = { workspace = true }
 walkdir = {workspace = true}
@@ -96,6 +97,7 @@ ssr = [
   "dep:rand",
   "dep:jsonwebtoken",
   "dep:tokio",
+  "dep:tokio-util",
   "leptos/ssr",
   "leptos-use/ssr",
   "leptos_meta/ssr",

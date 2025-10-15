@@ -531,6 +531,7 @@ dependencies = [
  "simple_logger",
  "thiserror 2.0.12",
  "tokio",
+ "tokio-util",
  "tree-ds",
  "uuid",
  "walkdir",

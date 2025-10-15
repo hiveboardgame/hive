@@ -2,9 +2,11 @@ use std::str::FromStr;
 
 use crate::common::{MoveInfo, PieceType};
 use crate::responses::GameResponse;
+use crate::websocket::new_style::client::ClientApi;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
 use leptos::prelude::*;
+use leptos::reactive::spawn_local;
 use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
@@ -368,7 +370,11 @@ impl GameState {
                 });
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
-                api.turn(game_id.to_owned(), turn);
+                let game_id = game_id.clone();
+                let api = expect_context::<ClientApi>();
+                spawn_local(async move {
+                    api.turn(game_id, turn).await;
+                });
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             }

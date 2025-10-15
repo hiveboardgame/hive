@@ -1,9 +1,10 @@
-use crate::common::{ClientRequest, ServerMessage};
-use futures::channel::mpsc::{self, Sender};
-use leptos::prelude::{GetValue, ReadSignal, RwSignal, Set, SetValue, StoredValue};
+use crate::common::{ClientRequest, GameAction, ServerMessage};
+use futures::{channel::mpsc::{self, Sender}, SinkExt};
+use hive_lib::Turn;
+use leptos::{logging, prelude::{GetValue , ReadSignal, RwSignal, Set, SetValue, StoredValue}};
 use server_fn::ServerFnError;
-
-type ClientResult = Result<ClientRequest, ServerFnError>;
+use shared_types::GameId;
+pub type ClientResult = Result<ClientRequest, ServerFnError>;
 
 #[derive(Clone)]
 pub struct ClientApi {
@@ -13,14 +14,8 @@ pub struct ClientApi {
     sender: StoredValue<Sender<ClientResult>>,
     pub latest: RwSignal<Result<ServerMessage, ServerFnError>>,
 }
-impl Default for ClientApi {
+impl Default for ClientApi{
     fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ClientApi {
-    pub fn new() -> Self {
         let (tx, _rx) = mpsc::channel(1);
         Self {
             ws_restart: RwSignal::new(()),
@@ -28,16 +23,30 @@ impl ClientApi {
             latest: RwSignal::new(Ok(ServerMessage::Error("".into()))),
         }
     }
+}
+impl ClientApi {
     pub fn set_sender(&self, sender: Sender<ClientResult>) {
         self.sender.set_value(sender);
     }
-    pub fn send(&self, client_request: ClientRequest) {
+    pub async fn send(&self, client_request: ClientRequest) {
         let mut sender = self.sender.get_value();
-
-        let _ = sender.try_send(Ok(client_request));
+        let ret = sender.send(Ok(client_request.clone())).await;
+        if ret.is_err() {
+            logging::log!("Msg: {client_request:?} Error: {ret:?}");
+        }
+    }
+    pub async fn join_game(&self, id: GameId) {
+        let req = ClientRequest::Game { game_id: id, action: crate::common::GameAction::Join };
+        self.send(req).await;
+    }
+    pub async fn turn(&self, game_id: GameId, turn: Turn) {
+        let msg = ClientRequest::Game {
+            game_id,
+            action: GameAction::Turn(turn),
+        };
+        self.send(msg).await;
     }
     pub fn restart_ws(&self) {
-        self.send(ClientRequest::Disconnect);
         self.ws_restart.set(());
     }
     pub fn signal_restart_ws(&self) -> ReadSignal<()> {

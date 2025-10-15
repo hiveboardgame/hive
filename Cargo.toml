@@ -79,6 +79,7 @@ simple_logger = "5.0"
 skillratings = "0.27"
 thiserror = "2"
 tokio = { version = "1.46.1", features = ["full"] }
+tokio-util = {version = "0.7"}
 tree-ds = { version = "0.2.0", features = ["serde", "compact_serde", "async"] }
 uuid = { version = "1.17", features = ["v4", "js", "serde"] }
 walkdir = "2.5"

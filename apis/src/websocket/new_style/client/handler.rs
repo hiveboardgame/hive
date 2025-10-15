@@ -3,18 +3,16 @@ use crate::{
     providers::PingContext,
     websocket::{
         client_handlers::user_status::handle::handle_user_status,
-        new_style::{client::ClientApi, websocket_fn::websocket_fn},
+        new_style::{client::{api::ClientResult, ClientApi}, websocket_fn::websocket_fn},
     },
 };
-use futures::channel::mpsc::{self};
+use futures::channel::mpsc::{Receiver};
 use futures::StreamExt;
 use leptos::prelude::expect_context;
 
-pub async fn client_handler() {
-    let (tx, rx) = mpsc::channel(1);
-    let client_api = expect_context::<ClientApi>();
+pub async fn client_handler(rx: Receiver<ClientResult>) {
     let mut ping = expect_context::<PingContext>();
-    client_api.set_sender(tx);
+    let client_api = expect_context::<ClientApi>();
     match websocket_fn(rx.into()).await {
         Ok(mut messages) => {
             while let Some(msg) = messages.next().await {
@@ -22,7 +20,7 @@ pub async fn client_handler() {
                     Ok(msg) => match msg {
                         ServerMessage::Ping { nonce, value } => {
                             ping.update_ping(value);
-                            client_api.send(ClientRequest::Pong(nonce));
+                            client_api.send(ClientRequest::Pong(nonce)).await;
                         }
                         ServerMessage::UserStatus(user_update) => {
                             handle_user_status(user_update);

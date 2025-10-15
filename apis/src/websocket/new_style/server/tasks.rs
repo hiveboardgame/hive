@@ -8,53 +8,57 @@ use actix_web::web::Data;
 use rand::Rng;
 use tokio::time::{interval as interval_fn, Duration};
 
-pub async fn ping_client_ms(interval: u64, mut client: ClientData, server_data: Data<ServerData>) {
+pub async fn ping_client_ms(interval: u64, client: ClientData, server_data: Data<ServerData>) {
     let mut interval = interval_fn(Duration::from_millis(interval));
     loop {
         interval.tick().await;
-        if client.is_closed().await {
-            break;
-        }
         let nonce = rand::rng().random();
-        client.update_pings(nonce).await;
+        client.update_pings(nonce);
         let message = ServerMessage::Ping {
             nonce,
-            value: client.pings_value().await,
+            value: client.pings_value(),
         };
         client.send(message, &server_data).await;
     }
 }
 
-pub async fn handle_server_notificantions(mut client: ClientData, server_data: Data<ServerData>) {
+pub async fn handle_server_notificantions(client: ClientData, server_data: Data<ServerData>) {
     let mut server_reciever = server_data.receiver();
-    loop {
-        if client.is_closed().await {
-            break;
-        }
-        if server_reciever.changed().await.is_ok() {
+    while server_reciever.changed().await.is_ok() {
+            let msg = server_reciever.borrow().clone();
             let InternalServerMessage {
                 destination,
                 message,
-            } = server_reciever.borrow().clone();
+            } = msg;
             match destination {
                 MessageDestination::Global =>{
                     client.send(message, &server_data).await;
                 },
                 MessageDestination::User(dest_id) => {
-                    if client.id.is_some_and(|id| id == dest_id) {
-                        client.send(message, &server_data).await;
+                    if let Some(user) = client.account()  {
+                        if user.user.uid == dest_id {
+                            client.send(message, &server_data).await;
+
+                        }
+                    }
+                }
+                MessageDestination::Game(id) => {
+                    let subscribers = server_data.game_subscribers(&id);
+                    let message = message.clone();
+                    for c in subscribers {
+                        c.send(message.clone(), &server_data).await;
                     }
                 }
                 _ => {
                     todo!()
                 }
             }
-        }
     }
 }
 
-pub async fn load_online_users(mut client: ClientData, server_data: Data<ServerData>) {
-    for user in server_data.get_online_users().await {
+pub async fn load_online_users(client: ClientData, server_data: Data<ServerData>) {
+    println!("Reached load online users");
+    for user in server_data.get_online_users() {
         let request = ServerMessage::UserStatus(
             UserUpdate {
                 status: crate::common::UserStatus::Online,
@@ -63,5 +67,7 @@ pub async fn load_online_users(mut client: ClientData, server_data: Data<ServerD
         );
         client.send(request, &server_data).await;
     }
-    server_data.add_user(client.id).await;
+    if let Some(user) = client.account() { 
+        server_data.add_user(user.clone());
+    }
 }
