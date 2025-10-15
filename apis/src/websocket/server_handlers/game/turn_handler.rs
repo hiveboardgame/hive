@@ -1,5 +1,4 @@
 use crate::websocket::busybee::Busybee;
-use crate::websocket::WebsocketData;
 
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
@@ -17,7 +16,6 @@ use diesel_async::AsyncConnection;
 use hive_lib::{GameError, State, Turn};
 use shared_types::{GameId, TimeMode};
 use std::str::FromStr;
-use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct TurnHandler {
@@ -26,7 +24,6 @@ pub struct TurnHandler {
     user_id: Uuid,
     username: String,
     game: Game,
-    data: Arc<WebsocketData>,
 }
 
 impl TurnHandler {
@@ -35,7 +32,6 @@ impl TurnHandler {
         game: &Game,
         username: &str,
         user_id: Uuid,
-        data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Self {
         Self {
@@ -44,7 +40,6 @@ impl TurnHandler {
             username: username.to_owned(),
             pool: pool.clone(),
             turn,
-            data,
         }
     }
 
@@ -63,10 +58,10 @@ impl TurnHandler {
         state.play_turn_from_position(piece, position)?;
 
         let comp = if self.game.time_mode == TimeMode::RealTime.to_string() {
-            let ping = self.data.pings.value(self.user_id);
+            //let ping = self.data.pings.value(self.user_id);
             let base = self.game.time_base.unwrap_or(0) as usize;
             let inc = self.game.time_increment.unwrap_or(0) as usize;
-            self.data
+            /*self.data
                 .lags
                 .track_lag(
                     self.user_id,
@@ -75,7 +70,8 @@ impl TurnHandler {
                     base,
                     inc,
                 )
-                .unwrap_or(0.0)
+                .unwrap_or(0.0)*/
+                0.0
         } else {
             0.0
         };

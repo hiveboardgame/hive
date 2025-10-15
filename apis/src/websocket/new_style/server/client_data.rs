@@ -1,52 +1,72 @@
-use std::sync::Arc;
-
 use crate::{
-    common::ServerMessage,
-    websocket::{lag_tracking::PingStats, new_style::server::ServerData},
+    common::ServerMessage, responses::AccountResponse, websocket::{lag_tracking::PingStats, new_style::server::ServerData}
 };
-use futures::{channel::mpsc, SinkExt};
 use server_fn::ServerFnError;
-use tokio::sync::RwLock;
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
+use std::sync::{RwLock, Arc};
+use futures::{channel::mpsc, SinkExt};
 
 type ClientResult = Result<ServerMessage, ServerFnError>;
 
+struct InternalClientData {
+    pub cancel: CancellationToken,
+    pub pings: RwLock<PingStats>,
+    pub account: Option<AccountResponse>,
+    pub id: Uuid
+}
+
 #[derive(Clone)]
 pub struct ClientData {
-    abort: Arc<RwLock<bool>>,
-    pings: Arc<RwLock<PingStats>>,
+    data: Arc<InternalClientData>,
     sender: mpsc::Sender<ClientResult>,
-    pub id: Option<Uuid>,
+
 }
 
 impl ClientData {
-    pub fn new(sender: mpsc::Sender<ClientResult>, id: Option<Uuid>) -> Self {
+    pub fn new(sender: mpsc::Sender<ClientResult>, account: Option<AccountResponse>, cancel: CancellationToken) -> Self {
+        let data = InternalClientData {
+            id: Uuid::new_v4(),
+            pings: RwLock::new(PingStats::default()),
+            cancel,
+            account
+        };
         ClientData {
-            pings: Arc::new(RwLock::new(PingStats::default())),
-            abort: Arc::new(RwLock::new(false)),
+            data: Arc::new(data),
             sender,
-            id,
+
         }
     }
-    pub async fn is_closed(&self) -> bool {
-        *self.abort.read().await
+
+    pub fn account(&self) ->Option<&AccountResponse> {
+        self.data.account.as_ref()
     }
-    pub async fn close(&self, server_data: &ServerData) {
-        server_data.remove_user(self.id).await;
-        *self.abort.write().await = true;
+    pub fn uuid(&self) ->&Uuid {
+        &self.data.id
     }
-    pub async fn update_pings(&self, nonce: u64) {
-        let mut pings = self.pings.write().await;
+    pub fn is_cancelled(&self) -> bool {
+        self.data.cancel.is_cancelled()
+    }
+    pub fn close(&self, server_data: &ServerData) {
+         if let Some(user) = self.data.account.as_ref() {
+            server_data.remove_user(user.clone());
+        }        
+        self.data.cancel.cancel();
+    }
+    pub fn update_pings(&self, nonce: u64) {
+        let mut pings = self.data.pings.write().unwrap();
         pings.update(nonce);
     }
-    pub async fn pings_value(&self) -> f64 {
-        let pings = self.pings.write().await;
+    pub fn pings_value(&self) -> f64 {
+        let pings = self.data.pings.read().unwrap();
         pings.value()
     }
-    pub async fn send(&mut self, request: ServerMessage, server_data: &ServerData) {
-        let ret = self.sender.send(Ok(request)).await;
+    pub async fn send(&self, request: ServerMessage, server_data: &ServerData) {
+        let mut sender = self.sender.clone();
+        let ret = sender.send(Ok(request.clone())).await;
         if ret.is_err() {
-            self.close(server_data).await;
+            //println!("Failed sending {request:?}");
+            self.close(server_data);
         }
     }
 }
