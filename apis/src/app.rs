@@ -1,3 +1,6 @@
+use futures::channel::mpsc;
+use futures::stream::{AbortHandle, Abortable};
+
 use crate::websocket::new_style::client::{client_handler, ClientApi};
 use crate::{
     components::{
@@ -68,10 +71,10 @@ pub fn App() -> impl IntoView {
     provide_users();
     provide_challenges();
     provide_websocket("/ws/");
-    provide_context(ClientApi::new());
 
     //expects websocket, client_api
 
+    provide_context(ClientApi::default());
     provide_auth();
 
     //expects auth
@@ -83,12 +86,32 @@ pub fn App() -> impl IntoView {
     //expects auth, api_requests, gameStateSignal
     provide_chat();
     let client_api = expect_context::<ClientApi>();
-    let ws_restart = client_api.signal_restart_ws();
+    let ws_restart =client_api.signal_restart_ws();
+
+    let task_handle = StoredValue::<Option<AbortHandle>>::new(None);
     if cfg!(feature = "hydrate") {
+
+        // Start or restart the ws task
         Effect::watch(
             ws_restart,
             move |_, _, _| {
-                leptos::task::spawn_local(client_handler());
+                // If a task is already running, cancel it
+                if let Some(handle) = task_handle.get_value() {
+                    handle.abort();
+                }
+                // Create a new abortable future
+                let (abort_handle, abort_reg) = AbortHandle::new_pair();
+    
+                // Store the handle so we can stop it later
+                task_handle.set_value(Some(abort_handle));
+
+                let (tx,rx) = mpsc::channel(1);
+                client_api.set_sender(tx);
+                leptos::task::spawn_local(async move {    
+                    // Make it abortable
+                    let _ = Abortable::new(client_handler(rx), abort_reg).await;
+                    leptos::logging::log!("Task stopped or aborted");
+                });
             },
             false,
         );
