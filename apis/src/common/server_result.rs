@@ -39,11 +39,8 @@ impl fmt::Display for ExternalServerError {
 pub enum ServerMessage {
     Challenge(ChallengeUpdate),
     Chat(Vec<ChatMessageContainer>),
-    ConnectionUpdated(Uuid, String),
     Error(String),
     Game(Box<GameUpdate>),
-    // sent to everyone in the game when a user joins the game
-    Join(Uuid),
     Ping { nonce: u64, value: f64 },
     Schedule(ScheduleUpdate),
     Tournament(TournamentUpdate),

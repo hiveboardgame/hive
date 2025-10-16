@@ -2,12 +2,11 @@ use std::sync::Arc;
 
 use super::challenges::handler::ChallengeHandler;
 use super::chat::handler::ChatHandler;
-use super::game::handler::GameActionHandler;
 use super::oauth::handler::OauthHandler;
 use super::schedules::ScheduleHandler;
 use super::tournaments::handler::TournamentHandler;
 use super::user_status::handler::UserStatusHandler;
-use crate::common::{ClientRequest, GameAction};
+use crate::common::ClientRequest;
 use crate::websocket::messages::AuthError;
 use crate::websocket::messages::InternalServerMessage;
 use crate::websocket::WebsocketData;
@@ -97,24 +96,6 @@ impl RequestHandler {
                 .handle()
                 .await?
             }
-            ClientRequest::Game {
-                action: game_action,
-                game_id,
-            } => {
-                match game_action {
-                    GameAction::Turn(_) | GameAction::Control(_) => self.ensure_auth()?,
-                    _ => {}
-                };
-                GameActionHandler::new(
-                    &game_id,
-                    game_action,
-                    (&self.username, self.user_id),
-                    &self.pool,
-                )
-                .await?
-                .handle()
-                .await?
-            }
             ClientRequest::Challenge(challenge_action) => {
                 self.ensure_auth()?;
                 ChallengeHandler::new(challenge_action, &self.username, self.user_id, &self.pool)
@@ -133,7 +114,8 @@ impl RequestHandler {
                     .handle()
                     .await?
             }
-            ClientRequest::Pong(_) => {
+            ClientRequest::Pong(_)| ClientRequest::Game { .. } => {
+                //Handled in v2
                 vec![]
             }
         };

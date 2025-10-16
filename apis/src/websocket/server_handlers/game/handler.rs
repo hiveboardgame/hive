@@ -31,14 +31,12 @@ impl GameActionHandler {
     ) -> Result<Self> {
         let (username, user_id) = user_details;
         let mut connection = get_conn(pool).await?;
-
         let game = connection
             .transaction::<_, anyhow::Error, _>(move |conn| {
                 // find_by_game_id automatically times the game out if needed
                 async move { Ok(Game::find_by_game_id(game_id, conn).await?) }.scope_boxed()
             })
             .await?;
-
         Ok(Self {
             pool: pool.clone(),
             game,
