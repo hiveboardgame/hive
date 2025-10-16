@@ -84,13 +84,13 @@ pub fn App() -> impl IntoView {
     provide_api_requests();
 
     //expects auth, api_requests, gameStateSignal
-    provide_chat();
-    let client_api = expect_context::<ClientApi>();
-    let ws_restart =client_api.signal_restart_ws();
-
-    let task_handle = StoredValue::<Option<AbortHandle>>::new(None);
+    provide_chat();        
+    
+    // we'll only listen for websocket messages on the client
     if cfg!(feature = "hydrate") {
-
+        let client_api = expect_context::<ClientApi>();
+        let ws_restart = client_api.signal_restart_ws();
+        let task_handle = StoredValue::<Option<AbortHandle>>::new(None);
         // Start or restart the ws task
         Effect::watch(
             ws_restart,
@@ -115,7 +115,6 @@ pub fn App() -> impl IntoView {
             },
             false,
         );
-        // we'll only listen for websocket messages on the client
     }
     let auth = expect_context::<AuthContext>();
     let is_logged_in = move || auth.user.with(|a| a.is_some()).into();
