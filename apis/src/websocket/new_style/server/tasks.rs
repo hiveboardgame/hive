@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use crate::common::UserUpdate;
 use crate::websocket::new_style::server::{ClientData, ServerData};
 use crate::{
@@ -6,7 +8,8 @@ use crate::{
 };
 use actix_web::web::Data;
 use rand::Rng;
-use tokio::time::{interval as interval_fn, Duration};
+use tokio::{time::{interval as interval_fn, Duration}, spawn, select};
+use tokio_util::sync::CancellationToken;
 
 pub async fn ping_client_ms(interval: u64, client: ClientData, server_data: Data<ServerData>) {
     let mut interval = interval_fn(Duration::from_millis(interval));
@@ -22,31 +25,27 @@ pub async fn ping_client_ms(interval: u64, client: ClientData, server_data: Data
     }
 }
 
-pub async fn handle_server_notificantions(client: ClientData, server_data: Data<ServerData>) {
-    let mut server_reciever = server_data.receiver();
-    while server_reciever.changed().await.is_ok() {
-            let msg = server_reciever.borrow().clone();
+pub async fn subscribe_to_notifications(client: ClientData, server: Data<ServerData>) {
+    let mut reciever = server.receiver();
+    while reciever.changed().await.is_ok() {
             let InternalServerMessage {
                 destination,
                 message,
-            } = msg;
+            } = reciever.borrow().clone();
             match destination {
                 MessageDestination::Global =>{
-                    client.send(message, &server_data).await;
+                    client.send(message, &server).await;
                 },
                 MessageDestination::User(dest_id) => {
-                    if let Some(user) = client.account()  {
-                        if user.user.uid == dest_id {
-                            client.send(message, &server_data).await;
-
-                        }
+                    if client.account().is_some_and(|u|u.user.uid == dest_id){
+                        client.send(message, &server).await;
                     }
                 }
-                MessageDestination::Game(id) => {
-                    let subscribers = server_data.game_subscribers(&id);
+                MessageDestination::Game(game_id) => {
+                    let is_subscriber = server.is_game_subscriber(client.uuid(), &game_id);
                     let message = message.clone();
-                    for c in subscribers {
-                        c.send(message.clone(), &server_data).await;
+                    if is_subscriber {
+                        client.send(message, &server).await;
                     }
                 }
                 _ => {
@@ -68,6 +67,17 @@ pub async fn load_online_users(client: ClientData, server_data: Data<ServerData>
         client.send(request, &server_data).await;
     }
     if let Some(user) = client.account() { 
-        server_data.add_user(user.clone());
+        server_data.add_user(user.user.clone());
     }
+}
+
+pub fn spawn_abortable<F>(task: F, token: CancellationToken) 
+where F: Future<Output = ()>+Send+'static,
+{
+    spawn(async move {
+        select! {
+            _ = token.cancelled() => {}
+            _ = task => {}
+         }
+    });
 }

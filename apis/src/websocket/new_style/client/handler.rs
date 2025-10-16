@@ -2,7 +2,7 @@ use crate::{
     common::{ClientRequest, ServerMessage},
     providers::PingContext,
     websocket::{
-        client_handlers::user_status::handle::handle_user_status,
+        client_handlers::{game::handle_game, user_status::handle::handle_user_status},
         new_style::{client::{api::ClientResult, ClientApi}, websocket_fn::websocket_fn},
     },
 };
@@ -24,6 +24,9 @@ pub async fn client_handler(rx: Receiver<ClientResult>) {
                         }
                         ServerMessage::UserStatus(user_update) => {
                             handle_user_status(user_update);
+                        }
+                        ServerMessage::Game(game_update) => {
+                            handle_game(*game_update);
                         }
                         _ => todo!(),
                     },

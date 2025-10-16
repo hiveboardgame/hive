@@ -101,9 +101,9 @@ impl TurnHandler {
                     game.str_time_left_for_player(game.current_player_id),
                 );
 
-                if let Err(e) = Busybee::msg(game.current_player_id, msg).await {
+                /*if let Err(e) = Busybee::msg(game.current_player_id, msg).await {
                     println!("{e}");
-                };
+                };*/
             }
         }
 
