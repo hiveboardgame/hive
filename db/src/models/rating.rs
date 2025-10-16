@@ -66,6 +66,7 @@ impl NewRating {
     AsChangeset,
     Selectable,
     PartialEq,
+    Clone,
 )]
 #[serde(rename_all = "camelCase")]
 #[diesel(belongs_to(User, foreign_key = user_uid))]

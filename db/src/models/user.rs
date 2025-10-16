@@ -301,6 +301,39 @@ impl User {
             .await?)
     }
 
+    pub async fn get_users_around_position(
+        game_speed: &GameSpeed,
+        user_id: &Uuid,
+        range: i64,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<(User, Rating, i64)>, DbError> {
+        let all_users: Vec<(User, Rating)> = users::table
+            .inner_join(ratings::table)
+            .filter(ratings::deviation.le(shared_types::RANKABLE_DEVIATION))
+            .filter(ratings::speed.eq(game_speed.to_string()))
+            .order_by(rating.desc())
+            .load::<(User, Rating)>(conn)
+            .await?;
+
+        let user_position = all_users
+            .iter()
+            .position(|(u, _)| u.id == *user_id)
+            .ok_or_else(|| DbError::NotFound {
+                reason: "User not found in rankings".to_string(),
+            })?;
+
+        let start = user_position.saturating_sub(range as usize);
+        let end = (user_position + range as usize + 1).min(all_users.len());
+
+        Ok(all_users[start..end]
+            .iter()
+            .enumerate()
+            .map(|(i, (user, rating_data))| {
+                (user.clone(), rating_data.clone(), (start + i + 1) as i64)
+            })
+            .collect())
+    }
+
     pub async fn get_username_by_id(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<String, DbError> {
         Ok(users_table
             .select(users::username)

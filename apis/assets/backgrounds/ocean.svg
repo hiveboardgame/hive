@@ -1,0 +1,112 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Ocean base gradient -->
+    <linearGradient id="oceanBase" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#4682B4;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1E90FF;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#0066CC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#003366;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Wave gradients -->
+    <linearGradient id="waveLight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#B0E0E6;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#87CEEB;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#B0E0E6;stop-opacity:0.8" />
+    </linearGradient>
+    
+    <linearGradient id="waveDark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1E90FF;stop-opacity:0.7" />
+      <stop offset="50%" style="stop-color:#0066CC;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#1E90FF;stop-opacity:0.7" />
+    </linearGradient>
+    
+    <!-- Water ripple effect -->
+    <radialGradient id="ripple" cx="50%" cy="50%" r="30%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.3" />
+      <stop offset="70%" style="stop-color:#87CEEB;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+    </radialGradient>
+    
+    <!-- Water animation filter -->
+    <filter id="waterEffect">
+      <feTurbulence baseFrequency="0.02 0.06" numOctaves="3" result="turbulence">
+        <animate attributeName="baseFrequency" dur="10s" values="0.02 0.06;0.04 0.08;0.02 0.06" repeatCount="indefinite"/>
+      </feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="5"/>
+    </filter>
+    
+    <!-- Foam effect -->
+    <filter id="foam">
+      <feTurbulence baseFrequency="0.9" numOctaves="3" result="noise"/>
+      <feComponentTransfer>
+        <feFuncA type="discrete" tableValues="0 0.3 0.6 1"/>
+      </feComponentTransfer>
+    </filter>
+  </defs>
+  
+  <!-- Base ocean background -->
+  <rect width="100%" height="100%" fill="url(#oceanBase)"/>
+  
+  <!-- Large waves -->
+  <g opacity="0.6">
+    <path d="M0,80 Q200,60 400,80 Q600,100 800,80 L800,160 Q600,140 400,160 Q200,180 0,160 Z" fill="url(#waveLight)"/>
+    <path d="M0,200 Q200,180 400,200 Q600,220 800,200 L800,280 Q600,260 400,280 Q200,300 0,280 Z" fill="url(#waveDark)"/>
+    <path d="M0,320 Q200,300 400,320 Q600,340 800,320 L800,400 Q600,380 400,400 Q200,420 0,400 Z" fill="url(#waveLight)"/>
+    <path d="M0,440 Q200,420 400,440 Q600,460 800,440 L800,520 Q600,500 400,520 Q200,540 0,520 Z" fill="url(#waveDark)"/>
+  </g>
+  
+  <!-- Smaller wave details -->
+  <g opacity="0.4">
+    <path d="M0,50 Q100,40 200,50 Q300,60 400,50 Q500,40 600,50 Q700,60 800,50 L800,90 Q700,80 600,90 Q500,100 400,90 Q300,80 200,90 Q100,100 0,90 Z" fill="url(#waveLight)"/>
+    <path d="M0,150 Q100,140 200,150 Q300,160 400,150 Q500,140 600,150 Q700,160 800,150 L800,190 Q700,180 600,190 Q500,200 400,190 Q300,180 200,190 Q100,200 0,190 Z" fill="url(#waveDark)"/>
+    <path d="M0,250 Q100,240 200,250 Q300,260 400,250 Q500,240 600,250 Q700,260 800,250 L800,290 Q700,280 600,290 Q500,300 400,290 Q300,280 200,290 Q100,300 0,290 Z" fill="url(#waveLight)"/>
+    <path d="M0,350 Q100,340 200,350 Q300,360 400,350 Q500,340 600,350 Q700,360 800,350 L800,390 Q700,380 600,390 Q500,400 400,390 Q300,380 200,390 Q100,400 0,390 Z" fill="url(#waveDark)"/>
+    <path d="M0,450 Q100,440 200,450 Q300,460 400,450 Q500,440 600,450 Q700,460 800,450 L800,490 Q700,480 600,490 Q500,500 400,490 Q300,480 200,490 Q100,500 0,490 Z" fill="url(#waveLight)"/>
+  </g>
+  
+  <!-- Water ripples -->
+  <g opacity="0.3">
+    <circle cx="150" cy="120" r="40" fill="url(#ripple)"/>
+    <circle cx="350" cy="180" r="30" fill="url(#ripple)"/>
+    <circle cx="550" cy="150" r="35" fill="url(#ripple)"/>
+    <circle cx="650" cy="220" r="25" fill="url(#ripple)"/>
+    <circle cx="250" cy="280" r="45" fill="url(#ripple)"/>
+    <circle cx="450" cy="320" r="30" fill="url(#ripple)"/>
+    <circle cx="650" cy="350" r="40" fill="url(#ripple)"/>
+    <circle cx="150" cy="420" r="35" fill="url(#ripple)"/>
+    <circle cx="550" cy="450" r="28" fill="url(#ripple)"/>
+    <circle cx="750" cy="480" r="32" fill="url(#ripple)"/>
+  </g>
+  
+  <!-- Foam and bubble effects -->
+  <g opacity="0.2">
+    <circle cx="100" cy="70" r="3" fill="#FFFFFF"/>
+    <circle cx="120" cy="75" r="2" fill="#FFFFFF"/>
+    <circle cx="110" cy="85" r="1.5" fill="#FFFFFF"/>
+    <circle cx="300" cy="160" r="2.5" fill="#FFFFFF"/>
+    <circle cx="320" cy="165" r="2" fill="#FFFFFF"/>
+    <circle cx="310" cy="175" r="1" fill="#FFFFFF"/>
+    <circle cx="500" cy="250" r="3" fill="#FFFFFF"/>
+    <circle cx="520" cy="255" r="2" fill="#FFFFFF"/>
+    <circle cx="510" cy="265" r="1.5" fill="#FFFFFF"/>
+    <circle cx="700" cy="340" r="2.5" fill="#FFFFFF"/>
+    <circle cx="720" cy="345" r="2" fill="#FFFFFF"/>
+    <circle cx="710" cy="355" r="1" fill="#FFFFFF"/>
+    <circle cx="200" cy="430" r="3" fill="#FFFFFF"/>
+    <circle cx="220" cy="435" r="2" fill="#FFFFFF"/>
+    <circle cx="210" cy="445" r="1.5" fill="#FFFFFF"/>
+  </g>
+  
+  <!-- Animated water effect -->
+  <rect width="100%" height="100%" fill="url(#oceanBase)" filter="url(#waterEffect)" opacity="0.1"/>
+  
+  <!-- Surface light reflection -->
+  <linearGradient id="surfaceLight" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.15" />
+    <stop offset="50%" style="stop-color:#FFFFFF;stop-opacity:0.05" />
+    <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+  </linearGradient>
+  <rect width="100%" height="100%" fill="url(#surfaceLight)"/>
+</svg> 

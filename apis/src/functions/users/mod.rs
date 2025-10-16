@@ -68,3 +68,27 @@ pub async fn search_users(pattern: String) -> Result<Vec<UserResponse>, ServerFn
         .await
         .map_err(ServerFnError::new)
 }
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_users_around_position(
+    game_speed: GameSpeed,
+    user_id: Uuid,
+    range: i64,
+) -> Result<Vec<UserResponse>, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::get_conn;
+    use db_lib::models::User;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    let users_with_position = User::get_users_around_position(&game_speed, &user_id, range, &mut conn).await?;
+    let mut results: Vec<UserResponse> = Vec::new();
+    for (user, _rating, _position) in users_with_position.iter() {
+        results.push(
+            UserResponse::from_model(user, &mut conn)
+                .await
+                .map_err(ServerFnError::new)?,
+        )
+    }
+    Ok(results)
+}
+

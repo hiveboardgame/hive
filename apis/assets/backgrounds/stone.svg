@@ -1,0 +1,96 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Stone base gradient -->
+    <radialGradient id="stoneBase" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#708090;stop-opacity:1" />
+      <stop offset="30%" style="stop-color:#696969;stop-opacity:1" />
+      <stop offset="60%" style="stop-color:#556B2F;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2F4F4F;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Dark stone pattern -->
+    <linearGradient id="stoneDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2F4F4F;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#36454F;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#2F4F4F;stop-opacity:0.8" />
+    </radialGradient>
+    
+    <!-- Light stone highlights -->
+    <linearGradient id="stoneLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#A9A9A9;stop-opacity:0.3" />
+      <stop offset="50%" style="stop-color:#D3D3D3;stop-opacity:0.4" />
+      <stop offset="100%" style="stop-color:#C0C0C0;stop-opacity:0.2" />
+    </linearGradient>
+    
+    <!-- Stone texture filter -->
+    <filter id="stoneTexture">
+      <feTurbulence baseFrequency="0.8" numOctaves="4" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3"/>
+    </filter>
+    
+    <!-- Stone shadow filter -->
+    <filter id="stoneShadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="2" dy="2" result="offset"/>
+      <feFlood flood-color="#000000" flood-opacity="0.2"/>
+      <feComposite in2="offset" operator="in"/>
+      <feMerge> 
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Base stone background -->
+  <rect width="100%" height="100%" fill="url(#stoneBase)"/>
+  
+  <!-- Stone formations and cracks -->
+  <g opacity="0.6">
+    <!-- Irregular stone shapes -->
+    <path d="M0,120 Q100,110 180,130 Q250,125 320,140 Q400,135 480,145 Q580,140 680,135 Q750,140 800,130 L800,200 Q720,190 640,195 Q560,200 480,185 Q400,190 320,195 Q240,200 160,190 Q80,195 0,200 Z" fill="url(#stoneDark)"/>
+    
+    <path d="M0,300 Q120,290 240,295 Q360,300 480,290 Q600,295 720,285 Q760,290 800,295 L800,380 Q700,370 600,375 Q500,380 400,370 Q300,375 200,380 Q100,375 0,380 Z" fill="url(#stoneDark)"/>
+    
+    <!-- Stone cracks -->
+    <path d="M150,50 Q180,150 200,250 Q220,350 180,450 Q200,550 220,600" stroke="#2F4F4F" stroke-width="2" fill="none" opacity="0.8"/>
+    <path d="M350,0 Q380,100 400,200 Q420,300 390,400 Q410,500 430,600" stroke="#36454F" stroke-width="1.5" fill="none" opacity="0.7"/>
+    <path d="M550,30 Q580,130 600,230 Q620,330 580,430 Q600,530 620,600" stroke="#2F4F4F" stroke-width="1.8" fill="none" opacity="0.6"/>
+    <path d="M750,0 Q720,120 700,240 Q680,360 720,480 Q700,580 680,600" stroke="#36454F" stroke-width="1.2" fill="none" opacity="0.8"/>
+  </g>
+  
+  <!-- Stone mineral deposits -->
+  <g opacity="0.4">
+    <circle cx="120" cy="80" r="8" fill="#87CEEB" opacity="0.6"/>
+    <circle cx="280" cy="150" r="6" fill="#F0E68C" opacity="0.5"/>
+    <circle cx="450" cy="220" r="10" fill="#DDA0DD" opacity="0.4"/>
+    <circle cx="620" cy="180" r="7" fill="#98FB98" opacity="0.6"/>
+    <circle cx="180" cy="320" r="9" fill="#F5DEB3" opacity="0.5"/>
+    <circle cx="380" cy="420" r="5" fill="#FFB6C1" opacity="0.4"/>
+    <circle cx="580" cy="380" r="8" fill="#87CEEB" opacity="0.6"/>
+    <circle cx="720" cy="450" r="6" fill="#F0E68C" opacity="0.5"/>
+    <circle cx="150" cy="520" r="7" fill="#DDA0DD" opacity="0.4"/>
+    <circle cx="480" cy="550" r="9" fill="#98FB98" opacity="0.6"/>
+  </g>
+  
+  <!-- Stone highlights -->
+  <g opacity="0.3">
+    <ellipse cx="100" cy="100" rx="40" ry="20" fill="url(#stoneLight)" transform="rotate(25 100 100)"/>
+    <ellipse cx="300" cy="180" rx="50" ry="25" fill="url(#stoneLight)" transform="rotate(-15 300 180)"/>
+    <ellipse cx="500" cy="120" rx="35" ry="18" fill="url(#stoneLight)" transform="rotate(40 500 120)"/>
+    <ellipse cx="700" cy="250" rx="45" ry="22" fill="url(#stoneLight)" transform="rotate(-30 700 250)"/>
+    <ellipse cx="200" cy="350" rx="38" ry="19" fill="url(#stoneLight)" transform="rotate(20 200 350)"/>
+    <ellipse cx="600" cy="400" rx="42" ry="21" fill="url(#stoneLight)" transform="rotate(-25 600 400)"/>
+    <ellipse cx="150" cy="480" rx="36" ry="18" fill="url(#stoneLight)" transform="rotate(35 150 480)"/>
+    <ellipse cx="520" cy="520" rx="48" ry="24" fill="url(#stoneLight)" transform="rotate(-10 520 520)"/>
+  </g>
+  
+  <!-- Texture overlay -->
+  <rect width="100%" height="100%" fill="url(#stoneBase)" filter="url(#stoneTexture)" opacity="0.2"/>
+  
+  <!-- Final highlight for depth -->
+  <linearGradient id="finalHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.08" />
+    <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+  </linearGradient>
+  <rect width="100%" height="100%" fill="url(#finalHighlight)"/>
+</svg> 

@@ -1,0 +1,87 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Wood grain gradient -->
+    <linearGradient id="woodBase" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8B4513;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#A0522D;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#CD853F;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#D2B48C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DEB887;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Darker wood grain for variation -->
+    <linearGradient id="woodDark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#654321;stop-opacity:0.3" />
+      <stop offset="30%" style="stop-color:#8B4513;stop-opacity:0.4" />
+      <stop offset="70%" style="stop-color:#A0522D;stop-opacity:0.2" />
+      <stop offset="100%" style="stop-color:#654321;stop-opacity:0.3" />
+    </linearGradient>
+    
+    <!-- Wood pattern filter -->
+    <filter id="woodTexture">
+      <feTurbulence baseFrequency="0.04 0.1" numOctaves="4" result="turbulence"/>
+      <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="8"/>
+    </filter>
+    
+    <!-- Subtle shadow -->
+    <filter id="subtleShadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+      <feOffset dx="1" dy="1" result="offset"/>
+      <feFlood flood-color="#000000" flood-opacity="0.1"/>
+      <feComposite in2="offset" operator="in"/>
+      <feMerge> 
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/> 
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Base wood background -->
+  <rect width="100%" height="100%" fill="url(#woodBase)"/>
+  
+  <!-- Wood grain rings - horizontal -->
+  <g opacity="0.6">
+    <ellipse cx="400" cy="100" rx="300" ry="15" fill="none" stroke="url(#woodDark)" stroke-width="2"/>
+    <ellipse cx="400" cy="130" rx="320" ry="18" fill="none" stroke="url(#woodDark)" stroke-width="1.5"/>
+    <ellipse cx="400" cy="170" rx="280" ry="12" fill="none" stroke="url(#woodDark)" stroke-width="2.5"/>
+    <ellipse cx="400" cy="200" rx="350" ry="20" fill="none" stroke="url(#woodDark)" stroke-width="1"/>
+    <ellipse cx="400" cy="240" rx="290" ry="14" fill="none" stroke="url(#woodDark)" stroke-width="2"/>
+    <ellipse cx="400" cy="280" rx="330" ry="16" fill="none" stroke="url(#woodDark)" stroke-width="1.5"/>
+    <ellipse cx="400" cy="320" rx="310" ry="18" fill="none" stroke="url(#woodDark)" stroke-width="2"/>
+    <ellipse cx="400" cy="360" rx="340" ry="15" fill="none" stroke="url(#woodDark)" stroke-width="1"/>
+    <ellipse cx="400" cy="400" rx="295" ry="13" fill="none" stroke="url(#woodDark)" stroke-width="2.5"/>
+    <ellipse cx="400" cy="440" rx="315" ry="17" fill="none" stroke="url(#woodDark)" stroke-width="1.5"/>
+    <ellipse cx="400" cy="480" rx="285" ry="11" fill="none" stroke="url(#woodDark)" stroke-width="2"/>
+    <ellipse cx="400" cy="520" rx="325" ry="19" fill="none" stroke="url(#woodDark)" stroke-width="1"/>
+  </g>
+  
+  <!-- Vertical wood grain lines -->
+  <g opacity="0.4">
+    <path d="M100,0 Q105,150 100,300 Q95,450 100,600" stroke="#654321" stroke-width="0.5" fill="none"/>
+    <path d="M200,0 Q195,150 200,300 Q205,450 200,600" stroke="#654321" stroke-width="0.5" fill="none"/>
+    <path d="M300,0 Q305,150 300,300 Q295,450 300,600" stroke="#654321" stroke-width="0.5" fill="none"/>
+    <path d="M400,0 Q395,150 400,300 Q405,450 400,600" stroke="#654321" stroke-width="0.5" fill="none"/>
+    <path d="M500,0 Q505,150 500,300 Q495,450 500,600" stroke="#654321" stroke-width="0.5" fill="none"/>
+    <path d="M600,0 Q595,150 600,300 Q605,450 600,600" stroke="#654321" stroke-width="0.5" fill="none"/>
+    <path d="M700,0 Q705,150 700,300 Q695,450 700,600" stroke="#654321" stroke-width="0.5" fill="none"/>
+  </g>
+  
+  <!-- Wood knots -->
+  <g opacity="0.7">
+    <ellipse cx="150" cy="180" rx="12" ry="8" fill="#654321" transform="rotate(15 150 180)"/>
+    <ellipse cx="550" cy="120" rx="10" ry="6" fill="#5D4037" transform="rotate(-20 550 120)"/>
+    <ellipse cx="680" cy="350" rx="14" ry="9" fill="#654321" transform="rotate(25 680 350)"/>
+    <ellipse cx="280" cy="480" rx="11" ry="7" fill="#5D4037" transform="rotate(-10 280 480)"/>
+    <ellipse cx="120" cy="420" rx="9" ry="5" fill="#654321" transform="rotate(30 120 420)"/>
+  </g>
+  
+  <!-- Subtle texture overlay -->
+  <rect width="100%" height="100%" fill="url(#woodBase)" filter="url(#woodTexture)" opacity="0.1"/>
+  
+  <!-- Light highlight for dimensionality -->
+  <linearGradient id="highlight">
+    <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.1" />
+    <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+  </linearGradient>
+  <rect width="100%" height="100%" fill="url(#highlight)"/>
+</svg> 

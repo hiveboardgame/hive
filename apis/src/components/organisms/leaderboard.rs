@@ -1,6 +1,10 @@
 use crate::common::UserAction;
 use crate::components::atoms::rating::icon_for_speed;
-use crate::{components::molecules::user_row::UserRow, functions::users::get_top_users};
+use crate::{
+    components::molecules::user_row::UserRow,
+    functions::users::{get_top_users, get_users_around_position},
+    providers::AuthContext,
+};
 use leptos::either::Either;
 use leptos::logging::log;
 use leptos::prelude::*;
@@ -9,23 +13,42 @@ use shared_types::GameSpeed;
 
 #[component]
 pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
+    let auth_context = expect_context::<AuthContext>();
     let speed = Signal::derive(move || speed);
-    let top_users = OnceResource::new(get_top_users(speed(), 10));
+    
+    let user_id = Signal::derive(move || auth_context.user.with(|u| u.as_ref().map(|u| u.id)));
+    
+    let users_resource = Resource::new(
+        move || (speed(), user_id()),
+        move |(speed, user_id_opt)| async move {
+            match user_id_opt {
+                Some(user_id) => {
+                    get_users_around_position(speed, user_id, 5).await
+                }
+                None => {
+                    get_top_users(speed, 10).await
+                }
+            }
+        },
+    );
+
     view! {
         <Transition>
             {move || {
-                top_users
+                users_resource
                     .get()
                     .map(|data| match data {
                         Err(e) => {
                             log!("Error is: {:?}", e);
                             Either::Left(
-                                view! { <pre class="m-2 h-6">"Couldn't fetch top users"</pre> },
+                                view! { <pre class="m-2 h-6">"Couldn't fetch users"</pre> },
                             )
                         }
                         Ok(users) => {
                             let users = StoredValue::new(users);
                             let is_empty = move || users.with_value(|u| u.is_empty());
+                            let has_current_user = user_id().is_some();
+                            
                             Either::Right(
                                 view! {
                                     <div class="flex flex-col m-2 rounded-lg w-fit">
@@ -33,6 +56,11 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                             <Icon icon=icon_for_speed(speed()) />
                                             {speed().to_string()}
                                             :
+                                            {move || if has_current_user {
+                                                " (Your Position)"
+                                            } else {
+                                                " (Top Players)"
+                                            }}
                                         </div>
                                         <div class=move || {
                                             format!(

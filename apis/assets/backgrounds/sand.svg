@@ -1,0 +1,131 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Sand base gradient -->
+    <linearGradient id="sandBase" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F4E4BC;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#E6D3A3;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#D2B48C;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#CD853F;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A0522D;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Light sand highlights -->
+    <linearGradient id="sandLight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FFF8DC;stop-opacity:0.8" />
+      <stop offset="50%" style="stop-color:#F5DEB3;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#FFF8DC;stop-opacity:0.8" />
+    </linearGradient>
+    
+    <!-- Dark sand shadows -->
+    <linearGradient id="sandDark" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#CD853F;stop-opacity:0.6" />
+      <stop offset="50%" style="stop-color:#A0522D;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#8B4513;stop-opacity:0.6" />
+    </linearGradient>
+    
+    <!-- Sand texture filter -->
+    <filter id="sandTexture">
+      <feTurbulence baseFrequency="0.9" numOctaves="6" result="noise"/>
+      <feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+      <feComposite operator="multiply" in2="SourceGraphic"/>
+    </filter>
+    
+    <!-- Fine sand grain filter -->
+    <filter id="sandGrain">
+      <feTurbulence baseFrequency="3" numOctaves="2" result="grain"/>
+      <feColorMatrix in="grain" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.1 0"/>
+      <feComposite operator="multiply" in2="SourceGraphic"/>
+    </filter>
+  </defs>
+  
+  <!-- Base sand background -->
+  <rect width="100%" height="100%" fill="url(#sandBase)"/>
+  
+  <!-- Sand dunes and formations -->
+  <g opacity="0.7">
+    <!-- Large dune shapes -->
+    <path d="M0,150 Q200,120 400,150 Q600,130 800,160 L800,250 Q600,220 400,250 Q200,270 0,240 Z" fill="url(#sandLight)"/>
+    <path d="M0,280 Q200,250 400,280 Q600,260 800,290 L800,380 Q600,350 400,380 Q200,400 0,370 Z" fill="url(#sandDark)"/>
+    <path d="M0,420 Q200,390 400,420 Q600,400 800,430 L800,520 Q600,490 400,520 Q200,540 0,510 Z" fill="url(#sandLight)"/>
+  </g>
+  
+  <!-- Sand ripples (wind patterns) -->
+  <g opacity="0.4">
+    <path d="M0,80 Q100,75 200,80 Q300,85 400,80 Q500,75 600,80 Q700,85 800,80" stroke="#D2B48C" stroke-width="1" fill="none"/>
+    <path d="M0,95 Q100,90 200,95 Q300,100 400,95 Q500,90 600,95 Q700,100 800,95" stroke="#CD853F" stroke-width="0.8" fill="none"/>
+    <path d="M0,110 Q100,105 200,110 Q300,115 400,110 Q500,105 600,110 Q700,115 800,110" stroke="#D2B48C" stroke-width="1" fill="none"/>
+    
+    <path d="M0,200 Q100,195 200,200 Q300,205 400,200 Q500,195 600,200 Q700,205 800,200" stroke="#CD853F" stroke-width="0.8" fill="none"/>
+    <path d="M0,215 Q100,210 200,215 Q300,220 400,215 Q500,210 600,215 Q700,220 800,215" stroke="#D2B48C" stroke-width="1" fill="none"/>
+    <path d="M0,230 Q100,225 200,230 Q300,235 400,230 Q500,225 600,230 Q700,235 800,230" stroke="#CD853F" stroke-width="0.8" fill="none"/>
+    
+    <path d="M0,320 Q100,315 200,320 Q300,325 400,320 Q500,315 600,320 Q700,325 800,320" stroke="#D2B48C" stroke-width="1" fill="none"/>
+    <path d="M0,335 Q100,330 200,335 Q300,340 400,335 Q500,330 600,335 Q700,340 800,335" stroke="#CD853F" stroke-width="0.8" fill="none"/>
+    <path d="M0,350 Q100,345 200,350 Q300,355 400,350 Q500,345 600,350 Q700,355 800,350" stroke="#D2B48C" stroke-width="1" fill="none"/>
+    
+    <path d="M0,460 Q100,455 200,460 Q300,465 400,460 Q500,455 600,460 Q700,465 800,460" stroke="#CD853F" stroke-width="0.8" fill="none"/>
+    <path d="M0,475 Q100,470 200,475 Q300,480 400,475 Q500,470 600,475 Q700,480 800,475" stroke="#D2B48C" stroke-width="1" fill="none"/>
+    <path d="M0,490 Q100,485 200,490 Q300,495 400,490 Q500,485 600,490 Q700,495 800,490" stroke="#CD853F" stroke-width="0.8" fill="none"/>
+  </g>
+  
+  <!-- Sand drifts and small formations -->
+  <g opacity="0.5">
+    <ellipse cx="150" cy="180" rx="60" ry="15" fill="url(#sandLight)" transform="rotate(15 150 180)"/>
+    <ellipse cx="350" cy="120" rx="80" ry="20" fill="url(#sandDark)" transform="rotate(-10 350 120)"/>
+    <ellipse cx="550" cy="300" rx="70" ry="18" fill="url(#sandLight)" transform="rotate(25 550 300)"/>
+    <ellipse cx="650" cy="180" rx="50" ry="12" fill="url(#sandDark)" transform="rotate(-20 650 180)"/>
+    <ellipse cx="250" cy="400" rx="65" ry="16" fill="url(#sandLight)" transform="rotate(30 250 400)"/>
+    <ellipse cx="450" cy="450" rx="55" ry="14" fill="url(#sandDark)" transform="rotate(-15 450 450)"/>
+    <ellipse cx="750" cy="380" rx="75" ry="19" fill="url(#sandLight)" transform="rotate(20 750 380)"/>
+  </g>
+  
+  <!-- Individual sand grains and details -->
+  <g opacity="0.3">
+    <circle cx="120" cy="90" r="1" fill="#DEB887"/>
+    <circle cx="180" cy="95" r="0.8" fill="#F5DEB3"/>
+    <circle cx="240" cy="85" r="1.2" fill="#D2B48C"/>
+    <circle cx="320" cy="105" r="0.9" fill="#DEB887"/>
+    <circle cx="420" cy="88" r="1.1" fill="#F5DEB3"/>
+    <circle cx="520" cy="98" r="0.7" fill="#D2B48C"/>
+    <circle cx="620" cy="92" r="1" fill="#DEB887"/>
+    <circle cx="720" cy="102" r="0.8" fill="#F5DEB3"/>
+    
+    <circle cx="80" cy="220" r="1" fill="#DEB887"/>
+    <circle cx="160" cy="230" r="0.9" fill="#F5DEB3"/>
+    <circle cx="280" cy="210" r="1.1" fill="#D2B48C"/>
+    <circle cx="380" cy="235" r="0.8" fill="#DEB887"/>
+    <circle cx="480" cy="225" r="1" fill="#F5DEB3"/>
+    <circle cx="580" cy="215" r="0.7" fill="#D2B48C"/>
+    <circle cx="680" cy="240" r="0.9" fill="#DEB887"/>
+    <circle cx="760" cy="220" r="1.2" fill="#F5DEB3"/>
+    
+    <circle cx="140" cy="360" r="0.8" fill="#DEB887"/>
+    <circle cx="220" cy="370" r="1" fill="#F5DEB3"/>
+    <circle cx="340" cy="350" r="0.9" fill="#D2B48C"/>
+    <circle cx="440" cy="375" r="1.1" fill="#DEB887"/>
+    <circle cx="540" cy="365" r="0.7" fill="#F5DEB3"/>
+    <circle cx="640" cy="355" r="1" fill="#D2B48C"/>
+    <circle cx="740" cy="380" r="0.8" fill="#DEB887"/>
+    
+    <circle cx="100" cy="500" r="1" fill="#DEB887"/>
+    <circle cx="200" cy="510" r="0.9" fill="#F5DEB3"/>
+    <circle cx="300" cy="495" r="1.2" fill="#D2B48C"/>
+    <circle cx="400" cy="515" r="0.8" fill="#DEB887"/>
+    <circle cx="500" cy="505" r="1" fill="#F5DEB3"/>
+    <circle cx="600" cy="490" r="0.7" fill="#D2B48C"/>
+    <circle cx="700" cy="520" r="0.9" fill="#DEB887"/>
+  </g>
+  
+  <!-- Sand texture overlay -->
+  <rect width="100%" height="100%" fill="url(#sandBase)" filter="url(#sandTexture)" opacity="0.1"/>
+  
+  <!-- Fine grain overlay -->
+  <rect width="100%" height="100%" fill="url(#sandBase)" filter="url(#sandGrain)" opacity="0.2"/>
+  
+  <!-- Subtle light reflection -->
+  <linearGradient id="sandReflection" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.1" />
+    <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0" />
+  </linearGradient>
+  <rect width="100%" height="100%" fill="url(#sandReflection)"/>
+</svg> 
