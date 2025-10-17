@@ -6,7 +6,7 @@ use crate::{
 use db_lib::DbPool;
 use futures::{channel::mpsc, SinkExt};
 use server_fn::ServerFnError;
-use std::sync::{Arc, RwLock};
+use std::{sync::{Arc, RwLock}};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -53,11 +53,14 @@ impl ClientData {
     pub fn uuid(&self) -> &Uuid {
         &self.data.id
     }
-    pub fn token(&self) -> CancellationToken {
-        self.data.cancel.clone()
-    }
     pub fn is_cancelled(&self) -> bool {
         self.data.cancel.is_cancelled()
+    }
+    pub fn as_subscriber(&self) -> (Uuid, CancellationToken) {
+        (self.data.id, self.data.cancel.clone())
+    }
+    pub fn token(&self) -> CancellationToken {
+        self.data.cancel.clone()
     }
     pub fn close(&self, server_data: &ServerData) {
         if let Some(user) = self.data.account.as_ref() {

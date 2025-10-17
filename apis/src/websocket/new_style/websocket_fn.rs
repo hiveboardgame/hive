@@ -12,8 +12,7 @@ pub async fn websocket_fn(
 ) -> Result<BoxedStream<ServerMessage, ServerFnError>, ServerFnError> {
     use crate::functions::db::pool;
     use crate::websocket::new_style::server::{
-        server_handler,
-        tasks::{self, spawn_abortable},
+        server_handler,tasks,
         ClientData, ServerData,
     };
     use actix_web::web::Data;
@@ -24,28 +23,23 @@ pub async fn websocket_fn(
         .app_data::<Data<ServerData>>()
         .ok_or("Failed to get server notifications")
         .map_err(ServerFnError::new)?
-        .clone();
+        .clone().into_inner();
     let user = get_account().await.ok();
+
     // create a channel of outgoing websocket messages (from mpsc)
     let (tx, rx) = mpsc::channel(1);
 
-    // Store the handle so we can stop it later
     let client = ClientData::new(tx, user, pool().await?);
     //ping at a given interval
-    const PING_INTERVAL_MS: u64 = 1000; //consistent with previous implementation
-    let ping = tasks::ping_client_ms(PING_INTERVAL_MS, client.clone(), server.clone());
-    spawn_abortable(ping, client.token());
+    tasks::spawn_abortable(tasks::ping_client(client.clone(),  server.clone()), client.token());
 
     //listens to the server notifications and sends them to the client
-    let server_notifications = tasks::subscribe_to_notifications(client.clone(), server.clone());
-    spawn_abortable(server_notifications, client.token());
+    tasks::spawn_abortable(tasks::subscribe_to_notifications(client.clone(), server.clone()), client.token());
 
     //Load initial online users and add myself
-    let load_users = tasks::load_online_users(client.clone(), server.clone());
-    spawn_abortable(load_users, client.token());
-
+    tasks::spawn_abortable(tasks::load_online_users(client.clone(), server.clone()), client.token());
+    
     //main handler
-    let main_handler = server_handler(input, client.clone(), server);
-    spawn_abortable(main_handler, client.token());
+    tasks::spawn_abortable(server_handler(input,client.clone(), server.clone()), client.token());
     Ok(rx.into())
 }
