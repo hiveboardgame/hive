@@ -134,7 +134,7 @@ impl Handler<Disconnect> for WsServer {
                     }
                 }
             }
-        //Remove from online users handled in v2
+            //Remove from online users handled in v2
         }
     }
 }

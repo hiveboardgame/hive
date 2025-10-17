@@ -1,7 +1,13 @@
 use crate::common::{ClientRequest, GameAction, ServerMessage};
-use futures::{channel::mpsc::{self, Sender}, SinkExt};
+use futures::{
+    channel::mpsc::{self, Sender},
+    SinkExt,
+};
 use hive_lib::Turn;
-use leptos::{logging, prelude::{GetValue , ReadSignal, RwSignal, Set, SetValue, StoredValue}};
+use leptos::{
+    logging,
+    prelude::{GetValue, ReadSignal, RwSignal, Set, SetValue, StoredValue},
+};
 use server_fn::ServerFnError;
 use shared_types::GameId;
 pub type ClientResult = Result<ClientRequest, ServerFnError>;
@@ -14,7 +20,7 @@ pub struct ClientApi {
     sender: StoredValue<Sender<ClientResult>>,
     pub latest: RwSignal<Result<ServerMessage, ServerFnError>>,
 }
-impl Default for ClientApi{
+impl Default for ClientApi {
     fn default() -> Self {
         let (tx, _rx) = mpsc::channel(1);
         Self {
@@ -36,7 +42,10 @@ impl ClientApi {
         }
     }
     pub async fn join_game(&self, id: GameId) {
-        let req = ClientRequest::Game { game_id: id, action: crate::common::GameAction::Join };
+        let req = ClientRequest::Game {
+            game_id: id,
+            action: crate::common::GameAction::Join,
+        };
         self.send(req).await;
     }
     pub async fn turn(&self, game_id: GameId, turn: Turn) {
