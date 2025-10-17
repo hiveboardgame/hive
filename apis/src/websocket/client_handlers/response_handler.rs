@@ -1,7 +1,6 @@
 use super::{
-    challenge::handler::handle_challenge, chat::handle::handle_chat,
-    oauth::handle::handle_oauth, schedule::handler::handle_schedule,
-    tournament::handler::handle_tournament,
+    challenge::handler::handle_challenge, chat::handle::handle_chat, oauth::handle::handle_oauth,
+    schedule::handler::handle_schedule, tournament::handler::handle_tournament,
 };
 use crate::common::{ServerMessage::*, ServerResult};
 use leptos::logging::log;
@@ -15,7 +14,7 @@ pub fn handle_response(m: ServerResult) {
             RedirectLink(link) => handle_oauth(link),
             Tournament(tournament_update) => handle_tournament(tournament_update),
             Schedule(schedule_update) => handle_schedule(schedule_update),
-            Game(_)|UserStatus(_)|Ping { .. }=> {
+            Game(_) | UserStatus(_) | Ping { .. } => {
                 //Handled in v2
             }
             Error(err) => {

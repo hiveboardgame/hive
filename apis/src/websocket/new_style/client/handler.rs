@@ -3,10 +3,13 @@ use crate::{
     providers::PingContext,
     websocket::{
         client_handlers::{game::handle_game, user_status::handle::handle_user_status},
-        new_style::{client::{api::ClientResult, ClientApi}, websocket_fn::websocket_fn},
+        new_style::{
+            client::{api::ClientResult, ClientApi},
+            websocket_fn::websocket_fn,
+        },
     },
 };
-use futures::channel::mpsc::{Receiver};
+use futures::channel::mpsc::Receiver;
 use futures::StreamExt;
 use leptos::prelude::expect_context;
 
