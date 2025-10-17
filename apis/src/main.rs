@@ -17,7 +17,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websocket::{start_connection, WsServer, InternalServerMessage, MessageDestination};
+    use crate::websocket::{start_connection, WsServer};
     use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::{api_control, api_play}, challenges::{api_accept_challenge, api_create_challenge, api_get_challenges}};
     use api::v1::auth::get_token_handler::get_token;
     use api::v1::auth::get_identity_handler::get_identity;
@@ -37,8 +37,7 @@ async fn main() -> std::io::Result<()> {
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use websocket::new_style::server::ServerData;
     use sha2::*;
-    use tokio::sync::watch;
-    use crate::common::ServerMessage;
+
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
@@ -62,13 +61,7 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to get pool");
     let data = Data::new(WebsocketData::default());
     let websocket_server = Data::new(WsServer::new(pool.clone()).start());
-    let server_notifications = Data::new(ServerData::new(
-        watch::channel(
-            InternalServerMessage {
-                destination: MessageDestination::Global,
-                message: ServerMessage::Error("Server notifications initialized".to_string()),
-        }
-    )));
+    let server_notifications = Data::new(ServerData::default());
     let jwt_secret = JwtSecret::new(config.jwt_secret);
     let jwt_key = Data::new(jwt_secret);
 

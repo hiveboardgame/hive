@@ -10,8 +10,9 @@ use crate::{
 };
 use shared_types::GameId;
 use std::sync::RwLock;
-use tokio::sync::watch;
+use tokio::sync::broadcast::{Sender,channel};
 use tokio_util::sync::CancellationToken;
+use tokio_stream::wrappers::BroadcastStream;
 use uuid::Uuid;
 
 #[derive(Default)]
@@ -41,28 +42,27 @@ impl SubscribersSet {
 pub struct ServerData {
     //using a watch channel to send messages to all clients (clonable receiver)
     //only retans the last message
-    sender: watch::Sender<InternalServerMessage>,
+    sender: Sender<InternalServerMessage>,
     online_users: RwLock<HashMap<Uuid, (UserResponse, i32)>>,
     game_subscribers: RwLock<HashMap<GameId, SubscribersSet>>,
 }
-
-impl ServerData {
-    pub fn new(
-        channel: (
-            watch::Sender<InternalServerMessage>,
-            watch::Receiver<InternalServerMessage>,
-        ),
-    ) -> Self {
+impl Default for ServerData {
+    fn default() -> Self {    
+        //Capacity chosen arbitrarily
+        let (sender, _) = channel(32);
         Self {
-            sender: channel.0,
+            sender,
             online_users: RwLock::new(HashMap::new()),
             game_subscribers: RwLock::new(HashMap::new()),
         }
     }
-    pub fn receiver(&self) -> watch::Receiver<InternalServerMessage> {
-        self.sender.subscribe()
+}
+impl ServerData {
+
+    pub fn notifications(&self) -> BroadcastStream<InternalServerMessage> {
+        BroadcastStream::new(self.sender.subscribe())
     }
-    pub fn send(&self, message: InternalServerMessage) -> Result<(), String> {
+    pub fn send(&self, message: InternalServerMessage) -> Result<usize, String> {
         self.sender.send(message).map_err(|e| e.to_string())
     }
 
@@ -72,7 +72,7 @@ impl ServerData {
             message: ServerMessage::UserStatus(UserUpdate { user, status }),
         };
         self.send(message)
-            .expect("Failed to send update status notification")
+            .expect("Failed to send update status notification");
     }
     pub fn remove_user(&self, user: UserResponse) {
         let mut users = self.online_users.write().unwrap();

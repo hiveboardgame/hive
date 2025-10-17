@@ -12,6 +12,7 @@ use tokio::{
     select, spawn,
     time::{interval as interval_fn, Duration},
 };
+use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 pub async fn ping_client_ms(interval: u64, client: ClientData, server_data: Data<ServerData>) {
@@ -29,12 +30,11 @@ pub async fn ping_client_ms(interval: u64, client: ClientData, server_data: Data
 }
 
 pub async fn subscribe_to_notifications(client: ClientData, server: Data<ServerData>) {
-    let mut reciever = server.receiver();
-    while reciever.changed().await.is_ok() {
-        let InternalServerMessage {
-            destination,
-            message,
-        } = reciever.borrow().clone();
+    let mut reciever = server.notifications();
+    while let Some(Ok(InternalServerMessage {
+        destination,
+        message,
+    })) = reciever.next().await {
         match destination {
             MessageDestination::Global => {
                 client.send(message, &server).await;
@@ -46,9 +46,8 @@ pub async fn subscribe_to_notifications(client: ClientData, server: Data<ServerD
             }
             MessageDestination::Game(game_id) => {
                 let is_subscriber = server.is_game_subscriber(client.uuid(), &game_id);
-                let message = message.clone();
                 if is_subscriber {
-                    client.send(message, &server).await;
+                    client.send(message.clone(), &server).await;
                 }
             }
             _ => {

@@ -4,7 +4,8 @@ use crate::pages::play::CurrentConfirm;
 use crate::providers::analysis::AnalysisSignal;
 use crate::providers::config::TileOptions;
 use crate::providers::game_state::GameStateSignal;
-use crate::providers::{ApiRequestsProvider, AuthContext, Config};
+use crate::providers::{AuthContext, Config};
+use crate::websocket::new_style::client::ClientApi;
 use hive_lib::{Bug, Color, Piece, Position};
 use leptos::either::Either;
 use leptos::prelude::*;
@@ -194,7 +195,7 @@ pub fn PieceWithOnClick(
     let analysis = use_context::<AnalysisSignal>();
     let mut game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let api = expect_context::<ClientApi>();
     let current_confirm = expect_context::<CurrentConfirm>().0;
     let config = expect_context::<Config>().0;
     let onclick = move |evt: MouseEvent| {
@@ -226,7 +227,7 @@ pub fn PieceWithOnClick(
                 }
                 PieceType::Move | PieceType::Spawn => {
                     if matches!(current_confirm.get_untracked(), MoveConfirm::Double) {
-                        game_state.move_active(None, api.get_untracked());
+                        game_state.move_active(None, api);
                     }
                 }
                 _ => {}

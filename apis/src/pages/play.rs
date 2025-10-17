@@ -20,7 +20,7 @@ use crate::{
         config::Config,
         game_state::{GameStateSignal, View},
         timer::TimerSignal,
-        ApiRequestsProvider, AuthContext, SoundType, Sounds, UpdateNotifier,
+        AuthContext, SoundType, Sounds, UpdateNotifier,
     },
     websocket::{
         client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
@@ -45,7 +45,6 @@ pub fn Play() -> impl IntoView {
     let orientation_signal = expect_context::<OrientationSignal>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
-    let api = expect_context::<ApiRequestsProvider>();
     let game_updater = expect_context::<UpdateNotifier>();
     let sounds = expect_context::<Sounds>();
     let controls_signal = expect_context::<ControlsSignal>();
