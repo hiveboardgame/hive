@@ -46,7 +46,6 @@ pub fn provide_auth() {
                 websocket_context.close();
                 websocket_context.open();
             }
-            let client_api = client_api.clone();
             client_api.restart_ws();
         },
         false,
