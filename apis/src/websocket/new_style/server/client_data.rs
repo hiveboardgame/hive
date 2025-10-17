@@ -30,13 +30,12 @@ impl ClientData {
     pub fn new(
         sender: mpsc::Sender<ClientResult>,
         account: Option<AccountResponse>,
-        cancel: CancellationToken,
         pool: DbPool,
     ) -> Self {
         let data = InternalClientData {
             id: Uuid::new_v4(),
             pings: RwLock::new(PingStats::default()),
-            cancel,
+            cancel: CancellationToken::new(),
             account,
             pool,
         };
