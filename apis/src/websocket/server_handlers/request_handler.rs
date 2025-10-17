@@ -114,7 +114,7 @@ impl RequestHandler {
                     .handle()
                     .await?
             }
-            ClientRequest::Pong(_)| ClientRequest::Game { .. } => {
+            ClientRequest::Pong(_) | ClientRequest::Game { .. } => {
                 //Handled in v2
                 vec![]
             }

@@ -1,12 +1,14 @@
 use crate::{
-    common::ServerMessage, responses::AccountResponse, websocket::{lag_tracking::PingStats, new_style::server::ServerData}
+    common::ServerMessage,
+    responses::AccountResponse,
+    websocket::{lag_tracking::PingStats, new_style::server::ServerData},
 };
 use db_lib::DbPool;
+use futures::{channel::mpsc, SinkExt};
 use server_fn::ServerFnError;
+use std::sync::{Arc, RwLock};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
-use std::sync::{RwLock, Arc};
-use futures::{channel::mpsc, SinkExt};
 
 type ClientResult = Result<ServerMessage, ServerFnError>;
 
@@ -15,38 +17,41 @@ struct InternalClientData {
     pub pings: RwLock<PingStats>,
     pub account: Option<AccountResponse>,
     pub id: Uuid,
-    pub pool: DbPool
+    pub pool: DbPool,
 }
 
 #[derive(Clone)]
 pub struct ClientData {
     data: Arc<InternalClientData>,
     sender: mpsc::Sender<ClientResult>,
-
 }
 
 impl ClientData {
-    pub fn new(sender: mpsc::Sender<ClientResult>, account: Option<AccountResponse>, cancel: CancellationToken, pool: DbPool) -> Self {
+    pub fn new(
+        sender: mpsc::Sender<ClientResult>,
+        account: Option<AccountResponse>,
+        cancel: CancellationToken,
+        pool: DbPool,
+    ) -> Self {
         let data = InternalClientData {
             id: Uuid::new_v4(),
             pings: RwLock::new(PingStats::default()),
             cancel,
             account,
-            pool
+            pool,
         };
         ClientData {
             data: Arc::new(data),
             sender,
-
         }
     }
     pub fn pool(&self) -> &DbPool {
         &self.data.pool
     }
-    pub fn account(&self) ->Option<&AccountResponse> {
+    pub fn account(&self) -> Option<&AccountResponse> {
         self.data.account.as_ref()
     }
-    pub fn uuid(&self) ->&Uuid {
+    pub fn uuid(&self) -> &Uuid {
         &self.data.id
     }
     pub fn token(&self) -> CancellationToken {
@@ -56,9 +61,9 @@ impl ClientData {
         self.data.cancel.is_cancelled()
     }
     pub fn close(&self, server_data: &ServerData) {
-         if let Some(user) = self.data.account.as_ref() {
+        if let Some(user) = self.data.account.as_ref() {
             server_data.remove_user(user.user.clone());
-        }        
+        }
         self.data.cancel.cancel();
     }
     pub fn update_pings(&self, nonce: u64) {
