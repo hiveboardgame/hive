@@ -1,9 +1,7 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
-    websocket::{
-        messages::{InternalServerMessage, MessageDestination},
-    },
+    websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{
@@ -25,12 +23,7 @@ pub struct StartHandler {
 }
 
 impl StartHandler {
-    pub fn new(
-        game: &Game,
-        user_id: Uuid,
-        username: String,
-         pool: &DbPool,
-    ) -> Self {
+    pub fn new(game: &Game, user_id: Uuid, username: String, pool: &DbPool) -> Self {
         Self {
             game: game.to_owned(),
             user_id,
@@ -43,7 +36,7 @@ impl StartHandler {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         //if let Ok(should_start) = self.data.game_start.should_start(&self.game, self.user_id) {
-           if let Some(should_start) = Some(false) { 
+        if let Some(should_start) = Some(false) {
             if should_start {
                 let game = conn
                     .transaction::<_, anyhow::Error, _>(move |tc| {

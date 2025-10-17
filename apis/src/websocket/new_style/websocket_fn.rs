@@ -1,4 +1,7 @@
-use crate::{common::{ClientRequest, ServerMessage}, functions::accounts::get::get_account};
+use crate::{
+    common::{ClientRequest, ServerMessage},
+    functions::accounts::get::get_account,
+};
 use futures::channel::mpsc;
 use leptos::prelude::*;
 use server_fn::{codec::MsgPackEncoding, BoxedStream, ServerFnError, Websocket};
@@ -7,41 +10,36 @@ use server_fn::{codec::MsgPackEncoding, BoxedStream, ServerFnError, Websocket};
 pub async fn websocket_fn(
     input: BoxedStream<ClientRequest, ServerFnError>,
 ) -> Result<BoxedStream<ServerMessage, ServerFnError>, ServerFnError> {
-    use crate::websocket::{
-        new_style::server::{tasks::{self, spawn_abortable}, ClientData, ServerData, server_handler},
-     };
+    use crate::functions::db::pool;
+    use crate::websocket::new_style::server::{
+        server_handler,
+        tasks::{self, spawn_abortable},
+        ClientData, ServerData,
+    };
     use actix_web::web::Data;
     use tokio_util::sync::CancellationToken;
-    use crate::functions::db::pool;
 
     let req: actix_web::HttpRequest = leptos_actix::extract().await?;
-
 
     let server = req
         .app_data::<Data<ServerData>>()
         .ok_or("Failed to get server notifications")
-        .map_err(ServerFnError::new)?.clone();
+        .map_err(ServerFnError::new)?
+        .clone();
     let user = get_account().await.ok();
     // create a channel of outgoing websocket messages (from mpsc)
     let (tx, rx) = mpsc::channel(1);
 
-    // Store the handle so we can stop it later    
+    // Store the handle so we can stop it later
     let token = CancellationToken::new();
-    let client = ClientData::new(tx, user, token.clone(), pool().await?); 
+    let client = ClientData::new(tx, user, token.clone(), pool().await?);
     //ping at a given interval
     const PING_INTERVAL_MS: u64 = 1000; //consistent with previous implementation
-    let ping = tasks::ping_client_ms(
-        PING_INTERVAL_MS,
-        client.clone(),
-        server.clone(),
-    );
+    let ping = tasks::ping_client_ms(PING_INTERVAL_MS, client.clone(), server.clone());
     spawn_abortable(ping, token.clone());
-    
+
     //listens to the server notifications and sends them to the client
-    let server_notifications = tasks::subscribe_to_notifications(
-        client.clone(),
-        server.clone(),
-    );
+    let server_notifications = tasks::subscribe_to_notifications(client.clone(), server.clone());
     spawn_abortable(server_notifications, token.clone());
 
     //Load initial online users and add myself

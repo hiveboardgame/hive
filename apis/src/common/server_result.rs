@@ -92,7 +92,7 @@ pub enum ChallengeUpdate {
 pub struct UserUpdate {
     pub status: UserStatus,
     pub user: UserResponse,
- }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UserStatus {

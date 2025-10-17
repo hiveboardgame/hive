@@ -1,5 +1,6 @@
 use crate::{
-    common::{GameReaction, MoveConfirm, PieceType}, components::{
+    common::{GameReaction, MoveConfirm, PieceType},
+    components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
@@ -13,12 +14,18 @@ use crate::{
             side_board::{SideboardTabs, TabView},
             unstarted::Unstarted,
         },
-    }, functions::games::get::get_game_from_nanoid, providers::{
+    },
+    functions::games::get::get_game_from_nanoid,
+    providers::{
         config::Config,
         game_state::{GameStateSignal, View},
         timer::TimerSignal,
         ApiRequestsProvider, AuthContext, SoundType, Sounds, UpdateNotifier,
-    }, websocket::{client_handlers::game::{reset_game_state, reset_game_state_for_takeback}, new_style::client::ClientApi}
+    },
+    websocket::{
+        client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
+        new_style::client::ClientApi,
+    },
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
 use leptos::prelude::*;

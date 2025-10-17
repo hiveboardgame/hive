@@ -1,5 +1,3 @@
-use crate::websocket::busybee::Busybee;
-
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
@@ -27,13 +25,7 @@ pub struct TurnHandler {
 }
 
 impl TurnHandler {
-    pub fn new(
-        turn: Turn,
-        game: &Game,
-        username: &str,
-        user_id: Uuid,
-        pool: &DbPool,
-    ) -> Self {
+    pub fn new(turn: Turn, game: &Game, username: &str, user_id: Uuid, pool: &DbPool) -> Self {
         Self {
             game: game.to_owned(),
             user_id,
@@ -62,16 +54,16 @@ impl TurnHandler {
             let base = self.game.time_base.unwrap_or(0) as usize;
             let inc = self.game.time_increment.unwrap_or(0) as usize;
             /*self.data
-                .lags
-                .track_lag(
-                    self.user_id,
-                    GameId(self.game.nanoid.clone()),
-                    ping,
-                    base,
-                    inc,
-                )
-                .unwrap_or(0.0)*/
-                0.0
+            .lags
+            .track_lag(
+                self.user_id,
+                GameId(self.game.nanoid.clone()),
+                ping,
+                base,
+                inc,
+            )
+            .unwrap_or(0.0)*/
+            0.0
         } else {
             0.0
         };

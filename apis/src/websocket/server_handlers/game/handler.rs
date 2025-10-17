@@ -1,7 +1,6 @@
 use super::start::StartHandler;
 use super::{
-    control_handler::GameControlHandler,
-    timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
+    control_handler::GameControlHandler, timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
 };
 use crate::common::GameAction;
 use crate::websocket::messages::InternalServerMessage;
@@ -56,15 +55,9 @@ impl GameActionHandler {
             GameAction::Turn(turn) => {
                 self.ensure_not_finished()?;
                 self.ensure_user_is_player()?;
-                TurnHandler::new(
-                    turn,
-                    &self.game,
-                    &self.username,
-                    self.user_id,
-                    &self.pool,
-                )
-                .handle()
-                .await?
+                TurnHandler::new(turn, &self.game, &self.username, self.user_id, &self.pool)
+                    .handle()
+                    .await?
             }
             GameAction::Control(control) => {
                 self.ensure_not_finished()?;
@@ -85,14 +78,9 @@ impl GameActionHandler {
             GameAction::Start => {
                 self.ensure_not_finished()?;
                 self.ensure_user_is_player()?;
-                StartHandler::new(
-                    &self.game,
-                    self.user_id,
-                    self.username.clone(),
-                    &self.pool,
-                )
-                .handle()
-                .await?
+                StartHandler::new(&self.game, self.user_id, self.username.clone(), &self.pool)
+                    .handle()
+                    .await?
             }
         };
         Ok(messages)

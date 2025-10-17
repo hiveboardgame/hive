@@ -3,9 +3,7 @@ use futures::stream::{AbortHandle, Abortable};
 
 use crate::websocket::new_style::client::{client_handler, ClientApi};
 use crate::{
-    components::{
-        layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames,
-    },
+    components::{layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames},
     i18n::I18nContextProvider,
     pages::{
         account::Account,
@@ -84,8 +82,8 @@ pub fn App() -> impl IntoView {
     provide_api_requests();
 
     //expects auth, api_requests, gameStateSignal
-    provide_chat();        
-    
+    provide_chat();
+
     // we'll only listen for websocket messages on the client
     if cfg!(feature = "hydrate") {
         let client_api = expect_context::<ClientApi>();
@@ -101,13 +99,13 @@ pub fn App() -> impl IntoView {
                 }
                 // Create a new abortable future
                 let (abort_handle, abort_reg) = AbortHandle::new_pair();
-    
+
                 // Store the handle so we can stop it later
                 task_handle.set_value(Some(abort_handle));
 
-                let (tx,rx) = mpsc::channel(1);
+                let (tx, rx) = mpsc::channel(1);
                 client_api.set_sender(tx);
-                leptos::task::spawn_local(async move {    
+                leptos::task::spawn_local(async move {
                     // Make it abortable
                     let _ = Abortable::new(client_handler(rx), abort_reg).await;
                     leptos::logging::log!("Task stopped or aborted");
