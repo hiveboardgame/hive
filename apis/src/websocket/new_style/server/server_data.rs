@@ -35,7 +35,8 @@ impl SubscribersSet {
         if client.is_cancelled() {
             return;
         }
-        self.map.insert(*client.uuid(), client.token());
+        let (key, value) = client.as_subscriber();
+        self.map.insert(key,value);
     }
 }
 
