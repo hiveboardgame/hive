@@ -3,8 +3,7 @@ use hive_lib::GameControl;
 use icondata_core;
 use leptos::prelude::*;
 use leptos_icons::*;
-use leptos_use::{use_interval_with_options, UseIntervalOptions};
-use std::sync::Arc;
+use leptos_use::{use_timeout_fn, UseTimeoutFnReturn};
 use uuid::Uuid;
 
 #[component]
@@ -50,40 +49,29 @@ pub fn ConfirmButton(
     user_id: Uuid,
     #[prop(optional, into)] hidden: Signal<String>,
 ) -> impl IntoView {
-    let game_state = StoredValue::new(expect_context::<GameStateSignal>());
+    let game_state = expect_context::<GameStateSignal>();
     let (icon, title) = get_icon_and_title(game_control.get_value());
     let color = game_control.with_value(|g| g.color());
     let is_clicked = RwSignal::new(false);
-    let interval = StoredValue::new(Arc::new(use_interval_with_options(
-        5000,
-        UseIntervalOptions::default().immediate(false),
-    )));
-
+    let UseTimeoutFnReturn {
+        start: wait_for_confirm, ..
+    } = use_timeout_fn(
+         move |_| {
+            is_clicked.set(false);
+        },
+        5000.0,
+    );
     let onclick_confirm = move |_| {
-        let interval = interval.get_value();
         if is_clicked() {
-            game_state
-                .read_value()
-                .send_game_control(game_control.get_value(), user_id);
-            is_clicked.update(|v| *v = false);
-            (interval.reset)();
-            (interval.pause)();
+            game_state.send_game_control(game_control.get_value(), user_id);
+            is_clicked.set(false);
         } else {
-            is_clicked.update(|v| *v = true);
-            (interval.resume)();
+            is_clicked.set(true);
+            wait_for_confirm(());
         }
     };
 
-    Effect::new_isomorphic(move |_| {
-        let interval = interval.get_value();
-        if (interval.counter)() >= 1 {
-            is_clicked.update(|v| *v = false);
-            (interval.reset)();
-            (interval.pause)();
-        }
-    });
-
-    let pending_slice = create_read_slice(game_state.with_value(|gs| gs.signal), |gs| {
+    let pending_slice = create_read_slice(game_state.signal, |gs| {
         gs.game_control_pending.clone()
     });
 
@@ -104,7 +92,7 @@ pub fn ConfirmButton(
         _ => false,
     };
 
-    let turn = create_read_slice(game_state.with_value(|gs| gs.signal), |gs| {
+    let turn = create_read_slice(game_state.signal, |gs| {
         gs.state.turn as i32
     });
 

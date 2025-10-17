@@ -1,5 +1,5 @@
 use crate::{
-    common::{ClientRequest, ServerMessage},
+    common::ServerMessage,
     providers::PingContext,
     websocket::{
         client_handlers::{game::handle_game, user_status::handle::handle_user_status},
@@ -23,7 +23,7 @@ pub async fn client_handler(rx: Receiver<ClientResult>) {
                     Ok(msg) => match msg {
                         ServerMessage::Ping { nonce, value } => {
                             ping.update_ping(value);
-                            client_api.send(ClientRequest::Pong(nonce)).await;
+                            client_api.pong(nonce).await;
                         }
                         ServerMessage::UserStatus(user_update) => {
                             handle_user_status(user_update);
