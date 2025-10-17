@@ -1,6 +1,5 @@
-use std::vec;
+use std::{sync::Arc, vec};
 
-use actix_web::web::Data;
 use futures::StreamExt;
 use server_fn::{BoxedStream, ServerFnError};
 use crate::{
@@ -14,7 +13,7 @@ use crate::{
 pub async fn server_handler(
     mut input: BoxedStream<ClientRequest, ServerFnError>,
     client: ClientData,
-    server: Data<ServerData>,
+    server: Arc<ServerData>,
 ) {
     while let Some(msg) = input.next().await {
         let server_message = match msg {

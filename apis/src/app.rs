@@ -1,6 +1,5 @@
 use futures::channel::mpsc;
 use futures::stream::{AbortHandle, Abortable};
-
 use crate::websocket::new_style::client::{client_handler, ClientApi};
 use crate::{
     components::{layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames},
@@ -105,6 +104,7 @@ pub fn App() -> impl IntoView {
 
                 let (tx, rx) = mpsc::channel(1);
                 client_api.set_sender(tx);
+                client_api.game_join();
                 leptos::task::spawn_local(async move {
                     // Make it abortable
                     let _ = Abortable::new(client_handler(rx), abort_reg).await;

@@ -1,4 +1,5 @@
 use std::future::Future;
+use std::sync::Arc;
 
 use crate::common::UserUpdate;
 use crate::websocket::new_style::server::{ClientData, ServerData};
@@ -6,17 +7,18 @@ use crate::{
     common::ServerMessage,
     websocket::{InternalServerMessage, MessageDestination},
 };
-use actix_web::web::Data;
 use rand::Rng;
 use tokio::{
-    select, spawn,
     time::{interval as interval_fn, Duration},
 };
 use tokio_stream::StreamExt;
+use tokio::{spawn, select};
 use tokio_util::sync::CancellationToken;
 
-pub async fn ping_client_ms(interval: u64, client: ClientData, server_data: Data<ServerData>) {
-    let mut interval = interval_fn(Duration::from_millis(interval));
+const PING_INTERVAL_MS: u64 = 1000; //consistent with previous implementation
+
+pub async fn ping_client(client: ClientData, server_data: Arc<ServerData>) {
+    let mut interval = interval_fn(Duration::from_millis(PING_INTERVAL_MS));
     loop {
         interval.tick().await;
         let nonce = rand::rng().random();
@@ -29,7 +31,7 @@ pub async fn ping_client_ms(interval: u64, client: ClientData, server_data: Data
     }
 }
 
-pub async fn subscribe_to_notifications(client: ClientData, server: Data<ServerData>) {
+pub async fn subscribe_to_notifications(client: ClientData, server: Arc<ServerData>) {
     let mut reciever = server.notifications();
     while let Some(Ok(InternalServerMessage {
         destination,
@@ -57,7 +59,7 @@ pub async fn subscribe_to_notifications(client: ClientData, server: Data<ServerD
     }
 }
 
-pub async fn load_online_users(client: ClientData, server_data: Data<ServerData>) {
+pub async fn load_online_users(client: ClientData, server_data: Arc<ServerData>) {
     println!("Reached load online users");
     for user in server_data.get_online_users() {
         let request = ServerMessage::UserStatus(UserUpdate {
@@ -73,12 +75,12 @@ pub async fn load_online_users(client: ClientData, server_data: Data<ServerData>
 
 pub fn spawn_abortable<F>(task: F, token: CancellationToken)
 where
-    F: Future<Output = ()> + Send + 'static,
+F: Future<Output = ()> + Send + 'static,
 {
     spawn(async move {
         select! {
-           _ = token.cancelled() => {}
-           _ = task => {}
+            _ = token.cancelled() => {}
+            _ = task => {}
         }
     });
 }
