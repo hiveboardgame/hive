@@ -15,6 +15,7 @@ pub type ClientResult = Result<ClientRequest, ServerFnError>;
 #[derive(Clone, Copy)]
 pub struct ClientApi {
     ws_restart: RwSignal<()>,
+    game_join: RwSignal<()>,
     //client api holds the client mpsc sender
     //and the latest message received from the server
     sender: StoredValue<Sender<ClientResult>>,
@@ -24,6 +25,7 @@ impl Default for ClientApi {
         let (tx, _rx) = mpsc::channel(1);
         Self {
             ws_restart: RwSignal::new(()),
+            game_join: RwSignal::new(()),
             sender: StoredValue::new(tx),
         }
     }
@@ -37,6 +39,12 @@ impl ClientApi {
     }
     pub fn signal_restart_ws(&self) -> ReadSignal<()> {
         self.ws_restart.read_only()
+    }
+    pub fn game_join(&self) {
+        self.game_join.set(());
+    }
+    pub fn signal_game_join(&self) -> ReadSignal<()> {
+        self.game_join.read_only()
     }
     async fn send(&self, client_request: ClientRequest) {
         let mut sender = self.sender.get_value();
