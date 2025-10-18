@@ -2,15 +2,13 @@ use std::sync::Arc;
 
 use super::challenges::handler::ChallengeHandler;
 use super::chat::handler::ChatHandler;
-use super::game::handler::GameActionHandler;
 use super::oauth::handler::OauthHandler;
 use super::schedules::ScheduleHandler;
 use super::tournaments::handler::TournamentHandler;
 use super::user_status::handler::UserStatusHandler;
-use crate::common::{ClientRequest, GameAction};
+use crate::common::ClientRequest;
 use crate::websocket::messages::AuthError;
 use crate::websocket::messages::InternalServerMessage;
-use crate::websocket::messages::WsMessage;
 use crate::websocket::WebsocketData;
 use db_lib::DbPool;
 use shared_types::{ChatDestination, SimpleUser};
@@ -34,7 +32,6 @@ impl std::fmt::Display for RequestHandlerError {
 pub struct RequestHandler {
     command: ClientRequest,
     data: Arc<WebsocketData>,
-    received_from: actix::Recipient<WsMessage>, // This is the socket the message was received over
     pool: DbPool,
     user_id: Uuid,
     username: String,
@@ -46,12 +43,10 @@ impl RequestHandler {
     pub fn new(
         command: ClientRequest,
         data: Arc<WebsocketData>,
-        sender_addr: actix::Recipient<WsMessage>,
         user: SimpleUser,
         pool: DbPool,
     ) -> Self {
         Self {
-            received_from: sender_addr,
             command,
             data,
             pool,
@@ -101,30 +96,6 @@ impl RequestHandler {
                 .handle()
                 .await?
             }
-            ClientRequest::Pong(nonce) => {
-                self.data.pings.update(self.user_id, nonce);
-                vec![]
-            }
-            ClientRequest::Game {
-                action: game_action,
-                game_id,
-            } => {
-                match game_action {
-                    GameAction::Turn(_) | GameAction::Control(_) => self.ensure_auth()?,
-                    _ => {}
-                };
-                GameActionHandler::new(
-                    &game_id,
-                    game_action,
-                    self.received_from.clone(),
-                    (&self.username, self.user_id),
-                    self.data.clone(),
-                    &self.pool,
-                )
-                .await?
-                .handle()
-                .await?
-            }
             ClientRequest::Challenge(challenge_action) => {
                 self.ensure_auth()?;
                 ChallengeHandler::new(challenge_action, &self.username, self.user_id, &self.pool)
@@ -142,6 +113,10 @@ impl RequestHandler {
                     .await?
                     .handle()
                     .await?
+            }
+            ClientRequest::Pong(_) | ClientRequest::Game { .. } => {
+                //Handled in v2
+                vec![]
             }
         };
         Ok(messages)

@@ -1,6 +1,5 @@
 use crate::{
-    common::{GameReaction, MoveConfirm, PieceType},
-    components::{
+    common::{GameReaction, MoveConfirm, PieceType}, components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
@@ -14,16 +13,15 @@ use crate::{
             side_board::{SideboardTabs, TabView},
             unstarted::Unstarted,
         },
-    },
-    functions::games::get::get_game_from_nanoid,
-    providers::{
+    }, functions::games::get::get_game_from_nanoid, providers::{
         config::Config,
         game_state::{GameStateSignal, View},
         timer::TimerSignal,
-        websocket::WebsocketContext,
-        ApiRequestsProvider, AuthContext, SoundType, Sounds, UpdateNotifier,
-    },
-    websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
+        AuthContext, SoundType, Sounds, UpdateNotifier,
+    }, websocket::{
+        client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
+        new_style::client::ClientApi,
+    }
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
 use leptos::prelude::*;
@@ -39,16 +37,15 @@ pub struct CurrentConfirm(pub Memo<MoveConfirm>);
 pub fn Play() -> impl IntoView {
     provide_context(TimerSignal::new());
     let timer = expect_context::<TimerSignal>();
+    let client_api =expect_context::<ClientApi>();
+    let game_rejoin = client_api.signal_game_join();
     let mut game_state = expect_context::<GameStateSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
-    let api = expect_context::<ApiRequestsProvider>();
     let game_updater = expect_context::<UpdateNotifier>();
     let sounds = expect_context::<Sounds>();
-    let ws = expect_context::<WebsocketContext>();
     let controls_signal = expect_context::<ControlsSignal>();
-    let ws_ready = ws.ready_state;
     let params = use_params_map();
     let queries = use_query_map();
     let move_number = Signal::derive(move || {
@@ -112,7 +109,13 @@ pub fn Play() -> impl IntoView {
             gr.game_start == GameStart::Ready && matches!(gr.game_status, GameStatus::NotStarted)
         })
     });
-
+    Effect::watch(
+        game_rejoin, move |_,_,_|{
+            spawn_local(async move {
+                client_api.join_game(game_id()).await;
+            });
+        }, 
+    false);
     //HB handler
     Effect::watch(
         move || game_updater.heartbeat.get(),
@@ -123,15 +126,13 @@ pub fn Play() -> impl IntoView {
     );
 
     Effect::watch(
-        move || {
-            ws_ready();
-            game_id()
-        },
+        game_id,
         move |game_id, _, _| {
             let game_id = game_id.clone();
-            api.0.get().join(game_id.clone());
+            client_api.game_join();
             spawn_local(async move {
-                let game = get_game_from_nanoid(game_id).await;
+                let game_id = game_id.clone();
+                let game = get_game_from_nanoid(game_id.clone()).await;
                 if let Ok(game) = game {
                     reset_game_state(&game, game_state);
                     timer.update_from(&game);
