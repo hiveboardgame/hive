@@ -2,7 +2,7 @@ use std::future::Future;
 use std::sync::Arc;
 
 use crate::common::UserUpdate;
-use crate::websocket::new_style::server::{ClientData, ServerData};
+use crate::websocket::new_style::server::{TabData, ServerData};
 use crate::{
     common::ServerMessage,
     websocket::{InternalServerMessage, MessageDestination},
@@ -17,7 +17,7 @@ use tokio_util::sync::CancellationToken;
 
 const PING_INTERVAL_MS: u64 = 1000; //consistent with previous implementation
 
-pub async fn ping_client(client: ClientData, server_data: Arc<ServerData>) {
+pub async fn ping_client(client: TabData, server_data: Arc<ServerData>) {
     let mut interval = interval_fn(Duration::from_millis(PING_INTERVAL_MS));
     loop {
         interval.tick().await;
@@ -31,7 +31,7 @@ pub async fn ping_client(client: ClientData, server_data: Arc<ServerData>) {
     }
 }
 
-pub async fn subscribe_to_notifications(client: ClientData, server: Arc<ServerData>) {
+pub async fn subscribe_to_notifications(client: TabData, server: Arc<ServerData>) {
     let mut reciever = server.notifications();
     while let Some(Ok(InternalServerMessage {
         destination,
@@ -47,7 +47,7 @@ pub async fn subscribe_to_notifications(client: ClientData, server: Arc<ServerDa
                 }
             }
             MessageDestination::Game(game_id) => {
-                let is_subscriber = server.is_game_subscriber(client.uuid(), &game_id);
+                let is_subscriber = server.is_game_subscriber(&client, &game_id);
                 if is_subscriber {
                     client.send(message.clone(), &server).await;
                 }
@@ -59,7 +59,7 @@ pub async fn subscribe_to_notifications(client: ClientData, server: Arc<ServerDa
     }
 }
 
-pub async fn load_online_users(client: ClientData, server_data: Arc<ServerData>) {
+pub async fn load_online_users(client: TabData, server_data: Arc<ServerData>) {
     println!("Reached load online users");
     for user in server_data.get_online_users() {
         let request = ServerMessage::UserStatus(UserUpdate {

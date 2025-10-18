@@ -1,15 +1,18 @@
-use crate::common::{ClientRequest, GameAction};
+use crate::common::{ChallengeAction, ClientRequest, GameAction};
+use crate::providers::{AuthContext, challenges::ChallengeStateSignal};
+use crate::responses::create_challenge_handler;
 use futures::{
     channel::mpsc::{self, Sender},
     SinkExt,
 };
 use hive_lib::{GameControl, Turn};
+use leptos::prelude::{With, WithUntracked};
 use leptos::{
     logging,
-    prelude::{GetValue, ReadSignal, RwSignal, Set, SetValue, StoredValue},
+    prelude::{expect_context, GetValue, ReadSignal, RwSignal, Set, SetValue, StoredValue},
 };
 use server_fn::ServerFnError;
-use shared_types::GameId;
+use shared_types::{ChallengeId, GameId};
 pub type ClientResult = Result<ClientRequest, ServerFnError>;
 
 #[derive(Clone, Copy)]
@@ -77,6 +80,40 @@ impl ClientApi {
             action: GameAction::Control(gc),
         };
         self.send(msg).await;
+    }
+    pub async fn challenge(&self, challenge_action: ChallengeAction) {
+        let challenge_action = match challenge_action {
+            ChallengeAction::Create(details) => {
+                let auth_context = expect_context::<AuthContext>();
+                let challenges = expect_context::<ChallengeStateSignal>();
+                auth_context.user.with(|a| {
+                    a.as_ref().and_then(|account| {
+                        let challenge_list = challenges.signal.with_untracked(|c| {
+                            c.challenges.values().cloned().collect::<Vec<_>>()
+                        });
+                        create_challenge_handler(
+                            account.user.username.clone(),
+                            details,
+                            challenge_list,
+                        )
+                    })
+                })
+            }
+            other => Some(other),
+        };
+        if let Some(challenge_action) = challenge_action {
+            let msg = ClientRequest::Challenge(challenge_action);
+            self.send(msg).await;
+        }
+    }
+    pub async fn challenge_cancel(&self, challenger_id: ChallengeId) {
+        self.challenge(ChallengeAction::Delete(challenger_id)).await;
+    }
+    pub async fn challenge_accept(&self, challenger_id: ChallengeId) {
+        self.challenge(ChallengeAction::Accept(challenger_id)).await;
+    }
+    pub async fn challenge_get(&self, challenger_id: ChallengeId) {
+        self.challenge(ChallengeAction::Get(challenger_id)).await;
     }
 
 }

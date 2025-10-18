@@ -13,7 +13,7 @@ pub async fn websocket_fn(
     use crate::functions::db::pool;
     use crate::websocket::new_style::server::{
         server_handler,tasks,
-        ClientData, ServerData,
+        TabData, ServerData,
     };
     use actix_web::web::Data;
 
@@ -29,17 +29,17 @@ pub async fn websocket_fn(
     // create a channel of outgoing websocket messages (from mpsc)
     let (tx, rx) = mpsc::channel(1);
 
-    let client = ClientData::new(tx, user, pool().await?);
+    let tab = TabData::new(tx, user, pool().await?);
     //ping at a given interval
-    tasks::spawn_abortable(tasks::ping_client(client.clone(),  server.clone()), client.token());
+    tasks::spawn_abortable(tasks::ping_client(tab.clone(),  server.clone()), tab.token());
 
     //listens to the server notifications and sends them to the client
-    tasks::spawn_abortable(tasks::subscribe_to_notifications(client.clone(), server.clone()), client.token());
+    tasks::spawn_abortable(tasks::subscribe_to_notifications(tab.clone(), server.clone()), tab.token());
 
     //Load initial online users and add myself
-    tasks::spawn_abortable(tasks::load_online_users(client.clone(), server.clone()), client.token());
+    tasks::spawn_abortable(tasks::load_online_users(tab.clone(), server.clone()), tab.token());
     
     //main handler
-    tasks::spawn_abortable(server_handler(input,client.clone(), server.clone()), client.token());
+    tasks::spawn_abortable(server_handler(input,tab.clone(), server.clone()), tab.token());
     Ok(rx.into())
 }

@@ -1,7 +1,8 @@
 use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::components::molecules::time_row::TimeRow;
 use crate::i18n::*;
-use crate::providers::{ApiRequestsProvider, Config};
+use crate::providers::Config;
+use crate::websocket::new_style::client::ClientApi;
 use crate::{
     components::atoms::game_type::GameType, components::atoms::profile_link::ProfileLink,
     functions::hostname::hostname_and_port, responses::ChallengeResponse,
@@ -9,6 +10,7 @@ use crate::{
 use hive_lib::ColorChoice;
 use leptos::either::Either;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use leptos_icons::*;
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
 use shared_types::{ChallengeVisibility, TimeInfo};
@@ -24,7 +26,7 @@ pub fn ChallengeRow(
 ) -> impl IntoView {
     let i18n = use_i18n();
     let config = expect_context::<Config>().0;
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let challenge_id = StoredValue::new(challenge.challenge_id);
     let visibility = StoredValue::new(challenge.visibility);
     let color_choice = StoredValue::new(challenge.color_choice);
@@ -212,7 +214,11 @@ pub fn ChallengeRow(
                                 </Show>
                                 <button
                                     on:click=move |_| {
-                                        api.get().challenge_cancel(challenge_id.get_value())
+                                        let api = client_api;
+                                        let id = challenge_id.get_value();
+                                        spawn_local(async move {
+                                            api.challenge_cancel(id).await;
+                                        });
                                     }
                                     class=cancel_button_classes.get_value()
                                 >
@@ -224,7 +230,11 @@ pub fn ChallengeRow(
 
                         <button
                             on:click=move |_| {
-                                api.get().challenge_accept(challenge_id.get_value());
+                                let api = client_api;
+                                let id = challenge_id.get_value();
+                                spawn_local(async move {
+                                    api.challenge_accept(id).await;
+                                });
                             }
                             class=accept_button_classes.get_value()
                         >
@@ -236,7 +246,11 @@ pub fn ChallengeRow(
                                 view! {
                                     <button
                                         on:click=move |_| {
-                                            api.get().challenge_cancel(challenge_id.get_value());
+                                            let api = client_api;
+                                            let id = challenge_id.get_value();
+                                            spawn_local(async move {
+                                                api.challenge_cancel(id).await;
+                                            });
                                         }
                                         class=cancel_button_classes.get_value()
                                     >

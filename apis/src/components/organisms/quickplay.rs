@@ -1,13 +1,15 @@
 use crate::i18n::*;
-use crate::providers::{challenge_params_cookie, ApiRequestsProvider, ChallengeParams};
+use crate::providers::{challenge_params_cookie, ChallengeParams};
 use crate::{
     common::ChallengeAction,
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
     pages::{challenge_bot::ChallengeBot, challenge_create::ChallengeCreate},
     providers::AuthContext,
 };
+use crate::websocket::new_style::client::ClientApi;
 use hive_lib::{ColorChoice, GameType};
 use leptos::{ev, html::Dialog, prelude::*};
+use leptos::task::spawn_local;
 use leptos_icons::*;
 use leptos_router::hooks::use_navigate;
 use leptos_use::use_event_listener;
@@ -30,7 +32,7 @@ const BUTTON_STYLE: &str = "flex w-full gap-1 justify-center items-center px-4 p
 #[component]
 pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let (display_text, icon_data, base, increment) = match time_control {
         Bullet1p2 => ("1+2".to_owned(), icon_for_speed(Bullet), 1, 2),
         Blitz3p3 => ("3+3".to_owned(), icon_for_speed(Blitz), 3, 3),
@@ -45,7 +47,6 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
             class=BUTTON_STYLE
             on:click=move |_| {
                 if auth_context.user.with(|a| a.is_some()) {
-                    let api = api.get();
                     let details = ChallengeDetails {
                         rated: true,
                         game_type: GameType::MLP,
@@ -59,7 +60,10 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
                         band_lower: None,
                     };
                     let challenge_action = ChallengeAction::Create(details);
-                    api.challenge(challenge_action);
+                    let api = client_api;
+                    spawn_local(async move {
+                        api.challenge(challenge_action).await;
+                    });
                 } else {
                     let navigate = use_navigate();
                     navigate("/login", Default::default());

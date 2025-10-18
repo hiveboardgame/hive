@@ -5,7 +5,7 @@ use crate::{
     responses::UserResponse,
     websocket::{
         messages::{InternalServerMessage, MessageDestination},
-        new_style::server::ClientData,
+        new_style::server::TabData,
     },
 };
 use shared_types::GameId;
@@ -16,12 +16,12 @@ use tokio_stream::wrappers::BroadcastStream;
 use uuid::Uuid;
 
 #[derive(Default)]
-struct SubscribersSet {
+struct SubscriberSet {
     map: HashMap<Uuid, CancellationToken>,
 }
 
-impl SubscribersSet {
-    pub fn new(client: &ClientData) -> Self {
+impl SubscriberSet {
+    pub fn new(client: &TabData) -> Self {
         let mut set = Self::default();
         set.insert(client);
         set
@@ -31,7 +31,7 @@ impl SubscribersSet {
         let _ = self.map.extract_if(|_c, v| v.is_cancelled());
         self.map.contains_key(id)
     }
-    pub fn insert(&mut self, client: &ClientData) {
+    pub fn insert(&mut self, client: &TabData) {
         if client.is_cancelled() {
             return;
         }
@@ -45,7 +45,7 @@ pub struct ServerData {
     //only retans the last message
     sender: Sender<InternalServerMessage>,
     online_users: RwLock<HashMap<Uuid, (UserResponse, i32)>>,
-    game_subscribers: RwLock<HashMap<GameId, SubscribersSet>>,
+    game_subscribers: RwLock<HashMap<GameId, SubscriberSet>>,
 }
 impl Default for ServerData {
     fn default() -> Self {    
@@ -113,17 +113,18 @@ impl ServerData {
             .map(|u| u.0.clone())
             .collect()
     }
-    pub fn subscribe_client_to(&self, client: &ClientData, game_id: GameId) {
+    pub fn subscribe_client_to(&self, client: &TabData, game_id: GameId) {
         let mut subscribers = self.game_subscribers.write().unwrap();
         subscribers
             .entry(game_id.clone())
             .and_modify(|v| {
                 v.insert(client);
             })
-            .or_insert(SubscribersSet::new(client));
+            .or_insert(SubscriberSet::new(client));
     }
-    pub fn is_game_subscriber(&self, id: &Uuid, game_id: &GameId) -> bool {
+    pub fn is_game_subscriber(&self, tab: &TabData, game_id: &GameId) -> bool {
+        let (id, _) = tab.as_subscriber();
         let mut game_subs = self.game_subscribers.write().unwrap();
-        game_subs.get_mut(game_id).is_some_and(|g| g.contains(id))
+        game_subs.get_mut(game_id).is_some_and(|g| g.contains(&id))
     }
 }
