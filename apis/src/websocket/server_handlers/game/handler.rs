@@ -3,7 +3,7 @@ use super::{
     control_handler::GameControlHandler, timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
 };
 use crate::common::GameAction;
-use crate::websocket::{messages::InternalServerMessage, new_style::server::ClientData};
+use crate::websocket::{messages::InternalServerMessage, new_style::server::TabData};
 use anyhow::Result;
 use db_lib::{get_conn, models::Game};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
@@ -13,14 +13,14 @@ use std::str::FromStr;
 pub struct GameActionHandler {
     game_action: GameAction,
     game: Game,
-    client: ClientData,
+    client: TabData,
 }
 
 impl GameActionHandler {
     pub async fn new(
         game_id: &GameId,
         game_action: GameAction,
-        client: ClientData,
+        client: TabData,
     ) -> Result<Self> {
         let mut connection = get_conn(client.pool()).await?;
         let game = connection

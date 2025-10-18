@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 type ClientResult = Result<ServerMessage, ServerFnError>;
 
-struct InternalClientData {
+struct Data {
     pub cancel: CancellationToken,
     pub pings: RwLock<PingStats>,
     pub account: Option<AccountResponse>,
@@ -21,25 +21,25 @@ struct InternalClientData {
 }
 
 #[derive(Clone)]
-pub struct ClientData {
-    data: Arc<InternalClientData>,
+pub struct TabData {
+    data: Arc<Data>,
     sender: mpsc::Sender<ClientResult>,
 }
 
-impl ClientData {
+impl TabData {
     pub fn new(
         sender: mpsc::Sender<ClientResult>,
         account: Option<AccountResponse>,
         pool: DbPool,
     ) -> Self {
-        let data = InternalClientData {
+        let data = Data {
             id: Uuid::new_v4(),
             pings: RwLock::new(PingStats::default()),
             cancel: CancellationToken::new(),
             account,
             pool,
         };
-        ClientData {
+        TabData {
             data: Arc::new(data),
             sender,
         }
@@ -50,9 +50,7 @@ impl ClientData {
     pub fn account(&self) -> Option<&AccountResponse> {
         self.data.account.as_ref()
     }
-    pub fn uuid(&self) -> &Uuid {
-        &self.data.id
-    }
+
     pub fn is_cancelled(&self) -> bool {
         self.data.cancel.is_cancelled()
     }
