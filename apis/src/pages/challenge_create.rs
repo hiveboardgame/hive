@@ -2,9 +2,8 @@ use crate::common::TimeParamsStoreFields;
 use crate::components::atoms::input_slider::InputSliderWithCallback;
 use crate::components::atoms::simple_switch::SimpleSwitchWithCallback;
 use crate::i18n::*;
-use crate::providers::{
-    ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields,
-};
+use crate::providers::{AuthContext, ChallengeParams, ChallengeParamsStoreFields};
+use crate::websocket::new_style::client::ClientApi;
 use crate::{
     common::ChallengeAction,
     components::{
@@ -13,6 +12,7 @@ use crate::{
 };
 use hive_lib::{ColorChoice, GameType};
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use reactive_stores::Store;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
 
@@ -20,13 +20,11 @@ use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
 pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoView {
     let i18n = use_i18n();
     let params = expect_context::<Store<ChallengeParams>>();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let auth_context = expect_context::<AuthContext>();
     let opponent = StoredValue::new(opponent);
     let opponent_exists = opponent.with_value(|o| o.is_some());
     let create_challenge = Callback::new(move |color_choice| {
-        let api = api.get();
-
         let (upper_rating, lower_rating) = auth_context.user.with(|acc_opt| {
             if let Some(account) = acc_opt {
                 let time_data = params.time_signals().get();
@@ -80,7 +78,10 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
             band_lower: lower_rating,
         };
         let challenge_action = ChallengeAction::Create(details);
-        api.challenge(challenge_action);
+        let api = client_api;
+        spawn_local(async move {
+            api.challenge(challenge_action).await;
+        });
     });
 
     let rating_string = move || {

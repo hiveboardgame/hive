@@ -1,4 +1,4 @@
-use crate::providers::ApiRequestsProvider;
+use crate::websocket::new_style::client::ClientApi;
 use crate::{
     common::ChallengeAction,
     components::atoms::{
@@ -7,6 +7,7 @@ use crate::{
 };
 use hive_lib::{ColorChoice, GameType};
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use shared_types::{ChallengeDetails, ChallengeVisibility, TimeMode};
 
 #[derive(Clone, Copy)]
@@ -31,7 +32,7 @@ impl BotDifficulty {
 pub fn ChallengeBot() -> impl IntoView {
     let expansions = RwSignal::new(true);
     let difficulty = RwSignal::new(BotDifficulty::Medium);
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
 
     let radio_style = move |active: bool| {
         format!("flex items-center p-2 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded cursor-pointer {}", 
@@ -44,7 +45,6 @@ pub fn ChallengeBot() -> impl IntoView {
     };
 
     let create_challenge = Callback::new(move |color_choice| {
-        let api = api.get();
         let details = ChallengeDetails {
             rated: false,
             game_type: if expansions.get_untracked() {
@@ -62,7 +62,10 @@ pub fn ChallengeBot() -> impl IntoView {
             band_lower: None,
         };
         let challenge_action = ChallengeAction::Create(details);
-        api.challenge(challenge_action);
+        let api = client_api;
+        spawn_local(async move {
+            api.challenge(challenge_action).await;
+        });
     });
 
     view! {
