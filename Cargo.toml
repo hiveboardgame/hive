@@ -56,6 +56,7 @@ lazy_static = "1.5"
 leptos = { version = "0.8", features = ["nightly"] }
 leptos-use = { version = "0.16.2" }
 leptos_actix = { version = "0.8" }
+leptos-chartistry = { version = "0.2" }
 leptos_i18n = { version = "0.6.0-rc.2", features = ["plurals"] }
 leptos_icons = { version = "0.6" }
 leptos_meta = { version = "0.8" }

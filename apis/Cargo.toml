@@ -42,12 +42,14 @@ icondata_mdi = { workspace = true }
 icondata_ri = { workspace = true }
 icondata_ti = { workspace = true }
 indoc = { workspace = true }
+itertools = { workspace = true }
 jsonwebtoken = { workspace = true, optional = true }
 # jsonwebtoken = { workspace = true }
 lazy_static = { workspace = true }
 leptos = { workspace = true }
 leptos-use = { workspace = true }
 leptos_actix = { workspace = true, optional = true }
+leptos-chartistry = { workspace = true }
 leptos_i18n = { workspace = true }
 leptos_icons = { workspace = true }
 leptos_meta = { workspace = true }

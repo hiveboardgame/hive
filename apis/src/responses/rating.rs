@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use shared_types::{Certainty, GameSpeed};
+use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct RatingResponse {
@@ -10,6 +11,7 @@ pub struct RatingResponse {
     pub loss: i64,
     pub draw: i64,
     pub certainty: Certainty,
+    pub user_uid: Uuid,
 }
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
@@ -18,7 +20,6 @@ use db_lib::{
     DbConn,
 };
 use std::str::FromStr;
-use uuid::Uuid;
 use anyhow::Result;
 impl RatingResponse {
     pub async fn from_uuid(id: &Uuid, game_speed: &GameSpeed, conn: &mut DbConn<'_>) -> Result<Self> {
@@ -46,6 +47,7 @@ impl RatingResponse {
             loss: rating.lost,
             draw: rating.draw,
             certainty: Certainty::from_deviation(rating.deviation),
+            user_uid: rating.user_uid,
         }
     }
 }

@@ -1,4 +1,5 @@
 use crate::components::atoms::rating::{icon_for_speed, Rating};
+use crate::components::atoms::rating_history::RatingGraph;
 use crate::components::molecules::modal::Modal;
 use crate::responses::{RatingResponse, UserResponse};
 use leptos::{html::Dialog, prelude::*};
@@ -76,7 +77,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                     .get()
                     .map(|rating| {
                         view! {
-                            <div class="p-4 w-full max-w-md">
+                            <div class="p-4 w-full max-w-md mx-auto">
                                 <div class="flex gap-2 items-center mb-4">
                                     <Icon icon=icon_for_speed(rating.speed) attr:class="size-6" />
                                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -143,8 +144,10 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                             </div>
                                         </div>
                                     </div>
+
                                 </div>
                             </div>
+                            <RatingGraph user_id=rating.user_uid game_speed=rating.speed />
                         }
                     })
             }}

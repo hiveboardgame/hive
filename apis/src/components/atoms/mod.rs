@@ -18,6 +18,7 @@ pub mod piece;
 pub mod profile_link;
 pub mod progress_bar;
 pub mod rating;
+pub mod rating_history;
 pub mod schedule_controls;
 pub mod select_options;
 pub mod simple_hex;
