@@ -3,7 +3,7 @@ use super::{messages::MessageDestination, server_handlers::request_handler::Requ
 use crate::common::{ClientRequest, ExternalServerError, ServerResult};
 use crate::websocket::server_handlers::request_handler::RequestHandlerError;
 use crate::websocket::{
-    messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
+    messages::{ClientActorMessage, Connect, WsMessage},
     ws_server::WsServer,
 };
 use actix::{
@@ -58,13 +58,7 @@ impl Actor for WsConnection {
             .wait(ctx);
     }
 
-    fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
-        self.wss_addr.do_send(Disconnect {
-            user_id: self.user_uid,
-            game_id: String::from("lobby"),
-            addr: ctx.address().recipient(),
-            username: self.username.clone(),
-        });
+    fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
         Running::Stop
     }
 }

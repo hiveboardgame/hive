@@ -1,4 +1,4 @@
-use crate::common::{ChallengeAction, ClientRequest, GameAction};
+use crate::common::{ChallengeAction, ClientRequest, GameAction, ScheduleAction};
 use crate::providers::{AuthContext, challenges::ChallengeStateSignal};
 use crate::responses::create_challenge_handler;
 use futures::{
@@ -115,5 +115,7 @@ impl ClientApi {
     pub async fn challenge_get(&self, challenger_id: ChallengeId) {
         self.challenge(ChallengeAction::Get(challenger_id)).await;
     }
-
+    pub async fn schedule_action(&self, action: ScheduleAction) {
+        self.send(ClientRequest::Schedule(action)).await;
+    }
 }

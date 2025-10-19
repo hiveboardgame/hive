@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
-use super::challenges::handler::ChallengeHandler;
 use super::chat::handler::ChatHandler;
 use super::oauth::handler::OauthHandler;
-use super::schedules::ScheduleHandler;
 use super::tournaments::handler::TournamentHandler;
 use super::user_status::handler::UserStatusHandler;
 use crate::common::ClientRequest;
@@ -96,25 +94,9 @@ impl RequestHandler {
                 .handle()
                 .await?
             }
-            ClientRequest::Challenge(challenge_action) => {
-                self.ensure_auth()?;
-                ChallengeHandler::new(challenge_action, &self.username, self.user_id, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
             ClientRequest::Away => UserStatusHandler::new().await?.handle().await?,
-            ClientRequest::Schedule(action) => {
-                match action {
-                    crate::common::ScheduleAction::TournamentPublic(_) => {}
-                    _ => self.ensure_auth()?,
-                }
-                ScheduleHandler::new(self.user_id, action, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
-            ClientRequest::Pong(_) | ClientRequest::Game { .. } => {
+            ClientRequest::Pong(_) | ClientRequest::Game { .. }
+            |ClientRequest::Challenge(_)|ClientRequest::Schedule(_)=> {
                 //Handled in v2
                 vec![]
             }

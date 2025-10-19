@@ -42,20 +42,7 @@ pub struct Connect {
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
-pub struct Disconnect {
-    pub addr: Recipient<WsMessage>,
-    pub game_id: String,
-    pub user_id: Uuid,
-    pub username: String,
-}
-
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
 pub struct GameHB {}
-
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
-pub struct Ping {}
 
 #[derive(Message, Debug, Clone)]
 #[rtype(result = "()")]

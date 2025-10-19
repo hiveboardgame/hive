@@ -6,7 +6,7 @@ use crate::{
     responses::ScheduleResponse,
     websocket::{
         busybee::Busybee,
-        messages::{InternalServerMessage, MessageDestination},
+        messages::{InternalServerMessage, MessageDestination}, new_style::server::TabData,
     },
 };
 use anyhow::Result;
@@ -21,22 +21,21 @@ use std::{collections::HashMap, vec};
 use uuid::Uuid;
 
 pub struct ScheduleHandler {
-    pool: DbPool,
-    user_id: Uuid,
+    client: TabData,
     action: ScheduleAction,
 }
 
 impl ScheduleHandler {
-    pub async fn new(user_id: Uuid, action: ScheduleAction, pool: &DbPool) -> Result<Self> {
+    pub async fn new(action: ScheduleAction, client: TabData) -> Result<Self> {
         Ok(Self {
-            pool: pool.clone(),
-            user_id,
+            client,
             action,
         })
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        let mut conn = get_conn(&self.pool).await?;
+        let mut conn = get_conn(self.client.pool()).await?;
+        let user_id = self.client.account().map(|a| a.id).unwrap_or_default();
         let (update, destinations) = conn
             .transaction::<_, anyhow::Error, _>(move |tc| {
                 async move {
@@ -44,7 +43,7 @@ impl ScheduleHandler {
                         Accept(id) => {
                             let mut schedule = Schedule::from_id(id, tc).await?;
                             let proposer_id = schedule.proposer_id;
-                            schedule.accept(self.user_id, tc).await?;
+                            schedule.accept(user_id, tc).await?;
                             let schedule = ScheduleResponse::from_model(schedule, tc).await?;
                             
                             let msg = format!(
@@ -66,7 +65,7 @@ impl ScheduleHandler {
                         }
                         Cancel(id) => {
                             let mut schedule = Schedule::from_id(id, tc).await?;
-                            schedule.cancel(self.user_id, tc).await?;
+                            schedule.cancel(user_id, tc).await?;
                             let schedule = ScheduleResponse::from_model(schedule, tc).await?;
                             (
                                 ScheduleUpdate::Deleted(schedule),
@@ -75,8 +74,8 @@ impl ScheduleHandler {
                         }
                         Propose(date, game_id) => {
                             let schedule =
-                                NewSchedule::new(self.user_id, &game_id, date, tc).await?;
-                            let schedule = Schedule::create(schedule, self.user_id, tc).await?;
+                                NewSchedule::new(user_id, &game_id, date, tc).await?;
+                            let schedule = Schedule::create(schedule, user_id, tc).await?;
                             let opponent_id = schedule.opponent_id;
                             let schedule_response = ScheduleResponse::from_model(schedule, tc).await?;
                             
@@ -88,12 +87,12 @@ impl ScheduleHandler {
                                 schedule_response.game_id
                             );
                             
-                            if let Err(e) = Busybee::msg(opponent_id, msg).await {
+                            /*if let Err(e) = Busybee::msg(opponent_id, msg).await {
                                 println!("Failed to send schedule proposal notification: {e}");
-                            }
+                            }*/
                             
                             let destinations = vec![
-                                MessageDestination::User(self.user_id),
+                                MessageDestination::User(user_id),
                                 MessageDestination::User(opponent_id),
                             ];
                             (ScheduleUpdate::Proposed(schedule_response), destinations)
@@ -117,14 +116,14 @@ impl ScheduleHandler {
                             }
                             (
                                 ScheduleUpdate::TournamentSchedules(all_schedules),
-                                vec![MessageDestination::User(self.user_id)],
+                                vec![MessageDestination::User(user_id)],
                             )
                         }
                         TournamentOwn(id) => {
                             let tournament = Tournament::from_nanoid(&id.to_string(), tc).await?;
                             let game_ids = Game::get_ongoing_ids_for_tournament_by_user(
                                 tournament.id,
-                                self.user_id,
+                                user_id,
                                 tc,
                             )
                             .await?;
@@ -142,7 +141,7 @@ impl ScheduleHandler {
                             }
                             (
                                 ScheduleUpdate::OwnTournamentSchedules(all_schedules),
-                                vec![MessageDestination::User(self.user_id)],
+                                vec![MessageDestination::User(user_id)],
                             )
                         }
                     })
