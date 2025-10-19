@@ -39,6 +39,15 @@ pub async fn websocket_fn(
     //Load initial online users and add myself
     tasks::spawn_abortable(tasks::load_online_users(tab.clone(), server.clone()), tab.token());
     
+    //Send urgent games
+    tasks::spawn_abortable(tasks::send_urgent_games(tab.clone(), server.clone()), tab.token());
+
+    //Send challenges
+    tasks::spawn_abortable(tasks::send_challenges(tab.clone(), server.clone()), tab.token());
+
+    //Send schedules
+    tasks::spawn_abortable(tasks::send_schedules(tab.clone(), server.clone()), tab.token());
+
     //main handler
     tasks::spawn_abortable(server_handler(input,tab.clone(), server.clone()), tab.token());
     Ok(rx.into())

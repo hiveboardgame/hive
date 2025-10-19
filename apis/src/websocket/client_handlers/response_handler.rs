@@ -1,5 +1,4 @@
-use super::{
-    challenge::handler::handle_challenge, chat::handle::handle_chat, oauth::handle::handle_oauth,
+use super::{chat::handle::handle_chat, oauth::handle::handle_oauth,
     schedule::handler::handle_schedule, tournament::handler::handle_tournament,
 };
 use crate::common::{ServerMessage::*, ServerResult};
@@ -9,12 +8,11 @@ use leptos_router::hooks::use_navigate;
 pub fn handle_response(m: ServerResult) {
     match m {
         ServerResult::Ok(message) => match *message {
-            Challenge(challenge) => handle_challenge(challenge),
             Chat(message) => handle_chat(message),
             RedirectLink(link) => handle_oauth(link),
             Tournament(tournament_update) => handle_tournament(tournament_update),
             Schedule(schedule_update) => handle_schedule(schedule_update),
-            Game(_) | UserStatus(_) | Ping { .. } => {
+            Game(_) | UserStatus(_) | Ping { .. }| Challenge(_) => {
                 //Handled in v2
             }
             Error(err) => {

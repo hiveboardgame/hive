@@ -14,9 +14,11 @@ use crate::functions::tournaments::{get_complete, UpdateDescription};
 use crate::providers::AuthContext;
 use crate::providers::{websocket::WebsocketContext, ApiRequestsProvider, UpdateNotifier};
 use crate::responses::{GameResponse, TournamentResponse};
+use crate::websocket::new_style::client::ClientApi;
 use chrono::Local;
 use hive_lib::GameStatus;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::core::ConnectionReadyState;
 use shared_types::{
@@ -73,7 +75,8 @@ pub fn Tournament() -> impl IntoView {
 fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let tournament = StoredValue::new(tournament);
     let auth_context = expect_context::<AuthContext>();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let api = expect_context::<ClientApi>();
+    let api_2 = expect_context::<ApiRequestsProvider>().0;
     let websocket = expect_context::<WebsocketContext>();
     let account = auth_context.user;
     let user_id = Signal::derive(move || account.with(|a| a.as_ref().map(|a| a.user.uid)));
@@ -88,11 +91,12 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         if tournament.with_value(|t| t.status.clone()) != TournamentStatus::NotStarted
             && ready_state == ConnectionReadyState::Open
         {
-            let api = api.get();
-            api.schedule_action(ScheduleAction::TournamentPublic(tournament_id.get_value()));
-            if user_id().is_some() {
-                api.schedule_action(ScheduleAction::TournamentOwn(tournament_id.get_value()));
-            }
+            spawn_local(async move{
+                api.schedule_action(ScheduleAction::TournamentPublic(tournament_id.get_value())).await;
+                if user_id().is_some() {
+                    api.schedule_action(ScheduleAction::TournamentOwn(tournament_id.get_value())).await;
+                }
+            });
         }
     });
 
@@ -130,7 +134,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         })
     });
     let send_action = move |action: TournamentAction| {
-        let api = api.get();
+        let api = api_2.get();
         api.tournament(action);
     };
     let delete = move |_| {

@@ -1,0 +1,36 @@
+use std::sync::Arc;
+
+use tokio_stream::StreamExt;
+
+use crate::websocket::new_style::server::{ServerData, TabData};
+use crate::websocket::{InternalServerMessage, MessageDestination};
+
+pub async fn subscribe_to_notifications(client: TabData, server: Arc<ServerData>) {
+    let mut receiver = server.notifications();
+
+    while let Some(Ok(InternalServerMessage {
+        destination,
+        message,
+    })) = receiver.next().await
+    {
+        match destination {
+            MessageDestination::Global => {
+                client.send(message, &server).await;
+            }
+            MessageDestination::User(dest_id) => {
+                if client.account().is_some_and(|u| u.user.uid == dest_id) {
+                    client.send(message, &server).await;
+                }
+            }
+            MessageDestination::Game(game_id) => {
+                let is_subscriber = server.is_game_subscriber(&client, &game_id);
+                if is_subscriber {
+                    client.send(message.clone(), &server).await;
+                }
+            }
+            _ => {
+                todo!()
+            }
+        }
+    }
+}
