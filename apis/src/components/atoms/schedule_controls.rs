@@ -1,10 +1,11 @@
 use crate::common::ScheduleAction;
 use crate::components::atoms::date_time_picker::DateTimePicker;
-use crate::providers::ApiRequestsProvider;
 use crate::responses::ScheduleResponse;
+use crate::websocket::new_style::client::ClientApi;
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::callback::Callback;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use shared_types::GameId;
 use uuid::Uuid;
 
@@ -14,7 +15,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
     let agreed = schedule.agreed;
     let id = schedule.id;
     let proposer_id = schedule.proposer_id;
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let api = expect_context::<ClientApi>();
     let formatted_game_date = move |time: DateTime<Utc>| {
         let to_date = time - Utc::now();
 
@@ -29,8 +30,9 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
         )
     };
     let accept = Callback::from(move |id| {
-        let api = api.get();
-        api.schedule_action(ScheduleAction::Accept(id));
+        spawn_local(async move {
+            api.schedule_action(ScheduleAction::Accept(id)).await;
+        });
     });
     view! {
         <div class={format!(
@@ -56,8 +58,9 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             </Show>
             <button
                 on:click=move |_| {
-                    let api = api.get();
-                    api.schedule_action(ScheduleAction::Cancel(id));
+                    spawn_local(async move {
+                        api.schedule_action(ScheduleAction::Cancel(id)).await;
+                    })
                 }
 
                 class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 bg-ladybug-red hover:bg-red-400 active:scale-95"
@@ -71,10 +74,12 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
 #[component]
 pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
     let selected_time = RwSignal::new(Utc::now() + Duration::minutes(10));
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let api = expect_context::<ClientApi>();
     let propose = Callback::from(move |date| {
-        let api = api.get();
-        api.schedule_action(ScheduleAction::Propose(date, game_id.clone()));
+        let gid= game_id.clone();
+        spawn_local(async move{
+            api.schedule_action(ScheduleAction::Propose(date, gid.clone())).await;
+        });
     });
     let callback = Callback::from(move |utc: DateTime<Utc>| {
         selected_time.set(utc);

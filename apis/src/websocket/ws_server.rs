@@ -5,9 +5,9 @@ use crate::{
         ChallengeUpdate, GameUpdate, ScheduleUpdate, ServerMessage, ServerResult, TournamentUpdate,
     },
     responses::{
-        ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse, TournamentResponse,
+        ChallengeResponse, HeartbeatResponse, ScheduleResponse, TournamentResponse,
     },
-    websocket::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
+    websocket::messages::{ClientActorMessage, Connect, WsMessage},
 };
 use actix::{
     prelude::{Actor, Context, Handler, Recipient},
@@ -20,7 +20,6 @@ use db_lib::{
     models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
     DbPool,
 };
-use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::GameStatus;
 use log::{error, warn};
 use shared_types::{GameId, TimeMode};
@@ -108,36 +107,6 @@ impl Handler<GameHB> for WsServer {
     }
 }
 
-impl Handler<Disconnect> for WsServer {
-    type Result = ();
-
-    fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
-        // Remove the WS connection from the user sessions
-        if let Some(user_sessions) = self.sessions.get_mut(&msg.user_id) {
-            user_sessions.retain(|session| *session != msg.addr);
-            if user_sessions.is_empty() {
-                self.sessions.remove(&msg.user_id);
-            }
-        }
-        // If that was the last WS connection for that user
-        if !self.sessions.contains_key(&msg.user_id) {
-            if let Some(games) = self.users_games.remove(&msg.user_id) {
-                for game in games.iter() {
-                    let game_id = GameId(game.to_string());
-                    if let Some(game_users) = self.games_users.get_mut(&game_id) {
-                        if game_users.len() > 1 {
-                            game_users.remove(&msg.user_id);
-                        } else {
-                            //only one in the game, remove it entirely
-                            self.games_users.remove(&game_id);
-                        }
-                    }
-                }
-            }
-            //Remove from online users handled in v2
-        }
-    }
-}
 
 impl Handler<Connect> for WsServer {
     type Result = ();
@@ -163,48 +132,6 @@ impl Handler<Connect> for WsServer {
                 //Loading online users for new connection handled in v2
 
                 let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
-                    // Send games which require input from the user
-                    let game_ids_result = user.get_urgent_nanoids(&mut conn).await;
-                    let game_ids = match game_ids_result {
-                        Ok(ids) => ids,
-                        Err(e) => {
-                            error!("Failed to get urgent game_ids for user {user_id}: {e}");
-                            Vec::new()
-                        }
-                    };
-                    if !game_ids.is_empty() {
-                        let games = conn
-                            .transaction::<_, anyhow::Error, _>(move |tc| {
-                                let mut games = Vec::new();
-                                async move {
-                                    for game_id in game_ids {
-                                        if let Ok(game) =
-                                            GameResponse::new_from_game_id(&game_id, tc).await
-                                        {
-                                            if !game.finished {
-                                                games.push(game)
-                                            }
-                                        }
-                                    }
-                                    Ok(games)
-                                }
-                                .scope_boxed()
-                            })
-                            .await;
-                        if let Ok(games) = games {
-                            let message = ServerResult::Ok(Box::new(ServerMessage::Game(
-                                Box::new(GameUpdate::Urgent(games)),
-                            )));
-                            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                                let cam = ClientActorMessage {
-                                    destination: MessageDestination::User(user_id),
-                                    serialized,
-                                    from: Some(user_id),
-                                };
-                                address.do_send(cam);
-                            };
-                        }
-                    }
                     // send tournament invitations
                     if let Ok(invitations) =
                         TournamentInvitation::find_by_user(&user.id, &mut conn).await
@@ -229,87 +156,9 @@ impl Handler<Connect> for WsServer {
                             }
                         }
                     }
-
-                    // send schedule notifications
-                    if let Ok(schedules) =
-                        Schedule::find_user_notifications(user.id, &mut conn).await
-                    {
-                        for schedule in schedules {
-                            let is_opponent = schedule.opponent_id == user.id;
-                            if let Ok(response) =
-                                ScheduleResponse::from_model(schedule, &mut conn).await
-                            {
-                                let schedule_update = if is_opponent {
-                                    ScheduleUpdate::Proposed(response)
-                                } else {
-                                    ScheduleUpdate::Accepted(response)
-                                };
-
-                                let message = ServerResult::Ok(Box::new(ServerMessage::Schedule(
-                                    schedule_update,
-                                )));
-                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                                    let cam = ClientActorMessage {
-                                        destination: MessageDestination::User(user_id),
-                                        serialized,
-                                        from: Some(user_id),
-                                    };
-                                    address.do_send(cam);
-                                };
-                            }
-                        }
-                    }
-
-                    // Send challenges on join
-                    let mut responses = Vec::new();
-                    if let Ok(challenges) =
-                        Challenge::get_public_exclude_user(user.id, &mut conn).await
-                    {
-                        for challenge in challenges {
-                            if let Ok(response) =
-                                ChallengeResponse::from_model(&challenge, &mut conn).await
-                            {
-                                responses.push(response);
-                            }
-                        }
-                    }
-                    if let Ok(challenges) = Challenge::get_own(user.id, &mut conn).await {
-                        for challenge in challenges {
-                            if let Ok(response) =
-                                ChallengeResponse::from_model(&challenge, &mut conn).await
-                            {
-                                responses.push(response);
-                            }
-                        }
-                    }
-                    if let Ok(challenges) = Challenge::direct_challenges(user.id, &mut conn).await {
-                        for challenge in challenges {
-                            if let Ok(response) =
-                                ChallengeResponse::from_model(&challenge, &mut conn).await
-                            {
-                                responses.push(response);
-                            }
-                        }
-                    }
-                    let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
-                        ChallengeUpdate::Challenges(responses),
-                    )));
-                    MsgpackSerdeCodec::encode(&message)
+                    MsgpackSerdeCodec::encode(&ServerResult::Ok(Box::new(ServerMessage::Error("Not sending challenges here".to_owned()))))
                 } else {
-                    let mut responses = Vec::new();
-                    if let Ok(challenges) = Challenge::get_public(&mut conn).await {
-                        for challenge in challenges {
-                            if let Ok(response) =
-                                ChallengeResponse::from_model(&challenge, &mut conn).await
-                            {
-                                responses.push(response);
-                            }
-                        }
-                    }
-                    let message = ServerResult::Ok(Box::new(ServerMessage::Challenge(
-                        ChallengeUpdate::Challenges(responses),
-                    )));
-                    MsgpackSerdeCodec::encode(&message)
+                    MsgpackSerdeCodec::encode(&ServerResult::Ok(Box::new(ServerMessage::Error("Not sending challenges here".to_owned()))))
                 };
                 if let Ok(serialized) = serialized {
                     let cam = ClientActorMessage {
