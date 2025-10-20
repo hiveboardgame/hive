@@ -1,29 +1,34 @@
 use crate::common::TournamentAction;
 use crate::components::molecules::time_row::TimeRow;
-use crate::providers::ApiRequestsProvider;
 use crate::responses::TournamentAbstractResponse;
+use crate::websocket::new_style::client::ClientApi;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use leptos_icons::*;
 use shared_types::TimeInfo;
 
 #[component]
 pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) -> impl IntoView {
     let tournament_id = StoredValue::new(tournament.tournament_id.clone());
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let seats_taken = format!("{}/{}", tournament.players, tournament.seats);
     let seats_full = tournament.players as i32 >= tournament.seats;
 
     let decline = move |_| {
-        let api = api.get();
-        api.tournament(TournamentAction::InvitationDecline(
-            tournament_id.get_value(),
-        ));
+        let api = client_api;
+        let tournament_id = tournament_id.get_value();
+        spawn_local(async move {
+            api.tournament(TournamentAction::InvitationDecline(tournament_id))
+                .await;
+        });
     };
     let accept = move |_| {
-        let api = api.get();
-        api.tournament(TournamentAction::InvitationAccept(
-            tournament_id.get_value(),
-        ));
+        let api = client_api;
+        let tournament_id = tournament_id.get_value();
+        spawn_local(async move {
+            api.tournament(TournamentAction::InvitationAccept(tournament_id))
+                .await;
+        });
     };
     let time_info = TimeInfo {
         mode: tournament.time_mode,

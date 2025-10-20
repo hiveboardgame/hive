@@ -2,13 +2,11 @@ use std::sync::Arc;
 
 use super::chat::handler::ChatHandler;
 use super::oauth::handler::OauthHandler;
-use super::tournaments::handler::TournamentHandler;
 use super::user_status::handler::UserStatusHandler;
 use crate::common::ClientRequest;
 use crate::websocket::messages::AuthError;
 use crate::websocket::messages::InternalServerMessage;
 use crate::websocket::WebsocketData;
-use db_lib::DbPool;
 use shared_types::{ChatDestination, SimpleUser};
 use thiserror::Error;
 use uuid::Uuid;
@@ -30,9 +28,7 @@ impl std::fmt::Display for RequestHandlerError {
 pub struct RequestHandler {
     command: ClientRequest,
     data: Arc<WebsocketData>,
-    pool: DbPool,
     user_id: Uuid,
-    username: String,
     authed: bool,
     admin: bool,
 }
@@ -42,14 +38,11 @@ impl RequestHandler {
         command: ClientRequest,
         data: Arc<WebsocketData>,
         user: SimpleUser,
-        pool: DbPool,
     ) -> Self {
         Self {
             command,
             data,
-            pool,
             user_id: user.user_id,
-            username: user.username,
             authed: user.authed,
             admin: user.admin,
         }
@@ -82,21 +75,12 @@ impl RequestHandler {
                 }
                 ChatHandler::new(message_container, self.data.clone()).handle()
             }
-            ClientRequest::Tournament(tournament_action) => {
-                TournamentHandler::new(
-                    tournament_action,
-                    &self.username,
-                    self.user_id,
-                    self.data.clone(),
-                    &self.pool,
-                )
-                .await?
-                .handle()
-                .await?
-            }
             ClientRequest::Away => UserStatusHandler::new().await?.handle().await?,
-            ClientRequest::Pong(_) | ClientRequest::Game { .. }
-            |ClientRequest::Challenge(_)|ClientRequest::Schedule(_)=> {
+            ClientRequest::Pong(_)
+            | ClientRequest::Game { .. }
+            | ClientRequest::Challenge(_)
+            | ClientRequest::Schedule(_)
+            | ClientRequest::Tournament(_) => {
                 //Handled in v2
                 vec![]
             }

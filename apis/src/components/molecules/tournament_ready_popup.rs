@@ -1,6 +1,8 @@
 use crate::i18n::*;
-use crate::providers::{ApiRequestsProvider, AuthContext};
+use crate::providers::AuthContext;
+use crate::websocket::new_style::client::ClientApi;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::{
     use_interval_fn_with_options, use_timeout_fn, UseIntervalFnOptions, UseTimeoutFnReturn,
@@ -14,7 +16,7 @@ pub fn TournamentReadyPopup(
     ready_signal: RwSignal<HashMap<GameId, Vec<ReadyUser>>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let auth_context = expect_context::<AuthContext>();
     let params = use_params_map();
     let countdown = RwSignal::new(30);
@@ -88,20 +90,24 @@ pub fn TournamentReadyPopup(
     });
 
     let accept_game = move |_| {
-        if let Some(game_id) = current_popup_candidate
-            .with(|opt| {
-                opt.as_ref().map(|(game_id, opponent_id, _)| {
-                    api.get().tournament_game_start(game_id.clone());
-                    closed_popups.update(|set| {
-                        set.insert((game_id.clone(), *opponent_id));
-                    });
-                    game_id.clone()
-                })
+        let should_navigate = !is_on_game_page.get_untracked();
+        if let Some(game_id) = current_popup_candidate.with(|opt| {
+            opt.as_ref().map(|(game_id, opponent_id, _)| {
+                closed_popups.update(|set| {
+                    set.insert((game_id.clone(), *opponent_id));
+                });
+                game_id.clone()
             })
-            .filter(|_| !is_on_game_page.get_untracked())
-        {
-            let navigate = use_navigate();
-            navigate(&format!("/game/{}", game_id.0), Default::default());
+        }) {
+            let api = client_api;
+            let send_game_id = game_id.clone();
+            spawn_local(async move {
+                api.tournament_game_start(send_game_id).await;
+            });
+            if should_navigate {
+                let navigate = use_navigate();
+                navigate(&format!("/game/{}", game_id.0), Default::default());
+            }
         }
     };
 

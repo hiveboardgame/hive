@@ -6,19 +6,18 @@ use crate::{
     responses::ScheduleResponse,
     websocket::{
         busybee::Busybee,
-        messages::{InternalServerMessage, MessageDestination}, new_style::server::TabData,
+        messages::{InternalServerMessage, MessageDestination},
+        new_style::server::TabData,
     },
 };
 use anyhow::Result;
 use db_lib::{
     get_conn,
     models::{Game, NewSchedule, Schedule, Tournament},
-    DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use shared_types::GameId;
 use std::{collections::HashMap, vec};
-use uuid::Uuid;
 
 pub struct ScheduleHandler {
     client: TabData,
@@ -27,10 +26,7 @@ pub struct ScheduleHandler {
 
 impl ScheduleHandler {
     pub async fn new(action: ScheduleAction, client: TabData) -> Result<Self> {
-        Ok(Self {
-            client,
-            action,
-        })
+        Ok(Self { client, action })
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {

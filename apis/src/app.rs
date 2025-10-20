@@ -1,5 +1,3 @@
-use futures::channel::mpsc;
-use futures::stream::{AbortHandle, Abortable};
 use crate::websocket::new_style::client::{client_handler, ClientApi};
 use crate::{
     components::{layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames},
@@ -36,6 +34,8 @@ use crate::{
         schedules::provide_schedules, websocket::provide_websocket, AuthContext,
     },
 };
+use futures::channel::mpsc;
+use futures::stream::{AbortHandle, Abortable};
 use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;

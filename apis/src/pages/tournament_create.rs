@@ -5,11 +5,11 @@ use crate::components::atoms::{
 };
 use crate::components::organisms::time_select::TimeSelect;
 use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
-use crate::providers::{
-    ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields,
-};
+use crate::providers::{AuthContext, ChallengeParams, ChallengeParamsStoreFields};
+use crate::websocket::new_style::client::ClientApi;
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use leptos_router::hooks::use_navigate;
 use reactive_stores::Store;
 use shared_types::PrettyString;
@@ -87,7 +87,7 @@ pub fn TournamentCreate() -> impl IntoView {
     let max_rating = RwSignal::new(2500);
     let organizer_start = RwSignal::new(true);
     let fixed_round_duration = RwSignal::new(false);
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let auth_context = expect_context::<AuthContext>();
     let account = auth_context.user;
     let user_allowed_to_run_swiss = Signal::derive(move || {
@@ -200,9 +200,11 @@ pub fn TournamentCreate() -> impl IntoView {
             },
         };
         if auth_context.user.with(|a| a.is_some()) {
-            let api = api.get();
             let action = TournamentAction::Create(Box::new(details));
-            api.tournament(action);
+            let api = client_api;
+            spawn_local(async move {
+                api.tournament(action).await;
+            });
             let navigate = use_navigate();
             navigate("/tournaments", Default::default());
         }

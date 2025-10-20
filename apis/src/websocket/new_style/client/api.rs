@@ -1,5 +1,5 @@
-use crate::common::{ChallengeAction, ClientRequest, GameAction, ScheduleAction};
-use crate::providers::{AuthContext, challenges::ChallengeStateSignal};
+use crate::common::{ChallengeAction, ClientRequest, GameAction, ScheduleAction, TournamentAction};
+use crate::providers::{challenges::ChallengeStateSignal, AuthContext};
 use crate::responses::create_challenge_handler;
 use futures::{
     channel::mpsc::{self, Sender},
@@ -12,7 +12,7 @@ use leptos::{
     prelude::{expect_context, GetValue, ReadSignal, RwSignal, Set, SetValue, StoredValue},
 };
 use server_fn::ServerFnError;
-use shared_types::{ChallengeId, GameId};
+use shared_types::{ChallengeId, GameId, TournamentGameResult, TournamentId};
 pub type ClientResult = Result<ClientRequest, ServerFnError>;
 
 #[derive(Clone, Copy)]
@@ -81,6 +81,13 @@ impl ClientApi {
         };
         self.send(msg).await;
     }
+    pub async fn tournament_game_start(&self, game_id: GameId) {
+        let msg = ClientRequest::Game {
+            game_id,
+            action: GameAction::Start,
+        };
+        self.send(msg).await;
+    }
     pub async fn challenge(&self, challenge_action: ChallengeAction) {
         let challenge_action = match challenge_action {
             ChallengeAction::Create(details) => {
@@ -88,9 +95,9 @@ impl ClientApi {
                 let challenges = expect_context::<ChallengeStateSignal>();
                 auth_context.user.with(|a| {
                     a.as_ref().and_then(|account| {
-                        let challenge_list = challenges.signal.with_untracked(|c| {
-                            c.challenges.values().cloned().collect::<Vec<_>>()
-                        });
+                        let challenge_list = challenges
+                            .signal
+                            .with_untracked(|c| c.challenges.values().cloned().collect::<Vec<_>>());
                         create_challenge_handler(
                             account.user.username.clone(),
                             details,
@@ -117,5 +124,20 @@ impl ClientApi {
     }
     pub async fn schedule_action(&self, action: ScheduleAction) {
         self.send(ClientRequest::Schedule(action)).await;
+    }
+    pub async fn tournament(&self, action: TournamentAction) {
+        self.send(ClientRequest::Tournament(action)).await;
+    }
+    pub async fn tournament_abandon(&self, tournament_id: TournamentId) {
+        self.tournament(TournamentAction::Abandon(tournament_id))
+            .await;
+    }
+    pub async fn tournament_adjudicate_game_result(
+        &self,
+        game_id: GameId,
+        new_result: TournamentGameResult,
+    ) {
+        self.tournament(TournamentAction::AdjudicateResult(game_id, new_result))
+            .await;
     }
 }

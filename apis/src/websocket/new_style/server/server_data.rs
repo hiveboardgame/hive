@@ -6,16 +6,18 @@ use crate::{
     websocket::{
         messages::{InternalServerMessage, MessageDestination},
         new_style::server::TabData,
+        TournamentGameStart,
     },
 };
+use db_lib::models::Game;
 use shared_types::GameId;
 use std::sync::RwLock;
-use tokio::sync::broadcast::{Sender,channel};
-use tokio_util::sync::CancellationToken;
+use tokio::sync::broadcast::{channel, Sender};
 use tokio_stream::wrappers::BroadcastStream;
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct SubscriberSet {
     map: HashMap<Uuid, CancellationToken>,
 }
@@ -36,30 +38,32 @@ impl SubscriberSet {
             return;
         }
         let (key, value) = client.as_subscriber();
-        self.map.insert(key,value);
+        self.map.insert(key, value);
     }
 }
 
+#[derive(Debug)]
 pub struct ServerData {
     //using a watch channel to send messages to all clients (clonable receiver)
     //only retans the last message
     sender: Sender<InternalServerMessage>,
     online_users: RwLock<HashMap<Uuid, (UserResponse, i32)>>,
     game_subscribers: RwLock<HashMap<GameId, SubscriberSet>>,
+    game_start: TournamentGameStart,
 }
 impl Default for ServerData {
-    fn default() -> Self {    
+    fn default() -> Self {
         //Capacity chosen arbitrarily
         let (sender, _) = channel(32);
         Self {
             sender,
             online_users: RwLock::new(HashMap::new()),
             game_subscribers: RwLock::new(HashMap::new()),
+            game_start: TournamentGameStart::new(),
         }
     }
 }
 impl ServerData {
-
     pub fn notifications(&self) -> BroadcastStream<InternalServerMessage> {
         BroadcastStream::new(self.sender.subscribe())
     }
@@ -126,5 +130,8 @@ impl ServerData {
         let (id, _) = tab.as_subscriber();
         let mut game_subs = self.game_subscribers.write().unwrap();
         game_subs.get_mut(game_id).is_some_and(|g| g.contains(&id))
+    }
+    pub fn game_should_start(&self, game: &Game, user_id: Uuid) -> anyhow::Result<bool> {
+        self.game_start.should_start(game, user_id)
     }
 }
