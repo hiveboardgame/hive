@@ -5,7 +5,6 @@ use crate::{common::TournamentAction, components::atoms::profile_link::ProfileLi
 use chrono::{DateTime, Duration, Local, Utc};
 use hive_lib::Color;
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use shared_types::{GameStart, PrettyString, TournamentGameResult};
 
 pub const BUTTON_STYLE: &str = "no-link-style flex justify-center items-center min-w-fit px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -55,9 +54,7 @@ pub fn UnplayedGameRow(
                 TournamentAction::AdjudicateResult(game.game_id.clone(), result)
             });
             let api = client_api;
-            spawn_local(async move {
-                api.tournament(action).await;
-            });
+            api.tournament(action);
             show_adjudicate_menu.update(|b| *b = !*b);
         }
     };

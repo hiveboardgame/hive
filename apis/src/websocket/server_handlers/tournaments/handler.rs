@@ -8,21 +8,25 @@ use super::{
     leave::LeaveHandler, progress_to_next_round::SwissRoundHandler, start::StartHandler,
 };
 use crate::{
-    common::TournamentAction, websocket::{messages::InternalServerMessage, new_style::server::{ServerData, TabData}}
+    common::TournamentAction,
+    websocket::{
+        messages::InternalServerMessage,
+        new_style::server::{ServerData, TabData},
+    },
 };
 use anyhow::Result;
 
 pub struct TournamentHandler {
     pub action: TournamentAction,
     pub client: TabData,
-    pub server: Arc<ServerData>
+    pub server: Arc<ServerData>,
 }
 
 impl TournamentHandler {
     pub async fn new(
         action: TournamentAction,
         client: TabData,
-        server: Arc<ServerData>
+        server: Arc<ServerData>,
     ) -> Result<Self> {
         Ok(Self {
             client,
@@ -32,7 +36,11 @@ impl TournamentHandler {
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        let (user_id, username) = self.client.account().map(|a| (a.id,a.username.clone())).unwrap_or_default();
+        let (user_id, username) = self
+            .client
+            .account()
+            .map(|a| (a.id, a.username.clone()))
+            .unwrap_or_default();
         let pool = self.client.pool();
         let messages = match self.action.clone() {
             TournamentAction::Create(details) => {
@@ -102,15 +110,10 @@ impl TournamentHandler {
                     .await?
             }
             TournamentAction::Abandon(tournament_id) => {
-                AbandonHandler::new(
-                    tournament_id,
-                    user_id,
-                    username.clone(),
-                    pool,
-                )
-                .await?
-                .handle()
-                .await?
+                AbandonHandler::new(tournament_id, user_id, username.clone(), pool)
+                    .await?
+                    .handle()
+                    .await?
             }
             TournamentAction::Finish(tournament_id) => {
                 FinishHandler::new(tournament_id, user_id, pool)
@@ -124,8 +127,9 @@ impl TournamentHandler {
                     .handle()
                     .await?
             }
-            TournamentAction::Subscribe(tournament_id) =>{
-                //Handle subscribe
+            TournamentAction::Subscribe(tournament_id) => {
+                self.server
+                    .subscribe_to_tournament(&self.client, tournament_id);
                 vec![]
             }
         };

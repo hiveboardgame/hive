@@ -2,7 +2,6 @@ use crate::i18n::*;
 use crate::providers::AuthContext;
 use crate::websocket::new_style::client::ClientApi;
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::{
     use_interval_fn_with_options, use_timeout_fn, UseIntervalFnOptions, UseTimeoutFnReturn,
@@ -101,9 +100,7 @@ pub fn TournamentReadyPopup(
         }) {
             let api = client_api;
             let send_game_id = game_id.clone();
-            spawn_local(async move {
-                api.tournament_game_start(send_game_id).await;
-            });
+            api.tournament_game_start(send_game_id);
             if should_navigate {
                 let navigate = use_navigate();
                 navigate(&format!("/game/{}", game_id.0), Default::default());

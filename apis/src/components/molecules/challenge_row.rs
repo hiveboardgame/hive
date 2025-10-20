@@ -10,7 +10,6 @@ use crate::{
 use hive_lib::ColorChoice;
 use leptos::either::Either;
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use leptos_icons::*;
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
 use shared_types::{ChallengeVisibility, TimeInfo};
@@ -216,9 +215,7 @@ pub fn ChallengeRow(
                                     on:click=move |_| {
                                         let api = client_api;
                                         let id = challenge_id.get_value();
-                                        spawn_local(async move {
-                                            api.challenge_cancel(id).await;
-                                        });
+                                        api.challenge_cancel(id);
                                     }
                                     class=cancel_button_classes.get_value()
                                 >
@@ -232,9 +229,7 @@ pub fn ChallengeRow(
                             on:click=move |_| {
                                 let api = client_api;
                                 let id = challenge_id.get_value();
-                                spawn_local(async move {
-                                    api.challenge_accept(id).await;
-                                });
+                                api.challenge_accept(id);
                             }
                             class=accept_button_classes.get_value()
                         >
@@ -248,9 +243,7 @@ pub fn ChallengeRow(
                                         on:click=move |_| {
                                             let api = client_api;
                                             let id = challenge_id.get_value();
-                                            spawn_local(async move {
-                                                api.challenge_cancel(id).await;
-                                            });
+                                            api.challenge_cancel(id);
                                         }
                                         class=cancel_button_classes.get_value()
                                     >

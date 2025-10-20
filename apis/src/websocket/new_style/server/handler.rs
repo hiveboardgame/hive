@@ -1,12 +1,12 @@
 use std::{sync::Arc, vec};
 
 use crate::{
-    common::{ClientRequest, GameAction, ServerMessage},
+    common::{ClientRequest, ServerMessage},
     websocket::{
         new_style::server::{ServerData, TabData},
         server_handlers::{
             challenges::handler::ChallengeHandler, game::handler::GameActionHandler,
-            schedules::ScheduleHandler,
+            schedules::ScheduleHandler, tournaments::handler::TournamentHandler,
         },
     },
 };
@@ -27,15 +27,10 @@ pub async fn server_handler(
                         Ok(vec![])
                     }
                     ClientRequest::Game { game_id, action } => {
-                        if matches!(action, GameAction::Join) {
-                            server.subscribe_client_to(&client, game_id.clone());
-                            Ok(vec![])
-                        } else {
-                            GameActionHandler::new(&game_id, action, client.clone(), server.clone())
-                                .await?
-                                .handle()
-                                .await
-                        }
+                        GameActionHandler::new(&game_id, action, client.clone(), server.clone())
+                            .await?
+                            .handle()
+                            .await
                     }
                     ClientRequest::Challenge(c) => {
                         if client.account().is_some() {
@@ -55,7 +50,7 @@ pub async fn server_handler(
                             let err = "Unauthorized user updated schedules";
                             let msg = ServerMessage::Error(err.to_string());
                             println!("{err}");
-                            client.send(msg, &server).await;
+                            client.send(msg, &server);
                             Ok(vec![])
                         } else {
                             ScheduleHandler::new(action, client.clone())
@@ -64,15 +59,21 @@ pub async fn server_handler(
                                 .await
                         }
                     }
+                    ClientRequest::Tournament(action) => {
+                        TournamentHandler::new(action, client.clone(), server.clone())
+                            .await?
+                            .handle()
+                            .await
+                    }
                     c => {
                         let msg = ServerMessage::Error(format!("{c:?} ISNT IMPLEMENTED"));
-                        client.send(msg, &server).await;
+                        client.send(msg, &server);
                         Ok(vec![])
                     }
                 },
                 Err(e) => {
                     let msg = ServerMessage::Error(format!("Error: {e}"));
-                    client.send(msg, &server).await;
+                    client.send(msg, &server);
                     Ok(vec![])
                 }
             }

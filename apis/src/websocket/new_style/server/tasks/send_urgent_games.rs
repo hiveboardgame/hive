@@ -70,6 +70,6 @@ pub async fn send_urgent_games(client: TabData, server_data: Arc<ServerData>) {
 
     let messages = vec![ServerMessage::Game(Box::new(GameUpdate::Urgent(games)))];
     for message in messages {
-        client.send(message, &server_data).await;
+        client.send(message, &server_data);
     }
 }

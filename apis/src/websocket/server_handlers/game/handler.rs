@@ -71,6 +71,8 @@ impl GameActionHandler {
                     .await?
             }
             GameAction::Join => {
+                self.server
+                    .subscribe_client_to(&self.client, GameId(self.game.nanoid.clone()));
                 vec![]
             }
             GameAction::Start => {

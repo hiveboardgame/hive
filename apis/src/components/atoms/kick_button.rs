@@ -3,7 +3,6 @@ use crate::{
     websocket::new_style::client::ClientApi,
 };
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use leptos_icons::*;
 use uuid::Uuid;
 
@@ -25,10 +24,7 @@ pub fn KickButton(user_id: Uuid, tournament: TournamentResponse) -> impl IntoVie
     let kick = move |_| {
         let api = client_api;
         let tournament_id = tournament.with_value(|t| t.tournament_id.clone());
-        spawn_local(async move {
-            api.tournament(TournamentAction::Kick(tournament_id, user_id))
-                .await;
-        });
+        api.tournament(TournamentAction::Kick(tournament_id, user_id));
     };
 
     view! {

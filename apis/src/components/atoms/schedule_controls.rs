@@ -5,7 +5,6 @@ use crate::websocket::new_style::client::ClientApi;
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::callback::Callback;
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use shared_types::GameId;
 use uuid::Uuid;
 
@@ -30,9 +29,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
         )
     };
     let accept = Callback::from(move |id| {
-        spawn_local(async move {
-            api.schedule_action(ScheduleAction::Accept(id)).await;
-        });
+        api.schedule_action(ScheduleAction::Accept(id));
     });
     view! {
         <div class={format!(
@@ -58,9 +55,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             </Show>
             <button
                 on:click=move |_| {
-                    spawn_local(async move {
-                        api.schedule_action(ScheduleAction::Cancel(id)).await;
-                    })
+                    api.schedule_action(ScheduleAction::Cancel(id));
                 }
 
                 class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 bg-ladybug-red hover:bg-red-400 active:scale-95"
@@ -77,10 +72,7 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
     let api = expect_context::<ClientApi>();
     let propose = Callback::from(move |date| {
         let gid = game_id.clone();
-        spawn_local(async move {
-            api.schedule_action(ScheduleAction::Propose(date, gid.clone()))
-                .await;
-        });
+        api.schedule_action(ScheduleAction::Propose(date, gid.clone()));
     });
     let callback = Callback::from(move |utc: DateTime<Utc>| {
         selected_time.set(utc);

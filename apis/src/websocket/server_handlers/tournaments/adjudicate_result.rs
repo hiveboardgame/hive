@@ -56,7 +56,7 @@ impl AdjudicateResultHandler {
             .await?;
 
         Ok(vec![InternalServerMessage {
-            destination: MessageDestination::Global,
+            destination: MessageDestination::Tournament(TournamentId(tournament.nanoid.clone())),
             message: ServerMessage::Tournament(TournamentUpdate::Adjudicated(TournamentId(
                 tournament.nanoid.clone(),
             ))),

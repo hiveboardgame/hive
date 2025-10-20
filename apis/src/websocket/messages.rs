@@ -19,9 +19,8 @@ pub struct InternalServerMessage {
 
 #[derive(Debug, Clone)]
 pub enum MessageDestination {
-    Direct(actix::Recipient<WsMessage>), // to non logged in user
-    User(Uuid),                          // to a user
-    Game(GameId),                        // to everyone in the game
+    User(Uuid),                         // to a user
+    Game(GameId),                       // to everyone in the game
     GameSpectators(GameId, Uuid, Uuid), // to everyone in game excluding players, nanoid, white_id, black_id
     Global,                             // to everyone online
     Tournament(TournamentId),           // to everyone that joined the tournament

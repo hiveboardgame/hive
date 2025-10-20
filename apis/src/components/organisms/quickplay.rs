@@ -8,7 +8,6 @@ use crate::{
     providers::AuthContext,
 };
 use hive_lib::{ColorChoice, GameType};
-use leptos::task::spawn_local;
 use leptos::{ev, html::Dialog, prelude::*};
 use leptos_icons::*;
 use leptos_router::hooks::use_navigate;
@@ -61,9 +60,7 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
                     };
                     let challenge_action = ChallengeAction::Create(details);
                     let api = client_api;
-                    spawn_local(async move {
-                        api.challenge(challenge_action).await;
-                    });
+                    api.challenge(challenge_action);
                 } else {
                     let navigate = use_navigate();
                     navigate("/login", Default::default());

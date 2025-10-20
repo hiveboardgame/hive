@@ -45,7 +45,7 @@ pub async fn send_challenges(client: TabData, server: Arc<ServerData>) {
         }
 
         let message = ServerMessage::Challenge(ChallengeUpdate::Challenges(responses));
-        client.send(message, &server).await;
+        client.send(message, &server);
     } else {
         let mut responses = Vec::new();
 
@@ -58,6 +58,6 @@ pub async fn send_challenges(client: TabData, server: Arc<ServerData>) {
         }
 
         let message = ServerMessage::Challenge(ChallengeUpdate::Challenges(responses));
-        client.send(message, &server).await;
+        client.send(message, &server);
     }
 }

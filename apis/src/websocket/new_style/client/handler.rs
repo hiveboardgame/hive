@@ -4,7 +4,8 @@ use crate::{
     websocket::{
         client_handlers::{
             challenge::handler::handle_challenge, game::handle_game,
-            schedule::handler::handle_schedule, user_status::handle::handle_user_status,
+            schedule::handler::handle_schedule, tournament::handler::handle_tournament,
+            user_status::handle::handle_user_status,
         },
         new_style::{
             client::{api::ClientResult, ClientApi},
@@ -26,7 +27,7 @@ pub async fn client_handler(rx: Receiver<ClientResult>) {
                     Ok(msg) => match msg {
                         ServerMessage::Ping { nonce, value } => {
                             ping.update_ping(value);
-                            client_api.pong(nonce).await;
+                            client_api.pong(nonce);
                         }
                         ServerMessage::UserStatus(user_update) => {
                             handle_user_status(user_update);
@@ -39,6 +40,9 @@ pub async fn client_handler(rx: Receiver<ClientResult>) {
                         }
                         ServerMessage::Schedule(update) => {
                             handle_schedule(update);
+                        }
+                        ServerMessage::Tournament(update) => {
+                            handle_tournament(update);
                         }
                         ServerMessage::Error(e) => {
                             leptos::logging::log!("ServerMessage::Error {e}");

@@ -34,11 +34,7 @@ pub struct RequestHandler {
 }
 type Result<T> = std::result::Result<T, RequestHandlerError>;
 impl RequestHandler {
-    pub fn new(
-        command: ClientRequest,
-        data: Arc<WebsocketData>,
-        user: SimpleUser,
-    ) -> Self {
+    pub fn new(command: ClientRequest, data: Arc<WebsocketData>, user: SimpleUser) -> Self {
         Self {
             command,
             data,

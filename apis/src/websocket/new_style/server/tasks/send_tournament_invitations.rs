@@ -29,8 +29,7 @@ pub async fn send_tournament_invitations(client: TabData, server: Arc<ServerData
                                 response.tournament_id.clone(),
                             )),
                             &server,
-                        )
-                        .await;
+                        );
                 }
             }
         }

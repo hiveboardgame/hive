@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{
     common::{ServerMessage, UserStatus, UserUpdate},
     responses::UserResponse,
@@ -10,7 +8,8 @@ use crate::{
     },
 };
 use db_lib::models::Game;
-use shared_types::GameId;
+use shared_types::{GameId, TournamentId};
+use std::collections::HashMap;
 use std::sync::RwLock;
 use tokio::sync::broadcast::{channel, Sender};
 use tokio_stream::wrappers::BroadcastStream;
@@ -24,7 +23,9 @@ struct SubscriberSet {
 
 impl SubscriberSet {
     pub fn new(client: &TabData) -> Self {
-        let mut set = Self::default();
+        let mut set = Self {
+            map: HashMap::default(),
+        };
         set.insert(client);
         set
     }
@@ -40,6 +41,9 @@ impl SubscriberSet {
         let (key, value) = client.as_subscriber();
         self.map.insert(key, value);
     }
+    pub fn remove(&mut self, id: &Uuid) {
+        self.map.remove(id);
+    }
 }
 
 #[derive(Debug)]
@@ -49,6 +53,7 @@ pub struct ServerData {
     sender: Sender<InternalServerMessage>,
     online_users: RwLock<HashMap<Uuid, (UserResponse, i32)>>,
     game_subscribers: RwLock<HashMap<GameId, SubscriberSet>>,
+    tournament_subscribers: RwLock<HashMap<TournamentId, SubscriberSet>>,
     game_start: TournamentGameStart,
 }
 impl Default for ServerData {
@@ -59,6 +64,7 @@ impl Default for ServerData {
             sender,
             online_users: RwLock::new(HashMap::new()),
             game_subscribers: RwLock::new(HashMap::new()),
+            tournament_subscribers: RwLock::new(HashMap::new()),
             game_start: TournamentGameStart::new(),
         }
     }
@@ -118,6 +124,7 @@ impl ServerData {
             .collect()
     }
     pub fn subscribe_client_to(&self, client: &TabData, game_id: GameId) {
+        *client.subscribed_game.write().unwrap() = Some(game_id.clone());
         let mut subscribers = self.game_subscribers.write().unwrap();
         subscribers
             .entry(game_id.clone())
@@ -128,8 +135,40 @@ impl ServerData {
     }
     pub fn is_game_subscriber(&self, tab: &TabData, game_id: &GameId) -> bool {
         let (id, _) = tab.as_subscriber();
+        let sub_game_id = tab.subscribed_game.read().unwrap();
         let mut game_subs = self.game_subscribers.write().unwrap();
-        game_subs.get_mut(game_id).is_some_and(|g| g.contains(&id))
+        if sub_game_id.as_ref().is_some_and(|i| i == game_id) {
+            game_subs.get_mut(game_id).is_some_and(|g| g.contains(&id))
+        } else {
+            if let Some(g) = game_subs.get_mut(game_id) {
+                g.remove(&id)
+            }
+            false
+        }
+    }
+    pub fn subscribe_to_tournament(&self, client: &TabData, tournament_id: TournamentId) {
+        let mut subscribers = self.tournament_subscribers.write().unwrap();
+        *client.subscribed_tournament.write().unwrap() = Some(tournament_id.clone());
+        subscribers
+            .entry(tournament_id.clone())
+            .and_modify(|v| {
+                v.insert(client);
+            })
+            .or_insert(SubscriberSet::new(client));
+    }
+    pub fn is_tournament_subscriber(&self, tab: &TabData, game_id: &TournamentId) -> bool {
+        let (id, _) = tab.as_subscriber();
+
+        let mut game_subs = self.tournament_subscribers.write().unwrap();
+        let sub_t_id = tab.subscribed_tournament.read().unwrap();
+        if sub_t_id.as_ref().is_some_and(|i| i == game_id) {
+            game_subs.get_mut(game_id).is_some_and(|g| g.contains(&id))
+        } else {
+            if let Some(g) = game_subs.get_mut(game_id) {
+                g.remove(&id)
+            }
+            false
+        }
     }
     pub fn game_should_start(&self, game: &Game, user_id: Uuid) -> anyhow::Result<bool> {
         self.game_start.should_start(game, user_id)

@@ -3,7 +3,6 @@ use crate::providers::{challenges::ChallengeStateSignal, AuthContext};
 use crate::responses::create_challenge_handler;
 use futures::{
     channel::mpsc::{self, Sender},
-    SinkExt,
 };
 use hive_lib::{GameControl, Turn};
 use leptos::prelude::{With, WithUntracked};
@@ -49,46 +48,50 @@ impl ClientApi {
     pub fn signal_game_join(&self) -> ReadSignal<()> {
         self.game_join.read_only()
     }
-    async fn send(&self, client_request: ClientRequest) {
+    fn send(&self, client_request: ClientRequest) {
         let mut sender = self.sender.get_value();
-        let ret = sender.send(Ok(client_request.clone())).await;
+        let ret = sender.try_send(Ok(client_request.clone()));
         if ret.is_err() {
             logging::log!("Msg: {client_request:?} Error: {ret:?}");
         }
     }
-    pub async fn join_game(&self, id: GameId) {
+    pub fn join_game(&self, id: GameId) {
         let req = ClientRequest::Game {
             game_id: id,
             action: GameAction::Join,
         };
-        self.send(req).await;
+        self.send(req);
     }
-    pub async fn turn(&self, game_id: GameId, turn: Turn) {
+    pub fn subscribe_tournament(&self, id: TournamentId) {
+        let req = ClientRequest::Tournament(TournamentAction::Subscribe(id));
+        self.send(req);
+    }
+    pub fn turn(&self, game_id: GameId, turn: Turn) {
         let msg = ClientRequest::Game {
             game_id,
             action: GameAction::Turn(turn),
         };
-        self.send(msg).await;
+        self.send(msg);
     }
-    pub async fn pong(&self, nonce: u64) {
+    pub fn pong(&self, nonce: u64) {
         let msg = ClientRequest::Pong(nonce);
-        self.send(msg).await;
+        self.send(msg);
     }
-    pub async fn game_control(&self, game_id: GameId, gc: GameControl) {
+    pub fn game_control(&self, game_id: GameId, gc: GameControl) {
         let msg = ClientRequest::Game {
             game_id,
             action: GameAction::Control(gc),
         };
-        self.send(msg).await;
+        self.send(msg);
     }
-    pub async fn tournament_game_start(&self, game_id: GameId) {
+    pub fn tournament_game_start(&self, game_id: GameId) {
         let msg = ClientRequest::Game {
             game_id,
             action: GameAction::Start,
         };
-        self.send(msg).await;
+        self.send(msg);
     }
-    pub async fn challenge(&self, challenge_action: ChallengeAction) {
+    pub fn challenge(&self, challenge_action: ChallengeAction) {
         let challenge_action = match challenge_action {
             ChallengeAction::Create(details) => {
                 let auth_context = expect_context::<AuthContext>();
@@ -110,34 +113,32 @@ impl ClientApi {
         };
         if let Some(challenge_action) = challenge_action {
             let msg = ClientRequest::Challenge(challenge_action);
-            self.send(msg).await;
+            self.send(msg);
         }
     }
-    pub async fn challenge_cancel(&self, challenger_id: ChallengeId) {
-        self.challenge(ChallengeAction::Delete(challenger_id)).await;
+    pub fn challenge_cancel(&self, challenger_id: ChallengeId) {
+        self.challenge(ChallengeAction::Delete(challenger_id));
     }
-    pub async fn challenge_accept(&self, challenger_id: ChallengeId) {
-        self.challenge(ChallengeAction::Accept(challenger_id)).await;
+    pub fn challenge_accept(&self, challenger_id: ChallengeId) {
+        self.challenge(ChallengeAction::Accept(challenger_id));
     }
-    pub async fn challenge_get(&self, challenger_id: ChallengeId) {
-        self.challenge(ChallengeAction::Get(challenger_id)).await;
+    pub fn challenge_get(&self, challenger_id: ChallengeId) {
+        self.challenge(ChallengeAction::Get(challenger_id));
     }
-    pub async fn schedule_action(&self, action: ScheduleAction) {
-        self.send(ClientRequest::Schedule(action)).await;
+    pub fn schedule_action(&self, action: ScheduleAction) {
+        self.send(ClientRequest::Schedule(action));
     }
-    pub async fn tournament(&self, action: TournamentAction) {
-        self.send(ClientRequest::Tournament(action)).await;
+    pub fn tournament(&self, action: TournamentAction) {
+        self.send(ClientRequest::Tournament(action));
     }
-    pub async fn tournament_abandon(&self, tournament_id: TournamentId) {
-        self.tournament(TournamentAction::Abandon(tournament_id))
-            .await;
+    pub fn tournament_abandon(&self, tournament_id: TournamentId) {
+        self.tournament(TournamentAction::Abandon(tournament_id));
     }
-    pub async fn tournament_adjudicate_game_result(
+    pub fn tournament_adjudicate_game_result(
         &self,
         game_id: GameId,
         new_result: TournamentGameResult,
     ) {
-        self.tournament(TournamentAction::AdjudicateResult(game_id, new_result))
-            .await;
+        self.tournament(TournamentAction::AdjudicateResult(game_id, new_result));
     }
 }

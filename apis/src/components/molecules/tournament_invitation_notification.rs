@@ -3,7 +3,6 @@ use crate::components::molecules::time_row::TimeRow;
 use crate::responses::TournamentAbstractResponse;
 use crate::websocket::new_style::client::ClientApi;
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use leptos_icons::*;
 use shared_types::TimeInfo;
 
@@ -17,18 +16,12 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
     let decline = move |_| {
         let api = client_api;
         let tournament_id = tournament_id.get_value();
-        spawn_local(async move {
-            api.tournament(TournamentAction::InvitationDecline(tournament_id))
-                .await;
-        });
+        api.tournament(TournamentAction::InvitationDecline(tournament_id));
     };
     let accept = move |_| {
         let api = client_api;
         let tournament_id = tournament_id.get_value();
-        spawn_local(async move {
-            api.tournament(TournamentAction::InvitationAccept(tournament_id))
-                .await;
-        });
+        api.tournament(TournamentAction::InvitationAccept(tournament_id));
     };
     let time_info = TimeInfo {
         mode: tournament.time_mode,
