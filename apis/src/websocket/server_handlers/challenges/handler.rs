@@ -11,22 +11,23 @@ use anyhow::Result;
 
 pub struct ChallengeHandler {
     challenge_action: ChallengeAction,
-    client: TabData
+    client: TabData,
 }
 
 impl ChallengeHandler {
-    pub async fn new(
-        action: ChallengeAction,
-        client:  TabData,
-    ) -> Result<Self> {
+    pub async fn new(action: ChallengeAction, client: TabData) -> Result<Self> {
         Ok(Self {
             challenge_action: action,
-            client
+            client,
         })
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        let (user_id, username) = self.client.account().map(|a| (a.id, a.username.clone())).unwrap_or_default();
+        let (user_id, username) = self
+            .client
+            .account()
+            .map(|a| (a.id, a.username.clone()))
+            .unwrap_or_default();
         let pool = self.client.pool();
         let messages = match self.challenge_action.clone() {
             ChallengeAction::Create(details) => {
@@ -60,17 +61,9 @@ impl ChallengeHandler {
                     .await?
             }
             ChallengeAction::GetPublic => {
-                GetPublicHandler::new(user_id, pool)
-                    .await?
-                    .handle()
-                    .await?
+                GetPublicHandler::new(user_id, pool).await?.handle().await?
             }
-            ChallengeAction::GetOwn => {
-                GetOwnHandler::new(user_id, pool)
-                    .await?
-                    .handle()
-                    .await?
-            }
+            ChallengeAction::GetOwn => GetOwnHandler::new(user_id, pool).await?.handle().await?,
             _ => unimplemented!(),
         };
         Ok(messages)

@@ -6,7 +6,7 @@ use crate::{
 use db_lib::DbPool;
 use futures::{channel::mpsc, SinkExt};
 use server_fn::ServerFnError;
-use std::{sync::{Arc, RwLock}};
+use std::sync::{Arc, RwLock};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 

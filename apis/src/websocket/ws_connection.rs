@@ -3,17 +3,16 @@ use super::{messages::MessageDestination, server_handlers::request_handler::Requ
 use crate::common::{ClientRequest, ExternalServerError, ServerResult};
 use crate::websocket::server_handlers::request_handler::RequestHandlerError;
 use crate::websocket::{
-    messages::{ClientActorMessage, Connect, WsMessage},
+    messages::{ClientActorMessage, WsMessage},
     ws_server::WsServer,
 };
 use actix::{
-    fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
-    Running, StreamHandler, WrapFuture,
+    Actor, ActorContext, Addr, AsyncContext, Handler, Running, StreamHandler,
+    WrapFuture,
 };
 use actix_web_actors::ws::{self};
 use anyhow::Result;
 use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
-use db_lib::DbPool;
 use indoc::printdoc;
 use shared_types::SimpleUser;
 use std::sync::Arc;
@@ -31,7 +30,6 @@ pub struct WsConnection {
     data: Arc<WebsocketData>,
     wss_addr: Addr<WsServer>,
     hb: Instant,
-    pool: DbPool,
 }
 
 impl Actor for WsConnection {
@@ -39,24 +37,7 @@ impl Actor for WsConnection {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         self.hb(ctx);
-        let addr = ctx.address();
-        self.wss_addr
-            .send(Connect {
-                addr: addr.recipient(),
-                game_id: String::from("lobby"), // self.game_id
-                user_id: self.user_uid,
-                username: self.username.clone(),
-            })
-            .into_actor(self)
-            .then(|res, _, ctx| {
-                match res {
-                    Ok(_res) => (),
-                    _ => ctx.stop(),
-                }
-                fut::ready(())
-            })
-            .wait(ctx);
-    }
+     }
 
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
         Running::Stop
@@ -70,8 +51,7 @@ impl WsConnection {
         admin: Option<bool>,
         lobby: Addr<WsServer>,
         data: Arc<WebsocketData>,
-        pool: DbPool,
-    ) -> WsConnection {
+     ) -> WsConnection {
         let id = user_uid.unwrap_or(Uuid::new_v4());
         let name = username.unwrap_or(id.to_string());
         let admin = admin.unwrap_or_default();
@@ -83,7 +63,6 @@ impl WsConnection {
             authed: user_uid.is_some(),
             hb: Instant::now(),
             wss_addr: lobby,
-            pool,
         }
     }
 
@@ -124,7 +103,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
             Ok(ws::Message::Binary(s)) => {
                 let request: Result<ClientRequest, _> = MsgpackSerdeCodec::decode(&s);
                 if let Ok(request) = request {
-                    let pool = self.pool.clone();
                     let lobby = self.wss_addr.clone();
                     let user_id = self.user_uid;
                     let username = self.username.clone();
@@ -136,7 +114,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                     };
                     let data = Arc::clone(&self.data);
                     let future = async move {
-                        let handler = RequestHandler::new(request.clone(), data, user, pool);
+                        let handler = RequestHandler::new(request.clone(), data, user);
                         let handler_result = handler.handle().await;
                         match handler_result {
                             Ok(messages) => {

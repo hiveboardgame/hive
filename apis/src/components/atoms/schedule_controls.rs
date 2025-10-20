@@ -76,9 +76,10 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
     let selected_time = RwSignal::new(Utc::now() + Duration::minutes(10));
     let api = expect_context::<ClientApi>();
     let propose = Callback::from(move |date| {
-        let gid= game_id.clone();
-        spawn_local(async move{
-            api.schedule_action(ScheduleAction::Propose(date, gid.clone())).await;
+        let gid = game_id.clone();
+        spawn_local(async move {
+            api.schedule_action(ScheduleAction::Propose(date, gid.clone()))
+                .await;
         });
     });
     let callback = Callback::from(move |utc: DateTime<Utc>| {

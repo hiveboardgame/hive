@@ -1,7 +1,12 @@
+use std::sync::Arc;
+
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        messages::{InternalServerMessage, MessageDestination},
+        new_style::server::ServerData,
+    },
 };
 use anyhow::Result;
 use db_lib::{
@@ -20,23 +25,31 @@ pub struct StartHandler {
     user_id: Uuid,
     username: String,
     game: Game,
+    server: Arc<ServerData>,
 }
 
 impl StartHandler {
-    pub fn new(game: &Game, user_id: Uuid, username: String, pool: &DbPool) -> Self {
+    pub fn new(
+        game: &Game,
+        user_id: Uuid,
+        username: String,
+        pool: &DbPool,
+        server: Arc<ServerData>,
+    ) -> Self {
         Self {
             game: game.to_owned(),
             user_id,
             username,
             pool: pool.clone(),
+            server,
         }
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
-        //if let Ok(should_start) = self.data.game_start.should_start(&self.game, self.user_id) {
-        if let Some(should_start) = Some(false) {
+        if let Ok(should_start) = self.server.game_should_start(&self.game, self.user_id) {
+            //if let Some(should_start) = Some(false) {
             if should_start {
                 let game = conn
                     .transaction::<_, anyhow::Error, _>(move |tc| {

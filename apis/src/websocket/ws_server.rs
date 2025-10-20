@@ -1,13 +1,9 @@
 use super::messages::GameHB;
 use super::messages::MessageDestination;
 use crate::{
-    common::{
-        ChallengeUpdate, GameUpdate, ScheduleUpdate, ServerMessage, ServerResult, TournamentUpdate,
-    },
-    responses::{
-        ChallengeResponse, HeartbeatResponse, ScheduleResponse, TournamentResponse,
-    },
-    websocket::messages::{ClientActorMessage, Connect, WsMessage},
+    common::{GameUpdate, ServerMessage, ServerResult},
+    responses::HeartbeatResponse,
+    websocket::messages::{ClientActorMessage, WsMessage},
 };
 use actix::{
     prelude::{Actor, Context, Handler, Recipient},
@@ -17,11 +13,11 @@ use codee::binary::MsgpackSerdeCodec;
 use codee::Encoder;
 use db_lib::{
     get_conn,
-    models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
+    models::{Game, Tournament},
     DbPool,
 };
 use hive_lib::GameStatus;
-use log::{error, warn};
+use log::warn;
 use shared_types::{GameId, TimeMode};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -31,7 +27,6 @@ pub struct WsServer {
     id: String,
     sessions: HashMap<Uuid, Vec<Recipient<WsMessage>>>, // user_id to (socket_)id
     games_users: HashMap<GameId, HashSet<Uuid>>,        // game_id to set of users
-    users_games: HashMap<Uuid, HashSet<String>>,        // user_id to set of games
     pool: DbPool,
 }
 
@@ -42,7 +37,6 @@ impl WsServer {
             id: String::from("lobby"),
             sessions: HashMap::new(),
             games_users: HashMap::new(),
-            users_games: HashMap::new(),
             pool,
         }
     }
@@ -104,74 +98,6 @@ impl Handler<GameHB> for WsServer {
             let actor_future = future.into_actor(self);
             ctx.wait(actor_future);
         }
-    }
-}
-
-
-impl Handler<Connect> for WsServer {
-    type Result = ();
-
-    fn handle(&mut self, msg: Connect, ctx: &mut Context<Self>) -> Self::Result {
-        let user_id = msg.user_id;
-        self.games_users
-            .entry(GameId(msg.game_id.clone()))
-            .or_default()
-            .insert(msg.user_id);
-        self.users_games
-            .entry(msg.user_id)
-            .or_default()
-            .insert(msg.game_id.clone());
-        self.sessions
-            .entry(msg.user_id)
-            .or_default()
-            .push(msg.addr.clone());
-        let pool = self.pool.clone();
-        let address = ctx.address().clone();
-        let future = async move {
-            if let Ok(mut conn) = get_conn(&pool).await {
-                //Loading online users for new connection handled in v2
-
-                let serialized = if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
-                    // send tournament invitations
-                    if let Ok(invitations) =
-                        TournamentInvitation::find_by_user(&user.id, &mut conn).await
-                    {
-                        for invitation in invitations {
-                            if let Ok(response) =
-                                TournamentResponse::from_uuid(&invitation.tournament_id, &mut conn)
-                                    .await
-                            {
-                                let message =
-                                    ServerResult::Ok(Box::new(ServerMessage::Tournament(
-                                        TournamentUpdate::Invited(response.tournament_id.clone()),
-                                    )));
-                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                                    let cam = ClientActorMessage {
-                                        destination: MessageDestination::User(user_id),
-                                        serialized,
-                                        from: Some(user_id),
-                                    };
-                                    address.do_send(cam);
-                                };
-                            }
-                        }
-                    }
-                    MsgpackSerdeCodec::encode(&ServerResult::Ok(Box::new(ServerMessage::Error("Not sending challenges here".to_owned()))))
-                } else {
-                    MsgpackSerdeCodec::encode(&ServerResult::Ok(Box::new(ServerMessage::Error("Not sending challenges here".to_owned()))))
-                };
-                if let Ok(serialized) = serialized {
-                    let cam = ClientActorMessage {
-                        destination: MessageDestination::User(user_id),
-                        serialized,
-                        from: Some(user_id),
-                    };
-                    address.do_send(cam);
-                };
-            }
-        };
-        let actor_future = future.into_actor(self);
-        ctx.wait(actor_future);
     }
 }
 
