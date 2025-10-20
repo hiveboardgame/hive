@@ -33,15 +33,6 @@ pub struct WsMessage(pub Vec<u8>);
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
-pub struct Connect {
-    pub addr: Recipient<WsMessage>,
-    pub game_id: String,
-    pub user_id: Uuid,
-    pub username: String,
-}
-
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
 pub struct GameHB {}
 
 #[derive(Message, Debug, Clone)]

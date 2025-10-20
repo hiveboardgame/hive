@@ -1,7 +1,6 @@
 use crate::{
-    common::ScheduleAction,
-    functions::schedules::MarkScheduleSeen,
-    providers::NotificationContext, websocket::new_style::client::ClientApi,
+    common::ScheduleAction, functions::schedules::MarkScheduleSeen, providers::NotificationContext,
+    websocket::new_style::client::ClientApi,
 };
 use chrono::{DateTime, Local, Utc};
 use leptos::{prelude::*, task::spawn_local};
@@ -28,16 +27,18 @@ pub fn ProposalNotification(
 
     let accept = move |_| {
         spawn_local(async move {
-            api.schedule_action(ScheduleAction::Accept(schedule_id.get_value())).await;
+            api.schedule_action(ScheduleAction::Accept(schedule_id.get_value()))
+                .await;
             notifications.schedule_proposals.update(|proposals| {
                 proposals.remove(&schedule_id.get_value());
             });
-        }); 
+        });
     };
 
     let decline = move |_| {
         spawn_local(async move {
-            api.schedule_action(ScheduleAction::Cancel(schedule_id.get_value())).await;
+            api.schedule_action(ScheduleAction::Cancel(schedule_id.get_value()))
+                .await;
             notifications.schedule_proposals.update(|proposals| {
                 proposals.remove(&schedule_id.get_value());
             });

@@ -1,5 +1,6 @@
 use crate::{
-    common::{GameReaction, MoveConfirm, PieceType}, components::{
+    common::{GameReaction, MoveConfirm, PieceType},
+    components::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
@@ -13,15 +14,18 @@ use crate::{
             side_board::{SideboardTabs, TabView},
             unstarted::Unstarted,
         },
-    }, functions::games::get::get_game_from_nanoid, providers::{
+    },
+    functions::games::get::get_game_from_nanoid,
+    providers::{
         config::Config,
         game_state::{GameStateSignal, View},
         timer::TimerSignal,
         AuthContext, SoundType, Sounds, UpdateNotifier,
-    }, websocket::{
+    },
+    websocket::{
         client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
         new_style::client::ClientApi,
-    }
+    },
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
 use leptos::prelude::*;
@@ -37,7 +41,7 @@ pub struct CurrentConfirm(pub Memo<MoveConfirm>);
 pub fn Play() -> impl IntoView {
     provide_context(TimerSignal::new());
     let timer = expect_context::<TimerSignal>();
-    let client_api =expect_context::<ClientApi>();
+    let client_api = expect_context::<ClientApi>();
     let game_rejoin = client_api.signal_game_join();
     let mut game_state = expect_context::<GameStateSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
@@ -110,12 +114,14 @@ pub fn Play() -> impl IntoView {
         })
     });
     Effect::watch(
-        game_rejoin, move |_,_,_|{
+        game_rejoin,
+        move |_, _, _| {
             spawn_local(async move {
                 client_api.join_game(game_id()).await;
             });
-        }, 
-    false);
+        },
+        false,
+    );
     //HB handler
     Effect::watch(
         move || game_updater.heartbeat.get(),

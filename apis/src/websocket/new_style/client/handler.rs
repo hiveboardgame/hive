@@ -2,7 +2,10 @@ use crate::{
     common::ServerMessage,
     providers::PingContext,
     websocket::{
-        client_handlers::{challenge::handler::handle_challenge, game::handle_game, schedule::handler::handle_schedule, user_status::handle::handle_user_status},
+        client_handlers::{
+            challenge::handler::handle_challenge, game::handle_game,
+            schedule::handler::handle_schedule, user_status::handle::handle_user_status,
+        },
         new_style::{
             client::{api::ClientResult, ClientApi},
             websocket_fn::websocket_fn,
@@ -37,7 +40,7 @@ pub async fn client_handler(rx: Receiver<ClientResult>) {
                         ServerMessage::Schedule(update) => {
                             handle_schedule(update);
                         }
-                        ServerMessage::Error(e)=> {
+                        ServerMessage::Error(e) => {
                             leptos::logging::log!("ServerMessage::Error {e}");
                         }
                         _ => todo!(),

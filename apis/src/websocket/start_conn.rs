@@ -30,7 +30,6 @@ pub async fn start_connection(
                                 Some(user.admin),
                                 srv.get_ref().clone(),
                                 Arc::clone(&data),
-                                pool.get_ref().clone(),
                             );
                             let resp = ws::start(ws, &req, stream)?;
                             return Ok(resp);
@@ -53,7 +52,6 @@ pub async fn start_connection(
         None,
         srv.get_ref().clone(),
         Arc::clone(&data),
-        pool.get_ref().clone(),
     );
 
     let resp = ws::start(ws, &req, stream)?;

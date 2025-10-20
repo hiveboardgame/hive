@@ -58,7 +58,7 @@ impl GameControlHandler {
             })
             .await?;
         let game_response = GameResponse::from_model(&game, &mut conn).await?;
-         messages.push(InternalServerMessage {
+        messages.push(InternalServerMessage {
             destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),

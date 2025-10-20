@@ -54,9 +54,10 @@ pub fn ConfirmButton(
     let color = game_control.with_value(|g| g.color());
     let is_clicked = RwSignal::new(false);
     let UseTimeoutFnReturn {
-        start: wait_for_confirm, ..
+        start: wait_for_confirm,
+        ..
     } = use_timeout_fn(
-         move |_| {
+        move |_| {
             is_clicked.set(false);
         },
         5000.0,
@@ -71,9 +72,7 @@ pub fn ConfirmButton(
         }
     };
 
-    let pending_slice = create_read_slice(game_state.signal, |gs| {
-        gs.game_control_pending.clone()
-    });
+    let pending_slice = create_read_slice(game_state.signal, |gs| gs.game_control_pending.clone());
 
     let cancel = move |_| is_clicked.update(|v| *v = false);
     let pending = move |game_control: GameControl| match pending_slice() {
@@ -92,9 +91,7 @@ pub fn ConfirmButton(
         _ => false,
     };
 
-    let turn = create_read_slice(game_state.signal, |gs| {
-        gs.state.turn as i32
-    });
+    let turn = create_read_slice(game_state.signal, |gs| gs.state.turn as i32);
 
     let disabled = move || {
         let game_control = game_control.get_value();

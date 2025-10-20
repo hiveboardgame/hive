@@ -1,10 +1,11 @@
 use crate::providers::schedules::SchedulesContext;
-use crate::providers::ApiRequestsProvider;
 use crate::responses::GameResponse;
+use crate::websocket::new_style::client::ClientApi;
 use crate::{common::TournamentAction, components::atoms::profile_link::ProfileLink};
 use chrono::{DateTime, Duration, Local, Utc};
 use hive_lib::Color;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
 use shared_types::{GameStart, PrettyString, TournamentGameResult};
 
 pub const BUTTON_STYLE: &str = "no-link-style flex justify-center items-center min-w-fit px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -16,7 +17,7 @@ pub fn UnplayedGameRow(
     tournament_finished: Signal<bool>,
 ) -> impl IntoView {
     let schedules_signal = expect_context::<SchedulesContext>();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let game = StoredValue::new(game);
     let schedule: Signal<Option<DateTime<Utc>>> = Signal::derive(move || {
         schedules_signal.tournament.with(|tournament| {
@@ -53,8 +54,10 @@ pub fn UnplayedGameRow(
             let action = game.with_value(|game| {
                 TournamentAction::AdjudicateResult(game.game_id.clone(), result)
             });
-            let api = api.get();
-            api.tournament(action);
+            let api = client_api;
+            spawn_local(async move {
+                api.tournament(action).await;
+            });
             show_adjudicate_menu.update(|b| *b = !*b);
         }
     };
