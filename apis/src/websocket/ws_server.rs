@@ -106,9 +106,6 @@ impl Handler<ClientActorMessage> for WsServer {
 
     fn handle(&mut self, cam: ClientActorMessage, ctx: &mut Context<Self>) -> Self::Result {
         match cam.destination {
-            MessageDestination::Direct(socket) => {
-                socket.do_send(WsMessage(cam.serialized));
-            }
             MessageDestination::Global => {
                 // Make sure the user is in the game:
                 if let Some(from) = cam.from {

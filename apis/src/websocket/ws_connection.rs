@@ -6,10 +6,7 @@ use crate::websocket::{
     messages::{ClientActorMessage, WsMessage},
     ws_server::WsServer,
 };
-use actix::{
-    Actor, ActorContext, Addr, AsyncContext, Handler, Running, StreamHandler,
-    WrapFuture,
-};
+use actix::{Actor, ActorContext, Addr, AsyncContext, Handler, Running, StreamHandler, WrapFuture};
 use actix_web_actors::ws::{self};
 use anyhow::Result;
 use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
@@ -37,7 +34,7 @@ impl Actor for WsConnection {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         self.hb(ctx);
-     }
+    }
 
     fn stopping(&mut self, _ctx: &mut Self::Context) -> Running {
         Running::Stop
@@ -51,7 +48,7 @@ impl WsConnection {
         admin: Option<bool>,
         lobby: Addr<WsServer>,
         data: Arc<WebsocketData>,
-     ) -> WsConnection {
+    ) -> WsConnection {
         let id = user_uid.unwrap_or(Uuid::new_v4());
         let name = username.unwrap_or(id.to_string());
         let admin = admin.unwrap_or_default();

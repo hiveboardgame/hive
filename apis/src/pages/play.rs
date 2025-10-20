@@ -116,9 +116,7 @@ pub fn Play() -> impl IntoView {
     Effect::watch(
         game_rejoin,
         move |_, _, _| {
-            spawn_local(async move {
-                client_api.join_game(game_id()).await;
-            });
+            client_api.join_game(game_id());
         },
         false,
     );

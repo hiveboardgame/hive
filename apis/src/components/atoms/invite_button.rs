@@ -2,7 +2,6 @@ use crate::{
     common::TournamentAction, providers::AuthContext, websocket::new_style::client::ClientApi,
 };
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use leptos_icons::*;
 use shared_types::TournamentId;
 use uuid::Uuid;
@@ -23,10 +22,7 @@ pub fn InviteButton(user_id: Uuid, tournament_id: TournamentId) -> impl IntoView
     let invite = move |_| {
         let api = client_api;
         let tournament_id = tournament_id.get_value();
-        spawn_local(async move {
-            api.tournament(TournamentAction::InvitationCreate(tournament_id, user_id))
-                .await;
-        });
+        api.tournament(TournamentAction::InvitationCreate(tournament_id, user_id));
     };
 
     view! {

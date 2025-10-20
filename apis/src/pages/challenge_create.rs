@@ -12,7 +12,6 @@ use crate::{
 };
 use hive_lib::{ColorChoice, GameType};
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use reactive_stores::Store;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
 
@@ -79,9 +78,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
         };
         let challenge_action = ChallengeAction::Create(details);
         let api = client_api;
-        spawn_local(async move {
-            api.challenge(challenge_action).await;
-        });
+        api.challenge(challenge_action);
     });
 
     let rating_string = move || {

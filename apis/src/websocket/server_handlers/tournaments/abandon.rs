@@ -78,7 +78,7 @@ impl AbandonHandler {
         let tournament_response = self.tournament_id.clone();
 
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Global,
+            destination: MessageDestination::Tournament(tournament_response.clone()),
             message: ServerMessage::Tournament(TournamentUpdate::Modified(tournament_response)),
         });
         Ok(messages)

@@ -10,7 +10,7 @@ pub async fn load_online_users(client: TabData, server_data: Arc<ServerData>) {
             status: crate::common::UserStatus::Online,
             user,
         });
-        client.send(request, &server_data).await;
+        client.send(request, &server_data);
     }
 
     if let Some(user) = client.account() {
