@@ -18,6 +18,6 @@ pub async fn ping_client(client: TabData, server_data: Arc<ServerData>) {
             nonce,
             value: client.pings_value(),
         };
-        client.send(message, &server_data).await;
+        client.send(message, &server_data);
     }
 }

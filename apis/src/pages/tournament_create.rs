@@ -9,7 +9,6 @@ use crate::providers::{AuthContext, ChallengeParams, ChallengeParamsStoreFields}
 use crate::websocket::new_style::client::ClientApi;
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use leptos_router::hooks::use_navigate;
 use reactive_stores::Store;
 use shared_types::PrettyString;
@@ -202,9 +201,7 @@ pub fn TournamentCreate() -> impl IntoView {
         if auth_context.user.with(|a| a.is_some()) {
             let action = TournamentAction::Create(Box::new(details));
             let api = client_api;
-            spawn_local(async move {
-                api.tournament(action).await;
-            });
+            api.tournament(action);
             let navigate = use_navigate();
             navigate("/tournaments", Default::default());
         }

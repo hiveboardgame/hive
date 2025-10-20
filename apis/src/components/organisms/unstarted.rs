@@ -5,7 +5,6 @@ use crate::i18n::*;
 use crate::providers::game_state::GameStateSignal;
 use crate::websocket::new_style::client::ClientApi;
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use leptos_icons::*;
 use shared_types::{GameId, ReadyUser};
 use uuid::Uuid;
@@ -59,9 +58,7 @@ pub fn Unstarted(
     let start = move |_| {
         let api = client_api;
         let game_id = game_id();
-        spawn_local(async move {
-            api.tournament_game_start(game_id).await;
-        });
+        api.tournament_game_start(game_id);
     };
     let style = move || {
         if orientation_signal.orientation_vertical.get() {

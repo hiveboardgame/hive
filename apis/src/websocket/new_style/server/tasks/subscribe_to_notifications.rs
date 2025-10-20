@@ -15,17 +15,23 @@ pub async fn subscribe_to_notifications(client: TabData, server: Arc<ServerData>
     {
         match destination {
             MessageDestination::Global => {
-                client.send(message, &server).await;
+                client.send(message, &server);
             }
             MessageDestination::User(dest_id) => {
                 if client.account().is_some_and(|u| u.user.uid == dest_id) {
-                    client.send(message, &server).await;
+                    client.send(message, &server);
                 }
             }
             MessageDestination::Game(game_id) => {
                 let is_subscriber = server.is_game_subscriber(&client, &game_id);
                 if is_subscriber {
-                    client.send(message.clone(), &server).await;
+                    client.send(message.clone(), &server);
+                }
+            }
+            MessageDestination::Tournament(tournament_id) => {
+                let is_subscriber = server.is_tournament_subscriber(&client, &tournament_id);
+                if is_subscriber {
+                    client.send(message.clone(), &server);
                 }
             }
             _ => {

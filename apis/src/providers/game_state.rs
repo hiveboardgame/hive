@@ -6,7 +6,6 @@ use crate::websocket::new_style::client::ClientApi;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
 use leptos::prelude::*;
-use leptos::reactive::spawn_local;
 use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
@@ -102,9 +101,7 @@ impl GameStateSignal {
                 if color != game_control.color() {
                     log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
                 } else if let Some(game_id) = gs.game_id.clone() {
-                    spawn_local( async move {
-                        api.game_control(game_id, game_control).await
-                    });
+                    api.game_control(game_id, game_control);
                 } else {
                     log!("This is a bug, there should be a game_id");
                 }
@@ -372,9 +369,7 @@ impl GameState {
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
                 let game_id = game_id.clone();
-                spawn_local(async move {
-                    api.turn(game_id, turn).await;
-                });
+                api.turn(game_id, turn);
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             }

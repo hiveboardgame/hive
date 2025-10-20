@@ -2,7 +2,6 @@ use crate::{
     common::TournamentAction, providers::AuthContext, websocket::new_style::client::ClientApi,
 };
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use leptos_icons::*;
 use shared_types::TournamentId;
 use uuid::Uuid;
@@ -25,10 +24,7 @@ pub fn UninviteButton(user_id: Uuid, tournament_id: TournamentId) -> impl IntoVi
         let api = client_api;
         let tournament_id = tournament_id.get_value();
         let user_id = user_id.get_value();
-        spawn_local(async move {
-            api.tournament(TournamentAction::InvitationRetract(tournament_id, user_id))
-                .await;
-        });
+        api.tournament(TournamentAction::InvitationRetract(tournament_id, user_id));
     };
 
     view! {

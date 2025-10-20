@@ -6,6 +6,7 @@ use crate::{
 use db_lib::DbPool;
 use futures::{channel::mpsc, SinkExt};
 use server_fn::ServerFnError;
+use shared_types::{GameId, TournamentId};
 use std::sync::{Arc, RwLock};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
@@ -24,6 +25,8 @@ struct Data {
 pub struct TabData {
     data: Arc<Data>,
     sender: mpsc::Sender<ClientResult>,
+    pub subscribed_game: Arc<RwLock<Option<GameId>>>,
+    pub subscribed_tournament: Arc<RwLock<Option<TournamentId>>>,
 }
 
 impl TabData {
@@ -40,6 +43,8 @@ impl TabData {
             pool,
         };
         TabData {
+            subscribed_game: Arc::new(RwLock::new(None)),
+            subscribed_tournament: Arc::new(RwLock::new(None)),
             data: Arc::new(data),
             sender,
         }
@@ -74,11 +79,11 @@ impl TabData {
         let pings = self.data.pings.read().unwrap();
         pings.value()
     }
-    pub async fn send(&self, request: ServerMessage, server_data: &ServerData) {
+    pub fn send(&self, request: ServerMessage, server_data: &ServerData) {
         let mut sender = self.sender.clone();
-        let ret = sender.send(Ok(request.clone())).await;
+        let ret = sender.try_send(Ok(request.clone()));
         if ret.is_err() {
-            //println!("Failed sending {request:?}");
+            println!("Failed sending {request:?} with error {ret:?}");
             self.close(server_data);
         }
     }

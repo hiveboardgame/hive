@@ -7,7 +7,6 @@ use crate::{
 };
 use hive_lib::{ColorChoice, GameType};
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use shared_types::{ChallengeDetails, ChallengeVisibility, TimeMode};
 
 #[derive(Clone, Copy)]
@@ -63,9 +62,7 @@ pub fn ChallengeBot() -> impl IntoView {
         };
         let challenge_action = ChallengeAction::Create(details);
         let api = client_api;
-        spawn_local(async move {
-            api.challenge(challenge_action).await;
-        });
+        api.challenge(challenge_action);
     });
 
     view! {

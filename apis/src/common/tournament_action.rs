@@ -26,5 +26,5 @@ pub enum TournamentAction {
     Leave(TournamentId),
     // TODO: RemoveFromSeries(TournamentId),
     Start(TournamentId),
-    Subscribe(TournamentId)
+    Subscribe(TournamentId),
 }

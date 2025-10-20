@@ -6,7 +6,6 @@ use crate::{
 };
 use hive_lib::{ColorChoice, GameControl};
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use leptos_router::hooks::use_navigate;
 use shared_types::{ChallengeDetails, ChallengeVisibility};
 
@@ -82,9 +81,7 @@ pub fn ControlButtons() -> impl IntoView {
                 let challenge_action = ChallengeAction::Create(details);
                 let api = client_api;
                 let navigate = leptos_router::hooks::use_navigate();
-                spawn_local(async move {
-                    api.challenge(challenge_action).await;
-                });
+                api.challenge(challenge_action);
                 navigate("/", Default::default());
             }
         });
@@ -150,9 +147,7 @@ pub fn ControlButtons() -> impl IntoView {
         if let Some(challenge) = rematch_present() {
             let api = client_api;
             let challenge_id = challenge.challenge_id;
-            spawn_local(async move {
-                api.challenge_accept(challenge_id).await;
-            });
+            api.challenge_accept(challenge_id);
         } else if let Some(user_id) = auth_context.user.with(|a| a.as_ref().map(|u| u.id)) {
             game_state.signal.with_untracked(|gs| {
                 if let Some(game) = &gs.game_response {
@@ -178,9 +173,7 @@ pub fn ControlButtons() -> impl IntoView {
                     };
                     let challenge_action = ChallengeAction::Create(details);
                     let api = client_api;
-                    spawn_local(async move {
-                        api.challenge(challenge_action).await;
-                    });
+                    api.challenge(challenge_action);
                 }
             });
         }

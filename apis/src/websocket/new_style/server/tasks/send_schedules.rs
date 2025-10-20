@@ -29,7 +29,8 @@ pub async fn send_schedules(client: TabData, server: Arc<ServerData>) {
                         ScheduleUpdate::Accepted(response)
                     };
 
-                    client.send(ServerMessage::Schedule(update), &server).await;
+                    client.send(ServerMessage::Schedule(update), &server);
+
                 }
             }
         }
