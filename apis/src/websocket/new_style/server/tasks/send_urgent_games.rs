@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use db_lib::get_conn;
 use db_lib::models::User;
 use diesel_async::scoped_futures::ScopedFutureExt;
@@ -9,7 +7,7 @@ use crate::common::{GameUpdate, ServerMessage};
 use crate::responses::GameResponse;
 use crate::websocket::new_style::server::{ServerData, TabData};
 
-pub async fn send_urgent_games(client: TabData, server_data: Arc<ServerData>) {
+pub async fn send_urgent_games(client: &TabData, server_data: &ServerData) {
     // Send games which require input from the user
     let Some(user_id) = client.account().map(|account| account.id) else {
         return;
@@ -70,6 +68,6 @@ pub async fn send_urgent_games(client: TabData, server_data: Arc<ServerData>) {
 
     let messages = vec![ServerMessage::Game(Box::new(GameUpdate::Urgent(games)))];
     for message in messages {
-        client.send(message, &server_data);
+        client.send(message, server_data);
     }
 }

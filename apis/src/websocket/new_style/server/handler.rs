@@ -15,7 +15,7 @@ use server_fn::{BoxedStream, ServerFnError};
 
 pub async fn server_handler(
     mut input: BoxedStream<ClientRequest, ServerFnError>,
-    client: TabData,
+    client: &TabData,
     server: Arc<ServerData>,
 ) {
     while let Some(msg) = input.next().await {

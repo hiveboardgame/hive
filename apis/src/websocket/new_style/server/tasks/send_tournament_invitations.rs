@@ -1,12 +1,10 @@
-use std::sync::Arc;
-
 use crate::common::{ServerMessage, TournamentUpdate};
 use crate::responses::TournamentResponse;
 use crate::websocket::new_style::server::{ServerData, TabData};
 use db_lib::get_conn;
 use db_lib::models::TournamentInvitation;
 
-pub async fn send_tournament_invitations(client: TabData, server: Arc<ServerData>) {
+pub async fn send_tournament_invitations(client: &TabData, server: &ServerData) {
     let mut conn = match get_conn(client.pool()).await {
         Ok(conn) => conn,
         Err(_) => {
@@ -28,7 +26,7 @@ pub async fn send_tournament_invitations(client: TabData, server: Arc<ServerData
                             ServerMessage::Tournament(TournamentUpdate::Invited(
                                 response.tournament_id.clone(),
                             )),
-                            &server,
+                            server,
                         );
                 }
             }

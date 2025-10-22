@@ -1,12 +1,10 @@
-use std::sync::Arc;
-
 use crate::common::{ScheduleUpdate, ServerMessage};
 use crate::responses::ScheduleResponse;
 use crate::websocket::new_style::server::{ServerData, TabData};
 use db_lib::get_conn;
 use db_lib::models::Schedule;
 
-pub async fn send_schedules(client: TabData, server: Arc<ServerData>) {
+pub async fn send_schedules(client: &TabData, server: &ServerData) {
     let mut conn = match get_conn(client.pool()).await {
         Ok(conn) => conn,
         Err(_) => {
@@ -29,7 +27,7 @@ pub async fn send_schedules(client: TabData, server: Arc<ServerData>) {
                         ScheduleUpdate::Accepted(response)
                     };
 
-                    client.send(ServerMessage::Schedule(update), &server);
+                    client.send(ServerMessage::Schedule(update), server);
 
                 }
             }
