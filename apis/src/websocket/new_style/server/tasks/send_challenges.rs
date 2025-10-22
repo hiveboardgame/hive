@@ -1,12 +1,10 @@
-use std::sync::Arc;
-
 use crate::common::{ChallengeUpdate, ServerMessage};
 use crate::responses::ChallengeResponse;
 use crate::websocket::new_style::server::{ServerData, TabData};
 use db_lib::get_conn;
 use db_lib::models::Challenge;
 
-pub async fn send_challenges(client: TabData, server: Arc<ServerData>) {
+pub async fn send_challenges(client: &TabData, server: &ServerData) {
     // Send challenges on join
     let mut conn = match get_conn(client.pool()).await {
         Ok(conn) => conn,
@@ -45,7 +43,7 @@ pub async fn send_challenges(client: TabData, server: Arc<ServerData>) {
         }
 
         let message = ServerMessage::Challenge(ChallengeUpdate::Challenges(responses));
-        client.send(message, &server);
+        client.send(message, server);
     } else {
         let mut responses = Vec::new();
 
@@ -58,6 +56,6 @@ pub async fn send_challenges(client: TabData, server: Arc<ServerData>) {
         }
 
         let message = ServerMessage::Challenge(ChallengeUpdate::Challenges(responses));
-        client.send(message, &server);
+        client.send(message, server);
     }
 }

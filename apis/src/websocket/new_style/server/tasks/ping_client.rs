@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use rand::Rng;
 use tokio::time::{interval as interval_fn, Duration};
 
@@ -8,7 +6,7 @@ use crate::websocket::new_style::server::{ServerData, TabData};
 
 const PING_INTERVAL_MS: u64 = 1000; // consistent with previous implementation
 
-pub async fn ping_client(client: TabData, server_data: Arc<ServerData>) {
+pub async fn ping_client(client: &TabData, server_data: &ServerData) {
     let mut interval = interval_fn(Duration::from_millis(PING_INTERVAL_MS));
     loop {
         interval.tick().await;
@@ -18,6 +16,6 @@ pub async fn ping_client(client: TabData, server_data: Arc<ServerData>) {
             nonce,
             value: client.pings_value(),
         };
-        client.send(message, &server_data);
+        client.send(message, server_data);
     }
 }
