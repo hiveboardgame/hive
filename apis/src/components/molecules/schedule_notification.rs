@@ -1,7 +1,6 @@
 use crate::{
-    common::ScheduleAction,
-    functions::schedules::MarkScheduleSeen,
-    providers::{ApiRequestsProvider, NotificationContext},
+    common::ScheduleAction, functions::schedules::MarkScheduleSeen, providers::NotificationContext,
+    websocket::new_style::client::ClientApi,
 };
 use chrono::{DateTime, Local, Utc};
 use leptos::prelude::*;
@@ -17,7 +16,7 @@ pub fn ProposalNotification(
     start_time: DateTime<Utc>,
 ) -> impl IntoView {
     let notifications = expect_context::<NotificationContext>();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let api = expect_context::<ClientApi>();
     let schedule_id = StoredValue::new(schedule_id);
     let div_class = "xs:py-1 xs:px-1 sm:py-2 sm:px-2";
     let local_time = start_time.with_timezone(&Local);
@@ -27,7 +26,6 @@ pub fn ProposalNotification(
     );
 
     let accept = move |_| {
-        let api = api.get();
         api.schedule_action(ScheduleAction::Accept(schedule_id.get_value()));
         notifications.schedule_proposals.update(|proposals| {
             proposals.remove(&schedule_id.get_value());
@@ -35,7 +33,6 @@ pub fn ProposalNotification(
     };
 
     let decline = move |_| {
-        let api = api.get();
         api.schedule_action(ScheduleAction::Cancel(schedule_id.get_value()));
         notifications.schedule_proposals.update(|proposals| {
             proposals.remove(&schedule_id.get_value());

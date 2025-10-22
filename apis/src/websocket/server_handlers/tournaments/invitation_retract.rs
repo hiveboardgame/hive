@@ -52,7 +52,7 @@ impl InvitationRetract {
                 message: ServerMessage::Tournament(TournamentUpdate::Uninvited(response.clone())),
             },
             InternalServerMessage {
-                destination: MessageDestination::Global,
+                destination: MessageDestination::Tournament(response.clone()),
                 message: ServerMessage::Tournament(TournamentUpdate::Modified(response)),
             },
         ])

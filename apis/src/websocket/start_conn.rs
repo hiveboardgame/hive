@@ -30,7 +30,6 @@ pub async fn start_connection(
                                 Some(user.admin),
                                 srv.get_ref().clone(),
                                 Arc::clone(&data),
-                                pool.get_ref().clone(),
                             );
                             let resp = ws::start(ws, &req, stream)?;
                             return Ok(resp);
@@ -47,14 +46,7 @@ pub async fn start_connection(
     };
 
     println!("Welcome Anonymous!");
-    let ws = WsConnection::new(
-        None,
-        None,
-        None,
-        srv.get_ref().clone(),
-        Arc::clone(&data),
-        pool.get_ref().clone(),
-    );
+    let ws = WsConnection::new(None, None, None, srv.get_ref().clone(), Arc::clone(&data));
 
     let resp = ws::start(ws, &req, stream)?;
     Ok(resp)

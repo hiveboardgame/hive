@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::components::layouts::base_layout::OrientationSignal;
 use crate::i18n::*;
 use crate::providers::game_state::GameStateSignal;
-use crate::providers::ApiRequestsProvider;
+use crate::websocket::new_style::client::ClientApi;
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{GameId, ReadyUser};
@@ -17,7 +17,7 @@ pub fn Unstarted(
     ready: RwSignal<HashMap<GameId, Vec<ReadyUser>>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let game_state = expect_context::<GameStateSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let white = create_read_slice(game_state.signal, |gs| {
@@ -56,8 +56,9 @@ pub fn Unstarted(
     };
 
     let start = move |_| {
-        let api = api.get();
-        api.tournament_game_start(game_id());
+        let api = client_api;
+        let game_id = game_id();
+        api.tournament_game_start(game_id);
     };
     let style = move || {
         if orientation_signal.orientation_vertical.get() {

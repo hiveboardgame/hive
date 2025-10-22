@@ -4,6 +4,7 @@ pub use chat::Chats;
 pub use lag_tracking::{Lags, Pings};
 pub mod busybee;
 pub mod client_handlers;
+pub mod new_style;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     mod messages;
@@ -16,7 +17,7 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     pub use start_conn::start_connection;
     pub use tournament_game_start::TournamentGameStart;
     pub use ws_server::WsServer;
-    pub use messages::{GameHB, Ping, InternalServerMessage, MessageDestination, ClientActorMessage};
+    pub use messages::{GameHB, InternalServerMessage, MessageDestination, ClientActorMessage};
 
     #[derive(Default, Debug)]
     pub struct WebsocketData {

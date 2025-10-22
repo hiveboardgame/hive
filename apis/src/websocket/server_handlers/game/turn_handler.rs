@@ -1,6 +1,3 @@
-use crate::websocket::busybee::Busybee;
-use crate::websocket::WebsocketData;
-
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
@@ -17,7 +14,6 @@ use diesel_async::AsyncConnection;
 use hive_lib::{GameError, State, Turn};
 use shared_types::{GameId, TimeMode};
 use std::str::FromStr;
-use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct TurnHandler {
@@ -26,25 +22,16 @@ pub struct TurnHandler {
     user_id: Uuid,
     username: String,
     game: Game,
-    data: Arc<WebsocketData>,
 }
 
 impl TurnHandler {
-    pub fn new(
-        turn: Turn,
-        game: &Game,
-        username: &str,
-        user_id: Uuid,
-        data: Arc<WebsocketData>,
-        pool: &DbPool,
-    ) -> Self {
+    pub fn new(turn: Turn, game: &Game, username: &str, user_id: Uuid, pool: &DbPool) -> Self {
         Self {
             game: game.to_owned(),
             user_id,
             username: username.to_owned(),
             pool: pool.clone(),
             turn,
-            data,
         }
     }
 
@@ -63,19 +50,20 @@ impl TurnHandler {
         state.play_turn_from_position(piece, position)?;
 
         let comp = if self.game.time_mode == TimeMode::RealTime.to_string() {
-            let ping = self.data.pings.value(self.user_id);
+            //let ping = self.data.pings.value(self.user_id);
             let base = self.game.time_base.unwrap_or(0) as usize;
             let inc = self.game.time_increment.unwrap_or(0) as usize;
-            self.data
-                .lags
-                .track_lag(
-                    self.user_id,
-                    GameId(self.game.nanoid.clone()),
-                    ping,
-                    base,
-                    inc,
-                )
-                .unwrap_or(0.0)
+            /*self.data
+            .lags
+            .track_lag(
+                self.user_id,
+                GameId(self.game.nanoid.clone()),
+                ping,
+                base,
+                inc,
+            )
+            .unwrap_or(0.0)*/
+            0.0
         } else {
             0.0
         };
@@ -105,9 +93,9 @@ impl TurnHandler {
                     game.str_time_left_for_player(game.current_player_id),
                 );
 
-                if let Err(e) = Busybee::msg(game.current_player_id, msg).await {
+                /*if let Err(e) = Busybee::msg(game.current_player_id, msg).await {
                     println!("{e}");
-                };
+                };*/
             }
         }
 
