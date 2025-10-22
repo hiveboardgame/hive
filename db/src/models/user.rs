@@ -309,7 +309,6 @@ impl User {
     ) -> Result<Vec<(User, Rating, i64)>, DbError> {
         let all_users: Vec<(User, Rating)> = users::table
             .inner_join(ratings::table)
-            .filter(ratings::deviation.le(shared_types::RANKABLE_DEVIATION))
             .filter(ratings::speed.eq(game_speed.to_string()))
             .order_by(rating.desc())
             .load::<(User, Rating)>(conn)

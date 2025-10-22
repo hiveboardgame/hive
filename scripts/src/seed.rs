@@ -104,7 +104,7 @@ async fn play_test_games(
         
         for game_idx in 0..games_per_user {
             let opponent_id = get_random_opponent(user_id, user_ids);
-            let game_speed = get_random_game_speed();
+            let game_speed = GameSpeed::Bullet;
             
             let (white_id, black_id) = {
                 let mut rng = rng();

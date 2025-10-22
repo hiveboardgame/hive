@@ -4,6 +4,7 @@
 pkg
 apis/target/
 apis/.cargo
+scripts/.cargo
 .cargo/target/
 todos
 site/
