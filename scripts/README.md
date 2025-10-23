@@ -1,262 +1,204 @@
-# Hive Database Scripts
+# Database Scripts
 
-A comprehensive CLI tool for managing the Hive database with multiple subcommands for different tasks.
+This directory contains database management scripts for data analysis, seeding, and maintenance. These scripts provide powerful tools for analyzing game data, managing test data, and generating reports.
 
-## Features
+## Quick Start
 
-The tool provides several subcommands for database management:
+```sh
+# Run any script from the project root
+cargo run --bin script <command>
 
-- **Seed**: Populate the database with test data for development
-- **ListUsers**: List all users in the database
-- **Cleanup**: Remove test data from the database
-- **GameStats**: Generate game statistics CSV file
-- **GamesReport**: Generate comprehensive games report CSV file
-
-## Prerequisites
-
-- PostgreSQL database running
-- `.env` file in the parent directory with `DATABASE_URL` set
-- Rust toolchain installed
-
-## Usage
-
-### General Help
-```bash
+# Or from the scripts directory
 cd scripts
-cargo run -- --help
+cargo run --bin script <command>
 ```
 
-### Seed Database
-```bash
-# Use default values (20 users, 15 games each)
-cargo run -- seed
+## Available Commands
 
-# Customize the number of users and games
-cargo run -- seed --users 50 --games-per-user 25
+### Game Statistics (`game-stats`)
+Analyzes game mechanics and tactical complexity for AI training and game balance research.
 
-# Use a custom database URL
-cargo run -- seed --database-url "postgresql://user:pass@localhost:5432/hive_db"
+**Purpose**: Studies move complexity and board states for tactical analysis
+**Output**: `game_statistics.csv` with turn-by-turn analysis of available moves and spawns
+
+**Use Cases**:
+- AI training data generation
+- Game balance research
+- Tactical analysis and complexity studies
+- Educational content creation
+- Game engine optimization
+
+**Features**:
+- Supports sampling for large datasets (`--sample-size`)
+- Optional bot filtering (`--no-bots`)
+- Analyzes every turn of each game to measure decision complexity
+- Memory-efficient processing with temporary files
+
+**Example**:
+```sh
+# Analyze 1000 random games, excluding bots
+cargo run --bin script game-stats --sample-size 1000 --no-bots
+
+# Analyze all games including bots
+cargo run --bin script game-stats
 ```
 
-### List Users
-```bash
-# List all users in the database
-cargo run -- list-users
+### Games Report (`games-report`)
+Analyzes player performance and game outcomes for business intelligence and player tracking.
 
-# Use a custom database URL
-cargo run -- list-users --database-url "postgresql://user:pass@localhost:5432/hive_db"
+**Purpose**: Studies player ratings, outcomes, and performance metrics
+**Output**: `games_report.csv` with player-focused data including ratings, usernames, and game results
+
+**Use Cases**:
+- Player performance tracking
+- Tournament analysis
+- Rating system validation
+- Business metrics and analytics
+- Player progression studies
+
+**Features**:
+- Always excludes bot games
+- Includes rating certainty analysis (rankable, provisional, clueless)
+- Provides tournament and game metadata
+- Fast processing with direct database queries
+
+**Example**:
+```sh
+# Generate comprehensive games report
+cargo run --bin script games-report
 ```
 
-### Cleanup Test Data
-```bash
-# Remove all test data
-cargo run -- cleanup
+### Database Seeding (`seed`)
+Creates realistic test data for development and testing.
 
-# Use a custom database URL
-cargo run -- cleanup --database-url "postgresql://user:pass@localhost:5432/hive_db"
+**Purpose**: Populates database with test users and games for development/testing
+
+**Features**:
+- Creates configurable number of test users
+- Generates realistic games with proper game mechanics
+- Supports cleanup of test data (`--cleanup` flag)
+- Uses database transactions for atomicity
+- Implements correct Hive game rules (queen placement, move validation)
+
+**Example**:
+```sh
+# Create 50 test users with 20 games each
+cargo run --bin script seed --users 50 --games-per-user 20
+
+# Clean up all test data
+cargo run --bin script seed --cleanup
 ```
 
-### Generate Game Statistics
-```bash
-# Generate game statistics CSV file (all games)
-cargo run -- game-stats
+### User Management
 
-# Sample 1000 random games
-cargo run -- game-stats --sample-size 1000
+#### List Users (`list-users`)
+Lists all users in the database with their creation dates.
 
-# Exclude bot games
-cargo run -- game-stats --no-bots
-
-# Sample 500 games excluding bots
-cargo run -- game-stats --sample-size 500 --no-bots
-
-# Use a custom database URL
-cargo run -- game-stats --database-url "postgresql://user:pass@localhost:5432/hive_db"
+**Example**:
+```sh
+cargo run --bin script list-users
 ```
 
-### Generate Games Report
-```bash
-# Generate comprehensive games report CSV file
-cargo run -- games-report
+#### Cleanup (`cleanup`)
+Removes test data including users, games, and ratings.
 
-# Use a custom database URL
-cargo run -- games-report --database-url "postgresql://user:pass@localhost:5432/hive_db"
+**Example**:
+```sh
+cargo run --bin script cleanup
 ```
 
-## Command Options
+## Output Files
 
-### Seed Command
-- `-u, --users <USERS>`: Number of test users to create (default: 20)
-- `-g, --games-per-user <GAMES_PER_USER>`: Number of games each user should play (default: 15)
-- `--database-url <DATABASE_URL>`: Database URL (overrides DATABASE_URL env var)
+### Game Statistics CSV (`game_statistics.csv`)
+Contains tactical analysis data with the following structure:
+```csv
+nanoid,total_turns,moves_turn_0,spawns_turn_0,moves_turn_1,spawns_turn_1,...
+game123,15,3,4,2,3,1,2,0,1,...
+```
 
-### ListUsers Command
-- `--database-url <DATABASE_URL>`: Database URL (overrides DATABASE_URL env var)
+**Columns**:
+- `nanoid`: Unique game identifier
+- `total_turns`: Total number of turns in the game
+- `moves_turn_N`: Number of available moves for turn N
+- `spawns_turn_N`: Number of available spawn positions for turn N
 
-### Cleanup Command
-- `--database-url <DATABASE_URL>`: Database URL (overrides DATABASE_URL env var)
+### Games Report CSV (`games_report.csv`)
+Contains player performance data with the following structure:
+```csv
+game_nanoid,result,white_player_username,black_player_username,white_elo,black_elo,white_elo_deviation,black_elo_deviation,white_rating_certainty,black_rating_certainty,time_control_category,tournament_game,tournament_id,game_created_at
+```
 
-### GameStats Command
-- `--database-url <DATABASE_URL>`: Database URL (overrides DATABASE_URL env var)
-- `-s, --sample-size <SAMPLE_SIZE>`: Number of games to randomly sample (if not specified, analyzes all games)
-- `--no-bots`: Exclude games from users with bot == true
+**Columns**:
+- `game_nanoid`: Unique game identifier
+- `result`: Game outcome (White Wins, Black Wins, Draw, etc.)
+- `white_player_username`, `black_player_username`: Player usernames
+- `white_elo`, `black_elo`: Player ELO ratings
+- `white_elo_deviation`, `black_elo_deviation`: Rating deviations
+- `white_rating_certainty`, `black_rating_certainty`: Rating certainty (Rankable, Provisional, Clueless)
+- `time_control_category`: Game speed category
+- `tournament_game`: Whether it's a tournament game
+- `tournament_id`: Tournament identifier (if applicable)
+- `game_created_at`: Game creation timestamp
 
-### GamesReport Command
-- `--database-url <DATABASE_URL>`: Database URL (overrides DATABASE_URL env var)
+## Command Line Options
+
+### Game Statistics Options
+- `--database-url <URL>`: Override DATABASE_URL environment variable
+- `--sample-size <N>`: Number of games to sample (random selection)
+- `--no-bots`: Exclude games from bot users
+
+### Games Report Options
+- `--database-url <URL>`: Override DATABASE_URL environment variable
+
+### Seeding Options
+- `--users <N>`: Number of test users to create (default: 20)
+- `--games-per-user <N>`: Number of games each user should play (default: 15)
+- `--cleanup`: Clean up test data instead of seeding
+- `--database-url <URL>`: Override DATABASE_URL environment variable
 
 ## Environment Variables
 
-Make sure your `.env` file contains:
-```
-DATABASE_URL=postgresql://username:password@localhost:5432/hive_db
-```
+- `DATABASE_URL`: PostgreSQL connection string (required)
+- `RUST_LOG`: Logging level (e.g., `info`, `debug`, `warn`)
 
-## Project Structure
+## Technical Details
 
-```
-scripts/
-├── src/
-│   ├── main.rs          # CLI entry point and command definitions
-│   ├── mod.rs           # Module declarations
-│   ├── seed.rs          # Database seeding functionality
-│   ├── users.rs         # User management functionality
-│   ├── game_stats.rs    # Game statistics generation
-│   └── games_report.rs  # Comprehensive games report generation
-├── Cargo.toml           # Dependencies and build configuration
-├── run_seed.sh          # Legacy shell script (can be removed)
-└── README.md            # This file
-```
+### Error Handling
+All scripts use `anyhow` for comprehensive error handling with detailed context messages.
 
-## Adding New Scripts
+### Database Transactions
+The seeding process uses database transactions to ensure atomicity - either all operations succeed or none are applied.
 
-To add a new script:
+### Memory Management
+Large datasets are processed efficiently using:
+- Temporary files for CSV writing
+- Streaming data processing
+- Optional sampling for very large datasets
 
-1. Create a new module file in `src/` (e.g., `src/tournaments.rs`)
-2. Add the module to `src/mod.rs`
-3. Add a new variant to the `Commands` enum in `main.rs`
-4. Implement the command logic in your module
-5. Add the command handler in the main function
+### Game Logic
+The seeding process implements correct Hive game rules:
+- Queen placement only on turns 2-4
+- No piece movement before queen placement
+- Valid move/spawn selection using game engine
+- Proper game state management
 
-### Example: Adding a Tournament Script
+## Development
 
-```rust
-// In src/tournaments.rs
-pub async fn list_tournaments(database_url: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
-    // Implementation here
-    Ok(())
-}
-
-// In src/mod.rs
-pub mod tournaments;
-
-// In main.rs - add to Commands enum
-#[derive(Subcommand)]
-enum Commands {
-    // ... existing commands ...
-    
-    /// List all tournaments in the database
-    ListTournaments {
-        /// Database URL (overrides DATABASE_URL env var)
-        #[arg(long)]
-        database_url: Option<String>,
-    },
-}
-
-// In main.rs - add to match statement
-match cli.command {
-    // ... existing matches ...
-    Commands::ListTournaments { database_url } => {
-        tournaments::list_tournaments(database_url).await?;
-    }
-}
+### Running Tests
+```sh
+cargo test --package script
 ```
 
-## Testing the Leaderboard
+### Code Quality
+The scripts follow Rust best practices:
+- Self-documenting function names
+- Comprehensive error handling
+- Clean separation of concerns
+- Proper resource management
 
-After running the seed command:
-1. Start the Hive application
-2. Navigate to the leaderboard page
-3. You should see the top 10 players for each game speed
-4. Log in as one of the test users to see their rating information
-5. Test the "rankable vs non-rankable" rating display
-
-## Game Statistics
-
-The `game-stats` command analyzes games in the database and generates a CSV file with detailed statistics:
-
-- **File Output**: `game_statistics.csv` in the current directory
-- **Data Included**: 
-  - Game nanoid and total turns
-  - Number of available moves for each turn
-  - Number of available spawn positions for each turn
-  - Analysis of game complexity and decision points
-- **Filtering Options**:
-  - **Sampling**: Randomly select a subset of games for faster analysis
-  - **Bot Exclusion**: Exclude games involving bot players
-- **Use Cases**:
-  - Game balance analysis
-  - AI training data
-  - Gameplay pattern research
-  - Performance optimization insights
-  - Spawn point availability analysis
-  - Opening theory development
-
-The CSV file can be imported into spreadsheet applications or data analysis tools for further processing.
-
-## Games Report
-
-The `games-report` command generates a comprehensive CSV report of all games (excluding bot games) with detailed player and game information:
-
-- **File Output**: `games_report.csv` in the current directory
-- **Data Included**:
-  - Game nanoid and result
-  - Player usernames (white and black)
-  - ELO ratings for both players
-  - ELO deviation (rating certainty: Rankable/Provisional/Clueless)
-  - Time control category (Bullet/Blitz/Rapid/Classic/Correspondence)
-  - Tournament information (whether it's a tournament game and tournament ID)
-  - Game creation timestamp
-- **Use Cases**:
-  - Player performance analysis
-  - Rating system evaluation
-  - Tournament statistics
-  - Game balance research
-  - Competitive analysis
-
-The report excludes bot games and provides Excel-friendly formatting for easy analysis and visualization.
-
-## Customization
-
-You can modify the constants in the seed module:
-- `NUM_USERS`: Number of test users to create
-- `GAMES_PER_USER`: Number of games each user plays
-- `GAME_SPEEDS`: Which game speeds to include
-
-## Cleanup
-
-To remove test data, use the cleanup command:
-```bash
-cargo run -- cleanup
-```
-
-This will:
-- Delete all users with usernames starting with "testuser"
-- Automatically remove associated games and ratings due to foreign key constraints
-
-## Troubleshooting
-
-### Linking Errors
-If you get PostgreSQL linking errors during development, this is normal. The CLI structure can be verified with:
-```bash
-cargo check
-```
-
-### Database Connection Issues
-- Ensure PostgreSQL is running
-- Check that `DATABASE_URL` is correct
-- Verify database permissions
-- Make sure the database exists
-
-### Permission Errors
-- Ensure your database user has the necessary permissions
-- Check that the database exists and is accessible
+### Adding New Scripts
+1. Create a new module in `src/`
+2. Add the module to `src/main.rs`
+3. Add the command to the CLI enum
+4. Implement the command handler
+5. Add tests and documentation
