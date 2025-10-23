@@ -1,13 +1,24 @@
 {
   "name": "end2end",
   "version": "1.0.0",
-  "description": "",
+  "description": "End-to-end tests for Hive game application",
   "main": "index.js",
-  "scripts": {},
-  "keywords": [],
+  "scripts": {
+    "test": "playwright test",
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed",
+    "show-report": "playwright show-report"
+  },
+  "keywords": [
+    "e2e",
+    "testing",
+    "playwright",
+    "hive"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@playwright/test": "^1.28.0"
+    "@playwright/test": "^1.47.2",
+    "@types/node": "^18.0.0"
   }
 }
