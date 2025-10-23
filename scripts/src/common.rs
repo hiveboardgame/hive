@@ -1,42 +1,25 @@
+use anyhow::{Context, Result};
 use db_lib::{get_conn, get_pool};
 use dotenvy::dotenv;
-use std::error::Error;
+use log::info;
 use std::time::Duration;
 use tokio::time::sleep;
 
-#[derive(Debug, Clone)]
-pub struct Config {
-    pub progress_interval: usize,
-    pub csv_buffer_size: usize,
-    pub max_retries: usize,
-    pub temp_file_prefix: String,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            progress_interval: 1000,
-            csv_buffer_size: 8192,
-            max_retries: 3,
-            temp_file_prefix: "hive_script_".to_string(),
-        }
-    }
-}
-
-pub async fn setup_database(
-    database_url: Option<String>,
-) -> Result<db_lib::DbConn<'static>, Box<dyn Error>> {
+pub async fn setup_database(database_url: Option<String>) -> Result<db_lib::DbConn<'static>> {
     dotenv().ok();
 
     let database_url = database_url
         .or_else(|| std::env::var("DATABASE_URL").ok())
-        .expect("DATABASE_URL environment variable must be set or --database-url provided");
+        .context("DATABASE_URL environment variable must be set or --database-url provided")?;
 
-    let pool = get_pool(&database_url).await?;
+    let pool = get_pool(&database_url)
+        .await
+        .context("Failed to create database connection pool")?;
 
-    // Use Box::leak to create a static reference to the pool
     let static_pool = Box::leak(Box::new(pool));
-    let conn = get_conn(static_pool).await?;
+    let conn = get_conn(static_pool)
+        .await
+        .context("Failed to get database connection from pool")?;
     Ok(conn)
 }
 
@@ -47,41 +30,24 @@ pub fn log_progress(processed: usize, total: usize, operation: &str) {
         } else {
             0
         };
-        println!("{}: {}/{} ({}%)", operation, processed, total, percentage);
+        info!("{}: {}/{} ({}%)", operation, processed, total, percentage);
     }
 }
 
-pub fn log_info(message: &str) {
-    println!("Info: {}", message);
-}
-
 pub fn log_operation_start(operation: &str) {
-    println!("Starting {}...", operation);
+    info!("Starting {}...", operation);
 }
 
 pub fn log_operation_complete(operation: &str, processed: usize, errors: usize) {
-    println!(
+    info!(
         "{} completed! Processed {} items with {} errors",
         operation, processed, errors
     );
 }
 
-pub fn log_warning(message: &str) {
-    println!("Warning: {}", message);
-}
-
-pub fn log_error(message: &str) {
-    eprintln!("Error: {}", message);
-}
-
-pub async fn retry_operation<F, T, E>(
-    operation: F,
-    max_retries: usize,
-    delay_ms: u64,
-) -> Result<T, E>
+pub async fn retry_operation<F, T>(operation: F, max_retries: usize, delay_ms: u64) -> Result<T>
 where
-    F: Fn() -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<T, E>> + Send>>,
-    E: std::fmt::Display,
+    F: Fn() -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<T>> + Send>>,
 {
     let mut last_error = None;
 
@@ -91,12 +57,12 @@ where
             Err(e) => {
                 last_error = Some(e);
                 if attempt < max_retries {
-                    log_warning(&format!(
+                    info!(
                         "Attempt {} failed, retrying in {}ms: {}",
                         attempt,
                         delay_ms,
                         last_error.as_ref().unwrap()
-                    ));
+                    );
                     sleep(Duration::from_millis(delay_ms)).await;
                 }
             }
@@ -104,19 +70,4 @@ where
     }
 
     Err(last_error.unwrap())
-}
-
-pub fn create_safe_csv_writer(filename: &str) -> Result<tempfile::NamedTempFile, Box<dyn Error>> {
-    let temp_file = tempfile::NamedTempFile::new()?;
-    log_info(&format!("Created temporary file for {}", filename));
-    Ok(temp_file)
-}
-
-pub fn persist_csv_file(
-    temp_file: tempfile::NamedTempFile,
-    filename: &str,
-) -> Result<(), Box<dyn Error>> {
-    temp_file.persist(filename)?;
-    log_info(&format!("Successfully wrote {}", filename));
-    Ok(())
 }

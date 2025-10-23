@@ -1,17 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::common::Config;
+    use anyhow::Result;
     use rand::rng;
-
-    #[test]
-    fn test_config_default() {
-        let config = Config::default();
-        assert_eq!(config.progress_interval, 1000);
-        assert_eq!(config.csv_buffer_size, 8192);
-        assert_eq!(config.max_retries, 3);
-        assert_eq!(config.temp_file_prefix, "hive_script_");
-    }
 
     #[test]
     fn test_sample_games_randomly() {
@@ -146,7 +136,45 @@ mod tests {
         match speed {
             GameSpeed::Bullet | GameSpeed::Blitz | GameSpeed::Rapid | 
             GameSpeed::Classic | GameSpeed::Correspondence => {},
-            _ => panic!("Invalid game speed returned"),
+            _ => panic!("Invalid game speed returned: {:?}", speed),
         }
+    }
+
+    #[test]
+    fn test_retry_operation_success() {
+        use crate::common::retry_operation;
+        use std::future::Future;
+        use std::pin::Pin;
+
+        let operation = || {
+            Box::pin(async move {
+                Ok::<i32, anyhow::Error>(42)
+            }) as Pin<Box<dyn Future<Output = Result<i32>> + Send>>
+        };
+
+        let result = futures::executor::block_on(retry_operation(operation, 3, 10));
+        assert_eq!(result, Ok(42));
+    }
+
+    #[test]
+    fn test_retry_operation_failure() {
+        use crate::common::retry_operation;
+        use std::future::Future;
+        use std::pin::Pin;
+
+        let operation = || {
+            Box::pin(async move {
+                Err::<i32, anyhow::Error>(anyhow::anyhow!("Always fails"))
+            }) as Pin<Box<dyn Future<Output = Result<i32>> + Send>>
+        };
+
+        let result = futures::executor::block_on(retry_operation(operation, 2, 1));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_anyhow_error_handling() {
+        let result: Result<()> = Err(anyhow::anyhow!("Test error"));
+        assert!(result.is_err());
     }
 }

@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use db_lib::models::{Game, NewGame, NewUser, User};
 use diesel::prelude::*;
 use diesel_async::{AsyncConnection, RunQueryDsl};
@@ -17,17 +18,25 @@ pub async fn run_seed_database(
     num_users: usize,
     games_per_user: usize,
     database_url: Option<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<()> {
     log_operation_start("database seeding");
 
-    info!("Setting up database connection...");
-    let mut conn = setup_database(database_url).await.map_err(|e| {
-        log::error!("Failed to setup database: {}", e);
-        e
-    })?;
+    let mut conn = setup_database(database_url)
+        .await
+        .context("Failed to setup database connection")?;
     info!("Connected to database");
 
-    // Wrap the entire seeding workflow in a single database transaction
+    let (created_users, created_games) = execute_seeding_transaction(&mut conn, num_users, games_per_user).await?;
+
+    log_operation_complete("Database seeding", created_users + created_games, 0);
+    Ok(())
+}
+
+async fn execute_seeding_transaction(
+    conn: &mut db_lib::DbConn<'_>,
+    num_users: usize,
+    games_per_user: usize,
+) -> Result<(usize, usize)> {
     info!("Beginning transactional seeding (all-or-nothing)...");
     let (created_users, created_games) = conn
         .transaction(|conn| {
@@ -56,9 +65,8 @@ pub async fn run_seed_database(
             log::error!("Seeding transaction failed and was rolled back: {}", e);
             e
         })?;
-
-    log_operation_complete("Database seeding", created_users + created_games, 0);
-    Ok(())
+    
+    Ok((created_users, created_games))
 }
 
 async fn create_test_users(
@@ -500,34 +508,16 @@ async fn resign_game(
     Ok(())
 }
 
-pub async fn cleanup_test_data(
-    database_url: Option<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn cleanup_test_data(database_url: Option<String>) -> Result<()> {
     log_operation_start("test data cleanup");
 
     info!("Setting up database connection...");
-    let mut conn = setup_database(database_url).await.map_err(|e| {
-        log::error!("Failed to setup database: {}", e);
-        e
-    })?;
+    let mut conn = setup_database(database_url)
+        .await
+        .context("Failed to setup database connection")?;
     info!("Connected to database");
 
-    // First, find all test users (by username and email patterns)
-    info!("Finding test users...");
-    let test_users = db_lib::schema::users::table
-        .filter(
-            db_lib::schema::users::username
-                .like("testuser%")
-                .and(db_lib::schema::users::email.like("test%@example.com")),
-        )
-        .select(db_lib::schema::users::id)
-        .load::<Uuid>(&mut conn)
-        .await
-        .map_err(|e| {
-            log::error!("Failed to find test users: {}", e);
-            e
-        })?;
-
+    let test_users = find_test_users(&mut conn).await?;
     info!("Found {} test users to clean up", test_users.len());
 
     if test_users.is_empty() {
@@ -536,42 +526,10 @@ pub async fn cleanup_test_data(
         return Ok(());
     }
 
-    // Delete all games involving test users
-    info!("Deleting games involving test users...");
-    let deleted_games = diesel::delete(
-        db_lib::schema::games::table.filter(
-            db_lib::schema::games::white_id
-                .eq_any(&test_users)
-                .or(db_lib::schema::games::black_id.eq_any(&test_users)),
-        ),
-    )
-    .execute(&mut conn)
-    .await
-    .map_err(|e| {
-        log::error!("Failed to delete games: {}", e);
-        e
-    })?;
-
+    let deleted_games = delete_games_involving_test_users(&mut conn, &test_users).await?;
     info!("Deleted {} games", deleted_games);
 
-    // Note: Ratings and game_users entries will be automatically deleted
-    // due to foreign key constraints with CASCADE DELETE
-
-    // Finally, delete the test users themselves
-    info!("Deleting test users...");
-    let deleted_users = diesel::delete(
-        db_lib::schema::users::table.filter(
-            db_lib::schema::users::username
-                .like("testuser%")
-                .and(db_lib::schema::users::email.like("test%@example.com")),
-        ),
-    )
-    .execute(&mut conn)
-    .await
-    .map_err(|e| {
-        log::error!("Failed to delete test users: {}", e);
-        e
-    })?;
+    let deleted_users = delete_test_users(&mut conn).await?;
 
     info!("Deleted {} test users", deleted_users);
 
@@ -588,4 +546,49 @@ pub async fn cleanup_test_data(
     info!("  - Total records deleted: {}", total_deleted);
 
     Ok(())
+}
+
+async fn find_test_users(conn: &mut db_lib::DbConn<'_>) -> Result<Vec<Uuid>> {
+    info!("Finding test users...");
+    db_lib::schema::users::table
+        .filter(
+            db_lib::schema::users::username
+                .like("testuser%")
+                .and(db_lib::schema::users::email.like("test%@example.com")),
+        )
+        .select(db_lib::schema::users::id)
+        .load::<Uuid>(conn)
+        .await
+        .context("Failed to find test users")
+}
+
+async fn delete_games_involving_test_users(
+    conn: &mut db_lib::DbConn<'_>,
+    test_users: &[Uuid],
+) -> Result<usize> {
+    info!("Deleting games involving test users...");
+    diesel::delete(
+        db_lib::schema::games::table.filter(
+            db_lib::schema::games::white_id
+                .eq_any(test_users)
+                .or(db_lib::schema::games::black_id.eq_any(test_users)),
+        ),
+    )
+    .execute(conn)
+    .await
+    .context("Failed to delete games involving test users")
+}
+
+async fn delete_test_users(conn: &mut db_lib::DbConn<'_>) -> Result<usize> {
+    info!("Deleting test users...");
+    diesel::delete(
+        db_lib::schema::users::table.filter(
+            db_lib::schema::users::username
+                .like("testuser%")
+                .and(db_lib::schema::users::email.like("test%@example.com")),
+        ),
+    )
+    .execute(conn)
+    .await
+    .context("Failed to delete test users")
 }

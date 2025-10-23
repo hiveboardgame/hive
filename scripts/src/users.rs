@@ -1,14 +1,17 @@
 use crate::common::{log_operation_complete, log_operation_start, setup_database};
+use anyhow::{Context, Result};
 use chrono::Utc;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use log::info;
 use uuid::Uuid;
 
-pub async fn list_users(database_url: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn list_users(database_url: Option<String>) -> Result<()> {
     log_operation_start("user listing");
 
-    let mut conn = setup_database(database_url).await?;
+    let mut conn = setup_database(database_url)
+        .await
+        .context("Failed to setup database connection")?;
 
     let users = db_lib::schema::users::table
         .select((
@@ -17,7 +20,8 @@ pub async fn list_users(database_url: Option<String>) -> Result<(), Box<dyn std:
             db_lib::schema::users::created_at,
         ))
         .load::<(Uuid, String, chrono::DateTime<Utc>)>(&mut conn)
-        .await?;
+        .await
+        .context("Failed to load users from database")?;
 
     info!("Found {} users:", users.len());
     let user_count = users.len();
@@ -34,14 +38,13 @@ pub async fn list_users(database_url: Option<String>) -> Result<(), Box<dyn std:
     Ok(())
 }
 
-pub async fn cleanup_test_data(
-    database_url: Option<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn cleanup_test_data(database_url: Option<String>) -> Result<()> {
     log_operation_start("test data cleanup");
 
-    let mut conn = setup_database(database_url).await?;
+    let mut conn = setup_database(database_url)
+        .await
+        .context("Failed to setup database connection")?;
 
-    // Delete test users (those starting with "testuser" and having test email)
     let deleted_users = diesel::delete(
         db_lib::schema::users::table.filter(
             db_lib::schema::users::username
@@ -50,11 +53,10 @@ pub async fn cleanup_test_data(
         ),
     )
     .execute(&mut conn)
-    .await?;
+    .await
+    .context("Failed to delete test users from database")?;
 
     info!("Deleted {} test users", deleted_users);
-
-    // Note: Games and ratings will be automatically deleted due to foreign key constraints
 
     log_operation_complete("Test data cleanup", deleted_users, 0);
     Ok(())
