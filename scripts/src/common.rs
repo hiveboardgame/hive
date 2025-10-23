@@ -1,8 +1,8 @@
 use db_lib::{get_conn, get_pool};
+use dotenvy::dotenv;
 use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
-use dotenvy::dotenv;
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -27,13 +27,13 @@ pub async fn setup_database(
     database_url: Option<String>,
 ) -> Result<db_lib::DbConn<'static>, Box<dyn Error>> {
     dotenv().ok();
-    
+
     let database_url = database_url
         .or_else(|| std::env::var("DATABASE_URL").ok())
         .expect("DATABASE_URL environment variable must be set or --database-url provided");
-    
+
     let pool = get_pool(&database_url).await?;
-    
+
     // Use Box::leak to create a static reference to the pool
     let static_pool = Box::leak(Box::new(pool));
     let conn = get_conn(static_pool).await?;
@@ -60,7 +60,10 @@ pub fn log_operation_start(operation: &str) {
 }
 
 pub fn log_operation_complete(operation: &str, processed: usize, errors: usize) {
-    println!("{} completed! Processed {} items with {} errors", operation, processed, errors);
+    println!(
+        "{} completed! Processed {} items with {} errors",
+        operation, processed, errors
+    );
 }
 
 pub fn log_warning(message: &str) {
@@ -81,20 +84,25 @@ where
     E: std::fmt::Display,
 {
     let mut last_error = None;
-    
+
     for attempt in 1..=max_retries {
         match operation().await {
             Ok(result) => return Ok(result),
             Err(e) => {
                 last_error = Some(e);
                 if attempt < max_retries {
-                    log_warning(&format!("Attempt {} failed, retrying in {}ms: {}", attempt, delay_ms, last_error.as_ref().unwrap()));
+                    log_warning(&format!(
+                        "Attempt {} failed, retrying in {}ms: {}",
+                        attempt,
+                        delay_ms,
+                        last_error.as_ref().unwrap()
+                    ));
                     sleep(Duration::from_millis(delay_ms)).await;
                 }
             }
         }
     }
-    
+
     Err(last_error.unwrap())
 }
 
@@ -104,7 +112,10 @@ pub fn create_safe_csv_writer(filename: &str) -> Result<tempfile::NamedTempFile,
     Ok(temp_file)
 }
 
-pub fn persist_csv_file(temp_file: tempfile::NamedTempFile, filename: &str) -> Result<(), Box<dyn Error>> {
+pub fn persist_csv_file(
+    temp_file: tempfile::NamedTempFile,
+    filename: &str,
+) -> Result<(), Box<dyn Error>> {
     temp_file.persist(filename)?;
     log_info(&format!("Successfully wrote {}", filename));
     Ok(())

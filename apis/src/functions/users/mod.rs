@@ -80,7 +80,8 @@ pub async fn get_users_around_position(
     use db_lib::models::User;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
-    let users_with_position = User::get_users_around_position(&game_speed, &user_id, range, &mut conn).await?;
+    let users_with_position =
+        User::get_users_around_position(&game_speed, &user_id, range, &mut conn).await?;
     let mut results: Vec<UserResponse> = Vec::new();
     for (user, _rating, _position) in users_with_position.iter() {
         results.push(
@@ -91,4 +92,3 @@ pub async fn get_users_around_position(
     }
     Ok(results)
 }
-

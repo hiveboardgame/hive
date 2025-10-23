@@ -63,10 +63,10 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let i18n = use_i18n();
     let radio_classes = |active| {
         format!("no-link-style py-1 px-2 text-sm font-semibold rounded-lg border-2 transition-all duration-200 transform hover:scale-[1.02] cursor-pointer shadow-sm hover:shadow-md {}", 
-            if active { 
-                "bg-pillbug-teal border-pillbug-teal text-white hover:bg-pillbug-teal/90" 
-            } else { 
-                "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:border-gray-500" 
+            if active {
+                "bg-pillbug-teal border-pillbug-teal text-white hover:bg-pillbug-teal/90"
+            } else {
+                "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:border-gray-500"
             })
     };
 

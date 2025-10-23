@@ -15,24 +15,20 @@ use shared_types::GameSpeed;
 pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let speed = Signal::derive(move || speed);
-    
+
     let user_id = Signal::derive(move || auth_context.user.with(|u| u.as_ref().map(|u| u.id)));
-    
+
     let top_users_resource = Resource::new(
         move || speed(),
-        move |speed| async move {
-            get_top_users(speed, 10).await
-        },
+        move |speed| async move { get_top_users(speed, 10).await },
     );
 
     let user_position_resource = Resource::new(
         move || (speed(), user_id()),
         move |(speed, user_id_opt)| async move {
             match user_id_opt {
-                Some(user_id) => {
-                    get_users_around_position(speed, user_id, 5).await.ok()
-                }
-                None => None
+                Some(user_id) => get_users_around_position(speed, user_id, 5).await.ok(),
+                None => None,
             }
         },
     );
@@ -48,14 +44,16 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                 Err(e) => {
                                     log!("Error fetching top users: {:?}", e);
                                     Either::Left(
-                                        view! { <pre class="m-2 h-6">"Couldn't fetch top users"</pre> },
+                                        view! {
+                                            <pre class="m-2 h-6">"Couldn't fetch top users"</pre>
+                                        },
                                     )
                                 }
                                 Ok(users) => {
                                     let users = StoredValue::new(users);
                                     let is_empty = move || users.with_value(|u| u.is_empty());
-                                    
                                     Either::Right(
+
                                         view! {
                                             <div class="flex flex-col m-2 rounded-lg w-fit">
                                                 <div class="flex gap-1 items-center">
@@ -98,7 +96,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                         .and_then(|data| data)
                         .map(|users| {
                             let users = StoredValue::new(users);
-                            
+
                             view! {
                                 <div class="flex flex-col m-2 rounded-lg w-fit">
                                     <div class="flex gap-1 items-center">

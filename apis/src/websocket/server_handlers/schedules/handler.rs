@@ -46,7 +46,7 @@ impl ScheduleHandler {
                             let proposer_id = schedule.proposer_id;
                             schedule.accept(self.user_id, tc).await?;
                             let schedule = ScheduleResponse::from_model(schedule, tc).await?;
-                            
+
                             let msg = format!(
                                 "[Schedule Accepted](<https://hivegame.com/tournament/{}>) - {} accepted your proposed game time: {} for [your game](<https://hivegame.com/game/{}>)",
                                 schedule.tournament_id,
@@ -54,11 +54,11 @@ impl ScheduleHandler {
                                 schedule.start_t.format("%Y-%m-%d %H:%M UTC"),
                                 schedule.game_id
                             );
-                            
+
                             if let Err(e) = Busybee::msg(proposer_id, msg).await {
                                 println!("Failed to send schedule acceptance notification: {e}");
                             }
-                            
+
                             (
                                 ScheduleUpdate::Accepted(schedule),
                                 vec![MessageDestination::Global],
@@ -79,7 +79,7 @@ impl ScheduleHandler {
                             let schedule = Schedule::create(schedule, self.user_id, tc).await?;
                             let opponent_id = schedule.opponent_id;
                             let schedule_response = ScheduleResponse::from_model(schedule, tc).await?;
-                            
+
                             let msg = format!(
                                 "[Schedule Proposal](<https://hivegame.com/tournament/{}>) - {} proposed a game time: {} for [your game](<https://hivegame.com/game/{}>)",
                                 schedule_response.tournament_id,
@@ -87,11 +87,11 @@ impl ScheduleHandler {
                                 schedule_response.start_t.format("%Y-%m-%d %H:%M UTC"),
                                 schedule_response.game_id
                             );
-                            
+
                             if let Err(e) = Busybee::msg(opponent_id, msg).await {
                                 println!("Failed to send schedule proposal notification: {e}");
                             }
-                            
+
                             let destinations = vec![
                                 MessageDestination::User(self.user_id),
                                 MessageDestination::User(opponent_id),

@@ -634,13 +634,13 @@ impl Tournament {
         for combination in combinations {
             let white = combination[0].id;
             let black = combination[1].id;
-            
+
             for _ in 0..3 {
                 let new_game = NewGame::new_from_tournament(white, black, self);
                 let game = Game::create(new_game, conn).await?;
                 games.push(game);
             }
-            
+
             for _ in 0..3 {
                 let new_game = NewGame::new_from_tournament(black, white, self);
                 let game = Game::create(new_game, conn).await?;
