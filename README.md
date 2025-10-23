@@ -136,6 +136,22 @@ docker compose logs -f app
 ```
 This shows the incremental build output and prints when the server binds to the port.
 
+## Database Scripts
+
+The project includes database management scripts for data analysis and seeding. See [scripts/README.md](scripts/README.md) for detailed documentation.
+
+Quick usage:
+```sh
+# Generate game statistics for tactical analysis
+cargo run --bin script game-stats --sample-size 1000 --no-bots
+
+# Generate comprehensive games report for player analysis
+cargo run --bin script games-report
+
+# Seed database with test data
+cargo run --bin script seed --users 50 --games-per-user 20
+```
+
 ### Troubleshooting
 
 If you get an error of the form
