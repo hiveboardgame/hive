@@ -1,7 +1,7 @@
 use crate::functions::games::get::server_fn::codec;
-use crate::responses::GameResponse;
+use crate::responses::{GameResponse, RatingHistoryResponse};
 use leptos::prelude::*;
-use shared_types::{GameId, GamesQueryOptions};
+use shared_types::{GameId, GameSpeed, GamesQueryOptions};
 use uuid::Uuid;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
@@ -35,6 +35,20 @@ pub async fn get_batch_from_options(
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     GameResponse::vec_from_options(options, &mut conn)
+        .await
+        .map_err(ServerFnError::new)
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_rating_history_resource(
+    user_id: Uuid,
+    game_speed: GameSpeed,
+) -> Result<Vec<RatingHistoryResponse>, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::get_conn;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    RatingHistoryResponse::get_rating_history_from_uuid_and_speed(&user_id, &game_speed, &mut conn)
         .await
         .map_err(ServerFnError::new)
 }

@@ -1209,4 +1209,27 @@ impl Game {
         }
         self.black_id
     }
+
+    pub async fn get_rated_games_for_player_and_speed_sorted(
+        player: Uuid,
+        game_speed: &GameSpeed,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Self>, DbError> {
+        if matches!(game_speed, GameSpeed::Untimed) {
+            return Ok(vec![]);
+        }
+        Ok(games::table
+        .filter(rated.eq(true))
+        .filter(finished.eq(true))
+        .filter(speed.eq(game_speed.to_string()))
+        .filter(white_id.eq(player).or(black_id.eq(player)))
+        .filter(white_rating.is_not_null())
+        .filter(black_rating.is_not_null())
+        .filter(white_rating_change.is_not_null())
+        .filter(black_rating_change.is_not_null())
+        .filter(updated_at.is_not_null())
+        .order(updated_at.asc())
+        .load::<Game>(conn)
+        .await?)
+    }
 }
