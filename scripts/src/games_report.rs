@@ -32,20 +32,17 @@ pub async fn run_games_report(database_url: Option<String>) -> Result<()> {
 }
 
 async fn process_game(game: &Game, conn: &mut db_lib::DbConn<'_>) -> Result<Vec<String>> {
-    // Get white player info
     let white_user = db_lib::schema::users::table
         .filter(db_lib::schema::users::id.eq(game.white_id))
         .first::<User>(conn)
         .await
         .context("Failed to load white player from database")?;
 
-    // Get black player info
     let black_user = db_lib::schema::users::table
         .filter(db_lib::schema::users::id.eq(game.black_id))
         .first::<User>(conn)
         .await
         .context("Failed to load black player from database")?;
-    // Parse game speed to get time control category
     let time_control_category = match game.speed.parse::<GameSpeed>() {
         Ok(speed) => match speed {
             GameSpeed::Bullet => "Bullet",
@@ -58,7 +55,6 @@ async fn process_game(game: &Game, conn: &mut db_lib::DbConn<'_>) -> Result<Vec<
         Err(_) => "Unknown",
     };
 
-    // Get ratings for both players
     let game_speed = game
         .speed
         .parse::<GameSpeed>()
@@ -70,18 +66,15 @@ async fn process_game(game: &Game, conn: &mut db_lib::DbConn<'_>) -> Result<Vec<
         .await
         .context("Failed to load black player rating")?;
 
-    // Determine rating certainty based on deviation
     let white_certainty = get_rating_certainty(white_rating.deviation);
     let black_certainty = get_rating_certainty(black_rating.deviation);
 
-    // Check if it's a tournament game
     let tournament_game = game.tournament_id.is_some();
     let tournament_id = game
         .tournament_id
         .map(|id| id.to_string())
         .unwrap_or_default();
 
-    // Format the result
     let result = format_result(&game.conclusion);
 
     Ok(vec![

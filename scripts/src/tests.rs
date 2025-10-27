@@ -10,7 +10,6 @@ mod tests {
         use uuid::Uuid;
         use chrono::Utc;
 
-        // Create mock games
         let games = vec![
             Game {
                 nanoid: "test1".to_string(),
@@ -80,15 +79,12 @@ mod tests {
             },
         ];
 
-        // Test sampling with size equal to total
         let sampled = sample_games_randomly(&games, 2);
         assert_eq!(sampled.len(), 2);
 
-        // Test sampling with size greater than total
         let sampled = sample_games_randomly(&games, 5);
         assert_eq!(sampled.len(), 2);
 
-        // Test sampling with size less than total
         let sampled = sample_games_randomly(&games, 1);
         assert_eq!(sampled.len(), 1);
     }
@@ -98,15 +94,12 @@ mod tests {
         use crate::games_report::get_rating_certainty;
         use shared_types::RANKABLE_DEVIATION;
 
-        // Test rankable rating
         assert_eq!(get_rating_certainty(RANKABLE_DEVIATION), "Rankable");
         assert_eq!(get_rating_certainty(50.0), "Rankable");
 
-        // Test provisional rating
         assert_eq!(get_rating_certainty(150.0), "Provisional");
         assert_eq!(get_rating_certainty(200.0), "Provisional");
 
-        // Test clueless rating
         assert_eq!(get_rating_certainty(250.0), "Clueless");
         assert_eq!(get_rating_certainty(500.0), "Clueless");
     }
@@ -132,7 +125,6 @@ mod tests {
 
         let speed = get_random_game_speed();
         
-        // Should be one of the valid game speeds
         match speed {
             GameSpeed::Bullet | GameSpeed::Blitz | GameSpeed::Rapid | 
             GameSpeed::Classic | GameSpeed::Correspondence => {},

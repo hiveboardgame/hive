@@ -66,11 +66,9 @@ async fn analyze_game(game: &Game, max_turns: usize) -> Result<Vec<String>> {
             Color::Black
         };
 
-        // Count available moves
         let available_moves = current_state.board.moves(current_color);
         let total_moves: usize = available_moves.values().map(|moves| moves.len()).sum();
 
-        // Count available spawn positions
         let available_spawns = current_state.board.spawnable_positions(current_color);
         let total_spawns = available_spawns.count();
 
@@ -85,13 +83,11 @@ async fn analyze_game(game: &Game, max_turns: usize) -> Result<Vec<String>> {
 
     stats.push(turn.to_string());
 
-    // Pad with empty strings to match max_turns
     while moves_per_turn.len() < max_turns {
         moves_per_turn.push("".to_string());
         spawns_per_turn.push("".to_string());
     }
 
-    // Interleave moves and spawns data
     for i in 0..max_turns {
         stats.push(moves_per_turn[i].clone());
         stats.push(spawns_per_turn[i].clone());

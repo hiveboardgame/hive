@@ -1,10 +1,9 @@
+use crate::common::{log_operation_complete, log_operation_start, log_progress, setup_database};
 use anyhow::{Context, Result};
+use chrono::Utc;
 use db_lib::models::{Game, NewGame, NewUser, User};
 use diesel::prelude::*;
 use diesel_async::{AsyncConnection, RunQueryDsl};
-
-use crate::common::{log_operation_complete, log_operation_start, log_progress, setup_database};
-use chrono::Utc;
 use hive_lib::{GameControl, GameType, History, Piece, Position, State};
 use log::info;
 use nanoid::nanoid;
@@ -26,7 +25,8 @@ pub async fn run_seed_database(
         .context("Failed to setup database connection")?;
     info!("Connected to database");
 
-    let (created_users, created_games) = execute_seeding_transaction(&mut conn, num_users, games_per_user).await?;
+    let (created_users, created_games) =
+        execute_seeding_transaction(&mut conn, num_users, games_per_user).await?;
 
     log_operation_complete("Database seeding", created_users + created_games, 0);
     Ok(())
@@ -37,35 +37,35 @@ async fn execute_seeding_transaction(
     num_users: usize,
     games_per_user: usize,
 ) -> Result<(usize, usize)> {
-    info!("Beginning transactional seeding (all-or-nothing)...");
+    info!("Beginning seeding");
     let (created_users, created_games) = conn
         .transaction(|conn| {
             Box::pin(async move {
-                info!("Creating {} test users...", num_users);
+                info!("Creating {} test users", num_users);
                 let user_ids = create_test_users(conn, num_users).await.map_err(|e| {
                     log::error!("Failed to create test users: {}", e);
                     diesel::result::Error::RollbackTransaction
                 })?;
-                info!("Created {} users", user_ids.len());
+                info!("Done, we now have {} users", user_ids.len());
 
-                info!("Playing {} games per user...", games_per_user);
+                info!("Playing {} games per user", games_per_user);
                 let total_games = play_test_games(conn, &user_ids, games_per_user)
                     .await
                     .map_err(|e| {
                         log::error!("Failed to play test games: {}", e);
                         diesel::result::Error::RollbackTransaction
                     })?;
-                info!("Created {} total games", total_games);
+                info!("Done, we now have {} total games", total_games);
 
                 Ok::<(usize, usize), diesel::result::Error>((user_ids.len(), total_games))
             })
         })
         .await
         .map_err(|e| {
-            log::error!("Seeding transaction failed and was rolled back: {}", e);
+            log::error!("Seeding failed and was rolled back: {}", e);
             e
         })?;
-    
+
     Ok((created_users, created_games))
 }
 
@@ -80,7 +80,6 @@ async fn create_test_users(
         let email = format!("test{}@example.com", i);
         let password_hash = String::from("hivegame");
 
-        info!("Creating user {}...", username);
         let new_user = NewUser::new(&username, &password_hash, &email).map_err(|e| {
             log::error!("Failed to create NewUser for {}: {}", username, e);
             e
@@ -116,7 +115,7 @@ async fn play_test_games(
 
         for game_idx in 0..games_per_user {
             let opponent_id = get_random_opponent(user_id, user_ids);
-            let game_speed = GameSpeed::Bullet;
+            let game_speed = get_random_game_speed();
 
             let (white_id, black_id) = {
                 let mut rng = rng();
@@ -142,13 +141,11 @@ async fn play_test_games(
                     e
                 })?;
 
-            info!("Playing game {}...", game.nanoid);
             play_game(&game, conn).await.map_err(|e| {
                 log::error!("Failed to play game {}: {}", game.nanoid, e);
                 e
             })?;
 
-            info!("Resigning game {}...", game.nanoid);
             resign_game(&game, conn).await.map_err(|e| {
                 log::error!("Failed to resign game {}: {}", game.nanoid, e);
                 e
@@ -251,16 +248,11 @@ async fn play_game(
     game: &Game,
     conn: &mut db_lib::DbConn<'_>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Start the game
-    info!("Starting game {}...", game.nanoid);
     let started_game = game.start(conn).await.map_err(|e| {
         log::error!("Failed to start game {}: {}", game.nanoid, e);
         e
     })?;
-    info!("Started game: {}", started_game.nanoid);
 
-    // Create game state from history
-    info!("Creating game state from history...");
     let history = History::new_from_str(&started_game.history).map_err(|e| {
         log::error!(
             "Failed to parse history for game {}: {}",
@@ -289,9 +281,7 @@ async fn play_game(
         e
     })?;
 
-    // Play up to 100 moves
     for move_num in 0..100 {
-        // Check if game is finished
         if matches!(state.game_status, hive_lib::GameStatus::Finished(_)) {
             info!(
                 "Game {} finished after {} moves",
@@ -302,19 +292,14 @@ async fn play_game(
 
         let current_color = state.turn_color;
 
-        // Get available spawns and reserve from the engine
         let available_spawns: Vec<Position> =
             state.board.spawnable_positions(current_color).collect();
         let mut reserve = state.reserve(current_color);
 
-        // Tournament rule: Queen cannot be spawned on turns 0 or 1 (first 2 moves)
-        // Must be spawned by turn 6 for white (4th white move) or turn 7 for black (4th black move)
         if state.turn < 2 {
-            // Remove queen from reserve for first 2 turns
             reserve.remove(&hive_lib::Bug::Queen);
         }
 
-        // Check if we can make moves (only after the current player's queen is played)
         let can_make_moves = state.board.queen_played(current_color);
         let available_moves = if can_make_moves {
             state.board.moves(current_color)
@@ -327,7 +312,6 @@ async fn play_game(
               available_moves.len(), available_spawns.len(),
               reserve.values().map(|v| v.len()).sum::<usize>());
 
-        // If no moves and no spawns available, end the game
         if available_moves.is_empty() && (available_spawns.is_empty() || reserve.is_empty()) {
             info!(
                 "Game {} - No valid moves or spawns available, ending game",
@@ -338,15 +322,12 @@ async fn play_game(
 
         let mut move_made = false;
 
-        // Decide: make a move or spawn
-        // Prefer spawning early (50% chance), then moving later (if queen is out and 70% chance)
         let should_try_move = can_make_moves && !available_moves.is_empty() && {
             let mut rng = rng();
             rng.random_bool(0.3)
         };
 
         if should_try_move {
-            // Make a move - pick from the valid moves returned by the engine
             let move_entries: Vec<_> = available_moves.iter().collect();
             if let Some(((piece, from_pos), target_positions)) = {
                 let mut rng = rng();
@@ -371,9 +352,7 @@ async fn play_game(
             }
         }
 
-        // If we didn't make a move, try to spawn
         if !move_made && !available_spawns.is_empty() && !reserve.is_empty() {
-            // Pick a random piece from the reserve
             let reserve_entries: Vec<_> = reserve
                 .iter()
                 .flat_map(|(bug, pieces)| pieces.iter().map(move |p| (*bug, p.clone())))
@@ -389,10 +368,8 @@ async fn play_game(
                 let mut rng = rng();
                 reserve_entries.choose(&mut rng)
             } {
-                // Parse the piece string to get the actual piece
                 match piece_str.parse::<Piece>() {
                     Ok(piece) => {
-                        // Pick a random spawn position
                         if let Some(spawn_pos) = {
                             let mut rng = rng();
                             available_spawns.choose(&mut rng)
@@ -444,7 +421,6 @@ async fn play_game(
         }
     }
 
-    // Update the game in the database with the new state
     if state.turn > 0 {
         info!("Updating game state in database...");
         started_game
@@ -471,7 +447,6 @@ async fn resign_game(
     game: &Game,
     conn: &mut db_lib::DbConn<'_>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Pick a random player to resign
     let resigning_user = {
         let mut rng = rng();
         if rng.random_bool(0.5) {
@@ -481,7 +456,6 @@ async fn resign_game(
         }
     };
 
-    // Create the resignation game control
     let user_color = game.user_color(resigning_user).ok_or_else(|| {
         let error = format!(
             "User {} is not a player in game {}",
@@ -493,7 +467,6 @@ async fn resign_game(
 
     let game_control = GameControl::Resign(user_color);
 
-    // Resign the game
     info!(
         "Resigning game {} for user {} ({})",
         game.nanoid, resigning_user, user_color
