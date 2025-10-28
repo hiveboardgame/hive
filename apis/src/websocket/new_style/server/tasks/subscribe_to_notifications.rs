@@ -1,16 +1,15 @@
+use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt;
 
 use crate::websocket::new_style::server::{tasks, ServerData, TabData};
 use crate::websocket::{InternalServerMessage, MessageDestination};
 
-pub async fn server_notifications(client: &TabData, server: &ServerData) {
-    let mut receiver = server.notifications();
+pub async fn server_notifications(client: &TabData, server: &ServerData, mut stream: BroadcastStream<InternalServerMessage>) {
     //Load initial online users and add myself
-    tasks::load_online_users(client, server);
     while let Some(Ok(InternalServerMessage {
         destination,
         message,
-    })) = receiver.next().await
+    })) = stream.next().await
     {
         match destination {
             MessageDestination::Global => {

@@ -1,61 +1,59 @@
 use crate::{
     common::ServerMessage,
     providers::PingContext,
-    websocket::{
-        client_handlers::{
-            challenge::handler::handle_challenge, game::handle_game,
-            schedule::handler::handle_schedule, tournament::handler::handle_tournament,
-            user_status::handle::handle_user_status,
-        },
-        new_style::{
-            client::{api::ClientResult, ClientApi},
-            websocket_fn::websocket_fn,
-        },
+    websocket::client_handlers::{
+        challenge::handler::handle_challenge, game::handle_game,
+        schedule::handler::handle_schedule, tournament::handler::handle_tournament,
+        user_status::handle::handle_user_status,
     },
+    websocket::new_style::client::ClientApi,
 };
-use futures::channel::mpsc::Receiver;
 use futures::StreamExt;
-use leptos::prelude::expect_context;
+use futures::Stream;
+use leptos::prelude::{expect_context, RwSignal, Set};
+use server_fn::ServerFnError;
 
-pub async fn client_handler(rx: Receiver<ClientResult>) {
+pub async fn client_handler<S>(
+    last_ping: RwSignal<Option<f64>>,
+    client_api: ClientApi,
+    mut stream: S,
+) where
+    S: Stream<Item = Result<ServerMessage, ServerFnError>> + Unpin,
+{
     let mut ping = expect_context::<PingContext>();
-    let client_api = expect_context::<ClientApi>();
-    match websocket_fn(rx.into()).await {
-        Ok(mut messages) => {
-            while let Some(msg) = messages.next().await {
-                match msg {
-                    Ok(msg) => match msg {
-                        ServerMessage::Ping { nonce, value } => {
-                            ping.update_ping(value);
-                            client_api.pong(nonce);
-                        }
-                        ServerMessage::UserStatus(user_update) => {
-                            handle_user_status(user_update);
-                        }
-                        ServerMessage::Game(game_update) => {
-                            handle_game(*game_update);
-                        }
-                        ServerMessage::Challenge(update) => {
-                            handle_challenge(update);
-                        }
-                        ServerMessage::Schedule(update) => {
-                            handle_schedule(update);
-                        }
-                        ServerMessage::Tournament(update) => {
-                            handle_tournament(update);
-                        }
-                        ServerMessage::Error(e) => {
-                            leptos::logging::log!("ServerMessage::Error {e}");
-                        }
-                        _ => todo!(),
-                    },
-
-                    Err(e) => {
-                        leptos::logging::log!("{e}");
-                    }
+    client_api.game_join();
+    while let Some(msg) = stream.next().await {
+        match msg {
+            Ok(msg) => match msg {
+                ServerMessage::Ping { nonce, value } => {
+                    ping.update_ping(value);
+                    let curr = chrono::offset::Utc::now().timestamp_millis();
+                    last_ping.set(Some(curr as f64));
+                    client_api.pong(nonce).await;
                 }
-            }
+                ServerMessage::UserStatus(user_update) => {
+                    handle_user_status(user_update);
+                }
+                ServerMessage::Game(game_update) => {
+                    handle_game(*game_update);
+                }
+                ServerMessage::Challenge(update) => {
+                    handle_challenge(update);
+                }
+                ServerMessage::Schedule(update) => {
+                    handle_schedule(update);
+                }
+                ServerMessage::Tournament(update) => {
+                    handle_tournament(update);
+                }
+                ServerMessage::Error(e) => {
+                    leptos::logging::log!("ServerMessage::Error {e}");
+                }
+                _ => todo!(),
+            },
+            Err(e) => {
+                leptos::logging::log!("WS restart");
+             }
         }
-        Err(e) => leptos::logging::warn!("{e}"),
     }
 }

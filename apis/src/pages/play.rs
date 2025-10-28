@@ -133,11 +133,11 @@ pub fn Play() -> impl IntoView {
         game_id,
         move |game_id, _, _| {
             let game_id = game_id.clone();
-            client_api.game_join();
             spawn_local(async move {
                 let game_id = game_id.clone();
                 let game = get_game_from_nanoid(game_id.clone()).await;
                 if let Ok(game) = game {
+                    client_api.game_join();
                     reset_game_state(&game, game_state);
                     timer.update_from(&game);
                     if let Some((_turn, gc)) = game.game_control_history.last() {

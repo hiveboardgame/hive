@@ -6,16 +6,22 @@ use crate::websocket::new_style::server::{ServerData, TabData};
 
 const PING_INTERVAL_MS: u64 = 1000; // consistent with previous implementation
 
-pub async fn ping_client(client: &TabData, server_data: &ServerData) {
+pub async fn ping_client(tab: &TabData, server: &ServerData) {
     let mut interval = interval_fn(Duration::from_millis(PING_INTERVAL_MS));
+    //firs tick is imediate
+    interval.tick().await;
+    let mut x = 0;
+    let (id,_)= tab.as_subscriber();
     loop {
         interval.tick().await;
+        x+=1;
+        println!("ping {x}. {id}");
         let nonce = rand::rng().random();
-        client.update_pings(nonce);
+        tab.update_pings(nonce);
         let message = ServerMessage::Ping {
             nonce,
-            value: client.pings_value(),
+            value: tab.pings_value(),
         };
-        client.send(message, server_data);
+        tab.send(message, server);
     }
 }

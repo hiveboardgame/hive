@@ -1,6 +1,7 @@
 use crate::common::{ChallengeAction, ClientRequest, GameAction, ScheduleAction, TournamentAction};
 use crate::providers::{challenges::ChallengeStateSignal, AuthContext};
 use crate::responses::create_challenge_handler;
+use futures::SinkExt;
 use futures::{
     channel::mpsc::{self, Sender},
 };
@@ -20,23 +21,23 @@ pub struct ClientApi {
     game_join: RwSignal<()>,
     //client api holds the client mpsc sender
     //and the latest message received from the server
-    sender: StoredValue<Sender<ClientResult>>,
+    sender: StoredValue<Option<Sender<ClientResult>>>,
 }
 impl Default for ClientApi {
     fn default() -> Self {
-        let (tx, _rx) = mpsc::channel(1);
         Self {
             ws_restart: RwSignal::new(()),
             game_join: RwSignal::new(()),
-            sender: StoredValue::new(tx),
+            sender: StoredValue::new(None),
         }
     }
 }
 impl ClientApi {
-    pub fn set_sender(&self, sender: Sender<ClientResult>) {
+    pub fn set_sender(&self, sender: Option<Sender<ClientResult>>) {
         self.sender.set_value(sender);
     }
     pub fn restart_ws(&self) {
+        self.set_sender(None);
         self.ws_restart.set(());
     }
     pub fn signal_restart_ws(&self) -> ReadSignal<()> {
@@ -49,8 +50,8 @@ impl ClientApi {
         self.game_join.read_only()
     }
     fn send(&self, client_request: ClientRequest) {
-        let mut sender = self.sender.get_value();
-        let ret = sender.try_send(Ok(client_request.clone()));
+        let sender = self.sender.get_value();
+        let ret = sender.expect("Dont have a sender").try_send(Ok(client_request.clone()));
         if ret.is_err() {
             logging::log!("Msg: {client_request:?} Error: {ret:?}");
         }
@@ -73,9 +74,12 @@ impl ClientApi {
         };
         self.send(msg);
     }
-    pub fn pong(&self, nonce: u64) {
-        let msg = ClientRequest::Pong(nonce);
-        self.send(msg);
+    pub async fn pong(&self, nonce: u64) {
+        let sender = self.sender.get_value();
+        let ret = sender.expect("Dont have a sender").send(Ok( ClientRequest::Pong(nonce))).await;
+        if ret.is_err() {
+            logging::log!("Pong Error: {ret:?}");
+        }
     }
     pub fn game_control(&self, game_id: GameId, gc: GameControl) {
         let msg = ClientRequest::Game {
