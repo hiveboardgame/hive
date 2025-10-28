@@ -27,6 +27,7 @@ diesel = { workspace = true, optional = true }
 diesel-async = { workspace = true, optional = true }
 diesel_migrations = { workspace = true, optional = true }
 futures = { workspace = true}
+gloo-timers = {workspace = true}
 hive = { path = "../engine" }
 http = { workspace = true }
 http-serde = { workspace = true }

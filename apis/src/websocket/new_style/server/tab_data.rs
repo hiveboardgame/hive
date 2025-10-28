@@ -4,7 +4,7 @@ use crate::{
     websocket::{lag_tracking::PingStats, new_style::server::ServerData},
 };
 use db_lib::DbPool;
-use futures::channel::mpsc;
+use futures::{channel::mpsc, SinkExt};
 use server_fn::ServerFnError;
 use shared_types::{GameId, TournamentId};
 use std::sync::{Arc, RwLock};

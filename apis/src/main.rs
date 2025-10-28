@@ -10,7 +10,6 @@ pub mod websocket;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::{time::Duration, SameSite};
 use actix_web::middleware::Compress;
-use leptos_meta::{HashedStylesheet, MetaTags};
 use websocket::WebsocketData;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
@@ -118,8 +117,8 @@ async fn main() -> std::io::Result<()> {
                                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                                 <AutoReload options=leptos_options.clone() />
                                 <HydrationScripts options=leptos_options.clone()/>
-                                <MetaTags/>
-                                <HashedStylesheet options=leptos_options.clone() id="leptos"/>
+                                <leptos_meta::MetaTags/>
+                                <leptos_meta::HashedStylesheet options=leptos_options.clone() id="leptos"/>
                             </head>
                             <body>
                                 <App/>

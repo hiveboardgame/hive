@@ -13,21 +13,25 @@ use crate::{
         },
     },
 };
-use futures::channel::mpsc::Receiver;
+use futures::channel::mpsc;
 use futures::StreamExt;
-use leptos::prelude::expect_context;
+use leptos::prelude::{expect_context, RwSignal, Set};
 
-pub async fn client_handler(rx: Receiver<ClientResult>) {
+pub async fn client_handler(last_ping: RwSignal<Option<f64>>, client_api: ClientApi) {
+    let (tx, rx) = mpsc::channel(1);
     let mut ping = expect_context::<PingContext>();
-    let client_api = expect_context::<ClientApi>();
     match websocket_fn(rx.into()).await {
         Ok(mut messages) => {
+            client_api.set_sender(Some(tx));
+            client_api.game_join();
             while let Some(msg) = messages.next().await {
                 match msg {
                     Ok(msg) => match msg {
                         ServerMessage::Ping { nonce, value } => {
                             ping.update_ping(value);
-                            client_api.pong(nonce);
+                            let curr = chrono::offset::Utc::now().timestamp_millis();
+                            last_ping.set(Some(curr as f64));
+                            client_api.pong(nonce).await;
                         }
                         ServerMessage::UserStatus(user_update) => {
                             handle_user_status(user_update);
@@ -51,7 +55,8 @@ pub async fn client_handler(rx: Receiver<ClientResult>) {
                     },
 
                     Err(e) => {
-                        leptos::logging::log!("{e}");
+                        leptos::logging::log!("WS restart due to {e}"); 
+                        client_api.restart_ws();
                     }
                 }
             }

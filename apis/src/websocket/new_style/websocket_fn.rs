@@ -1,8 +1,4 @@
-use crate::{
-    common::{ClientRequest, ServerMessage},
-    functions::accounts::get::get_account,
-};
-use futures::channel::mpsc;
+use crate::common::{ClientRequest, ServerMessage};
 use leptos::prelude::*;
 use server_fn::{codec::MsgPackEncoding, BoxedStream, ServerFnError, Websocket};
 
@@ -10,15 +6,27 @@ use server_fn::{codec::MsgPackEncoding, BoxedStream, ServerFnError, Websocket};
 pub async fn websocket_fn(
     input: BoxedStream<ClientRequest, ServerFnError>,
 ) -> Result<BoxedStream<ServerMessage, ServerFnError>, ServerFnError> {
-    use crate::functions::db::pool;
-    use crate::websocket::{
-        new_style::server::{server_handler, tasks, ServerData, TabData}
-    };
     use actix_web::web::Data;
     use tokio::{join, spawn,select};
+    use futures::channel::mpsc;
+    use futures::StreamExt;
+    use crate::functions::{
+        db::pool,
+        accounts::get::get_account
+    };
+    use crate::websocket::{
+        new_style::server::{server_handler, tasks, ServerData, TabData},
+        server_handlers::{
+            game::handler::GameActionHandler, 
+            challenges::handler::ChallengeHandler,
+            schedules::ScheduleHandler,
+            tournaments::handler::TournamentHandler,
+        }
+    };
+    let mut input = input;
     let req: actix_web::HttpRequest = leptos_actix::extract().await?;
 
-    let server_o = req
+    let server = req
         .app_data::<Data<ServerData>>()
         .ok_or("Failed to get server notifications")
         .map_err(ServerFnError::new)?
@@ -28,42 +36,27 @@ pub async fn websocket_fn(
 
     // create a channel of outgoing websocket messages (from mpsc)
     let (tx, rx) = mpsc::channel(1);
+    let tab = TabData::new(tx, user, pool().await?);
 
-    let tab_o = TabData::new(tx, user, pool().await?);
+    //server notifications stream
+    let notifications = server.notifications();
 
-    //One shot tasks
-    let (tab, server) = (tab_o.clone(),server_o.clone());
-    spawn(async move {
-        let server = server.as_ref();
-        join!(
-            tasks::send_tournament_invitations(&tab, server),
-            tasks::send_schedules(&tab, server),
-            tasks::send_challenges(&tab, server),
-            tasks::send_urgent_games(&tab, server),
-        );
-    });
-
+    tasks::send_tournament_invitations(&tab, &server).await;
+    tasks::send_schedules(&tab, &server).await;
+    tasks::send_challenges(&tab, &server).await;
+    tasks::send_urgent_games(&tab, &server).await;
     /* === Long runing tasks with abortable handle === */
 
-    let (tab, server) = (tab_o.clone(),server_o.clone());
-    let token = tab_o.token();
-    spawn( async move { 
-        select!(
-            //pings the client on a given interval
-            _ = tasks::ping_client(&tab, server.as_ref()) =>{},
-            _ = token.cancelled() => {}
-
-        );
-    });
-
-    let token = tab_o.token();
+    let token = tab.token();
     spawn(async move { 
         select!(
-            //listens to the server notifications and sends them to the client
-            _ = tasks::server_notifications(&tab_o, &server_o) =>{},
-            //main handler
-            _ = server_handler(input, &tab_o, server_o.clone()) => {},
             _ = token.cancelled() => {}
+            //main handler
+            _ = server_handler(input, &tab, server.clone()) => {},
+            //subscribe to server notifications
+            _ = tasks::server_notifications(&tab, &server, notifications) =>{},
+            //one shot tasks then ping client on a loop
+            _ = tasks::ping_client(&tab, &server) =>{},
 
         );
     });

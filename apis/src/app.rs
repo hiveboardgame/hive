@@ -34,8 +34,8 @@ use crate::{
         schedules::provide_schedules, websocket::provide_websocket, AuthContext,
     },
 };
-use futures::channel::mpsc;
 use futures::stream::{AbortHandle, Abortable};
+use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
@@ -43,11 +43,12 @@ use leptos_router::{
     components::{Outlet, ParentRoute, ProtectedRoute, Route, Router, Routes},
     path,
 };
-use leptos_use::SameSite;
+use leptos_use::{use_timestamp_with_options, SameSite, UseTimestampOptions};
 use shared_types::{GameProgress, TournamentStatus};
 
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
+const WS_TIMEOUT_MS: f64 = 5000.0;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -88,6 +89,16 @@ pub fn App() -> impl IntoView {
         let client_api = expect_context::<ClientApi>();
         let ws_restart = client_api.signal_restart_ws();
         let task_handle = StoredValue::<Option<AbortHandle>>::new(None);
+        let last_ping = RwSignal::new(None);
+        let now = use_timestamp_with_options(UseTimestampOptions::default().interval(1000).callback(
+            move |n| {
+                last_ping.with(|last| {
+                    if last.is_some_and(|last| n - last > WS_TIMEOUT_MS) {
+                        client_api.restart_ws();
+                    }
+                })
+            }
+        ));
         // Start or restart the ws task
         Effect::watch(
             ws_restart,
@@ -102,13 +113,13 @@ pub fn App() -> impl IntoView {
                 // Store the handle so we can stop it later
                 task_handle.set_value(Some(abort_handle));
 
-                let (tx, rx) = mpsc::channel(1);
-                client_api.set_sender(tx);
-                client_api.game_join();
                 leptos::task::spawn_local(async move {
                     // Make it abortable
-                    let _ = Abortable::new(client_handler(rx), abort_reg).await;
+                    let _ = Abortable::new(client_handler(last_ping, client_api), abort_reg).await;
                     leptos::logging::log!("Task stopped or aborted");
+                    last_ping.set(None);
+                    let timeout = Timeout::new(1_000, move || {});
+                    timeout.forget();
                 });
             },
             false,
