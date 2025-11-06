@@ -16,6 +16,17 @@ pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError>
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_user_by_username(username: String) -> Result<UserResponse, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::get_conn;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    UserResponse::from_username(&username, &mut conn)
+        .await
+        .map_err(ServerFnError::new)
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
