@@ -1,14 +1,14 @@
-use crate::providers::websocket::WebsocketContext;
 use crate::providers::PingContext;
+use crate::websocket::new_style::client::ClientApi;
 use chrono::Utc;
 use leptos::either::Either;
 use leptos::prelude::*;
 use leptos_icons::*;
-use leptos_use::core::ConnectionReadyState;
 
 #[component]
 pub fn Ping() -> impl IntoView {
-    let websocket = expect_context::<WebsocketContext>();
+    let api = expect_context::<ClientApi>();
+    let ws_ready = api.signal_ws_ready();
     let ping = expect_context::<PingContext>();
 
     let signal = move || {
@@ -20,21 +20,20 @@ pub fn Ping() -> impl IntoView {
             Either::Left(
                 view! { <Icon attr:class="fill-ladybug-red" icon=icondata_bi::BiNoSignalRegular /> },
             )
+        } else if ws_ready() {
+            Either::Right(view! {
+                <div class="flex items-center">
+                    <Icon
+                        attr:class="fill-grasshopper-green"
+                        icon=icondata_bi::BiSignal5Regular
+                    />
+                    {move || { format!("{:.0}ms", ping.ping.get()) }}
+                </div>
+            })
         } else {
-            match websocket.ready_state.get() {
-                ConnectionReadyState::Open => Either::Right(view! {
-                    <div class="flex items-center">
-                        <Icon
-                            attr:class="fill-grasshopper-green"
-                            icon=icondata_bi::BiSignal5Regular
-                        />
-                        {move || { format!("{:.0}ms", ping.ping.get()) }}
-                    </div>
-                }),
-                _ => Either::Left(
-                    view! { <Icon attr:class="fill-ladybug-red" icon=icondata_bi::BiNoSignalRegular /> },
-                ),
-            }
+            Either::Left(
+                view! { <Icon attr:class="fill-ladybug-red" icon=icondata_bi::BiNoSignalRegular /> },
+            )
         }
     };
 

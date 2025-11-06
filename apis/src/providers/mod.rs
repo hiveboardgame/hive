@@ -18,7 +18,6 @@ pub mod refocus;
 pub mod schedules;
 mod sounds;
 pub mod timer;
-pub mod websocket;
 pub use alerts::{provide_alerts, AlertType, AlertsContext};
 pub use api_requests::{provide_api_requests, ApiRequestsProvider};
 pub use auth_context::{provide_auth, AuthContext};

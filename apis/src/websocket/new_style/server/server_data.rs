@@ -173,4 +173,8 @@ impl ServerData {
     pub fn game_should_start(&self, game: &Game, user_id: Uuid) -> anyhow::Result<bool> {
         self.game_start.should_start(game, user_id)
     }
+    pub fn active_games(&self) -> Vec<GameId> {
+        let game_subs = self.game_subscribers.read().unwrap();
+        game_subs.keys().cloned().collect()
+    }
 }

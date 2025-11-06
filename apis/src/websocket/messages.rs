@@ -26,14 +26,6 @@ pub enum MessageDestination {
     Tournament(TournamentId),           // to everyone that joined the tournament
 }
 
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
-pub struct WsMessage(pub Vec<u8>);
-
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
-pub struct GameHB {}
-
 #[derive(Message, Debug, Clone)]
 #[rtype(result = "()")]
 pub struct ClientActorMessage {

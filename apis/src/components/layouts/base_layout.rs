@@ -4,17 +4,15 @@ use crate::components::molecules::tournament_ready_popup::TournamentReadyPopup;
 use crate::components::organisms::header::Header;
 use crate::providers::Config;
 use crate::providers::{
-    game_state::GameStateSignal, refocus::RefocusSignal, websocket::WebsocketContext, AuthContext,
-    PingContext, UpdateNotifier,
+    game_state::GameStateSignal, refocus::RefocusSignal, AuthContext,
+    UpdateNotifier,
 };
+use crate::websocket::new_style::client::ClientApi;
 use cfg_if::cfg_if;
-use chrono::Utc;
 use hive_lib::GameControl;
 use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_use::core::ConnectionReadyState;
-use leptos_use::utils::Pausable;
-use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
+use leptos_use::{use_media_query, use_window_focus};
 
 cfg_if! { if #[cfg(not(feature = "ssr"))] {
     use leptos_use::utils::IS_IOS;
@@ -43,9 +41,8 @@ pub struct OrientationSignal {
 pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
     provide_context(GameStateSignal::new());
     let config = expect_context::<Config>().0;
-    let ping = expect_context::<PingContext>();
-    let ws = expect_context::<WebsocketContext>();
-    let ws_ready = ws.ready_state;
+    let api = expect_context::<ClientApi>();
+    let ws_ready = api.signal_ws_ready();
     let auth_context = expect_context::<AuthContext>();
     let gamestate = expect_context::<GameStateSignal>();
     let mut refocus = expect_context::<RefocusSignal>();
@@ -115,41 +112,6 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         },
         false,
     );
-
-    let counter = RwSignal::new(0_u64);
-    let retry_at = RwSignal::new(2_u64);
-
-    let Pausable { .. } = use_interval_fn(
-        move || {
-            let ws = ws.clone();
-            counter.update(|c| *c += 1);
-            match ws_ready() {
-                ConnectionReadyState::Closed => {
-                    if retry_at.get() == counter.get() {
-                        ws.open();
-                        counter.update(|c| *c = 0);
-                        retry_at.update(|r| *r *= 2);
-                    }
-                }
-                ConnectionReadyState::Open => {
-                    counter.update(|c| *c = 0);
-                    retry_at.update(|r| *r = 2);
-                }
-                _ => {}
-            }
-            if Utc::now()
-                .signed_duration_since(ping.last_updated.get_untracked())
-                .num_seconds()
-                >= 5
-                && retry_at.get() == counter.get()
-            {
-                ws.open();
-                counter.update(|c| *c = 0);
-                retry_at.update(|r| *r *= 2);
-            };
-        },
-        1000,
-    );
     view! {
         <Title />
         <OG />
@@ -180,7 +142,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             <Header />
             <Alert />
             <TournamentReadyPopup ready_signal=update_notifier.tournament_ready />
-            <Show when=move || ws_ready() != ConnectionReadyState::Open>
+            <Show when=move || !ws_ready()>
                 <div class="flex absolute top-1/2 left-1/2 gap-2 items-center -translate-x-1/2 -translate-y-1/2 z-[60]">
                     <div class="size-10 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
                     <div class="text-lg font-bold text-ladybug-red">Connecting..</div>

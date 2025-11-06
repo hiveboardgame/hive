@@ -10,25 +10,21 @@ use crate::{
 };
 use futures::StreamExt;
 use futures::Stream;
-use leptos::prelude::{expect_context, RwSignal, Set};
 use server_fn::ServerFnError;
 
 pub async fn client_handler<S>(
-    last_ping: RwSignal<Option<f64>>,
     client_api: ClientApi,
+    ping: PingContext,
     mut stream: S,
 ) where
     S: Stream<Item = Result<ServerMessage, ServerFnError>> + Unpin,
 {
-    let mut ping = expect_context::<PingContext>();
     client_api.game_join();
     while let Some(msg) = stream.next().await {
         match msg {
             Ok(msg) => match msg {
                 ServerMessage::Ping { nonce, value } => {
                     ping.update_ping(value);
-                    let curr = chrono::offset::Utc::now().timestamp_millis();
-                    last_ping.set(Some(curr as f64));
                     client_api.pong(nonce).await;
                 }
                 ServerMessage::UserStatus(user_update) => {

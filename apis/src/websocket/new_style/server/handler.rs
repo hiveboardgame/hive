@@ -3,10 +3,9 @@ use std::{sync::Arc, vec};
 use crate::{
     common::{ClientRequest, ServerMessage},
     websocket::{
-        new_style::server::{tasks, ServerData, TabData},
+        new_style::server::{ServerData, TabData, tasks},
         server_handlers::{
-            challenges::handler::ChallengeHandler, game::handler::GameActionHandler,
-            schedules::ScheduleHandler, tournaments::handler::TournamentHandler,
+            challenges::handler::ChallengeHandler, game::handler::GameActionHandler, oauth::handler::OauthHandler, schedules::ScheduleHandler, tournaments::handler::TournamentHandler
         },
     },
 };
@@ -27,6 +26,12 @@ pub async fn server_handler(
         let messages = async {
             match msg {
                 Ok(msg) => match msg {
+                    ClientRequest::LinkDiscord => {
+                        match tab.account() {
+                            Some(account) => OauthHandler::new(account.id).handle().await,
+                            None => anyhow::bail!("Anonymous user tried to link discord")
+                        }
+                    }
                     ClientRequest::Pong(nonce) => {
                         tab.update_pings(nonce);
                         Ok(vec![])

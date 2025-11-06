@@ -16,13 +16,11 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websocket::{start_connection, WsServer};
     use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::{api_control, api_play}, challenges::{api_accept_challenge, api_create_challenge, api_get_challenges}};
     use api::v1::auth::get_token_handler::get_token;
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
-    use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -59,13 +57,12 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Failed to get pool");
     let data = Data::new(WebsocketData::default());
-    let websocket_server = Data::new(WsServer::new(pool.clone()).start());
     let server_notifications = Data::new(ServerData::default());
     let jwt_secret = JwtSecret::new(config.jwt_secret);
     let jwt_key = Data::new(jwt_secret);
 
-    jobs::tournament_start(pool.clone(), Data::clone(&websocket_server));
-    jobs::heartbeat(Data::clone(&websocket_server));
+    jobs::tournament_start(pool.clone(), server_notifications.clone());
+    jobs::heartbeat(server_notifications.clone(), pool.clone());
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
 
@@ -77,7 +74,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .app_data(Data::new(pool.clone()))
-            .app_data(Data::clone(&websocket_server))
+            //.app_data(Data::clone(&websocket_server))
             .app_data(Data::clone(&server_notifications))
             .app_data(Data::clone(&data))
             .app_data(Data::clone(&jwt_key))
@@ -88,7 +85,6 @@ async fn main() -> std::io::Result<()> {
             .service(Files::new("/assets", site_root.as_ref()))
             // serve the favicon from /favicon.ico
             .service(favicon)
-            .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::oauth::callback)
             .service(get_token)

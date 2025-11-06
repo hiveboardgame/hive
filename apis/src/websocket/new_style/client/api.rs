@@ -1,10 +1,7 @@
 use crate::common::{ChallengeAction, ClientRequest, GameAction, ScheduleAction, TournamentAction};
 use crate::providers::{challenges::ChallengeStateSignal, AuthContext};
 use crate::responses::create_challenge_handler;
-use futures::SinkExt;
-use futures::{
-    channel::mpsc::{self, Sender},
-};
+use futures::{channel::mpsc::Sender, SinkExt};
 use hive_lib::{GameControl, Turn};
 use leptos::prelude::{With, WithUntracked};
 use leptos::{
@@ -20,8 +17,8 @@ pub struct ClientApi {
     ws_restart: RwSignal<()>,
     game_join: RwSignal<()>,
     //client api holds the client mpsc sender
-    //and the latest message received from the server
     sender: StoredValue<Option<Sender<ClientResult>>>,
+    ws_ready:  RwSignal<bool>
 }
 impl Default for ClientApi {
     fn default() -> Self {
@@ -29,6 +26,7 @@ impl Default for ClientApi {
             ws_restart: RwSignal::new(()),
             game_join: RwSignal::new(()),
             sender: StoredValue::new(None),
+            ws_ready: RwSignal::new(false)
         }
     }
 }
@@ -46,6 +44,15 @@ impl ClientApi {
     pub fn game_join(&self) {
         self.game_join.set(());
     }
+    pub fn set_ws_ready(&self) {
+        self.ws_ready.set(true);
+    }
+    pub fn set_ws_pending(&self) {
+        self.ws_ready.set(false);
+    }
+    pub fn signal_ws_ready(&self) ->ReadSignal<bool> {
+        self.ws_ready.read_only()
+    }
     pub fn signal_game_join(&self) -> ReadSignal<()> {
         self.game_join.read_only()
     }
@@ -55,6 +62,9 @@ impl ClientApi {
         if ret.is_err() {
             logging::log!("Msg: {client_request:?} Error: {ret:?}");
         }
+    }
+    pub fn link_discord(&self) {
+        self.send(ClientRequest::LinkDiscord);
     }
     pub fn join_game(&self, id: GameId) {
         let req = ClientRequest::Game {
@@ -85,6 +95,13 @@ impl ClientApi {
         let msg = ClientRequest::Game {
             game_id,
             action: GameAction::Control(gc),
+        };
+        self.send(msg);
+    }
+    pub fn game_check_time(&self, game_id: GameId) {
+        let msg = ClientRequest::Game {
+            game_id,
+            action: GameAction::CheckTime,
         };
         self.send(msg);
     }

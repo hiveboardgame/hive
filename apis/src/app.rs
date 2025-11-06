@@ -1,3 +1,4 @@
+use crate::providers::PingContext;
 use crate::websocket::new_style::client::{client_handler, ClientApi};
 use crate::websocket::new_style::{WS_BUFFER_SIZE, websocket_fn};
 use crate::{
@@ -32,13 +33,12 @@ use crate::{
         online_users::provide_users, provide_alerts, provide_api_requests, provide_auth,
         provide_challenge_params, provide_config, provide_notifications, provide_ping,
         provide_referer, provide_server_updates, provide_sounds, refocus::provide_refocus,
-        schedules::provide_schedules, websocket::provide_websocket, AuthContext,
+        schedules::provide_schedules, AuthContext,
     },
 };
 use futures::channel::mpsc;
 use futures::stream::{AbortHandle, Abortable};
 use gloo_timers::callback::Timeout;
-use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
@@ -51,7 +51,7 @@ use shared_types::{GameProgress, TournamentStatus};
 
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
-const WS_TIMEOUT_MS: f64 = 5000.0;
+const WS_TIMEOUT: i64 = 5;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -71,7 +71,6 @@ pub fn App() -> impl IntoView {
     provide_config();
     provide_users();
     provide_challenges();
-    provide_websocket("/ws/");
 
     //expects websocket, client_api
 
@@ -91,13 +90,14 @@ pub fn App() -> impl IntoView {
     // we'll only listen for websocket messages on the client
     if cfg!(feature = "hydrate") {
         let client_api = expect_context::<ClientApi>();
+        let ping = expect_context::<PingContext>();
         let ws_restart = client_api.signal_restart_ws();
         let task_handle = StoredValue::<Option<AbortHandle>>::new(None);
-        let last_ping = RwSignal::new(None);
         let now = use_timestamp_with_options(UseTimestampOptions::default().interval(1000).callback(
             move |n| {
-                last_ping.with(|last| {
-                    if last.is_some_and(|last| n - last > WS_TIMEOUT_MS) {
+                ping.last_updated.with(|last| {
+                    let n = chrono::DateTime::from_timestamp(n as i64, 0);
+                    if n.is_some_and(|n| (n-last).num_seconds() > WS_TIMEOUT) {
                         client_api.restart_ws();
                     }
                 })
@@ -110,7 +110,8 @@ pub fn App() -> impl IntoView {
                 // If a task is already running, cancel it
                 if let Some(handle) = task_handle.get_value() {
                     handle.abort();
-                    last_ping.set(None);
+                    client_api.set_ws_pending();
+                    ping.update_ping(0.0);
                 }
                 let (abort_handle, abort_reg) = AbortHandle::new_pair();
                 let (tx, rx) = mpsc::channel(WS_BUFFER_SIZE);
@@ -123,7 +124,8 @@ pub fn App() -> impl IntoView {
                         Ok(mut stream) =>  {
                             // Make it abortable
                             let stream = Abortable::new(stream.as_mut(), abort_reg);
-                            client_handler(last_ping, client_api, stream).await;
+                            client_api.set_ws_ready();
+                            client_handler(client_api, ping, stream).await;
                         },
                         Err(e) => println!("Error getting stream: {e}")
                     }

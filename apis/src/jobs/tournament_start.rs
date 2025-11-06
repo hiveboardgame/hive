@@ -1,19 +1,16 @@
 use crate::common::{
-    GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult, TournamentUpdate,
+    GameActionResponse, GameReaction, GameUpdate, ServerMessage, TournamentUpdate,
 };
 use crate::responses::GameResponse;
-use crate::websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer};
-use actix::Addr;
+use crate::websocket::{InternalServerMessage, MessageDestination, new_style::server::ServerData};
 use actix_web::web::Data;
-use codee::binary::MsgpackSerdeCodec;
-use codee::Encoder;
 use db_lib::{get_conn, models::Tournament, DbPool};
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::AsyncConnection;
 use shared_types::TournamentId;
 use std::time::Duration;
 
-pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
+pub fn run(pool: DbPool, ws_server: Data<ServerData>) {
     actix_rt::spawn(async move {
         let mut interval = actix_rt::time::interval(Duration::from_secs(60));
         loop {
@@ -87,15 +84,7 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                     }
                                 }
                                 for message in messages {
-                                    let serialized = ServerResult::Ok(Box::new(message.message));
-                                    if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-                                        let cam = ClientActorMessage {
-                                            destination: message.destination,
-                                            serialized,
-                                            from: None,
-                                        };
-                                        ws_server.do_send(cam);
-                                    };
+                                    let _ = ws_server.send(message);
                                 }
                             }
                             Ok(())

@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use super::chat::handler::ChatHandler;
-use super::oauth::handler::OauthHandler;
 use super::user_status::handler::UserStatusHandler;
 use crate::common::ClientRequest;
 use crate::websocket::messages::AuthError;
@@ -60,7 +59,7 @@ impl RequestHandler {
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.command.clone() {
-            ClientRequest::LinkDiscord => OauthHandler::new(self.user_id).handle().await?,
+           
             ClientRequest::Chat(message_container) => {
                 self.ensure_auth()?;
                 if self.user_id != message_container.message.user_id {
@@ -71,11 +70,13 @@ impl RequestHandler {
                 }
                 ChatHandler::new(message_container, self.data.clone()).handle()
             }
+            
             ClientRequest::Away => UserStatusHandler::new().await?.handle().await?,
             ClientRequest::Pong(_)
             | ClientRequest::Game { .. }
             | ClientRequest::Challenge(_)
             | ClientRequest::Schedule(_)
+            | ClientRequest::LinkDiscord
             | ClientRequest::Tournament(_) => {
                 //Handled in v2
                 vec![]

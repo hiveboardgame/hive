@@ -8,7 +8,7 @@ pub struct PingContext {
 }
 
 impl PingContext {
-    pub fn update_ping(&mut self, ping: f64) {
+    pub fn update_ping(&self, ping: f64) {
         self.ping.set(ping);
         self.last_updated.set(Utc::now());
     }
