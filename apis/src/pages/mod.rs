@@ -12,6 +12,7 @@ pub mod login;
 pub mod play;
 pub mod profile_view;
 pub mod puzzles;
+pub mod statistics;
 pub mod register;
 pub mod resources;
 pub mod rules;

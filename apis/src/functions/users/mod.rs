@@ -68,3 +68,19 @@ pub async fn search_users(pattern: String) -> Result<Vec<UserResponse>, ServerFn
         .await
         .map_err(ServerFnError::new)
 }
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+
+pub async fn get_statistics_number_user_registrations(
+    period: String,
+    include_bots: bool,
+) -> Result<i64, ServerFnError> {
+    use crate::functions::db::pool;
+    use db_lib::get_conn;
+    use crate::responses::SiteStatisticsNumberUserRegistrationsResponse;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+    SiteStatisticsNumberUserRegistrationsResponse::get_number_of_user_registrations(&mut conn, period, include_bots)
+        .await
+        .map_err(ServerFnError::new)
+}

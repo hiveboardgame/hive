@@ -13,11 +13,14 @@ use ::nanoid::nanoid;
 use chrono::{DateTime, Utc};
 use diesel::{prelude::*, ExpressionMethods, Insertable};
 use diesel_async::RunQueryDsl;
+use diesel::sql_query;
+use diesel::sql_types::{Integer, Text, BigInt, Timestamptz};
+use diesel::dsl::{case_when, not, count_star, sum};
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{
     ChallengeId, Conclusion, GameId, GameSpeed, GameStart, GamesQueryOptions, TimeMode,
-    TournamentGameResult,
+    TournamentGameResult, SiteStatisticsTimePeriod,
 };
 use std::{str::FromStr, time::Duration};
 use uuid::Uuid;
@@ -42,6 +45,35 @@ impl TimeInfo {
         }
     }
 }
+
+#[derive(Queryable, Debug, PartialEq)]
+pub struct SiteStatisticsGamesByTypeAndPeriod {
+    pub speed: String,
+    pub tournament_games: Option<i64>,
+    pub rated_games: Option<i64>,
+    pub casual_games: Option<i64>,
+    pub total: i64,
+    pub period: String,
+}
+
+#[derive(Debug, QueryableByName)]
+pub struct SiteStatisticsWinrateByRatingDifference {
+    #[diesel(sql_type = Text)]
+    pub spd: String,
+    
+    #[diesel(sql_type = Text)]
+    pub gms: String,
+    
+    #[diesel(sql_type = Text)]
+    pub bucket: String,
+    
+    #[diesel(sql_type = Text)]
+    pub period: String,
+    
+    #[diesel(sql_type = BigInt)]
+    pub num_games: i64,
+}
+
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = games)]
@@ -1208,5 +1240,141 @@ impl Game {
             return self.white_id;
         }
         self.black_id
+    }
+
+pub async fn get_site_statistics_games_by_type_by_period(
+        conn: &mut DbConn<'_>,
+        period: String,
+        include_bots: bool,
+    ) -> QueryResult<Vec<SiteStatisticsGamesByTypeAndPeriod>> {
+        use crate::schema::users;
+        
+        let period_enum: SiteStatisticsTimePeriod = SiteStatisticsTimePeriod::from_str(&period).unwrap_or(SiteStatisticsTimePeriod::default());
+        let cutoff_date = period_enum.cutoff_date();
+        let tournament_case = case_when(games::tournament_id.is_not_null(), 1.into_sql::<Integer>())
+            .otherwise(0.into_sql::<Integer>());
+        let rated_case = case_when(games::rated, 1.into_sql::<Integer>())
+            .otherwise(0.into_sql::<Integer>());
+        let casual_case = case_when(not(games::rated), 1.into_sql::<Integer>())
+            .otherwise(0.into_sql::<Integer>());
+        let total_count = count_star();
+        let results: Vec<(String, Option<i64>, Option<i64>, Option<i64>, i64)>;
+        if !include_bots {
+            results = games::table
+                .filter(games::game_status.eq_any(vec![
+                    "Finished(1-0)",
+                    "Finished(0-1)",
+                    "Finished(½-½)"
+                ]))
+                .filter(games::updated_at.is_not_null())
+                .filter(games::updated_at.ge(cutoff_date))
+                .filter(games::black_id.ne_all(
+                        users::table
+                            .filter(users::bot.eq(true))
+                            .select(users::id)
+                    ))
+                    .filter(games::white_id.ne_all(
+                        users::table
+                            .filter(users::bot.eq(true))
+                            .select(users::id)
+                    ))
+                .group_by(games::speed)
+                .select((
+                    games::speed,
+                    sum(tournament_case),
+                    sum(rated_case),
+                    sum(casual_case),
+                    total_count,
+                ))
+                .order(total_count.desc())
+                .load::<(String, Option<i64>, Option<i64>, Option<i64>, i64)>(conn)
+                .await?;
+        } else {
+            results = games::table
+                .filter(games::game_status.eq_any(vec![
+                    "Finished(1-0)",
+                    "Finished(0-1)",
+                    "Finished(½-½)"
+                ]))
+                .filter(games::updated_at.is_not_null())
+                .filter(games::updated_at.ge(cutoff_date))
+                .group_by(games::speed)
+                .select((
+                    games::speed,
+                    sum(tournament_case),
+                    sum(rated_case),
+                    sum(casual_case),
+                    total_count,
+                ))
+                .order(total_count.desc())
+                .load::<(String, Option<i64>, Option<i64>, Option<i64>, i64)>(conn)
+                .await?;
+        }
+        
+        Ok(results
+            .into_iter()
+            .map(|(spd, tournament_games, rated_games, casual_games, total)| SiteStatisticsGamesByTypeAndPeriod {
+                speed: spd,
+                tournament_games,
+                rated_games,
+                casual_games,
+                total,
+                period: period.to_string(),
+            })
+            .collect())
+    }
+
+    pub async fn get_site_statistics_winrate_by_rating_difference(
+        conn: &mut DbConn<'_>,
+        period: String,
+        include_bots: bool,
+    ) -> QueryResult<Vec<SiteStatisticsWinrateByRatingDifference>> {
+        let period_enum: SiteStatisticsTimePeriod = 
+            SiteStatisticsTimePeriod::from_str(&period)
+                .unwrap_or(SiteStatisticsTimePeriod::default());
+        let cutoff_date = period_enum.cutoff_date();
+
+        let bot_filter = if !include_bots {
+            "AND black_id NOT IN (SELECT id FROM users WHERE bot = true)
+                AND white_id NOT IN (SELECT id FROM users WHERE bot = true)"
+        } else {
+            ""
+        };
+
+        let query = format!(r#"
+            SELECT 
+                speed AS spd,
+                game_status AS gms,
+                CASE 
+                    WHEN (white_rating - black_rating) >= 300 THEN 'White > 300+'
+                    WHEN (white_rating - black_rating) >= 200 THEN 'White > 200'
+                    WHEN (white_rating - black_rating) >= 100 THEN 'White > 100'
+                    WHEN (white_rating - black_rating) >= 0 THEN 'White > 0'
+                    WHEN (white_rating - black_rating) >= -100 THEN 'Black > 0'
+                    WHEN (white_rating - black_rating) >= -200 THEN 'Black > 100'
+                    WHEN (white_rating - black_rating) >= -300 THEN 'Black > 200'
+                    ELSE 'Black > 300'
+                END AS bucket,
+                $1 AS period,
+                COUNT(*) AS num_games
+            FROM games
+            WHERE 
+                finished = true
+                AND rated = true
+                AND updated_at IS NOT NULL
+                AND updated_at >= $2
+                AND white_rating IS NOT NULL
+                AND black_rating IS NOT NULL
+                AND game_status IN ('Finished(1-0)', 'Finished(0-1)', 'Finished(½-½)')
+                {}
+            GROUP BY speed, game_status, bucket
+            ORDER BY speed, game_status, bucket
+        "#, bot_filter);
+
+        sql_query(&query)
+            .bind::<Text, _>(period)
+            .bind::<Timestamptz, _>(cutoff_date)
+            .load::<SiteStatisticsWinrateByRatingDifference>(conn)
+            .await
     }
 }
