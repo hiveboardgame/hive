@@ -10,6 +10,7 @@ pub enum GameSpeed {
     Correspondence,
     Untimed,
     Puzzle,
+    AllSpeeds,
 }
 
 impl GameSpeed {
@@ -41,6 +42,11 @@ impl GameSpeed {
         ]
     }
 
+    pub fn all_for_stats() -> Vec<GameSpeed> {
+        use GameSpeed::*;
+        vec![Bullet, Blitz, Rapid, Classic, Correspondence, AllSpeeds]
+    }
+
     pub fn from_base_increment(base: Option<i32>, increment: Option<i32>) -> GameSpeed {
         let total = base.unwrap_or(0) + 40 * increment.unwrap_or(0);
         if total == 0 {
@@ -69,6 +75,7 @@ impl fmt::Display for GameSpeed {
             GameSpeed::Correspondence => "Correspondence",
             GameSpeed::Untimed => "Untimed",
             GameSpeed::Puzzle => "Puzzle",
+            GameSpeed::AllSpeeds => "All speeds",
         };
         write!(f, "{time}")
     }
@@ -93,6 +100,7 @@ impl std::str::FromStr for GameSpeed {
             "Correspondence" => Ok(GameSpeed::Correspondence),
             "Untimed" => Ok(GameSpeed::Untimed),
             "Puzzle" => Ok(GameSpeed::Untimed),
+            "All speeds" => Ok(GameSpeed::AllSpeeds),
             s => Err(GameSpeedError::InvalidGameSpeed {
                 found: s.to_string(),
             }),

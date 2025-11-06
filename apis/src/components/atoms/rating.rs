@@ -35,5 +35,6 @@ pub fn icon_for_speed(speed: GameSpeed) -> &'static icondata_core::IconData {
         GameSpeed::Classic => icondata_lu::LuTurtle,
         GameSpeed::Correspondence => icondata_ai::AiMailOutlined,
         GameSpeed::Puzzle => icondata_ti::TiPuzzle,
+        GameSpeed::AllSpeeds => icondata_fa::FaAsteriskSolid,
     }
 }

@@ -121,7 +121,10 @@ fn MySchedulesInner(
 
                                     let:schedule
                                 >
-                                    <GameDateControls player_id=user_id() schedule=schedule.clone() />
+                                    <GameDateControls
+                                        player_id=user_id()
+                                        schedule=schedule.clone()
+                                    />
 
                                 </For>
                             </div>

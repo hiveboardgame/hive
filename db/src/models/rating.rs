@@ -6,6 +6,8 @@ use crate::{
 };
 use bb8::PooledConnection;
 use chrono::{DateTime, Utc};
+use diesel::sql_query;
+use diesel::sql_types::{BigInt, Integer, Text};
 use diesel::{
     prelude::*, AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable,
 };
@@ -14,13 +16,23 @@ use diesel_async::{
 };
 use hive_lib::{Color, GameResult};
 use serde::{Deserialize, Serialize};
-use shared_types::GameSpeed;
+use shared_types::{GameSpeed, RANKABLE_DEVIATION};
 use skillratings::{
     glicko2::{glicko2, Glicko2Config, Glicko2Rating},
     Outcomes,
 };
 use std::str::FromStr;
 use uuid::Uuid;
+
+#[derive(Debug, Serialize, QueryableByName)]
+pub struct RatingBucket {
+    #[diesel(sql_type = Text)]
+    pub spd: String,
+    #[diesel(sql_type = Integer)]
+    pub bucket: i32,
+    #[diesel(sql_type = BigInt)]
+    pub number_of_players: i64,
+}
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = ratings)]
@@ -303,5 +315,54 @@ impl Rating {
                 .await?;
             Ok((None, None))
         }
+    }
+
+    pub async fn get_rating_buckets(
+        conn: &mut DbConn<'_>,
+        bucket_size: i32,
+        include_bots: bool,
+    ) -> QueryResult<Vec<RatingBucket>> {
+        let bot_filter = if !include_bots {
+            "AND user_uid NOT IN (SELECT id FROM users WHERE bot = true)"
+        } else {
+            ""
+        };
+        let query = format!(
+            r#"
+            SELECT 
+                speed AS spd,
+                (FLOOR(rating / $1) * $1)::INTEGER as bucket,
+                COUNT(*) as number_of_players
+            FROM ratings
+            WHERE deviation <= $2
+            {}
+            GROUP BY speed, FLOOR(rating / $1)
+            
+            UNION ALL
+            
+            SELECT 
+                'All speeds' AS spd,
+                (FLOOR(avg_rating / $1) * $1)::INTEGER as bucket,
+                COUNT(*) as number_of_players
+            FROM (
+                SELECT 
+                    user_uid,
+                    AVG(rating) as avg_rating
+                FROM ratings
+                WHERE deviation <= $2
+                {}
+                GROUP BY user_uid
+            ) user_averages
+            GROUP BY FLOOR(avg_rating / $1)
+            
+            ORDER BY spd, bucket
+            "#,
+            bot_filter, bot_filter
+        );
+        sql_query(&query)
+            .bind::<Integer, _>(bucket_size)
+            .bind::<diesel::sql_types::Double, _>(RANKABLE_DEVIATION)
+            .load::<RatingBucket>(conn)
+            .await
     }
 }

@@ -8,6 +8,7 @@ use leptos_icons::*;
 pub fn ProfileLink(
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] user_is_hoverable: MaybeProp<UserResponse>,
+    #[prop(optional)] use_default_style: Option<bool>,
     username: String,
     patreon: bool,
     bot: bool,
@@ -17,6 +18,12 @@ pub fn ProfileLink(
     let patreon = RwSignal::new(patreon);
     let bot = RwSignal::new(bot);
     let link_ref = NodeRef::<html::A>::new();
+    const DEFAULT_STYLE: &str = "flex text-xs";
+    let ds = if use_default_style.unwrap_or(true) {
+        DEFAULT_STYLE
+    } else {
+        ""
+    };
     view! {
         <div class="relative w-full">
             <a
@@ -32,7 +39,8 @@ pub fn ProfileLink(
                 href=profile_link
             >
                 <div class=format!(
-                    "flex text-xs {}",
+                    "{} {}",
+                    ds,
                     extend_tw_classes,
                 )>
                     {username} <Show when=patreon>
