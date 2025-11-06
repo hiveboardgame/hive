@@ -9,5 +9,6 @@ pub mod hostname;
 pub mod oauth;
 pub mod pwa;
 pub mod schedules;
+pub mod site_statistics;
 pub mod tournaments;
 pub mod users;

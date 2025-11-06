@@ -17,16 +17,18 @@ use crate::{
     DbConn,
 };
 use chrono::{DateTime, Utc};
+use diesel::QueryResult;
 use diesel::{
-    dsl::exists, query_dsl::BelongingToDsl, select, BoolExpressionMethods, ExpressionMethods,
-    Identifiable, Insertable, PgTextExpressionMethods, QueryDsl, Queryable, Selectable,
-    SelectableHelper,
+    dsl::count_star, dsl::exists, query_dsl::BelongingToDsl, select, BoolExpressionMethods,
+    ExpressionMethods, Identifiable, Insertable, PgTextExpressionMethods, QueryDsl, Queryable,
+    Selectable, SelectableHelper,
 };
 use diesel_async::RunQueryDsl;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use shared_types::{GameId, GameSpeed, Takeback};
+use shared_types::{GameId, GameSpeed, Takeback, TimePeriod};
+use std::str::FromStr;
 use uuid::Uuid;
 
 const MAX_USERNAME_LENGTH: usize = 20;
@@ -307,5 +309,26 @@ impl User {
             .filter(users::id.eq(uuid))
             .first(conn)
             .await?)
+    }
+
+    pub async fn get_number_of_user_registrations(
+        conn: &mut DbConn<'_>,
+        period: String,
+        include_bots: bool,
+    ) -> QueryResult<i64> {
+        let period_enum: TimePeriod =
+            TimePeriod::from_str(&period).unwrap_or(TimePeriod::default());
+
+        let cutoff_date = period_enum.cutoff_date();
+
+        let mut query = users::table
+            .filter(users::created_at.ge(cutoff_date))
+            .into_boxed();
+
+        if !include_bots {
+            query = query.filter(users::bot.eq(false));
+        }
+
+        query.select(count_star()).get_result::<i64>(conn).await
     }
 }

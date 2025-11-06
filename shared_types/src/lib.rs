@@ -4,12 +4,14 @@ mod chat_message;
 mod conclusion;
 mod game_speed;
 mod game_start;
+mod game_type_filter;
 mod games_query_options;
 mod newtypes;
 mod pretty_string;
 mod ready_user;
 mod scoring_mode;
 mod simple_user;
+mod site_statistics_time_period;
 mod standings;
 mod start_mode;
 mod takeback_conf;
@@ -27,6 +29,7 @@ pub use chat_message::{ChatDestination, ChatMessage, ChatMessageContainer, Simpl
 pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
+pub use game_type_filter::GameTypeFilter;
 pub use games_query_options::{
     BatchInfo, GameProgress, GamesQueryOptions, PlayerFilter, ResultType,
 };
@@ -35,6 +38,7 @@ pub use pretty_string::PrettyString;
 pub use ready_user::ReadyUser;
 pub use scoring_mode::ScoringMode;
 pub use simple_user::SimpleUser;
+pub use site_statistics_time_period::TimePeriod;
 pub use standings::PlayerScores;
 pub use standings::Standings;
 pub use start_mode::StartMode;
