@@ -10,9 +10,10 @@ use crate::{
     DbConn,
 };
 use ::nanoid::nanoid;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Datelike, TimeZone, Utc};
 use diesel::{prelude::*, ExpressionMethods, Insertable};
 use diesel_async::RunQueryDsl;
+use itertools::Itertools;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{
@@ -41,6 +42,16 @@ impl TimeInfo {
             new_game_status: status,
         }
     }
+}
+
+#[derive(Queryable, Debug, PartialEq)]
+pub struct GameRatings {
+    pub speed: String,
+    pub white_rating: Option<f64>,
+    pub black_rating: Option<f64>,
+    pub white_id: Uuid,
+    pub black_id: Uuid,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Insertable, Debug)]
@@ -1208,5 +1219,51 @@ impl Game {
             return self.white_id;
         }
         self.black_id
+    }
+
+    pub async fn get_rating_history_for_player(
+        player: Uuid,
+        game_speed: &GameSpeed,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<GameRatings>, DbError> {
+        if matches!(game_speed, GameSpeed::Untimed) {
+            return Ok(vec![]);
+        }
+        let games_preload = games::table
+            .filter(rated.eq(true))
+            .filter(finished.eq(true))
+            .filter(speed.eq(game_speed.to_string()))
+            .filter(white_id.eq(player).or(black_id.eq(player)))
+            .filter(white_rating.is_not_null())
+            .filter(black_rating.is_not_null())
+            .filter(white_rating_change.is_not_null())
+            .filter(black_rating_change.is_not_null())
+            .filter(updated_at.is_not_null())
+            .order(updated_at.asc())
+            .load::<Game>(conn)
+            .await?;
+
+        Ok(games_preload
+        .into_iter()
+        .chunk_by(|game| {
+            let utc = game.updated_at.with_timezone(&Utc);
+            (utc.year(), utc.month(), utc.day())
+        })
+        .into_iter()
+        .filter_map(|((_y, _m, _d), group)| {
+            let last = group.last()?;
+            let utc_day = last.updated_at.with_timezone(&Utc).date_naive();
+            let utc_datetime = Utc.from_local_datetime(&utc_day.and_hms_opt(0, 0, 0)?)
+                .single()?;
+            Some(GameRatings {
+                speed: last.speed.clone(),
+                white_rating: last.white_rating.map(|r| r + last.white_rating_change.unwrap_or(0.0)),
+                black_rating: last.black_rating.map(|r| r + last.black_rating_change.unwrap_or(0.0)),
+                white_id: last.white_id,
+                black_id: last.black_id,
+                updated_at: utc_datetime,
+            })
+        })
+        .collect())
     }
 }
