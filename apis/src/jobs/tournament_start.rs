@@ -2,7 +2,7 @@ use crate::common::{
     GameActionResponse, GameReaction, GameUpdate, ServerMessage, TournamentUpdate,
 };
 use crate::responses::GameResponse;
-use crate::websocket::{InternalServerMessage, MessageDestination, new_style::server::ServerData};
+use crate::websocket::{InternalServerMessage, MessageDestination, ServerData};
 use actix_web::web::Data;
 use db_lib::{get_conn, models::Tournament, DbPool};
 use diesel_async::scoped_futures::ScopedFutureExt;

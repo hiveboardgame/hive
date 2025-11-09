@@ -10,7 +10,6 @@ pub mod websocket;
 use actix_session::config::PersistentSession;
 use actix_web::cookie::{time::Duration, SameSite};
 use actix_web::middleware::Compress;
-use websocket::WebsocketData;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
@@ -32,7 +31,7 @@ async fn main() -> std::io::Result<()> {
     use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
     use leptos::prelude::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
-    use websocket::new_style::server::ServerData;
+    use websocket::ServerData;
     use sha2::*;
 
     let conf = get_configuration(None).expect("Got configuration");
@@ -56,7 +55,6 @@ async fn main() -> std::io::Result<()> {
     let pool = get_pool(&config.database_url)
         .await
         .expect("Failed to get pool");
-    let data = Data::new(WebsocketData::default());
     let server_notifications = Data::new(ServerData::default());
     let jwt_secret = JwtSecret::new(config.jwt_secret);
     let jwt_key = Data::new(jwt_secret);
@@ -74,9 +72,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .app_data(Data::new(pool.clone()))
-            //.app_data(Data::clone(&websocket_server))
             .app_data(Data::clone(&server_notifications))
-            .app_data(Data::clone(&data))
             .app_data(Data::clone(&jwt_key))
             .app_data(Data::new(site_root.to_string()))
             // serve JS/WASM/CSS from `pkg`

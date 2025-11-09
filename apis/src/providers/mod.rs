@@ -1,6 +1,5 @@
 mod alerts;
 pub mod analysis;
-mod api_requests;
 mod client_api;
 pub use client_api::ClientApi;
 mod auth_context;
@@ -21,7 +20,6 @@ pub mod schedules;
 mod sounds;
 pub mod timer;
 pub use alerts::{provide_alerts, AlertType, AlertsContext};
-pub use api_requests::{provide_api_requests, ApiRequestsProvider};
 pub use auth_context::{provide_auth, AuthContext};
 pub use challenge_params::{
     challenge_params_cookie, provide_challenge_params, ChallengeParams, ChallengeParamsStoreFields,

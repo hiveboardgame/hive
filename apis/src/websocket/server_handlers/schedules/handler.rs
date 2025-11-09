@@ -7,7 +7,7 @@ use crate::{
     websocket::{
         busybee::Busybee,
         messages::{InternalServerMessage, MessageDestination},
-        new_style::server::TabData,
+        TabData,
     },
 };
 use anyhow::Result;

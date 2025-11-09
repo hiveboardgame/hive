@@ -35,12 +35,13 @@ pub fn provide_auth() {
         ws_refresh,
     });
 
-    let ctx = use_context::<AuthContext>().unwrap();
-
+    let ctx = expect_context::<AuthContext>();
     Effect::watch(
         ctx.action.version(),
         move |_, _, _| {
-            client_api.restart_ws();
+            if ctx.ws_refresh.get_value() {
+                client_api.restart_ws();
+            }
         },
         false,
     );

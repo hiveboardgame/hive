@@ -2,11 +2,9 @@ use std::{sync::Arc, vec};
 
 use crate::{
     common::{ClientRequest, ServerMessage},
-    websocket::{
-        new_style::server::{ServerData, TabData, tasks},
-        server_handlers::{
-            challenges::handler::ChallengeHandler, game::handler::GameActionHandler, oauth::handler::OauthHandler, schedules::ScheduleHandler, tournaments::handler::TournamentHandler
-        },
+    websocket::{ServerData, TabData, server_handlers::{
+            challenges::handler::ChallengeHandler, chat::handler::ChatHandler, game::handler::GameActionHandler, oauth::handler::OauthHandler, schedules::ScheduleHandler, tournaments::handler::TournamentHandler
+        }, server_tasks
     },
 };
 use futures::StreamExt;
@@ -17,11 +15,11 @@ pub async fn server_handler(
     tab: &TabData,
     server: Arc<ServerData>,
 ) {
-    tasks::send_tournament_invitations(tab, &server).await;
-    tasks::send_schedules(tab, &server).await;
-    tasks::send_challenges(tab, &server).await;
-    tasks::send_urgent_games(tab, &server).await;
-    tasks::load_online_users(tab, &server);
+    server_tasks::send_tournament_invitations(tab, &server).await;
+    server_tasks::send_schedules(tab, &server).await;
+    server_tasks::send_challenges(tab, &server).await;
+    server_tasks::send_urgent_games(tab, &server).await;
+    server_tasks::load_online_users(tab, &server);
     while let Some(msg) = input.next().await {
         let messages = async {
             match msg {
@@ -75,10 +73,11 @@ pub async fn server_handler(
                             .handle()
                             .await
                     }
-                    c => {
-                        let msg = ServerMessage::Error(format!("{c:?} ISNT IMPLEMENTED"));
-                        tab.send(msg, &server);
-                        Ok(vec![])
+                    ClientRequest::Chat(container) => {
+                        Ok(ChatHandler::new(container, server.clone()).handle())
+                    }
+                    ClientRequest::Away => {
+                        todo!()
                     }
                 },
                 Err(e) => {

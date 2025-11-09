@@ -2,7 +2,7 @@ use crate::api::v1::auth::Auth;
 use crate::api::v1::messages::send::{send_challenge_creation_message, send_challenge_messages};
 use crate::responses::{ChallengeResponse, GameResponse};
 use crate::websocket::busybee::Busybee;
-use crate::websocket::new_style::server::ServerData;
+use crate::websocket::ServerData;
 use actix_web::{
     get, post,
     web::{Data, Json, Path},

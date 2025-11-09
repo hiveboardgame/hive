@@ -3,7 +3,7 @@ use crate::common::{
     ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage,
 };
 use crate::responses::{ChallengeResponse, GameResponse};
-use crate::websocket::{InternalServerMessage, MessageDestination, new_style::server::ServerData};
+use crate::websocket::{InternalServerMessage, MessageDestination, ServerData};
 use actix_web::web::Data;
 use anyhow::Result;
 use db_lib::{

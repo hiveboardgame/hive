@@ -1,6 +1,6 @@
 use crate::common::{GameUpdate, ServerMessage};
 use crate::responses::HeartbeatResponse;
-use crate::websocket::{new_style::server::ServerData,InternalServerMessage,MessageDestination};
+use crate::websocket::{ServerData,InternalServerMessage,MessageDestination};
 use actix_web::web::Data;
 use db_lib::{DbPool, get_conn, models::Game};
 use hive_lib::GameStatus;

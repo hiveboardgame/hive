@@ -1,7 +1,7 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{Lags, messages::{InternalServerMessage, MessageDestination}},
 };
 use anyhow::Result;
 use db_lib::{
@@ -35,7 +35,7 @@ impl TurnHandler {
         }
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self, ping: f64, lags: &Lags) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
         self.users_turn()?;
         let (piece, position) = match self.turn {
@@ -53,8 +53,7 @@ impl TurnHandler {
             //let ping = self.data.pings.value(self.user_id);
             let base = self.game.time_base.unwrap_or(0) as usize;
             let inc = self.game.time_increment.unwrap_or(0) as usize;
-            /*self.data
-            .lags
+            lags
             .track_lag(
                 self.user_id,
                 GameId(self.game.nanoid.clone()),
@@ -62,8 +61,7 @@ impl TurnHandler {
                 base,
                 inc,
             )
-            .unwrap_or(0.0)*/
-            0.0
+            .unwrap_or(0.0)
         } else {
             0.0
         };

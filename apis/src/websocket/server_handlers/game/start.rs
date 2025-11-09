@@ -5,7 +5,7 @@ use crate::{
     responses::GameResponse,
     websocket::{
         messages::{InternalServerMessage, MessageDestination},
-        new_style::server::ServerData,
+        ServerData,
     },
 };
 use anyhow::Result;
@@ -49,7 +49,6 @@ impl StartHandler {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         if let Ok(should_start) = self.server.game_should_start(&self.game, self.user_id) {
-            //if let Some(should_start) = Some(false) {
             if should_start {
                 let game = conn
                     .transaction::<_, anyhow::Error, _>(move |tc| {

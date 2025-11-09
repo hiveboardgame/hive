@@ -6,7 +6,7 @@ use super::get_own::GetOwnHandler;
 use super::get_public::GetPublicHandler;
 use crate::common::ChallengeAction;
 use crate::websocket::messages::InternalServerMessage;
-use crate::websocket::new_style::server::TabData;
+use crate::websocket::TabData;
 use anyhow::Result;
 
 pub struct ChallengeHandler {

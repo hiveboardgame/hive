@@ -9,7 +9,7 @@ use leptos::{
     prelude::{expect_context, GetValue, ReadSignal, RwSignal, Set, SetValue, StoredValue},
 };
 use server_fn::ServerFnError;
-use shared_types::{ChallengeId, GameId, TournamentGameResult, TournamentId};
+use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResult, TournamentId};
 pub type ClientResult = Result<ClientRequest, ServerFnError>;
 
 #[derive(Clone, Copy)]
@@ -157,5 +157,9 @@ impl ClientApi {
         new_result: TournamentGameResult,
     ) {
         self.tournament(TournamentAction::AdjudicateResult(game_id, new_result));
+    }
+    pub fn chat(&self, message: &ChatMessageContainer) {
+        let msg = ClientRequest::Chat(message.to_owned());
+        self.send(msg);
     }
 }

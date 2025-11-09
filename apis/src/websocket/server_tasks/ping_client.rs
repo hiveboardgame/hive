@@ -2,14 +2,12 @@ use rand::Rng;
 use tokio::time::{interval as interval_fn, Duration};
 
 use crate::common::ServerMessage;
-use crate::websocket::new_style::server::{ServerData, TabData};
+use crate::websocket::{ServerData, TabData};
 
 const PING_INTERVAL_MS: u64 = 1000; // consistent with previous implementation
 
 pub async fn ping_client(tab: &TabData, server: &ServerData) {
     let mut interval = interval_fn(Duration::from_millis(PING_INTERVAL_MS));
-    //firs tick is imediate
-    interval.tick().await;
     let mut x = 0;
     let (id,_)= tab.as_subscriber();
     loop {

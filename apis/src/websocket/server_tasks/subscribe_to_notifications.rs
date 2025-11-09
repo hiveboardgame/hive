@@ -1,7 +1,7 @@
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::StreamExt;
 
-use crate::websocket::new_style::server::{ServerData, TabData};
+use crate::websocket::{ServerData, TabData};
 use crate::websocket::{InternalServerMessage, MessageDestination};
 
 pub async fn server_notifications(client: &TabData, server: &ServerData, mut stream: BroadcastStream<InternalServerMessage>) {

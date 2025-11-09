@@ -1,8 +1,7 @@
 use crate::responses::AccountResponse;
 
 use super::{
-    api_requests::ApiRequests, auth_context::AuthContext, AlertType, AlertsContext,
-    ApiRequestsProvider,
+    ClientApi, auth_context::AuthContext, AlertType, AlertsContext,
 };
 use leptos::prelude::*;
 use shared_types::{ChatDestination, ChatMessage, ChatMessageContainer, GameId, TournamentId};
@@ -21,11 +20,10 @@ pub struct Chat {
     pub tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
     pub typed_message: RwSignal<String>,
     user: Signal<Option<AccountResponse>>,
-    api: Signal<ApiRequests>,
 }
 
 impl Chat {
-    pub fn new(user: Signal<Option<AccountResponse>>, api: Signal<ApiRequests>) -> Self {
+    pub fn new(user: Signal<Option<AccountResponse>>) -> Self {
         Self {
             users_messages: RwSignal::new(HashMap::new()),
             users_new_messages: RwSignal::new(HashMap::new()),
@@ -37,7 +35,6 @@ impl Chat {
             tournament_lobby_new_messages: RwSignal::new(HashMap::new()),
             typed_message: RwSignal::new(String::new()),
             user,
-            api,
         }
     }
 
@@ -60,7 +57,7 @@ impl Chat {
         });
     }
 
-    pub fn send(&self, message: &str, destination: ChatDestination, turn: Option<usize>) {
+    pub fn send(&self, message: &str, destination: ChatDestination, turn: Option<usize>, api: ClientApi) {
         self.user.with_untracked(|a| {
             if let Some(account) = a {
                 let id = account.user.uid;
@@ -72,7 +69,7 @@ impl Chat {
                 };
                 let msg = ChatMessage::new(name, id, message, None, turn);
                 let container = ChatMessageContainer::new(destination, &msg);
-                self.api.get_untracked().chat(&container);
+                api.chat(&container);
             }
         });
     }
@@ -181,6 +178,5 @@ impl Chat {
 
 pub fn provide_chat() {
     let user = expect_context::<AuthContext>().user;
-    let api = expect_context::<ApiRequestsProvider>().0;
-    provide_context(Chat::new(user, api))
+    provide_context(Chat::new(user))
 }

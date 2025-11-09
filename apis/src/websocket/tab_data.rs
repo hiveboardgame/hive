@@ -1,10 +1,10 @@
 use crate::{
     common::ServerMessage,
     responses::AccountResponse,
-    websocket::{lag_tracking::PingStats, new_style::server::ServerData},
+    websocket::{lag_tracking::PingStats, ServerData},
 };
 use db_lib::DbPool;
-use futures::{channel::mpsc, SinkExt};
+use futures::channel::mpsc;
 use server_fn::ServerFnError;
 use shared_types::{GameId, TournamentId};
 use std::sync::{Arc, RwLock};

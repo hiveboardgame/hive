@@ -15,7 +15,8 @@ pub async fn websocket_fn(
         accounts::get::get_account
     };
     use crate::websocket::{
-        new_style::server::{server_handler, tasks, ServerData, TabData},
+        server_tasks, ServerData, TabData,
+        server_handlers::handler::server_handler
     };
     let req: actix_web::HttpRequest = leptos_actix::extract().await?;
 
@@ -50,9 +51,9 @@ pub async fn websocket_fn(
         select!(
             _ = token.cancelled() => {}
             //subscribe to server notifications
-            _ = tasks::server_notifications(&tab, &server, notifications) =>{},
+            _ = server_tasks::server_notifications(&tab, &server, notifications) =>{},
             //one shot tasks then ping client on a loop
-            _ = tasks::ping_client(&tab, &server) =>{},
+            _ = server_tasks::ping_client(&tab, &server) =>{},
 
         );
     });

@@ -1,11 +1,7 @@
 use crate::{
-    common::{ServerMessage, UserStatus, UserUpdate},
-    responses::UserResponse,
-    websocket::{
-        messages::{InternalServerMessage, MessageDestination},
-        new_style::server::TabData,
-        TournamentGameStart,
-    },
+    common::{ServerMessage, UserStatus, UserUpdate}, responses::UserResponse, websocket::{
+        Chats, Lags, TabData, TournamentGameStart, messages::{InternalServerMessage, MessageDestination}
+    }
 };
 use db_lib::models::Game;
 use shared_types::{GameId, TournamentId};
@@ -44,6 +40,10 @@ impl SubscriberSet {
     pub fn remove(&mut self, id: &Uuid) {
         self.map.remove(id);
     }
+    pub fn is_empty(&mut self) -> bool {
+        self.map.retain(|_,v| !v.is_cancelled());
+        self.map.is_empty()
+    }
 }
 
 #[derive(Debug)]
@@ -55,6 +55,8 @@ pub struct ServerData {
     game_subscribers: RwLock<HashMap<GameId, SubscriberSet>>,
     tournament_subscribers: RwLock<HashMap<TournamentId, SubscriberSet>>,
     game_start: TournamentGameStart,
+    lags: Lags,
+    pub chat_storage: Chats
 }
 impl Default for ServerData {
     fn default() -> Self {
@@ -66,6 +68,8 @@ impl Default for ServerData {
             game_subscribers: RwLock::new(HashMap::new()),
             tournament_subscribers: RwLock::new(HashMap::new()),
             game_start: TournamentGameStart::new(),
+            lags: Lags::default(),
+            chat_storage: Chats::new()
         }
     }
 }
@@ -76,7 +80,9 @@ impl ServerData {
     pub fn send(&self, message: InternalServerMessage) -> Result<usize, String> {
         self.sender.send(message).map_err(|e| e.to_string())
     }
-
+    pub fn lags(&self) -> &Lags {
+        &self.lags
+    }
     fn notify_user_status(&self, user: UserResponse, status: UserStatus) {
         let message = InternalServerMessage {
             destination: MessageDestination::Global,
@@ -174,7 +180,8 @@ impl ServerData {
         self.game_start.should_start(game, user_id)
     }
     pub fn active_games(&self) -> Vec<GameId> {
-        let game_subs = self.game_subscribers.read().unwrap();
+        let mut game_subs = self.game_subscribers.write().unwrap();
+        game_subs.retain(|_,v| !v.is_empty());
         game_subs.keys().cloned().collect()
     }
 }

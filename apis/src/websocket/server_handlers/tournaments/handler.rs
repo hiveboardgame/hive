@@ -11,7 +11,7 @@ use crate::{
     common::TournamentAction,
     websocket::{
         messages::InternalServerMessage,
-        new_style::server::{ServerData, TabData},
+        ServerData, TabData,
     },
 };
 use anyhow::Result;

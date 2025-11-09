@@ -3,8 +3,7 @@ use super::{
     control_handler::GameControlHandler, timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
 };
 use crate::common::GameAction;
-use crate::websocket::new_style::server::ServerData;
-use crate::websocket::{messages::InternalServerMessage, new_style::server::TabData};
+use crate::websocket::{messages::InternalServerMessage, TabData, ServerData};
 use anyhow::Result;
 use db_lib::{get_conn, models::Game};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
@@ -59,8 +58,10 @@ impl GameActionHandler {
             GameAction::Turn(turn) => {
                 self.ensure_not_finished()?;
                 self.ensure_user_is_player()?;
+                let ping_value = self.client.pings_value();
+                let lags = self.server.lags();
                 TurnHandler::new(turn, &self.game, username, user_id, pool)
-                    .handle()
+                    .handle(ping_value, lags)
                     .await?
             }
             GameAction::Control(control) => {

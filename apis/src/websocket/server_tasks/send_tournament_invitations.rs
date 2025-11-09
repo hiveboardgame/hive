@@ -1,6 +1,6 @@
 use crate::common::{ServerMessage, TournamentUpdate};
 use crate::responses::TournamentResponse;
-use crate::websocket::new_style::server::{ServerData, TabData};
+use crate::websocket::{ServerData, TabData};
 use db_lib::get_conn;
 use db_lib::models::TournamentInvitation;
 

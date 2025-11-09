@@ -5,7 +5,7 @@ use diesel_async::AsyncConnection;
 
 use crate::common::{GameUpdate, ServerMessage};
 use crate::responses::GameResponse;
-use crate::websocket::new_style::server::{ServerData, TabData};
+use crate::websocket::{ServerData, TabData};
 
 pub async fn send_urgent_games(client: &TabData, server_data: &ServerData) {
     // Send games which require input from the user

@@ -1,4 +1,3 @@
-use actix::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared_types::{GameId, TournamentId};
 use uuid::Uuid;
@@ -24,22 +23,4 @@ pub enum MessageDestination {
     GameSpectators(GameId, Uuid, Uuid), // to everyone in game excluding players, nanoid, white_id, black_id
     Global,                             // to everyone online
     Tournament(TournamentId),           // to everyone that joined the tournament
-}
-
-#[derive(Message, Debug, Clone)]
-#[rtype(result = "()")]
-pub struct ClientActorMessage {
-    pub destination: MessageDestination,
-    pub from: Option<Uuid>,
-    pub serialized: Vec<u8>, // the serialized message
-}
-
-impl ClientActorMessage {
-    pub fn new(from: Option<Uuid>, destination: MessageDestination, serialized: &Vec<u8>) -> Self {
-        Self {
-            from,
-            destination,
-            serialized: serialized.to_owned(),
-        }
-    }
 }

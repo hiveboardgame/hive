@@ -3,7 +3,7 @@ use crate::api::v1::messages::send::{send_control_messages, send_turn_messages};
 use actix_web::web::{Data, Json};
 use actix_web::{post, HttpResponse};
 use anyhow::{anyhow, Result};
-use crate::websocket::new_style::server::ServerData;
+use crate::websocket::ServerData;
 use db_lib::{
     get_conn,
     models::{Game, User},

@@ -1,5 +1,5 @@
 use crate::common::{ServerMessage, UserUpdate};
-use crate::websocket::new_style::server::{ServerData, TabData};
+use crate::websocket::{ServerData, TabData};
 
 pub fn load_online_users(client: &TabData, server_data: &ServerData) {
     println!("Reached load online users");
