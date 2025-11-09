@@ -508,9 +508,11 @@ dependencies = [
  "icondata_tb",
  "icondata_ti",
  "indoc",
+ "itertools",
  "jsonwebtoken",
  "lazy_static",
  "leptos",
+ "leptos-chartistry",
  "leptos-use",
  "leptos_actix",
  "leptos_i18n",
@@ -3314,6 +3316,19 @@ dependencies = [
  "typed-builder",
  "typed-builder-macro",
  "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "leptos-chartistry"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f40cb5107c4c1ea5b06de6b95b13ab0eb2bb5ae30bbcb19fdbe65004c733318"
+dependencies = [
+ "chrono",
+ "leptos",
+ "leptos-use",
+ "log",
  "web-sys",
 ]
 
