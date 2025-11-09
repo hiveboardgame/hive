@@ -20,11 +20,10 @@ use crate::{
         config::Config,
         game_state::{GameStateSignal, View},
         timer::TimerSignal,
-        AuthContext, SoundType, Sounds, UpdateNotifier,
+        AuthContext, SoundType, Sounds, UpdateNotifier, ClientApi
     },
     websocket::{
         client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
-        new_style::client::ClientApi,
     },
 };
 use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};

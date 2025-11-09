@@ -2,8 +2,7 @@ use crate::common::TimeParamsStoreFields;
 use crate::components::atoms::input_slider::InputSliderWithCallback;
 use crate::components::atoms::simple_switch::SimpleSwitchWithCallback;
 use crate::i18n::*;
-use crate::providers::{AuthContext, ChallengeParams, ChallengeParamsStoreFields};
-use crate::websocket::new_style::client::ClientApi;
+use crate::providers::{ClientApi, AuthContext, ChallengeParams, ChallengeParamsStoreFields};
 use crate::{
     common::ChallengeAction,
     components::{

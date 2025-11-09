@@ -1,6 +1,8 @@
 mod alerts;
 pub mod analysis;
 mod api_requests;
+mod client_api;
+pub use client_api::ClientApi;
 mod auth_context;
 mod challenge_params;
 pub mod challenges;

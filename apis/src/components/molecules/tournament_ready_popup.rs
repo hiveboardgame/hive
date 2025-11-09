@@ -1,6 +1,5 @@
 use crate::i18n::*;
-use crate::providers::AuthContext;
-use crate::websocket::new_style::client::ClientApi;
+use crate::providers::{AuthContext, ClientApi};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::{

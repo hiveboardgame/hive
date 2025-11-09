@@ -1,9 +1,11 @@
 use crate::common::MoveConfirm;
 use crate::common::SvgPos;
 use crate::pages::play::CurrentConfirm;
-use crate::providers::analysis::AnalysisSignal;
-use crate::providers::game_state::GameStateSignal;
-use crate::websocket::new_style::client::ClientApi;
+use crate::providers::{
+    game_state::GameStateSignal,
+    analysis::AnalysisSignal,
+    ClientApi
+};
 use hive_lib::Position;
 use leptos::prelude::*;
 

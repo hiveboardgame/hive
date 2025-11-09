@@ -1,7 +1,7 @@
 use crate::common::{ChallengeAction, ClientRequest, GameAction, ScheduleAction, TournamentAction};
 use crate::providers::{challenges::ChallengeStateSignal, AuthContext};
 use crate::responses::create_challenge_handler;
-use futures::{channel::mpsc::Sender, SinkExt};
+use futures::channel::mpsc::Sender;
 use hive_lib::{GameControl, Turn};
 use leptos::prelude::{With, WithUntracked};
 use leptos::{
@@ -84,12 +84,8 @@ impl ClientApi {
         };
         self.send(msg);
     }
-    pub async fn pong(&self, nonce: u64) {
-        let sender = self.sender.get_value();
-        let ret = sender.expect("Dont have a sender").send(Ok( ClientRequest::Pong(nonce))).await;
-        if ret.is_err() {
-            logging::log!("Pong Error: {ret:?}");
-        }
+    pub fn pong(&self, nonce: u64) {
+        self.send(ClientRequest::Pong(nonce));
     }
     pub fn game_control(&self, game_id: GameId, gc: GameControl) {
         let msg = ClientRequest::Game {

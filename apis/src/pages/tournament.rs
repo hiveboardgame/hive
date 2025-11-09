@@ -11,10 +11,8 @@ use crate::components::{
     update_from_event::update_from_input,
 };
 use crate::functions::tournaments::{get_complete, UpdateDescription};
-use crate::providers::AuthContext;
-use crate::providers::UpdateNotifier;
+use crate::providers::{ClientApi, AuthContext, UpdateNotifier};
 use crate::responses::{GameResponse, TournamentResponse};
-use crate::websocket::new_style::client::ClientApi;
 use chrono::Local;
 use hive_lib::GameStatus;
 use leptos::prelude::*;

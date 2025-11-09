@@ -1,7 +1,7 @@
 use crate::common::ScheduleAction;
 use crate::components::atoms::date_time_picker::DateTimePicker;
 use crate::responses::ScheduleResponse;
-use crate::websocket::new_style::client::ClientApi;
+use crate::providers::ClientApi;
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::callback::Callback;
 use leptos::prelude::*;

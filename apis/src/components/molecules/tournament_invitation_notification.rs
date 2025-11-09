@@ -1,7 +1,7 @@
 use crate::common::TournamentAction;
 use crate::components::molecules::time_row::TimeRow;
 use crate::responses::TournamentAbstractResponse;
-use crate::websocket::new_style::client::ClientApi;
+use crate::providers::ClientApi;
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::TimeInfo;

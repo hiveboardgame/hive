@@ -1,6 +1,5 @@
-use crate::providers::schedules::SchedulesContext;
+use crate::providers::{schedules::SchedulesContext, ClientApi};
 use crate::responses::GameResponse;
-use crate::websocket::new_style::client::ClientApi;
 use crate::{common::TournamentAction, components::atoms::profile_link::ProfileLink};
 use chrono::{DateTime, Duration, Local, Utc};
 use hive_lib::Color;

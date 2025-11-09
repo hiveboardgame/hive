@@ -1,6 +1,6 @@
 use crate::{providers::{
-    AuthContext, SoundType, Sounds, game_state::GameStateSignal, timer::TimerSignal
-}, websocket::new_style::client::ClientApi};
+    AuthContext, SoundType, Sounds, game_state::GameStateSignal, timer::TimerSignal, ClientApi
+}};
 use hive_lib::{Color, GameStatus};
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;

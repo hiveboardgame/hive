@@ -1,4 +1,4 @@
-use crate::websocket::new_style::client::ClientApi;
+use crate::providers::ClientApi;
 use crate::{
     common::ChallengeAction,
     components::atoms::{

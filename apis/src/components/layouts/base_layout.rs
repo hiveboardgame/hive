@@ -2,12 +2,10 @@ use crate::components::atoms::{og::OG, title::Title};
 use crate::components::molecules::alert::Alert;
 use crate::components::molecules::tournament_ready_popup::TournamentReadyPopup;
 use crate::components::organisms::header::Header;
-use crate::providers::Config;
 use crate::providers::{
     game_state::GameStateSignal, refocus::RefocusSignal, AuthContext,
-    UpdateNotifier,
+    UpdateNotifier,Config,ClientApi
 };
-use crate::websocket::new_style::client::ClientApi;
 use cfg_if::cfg_if;
 use hive_lib::GameControl;
 use leptos::prelude::*;

@@ -1,6 +1,5 @@
 use crate::{
-    common::TournamentAction, providers::AuthContext, responses::TournamentResponse,
-    websocket::new_style::client::ClientApi,
+    common::TournamentAction, providers::{AuthContext, ClientApi}, responses::TournamentResponse,
 };
 use leptos::prelude::*;
 use leptos_icons::*;

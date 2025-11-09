@@ -1,5 +1,5 @@
-use crate::providers::PingContext;
-use crate::websocket::new_style::client::{client_handler, ClientApi};
+use crate::providers::{PingContext, ClientApi};
+use crate::websocket::client_handlers::client_handler;
 use crate::websocket::new_style::{WS_BUFFER_SIZE, websocket_fn};
 use crate::{
     components::{layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames},
@@ -124,13 +124,12 @@ pub fn App() -> impl IntoView {
                         Ok(mut stream) =>  {
                             // Make it abortable
                             let stream = Abortable::new(stream.as_mut(), abort_reg);
-                            client_api.set_ws_ready();
                             client_handler(client_api, ping, stream).await;
                         },
                         Err(e) => println!("Error getting stream: {e}")
                     }
                     leptos::logging::log!("Task stopped or aborted");
-                    let timeout = Timeout::new(1_000, move || {});
+                    let timeout = Timeout::new(2_000, move || {});
                     timeout.forget();               
                  });
             },

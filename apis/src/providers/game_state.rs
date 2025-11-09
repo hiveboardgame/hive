@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use crate::common::{MoveInfo, PieceType};
 use crate::responses::GameResponse;
-use crate::websocket::new_style::client::ClientApi;
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
 use leptos::logging::log;
 use leptos::prelude::*;
@@ -11,7 +10,7 @@ use uuid::Uuid;
 
 use super::analysis::AnalysisSignal;
 use super::auth_context::AuthContext;
-
+use super::client_api::ClientApi;
 #[derive(Clone, Debug, Copy)]
 pub struct GameStateSignal {
     pub signal: RwSignal<GameState>,

@@ -1,8 +1,7 @@
 use crate::components::update_from_event::update_from_input;
 use crate::functions::accounts::edit::EditAccount;
 use crate::functions::oauth::get_discord_handle;
-use crate::providers::RefererContext;
-use crate::websocket::new_style::client::ClientApi;
+use crate::providers::{RefererContext, ClientApi};
 use leptos::form::ActionForm;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::prelude::*;

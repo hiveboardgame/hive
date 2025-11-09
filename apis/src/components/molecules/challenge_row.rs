@@ -1,8 +1,7 @@
 use crate::components::atoms::status_indicator::StatusIndicator;
 use crate::components::molecules::time_row::TimeRow;
 use crate::i18n::*;
-use crate::providers::Config;
-use crate::websocket::new_style::client::ClientApi;
+use crate::providers::{Config, ClientApi};
 use crate::{
     components::atoms::game_type::GameType, components::atoms::profile_link::ProfileLink,
     functions::hostname::hostname_and_port, responses::ChallengeResponse,

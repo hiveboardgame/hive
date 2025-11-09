@@ -1,6 +1,5 @@
 use crate::{
-    common::ScheduleAction, functions::schedules::MarkScheduleSeen, providers::NotificationContext,
-    websocket::new_style::client::ClientApi,
+    common::ScheduleAction, functions::schedules::MarkScheduleSeen, providers::{NotificationContext, ClientApi},
 };
 use chrono::{DateTime, Local, Utc};
 use leptos::prelude::*;

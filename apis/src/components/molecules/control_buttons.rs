@@ -1,8 +1,7 @@
 use crate::{
     common::ChallengeAction,
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
-    providers::{challenges::ChallengeStateSignal, game_state::GameStateSignal, AuthContext},
-    websocket::new_style::client::ClientApi,
+    providers::{challenges::ChallengeStateSignal, game_state::GameStateSignal, AuthContext, ClientApi},
 };
 use hive_lib::{ColorChoice, GameControl};
 use leptos::prelude::*;

@@ -1,11 +1,12 @@
 use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
 use crate::common::{PieceType, SvgPos};
 use crate::pages::play::CurrentConfirm;
-use crate::providers::analysis::AnalysisSignal;
-use crate::providers::config::TileOptions;
-use crate::providers::game_state::GameStateSignal;
-use crate::providers::{AuthContext, Config};
-use crate::websocket::new_style::client::ClientApi;
+use crate::providers::{
+    game_state::GameStateSignal,
+    config::TileOptions,
+    analysis::AnalysisSignal,
+    AuthContext, Config, ClientApi
+};
 use hive_lib::{Bug, Color, Piece, Position};
 use leptos::either::Either;
 use leptos::prelude::*;

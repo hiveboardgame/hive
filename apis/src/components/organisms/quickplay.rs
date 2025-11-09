@@ -1,11 +1,9 @@
 use crate::i18n::*;
-use crate::providers::{challenge_params_cookie, ChallengeParams};
-use crate::websocket::new_style::client::ClientApi;
 use crate::{
     common::ChallengeAction,
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
     pages::{challenge_bot::ChallengeBot, challenge_create::ChallengeCreate},
-    providers::AuthContext,
+    providers::{challenge_params_cookie, ChallengeParams, ClientApi, AuthContext},
 };
 use hive_lib::{ColorChoice, GameType};
 use leptos::{ev, html::Dialog, prelude::*};

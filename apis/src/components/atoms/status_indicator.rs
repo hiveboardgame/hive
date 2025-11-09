@@ -1,8 +1,8 @@
 use crate::{
     common::UserStatus,
     providers::{
-        AuthContext, PingContext, online_users::OnlineUsersSignal,
-    }, websocket::new_style::client::ClientApi,
+        ClientApi, AuthContext, PingContext, online_users::OnlineUsersSignal,
+    }
 };
 use chrono::Utc;
 use leptos::prelude::*;

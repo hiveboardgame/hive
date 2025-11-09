@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use crate::components::layouts::base_layout::OrientationSignal;
 use crate::i18n::*;
-use crate::providers::game_state::GameStateSignal;
-use crate::websocket::new_style::client::ClientApi;
+use crate::providers::{game_state::GameStateSignal, ClientApi};
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{GameId, ReadyUser};
