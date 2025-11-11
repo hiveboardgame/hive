@@ -661,7 +661,7 @@ impl Tournament {
 
         // if odd number of players, add a bye player
         let bye_player = User::find_by_username("SwissByePlayer", conn).await?;
-        if players.len() % 2 != 0 && !players.iter().any(|p| p.id == bye_player.id) {
+        if !players.len().is_multiple_of(2) && !players.iter().any(|p| p.id == bye_player.id) {
             self.join(&bye_player.id, conn).await?;
             players.push(bye_player.clone());
         };
