@@ -1,8 +1,8 @@
 use crate::api::v1::auth::Auth;
 use crate::api::v1::messages::send::{send_challenge_creation_message, send_challenge_messages};
 use crate::responses::{ChallengeResponse, GameResponse};
-use crate::websocket::{busybee::Busybee, WsServer};
-use actix::Addr;
+use crate::websocket::busybee::Busybee;
+use crate::websocket::ServerData;
 use actix_web::{
     get, post,
     web::{Data, Json, Path},
@@ -151,7 +151,7 @@ pub async fn api_accept_challenge(
     nanoid: Path<ChallengeId>,
     Auth(bot): Auth,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
 ) -> HttpResponse {
     let nanoid = nanoid.into_inner();
     match accept_challenge(nanoid, bot.clone(), pool, ws_server).await {
@@ -177,7 +177,7 @@ pub async fn api_create_challenge(
     Json(req): Json<BotChallengeRequest>,
     Auth(bot): Auth,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
 ) -> HttpResponse {
     let challenge_details = match req.validate_and_convert() {
         Ok(details) => details,
@@ -213,7 +213,7 @@ async fn create_challenge(
     req: ChallengeDetails,
     bot_id: Uuid,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
 ) -> Result<ChallengeResponse> {
     let mut conn = get_conn(&pool).await?;
 
@@ -238,7 +238,7 @@ async fn accept_challenge(
     id: ChallengeId,
     bot: User,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
 ) -> Result<GameResponse> {
     let mut conn = get_conn(&pool).await?;
     let challenge = Challenge::find_by_challenge_id(&id, &mut conn).await?;

@@ -1,10 +1,9 @@
 use crate::api::v1::auth::Auth;
 use crate::api::v1::messages::send::{send_control_messages, send_turn_messages};
-use crate::websocket::WsServer;
-use actix::Addr;
 use actix_web::web::{Data, Json};
 use actix_web::{post, HttpResponse};
 use anyhow::{anyhow, Result};
+use crate::websocket::ServerData;
 use db_lib::{
     get_conn,
     models::{Game, User},
@@ -35,7 +34,7 @@ pub async fn api_play(
     Json(req): Json<PlayRequest>,
     Auth(bot): Auth,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
 ) -> HttpResponse {
     match play_move(req, bot.clone(), pool, ws_server).await {
         Ok((game, _turn)) => HttpResponse::Ok().json(json!({
@@ -59,7 +58,7 @@ async fn play_move(
     play: PlayRequest,
     bot: User,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
 ) -> Result<(Game, Turn)> {
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
@@ -136,7 +135,7 @@ pub async fn api_control(
     Json(req): Json<ControlRequest>,
     Auth(bot): Auth,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
 ) -> HttpResponse {
     match handle_control(req, bot.clone(), pool, ws_server).await {
         Ok(game) => HttpResponse::Ok().json(json!({
@@ -161,7 +160,7 @@ async fn handle_control(
     req: ControlRequest,
     bot: User,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
 ) -> Result<Game> {
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;

@@ -11,14 +11,12 @@ use crate::components::{
     update_from_event::update_from_input,
 };
 use crate::functions::tournaments::{get_complete, UpdateDescription};
-use crate::providers::AuthContext;
-use crate::providers::{websocket::WebsocketContext, ApiRequestsProvider, UpdateNotifier};
+use crate::providers::{ClientApi, AuthContext, UpdateNotifier};
 use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
-use leptos_use::core::ConnectionReadyState;
 use shared_types::{
     Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentId,
     TournamentMode, TournamentStatus,
@@ -32,6 +30,7 @@ pub const INFO_STYLE: &str = "m-2 h-6 text-lg font-bold sm:place-self-center";
 #[component]
 pub fn Tournament() -> impl IntoView {
     let use_params = use_params_map();
+    let api = expect_context::<ClientApi>();
     let update_notification = expect_context::<UpdateNotifier>().tournament_update;
     let tournament_id = move || {
         use_params
@@ -39,8 +38,14 @@ pub fn Tournament() -> impl IntoView {
             .get("nanoid")
             .map(|s| TournamentId(s.to_string()))
     };
-    let current_tournament =
-        Action::new(move |_: &()| async move { get_complete(tournament_id().unwrap()).await.ok() });
+    let current_tournament = Action::new(move |_: &()| async move {
+        let id = tournament_id().unwrap();
+        let ret = get_complete(id.clone()).await.ok();
+        if ret.is_some() {
+            api.subscribe_tournament(id);
+        }
+        ret
+    });
     Effect::watch(
         update_notification,
         move |needs_update, _, _| {
@@ -48,7 +53,7 @@ pub fn Tournament() -> impl IntoView {
                 current_tournament.dispatch(());
             }
         },
-        true,
+        false,
     );
     Effect::new(move |_| {
         current_tournament.dispatch(());
@@ -73,8 +78,7 @@ pub fn Tournament() -> impl IntoView {
 fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let tournament = StoredValue::new(tournament);
     let auth_context = expect_context::<AuthContext>();
-    let api = expect_context::<ApiRequestsProvider>().0;
-    let websocket = expect_context::<WebsocketContext>();
+    let api = expect_context::<ClientApi>();
     let account = auth_context.user;
     let user_id = Signal::derive(move || account.with(|a| a.as_ref().map(|a| a.user.uid)));
     let time_info = tournament.with_value(|t| TimeInfo {
@@ -84,11 +88,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     });
     let tournament_id = StoredValue::new(tournament.with_value(|t| t.tournament_id.clone()));
     Effect::new(move |_| {
-        let ready_state = websocket.ready_state.get();
-        if tournament.with_value(|t| t.status.clone()) != TournamentStatus::NotStarted
-            && ready_state == ConnectionReadyState::Open
-        {
-            let api = api.get();
+        if tournament.with_value(|t| t.status.clone()) != TournamentStatus::NotStarted {
             api.schedule_action(ScheduleAction::TournamentPublic(tournament_id.get_value()));
             if user_id().is_some() {
                 api.schedule_action(ScheduleAction::TournamentOwn(tournament_id.get_value()));
@@ -130,7 +130,6 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         })
     });
     let send_action = move |action: TournamentAction| {
-        let api = api.get();
         api.tournament(action);
     };
     let delete = move |_| {

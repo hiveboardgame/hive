@@ -1,7 +1,6 @@
-use crate::providers::{
-    game_state::GameStateSignal, timer::TimerSignal, ApiRequestsProvider, AuthContext, SoundType,
-    Sounds,
-};
+use crate::{providers::{
+    AuthContext, SoundType, Sounds, game_state::GameStateSignal, timer::TimerSignal, ClientApi
+}};
 use hive_lib::{Color, GameStatus};
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
@@ -17,7 +16,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let api = expect_context::<ClientApi>();
     let params = use_params_map();
     let game_id = move || {
         params
@@ -116,8 +115,7 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
         move || time_is_zero() && !timer().finished,
         move |_, _, _| {
             // When time runs out declare winner and style timer that ran out
-            let api = api.get();
-            api.game_check_time(&game_id());
+            api.game_check_time(game_id());
         },
         WatchOptions::default().immediate(true),
     );

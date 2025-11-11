@@ -54,9 +54,9 @@ impl InvitationCreate {
             tournament.name
         );
 
-        if let Err(e) = Busybee::msg(self.invitee, msg).await {
+        /*if let Err(e) = Busybee::msg(self.invitee, msg).await {
             println!("Failed to send tournament invitation notification: {e}");
-        }
+        }*/
 
         let response = TournamentId(tournament.nanoid.clone());
         Ok(vec![
@@ -65,7 +65,7 @@ impl InvitationCreate {
                 message: ServerMessage::Tournament(TournamentUpdate::Invited(response.clone())),
             },
             InternalServerMessage {
-                destination: MessageDestination::Global,
+                destination: MessageDestination::Tournament(response.clone()),
                 message: ServerMessage::Tournament(TournamentUpdate::Modified(response)),
             },
         ])

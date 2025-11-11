@@ -9,9 +9,8 @@ use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
 use super::analysis::AnalysisSignal;
-use super::api_requests::ApiRequests;
-use super::{auth_context::AuthContext, ApiRequestsProvider};
-
+use super::auth_context::AuthContext;
+use super::client_api::ClientApi;
 #[derive(Clone, Debug, Copy)]
 pub struct GameStateSignal {
     pub signal: RwSignal<GameState>,
@@ -95,13 +94,13 @@ impl GameStateSignal {
     }
 
     pub fn send_game_control(&self, game_control: GameControl, user: Uuid) {
-        let api = expect_context::<ApiRequestsProvider>().0;
+        let api = expect_context::<ClientApi>();
         self.signal.with_untracked(|gs| {
             if let Some(color) = gs.user_color(user) {
                 if color != game_control.color() {
                     log!("This is a bug, you should only send GCs of your own color, user id color is {color} and gc color is {}", game_control.color());
-                } else if let Some(ref game_id) = gs.game_id {
-                    api.get().game_control(game_id.to_owned(), game_control);
+                } else if let Some(game_id) = gs.game_id.clone() {
+                    api.game_control(game_id, game_control);
                 } else {
                     log!("This is a bug, there should be a game_id");
                 }
@@ -138,7 +137,7 @@ impl GameStateSignal {
         self.signal.update(|s| s.move_info.reset())
     }
 
-    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
+    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ClientApi) {
         self.signal.update(|s| s.move_active(analysis, api))
     }
 
@@ -348,7 +347,7 @@ impl GameState {
         })
     }
 
-    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
+    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ClientApi) {
         if let (Some((active, _)), Some(position)) =
             (self.move_info.active, self.move_info.target_position)
         {
@@ -368,7 +367,8 @@ impl GameState {
                 });
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
-                api.turn(game_id.to_owned(), turn);
+                let game_id = game_id.clone();
+                api.turn(game_id, turn);
                 self.move_info.reset();
                 self.history_turn = Some(self.state.turn - 1);
             }

@@ -1,8 +1,7 @@
 use crate::components::update_from_event::update_from_input;
 use crate::functions::accounts::edit::EditAccount;
 use crate::functions::oauth::get_discord_handle;
-use crate::providers::ApiRequestsProvider;
-use crate::providers::RefererContext;
+use crate::providers::{RefererContext, ClientApi};
 use leptos::form::ActionForm;
 use leptos::leptos_dom::helpers::debounce;
 use leptos::prelude::*;
@@ -29,10 +28,10 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
             .value()
             .with(|a| a.as_ref().is_some_and(|v| v.is_err()))
     };
-    let api = expect_context::<ApiRequestsProvider>();
+    let api = expect_context::<ClientApi>();
 
     let oauth = move |_: leptos::ev::MouseEvent| {
-        api.0.get().link_discord();
+        api.link_discord();
     };
     let discord_name = Action::new(move |_: &()| async { get_discord_handle().await });
     Effect::new(move |_| {

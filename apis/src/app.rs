@@ -1,3 +1,6 @@
+use crate::providers::{PingContext, ClientApi};
+use crate::websocket::client_handlers::client_handler;
+use crate::websocket::{WS_BUFFER_SIZE, websocket_fn};
 use crate::{
     components::{layouts::base_layout::BaseLayout, organisms::display_games::DisplayGames},
     i18n::I18nContextProvider,
@@ -27,12 +30,15 @@ use crate::{
     },
     providers::{
         challenges::provide_challenges, chat::provide_chat, games::provide_games,
-        online_users::provide_users, provide_alerts, provide_api_requests, provide_auth,
+        online_users::provide_users, provide_alerts, provide_auth,
         provide_challenge_params, provide_config, provide_notifications, provide_ping,
         provide_referer, provide_server_updates, provide_sounds, refocus::provide_refocus,
-        schedules::provide_schedules, websocket::provide_websocket, AuthContext,
+        schedules::provide_schedules, AuthContext,
     },
 };
+use futures::channel::mpsc;
+use futures::stream::{AbortHandle, Abortable};
+use gloo_timers::callback::Timeout;
 use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
@@ -40,11 +46,12 @@ use leptos_router::{
     components::{Outlet, ParentRoute, ProtectedRoute, Route, Router, Routes},
     path,
 };
-use leptos_use::SameSite;
+use leptos_use::{use_timestamp_with_options, SameSite, UseTimestampOptions};
 use shared_types::{GameProgress, TournamentStatus};
 
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
+const WS_TIMEOUT: i64 = 5;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -64,19 +71,68 @@ pub fn App() -> impl IntoView {
     provide_config();
     provide_users();
     provide_challenges();
-    provide_websocket("/ws/");
 
-    //expects websocket
+    //expects websocket, client_api
+
+    provide_context(ClientApi::default());
     provide_auth();
 
     //expects auth
     provide_games();
 
-    //expects auth, challengeStateSignal, websocket
-    provide_api_requests();
+    //expects auth, api_requests, 
 
-    //expects auth, api_requests, gameStateSignal
     provide_chat();
+
+    // we'll only listen for websocket messages on the client
+    if cfg!(feature = "hydrate") {
+        let client_api = expect_context::<ClientApi>();
+        let ping = expect_context::<PingContext>();
+        let ws_restart = client_api.signal_restart_ws();
+        let task_handle = StoredValue::<Option<AbortHandle>>::new(None);
+        let now = use_timestamp_with_options(UseTimestampOptions::default().interval(1000).callback(
+            move |n| {
+                ping.last_updated.with(|last| {
+                    let n = chrono::DateTime::from_timestamp_millis(n as i64).expect("valid timestamp");
+                    if (n-last).num_seconds() > WS_TIMEOUT {
+                        client_api.restart_ws();
+                    }
+                })
+            }
+        ));
+        // Start or restart the ws task
+        Effect::watch(
+            ws_restart,
+            move |_, _, _| {
+                // If a task is already running, cancel it
+                if let Some(handle) = task_handle.get_value() {
+                    handle.abort();
+                    client_api.set_ws_pending();
+                    ping.update_ping(0.0);
+                    let timeout = Timeout::new(2_000, move || {});
+                    timeout.forget();               
+                }
+                let (abort_handle, abort_reg) = AbortHandle::new_pair();
+                let (tx, rx) = mpsc::channel(WS_BUFFER_SIZE);
+                task_handle.set_value(Some(abort_handle));
+                client_api.set_sender(Some(tx));
+                // Store the handle so we can stop it later
+                let stream = websocket_fn(rx.into());
+                leptos::task::spawn(async move {
+                    match stream.await {
+                        Ok(mut stream) =>  {
+                            // Make it abortable
+                            let stream = Abortable::new(stream.as_mut(), abort_reg);
+                            client_handler(client_api, ping, stream).await;
+                        },
+                        Err(e) => println!("Error getting stream: {e}")
+                    }
+                    leptos::logging::log!("Task stopped or aborted");
+                 });
+            },
+            false,
+        );
+    }
     let auth = expect_context::<AuthContext>();
     let is_logged_in = move || auth.user.with(|a| a.is_some()).into();
     let is_admin = move || Some(auth.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin)));

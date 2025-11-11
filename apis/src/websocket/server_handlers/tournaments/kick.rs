@@ -42,7 +42,7 @@ impl KickHandler {
             })
             .await?;
         Ok(vec![InternalServerMessage {
-            destination: MessageDestination::Global,
+            destination: MessageDestination::Tournament(TournamentId(tournament.nanoid.clone())),
             message: ServerMessage::Tournament(TournamentUpdate::Modified(TournamentId(
                 tournament.nanoid.clone(),
             ))),

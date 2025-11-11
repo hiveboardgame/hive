@@ -1,12 +1,11 @@
+
 use crate::common::{
-    ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult,
+    ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage,
 };
 use crate::responses::{ChallengeResponse, GameResponse};
-use crate::websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer};
-use actix::Addr;
+use crate::websocket::{InternalServerMessage, MessageDestination, ServerData};
 use actix_web::web::Data;
 use anyhow::Result;
-use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{
     get_conn,
     models::{Game, User},
@@ -24,20 +23,11 @@ fn get_opponent_id(game: &Game, bot: &User) -> uuid::Uuid {
 }
 
 fn send_messages_batch(
-    ws_server: &Addr<WsServer>,
+    ws_server: Data<ServerData>,
     messages: Vec<InternalServerMessage>,
-    from_user_id: Option<uuid::Uuid>,
 ) {
     for message in messages {
-        let serialized = ServerResult::Ok(Box::new(message.message));
-        if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-            let cam = ClientActorMessage {
-                destination: message.destination,
-                serialized,
-                from: from_user_id,
-            };
-            ws_server.do_send(cam);
-        }
+        let _ = ws_server.send(message);
     }
 }
 
@@ -65,7 +55,7 @@ fn maybe_add_tv_update(messages: &mut Vec<InternalServerMessage>, game_response:
 }
 
 pub async fn send_turn_messages(
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
     game: &Game,
     bot: &User,
     pool: &Data<DbPool>,
@@ -76,7 +66,6 @@ pub async fn send_turn_messages(
     let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
     let games = next_to_move.get_games_with_notifications(&mut conn).await?;
     let game_responses = GameResponse::from_games_batch(games, &mut conn).await?;
-    let user_id = get_opponent_id(game, bot);
 
     messages.push(InternalServerMessage {
         destination: MessageDestination::User(game.current_player_id),
@@ -95,12 +84,12 @@ pub async fn send_turn_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
 
-    send_messages_batch(&ws_server, messages, Some(user_id));
+    send_messages_batch(ws_server, messages);
     Ok(())
 }
 
 pub async fn send_challenge_messages(
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
     deleted_challenges: Vec<ChallengeId>,
     game: &Game,
     bot: &User,
@@ -127,12 +116,12 @@ pub async fn send_challenge_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
 
-    send_messages_batch(&ws_server, messages, Some(user_id));
+    send_messages_batch(ws_server, messages);
     Ok(())
 }
 
 pub async fn send_challenge_creation_message(
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
     challenge_response: &ChallengeResponse,
     visibility: &ChallengeVisibility,
     opponent_id: Option<uuid::Uuid>,
@@ -161,15 +150,14 @@ pub async fn send_challenge_creation_message(
     }
 
     send_messages_batch(
-        &ws_server,
+        ws_server,
         messages,
-        Some(challenge_response.challenger.uid),
     );
     Ok(())
 }
 
 pub async fn send_control_messages(
-    ws_server: Data<Addr<WsServer>>,
+    ws_server: Data<ServerData>,
     game: &Game,
     bot: &User,
     pool: &Data<DbPool>,
@@ -178,7 +166,6 @@ pub async fn send_control_messages(
     let mut messages = Vec::new();
     let mut conn = get_conn(pool).await?;
 
-    let opponent_id = get_opponent_id(game, bot);
     let game_response = GameResponse::from_model(game, &mut conn).await?;
     let action_response =
         create_game_action_response(game_response, GameReaction::Control(game_control), bot);
@@ -191,6 +178,6 @@ pub async fn send_control_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
 
-    send_messages_batch(&ws_server, messages, Some(opponent_id));
+    send_messages_batch(ws_server, messages);
     Ok(())
 }

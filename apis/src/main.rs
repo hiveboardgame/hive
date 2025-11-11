@@ -6,25 +6,20 @@ pub mod jobs;
 pub mod providers;
 pub mod responses;
 pub mod websocket;
-use std::sync::Arc;
 
 use actix_session::config::PersistentSession;
 use actix_web::cookie::{time::Duration, SameSite};
 use actix_web::middleware::Compress;
-use leptos_meta::{HashedStylesheet, MetaTags};
-use websocket::WebsocketData;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websocket::{start_connection, WsServer};
     use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::{api_control, api_play}, challenges::{api_accept_challenge, api_create_challenge, api_get_challenges}};
     use api::v1::auth::get_token_handler::get_token;
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
-    use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -36,12 +31,12 @@ async fn main() -> std::io::Result<()> {
     use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
     use leptos::prelude::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
+    use websocket::ServerData;
     use sha2::*;
 
     let conf = get_configuration(None).expect("Got configuration");
     let addr = conf.leptos_options.site_addr;
     let routes = generate_route_list(App);
-
     simple_logger::init_with_level(log::Level::Warn).expect("couldn't initialize logging");
 
     let config = DbConfig::from_env().expect("Failed to load config from env");
@@ -60,14 +55,12 @@ async fn main() -> std::io::Result<()> {
     let pool = get_pool(&config.database_url)
         .await
         .expect("Failed to get pool");
-    let data = Data::new(WebsocketData::default());
-    let websocket_server = Data::new(WsServer::new(Arc::clone(&data), pool.clone()).start());
+    let server_notifications = Data::new(ServerData::default());
     let jwt_secret = JwtSecret::new(config.jwt_secret);
     let jwt_key = Data::new(jwt_secret);
 
-    jobs::tournament_start(pool.clone(), Data::clone(&websocket_server));
-    jobs::heartbeat(Data::clone(&websocket_server));
-    jobs::ping(Data::clone(&websocket_server));
+    jobs::tournament_start(pool.clone(), server_notifications.clone());
+    jobs::heartbeat(server_notifications.clone(), pool.clone());
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
 
@@ -79,8 +72,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .app_data(Data::new(pool.clone()))
-            .app_data(Data::clone(&websocket_server))
-            .app_data(Data::clone(&data))
+            .app_data(Data::clone(&server_notifications))
             .app_data(Data::clone(&jwt_key))
             .app_data(Data::new(site_root.to_string()))
             // serve JS/WASM/CSS from `pkg`
@@ -89,7 +81,6 @@ async fn main() -> std::io::Result<()> {
             .service(Files::new("/assets", site_root.as_ref()))
             // serve the favicon from /favicon.ico
             .service(favicon)
-            .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::oauth::callback)
             .service(get_token)
@@ -118,8 +109,8 @@ async fn main() -> std::io::Result<()> {
                                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                                 <AutoReload options=leptos_options.clone() />
                                 <HydrationScripts options=leptos_options.clone()/>
-                                <MetaTags/>
-                                <HashedStylesheet options=leptos_options.clone() id="leptos"/>
+                                <leptos_meta::MetaTags/>
+                                <leptos_meta::HashedStylesheet options=leptos_options.clone() id="leptos"/>
                             </head>
                             <body>
                                 <App/>

@@ -1,6 +1,6 @@
 use crate::functions::accounts::get::get_account;
 use crate::functions::auth::logout::Logout;
-use crate::providers::websocket::WebsocketContext;
+use crate::providers::ClientApi;
 use crate::responses::AccountResponse;
 use leptos::prelude::*;
 #[derive(Clone)]
@@ -18,7 +18,7 @@ impl AuthContext {
     }
 }
 pub fn provide_auth() {
-    let websocket_context = expect_context::<WebsocketContext>();
+    let client_api = expect_context::<ClientApi>();
     let logout = ServerAction::<Logout>::new();
     let action = Action::new(move |_: &()| async { get_account().await });
 
@@ -35,14 +35,12 @@ pub fn provide_auth() {
         ws_refresh,
     });
 
-    let ctx = use_context::<AuthContext>().unwrap();
-
+    let ctx = expect_context::<AuthContext>();
     Effect::watch(
         ctx.action.version(),
         move |_, _, _| {
             if ctx.ws_refresh.get_value() {
-                websocket_context.close();
-                websocket_context.open();
+                client_api.restart_ws();
             }
         },
         false,

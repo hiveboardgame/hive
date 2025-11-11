@@ -3,20 +3,18 @@ use std::sync::Arc;
 use crate::{
     common::ServerMessage,
     websocket::{
-        chat::UserToUser,
-        messages::{InternalServerMessage, MessageDestination},
-        WebsocketData,
+        ServerData, chat::UserToUser, messages::{InternalServerMessage, MessageDestination}
     },
 };
 use shared_types::{ChatDestination, ChatMessageContainer};
 
 pub struct ChatHandler {
     container: ChatMessageContainer,
-    data: Arc<WebsocketData>,
+    data: Arc<ServerData>,
 }
 
 impl ChatHandler {
-    pub fn new(mut container: ChatMessageContainer, data: Arc<WebsocketData>) -> Self {
+    pub fn new(mut container: ChatMessageContainer, data: Arc<ServerData>) -> Self {
         container.time();
         Self { container, data }
     }

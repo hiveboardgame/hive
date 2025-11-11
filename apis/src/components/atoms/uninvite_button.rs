@@ -1,6 +1,5 @@
 use crate::{
-    common::TournamentAction,
-    providers::{ApiRequestsProvider, AuthContext},
+    common::TournamentAction, providers::{AuthContext, ClientApi},
 };
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -10,7 +9,7 @@ use uuid::Uuid;
 #[component]
 pub fn UninviteButton(user_id: Uuid, tournament_id: TournamentId) -> impl IntoView {
     let user_id = StoredValue::new(user_id);
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let auth_context = expect_context::<AuthContext>();
 
     let logged_in_and_not_user = move || {
@@ -22,11 +21,10 @@ pub fn UninviteButton(user_id: Uuid, tournament_id: TournamentId) -> impl IntoVi
     let tournament_id = StoredValue::new(tournament_id);
 
     let uninvite = move |_| {
-        let api = api.get();
-        api.tournament(TournamentAction::InvitationRetract(
-            tournament_id.get_value(),
-            user_id.get_value(),
-        ));
+        let api = client_api;
+        let tournament_id = tournament_id.get_value();
+        let user_id = user_id.get_value();
+        api.tournament(TournamentAction::InvitationRetract(tournament_id, user_id));
     };
 
     view! {

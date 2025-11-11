@@ -41,7 +41,7 @@ impl InvitationAccept {
                 message: ServerMessage::Tournament(TournamentUpdate::Joined(response.clone())),
             },
             InternalServerMessage {
-                destination: MessageDestination::Global,
+                destination: MessageDestination::Tournament(response.clone()),
                 message: ServerMessage::Tournament(TournamentUpdate::Modified(response)),
             },
         ])

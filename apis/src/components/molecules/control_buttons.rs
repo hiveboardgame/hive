@@ -1,10 +1,7 @@
 use crate::{
     common::ChallengeAction,
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
-    providers::{
-        challenges::ChallengeStateSignal, game_state::GameStateSignal, ApiRequestsProvider,
-        AuthContext,
-    },
+    providers::{challenges::ChallengeStateSignal, game_state::GameStateSignal, AuthContext, ClientApi},
 };
 use hive_lib::{ColorChoice, GameControl};
 use leptos::prelude::*;
@@ -15,7 +12,7 @@ use shared_types::{ChallengeDetails, ChallengeVisibility};
 pub fn ControlButtons() -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let user_id = move || {
         auth_context.user.with_untracked(|a| {
             a.as_ref()
@@ -81,7 +78,7 @@ pub fn ControlButtons() -> impl IntoView {
                     band_lower: None,
                 };
                 let challenge_action = ChallengeAction::Create(details);
-                let api = api.get();
+                let api = client_api;
                 let navigate = leptos_router::hooks::use_navigate();
                 api.challenge(challenge_action);
                 navigate("/", Default::default());
@@ -147,8 +144,9 @@ pub fn ControlButtons() -> impl IntoView {
 
     let rematch = move |_| {
         if let Some(challenge) = rematch_present() {
-            let api = api.get();
-            api.challenge_accept(challenge.challenge_id);
+            let api = client_api;
+            let challenge_id = challenge.challenge_id;
+            api.challenge_accept(challenge_id);
         } else if let Some(user_id) = auth_context.user.with(|a| a.as_ref().map(|u| u.id)) {
             game_state.signal.with_untracked(|gs| {
                 if let Some(game) = &gs.game_response {
@@ -173,7 +171,7 @@ pub fn ControlButtons() -> impl IntoView {
                         band_lower: None,
                     };
                     let challenge_action = ChallengeAction::Create(details);
-                    let api = api.get();
+                    let api = client_api;
                     api.challenge(challenge_action);
                 }
             });

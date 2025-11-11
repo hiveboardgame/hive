@@ -1,6 +1,6 @@
 use crate::{
     components::update_from_event::update_from_input,
-    providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
+    providers::{AuthContext, ClientApi, chat::Chat, game_state::GameStateSignal},
 };
 use chrono::Local;
 use leptos::{html, prelude::*};
@@ -35,11 +35,12 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let game_state = use_context::<GameStateSignal>();
+    let api = expect_context::<ClientApi>();
     let turn = move || game_state.map(|gs| gs.signal.with(|state| state.state.turn));
     let send = move || {
         let message = chat.typed_message.get();
         if !message.is_empty() {
-            chat.send(&message, destination(), turn());
+            chat.send(&message, destination(), turn(), api);
             chat.typed_message.set(String::new());
         };
     };

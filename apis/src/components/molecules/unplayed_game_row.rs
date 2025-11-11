@@ -1,5 +1,4 @@
-use crate::providers::schedules::SchedulesContext;
-use crate::providers::ApiRequestsProvider;
+use crate::providers::{schedules::SchedulesContext, ClientApi};
 use crate::responses::GameResponse;
 use crate::{common::TournamentAction, components::atoms::profile_link::ProfileLink};
 use chrono::{DateTime, Duration, Local, Utc};
@@ -16,7 +15,7 @@ pub fn UnplayedGameRow(
     tournament_finished: Signal<bool>,
 ) -> impl IntoView {
     let schedules_signal = expect_context::<SchedulesContext>();
-    let api = expect_context::<ApiRequestsProvider>().0;
+    let client_api = expect_context::<ClientApi>();
     let game = StoredValue::new(game);
     let schedule: Signal<Option<DateTime<Utc>>> = Signal::derive(move || {
         schedules_signal.tournament.with(|tournament| {
@@ -53,7 +52,7 @@ pub fn UnplayedGameRow(
             let action = game.with_value(|game| {
                 TournamentAction::AdjudicateResult(game.game_id.clone(), result)
             });
-            let api = api.get();
+            let api = client_api;
             api.tournament(action);
             show_adjudicate_menu.update(|b| *b = !*b);
         }

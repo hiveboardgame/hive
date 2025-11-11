@@ -9,127 +9,128 @@ use super::{
 };
 use crate::{
     common::TournamentAction,
-    websocket::{messages::InternalServerMessage, WebsocketData},
+    websocket::{
+        messages::InternalServerMessage,
+        ServerData, TabData,
+    },
 };
 use anyhow::Result;
-use db_lib::DbPool;
-use uuid::Uuid;
 
 pub struct TournamentHandler {
     pub action: TournamentAction,
-    pub pool: DbPool,
-    pub user_id: Uuid,
-    pub username: String,
-    pub data: Arc<WebsocketData>,
+    pub client: TabData,
+    pub server: Arc<ServerData>,
 }
 
 impl TournamentHandler {
     pub async fn new(
         action: TournamentAction,
-        username: &str,
-        user_id: Uuid,
-        data: Arc<WebsocketData>,
-        pool: &DbPool,
+        client: TabData,
+        server: Arc<ServerData>,
     ) -> Result<Self> {
         Ok(Self {
-            pool: pool.clone(),
+            client,
+            server,
             action,
-            user_id,
-            username: username.to_owned(),
-            data,
         })
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+        let (user_id, username) = self
+            .client
+            .account()
+            .map(|a| (a.id, a.username.clone()))
+            .unwrap_or_default();
+        let pool = self.client.pool();
         let messages = match self.action.clone() {
             TournamentAction::Create(details) => {
-                CreateHandler::new(*details, self.user_id, &self.pool)
+                CreateHandler::new(*details, user_id, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::Join(tournament_id) => {
-                JoinHandler::new(tournament_id, self.user_id, &self.pool)
+                JoinHandler::new(tournament_id, user_id, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::Leave(tournament_id) => {
-                LeaveHandler::new(tournament_id, self.user_id, &self.pool)
+                LeaveHandler::new(tournament_id, user_id, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::Delete(tournament_id) => {
-                DeleteHandler::new(tournament_id, self.user_id, &self.pool)
+                DeleteHandler::new(tournament_id, user_id, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::InvitationCreate(tournament_id, user) => {
-                InvitationCreate::new(tournament_id, self.user_id, user, &self.pool)
+                InvitationCreate::new(tournament_id, user_id, user, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::InvitationAccept(tournament_id) => {
-                InvitationAccept::new(tournament_id, self.user_id, &self.pool)
+                InvitationAccept::new(tournament_id, user_id, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::InvitationDecline(tournament_id) => {
-                InvitationDecline::new(tournament_id, self.user_id, &self.pool)
+                InvitationDecline::new(tournament_id, user_id, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::InvitationRetract(tournament_id, user) => {
-                InvitationRetract::new(tournament_id, self.user_id, user, &self.pool)
+                InvitationRetract::new(tournament_id, user_id, user, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::Kick(tournament_id, user) => {
-                KickHandler::new(tournament_id, self.user_id, user, &self.pool)
+                KickHandler::new(tournament_id, user_id, user, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::Start(tournament_id) => {
-                StartHandler::new(tournament_id, self.user_id, &self.pool)
+                StartHandler::new(tournament_id, user_id, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::AdjudicateResult(game_id, new_result) => {
-                AdjudicateResultHandler::new(game_id, new_result, self.user_id, &self.pool)
+                AdjudicateResultHandler::new(game_id, new_result, user_id, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::Abandon(tournament_id) => {
-                AbandonHandler::new(
-                    tournament_id,
-                    self.user_id,
-                    self.username.clone(),
-                    &self.pool,
-                )
-                .await?
-                .handle()
-                .await?
+                AbandonHandler::new(tournament_id, user_id, username.clone(), pool)
+                    .await?
+                    .handle()
+                    .await?
             }
             TournamentAction::Finish(tournament_id) => {
-                FinishHandler::new(tournament_id, self.user_id, &self.pool)
+                FinishHandler::new(tournament_id, user_id, pool)
                     .await?
                     .handle()
                     .await?
             }
             TournamentAction::ProgressToNextRound(tournament_id) => {
-                SwissRoundHandler::new(tournament_id, self.user_id, &self.pool)
+                SwissRoundHandler::new(tournament_id, user_id, pool)
                     .await?
                     .handle()
                     .await?
+            }
+            TournamentAction::Subscribe(tournament_id) => {
+                self.server
+                    .subscribe_to_tournament(&self.client, tournament_id);
+                vec![]
             }
         };
         Ok(messages)
