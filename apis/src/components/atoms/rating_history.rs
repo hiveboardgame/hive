@@ -2,13 +2,13 @@ use crate::{
     components::layouts::base_layout::OrientationSignal,
     functions::games::get::get_rating_history_resource, responses::RatingHistoryResponse,
 };
+use chrono::{DateTime, Duration, Utc};
 use leptos::prelude::*;
 use leptos_chartistry::*;
+use leptos_meta::Style;
 use leptos_use::use_window_size;
 use shared_types::GameSpeed;
 use uuid::Uuid;
-use leptos_meta::Style;
-use chrono::{Duration, DateTime, Utc};
 
 fn build_x_ticks(data: ReadSignal<Vec<RatingHistoryResponse>>) -> TickLabels<DateTime<Utc>> {
     let data_vec = data.get();
@@ -34,11 +34,16 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
     let vertical = expect_context::<OrientationSignal>().orientation_vertical;
     let history = OnceResource::new(get_rating_history_resource(user_id, game_speed));
     let window_size = use_window_size();
-    let padding_right = Signal::derive(move || window_size.width.get() * if vertical.get() { 0.01 } else { 0.06 });
-    let padding_left = Signal::derive(move || window_size.width.get() * if vertical.get() { 0.01 } else { 0.03 });
-    let padding_bottom = Signal::derive(move || window_size.height.get() * if vertical.get() { 0.04 } else { 0.07 });
-    let graph_width = Signal::derive(move || window_size.width.get() * if vertical.get() { 0.83 } else { 0.82 });
-    let graph_height = Signal::derive(move || window_size.height.get() * 0.58 - padding_bottom.get());
+    let padding_right =
+        Signal::derive(move || window_size.width.get() * if vertical.get() { 0.01 } else { 0.06 });
+    let padding_left =
+        Signal::derive(move || window_size.width.get() * if vertical.get() { 0.01 } else { 0.03 });
+    let padding_bottom =
+        Signal::derive(move || window_size.height.get() * if vertical.get() { 0.04 } else { 0.07 });
+    let graph_width =
+        Signal::derive(move || window_size.width.get() * if vertical.get() { 0.83 } else { 0.82 });
+    let graph_height =
+        Signal::derive(move || window_size.height.get() * 0.58 - padding_bottom.get());
 
     view! {
         <div
@@ -78,7 +83,7 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
                                         x_periods.with_strftime("%Y-%m-%d"),
                                     );
                                     tooltip.y_ticks = TickLabels::aligned_floats()
-                                        .with_format(|value, _| format!("{:.0}", value));
+                                        .with_format(|value, _| format!("{value:.0}"));
                                     view! {
                                         <Style>
                                             "
