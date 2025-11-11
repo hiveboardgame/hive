@@ -51,6 +51,7 @@ pub fn DisplayGames(tab_view: GameProgress) -> impl IntoView {
                         expansions: base_filters.expansions,
                         rated: base_filters.rated,
                         exclude_bots: base_filters.exclude_bots,
+                        opponent: base_filters.opponent,
                     });
 
                     ctx.has_more.set_value(true);
