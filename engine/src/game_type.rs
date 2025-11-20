@@ -52,3 +52,35 @@ impl FromStr for GameType {
         }
     }
 }
+
+impl GameType {
+    pub(crate) fn add_m(self) -> Self {
+        match self {
+            GameType::Base => GameType::M,
+            GameType::L => GameType::ML,
+            GameType::P => GameType::MP,
+            GameType::LP => GameType::MLP,
+            _ => self,
+        }
+    }
+
+    pub(crate) fn add_l(self) -> Self {
+        match self {
+            GameType::Base => GameType::L,
+            GameType::M => GameType::ML,
+            GameType::P => GameType::LP,
+            GameType::MP => GameType::MLP,
+            _ => self,
+        }
+    }
+
+    pub(crate) fn add_p(self) -> Self {
+        match self {
+            GameType::Base => GameType::P,
+            GameType::M => GameType::MP,
+            GameType::L => GameType::LP,
+            GameType::ML => GameType::MLP,
+            _ => self,
+        }
+    }
+}

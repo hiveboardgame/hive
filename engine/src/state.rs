@@ -155,13 +155,15 @@ impl State {
             _ => {
                 let piece = piece.parse()?;
                 if is_absolute_position(position) {
-                    if let Ok(destination_piece) = Piece::from_str(position) {
-                        if let Some(target_position) =
-                            self.board.position_of_piece(destination_piece)
-                        {
-                            self.play_turn(piece, target_position)?;
-                        }
-                    }
+                    let destination_piece = Piece::from_str(position)?;
+                    let target_position = self
+                        .board
+                        .position_of_piece(destination_piece)
+                        .ok_or_else(|| GameError::ParsingError {
+                            found: position.to_string(),
+                            typ: "destination piece not on board".to_string(),
+                        })?;
+                    self.play_turn(piece, target_position)?;
                 } else {
                     let target_position = Position::from_string(position, &self.board)?;
                     self.play_turn(piece, target_position)?;

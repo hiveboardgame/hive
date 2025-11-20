@@ -1,4 +1,4 @@
-use crate::game_result::GameResult;
+use crate::{game_result::GameResult, history::History};
 use serde::{Deserialize, Serialize};
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -48,6 +48,12 @@ pub enum GameError {
     NotPlayer { username: String, game: String },
     #[error("Cannot abort tournament game")]
     TournamentAbort,
+    #[error("Parsed history through turn {turn} couldn't parse: {reason}")]
+    PartialHistory {
+        history: History,
+        turn: usize,
+        reason: String,
+    },
 }
 
 impl GameError {
