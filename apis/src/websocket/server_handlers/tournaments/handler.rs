@@ -3,6 +3,7 @@ use std::sync::Arc;
 use super::{
     abandon::AbandonHandler,
     adjudicate_result::AdjudicateResultHandler,
+    bulk_adjudicate::{BulkAdjudicateHandler, BulkAdjudication},
     create::CreateHandler,
     delete::DeleteHandler,
     finish::FinishHandler,
@@ -116,6 +117,28 @@ impl TournamentHandler {
                     .await?
                     .handle()
                     .await?
+            }
+            TournamentAction::DoubleForfeitUnstartedGames(tournament_id) => {
+                BulkAdjudicateHandler::new(
+                    tournament_id,
+                    self.user_id,
+                    BulkAdjudication::DoubleForfeitUnstarted,
+                    &self.pool,
+                )
+                .await?
+                .handle()
+                .await?
+            }
+            TournamentAction::ResetAdjudicatedGames(tournament_id) => {
+                BulkAdjudicateHandler::new(
+                    tournament_id,
+                    self.user_id,
+                    BulkAdjudication::ResetAdjudicated,
+                    &self.pool,
+                )
+                .await?
+                .handle()
+                .await?
             }
             TournamentAction::Abandon(tournament_id) => {
                 AbandonHandler::new(

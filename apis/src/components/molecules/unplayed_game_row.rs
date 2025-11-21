@@ -149,7 +149,10 @@ pub fn UnplayedGameRow(
                                 format!("Adjudicated result: {}", game.tournament_game_result)
                             })}
                     </Show>
-                    <Show when=move || user_is_organizer() && !tournament_finished()>
+                    <Show when=move || {
+                        user_is_organizer() && !tournament_finished()
+                            && game.with_value(|game| game.organizer_can_adjudicate())
+                    }>
                         <button class=BUTTON_STYLE on:click=toggle_adjudicate>
                             {"Adjudicate"}
                         </button>
