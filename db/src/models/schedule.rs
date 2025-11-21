@@ -194,6 +194,20 @@ impl Schedule {
         )
     }
 
+    pub async fn delete_all_for_games(
+        game_ids: &[Uuid],
+        conn: &mut DbConn<'_>,
+    ) -> Result<usize, DbError> {
+        if game_ids.is_empty() {
+            return Ok(0);
+        }
+        Ok(
+            diesel::delete(schedules::table.filter(schedules::game_id.eq_any(game_ids)))
+                .execute(conn)
+                .await?,
+        )
+    }
+
     pub async fn get_upcoming_agreed_games(
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<(Uuid, DateTime<Utc>)>, DbError> {
