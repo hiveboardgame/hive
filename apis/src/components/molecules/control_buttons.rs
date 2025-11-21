@@ -32,7 +32,7 @@ pub fn ControlButtons() -> impl IntoView {
             .get()
             .expect("User_id is one of the players in this game")
     });
-    let pending = create_read_slice(game_state.signal, |gs| gs.game_control_pending.clone());
+    let pending = create_read_slice(game_state.signal, |gs| gs.game_control_pending);
     let not_tournament = create_read_slice(game_state.signal, |gs| {
         gs.game_response
             .as_ref()

@@ -1151,42 +1151,80 @@ impl Game {
         new_result: &TournamentGameResult,
         conn: &mut DbConn<'_>,
     ) -> Result<Self, DbError> {
-        match Conclusion::from_str(&self.conclusion) {
-            Ok(Conclusion::Committee) | Ok(Conclusion::Unknown) | Ok(Conclusion::Forfeit) => {}
-            _ => {
-                return Err(DbError::InvalidAction {
-                    info: String::from("You cannot adjudicate a played game"),
-                });
-            }
+        if !(matches!(
+            Conclusion::from_str(&self.conclusion),
+            Ok(Conclusion::Committee) | Ok(Conclusion::Unknown) | Ok(Conclusion::Forfeit)
+        ) && self.turn == 0
+            && self.history.is_empty()
+            && self.game_start == GameStart::Ready.to_string()
+            && matches!(
+                GameStatus::from_str(&self.game_status),
+                Ok(GameStatus::NotStarted) | Ok(GameStatus::Adjudicated)
+            ))
+        {
+            return Err(DbError::InvalidAction {
+                info: String::from("You cannot adjudicate a game that has already started"),
+            });
         }
-        if let Some(tid) = self.tournament_id {
-            let tournament = Tournament::find(tid, conn).await?;
-            tournament
-                .ensure_user_is_organizer_or_admin(user_id, conn)
-                .await?;
-            let con = match new_result {
-                TournamentGameResult::DoubeForfeit => Conclusion::Forfeit,
-                TournamentGameResult::Unknown => Conclusion::Unknown,
-                _ => Conclusion::Committee,
-            };
-            let fin = new_result != &TournamentGameResult::Unknown;
-            let game = diesel::update(games::table.find(self.id))
-                .set((
-                    finished.eq(fin),
-                    conclusion.eq(con.to_string()),
-                    game_status.eq(GameStatus::Adjudicated.to_string()),
-                    tournament_game_result.eq(new_result.to_string()),
-                    updated_at.eq(Utc::now()),
-                    last_interaction.eq(Utc::now()),
-                ))
-                .get_result(conn)
-                .await?;
-            Ok(game)
-        } else {
-            Err(DbError::InvalidAction {
+
+        let tid = self.tournament_id.ok_or_else(|| DbError::InvalidAction {
+            info: String::from("Not a tournament game"),
+        })?;
+        let tournament = Tournament::find(tid, conn).await?;
+        tournament
+            .ensure_user_is_organizer_or_admin(user_id, conn)
+            .await?;
+
+        self.update_tournament_result(new_result, conn).await
+    }
+
+    pub(crate) async fn assign_tournament_result(
+        &self,
+        new_result: &TournamentGameResult,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Self, DbError> {
+        if self.tournament_id.is_none() {
+            return Err(DbError::InvalidAction {
                 info: String::from("Not a tournament game"),
-            })
+            });
         }
+        self.update_tournament_result(new_result, conn).await
+    }
+
+    async fn update_tournament_result(
+        &self,
+        new_result: &TournamentGameResult,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Self, DbError> {
+        let (con, status, fin, new_last_interaction) = match new_result {
+            TournamentGameResult::DoubeForfeit => (
+                Conclusion::Forfeit,
+                GameStatus::Adjudicated,
+                true,
+                Some(Utc::now()),
+            ),
+            TournamentGameResult::Unknown => {
+                (Conclusion::Unknown, GameStatus::NotStarted, false, None)
+            }
+            _ => (
+                Conclusion::Committee,
+                GameStatus::Adjudicated,
+                true,
+                Some(Utc::now()),
+            ),
+        };
+        let game = diesel::update(games::table.find(self.id))
+            .set((
+                finished.eq(fin),
+                conclusion.eq(con.to_string()),
+                game_status.eq(status.to_string()),
+                tournament_game_result.eq(new_result.to_string()),
+                updated_at.eq(Utc::now()),
+                last_interaction.eq(new_last_interaction),
+            ))
+            .get_result(conn)
+            .await?;
+        Ok(game)
     }
 
     pub async fn start(&self, conn: &mut DbConn<'_>) -> Result<Self, DbError> {

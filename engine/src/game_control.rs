@@ -107,7 +107,7 @@ mod tests {
         ]
         .iter()
         {
-            assert_eq!(Ok(gc.clone()), GameControl::from_str(&format!("{gc}")));
+            assert_eq!(Ok(gc), GameControl::from_str(&format!("{gc}")));
         }
     }
 }
