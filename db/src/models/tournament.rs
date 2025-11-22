@@ -656,6 +656,7 @@ impl Tournament {
     }
 
     async fn swiss_create_first_round(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
+        let organizer = &self.organizers(conn).await?[0].id;
         let mut players = self.players(conn).await?;
         let mut games = Vec::new();
 
@@ -677,18 +678,30 @@ impl Tournament {
                 continue; // shouldn't happen since we handled odd number of players
             }
 
-            let white = pair[0].id;
-            let black = pair[1].id;
+            let p1 = pair[0].id;
+            let p2 = pair[1].id;
 
-            // first game: white vs black
-            let new_game = NewGame::new_from_tournament(white, black, self);
-            let game = Game::create(new_game, conn).await?;
-            games.push(game);
-
-            // second game: black vs white
-            let new_game = NewGame::new_from_tournament(black, white, self);
-            let game = Game::create(new_game, conn).await?;
-            games.push(game);
+            for (white, black) in [(p1, p2), (p2, p1)] {
+                let new_game = NewGame::new_from_tournament(white, black, self);
+                let game = Game::create(new_game, conn).await?;
+                
+                if let Some(winner) = if white == bye_player.id {
+                    Some(Color::Black)
+                } else if black == bye_player.id {
+                    Some(Color::White)
+                } else {
+                    None
+                } {
+                    game.adjudicate_tournament_result(
+                        organizer,
+                        &TournamentGameResult::Winner(winner),
+                        conn,
+                    )
+                    .await?;
+                }
+                
+                games.push(game);
+            }
         }
 
         Ok(games)
@@ -847,40 +860,26 @@ impl Tournament {
         });
         let bye_player = User::find_by_username("SwissByePlayer", conn).await?;
         for (a, b) in pairings {
-            let g1 = Game::create(NewGame::new_from_tournament(a, b, self), conn).await?;
-            let g2 = Game::create(NewGame::new_from_tournament(b, a, self), conn).await?;
-            // bye_player is white in g1 and black in g2
-            if a == bye_player.id {
-                g1.adjudicate_tournament_result(
-                    user_id,
-                    &TournamentGameResult::Winner(Color::Black),
-                    conn,
-                )
-                .await?;
-                g2.adjudicate_tournament_result(
-                    user_id,
-                    &TournamentGameResult::Winner(Color::White),
-                    conn,
-                )
-                .await?;
+            for (white, black) in [(a, b), (b, a)] {
+                let game = Game::create(NewGame::new_from_tournament(white, black, self), conn).await?;
+                
+                if let Some(winner) = if white == bye_player.id {
+                    Some(Color::Black)
+                } else if black == bye_player.id {
+                    Some(Color::White)
+                } else {
+                    None
+                } {
+                    game.adjudicate_tournament_result(
+                        user_id,
+                        &TournamentGameResult::Winner(winner),
+                        conn,
+                    )
+                    .await?;
+                }
+                
+                games.push(game);
             }
-            // bye_player is black in g1 and white in g2
-            if b == bye_player.id {
-                g1.adjudicate_tournament_result(
-                    user_id,
-                    &TournamentGameResult::Winner(Color::White),
-                    conn,
-                )
-                .await?;
-                g2.adjudicate_tournament_result(
-                    user_id,
-                    &TournamentGameResult::Winner(Color::Black),
-                    conn,
-                )
-                .await?;
-            }
-            games.push(g1);
-            games.push(g2);
         }
         Ok(games)
     }

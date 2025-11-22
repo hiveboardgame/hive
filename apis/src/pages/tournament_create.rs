@@ -224,6 +224,18 @@ pub fn TournamentCreate() -> impl IntoView {
     let is_not_preview_desc = RwSignal::new(true);
     let markdown_desc = move || markdown_to_html(&tournament.description.get());
 
+    let max_seats = Signal::derive(move || {
+        match tournament.mode.get() {
+            TournamentMode::DoubleSwiss => 64,
+            _ => 16,
+        }
+    });
+    Effect::new(move || {
+        let current_max = max_seats.get();
+        if tournament.seats.get() > current_max {
+            tournament.seats.set(current_max);
+        }
+    });
     view! {
         <div class="flex justify-center items-center pt-10">
             <div class="container flex flex-col justify-between p-2 md:flex-row md:flex-wrap">
@@ -300,7 +312,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             signal_to_update=tournament.seats
                             name="Min Seats"
                             min=tournament.min_seats
-                            max=16
+                            max=max_seats
                             step=1
                         /> {tournament.seats}
                     </div>
