@@ -13,6 +13,11 @@ use shared_types::{GameSpeed, TimeMode};
 use std::str::FromStr;
 use uuid::Uuid;
 
+const MAX_MOVES_PER_GAME: usize = 100;
+const MOVE_PROBABILITY: f64 = 0.3;
+const RESIGNATION_PROBABILITY: f64 = 0.5;
+const QUEEN_MUST_BE_PLAYED_BY_TURN: usize = 2;
+
 pub async fn run_seed_database(
     num_users: usize,
     games_per_user: usize,
@@ -38,18 +43,21 @@ async fn execute_seeding_transaction(
     games_per_user: usize,
 ) -> Result<(usize, usize)> {
     info!("Beginning seeding");
+
     let (created_users, created_games) = conn
-        .transaction(|conn| {
+        .transaction(move |conn| {
+            let users_to_create = num_users;
+            let games_per_user_count = games_per_user;
             Box::pin(async move {
-                info!("Creating {} test users", num_users);
-                let user_ids = create_test_users(conn, num_users).await.map_err(|e| {
+                info!("Creating {} test users", users_to_create);
+                let user_ids = create_test_users(conn, users_to_create).await.map_err(|e| {
                     log::error!("Failed to create test users: {}", e);
                     diesel::result::Error::RollbackTransaction
                 })?;
                 info!("Done, we now have {} users", user_ids.len());
 
-                info!("Playing {} games per user", games_per_user);
-                let total_games = play_test_games(conn, &user_ids, games_per_user)
+                info!("Playing {} games per user", games_per_user_count);
+                let total_games = play_test_games(conn, &user_ids, games_per_user_count)
                     .await
                     .map_err(|e| {
                         log::error!("Failed to play test games: {}", e);
@@ -281,11 +289,11 @@ async fn play_game(
         e
     })?;
 
-    for move_num in 0..100 {
+    for move_number in 0..MAX_MOVES_PER_GAME {
         if matches!(state.game_status, hive_lib::GameStatus::Finished(_)) {
             info!(
                 "Game {} finished after {} moves",
-                started_game.nanoid, move_num
+                started_game.nanoid, move_number
             );
             break;
         }
@@ -296,19 +304,19 @@ async fn play_game(
             state.board.spawnable_positions(current_color).collect();
         let mut reserve = state.reserve(current_color);
 
-        if state.turn < 2 {
+        if state.turn < QUEEN_MUST_BE_PLAYED_BY_TURN {
             reserve.remove(&hive_lib::Bug::Queen);
         }
 
-        let can_make_moves = state.board.queen_played(current_color);
-        let available_moves = if can_make_moves {
+        let queen_has_been_played = state.board.queen_played(current_color);
+        let available_moves = if queen_has_been_played {
             state.board.moves(current_color)
         } else {
             std::collections::HashMap::new()
         };
 
         info!("Game {} - Turn {} (game turn {}): {:?} to play - {} moves, {} spawn positions, {} pieces in reserve",
-              started_game.nanoid, move_num + 1, state.turn, current_color,
+              started_game.nanoid, move_number + 1, state.turn, current_color,
               available_moves.len(), available_spawns.len(),
               reserve.values().map(|v| v.len()).sum::<usize>());
 
@@ -322,12 +330,12 @@ async fn play_game(
 
         let mut move_made = false;
 
-        let should_try_move = can_make_moves && !available_moves.is_empty() && {
+        let should_attempt_move = queen_has_been_played && !available_moves.is_empty() && {
             let mut rng = rng();
-            rng.random_bool(0.3)
+            rng.random_bool(MOVE_PROBABILITY)
         };
 
-        if should_try_move {
+        if should_attempt_move {
             let move_entries: Vec<_> = available_moves.iter().collect();
             if let Some(((piece, from_pos), target_positions)) = {
                 let mut rng = rng();
@@ -341,7 +349,7 @@ async fn play_game(
                         info!(
                             "Game {} - Turn {}: Move {} from {} to {}",
                             started_game.nanoid,
-                            move_num + 1,
+                            move_number + 1,
                             piece,
                             from_pos,
                             target_pos
@@ -362,7 +370,7 @@ async fn play_game(
                 info!(
                     "Game {} - Turn {}: Reserve is empty after filtering",
                     started_game.nanoid,
-                    move_num + 1
+                    move_number + 1
                 );
             } else if let Some((_bug, piece_str)) = {
                 let mut rng = rng();
@@ -379,7 +387,7 @@ async fn play_game(
                                     info!(
                                         "Game {} - Turn {}: Spawn {} at {}",
                                         started_game.nanoid,
-                                        move_num + 1,
+                                        move_number + 1,
                                         piece,
                                         spawn_pos
                                     );
@@ -389,7 +397,7 @@ async fn play_game(
                                     log::warn!(
                                         "Game {} - Turn {}: Failed to spawn {} at {}: {:?}",
                                         started_game.nanoid,
-                                        move_num + 1,
+                                        move_number + 1,
                                         piece,
                                         spawn_pos,
                                         e
@@ -402,7 +410,7 @@ async fn play_game(
                         log::warn!(
                             "Game {} - Turn {}: Failed to parse piece '{}': {:?}",
                             started_game.nanoid,
-                            move_num + 1,
+                            move_number + 1,
                             piece_str,
                             e
                         );
@@ -415,7 +423,7 @@ async fn play_game(
             info!(
                 "Game {} - Turn {}: No valid move could be made",
                 started_game.nanoid,
-                move_num + 1
+                move_number + 1
             );
             break;
         }
@@ -449,7 +457,7 @@ async fn resign_game(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let resigning_user = {
         let mut rng = rng();
-        if rng.random_bool(0.5) {
+        if rng.random_bool(RESIGNATION_PROBABILITY) {
             game.white_id
         } else {
             game.black_id

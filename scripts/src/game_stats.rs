@@ -28,13 +28,16 @@ pub async fn run_game_stats(
     info!("Analyzing {} games", games_to_analyze.len());
 
     let max_turns = find_maximum_turns(&games_to_analyze);
-    let mut temp_file = create_csv_writer_for_game_stats().await?;
+    let mut temp_file = create_temp_file_for_csv().await?;
     let mut writer = csv::Writer::from_writer(&mut temp_file);
     write_csv_header(&mut writer, max_turns).await?;
-    
+
     let (processed, errors) = process_games_and_write_to_csv(games_to_analyze, &mut writer, max_turns).await;
-    
-    persist_csv_file(temp_file, writer, "game_statistics.csv").await?;
+
+    writer.flush().context("Failed to flush CSV writer")?;
+    drop(writer);
+
+    persist_csv_file(temp_file, "game_statistics.csv")?;
 
     log_operation_complete("Game statistics collection", processed, errors);
     info!("Results written to game_statistics.csv");
@@ -44,7 +47,7 @@ pub async fn run_game_stats(
 
 async fn analyze_game(game: &Game, max_turns: usize) -> Result<Vec<String>> {
     if game.history.is_empty() {
-        return Err("Game has empty history".into());
+        return Err(anyhow::anyhow!("Game has empty history"));
     }
 
     let history = History::new_from_str(&game.history).context("Failed to parse game history")?;
@@ -83,14 +86,11 @@ async fn analyze_game(game: &Game, max_turns: usize) -> Result<Vec<String>> {
 
     stats.push(turn.to_string());
 
-    while moves_per_turn.len() < max_turns {
-        moves_per_turn.push("".to_string());
-        spawns_per_turn.push("".to_string());
-    }
+    pad_turn_vectors_to_max_turns(&mut moves_per_turn, &mut spawns_per_turn, max_turns);
 
-    for i in 0..max_turns {
-        stats.push(moves_per_turn[i].clone());
-        stats.push(spawns_per_turn[i].clone());
+    for turn_index in 0..max_turns {
+        stats.push(moves_per_turn[turn_index].clone());
+        stats.push(spawns_per_turn[turn_index].clone());
     }
 
     Ok(stats)
@@ -150,7 +150,7 @@ fn find_maximum_turns(games: &[Game]) -> usize {
         .unwrap_or(0) as usize
 }
 
-async fn create_csv_writer_for_game_stats() -> Result<NamedTempFile> {
+async fn create_temp_file_for_csv() -> Result<NamedTempFile> {
     NamedTempFile::new().context("Failed to create temporary file for CSV writing")
 }
 
@@ -196,15 +196,10 @@ async fn process_games_and_write_to_csv(
     (processed, errors)
 }
 
-async fn persist_csv_file(
-    temp_file: NamedTempFile,
-    mut writer: csv::Writer<&mut NamedTempFile>,
-    filename: &str,
-) -> Result<()> {
-    writer.flush().context("Failed to flush CSV writer")?;
-    drop(writer);
+fn persist_csv_file(temp_file: NamedTempFile, filename: &str) -> Result<()> {
     temp_file
         .persist(filename)
+        .map(|_| ())
         .context("Failed to persist CSV file")
 }
 
@@ -218,4 +213,15 @@ fn sample_games_randomly(games: &[Game], sample_size: usize) -> Vec<Game> {
         .choose_multiple(&mut rng, sample_size)
         .cloned()
         .collect()
+}
+
+fn pad_turn_vectors_to_max_turns(
+    moves_per_turn: &mut Vec<String>,
+    spawns_per_turn: &mut Vec<String>,
+    max_turns: usize,
+) {
+    while moves_per_turn.len() < max_turns {
+        moves_per_turn.push(String::new());
+        spawns_per_turn.push(String::new());
+    }
 }

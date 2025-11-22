@@ -19,11 +19,15 @@ pub async fn run_games_report(database_url: Option<String>) -> Result<()> {
     info!("Found {} games (excluding bot games)", games.len());
 
     let mut temp_file = NamedTempFile::new().context("Failed to create temporary file for CSV writing")?;
-    let mut wtr = csv::Writer::from_writer(&mut temp_file);
+    let mut writer = csv::Writer::from_writer(&mut temp_file);
 
-    write_games_report_header(&mut wtr).await?;
-    let (processed, errors) = process_games_for_report(games, &mut wtr, &mut conn).await;
-    persist_games_report_csv(temp_file, wtr).await?;
+    write_games_report_header(&mut writer).await?;
+    let (processed, errors) = process_games_for_report(games, &mut writer, &mut conn).await;
+
+    writer.flush().context("Failed to flush CSV writer")?;
+    drop(writer);
+
+    persist_games_report_csv(temp_file)?;
 
     log_operation_complete("Games report generation", processed, errors);
     info!("Results written to games_report.csv");
@@ -43,17 +47,7 @@ async fn process_game(game: &Game, conn: &mut db_lib::DbConn<'_>) -> Result<Vec<
         .first::<User>(conn)
         .await
         .context("Failed to load black player from database")?;
-    let time_control_category = match game.speed.parse::<GameSpeed>() {
-        Ok(speed) => match speed {
-            GameSpeed::Bullet => "Bullet",
-            GameSpeed::Blitz => "Blitz",
-            GameSpeed::Rapid => "Rapid",
-            GameSpeed::Classic => "Classic",
-            GameSpeed::Correspondence => "Correspondence",
-            _ => "Other",
-        },
-        Err(_) => "Unknown",
-    };
+    let time_control_category = categorize_game_speed(&game.speed);
 
     let game_speed = game
         .speed
@@ -115,8 +109,8 @@ async fn load_non_bot_games(conn: &mut db_lib::DbConn<'_>) -> Result<Vec<Game>> 
         .context("Failed to load games from database")
 }
 
-async fn write_games_report_header(wtr: &mut csv::Writer<&mut NamedTempFile>) -> Result<()> {
-    wtr.write_record(&[
+async fn write_games_report_header(writer: &mut csv::Writer<&mut NamedTempFile>) -> Result<()> {
+    writer.write_record(&[
         "game_nanoid",
         "result",
         "white_player_username",
@@ -137,7 +131,7 @@ async fn write_games_report_header(wtr: &mut csv::Writer<&mut NamedTempFile>) ->
 
 async fn process_games_for_report(
     games: Vec<Game>,
-    wtr: &mut csv::Writer<&mut NamedTempFile>,
+    writer: &mut csv::Writer<&mut NamedTempFile>,
     conn: &mut db_lib::DbConn<'_>,
 ) -> (usize, usize) {
     let mut processed = 0;
@@ -147,7 +141,7 @@ async fn process_games_for_report(
     for game in games {
         match process_game(&game, conn).await {
             Ok(record) => {
-                if let Err(e) = wtr.write_record(&record) {
+                if let Err(e) = writer.write_record(&record) {
                     log::warn!("Failed to write game {} to CSV: {}", game.nanoid, e);
                     errors += 1;
                 }
@@ -165,15 +159,26 @@ async fn process_games_for_report(
     (processed, errors)
 }
 
-async fn persist_games_report_csv(
-    temp_file: NamedTempFile,
-    mut wtr: csv::Writer<&mut NamedTempFile>,
-) -> Result<()> {
-    wtr.flush().context("Failed to flush CSV writer")?;
-    drop(wtr);
+fn persist_games_report_csv(temp_file: NamedTempFile) -> Result<()> {
     temp_file
         .persist("games_report.csv")
+        .map(|_| ())
         .context("Failed to persist CSV file to games_report.csv")
+}
+
+fn categorize_game_speed(speed_str: &str) -> String {
+    match speed_str.parse::<GameSpeed>() {
+        Ok(speed) => match speed {
+            GameSpeed::Bullet => "Bullet",
+            GameSpeed::Blitz => "Blitz",
+            GameSpeed::Rapid => "Rapid",
+            GameSpeed::Classic => "Classic",
+            GameSpeed::Correspondence => "Correspondence",
+            _ => "Other",
+        },
+        Err(_) => "Unknown",
+    }
+    .to_string()
 }
 
 fn format_result(conclusion: &str) -> String {
