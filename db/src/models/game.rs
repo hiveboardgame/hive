@@ -13,12 +13,12 @@ use ::nanoid::nanoid;
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 use diesel::{prelude::*, ExpressionMethods, Insertable};
 use diesel_async::RunQueryDsl;
-use itertools::Itertools;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    ChallengeId, Conclusion, GameId, GameSpeed, GameStart, GamesQueryOptions, TimeMode,
-    TournamentGameResult,
+    BatchToken, ChallengeId, Conclusion, FinishedGameSortKey, FinishedGamesQueryOptions, GameId,
+    GameSpeed, GameStart, GamesQueryOptions, SortValue, TimeMode, TournamentGameResult,
 };
 use std::{str::FromStr, time::Duration};
 use uuid::Uuid;
@@ -1124,19 +1124,78 @@ impl Game {
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<Game>, DbError> {
         let query = GameQueryBuilder::new()
-            .player_filters(
-                options.player1.as_ref(),
-                options.player2.as_ref(),
-                options.exclude_bots,
-            )
-            .progress(&options.game_progress)
-            .speeds(&options.speeds)
-            .expansions(options.expansions)
-            .rated_filter(options.rated)
-            .paginate(options.current_batch.as_ref(), options.batch_size)
+            .apply_legacy_options(options)
             .build();
 
         Ok(query.select(games::all_columns).get_results(conn).await?)
+    }
+
+    pub async fn get_finished_rows_from_options(
+        options: &FinishedGamesQueryOptions,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(Vec<Game>, Option<BatchToken>, i64), DbError> {
+        let prepared = options.clone().validate_all().map_err(|errs| DbError::InvalidInput {
+            info: errs
+                .into_iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+                .join("; "),
+            error: String::new(),
+        })?;
+        let query = GameQueryBuilder::finished_batch_query(&prepared).build();
+        let records: Vec<Game> = query.select(games::all_columns).get_results(conn).await?;
+        let total: i64 = GameQueryBuilder::finished_base_query(&prepared)
+            .build()
+            .count()
+            .get_result(conn)
+            .await?;
+        let next = Self::next_batch_token(&records, &prepared);
+        Ok((records, next, total))
+    }
+
+    pub async fn export_finished_games(
+        options: &FinishedGamesQueryOptions,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        let mut prepared = options.clone().validate_all().map_err(|errs| DbError::InvalidInput {
+            info: errs
+                .into_iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+                .join("; "),
+            error: String::new(),
+        })?;
+        prepared.batch_token = None;
+        let query = GameQueryBuilder::new()
+            .filters(&prepared)
+            .sort(&prepared.sort)
+            .build();
+
+        Ok(query.select(games::all_columns).get_results(conn).await?)
+    }
+
+    fn next_batch_token(rows: &[Game], options: &FinishedGamesQueryOptions) -> Option<BatchToken> {
+        if rows.len() < options.batch_size {
+            return None;
+        }
+        let last = rows.last()?;
+        let primary_value = match options.sort.key {
+            FinishedGameSortKey::Date => SortValue::UpdatedAt(last.updated_at),
+            FinishedGameSortKey::Turns => SortValue::Turns(last.turn),
+            FinishedGameSortKey::RatingAvg => {
+                let (Some(white), Some(black)) = (last.white_rating, last.black_rating) else {
+                    return None;
+                };
+                SortValue::RatingAvg((white + black) / 2.0)
+            }
+        };
+
+        Some(BatchToken {
+            sort: options.sort.clone(),
+            primary_value,
+            updated_at: last.updated_at,
+            id: last.id,
+        })
     }
 
     pub async fn adjudicate_tournament_result(
@@ -1244,26 +1303,31 @@ impl Game {
             .await?;
 
         Ok(games_preload
-        .into_iter()
-        .chunk_by(|game| {
-            let utc = game.updated_at.with_timezone(&Utc);
-            (utc.year(), utc.month(), utc.day())
-        })
-        .into_iter()
-        .filter_map(|((_y, _m, _d), group)| {
-            let last = group.last()?;
-            let utc_day = last.updated_at.with_timezone(&Utc).date_naive();
-            let utc_datetime = Utc.from_local_datetime(&utc_day.and_hms_opt(0, 0, 0)?)
-                .single()?;
-            Some(GameRatings {
-                speed: last.speed.clone(),
-                white_rating: last.white_rating.map(|r| r + last.white_rating_change.unwrap_or(0.0)),
-                black_rating: last.black_rating.map(|r| r + last.black_rating_change.unwrap_or(0.0)),
-                white_id: last.white_id,
-                black_id: last.black_id,
-                updated_at: utc_datetime,
+            .into_iter()
+            .chunk_by(|game| {
+                let utc = game.updated_at.with_timezone(&Utc);
+                (utc.year(), utc.month(), utc.day())
             })
-        })
-        .collect())
+            .into_iter()
+            .filter_map(|((_y, _m, _d), group)| {
+                let last = group.last()?;
+                let utc_day = last.updated_at.with_timezone(&Utc).date_naive();
+                let utc_datetime = Utc
+                    .from_local_datetime(&utc_day.and_hms_opt(0, 0, 0)?)
+                    .single()?;
+                Some(GameRatings {
+                    speed: last.speed.clone(),
+                    white_rating: last
+                        .white_rating
+                        .map(|r| r + last.white_rating_change.unwrap_or(0.0)),
+                    black_rating: last
+                        .black_rating
+                        .map(|r| r + last.black_rating_change.unwrap_or(0.0)),
+                    white_id: last.white_id,
+                    black_id: last.black_id,
+                    updated_at: utc_datetime,
+                })
+            })
+            .collect())
     }
 }

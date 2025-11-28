@@ -28,7 +28,9 @@ pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
 pub use games_query_options::{
-    BatchInfo, GameProgress, GamesQueryOptions, PlayerFilter, ResultType,
+    BatchInfo, BatchToken, FinishedGameQueryValidationError, FinishedGameSort, FinishedGameSortKey,
+    FinishedGamesQueryOptions, FinishedGamesQueryParseError, FinishedResultFilter, GameProgress,
+    GamesQueryOptions, PlayerFilter, ResultType, SortValue,
 };
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use pretty_string::PrettyString;
