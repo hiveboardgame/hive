@@ -40,6 +40,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             .and_then(|s| s.parse::<usize>().ok())
             .map(|n| n.saturating_sub(1)),
     );
+    let uhp_string = StoredValue::new(queries.get_untracked().get("uhp"));
 
     provide_context(ToggleStates(RwSignal::new(HashSet::new())));
     provide_context(CurrentConfirm(Memo::new(move |_| MoveConfirm::Single)));
@@ -82,25 +83,27 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 {move || {
                     let analysis_signal = game_resource
                         .with(|gr| {
-                            match gr {
-                                Some(
-                                    Ok(game_response),
-                                ) if !should_block_analysis(game_response) => {
-                                    let analysis_tree = AnalysisTree::from_game_response(
-                                        game_response,
-                                        game_state,
-                                        move_number.get_value(),
-                                    );
-                                    AnalysisSignal(RwSignal::new(analysis_tree.unwrap_or_default()))
+                            let analysis_tree = match gr {
+                                Some(Ok(game_response)) if !should_block_analysis(game_response) => {
+                                    AnalysisTree::from_game_response(
+                                            game_response,
+                                            game_state,
+                                            move_number.get_value(),
+                                        )
+                                        .unwrap_or_default()
                                 }
                                 _ => {
-                                    let analysis_tree = AnalysisTree::new_blank_analysis(
-                                        game_state,
-                                        GameType::MLP,
-                                    );
-                                    AnalysisSignal(RwSignal::new(analysis_tree))
+                                    uhp_string
+                                        .get_value()
+                                        .and_then(|uhp| {
+                                            AnalysisTree::from_uhp(game_state, uhp).ok()
+                                        })
+                                        .unwrap_or_else(|| {
+                                            AnalysisTree::new_blank_analysis(game_state, GameType::MLP)
+                                        })
                                 }
-                            }
+                            };
+                            AnalysisSignal(RwSignal::new(analysis_tree))
                         });
                     provide_context(analysis_signal);
 

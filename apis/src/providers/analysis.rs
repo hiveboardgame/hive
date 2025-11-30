@@ -1,7 +1,7 @@
 use crate::providers::game_state::{GameState, GameStateSignal};
 use crate::responses::GameResponse;
 use bimap::BiMap;
-use hive_lib::{GameType, History, State};
+use hive_lib::{GameError, GameType, History, State};
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::vec;
@@ -128,6 +128,26 @@ impl AnalysisTree {
         Some(analysis_tree)
     }
 
+    pub fn from_uhp(
+        game_state: GameStateSignal,
+        uhp_string: impl Into<String>,
+    ) -> Result<Self, GameError> {
+        let normalized_uhp = normalize_uhp_metadata(uhp_string);
+        let history = match History::from_uhp_str(normalized_uhp) {
+            Ok(history) => history,
+            Err(GameError::PartialHistory { history, .. }) => history,
+            Err(err) => return Err(err),
+        };
+        let state = State::new_from_history(&history)?;
+
+        game_state.signal.update(|gs| {
+            gs.state = state.clone();
+            gs.view = game_state::View::Game;
+        });
+
+        Ok(Self::from_loaded_state(game_state, &state))
+    }
+
     pub fn update_node(&mut self, node_id: i32, game: Option<GameStateSignal>) -> Option<()> {
         let moves = self
             .tree
@@ -225,5 +245,24 @@ impl AnalysisTree {
             *gs = GameState::new_with_game_type(self.game_type);
             gs.view = game_state::View::Game;
         });
+    }
+}
+
+fn normalize_uhp_metadata(uhp_string: impl Into<String>) -> String {
+    let input = uhp_string.into();
+    let mut split = input.splitn(2, ';');
+    let header = split.next().unwrap_or_default();
+    let rest = split.next();
+
+    // Query parameters decode '+' into ' ', so restore it for the game type metadata token.
+    if header.starts_with("Base") && header.contains(' ') && !header.contains('+') {
+        let normalized_header = header.replace(' ', "+");
+        match rest {
+            Some(rest) if rest.is_empty() => normalized_header,
+            Some(rest) => format!("{normalized_header};{rest}"),
+            None => normalized_header,
+        }
+    } else {
+        input
     }
 }
