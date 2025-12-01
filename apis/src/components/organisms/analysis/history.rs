@@ -5,7 +5,7 @@ use crate::components::organisms::{
     analysis::{DownloadTree, LoadTree, UndoButton},
     reserve::{Alignment, Reserve},
 };
-use crate::providers::analysis::{AnalysisSignal, AnalysisTree};
+use crate::providers::analysis::{AnalysisSignal, AnalysisTree, TreeNode};
 use hive_lib::Color;
 use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
@@ -15,20 +15,139 @@ use tree_ds::prelude::*;
 
 const BTN_CLASS: &str = "flex z-20 justify-center items-center m-1 w-44 h-10 text-white rounded-sm transition-transform duration-300 aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
 
+#[derive(Clone, Debug, PartialEq)]
+enum HistoryItem {
+    /// A plain history row: <HistoryMove ... />
+    Move { node_id: i32 },
+
+    /// A collapsible row:
+    /// <CollapsibleMove ... inner= ... >
+    Collapsible {
+        node_id: i32,
+        inner: Vec<HistoryItem>,
+    },
+}
+
+fn build_history_model(tree: &Tree<i32, TreeNode>) -> Option<Vec<HistoryItem>> {
+    let root = tree.get_root_node()?;
+    let root_id = root.get_node_id().ok()?;
+    // Post-order traversal ensures children are processed before their parents.
+    let node_order = tree.traverse(&root_id, TraversalStrategy::PostOrder).ok()?;
+
+    // At each step this holds the rendered subtree for the current branch.
+    let mut content: Vec<HistoryItem> = Vec::new();
+
+    // Branch root id -> fully built content of that branch.
+    let mut branches: HashMap<i32, Vec<HistoryItem>> = HashMap::new();
+
+    for node_id in node_order {
+        let node = tree.get_node_by_id(&node_id)?;
+        let children_ids = node.get_children_ids().ok().unwrap_or_default();
+        let siblings_ids = tree
+            .get_sibling_ids(&node_id, true)
+            .ok()
+            .unwrap_or_default();
+
+        let parent_degree = siblings_ids.len();
+        let is_main_variation = siblings_ids.first().is_some_and(|first| *first == node_id);
+
+        content = match children_ids.len() {
+            // Multiple children: put secondary variations inside a collapsible,
+            // then continue the main line inline.
+            n if n > 1 => {
+                // Collect full branch contents for secondary variations.
+                let mut secondary_variations: Vec<HistoryItem> = Vec::new();
+                for child_id in children_ids.iter().skip(1) {
+                    if let Some(mut branch) = branches.remove(child_id) {
+                        secondary_variations.append(&mut branch);
+                    }
+                }
+
+                if let Some(first_child) = children_ids.first() {
+                    // Main line content for the first child.
+                    let mut main_branch = branches.remove(first_child).unwrap_or_default();
+
+                    // Parent node is rendered as a collapsible, with the secondary
+                    // variations as its inner content, then the main line inline.
+                    let mut new_content = Vec::with_capacity(1 + main_branch.len());
+                    new_content.push(HistoryItem::Collapsible {
+                        node_id,
+                        inner: secondary_variations,
+                    });
+                    new_content.append(&mut main_branch);
+                    new_content
+                } else {
+                    content
+                }
+            }
+
+            // Single child in a non‑main variation where the parent has >2 children:
+            // wrap it in a collapsible for aesthetics.
+            1 if parent_degree > 2 && !is_main_variation => {
+                let inner = content;
+                vec![HistoryItem::Collapsible { node_id, inner }]
+            }
+
+            // Default case: a plain HistoryMove followed by the already‑built content.
+            _ => {
+                let mut new_content = Vec::with_capacity(1 + content.len());
+                new_content.push(HistoryItem::Move { node_id });
+                new_content.extend(content);
+                new_content
+            }
+        };
+
+        // Start of a new branch: store its content and reset current content
+        // so siblings/parent can consume it later.
+        if parent_degree > 1 {
+            branches.insert(node_id, std::mem::take(&mut content));
+        }
+    }
+
+    debug_assert!(branches.is_empty());
+    Some(content)
+}
+
+fn render_history_items(
+    items: &[HistoryItem],
+    analysis: RwSignal<AnalysisTree>,
+    current_path: Memo<Vec<i32>>,
+) -> AnyView {
+    items
+        .iter()
+        .map(|item| match item {
+            HistoryItem::Move { node_id } => {
+                let maybe_node = analysis.with(|a| a.tree.get_node_by_id(node_id));
+
+                if let Some(node) = maybe_node {
+                    // Plain row: children render via their own entries, so has_children=false.
+                    view! { <HistoryMove current_path node has_children=false /> }
+                    .into_any()
+                } else {
+                    view! { <div>"Invalid node"</div> }.into_any()
+                }
+            }
+
+            HistoryItem::Collapsible { node_id, inner } => {
+                let maybe_node = analysis.with(|a| a.tree.get_node_by_id(node_id));
+
+                if let Some(node) = maybe_node {
+                    let inner_view = render_history_items(inner, analysis, current_path);
+
+                    view! { <CollapsibleMove current_path node inner=inner_view /> }
+                    .into_any()
+                } else {
+                    view! { <div>"Invalid node"</div> }.into_any()
+                }
+            }
+        })
+        .collect_view()
+        .into_any()
+}
+
 #[component]
 pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let get_tree = move || {
-        analysis.with(|a| {
-            let out = AnalysisTree {
-                current_node: a.current_node.clone(),
-                tree: a.tree.clone(),
-                hashes: a.hashes.clone(),
-                game_type: a.game_type,
-            };
-            serde_json::to_string(&out).unwrap()
-        })
-    };
     let current_path = Memo::new(move |_| {
         analysis.with(|a| {
             a.current_node
@@ -44,6 +163,8 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 .unwrap_or_default()
         })
     });
+
+    let has_history = Memo::new(move |_| analysis.with(|a| a.tree.get_root_node().is_some()));
     let promote_variation = move |promote_all: bool| {
         analysis.update(|a| {
             let current_path = current_path();
@@ -117,89 +238,10 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
             }
         }))
     };
-    let walk_tree = move || {
-        analysis.with(|a| {
-            let tree = &a.tree;
-            let root = tree.get_root_node()?;
 
-            // Post order traversal ensures all children are processed before their parents
-            let root_id = root.get_node_id().ok()?;
-            let node_order = tree.traverse(&root_id, TraversalStrategy::PostOrder).ok()?;
+    let history_model =
+        Memo::new(move |_| analysis.with(|a| build_history_model(&a.tree).unwrap_or_default()));
 
-            let mut content = "".into_any();
-            let mut branches = HashMap::<i32, AnyView>::new();
-
-            for node_id in node_order {
-                let node = tree.get_node_by_id(&node_id)?;
-                let children_ids = node.get_children_ids().ok()?;
-                let siblings_ids = tree.get_sibling_ids(&node_id, true).ok()?;
-
-                let parent_degree = siblings_ids.len();
-                let is_main_variation = siblings_ids.first().is_some_and(|first| *first == node_id);
-
-                content = match children_ids.len() {
-                    // Multiple children: create collapsible for secondary variations
-                    n if n > 1 => {
-                        /* == More than one child ==
-                           gather all children but the first (secondary variations)
-                           and place them inside a collapsible
-                           then place the first child (main variation) at the same level as the parent
-                        */
-                        let secondary_variations = children_ids
-                            .iter()
-                            .skip(1)
-                            .filter_map(|c| branches.remove(c))
-                            .collect::<Vec<_>>()
-                            .into_any();
-
-                        if let Some(first_child) = children_ids.first() {
-                            view! {
-                                <CollapsibleMove current_path node inner=secondary_variations />
-                                {branches.remove(first_child)}
-                            }
-                            .into_any()
-                        } else {
-                            content
-                        }
-                    }
-
-                    // Single child in non-main variation: create collapsible for aesthetics
-                    1 if parent_degree > 2 && !is_main_variation => {
-                        /* We make a collapsible for nodes with one child
-                           for aesthetic reasons, to hide its content.
-                           it must be that parent has already a "secondary variation"
-                           (else a toggle would not be needed)
-                           and this must not be the "main variation" (first child)
-                        */
-                        view! { <CollapsibleMove current_path node inner=content /> }.into_any()
-                    }
-
-                    // Default case: regular node
-                    _ => {
-                        /* All other nodes are placed at the same level as the parent
-                        in a regular HistoryMove node */
-                        view! {
-                            <HistoryMove current_path node has_children=false />
-                            {content}
-                        }
-                        .into_any()
-                    }
-                };
-
-                /* We are start of a new branch so clear the content
-                to process either the next sibling or the parent */
-                if parent_degree > 1 {
-                    // save the branch only when its the start
-                    branches.insert(node_id, content);
-                    content = "".into_any();
-                }
-            }
-
-            // all branches are processed
-            debug_assert!(branches.is_empty());
-            Some(content)
-        })
-    };
     let viewbox_str = "-32 -40 250 120";
     view! {
         <div class="flex flex-col size-full">
@@ -225,8 +267,8 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                 </div>
             </Show>
             <div class="flex justify-between w-full">
-                <Show when=move || walk_tree().is_some()>
-                    <DownloadTree tree=get_tree() />
+                <Show when=has_history>
+                    <DownloadTree />
                 </Show>
                 <LoadTree />
             </div>
@@ -238,7 +280,13 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                     "Promote variation"
                 </button>
             </div>
-            <div class="overflow-y-auto p-1">{walk_tree}</div>
+            <div class="overflow-y-auto p-1">
+                {move || {
+                    history_model
+                        .with(|items| { render_history_items(items, analysis, current_path) })
+                }}
+
+            </div>
         </div>
     }
 }

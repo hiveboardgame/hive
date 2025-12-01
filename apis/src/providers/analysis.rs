@@ -258,7 +258,7 @@ fn normalize_uhp_metadata(uhp_string: impl Into<String>) -> String {
     if header.starts_with("Base") && header.contains(' ') && !header.contains('+') {
         let normalized_header = header.replace(' ', "+");
         match rest {
-            Some(rest) if rest.is_empty() => normalized_header,
+            Some("") => normalized_header,
             Some(rest) => format!("{normalized_header};{rest}"),
             None => normalized_header,
         }

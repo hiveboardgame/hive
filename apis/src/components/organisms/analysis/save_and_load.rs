@@ -12,12 +12,22 @@ use web_sys::{js_sys::Array, Blob, Url};
 const BTN_CLASS: &str = "z-20 content-center text-center m-1 w-1/3 h-7 text-white rounded-sm transition-transform duration-300 transform aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
 
 #[component]
-pub fn DownloadTree(tree: String) -> impl IntoView {
+pub fn DownloadTree() -> impl IntoView {
+    let analysis = expect_context::<AnalysisSignal>().0;
+
     let download = move |_| {
-        let (blob, filename) = blob_and_filename(tree.clone());
-        // Create an object URL for the blob
+        let tree_json = analysis.with_untracked(|a| {
+            let out = AnalysisTree {
+                current_node: a.current_node.clone(),
+                tree: a.tree.clone(),
+                hashes: a.hashes.clone(),
+                game_type: a.game_type,
+            };
+            serde_json::to_string(&out).unwrap()
+        });
+
+        let (blob, filename) = blob_and_filename(tree_json);
         let url = Url::create_object_url_with_blob(&blob).unwrap();
-        // Create a download link
         let a = web_sys::window()
             .unwrap()
             .document()
