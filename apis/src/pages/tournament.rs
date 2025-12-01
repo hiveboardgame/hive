@@ -271,6 +271,54 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             .iter()
             .any(|e| e.tournament_game_result == TournamentGameResult::Unknown)
     });
+    let unstarted_games_count = Signal::derive(move || {
+        tournament.with_value(|t| {
+            t.games
+                .iter()
+                .filter(|g| g.game_status == GameStatus::NotStarted)
+                .count()
+        })
+    });
+    let adjudicated_games_count = Signal::derive(move || {
+        tournament.with_value(|t| {
+            t.games
+                .iter()
+                .filter(|g| g.game_status == GameStatus::Adjudicated)
+                .count()
+        })
+    });
+    let confirming_double_forfeit = RwSignal::new(false);
+    let confirming_reset_adjudicated = RwSignal::new(false);
+    let unstarted_games_label = move || {
+        let nr = unstarted_games_count();
+        if nr == 1 {
+            String::from("1 unstarted game")
+        } else {
+            format!("{nr} unstarted games")
+        }
+    };
+    let request_double_forfeit = move |_| {
+        if user_is_organizer_or_admin() && inprogress {
+            confirming_double_forfeit.set(true);
+        }
+    };
+    let cancel_double_forfeit = move |_| confirming_double_forfeit.set(false);
+    let double_forfeit_unstarted = move |_| {
+        if user_is_organizer_or_admin() && inprogress {
+            send_action(TournamentAction::DoubleForfeitUnstartedGames(
+                tournament_id.get_value(),
+            ));
+            confirming_double_forfeit.set(false);
+        }
+    };
+    let reset_adjudicated = move |_| {
+        if user_is_organizer_or_admin() && inprogress {
+            send_action(TournamentAction::ResetAdjudicatedGames(
+                tournament_id.get_value(),
+            ));
+            confirming_reset_adjudicated.set(false);
+        }
+    };
     let unplayed_games_string = move || {
         let nr = unplayed_games.with_value(|games| games.len());
         if nr == 1 {
@@ -454,9 +502,9 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         tournament
                     />
                 </Show>
-                <Show when=user_is_organizer_or_admin>
-                    <div class="flex gap-1 justify-center items-center p-2">
-                        <Show when=move || inprogress>
+                <Show when=move || user_is_organizer_or_admin() && inprogress>
+                    <div class="flex flex-col gap-2 justify-center items-center p-2">
+                        <div class="flex gap-1 justify-center items-center">
                             <button
                                 class=BUTTON_STYLE
                                 on:click=finish
@@ -464,6 +512,93 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                             >
                                 {"Finish"}
                             </button>
+                        </div>
+                        <Show when=move || { unstarted_games_count() > 0 }>
+                            <div class="flex flex-col gap-2 items-center p-2 rounded">
+                                <p class="text-center text-sm font-semibold">
+                                    {move || format!(
+                                        "{} will be double forfeited.",
+                                        unstarted_games_label(),
+                                    )}
+                                </p>
+                                <Show
+                                    when=move || confirming_double_forfeit()
+                                    fallback=move || {
+                                        view! {
+                                            <button
+                                                class=BUTTON_STYLE
+                                                on:click=request_double_forfeit
+                                            >
+                                                "Double forfeit unstarted games"
+                                            </button>
+                                        }
+                                    }
+                                >
+                                    <div class="flex flex-col items-center gap-2">
+                                        <div class="text-center text-sm">
+                                            {"This will adjudicate every unstarted tournament game as a double forfeit."}
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button
+                                                class="flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-ladybug-red hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                                                on:click=double_forfeit_unstarted
+                                            >
+                                                {move || format!("Confirm {}", unstarted_games_label())}
+                                            </button>
+                                            <button class=BUTTON_STYLE on:click=cancel_double_forfeit>
+                                                {"Cancel"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </Show>
+                            </div>
+                        </Show>
+                        <Show when=move || { adjudicated_games_count() > 0 }>
+                            <div class="flex flex-col gap-2 items-center p-2 rounded">
+                                <p class="text-center text-sm font-semibold">
+                                    {move || {
+                                        let count = adjudicated_games_count();
+                                        if count == 1 {
+                                            String::from("1 adjudicated game will be reset.")
+                                        } else {
+                                            format!("{count} adjudicated games will be reset.")
+                                        }
+                                    }}
+                                </p>
+                                <Show
+                                    when=move || confirming_reset_adjudicated()
+                                    fallback=move || {
+                                        view! {
+                                            <button
+                                                class=BUTTON_STYLE
+                                                on:click=move |_| confirming_reset_adjudicated.set(true)
+                                            >
+                                                "Undo adjudications"
+                                            </button>
+                                        }
+                                    }
+                                >
+                                    <div class="flex flex-col items-center gap-2">
+                                        <div class="text-center text-sm">
+                                            {"This will set all adjudicated tournament games back to not started."}
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button
+                                                class="flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-ladybug-red hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                                                on:click=reset_adjudicated
+                                            >
+                                                {"Confirm undo"}
+                                            </button>
+                                            <button
+                                                class=BUTTON_STYLE
+                                                on:click=move |_| confirming_reset_adjudicated.set(false)
+                                            >
+                                                {"Cancel"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </Show>
+                            </div>
                         </Show>
                     </div>
                 </Show>

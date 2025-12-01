@@ -13,8 +13,8 @@ use ::nanoid::nanoid;
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 use diesel::{prelude::*, ExpressionMethods, Insertable};
 use diesel_async::RunQueryDsl;
-use itertools::Itertools;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use shared_types::{
     ChallengeId, Conclusion, GameId, GameSpeed, GameStart, GamesQueryOptions, TimeMode,
@@ -1158,20 +1158,31 @@ impl Game {
             tournament
                 .ensure_user_is_organizer_or_admin(user_id, conn)
                 .await?;
-            let con = match new_result {
-                TournamentGameResult::DoubeForfeit => Conclusion::Forfeit,
-                TournamentGameResult::Unknown => Conclusion::Unknown,
-                _ => Conclusion::Committee,
+            let (con, status, fin, new_last_interaction) = match new_result {
+                TournamentGameResult::DoubeForfeit => (
+                    Conclusion::Forfeit,
+                    GameStatus::Adjudicated,
+                    true,
+                    Some(Utc::now()),
+                ),
+                TournamentGameResult::Unknown => {
+                    (Conclusion::Unknown, GameStatus::NotStarted, false, None)
+                }
+                _ => (
+                    Conclusion::Committee,
+                    GameStatus::Adjudicated,
+                    true,
+                    Some(Utc::now()),
+                ),
             };
-            let fin = new_result != &TournamentGameResult::Unknown;
             let game = diesel::update(games::table.find(self.id))
                 .set((
                     finished.eq(fin),
                     conclusion.eq(con.to_string()),
-                    game_status.eq(GameStatus::Adjudicated.to_string()),
+                    game_status.eq(status.to_string()),
                     tournament_game_result.eq(new_result.to_string()),
                     updated_at.eq(Utc::now()),
-                    last_interaction.eq(Utc::now()),
+                    last_interaction.eq(new_last_interaction),
                 ))
                 .get_result(conn)
                 .await?;
@@ -1244,26 +1255,31 @@ impl Game {
             .await?;
 
         Ok(games_preload
-        .into_iter()
-        .chunk_by(|game| {
-            let utc = game.updated_at.with_timezone(&Utc);
-            (utc.year(), utc.month(), utc.day())
-        })
-        .into_iter()
-        .filter_map(|((_y, _m, _d), group)| {
-            let last = group.last()?;
-            let utc_day = last.updated_at.with_timezone(&Utc).date_naive();
-            let utc_datetime = Utc.from_local_datetime(&utc_day.and_hms_opt(0, 0, 0)?)
-                .single()?;
-            Some(GameRatings {
-                speed: last.speed.clone(),
-                white_rating: last.white_rating.map(|r| r + last.white_rating_change.unwrap_or(0.0)),
-                black_rating: last.black_rating.map(|r| r + last.black_rating_change.unwrap_or(0.0)),
-                white_id: last.white_id,
-                black_id: last.black_id,
-                updated_at: utc_datetime,
+            .into_iter()
+            .chunk_by(|game| {
+                let utc = game.updated_at.with_timezone(&Utc);
+                (utc.year(), utc.month(), utc.day())
             })
-        })
-        .collect())
+            .into_iter()
+            .filter_map(|((_y, _m, _d), group)| {
+                let last = group.last()?;
+                let utc_day = last.updated_at.with_timezone(&Utc).date_naive();
+                let utc_datetime = Utc
+                    .from_local_datetime(&utc_day.and_hms_opt(0, 0, 0)?)
+                    .single()?;
+                Some(GameRatings {
+                    speed: last.speed.clone(),
+                    white_rating: last
+                        .white_rating
+                        .map(|r| r + last.white_rating_change.unwrap_or(0.0)),
+                    black_rating: last
+                        .black_rating
+                        .map(|r| r + last.black_rating_change.unwrap_or(0.0)),
+                    white_id: last.white_id,
+                    black_id: last.black_id,
+                    updated_at: utc_datetime,
+                })
+            })
+            .collect())
     }
 }
