@@ -32,6 +32,7 @@ pub use game_error::GameError;
 pub use game_result::GameResult;
 pub use game_status::GameStatus;
 pub use game_type::GameType;
+pub use game_type::GameTypeFilter;
 pub use history::History;
 pub use piece::Piece;
 pub use player::Player;

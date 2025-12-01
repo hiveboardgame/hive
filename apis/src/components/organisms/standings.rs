@@ -43,7 +43,10 @@ fn TiebreakerHeader(tiebreaker: Tiebreaker) -> impl IntoView {
                     title="Click for explanation"
                     attr:aria-expanded=move || is_open.get().to_string()
                 >
-                    <span class="hover:cursor-help whitespace-normal xs:whitespace-nowrap" title=explanation.clone()>
+                    <span
+                        class="hover:cursor-help whitespace-normal xs:whitespace-nowrap"
+                        title=explanation.clone()
+                    >
                         {tiebreaker.pretty_str().to_owned()}
                     </span>
                     <div class="hidden xs:inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
@@ -51,9 +54,7 @@ fn TiebreakerHeader(tiebreaker: Tiebreaker) -> impl IntoView {
                     </div>
                 </button>
                 <Show when=move || is_open.get()>
-                    <div
-                        class="absolute left-1/2 top-full -translate-x-1/2 z-50 mt-1 p-2 text-xs font-normal normal-case text-left bg-white text-gray-900 border border-gray-200 rounded-lg shadow-lg dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 whitespace-normal break-words w-fit max-w-[18rem] text-wrap"
-                    >
+                    <div class="absolute left-1/2 top-full -translate-x-1/2 z-50 mt-1 p-2 text-xs font-normal normal-case text-left bg-white text-gray-900 border border-gray-200 rounded-lg shadow-lg dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 whitespace-normal break-words w-fit max-w-[18rem] text-wrap">
                         <div class="relative">
                             {explanation()}
                             <div class="absolute left-1/2 -top-1 -translate-x-1/2 w-2 h-2 bg-white border-l border-t border-gray-200 dark:bg-gray-700 dark:border-gray-600 rotate-45"></div>
