@@ -3,10 +3,14 @@ use db_lib::models::{Game, Rating, User};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use shared_types::GameSpeed;
+use std::collections::HashMap;
 
 use crate::common::{log_operation_complete, log_operation_start, log_progress, setup_database};
 use log::info;
 use tempfile::NamedTempFile;
+use uuid::Uuid;
+
+const PROVISIONAL_DEVIATION_THRESHOLD: f64 = 200.0;
 
 pub async fn run_games_report(database_url: Option<String>) -> Result<()> {
     log_operation_start("games report generation");
@@ -16,12 +20,13 @@ pub async fn run_games_report(database_url: Option<String>) -> Result<()> {
         .context("Failed to setup database connection")?;
 
     let games = load_non_bot_games(&mut conn).await?;
-    info!("Found {} games (excluding bot games)", games.len());
+    let game_count = games.len();
+    info!("Found {game_count} games (excluding bot games)");
 
     let mut temp_file = NamedTempFile::new().context("Failed to create temporary file for CSV writing")?;
     let mut writer = csv::Writer::from_writer(&mut temp_file);
 
-    write_games_report_header(&mut writer).await?;
+    write_games_report_header(&mut writer)?;
     let (processed, errors) = process_games_for_report(games, &mut writer, &mut conn).await;
 
     writer.flush().context("Failed to flush CSV writer")?;
@@ -35,24 +40,26 @@ pub async fn run_games_report(database_url: Option<String>) -> Result<()> {
     Ok(())
 }
 
-async fn process_game(game: &Game, conn: &mut db_lib::DbConn<'_>) -> Result<Vec<String>> {
-    let white_user = db_lib::schema::users::table
-        .filter(db_lib::schema::users::id.eq(game.white_id))
-        .first::<User>(conn)
-        .await
-        .context("Failed to load white player from database")?;
+async fn process_game_with_users(
+    game: &Game,
+    users: &HashMap<Uuid, User>,
+    conn: &mut db_lib::DbConn<'_>,
+) -> Result<Vec<String>> {
+    let white_user = users
+        .get(&game.white_id)
+        .context("White player not found in batch load")?;
 
-    let black_user = db_lib::schema::users::table
-        .filter(db_lib::schema::users::id.eq(game.black_id))
-        .first::<User>(conn)
-        .await
-        .context("Failed to load black player from database")?;
+    let black_user = users
+        .get(&game.black_id)
+        .context("Black player not found in batch load")?;
+
     let time_control_category = categorize_game_speed(&game.speed);
 
     let game_speed = game
         .speed
         .parse::<GameSpeed>()
         .context("Failed to parse game speed")?;
+    
     let white_rating = Rating::for_uuid(&game.white_id, &game_speed, conn)
         .await
         .context("Failed to load white player rating")?;
@@ -82,7 +89,7 @@ async fn process_game(game: &Game, conn: &mut db_lib::DbConn<'_>) -> Result<Vec<
         format!("{:.0}", black_rating.deviation),
         white_certainty,
         black_certainty,
-        time_control_category.to_string(),
+        time_control_category,
         tournament_game.to_string(),
         tournament_id,
         game.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
@@ -94,7 +101,7 @@ fn get_rating_certainty(deviation: f64) -> String {
 
     if deviation <= RANKABLE_DEVIATION {
         "Rankable".to_string()
-    } else if deviation <= 200.0 {
+    } else if deviation <= PROVISIONAL_DEVIATION_THRESHOLD {
         "Provisional".to_string()
     } else {
         "Clueless".to_string()
@@ -109,8 +116,8 @@ async fn load_non_bot_games(conn: &mut db_lib::DbConn<'_>) -> Result<Vec<Game>> 
         .context("Failed to load games from database")
 }
 
-async fn write_games_report_header(writer: &mut csv::Writer<&mut NamedTempFile>) -> Result<()> {
-    writer.write_record(&[
+fn write_games_report_header(writer: &mut csv::Writer<&mut NamedTempFile>) -> Result<()> {
+    writer.write_record([
         "game_nanoid",
         "result",
         "white_player_username",
@@ -134,20 +141,38 @@ async fn process_games_for_report(
     writer: &mut csv::Writer<&mut NamedTempFile>,
     conn: &mut db_lib::DbConn<'_>,
 ) -> (usize, usize) {
+    let total_games = games.len();
+    
+    let user_ids: Vec<Uuid> = games
+        .iter()
+        .flat_map(|g| [g.white_id, g.black_id])
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
+    
+    let users: HashMap<Uuid, User> = db_lib::schema::users::table
+        .filter(db_lib::schema::users::id.eq_any(&user_ids))
+        .load::<User>(conn)
+        .await
+        .ok()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|u| (u.id, u))
+        .collect();
+    
     let mut processed = 0;
     let mut errors = 0;
-    let total_games = games.len();
 
     for game in games {
-        match process_game(&game, conn).await {
+        match process_game_with_users(&game, &users, conn).await {
             Ok(record) => {
                 if let Err(e) = writer.write_record(&record) {
-                    log::warn!("Failed to write game {} to CSV: {}", game.nanoid, e);
+                    log::warn!("Failed to write game {} to CSV: {e}", game.nanoid);
                     errors += 1;
                 }
             }
             Err(e) => {
-                log::warn!("Failed to process game {}: {}", game.nanoid, e);
+                log::warn!("Failed to process game {}: {e}", game.nanoid);
                 errors += 1;
             }
         }

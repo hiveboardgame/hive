@@ -1,4 +1,7 @@
-use crate::common::{log_operation_complete, log_operation_start, setup_database};
+use crate::common::{
+    log_operation_complete, log_operation_start, setup_database, TEST_USER_EMAIL_PATTERN,
+    TEST_USER_USERNAME_PATTERN,
+};
 use anyhow::{Context, Result};
 use chrono::Utc;
 use diesel::prelude::*;
@@ -48,15 +51,15 @@ pub async fn cleanup_test_data(database_url: Option<String>) -> Result<()> {
     let deleted_users = diesel::delete(
         db_lib::schema::users::table.filter(
             db_lib::schema::users::username
-                .like("testuser%")
-                .and(db_lib::schema::users::email.like("test%@example.com")),
+                .like(TEST_USER_USERNAME_PATTERN)
+                .and(db_lib::schema::users::email.like(TEST_USER_EMAIL_PATTERN)),
         ),
     )
     .execute(&mut conn)
     .await
     .context("Failed to delete test users from database")?;
 
-    info!("Deleted {} test users", deleted_users);
+    info!("Deleted {deleted_users} test users");
 
     log_operation_complete("Test data cleanup", deleted_users, 0);
     Ok(())

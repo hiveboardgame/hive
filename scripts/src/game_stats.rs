@@ -6,8 +6,11 @@ use hive_lib::{Color, History, State};
 
 use crate::common::{log_operation_complete, log_operation_start, log_progress, setup_database};
 use log::{info, warn};
-use rand::{prelude::*, rng};
+use rand::prelude::*;
+use rand::rng;
 use tempfile::NamedTempFile;
+
+const LARGE_DATASET_THRESHOLD: usize = 100_000;
 
 pub async fn run_game_stats(
     database_url: Option<String>,
@@ -21,16 +24,18 @@ pub async fn run_game_stats(
         .context("Failed to setup database connection")?;
 
     let all_games = load_games_with_filters(&mut conn, no_bots).await?;
-    info!("Found {} games to analyze", all_games.len());
+    let game_count = all_games.len();
+    info!("Found {game_count} games to analyze");
 
-    let games_to_analyze = select_games_for_analysis(all_games, sample_size).await?;
+    let games_to_analyze = select_games_for_analysis(all_games, sample_size)?;
 
-    info!("Analyzing {} games", games_to_analyze.len());
+    let analyze_count = games_to_analyze.len();
+    info!("Analyzing {analyze_count} games");
 
     let max_turns = find_maximum_turns(&games_to_analyze);
-    let mut temp_file = create_temp_file_for_csv().await?;
+    let mut temp_file = create_temp_file_for_csv()?;
     let mut writer = csv::Writer::from_writer(&mut temp_file);
-    write_csv_header(&mut writer, max_turns).await?;
+    write_csv_header(&mut writer, max_turns)?;
 
     let (processed, errors) = process_games_and_write_to_csv(games_to_analyze, &mut writer, max_turns).await;
 
@@ -52,16 +57,17 @@ async fn analyze_game(game: &Game, max_turns: usize) -> Result<Vec<String>> {
 
     let history = History::new_from_str(&game.history).context("Failed to parse game history")?;
 
-    let mut stats = vec![game.nanoid.clone()];
-    let mut moves_per_turn = Vec::new();
-    let mut spawns_per_turn = Vec::new();
+    let mut stats = Vec::with_capacity(1 + 1 + max_turns * 2);
+    stats.push(game.nanoid.clone());
+    let mut moves_per_turn = Vec::with_capacity(max_turns);
+    let mut spawns_per_turn = Vec::with_capacity(max_turns);
 
     let mut current_history = History::new();
     let mut turn = 0;
 
     for (piece, position) in &history.moves {
         let current_state = State::new_from_history(&current_history)
-            .with_context(|| format!("Failed to create state from history at turn {}", turn))?;
+            .with_context(|| format!("Failed to create state from history at turn {turn}"))?;
 
         let current_color = if turn % 2 == 0 {
             Color::White
@@ -123,19 +129,22 @@ async fn load_games_with_filters(conn: &mut db_lib::DbConn<'_>, no_bots: bool) -
         .context("Failed to load games from database")
 }
 
-async fn select_games_for_analysis(all_games: Vec<Game>, sample_size: Option<usize>) -> Result<Vec<Game>> {
+fn select_games_for_analysis(all_games: Vec<Game>, sample_size: Option<usize>) -> Result<Vec<Game>> {
     match sample_size {
         Some(size) if size >= all_games.len() => {
-            info!("Sample size {} is >= total games {}, analyzing all games", size, all_games.len());
+            let total = all_games.len();
+            info!("Sample size {size} is >= total games {total}, analyzing all games");
             Ok(all_games)
         }
         Some(size) => {
-            info!("Randomly sampling {} games from {} total games", size, all_games.len());
+            let total = all_games.len();
+            info!("Randomly sampling {size} games from {total} total games");
             Ok(sample_games_randomly(&all_games, size))
         }
         None => {
-            if all_games.len() > 100_000 {
-                warn!("Large dataset detected ({} games). Consider using --sample-size for faster processing.", all_games.len());
+            if all_games.len() > LARGE_DATASET_THRESHOLD {
+                let total = all_games.len();
+                warn!("Large dataset detected ({total} games). Consider using --sample-size for faster processing.");
             }
             Ok(all_games)
         }
@@ -150,15 +159,17 @@ fn find_maximum_turns(games: &[Game]) -> usize {
         .unwrap_or(0) as usize
 }
 
-async fn create_temp_file_for_csv() -> Result<NamedTempFile> {
+fn create_temp_file_for_csv() -> Result<NamedTempFile> {
     NamedTempFile::new().context("Failed to create temporary file for CSV writing")
 }
 
-async fn write_csv_header(writer: &mut csv::Writer<&mut NamedTempFile>, max_turns: usize) -> Result<()> {
-    let mut header = vec!["nanoid".to_string(), "total_turns".to_string()];
+fn write_csv_header(writer: &mut csv::Writer<&mut NamedTempFile>, max_turns: usize) -> Result<()> {
+    let mut header = Vec::with_capacity(2 + max_turns * 2);
+    header.push("nanoid".to_string());
+    header.push("total_turns".to_string());
     for turn in 0..max_turns {
-        header.push(format!("moves_turn_{}", turn));
-        header.push(format!("spawns_turn_{}", turn));
+        header.push(format!("moves_turn_{turn}"));
+        header.push(format!("spawns_turn_{turn}"));
     }
 
     writer
@@ -179,12 +190,12 @@ async fn process_games_and_write_to_csv(
         match analyze_game(&game, max_turns).await {
             Ok(stats) => {
                 if let Err(e) = writer.write_record(&stats) {
-                    warn!("Failed to write game {} to CSV: {}", game.nanoid, e);
+                    warn!("Failed to write game {} to CSV: {e}", game.nanoid);
                     errors += 1;
                 }
             }
             Err(e) => {
-                warn!("Failed to analyze game {}: {}", game.nanoid, e);
+                warn!("Failed to analyze game {}: {e}", game.nanoid);
                 errors += 1;
             }
         }
@@ -220,8 +231,13 @@ fn pad_turn_vectors_to_max_turns(
     spawns_per_turn: &mut Vec<String>,
     max_turns: usize,
 ) {
-    while moves_per_turn.len() < max_turns {
-        moves_per_turn.push(String::new());
-        spawns_per_turn.push(String::new());
+    let current_len = moves_per_turn.len();
+    if current_len < max_turns {
+        moves_per_turn.reserve_exact(max_turns - current_len);
+        spawns_per_turn.reserve_exact(max_turns - current_len);
+        for _ in current_len..max_turns {
+            moves_per_turn.push(String::new());
+            spawns_per_turn.push(String::new());
+        }
     }
 }
