@@ -35,3 +35,4 @@ pub mod upcoming_game_row;
 pub mod user_row;
 pub mod user_search;
 pub mod user_with_rating;
+pub mod challenge_buttons_trio;
