@@ -24,6 +24,7 @@ impl UserResponse {
             GameSpeed::Rapid => self.rapid(),
             GameSpeed::Classic => self.classic(),
             GameSpeed::Puzzle => self.puzzle(),
+            GameSpeed::AllSpeeds => 0,
         }
     }
 

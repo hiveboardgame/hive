@@ -18,6 +18,7 @@ use crate::{
         resources::Resources,
         rules::Rules,
         rules_summary::RulesSummary,
+        statistics::Statistics,
         strategy::Strategy,
         top_players::TopPlayers,
         tournament::Tournament,
@@ -214,6 +215,7 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/faq") view=|| view! { <Faq /> } />
                         <Route path=path!("/puzzles") view=|| view! { <Puzzles /> } />
                         <Route path=path!("/rules") view=|| view! { <Rules /> } />
+                        <Route path=path!("/statistics") view=|| view! { <Statistics /> } />
                         <Route path=path!("/strategy") view=|| view! { <Strategy /> } />
                         <Route path=path!("/resources") view=|| view! { <Resources /> } />
                         <Route path=path!("/tutorial") view=|| view! { <Tutorial /> } />

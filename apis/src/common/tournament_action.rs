@@ -16,7 +16,7 @@ pub enum TournamentAction {
     Create(Box<TournamentDetails>),
     Delete(TournamentId),
     Finish(TournamentId),
-     ProgressToNextRound(TournamentId),
+    ProgressToNextRound(TournamentId),
     InvitationAccept(TournamentId),
     InvitationCreate(TournamentId, Uuid),
     InvitationDecline(TournamentId),

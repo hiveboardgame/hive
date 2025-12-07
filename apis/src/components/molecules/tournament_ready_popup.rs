@@ -189,7 +189,7 @@ pub fn TournamentReadyPopup(
                 <div class="flex gap-4 justify-center">
                     <button
                         on:click=accept_game
-                    class="px-4 py-2 font-bold text-white bg-green-600 rounded transition-transform duration-300 hover:bg-green-700 active:scale-95"
+                        class="px-4 py-2 font-bold text-white bg-green-600 rounded transition-transform duration-300 hover:bg-green-700 active:scale-95"
                     >
                         {t!(i18n, game.tournament_ready_accept)}
                     </button>
