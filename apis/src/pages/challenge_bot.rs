@@ -2,10 +2,12 @@ use crate::providers::ApiRequestsProvider;
 use crate::{
     common::ChallengeAction,
     components::atoms::{
-        create_challenge_button::CreateChallengeButton, simple_switch::SimpleSwitch,
+        simple_switch::SimpleSwitch,
     },
+    components::molecules::challenge_buttons_trio::ChallengeButtonsTrio,
 };
-use hive_lib::{ColorChoice, GameType};
+// use hive_lib::{ColorChoice, GameType};
+use hive_lib::{GameType};
 use leptos::prelude::*;
 use shared_types::{ChallengeDetails, ChallengeVisibility, TimeMode};
 
@@ -93,22 +95,31 @@ pub fn ChallengeBot() -> impl IntoView {
                 </div>
             </div>
 
+            // <div class="flex justify-center items-baseline">
+            //     <form method="dialog">
+            //         <CreateChallengeButton
+            //             color_choice=StoredValue::new(ColorChoice::White)
+            //             create_challenge
+            //         />
+            //         <CreateChallengeButton
+            //             color_choice=StoredValue::new(ColorChoice::Random)
+            //             create_challenge
+            //         />
+            //         <CreateChallengeButton
+            //             color_choice=StoredValue::new(ColorChoice::Black)
+            //             create_challenge
+            //         />
+            //     </form>
+            // </div>
+
             <div class="flex justify-center items-baseline">
                 <form method="dialog">
-                    <CreateChallengeButton
-                        color_choice=StoredValue::new(ColorChoice::White)
-                        create_challenge
-                    />
-                    <CreateChallengeButton
-                        color_choice=StoredValue::new(ColorChoice::Random)
-                        create_challenge
-                    />
-                    <CreateChallengeButton
-                        color_choice=StoredValue::new(ColorChoice::Black)
+                    <ChallengeButtonsTrio
                         create_challenge
                     />
                 </form>
             </div>
+
         </div>
     }
 }
