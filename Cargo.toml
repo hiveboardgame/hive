@@ -11,9 +11,9 @@ opt-level = 'z'
 [workspace.dependencies]
 actix = "0.13.5"
 actix-files = { version = "0.6" }
-actix-identity = { version = "0.8" }
+actix-identity = { version = "0.9" }
 actix-rt = "2.10.0"
-actix-session = { version = "0.10", features = ["cookie-session"] }
+actix-session = { version = "0.11", features = ["cookie-session"] }
 actix-web = { version = "4", features = ["macros"] }
 actix-web-actors = { version = "4.3.1" }
 anyhow = "1"
@@ -54,12 +54,12 @@ itertools = "0.14.0"
 jsonwebtoken = { version = "9.3.1" }
 lazy_static = "1.5"
 leptos = { version = "0.8", features = ["nightly"] }
-leptos-use = { version = "0.16.2" }
+leptos-use = { version = "0.18" }
 leptos_actix = { version = "0.8" }
 leptos-chartistry = { version = "0.2" }
 leptos_i18n = { version = "0.6.0", features = ["plurals"] }
 leptos_i18n_build = "0.6.0"
-leptos_icons = { version = "0.6" }
+leptos_icons = { version = "0.7" }
 leptos_meta = { version = "0.8" }
 leptos_router = { version = "0.8", features = ["nightly"] }
 log = "0.4.27"
@@ -67,7 +67,7 @@ markdown = "1.0.0"
 nanoid = "0.4"
 rand = "0.9"
 regex = "1.11"
-reactive_stores = { version = "0.2" }
+reactive_stores = { version = "0.3" }
 reqwest = { version = "0.12.22", features = ["json"] }
 serde = { version = "1" }
 serde_json = { version = "1" }
@@ -78,7 +78,7 @@ send_wrapper = "0.6"
 simple_logger = "5.0"
 skillratings = "0.27"
 thiserror = "2"
-tokio = { version = "1.46.1", features = ["full"] }
+tokio = { version = "1.49", features = ["full"] }
 tree-ds = { version = "0.2.0", features = ["serde", "compact_serde", "async"] }
 uuid = { version = "1.17", features = ["v4", "js", "serde"] }
 walkdir = "2.5"

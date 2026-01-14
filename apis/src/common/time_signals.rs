@@ -2,7 +2,7 @@ use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
 use shared_types::{CorrespondenceMode, TimeMode};
 
-#[derive(Debug, Clone, Store, Serialize, Deserialize)]
+#[derive(Debug, Clone, Store, Serialize, Deserialize, PartialEq)]
 pub struct TimeParams {
     pub time_mode: TimeMode,
     pub corr_mode: CorrespondenceMode,

@@ -99,6 +99,7 @@ ssr = [
   "dep:jsonwebtoken",
   "leptos/ssr",
   "leptos-use/ssr",
+  "leptos-use/actix",
   "leptos_meta/ssr",
   "leptos_router/ssr",
   "leptos_i18n/actix",

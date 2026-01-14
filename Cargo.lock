@@ -56,7 +56,7 @@ dependencies = [
  "actix-web",
  "bitflags 2.10.0",
  "bytes",
- "derive_more 2.1.1",
+ "derive_more",
  "futures-core",
  "http-range",
  "log",
@@ -82,7 +82,7 @@ dependencies = [
  "brotli",
  "bytes",
  "bytestring",
- "derive_more 2.1.1",
+ "derive_more",
  "encoding_rs",
  "flate2",
  "foldhash",
@@ -108,15 +108,15 @@ dependencies = [
 
 [[package]]
 name = "actix-identity"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23b8ddc6f6a8b19c4016aaa13519968da9969bc3bc1c1c883cdb0f25dd6c8cf7"
+checksum = "810f47733f956175bd5b2ae17ae5237fa92bd1b6a4a65f646a7240dbe9ff2728"
 dependencies = [
  "actix-service",
  "actix-session",
  "actix-utils",
  "actix-web",
- "derive_more 1.0.0",
+ "derive_more",
  "futures-core",
  "serde",
  "tracing",
@@ -187,16 +187,16 @@ dependencies = [
 
 [[package]]
 name = "actix-session"
-version = "0.10.1"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efe6976a74f34f1b6d07a6c05aadc0ed0359304a7781c367fa5b4029418db08f"
+checksum = "400c27fd4cdbe0082b7bbd29ac44a3070cbda1b2114138dc106ba39fe2f90dff"
 dependencies = [
  "actix-service",
  "actix-utils",
  "actix-web",
  "anyhow",
- "derive_more 1.0.0",
- "rand 0.8.5",
+ "derive_more",
+ "rand 0.9.2",
  "serde",
  "serde_json",
  "tracing",
@@ -231,7 +231,7 @@ dependencies = [
  "bytestring",
  "cfg-if",
  "cookie 0.16.2",
- "derive_more 2.1.1",
+ "derive_more",
  "encoding_rs",
  "foldhash",
  "futures-core",
@@ -496,7 +496,7 @@ dependencies = [
  "lazy_static",
  "leptos",
  "leptos-chartistry",
- "leptos-use 0.16.3",
+ "leptos-use 0.18.0",
  "leptos_actix",
  "leptos_i18n",
  "leptos_i18n_build",
@@ -506,7 +506,7 @@ dependencies = [
  "log",
  "markdown",
  "rand 0.9.2",
- "reactive_stores 0.2.5",
+ "reactive_stores",
  "reqwest",
  "send_wrapper",
  "serde",
@@ -1431,32 +1431,11 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
-dependencies = [
- "derive_more-impl 1.0.0",
-]
-
-[[package]]
-name = "derive_more"
 version = "2.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d751e9e49156b02b44f9c1815bcb94b984cdcc4396ecc32521c739452808b134"
 dependencies = [
- "derive_more-impl 2.1.1",
-]
-
-[[package]]
-name = "derive_more-impl"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
- "unicode-xid",
+ "derive_more-impl",
 ]
 
 [[package]]
@@ -3384,6 +3363,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "leptos-use"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e652389aa67f810bab687dd32566346a1d0dc4d25b44370d952ffc2ca4c627c0"
+dependencies = [
+ "actix-web",
+ "cfg-if",
+ "chrono",
+ "codee",
+ "cookie 0.18.1",
+ "default-struct-builder",
+ "futures-util",
+ "gloo-timers",
+ "http 0.2.12",
+ "js-sys",
+ "lazy_static",
+ "leptos",
+ "leptos_actix",
+ "paste",
+ "send_wrapper",
+ "thiserror 2.0.17",
+ "unic-langid",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "leptos_actix"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3556,9 +3563,9 @@ dependencies = [
 
 [[package]]
 name = "leptos_icons"
-version = "0.6.1"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2b4b2336bb146d3436c72ed885ac17c96164c54e53e8120137e722bf27d99ab"
+checksum = "274959df1a852fc431b03f27d9cd3129fb0f8cca9c8d383e4d668f62543cbec9"
 dependencies = [
  "icondata_core",
  "leptos",
@@ -4694,23 +4701,6 @@ dependencies = [
 
 [[package]]
 name = "reactive_stores"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79983e88dfd1a2925e29a4853ab9161b234ea78dd0d44ed33a706c9cd5e35762"
-dependencies = [
- "dashmap",
- "guardian",
- "itertools",
- "or_poisoned",
- "paste",
- "reactive_graph",
- "reactive_stores_macro",
- "rustc-hash",
- "send_wrapper",
-]
-
-[[package]]
-name = "reactive_stores"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35372f05664a62a3dd389503371a15b8feb3396f99f6ec000de651fddb030942"
@@ -5709,7 +5699,7 @@ dependencies = [
  "parking_lot",
  "paste",
  "reactive_graph",
- "reactive_stores 0.3.1",
+ "reactive_stores",
  "rustc-hash",
  "rustc_version",
  "send_wrapper",

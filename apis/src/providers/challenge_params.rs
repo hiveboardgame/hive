@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 const CHALENGE_PARAMS_COOKIE: &str = "challenge_params";
 const CONF_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
 
-#[derive(Debug, Clone, Store, Serialize, Deserialize)]
+#[derive(Debug, Clone, Store, Serialize, Deserialize, PartialEq)]
 pub struct ChallengeParams {
     pub rated: bool,
     pub with_expansions: bool,
