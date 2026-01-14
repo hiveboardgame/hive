@@ -26,14 +26,14 @@ codee = { version = "0.3", features = ["msgpack_serde", "base64"] }
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 cookie = "0.18"
-diesel = { version = "2.2", features = [
+diesel = { version = "2.3", features = [
     "postgres",
     "chrono",
     "uuid",
     "serde_json",
 ] }
-diesel-async = { version = "0.6", features = ["postgres", "bb8"] }
-diesel_migrations = { version = "2.2", features = ["postgres"] }
+diesel-async = { version = "0.7", features = ["postgres", "bb8"] }
+diesel_migrations = { version = "2.3", features = ["postgres"] }
 dotenvy = "0.15"
 http = "1.3.1"
 http-serde = { version = "2" }
