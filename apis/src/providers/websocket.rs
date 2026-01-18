@@ -1,5 +1,5 @@
 use crate::common::{ClientRequest, ServerResult};
-use crate::functions::hostname::hostname_and_port;
+use crate::functions::hostname::{hostname_and_port, Address};
 use crate::websocket::client_handlers::response_handler::handle_response;
 use codee::binary::MsgpackSerdeCodec;
 use leptos::prelude::*;
@@ -56,16 +56,10 @@ fn on_message_callback(m: &ServerResult) {
 }
 
 fn fix_wss(url: &str) -> String {
-    let address = hostname_and_port();
-
-    if address.port.is_none() {
-        format!("wss://{}{url}", address.hostname)
-    } else {
-        format!(
-            "ws://{}:{}{url}",
-            address.hostname,
-            address.port.expect("There to be a port")
-        )
+    let Address { hostname, port } = hostname_and_port();
+    match port {
+        None => format!("wss://{}{url}", hostname),
+        Some(port) => format!("ws://{}:{}{url}", hostname, port),
     }
 }
 
