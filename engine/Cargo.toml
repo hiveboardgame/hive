@@ -18,11 +18,11 @@ regex = "*"
 serde = { version = "*", features = ["derive"] }
 serde_with = "3.14.0"
 thiserror = "*"
-bitfield-struct = "0.11"
+bitfield-struct = "0.12.1"
 itertools = "0.14"
 clap = { version = "4.5.41", features = ["derive"] }
 anyhow.workspace = true
 pest = "2.8.1"
 pest_derive = "2.8.1"
-resvg = "0.45"
-usvg = "0.45"
+resvg = "0.46"
+usvg = "0.46"
