@@ -8,7 +8,7 @@ use shared_types::{GameId, TimeMode};
 pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoView {
     let time_mode = StoredValue::new(time_mode);
     let params = use_params_map();
-    let game_id = move || {
+    let current_game_id = move || {
         params
             .get()
             .get("nanoid")
@@ -16,7 +16,7 @@ pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoV
             .unwrap_or_default()
     };
     let next_games = move || {
-        let game_id = game_id();
+        let game_id = current_game_id();
         games.own.with(|own| {
             let games_list = match time_mode.get_value() {
                 TimeMode::Untimed => &own.next_untimed,
@@ -38,7 +38,7 @@ pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoV
         }
     };
     let text = move || format!(": {}", next_games());
-    let game_id = move || {
+    let next_game_id = move || {
         games.own.with(|own| {
             let games_list = match time_mode.get_value() {
                 TimeMode::Untimed => &own.next_untimed,
@@ -49,12 +49,13 @@ pub fn NextGameButton(time_mode: TimeMode, mut games: GamesSignal) -> impl IntoV
         })
     };
 
-    let href_game_id = move || game_id().map(|id| format!("/game/{id}"));
+    let href_game_id = move || next_game_id().map(|id| format!("/game/{id}"));
 
     let onclick = move |_| {
-        if let Some(game_id) = game_id() {
+        let game_id = current_game_id();
+        if !game_id.0.is_empty() {
             games.visit(time_mode.get_value(), game_id);
-        };
+        }
     };
 
     view! {
