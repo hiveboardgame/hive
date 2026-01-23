@@ -4,7 +4,7 @@ use crate::responses::TournamentAbstractResponse;
 use chrono::Local;
 use leptos::prelude::*;
 use shared_types::PrettyString;
-use shared_types::{TimeInfo, TournamentStatus};
+use shared_types::{TimeInfo, TournamentMode, TournamentStatus};
 
 #[component]
 pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
@@ -49,7 +49,7 @@ pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
             <div class="flex flex-row justify-between w-full">
                 <div class="flex flex-col">
                     <div class="flex gap-1">
-                        <div>{tournament.mode}</div>
+                        <div>{tournament.mode.parse::<TournamentMode>().map(|m| m.pretty_string()).unwrap_or_default()}</div>
                     </div>
                     <TimeRow time_info />
                     <div>{seats_taken}</div>

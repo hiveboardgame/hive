@@ -379,6 +379,10 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         <div class=tournament_style>
             <div class="m-2 h-fit">
                 <div class=INFO_STYLE>Tournament Info</div>
+                <div class="m-2">
+                    <span class="font-bold">"Type: "</span>
+                    {tournament.with_value(|t| t.mode.parse::<TournamentMode>().map(|m| m.pretty_string()).unwrap_or_default())}
+                </div>
                 <div class="flex gap-1 m-2">
                     <span class="font-bold">"Time control: "</span>
                     <TimeRow time_info=time_info />
