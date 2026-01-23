@@ -110,7 +110,7 @@
               cargo-leptos
               tailwindcss_4
               openssl
-              nokamute # The AI used by hive-hydra
+              # nokamute # The AI used by hive-hydra - temporarily disabled due to darwin SDK issue
               (rust-bin.selectLatestNightlyWith (
                 toolchain:
                 toolchain.default.override {
@@ -122,12 +122,15 @@
                 }
               ))
             ]
-            ++ pkgs.lib.optionals pkg.stdenv.isDarwin [
-              darwin.apple_sdk.frameworks.SystemConfiguration
-            ]
             ++ aliases;
           shellHook = ''
             export CARGO_TARGET_DIR="$PWD/.cargo/target"
+            # Install wasm-bindgen-cli at the version matching our Cargo.lock
+            WASM_BINDGEN_VERSION="0.2.108"
+            if ! command -v wasm-bindgen &> /dev/null || [[ "$(wasm-bindgen --version 2>/dev/null | cut -d' ' -f2)" != "$WASM_BINDGEN_VERSION" ]]; then
+              echo "Installing wasm-bindgen-cli $WASM_BINDGEN_VERSION..."
+              cargo install wasm-bindgen-cli --version "$WASM_BINDGEN_VERSION" --quiet
+            fi
             echo "Welcome to hivegame.com"
             echo "'server' to start everything"
             echo "'hive-hydra' to start hive-hydra for playing with bots"
