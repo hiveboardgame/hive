@@ -11,7 +11,7 @@ use leptos::either::Either;
 use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
-use shared_types::{ChallengeVisibility, TimeInfo};
+use shared_types::{ChallengeId, ChallengeVisibility, TimeInfo};
 use uuid::Uuid;
 
 const BUTTON_BASE_CLASSES: &str = "px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform active:scale-95 focus:outline-none focus:shadow-outline font-bold";
@@ -21,12 +21,16 @@ pub fn ChallengeRow(
     challenge: ChallengeResponse,
     single: bool,
     uid: Option<Uuid>,
+    #[prop(default = 1)] count: usize,
+    #[prop(default = Vec::new())] challenge_ids: Vec<ChallengeId>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let config = expect_context::<Config>().0;
     let api = expect_context::<ApiRequestsProvider>().0;
     let challenge_id = StoredValue::new(challenge.challenge_id);
     let visibility = StoredValue::new(challenge.visibility);
+    let all_challenge_ids = StoredValue::new(challenge_ids);
+    let group_count = count;
     let color_choice = StoredValue::new(challenge.color_choice);
     let icon = move || {
         let prefers_dark = config.with(|c| c.prefers_dark);
@@ -157,6 +161,17 @@ pub fn ChallengeRow(
                             bot
                             extend_tw_classes="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[140px] lg:max-w-[160px]"
                         />
+                        {if group_count > 1 {
+                            Either::Left(
+                                view! {
+                                    <span class="ml-1 px-1.5 py-0.5 text-xs font-bold bg-pillbug-teal text-white rounded-full">
+                                        {format!("x{}", group_count)}
+                                    </span>
+                                },
+                            )
+                        } else {
+                            Either::Right(view! { "" })
+                        }}
                     </div>
                 </div>
             </td>
@@ -212,7 +227,10 @@ pub fn ChallengeRow(
                                 </Show>
                                 <button
                                     on:click=move |_| {
-                                        api.get().challenge_cancel(challenge_id.get_value())
+                                        let ids = all_challenge_ids.get_value();
+                                        let ids_to_cancel =
+                                            if ids.is_empty() { vec![challenge_id.get_value()] } else { ids };
+                                        api.get().challenges_cancel(ids_to_cancel);
                                     }
                                     class=cancel_button_classes.get_value()
                                 >
@@ -236,7 +254,10 @@ pub fn ChallengeRow(
                                 view! {
                                     <button
                                         on:click=move |_| {
-                                            api.get().challenge_cancel(challenge_id.get_value());
+                                            let ids = all_challenge_ids.get_value();
+                                            let ids_to_cancel =
+                                                if ids.is_empty() { vec![challenge_id.get_value()] } else { ids };
+                                            api.get().challenges_cancel(ids_to_cancel);
                                         }
                                         class=cancel_button_classes.get_value()
                                     >

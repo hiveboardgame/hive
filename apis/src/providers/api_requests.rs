@@ -128,6 +128,14 @@ impl ApiRequests {
         self.websocket.send(&msg);
     }
 
+    pub fn challenges_cancel(&self, ids: Vec<ChallengeId>) {
+        if ids.is_empty() {
+            return;
+        }
+        let msg = ClientRequest::Challenge(ChallengeAction::DeleteMany(ids));
+        self.websocket.send(&msg);
+    }
+
     pub fn challenge_accept(&self, challenger_id: ChallengeId) {
         let msg = ClientRequest::Challenge(ChallengeAction::Accept(challenger_id));
         self.websocket.send(&msg);

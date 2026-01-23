@@ -7,6 +7,73 @@ use crate::{
     responses::ChallengeResponse,
 };
 use leptos::prelude::*;
+use shared_types::ChallengeId;
+use std::collections::HashMap;
+
+/// Represents a group of challenges with identical parameters from the same user
+#[derive(Clone, Debug)]
+pub struct GroupedChallenge {
+    /// The representative challenge to display
+    pub challenge: ChallengeResponse,
+    /// All challenge IDs in this group (for bulk actions like cancel)
+    pub challenge_ids: Vec<ChallengeId>,
+    /// Number of challenges in this group
+    pub count: usize,
+}
+
+impl GroupedChallenge {
+    /// Creates a unique key for grouping challenges based on their attributes.
+    /// Includes opponent uid so direct challenges to different players are not grouped.
+    pub fn group_key(challenge: &ChallengeResponse) -> String {
+        let opponent_uid = challenge
+            .opponent
+            .as_ref()
+            .map(|o| o.uid.to_string())
+            .unwrap_or_default();
+        format!(
+            "{}|{}|{}|{}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{}",
+            challenge.challenger.uid,
+            challenge.game_type,
+            challenge.rated,
+            challenge.time_mode,
+            challenge.time_base,
+            challenge.time_increment,
+            challenge.color_choice,
+            challenge.visibility,
+            challenge.band_lower,
+            challenge.band_upper,
+            opponent_uid,
+        )
+    }
+
+    /// Returns a unique key for this group that includes the count for reactivity
+    pub fn reactive_key(&self) -> String {
+        format!("{}|{}", Self::group_key(&self.challenge), self.count)
+    }
+
+    /// Groups a list of challenges by their common attributes
+    pub fn group_challenges(challenges: Vec<ChallengeResponse>) -> Vec<GroupedChallenge> {
+        let mut groups: HashMap<String, GroupedChallenge> = HashMap::new();
+
+        for challenge in challenges {
+            let key = Self::group_key(&challenge);
+
+            groups
+                .entry(key)
+                .and_modify(|group| {
+                    group.challenge_ids.push(challenge.challenge_id.clone());
+                    group.count += 1;
+                })
+                .or_insert_with(|| GroupedChallenge {
+                    challenge_ids: vec![challenge.challenge_id.clone()],
+                    challenge: challenge,
+                    count: 1,
+                });
+        }
+
+        groups.into_values().collect()
+    }
+}
 
 fn challenge_order(
     a: &ChallengeResponse,
@@ -34,6 +101,14 @@ fn challenge_order(
     }
 }
 
+fn grouped_challenge_order(
+    a: &GroupedChallenge,
+    b: &GroupedChallenge,
+    online_users: &OnlineUsersState,
+) -> std::cmp::Ordering {
+    challenge_order(&a.challenge, &b.challenge, online_users)
+}
+
 #[component]
 pub fn Challenges() -> impl IntoView {
     let i18n = use_i18n();
@@ -45,7 +120,7 @@ pub fn Challenges() -> impl IntoView {
     let user = auth_context.user;
     let uid = move || auth_context.user.with(|a| a.as_ref().map(|user| user.id));
     let direct = Signal::derive(move || {
-        let mut ret = if user.with(|u| u.is_some()) {
+        let challenges_list = if user.with(|u| u.is_some()) {
             // Get the challenges direct at the current user
             challenges.with(|c| {
                 c.challenges
@@ -67,12 +142,13 @@ pub fn Challenges() -> impl IntoView {
                     .collect::<Vec<ChallengeResponse>>()
             })
         };
-        online_users.with(|ou| ret.sort_by(|a, b| challenge_order(a, b, ou)));
-        ret
+        let mut grouped = GroupedChallenge::group_challenges(challenges_list);
+        online_users.with(|ou| grouped.sort_by(|a, b| grouped_challenge_order(a, b, ou)));
+        grouped
     });
 
     let own = Signal::derive(move || {
-        let mut ret = if user.with(|u| u.is_some()) {
+        let challenges_list = if user.with(|u| u.is_some()) {
             challenges.with(|c| {
                 c.challenges
                     .values()
@@ -83,12 +159,13 @@ pub fn Challenges() -> impl IntoView {
         } else {
             Vec::new()
         };
-        online_users.with(|ou| ret.sort_by(|a, b| challenge_order(a, b, ou)));
-        ret
+        let mut grouped = GroupedChallenge::group_challenges(challenges_list);
+        online_users.with(|ou| grouped.sort_by(|a, b| grouped_challenge_order(a, b, ou)));
+        grouped
     });
 
     let public = Signal::derive(move || {
-        let mut ret = if user.with(|u| u.is_some()) {
+        let challenges_list = if user.with(|u| u.is_some()) {
             challenges.with(|c| {
                 c.challenges
                     .values()
@@ -101,10 +178,11 @@ pub fn Challenges() -> impl IntoView {
         } else {
             Vec::new()
         };
-        online_users.with(|ou| ret.sort_by(|a, b| challenge_order(a, b, ou)));
-        ret
+        let mut grouped = GroupedChallenge::group_challenges(challenges_list);
+        online_users.with(|ou| grouped.sort_by(|a, b| grouped_challenge_order(a, b, ou)));
+        grouped
     });
-    let has_games = |list: &Vec<ChallengeResponse>| !list.is_empty();
+    let has_games = |list: &Vec<GroupedChallenge>| !list.is_empty();
     let not_hidden =
         Memo::new(move |_| has_games(&direct()) || has_games(&own()) || has_games(&public()));
     view! {
@@ -146,14 +224,32 @@ pub fn Challenges() -> impl IntoView {
                         </tr>
                     </thead>
                     <tbody>
-                        <For each=direct key=|c| c.challenge_id.clone() let(challenge)>
-                            <ChallengeRow challenge=challenge single=false uid=uid() />
+                        <For each=direct key=|g| g.reactive_key() let(grouped)>
+                            <ChallengeRow
+                                challenge=grouped.challenge
+                                single=false
+                                uid=uid()
+                                count=grouped.count
+                                challenge_ids=grouped.challenge_ids
+                            />
                         </For>
-                        <For each=own key=|c| c.challenge_id.clone() let(challenge)>
-                            <ChallengeRow challenge=challenge single=false uid=uid() />
+                        <For each=own key=|g| g.reactive_key() let(grouped)>
+                            <ChallengeRow
+                                challenge=grouped.challenge
+                                single=false
+                                uid=uid()
+                                count=grouped.count
+                                challenge_ids=grouped.challenge_ids
+                            />
                         </For>
-                        <For each=public key=|c| c.challenge_id.clone() let(challenge)>
-                            <ChallengeRow challenge=challenge single=false uid=uid() />
+                        <For each=public key=|g| g.reactive_key() let(grouped)>
+                            <ChallengeRow
+                                challenge=grouped.challenge
+                                single=false
+                                uid=uid()
+                                count=grouped.count
+                                challenge_ids=grouped.challenge_ids
+                            />
                         </For>
                     </tbody>
                 </table>

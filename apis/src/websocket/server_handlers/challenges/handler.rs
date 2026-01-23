@@ -52,6 +52,17 @@ impl ChallengeHandler {
                     .handle()
                     .await?
             }
+            ChallengeAction::DeleteMany(ids) => {
+                let mut messages = Vec::new();
+                for challenge_id in ids {
+                    let mut msgs = DeleteHandler::new(challenge_id, self.user_id, &self.pool)
+                        .await?
+                        .handle()
+                        .await?;
+                    messages.append(&mut msgs);
+                }
+                messages
+            }
             ChallengeAction::Decline(challenge_id) => {
                 DeleteHandler::new(challenge_id, self.user_id, &self.pool)
                     .await?
