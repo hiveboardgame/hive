@@ -87,6 +87,7 @@ fn is_compatible(
         .is_none_or(|opponent_name| existing_challenge.challenger.username == *opponent_name);
 
     opponent_matches
+        && !existing_challenge.challenger.bot
         && new_challenge_details.game_type
             == GameType::from_str(&existing_challenge.game_type).unwrap()
         && new_challenge_details.rated == existing_challenge.rated
