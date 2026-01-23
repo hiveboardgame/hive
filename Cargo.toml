@@ -31,6 +31,7 @@ diesel = { version = "2.3", features = [
     "chrono",
     "uuid",
     "serde_json",
+    "64-column-tables",
 ] }
 diesel-async = { version = "0.7", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.3", features = ["postgres"] }

@@ -3,6 +3,9 @@
         "raw_points": "Gesamte Turnierpunkte erhalten",
         "head_to_head": "Gewonnene Spiele zwischen punktgleichen Spielern",
         "wins_as_black": "Gewonnene Spiele mit schwarzen Steinen",
-        "sonneborn_berger": "Summe der Punkte aller Gegner gegen die Sie punkteten"
+        "sonneborn_berger": "Summe der Punkte aller Gegner gegen die Sie punkteten",
+        "buchholz": "Summe aller Gegnerpunkte",
+        "buchholz_cut1": "Summe aller Gegnerpunkte ohne den niedrigsten",
+        "direct_encounter": "Ergebnis der direkten Begegnungen"
     }
 }

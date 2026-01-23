@@ -27,6 +27,9 @@ fn TiebreakerHeader(tiebreaker: Tiebreaker) -> impl IntoView {
         Tiebreaker::HeadToHead => t_string!(i18n, tournaments.tiebreakers.head_to_head),
         Tiebreaker::WinsAsBlack => t_string!(i18n, tournaments.tiebreakers.wins_as_black),
         Tiebreaker::SonnebornBerger => t_string!(i18n, tournaments.tiebreakers.sonneborn_berger),
+        Tiebreaker::Buchholz => t_string!(i18n, tournaments.tiebreakers.buchholz),
+        Tiebreaker::BuchholzCut1 => t_string!(i18n, tournaments.tiebreakers.buchholz_cut1),
+        Tiebreaker::DirectEncounter => t_string!(i18n, tournaments.tiebreakers.direct_encounter),
     };
 
     let _ = on_click_outside(container_ref, move |_| {

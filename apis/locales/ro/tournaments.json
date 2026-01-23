@@ -3,6 +3,9 @@
         "raw_points": "Puncte totale de turneu câștigate",
         "head_to_head": "Jocuri câștigate între jucători la egalitate",
         "wins_as_black": "Jocuri câștigate jucând cu negrul",
-        "sonneborn_berger": "Suma punctelor adversarilor împotriva cărora ai punctat"
+        "sonneborn_berger": "Suma punctelor adversarilor împotriva cărora ai punctat",
+        "buchholz": "Suma scorurilor tuturor adversarilor",
+        "buchholz_cut1": "Suma scorurilor fără cel mai mic",
+        "direct_encounter": "Rezultatul întâlnirilor directe"
     }
 }

@@ -1,4 +1,3 @@
-#![feature(int_roundings)]
 use super::{Game, NewGame, Rating, TournamentInvitation};
 use crate::{
     db_error::DbError,
@@ -23,11 +22,10 @@ use itertools::Itertools;
 use nanoid::nanoid;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    GameSpeed, Pairing, SeedingMode, Standings, Tiebreaker, TimeMode, TournamentDetails,
+    GameSpeed, SeedingMode, Standings, Tiebreaker, TimeMode, TournamentDetails,
     TournamentGameResult, TournamentId, TournamentMode, TournamentSortOrder, TournamentStatus,
 };
-use std::collections::{HashMap, HashSet};
-use std::io::Read;
+use std::collections::HashSet;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -35,6 +33,72 @@ use uuid::Uuid;
 const WIN_SCORE: f64 = 1.0;
 const DRAW_SCORE: f64 = 0.5;
 const SCORE_COMPARISON_EPSILON: f64 = f64::EPSILON;
+
+/// Represents the state of a player during Swiss pairing
+#[derive(Clone, Debug)]
+struct PlayerState {
+    player: User,
+    #[allow(dead_code)] // Will be used for tiebreakers
+    rating: f64,
+    score: f64,
+    pairing_number: i32,
+    opponents: HashSet<Uuid>,
+    colors: Vec<Color>,
+}
+
+impl PlayerState {
+    fn new(player: User, rating: f64, pairing_number: i32) -> Self {
+        Self {
+            player,
+            rating,
+            score: 0.0,
+            pairing_number,
+            opponents: HashSet::new(),
+            colors: Vec::new(),
+        }
+    }
+
+    fn has_played(&self, opponent_id: Uuid) -> bool {
+        self.opponents.contains(&opponent_id)
+    }
+
+    /// Check if player can play a given color based on FIDE rules:
+    /// - No player plays same color 3 times consecutively
+    /// - Color difference cannot exceed ±2
+    fn can_play_color(&self, color: Color) -> bool {
+        // Rule: No player plays same color 3 times consecutively
+        if self.colors.len() >= 2 {
+            let last_two = &self.colors[self.colors.len() - 2..];
+            if last_two.iter().all(|c| *c == color) {
+                return false;
+            }
+        }
+        // Rule: Color difference cannot exceed ±2
+        let whites = self.colors.iter().filter(|c| **c == Color::White).count() as i32;
+        let blacks = self.colors.iter().filter(|c| **c == Color::Black).count() as i32;
+        let diff = whites - blacks;
+        match color {
+            Color::White => diff < 2,
+            Color::Black => diff > -2,
+        }
+    }
+
+    /// Calculate a score for assigning a color - higher is more desirable
+    fn color_score(&self, color: Color) -> i32 {
+        let whites = self.colors.iter().filter(|c| **c == Color::White).count() as i32;
+        let blacks = self.colors.iter().filter(|c| **c == Color::Black).count() as i32;
+        let diff = whites - blacks;
+
+        match color {
+            Color::White => -diff, // Prefer white if had more blacks
+            Color::Black => diff,  // Prefer black if had more whites
+        }
+    }
+
+    fn update_color_preference(&mut self) {
+        // This method can be used for tracking purposes if needed
+    }
+}
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = tournaments)]
@@ -256,6 +320,10 @@ impl Tournament {
         Ok(())
     }
 
+    pub fn is_started(&self) -> bool {
+        self.status != TournamentStatus::NotStarted.to_string()
+    }
+
     fn ensure_inprogress(&self) -> Result<(), DbError> {
         if self.status != TournamentStatus::InProgress.to_string() {
             return Err(DbError::InvalidInput {
@@ -462,6 +530,10 @@ impl Tournament {
         Ok(tournaments::table.find(uuid).first(conn).await?)
     }
 
+    pub async fn find(id: Uuid, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
+        Ok(tournaments::table.find(id).first(conn).await?)
+    }
+
     pub async fn from_nanoid(nano: &str, conn: &mut DbConn<'_>) -> Result<Tournament, DbError> {
         Ok(tournaments::table
             .filter(nanoid_field.eq(nano))
@@ -584,7 +656,7 @@ impl Tournament {
         }
 
         // Handle byes from tournament.bye vector
-        for (round, bye_player) in self.bye.iter().enumerate() {
+        for (_round, bye_player) in self.bye.iter().enumerate() {
             if let Some(player_id) = bye_player {
                 // Add bye result for the player using our new dedicated method
                 standings.add_bye_result(*player_id);
@@ -680,6 +752,84 @@ impl Tournament {
                 games.push(game);
             }
         }
+        Ok((self.clone(), games))
+    }
+
+    /// Start a Swiss tournament - creates the first round pairings
+    pub async fn swiss_start(
+        &self,
+        players: Vec<User>,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(Self, Vec<Game>), DbError> {
+        let mut games = Vec::new();
+
+        // Determine game speed based on tournament time mode
+        let game_speed = match TimeMode::from_str(&self.time_mode)? {
+            TimeMode::Correspondence => GameSpeed::Correspondence,
+            TimeMode::RealTime => GameSpeed::Blitz,
+            TimeMode::Untimed => {
+                return Err(DbError::InvalidInput {
+                    info: String::from("Cannot start untimed tournament"),
+                    error: String::from("Tournament must have a time mode"),
+                });
+            }
+        };
+
+        // Sort players by rating for initial seeding
+        let mut players_with_ratings: Vec<(User, f64)> = Vec::new();
+        for player in players {
+            let rating = Rating::for_uuid(&player.id, &game_speed, conn).await?;
+            players_with_ratings.push((player, rating.rating));
+        }
+        players_with_ratings.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+        // Store initial seeding
+        let initial_seeding: Vec<Option<Uuid>> = players_with_ratings
+            .iter()
+            .map(|(player, _)| Some(player.id))
+            .collect();
+
+        // Handle odd number of players - give bye to lowest rated
+        let mut players_to_pair = players_with_ratings.clone();
+        let bye_player_id = if players_to_pair.len() % 2 != 0 {
+            let bye_player = players_to_pair.pop().unwrap();
+            Some(bye_player.0.id)
+        } else {
+            None
+        };
+
+        // Update tournament with initial seeding and bye
+        let bye_vec: Vec<Option<Uuid>> = if bye_player_id.is_some() {
+            vec![bye_player_id]
+        } else {
+            vec![None]
+        };
+
+        diesel::update(tournaments::table.find(self.id))
+            .set((
+                tournaments::initial_seeding.eq(&initial_seeding),
+                current_round.eq(1),
+                bye.eq(&bye_vec),
+            ))
+            .execute(conn)
+            .await?;
+
+        // Create first round pairings using folded pairing
+        // Top half vs bottom half: 1 vs n/2+1, 2 vs n/2+2, etc.
+        let n = players_to_pair.len();
+        let half = n / 2;
+
+        for i in 0..half {
+            let top_player = &players_to_pair[i];
+            let bottom_player = &players_to_pair[half + i];
+
+            // Top player gets white in first round
+            let new_game =
+                NewGame::new_from_tournament(top_player.0.id, bottom_player.0.id, self);
+            let game = Game::create(new_game, conn).await?;
+            games.push(game);
+        }
+
         Ok((self.clone(), games))
     }
 
@@ -789,10 +939,10 @@ impl Tournament {
         }
     }
 
-    pub async fn find_bye_player_in_score_groups(
+    async fn find_bye_player_in_score_groups(
         &self,
         score_groups: &[Vec<PlayerState>],
-        conn: &mut DbConn<'_>,
+        _conn: &mut DbConn<'_>,
     ) -> Result<Option<Uuid>, DbError> {
         // Rule 8.1: A player may receive at most one bye in a tournament
         let players_with_byes: HashSet<Uuid> = self
@@ -890,6 +1040,56 @@ impl Tournament {
             .await?)
     }
 
+    pub async fn find_by_tournament_ids(
+        tournament_ids: &[TournamentId],
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Tournament>, DbError> {
+        let ids: Vec<&str> = tournament_ids
+            .iter()
+            .map(|TournamentId(id)| id.as_str())
+            .collect();
+        Ok(tournaments::table
+            .filter(nanoid_field.eq_any(ids))
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn find_by_uuids(
+        ids: &[Uuid],
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Tournament>, DbError> {
+        Ok(tournaments::table
+            .filter(tournaments::id.eq_any(ids))
+            .get_results(conn)
+            .await?)
+    }
+
+    pub async fn update_description(
+        &self,
+        user_id: &Uuid,
+        description: &str,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(), DbError> {
+        self.ensure_user_is_organizer(user_id, conn).await?;
+        diesel::update(tournaments::table.find(self.id))
+            .set((
+                tournaments::description.eq(description),
+                updated_at.eq(Utc::now()),
+            ))
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn swiss_create_next_round(
+        &self,
+        user_id: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<(Self, Vec<Game>), DbError> {
+        self.ensure_user_is_organizer_or_admin(user_id, conn).await?;
+        self.create_next_round(conn).await
+    }
+
     pub async fn get_by_status(
         status: TournamentStatus,
         sort_order: TournamentSortOrder,
@@ -968,7 +1168,7 @@ impl Tournament {
         &self,
         conn: &mut DbConn<'_>,
     ) -> Result<(Self, Vec<Game>), DbError> {
-        if TournamentMode::from_str(&self.mode) != Ok(TournamentMode::DoubleSwiss) {
+        if TournamentMode::from_str(&self.mode).ok() != Some(TournamentMode::DoubleSwiss) {
             return Err(DbError::InvalidInput {
                 info: String::from("Not a Swiss tournament"),
                 error: String::from("Can only create next round for Swiss tournaments"),
@@ -1015,7 +1215,7 @@ impl Tournament {
                     match TournamentGameResult::from_str(&game.tournament_game_result) {
                         Ok(TournamentGameResult::Winner(Color::White)) => state.score += WIN_SCORE,
                         Ok(TournamentGameResult::Draw) => state.score += DRAW_SCORE,
-                        _ => {}
+                        Ok(_) => {} // Other results (Winner(Black), Unknown) - no points for white
                         Err(_) => {
                             return Err(DbError::InvalidInput {
                                 info: format!(
@@ -1032,7 +1232,7 @@ impl Tournament {
                     match TournamentGameResult::from_str(&game.tournament_game_result) {
                         Ok(TournamentGameResult::Winner(Color::Black)) => state.score += WIN_SCORE,
                         Ok(TournamentGameResult::Draw) => state.score += DRAW_SCORE,
-                        _ => {}
+                        Ok(_) => {} // Other results (Winner(White), Unknown) - no points for black
                         Err(_) => {
                             return Err(DbError::InvalidInput {
                                 info: format!(
@@ -1145,7 +1345,7 @@ impl Tournament {
         }
 
         // Process each score group
-        let mut score_groups_clone = score_groups.clone(); // Clone for later verification
+        let score_groups_clone = score_groups.clone(); // Clone for later verification
         
         // Track players who need to float down
         let mut floating_players: Vec<PlayerState> = Vec::new();
@@ -1188,15 +1388,25 @@ impl Tournament {
                 let current_player_username = group[0].player.username.clone();
                 let current_player_score = group[0].score;
                 
+                #[allow(unused_assignments)]
                 let mut opponent_idx = 0;
+                #[allow(unused_assignments)]
                 let mut opponent_id = Uuid::nil();
+                #[allow(unused_assignments)]
                 let mut opponent_username = String::new();
+                #[allow(unused_assignments)]
                 let mut opponent_score = 0.0;
+                #[allow(unused_assignments)]
                 let mut white_id = Uuid::nil();
+                #[allow(unused_assignments)]
                 let mut black_id = Uuid::nil();
+                #[allow(unused_assignments)]
                 let mut white_username = String::new();
+                #[allow(unused_assignments)]
                 let mut black_username = String::new();
+                #[allow(unused_assignments)]
                 let mut white_score = 0.0;
+                #[allow(unused_assignments)]
                 let mut black_score = 0.0;
                 
                 // First find a compatible opponent
