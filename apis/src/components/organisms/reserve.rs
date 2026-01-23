@@ -127,7 +127,10 @@ pub fn Reserve(
                 };
 
                 let mut clicked_position = None;
-                if user_color().is_some_and(|uc| uc == reserve_color) {
+                let active_color = move_info.active.as_ref().map(|(piece, _)| piece.color());
+                if active_color == Some(reserve_color) {
+                    clicked_position = move_info.reserve_position;
+                } else if !analysis && user_color().is_some_and(|uc| uc == reserve_color) {
                     clicked_position = move_info.reserve_position;
                 }
 
