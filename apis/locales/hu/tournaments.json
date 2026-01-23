@@ -3,6 +3,9 @@
         "raw_points": "Összesen szerzett versenypont",
         "head_to_head": "Nyert játékok egyenpontszámú játékosok között",
         "wins_as_black": "Fekete bábukkkal nyert játékok",
-        "sonneborn_berger": "Az ellenfelek pontjainak összege akik ellen pontot szereztél"
+        "sonneborn_berger": "Az ellenfelek pontjainak összege akik ellen pontot szereztél",
+        "buchholz": "Az összes ellenfél pontjainak összege",
+        "buchholz_cut1": "Az összes ellenfél pontjainak összege a legalacsonyabb nélkül",
+        "direct_encounter": "Közvetlen találkozók eredménye"
     }
 }

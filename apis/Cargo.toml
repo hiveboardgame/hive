@@ -16,13 +16,13 @@ actix-web = { workspace = true, optional = true, features = ["macros"] }
 actix-web-actors = { workspace = true, optional = true }
 anyhow = { workspace = true }
 argon2 = { workspace = true, optional = true }
-bimap = {workspace = true}
+bimap = { workspace = true }
 cfg-if = { workspace = true }
 chrono.workspace = true
-codee ={ workspace = true }
+codee = { workspace = true }
 console_error_panic_hook = { workspace = true }
 cookie = { workspace = true }
-db = { path = "../db", optional = true  }
+db = { path = "../db", optional = true }
 diesel = { workspace = true, optional = true }
 diesel-async = { workspace = true, optional = true }
 diesel_migrations = { workspace = true, optional = true }
@@ -55,7 +55,7 @@ leptos_icons = { workspace = true }
 leptos_meta = { workspace = true }
 leptos_router = { workspace = true }
 log = { workspace = true }
-markdown = {workspace = true}
+markdown = { workspace = true }
 rand = { workspace = true, optional = true }
 reqwest = { workspace = true }
 reactive_stores = { workspace = true }
@@ -68,16 +68,19 @@ shared_types = { path = "../shared_types" }
 simple_logger = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, optional = true }
-tree-ds = {workspace = true}
+tree-ds = { workspace = true }
 uuid = { workspace = true }
-walkdir = {workspace = true}
-wasm-bindgen = { workspace = true}
-wasm-bindgen-futures = { workspace = true}
+walkdir = { workspace = true }
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
 web-sys = { workspace = true }
 
+[build-dependencies]
+leptos_i18n_build = { workspace = true }
+
 [features]
-csr = ["leptos/csr", "leptos_i18n/csr"]
-hydrate = ["leptos/hydrate", "leptos_i18n/hydrate"]
+hydrate = ["leptos/hydrate", "leptos_i18n/hydrate", "leptos_i18n_build/hydrate"]
+csr = ["leptos/csr", "leptos_i18n/csr", "leptos_i18n_build/csr"]
 ssr = [
   "dep:actix",
   "dep:actix-files",
@@ -96,46 +99,17 @@ ssr = [
   "dep:jsonwebtoken",
   "leptos/ssr",
   "leptos-use/ssr",
+  "leptos-use/actix",
   "leptos_meta/ssr",
   "leptos_router/ssr",
   "leptos_i18n/actix",
-]
-
-[package.metadata.leptos-i18n]
-default = "en"
-#Commented out very incomplete locales (< 30% translated)
-locales = [
-  "ca", 
-  "de",
-  "en", 
-  "es", 
-  "fr",
-  "hu",
-  "it", 
-  "pt",
-  "ro", 
-  "ru" ,
-  #cs,
-  #ja,
-  #nl,
-  #sv
-]
-namespaces = [
-  "header", 
-  "home", 
-  "faq", 
-  "resources", 
-  "profile", 
-  "user_config", 
-  "game", 
-  "tournaments",
-  "donate"
+  "leptos_i18n_build/ssr",
 ]
 
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name   
 output-name = "HiveGame"
-hash-files=false
+hash-files = false
 # The site root folder is where cargo-leptos generate all output. WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
 site-root = "target/site"
 # The site-root relative folder where all compiled output (JS, WASM and CSS) is written
@@ -190,6 +164,3 @@ lib-default-features = false
 #
 # Optional. Defaults to "release".
 lib-profile-release = "wasm-release"
-
-[build-dependencies]
-leptos_i18n_build = "0.6.0-rc.2"

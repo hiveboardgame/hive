@@ -14,8 +14,8 @@ use leptos_router::hooks::use_navigate;
 use reactive_stores::Store;
 use shared_types::PrettyString;
 use shared_types::{
-    CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
-    TournamentMode,
+    CorrespondenceMode, ScoringMode, SeedingMode, StartMode, Tiebreaker, TimeMode,
+    TournamentDetails, TournamentMode,
 };
 use uuid::Uuid;
 
@@ -198,6 +198,7 @@ pub fn TournamentCreate() -> impl IntoView {
             } else {
                 None
             },
+            seeding_mode: Some(SeedingMode::Standard),
         };
         if auth_context.user.with(|a| a.is_some()) {
             let api = api.get();

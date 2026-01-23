@@ -11,9 +11,9 @@ opt-level = 'z'
 [workspace.dependencies]
 actix = "0.13.5"
 actix-files = { version = "0.6" }
-actix-identity = { version = "0.8" }
+actix-identity = { version = "0.9" }
 actix-rt = "2.10.0"
-actix-session = { version = "0.10", features = ["cookie-session"] }
+actix-session = { version = "0.11", features = ["cookie-session"] }
 actix-web = { version = "4", features = ["macros"] }
 actix-web-actors = { version = "4.3.1" }
 anyhow = "1"
@@ -21,21 +21,22 @@ argon2 = "0.5"
 bb8 = { version = "0.9" }
 bimap = { version = "0.6.3", features = ["serde"] }
 cfg-if = "1.0.1"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4.43", features = ["serde"] }
 codee = { version = "0.3", features = ["msgpack_serde", "base64"] }
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 cookie = "0.18"
-diesel = { version = "2.2", features = [
+diesel = { version = "2.3", features = [
     "postgres",
     "chrono",
     "uuid",
     "serde_json",
+    "64-column-tables",
 ] }
-diesel-async = { version = "0.6", features = ["postgres", "bb8"] }
-diesel_migrations = { version = "2.2", features = ["postgres"] }
+diesel-async = { version = "0.7", features = ["postgres", "bb8"] }
+diesel_migrations = { version = "2.3", features = ["postgres"] }
 dotenvy = "0.15"
-http = "1.3.1"
+http = "1.4.0"
 http-serde = { version = "2" }
 icondata_core = "0.1"
 icondata_tb = "0.1"
@@ -51,14 +52,15 @@ icondata_ti = "0.1"
 icondata_mdi = "0.1"
 indoc = "2"
 itertools = "0.14.0"
-jsonwebtoken = { version = "9.3.1" }
+jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
 lazy_static = "1.5"
 leptos = { version = "0.8", features = ["nightly"] }
-leptos-use = { version = "0.16.2" }
+leptos-use = { version = "0.18" }
 leptos_actix = { version = "0.8" }
 leptos-chartistry = { version = "0.2" }
-leptos_i18n = { version = "0.6.0-rc.2", features = ["plurals"] }
-leptos_icons = { version = "0.6" }
+leptos_i18n = { version = "0.6.0", features = ["plurals"] }
+leptos_i18n_build = "0.6.0"
+leptos_icons = { version = "0.7" }
 leptos_meta = { version = "0.8" }
 leptos_router = { version = "0.8", features = ["nightly"] }
 log = "0.4.27"
@@ -66,8 +68,8 @@ markdown = "1.0.0"
 nanoid = "0.4"
 rand = "0.9"
 regex = "1.11"
-reactive_stores = { version = "0.2" }
-reqwest = { version = "0.12.22", features = ["json"] }
+reactive_stores = { version = "0.3" }
+reqwest = { version = "0.13.1", features = ["json"] }
 serde = { version = "1" }
 serde_json = { version = "1" }
 serde_with = { version = "3.14" }
@@ -75,15 +77,15 @@ server_fn = { version = "0.8", features = ["cbor"] }
 sha2 = "0.10"
 send_wrapper = "0.6"
 simple_logger = "5.0"
-skillratings = "0.27"
-thiserror = "2"
-tokio = { version = "1.46.1", features = ["full"] }
+skillratings = "0.28.2"
+thiserror = "2.0.18"
+tokio = { version = "1.49", features = ["full"] }
 tree-ds = { version = "0.2.0", features = ["serde", "compact_serde", "async"] }
 uuid = { version = "1.17", features = ["v4", "js", "serde"] }
 walkdir = "2.5"
-wasm-bindgen = "0.2.100"
-wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3.77", features = [
+wasm-bindgen = "0.2.106"
+wasm-bindgen-futures = "0.4.58"
+web-sys = { version = "0.3.85", features = [
     "AbortController",
     "AbortSignal",
     "AudioContext",

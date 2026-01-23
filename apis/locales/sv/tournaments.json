@@ -3,6 +3,9 @@
         "raw_points": "Totala turneringspoäng erhållna",
         "head_to_head": "Vunna spel mellan lika poäng spelare",
         "wins_as_black": "Vunna spel med svarta pjäser",
-        "sonneborn_berger": "Summa av poäng från motståndare du poängterade mot"
+        "sonneborn_berger": "Summa av poäng från motståndare du poängterade mot",
+        "buchholz": "Summa av alla motståndarnas poäng",
+        "buchholz_cut1": "Summa av poäng utan den lägsta",
+        "direct_encounter": "Resultat av direkta möten"
     }
 }

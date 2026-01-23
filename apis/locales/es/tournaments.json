@@ -3,6 +3,9 @@
         "raw_points": "Puntos totales del torneo obtenidos",
         "head_to_head": "Partidas ganadas entre jugadores empatados",
         "wins_as_black": "Partidas ganadas jugando con negras",
-        "sonneborn_berger": "Suma de puntos de oponentes contra los que puntuaste"
+        "sonneborn_berger": "Suma de puntos de oponentes contra los que puntuaste",
+        "buchholz": "Suma de puntos de todos los oponentes",
+        "buchholz_cut1": "Suma de puntos sin el más bajo",
+        "direct_encounter": "Resultado de enfrentamientos directos"
     }
 }

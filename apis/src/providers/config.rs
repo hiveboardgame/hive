@@ -15,7 +15,7 @@ const CONF_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
 const LIGHT_DEFAULT_BG: &str = "#edebe9"; // board-dawn color (light mode)
 const DARK_DEFAULT_BG: &str = "#47545a"; // board-twilight color (dark mode)
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct TileOptions {
     pub design: TileDesign,
     pub rotation: TileRotation,
@@ -57,7 +57,7 @@ impl TileOptions {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ConfigOpts {
     pub confirm_mode: HashMap<GameSpeed, MoveConfirm>,
     pub tile: TileOptions,

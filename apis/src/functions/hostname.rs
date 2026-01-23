@@ -14,13 +14,8 @@ impl Address {
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.port.is_some() {
-            write!(
-                f,
-                "{}:{}",
-                self.hostname,
-                self.port.as_ref().expect("Port is some")
-            )
+        if let Some(port) = &self.port {
+            write!(f, "{}:{}", self.hostname, port)
         } else {
             write!(f, "{}", self.hostname)
         }

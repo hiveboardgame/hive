@@ -3,6 +3,9 @@
         "raw_points": "Points totaux du tournoi obtenus",
         "head_to_head": "Parties gagnées entre joueurs à égalité",
         "wins_as_black": "Parties gagnées en jouant avec les noirs",
-        "sonneborn_berger": "Somme des points des adversaires contre lesquels vous avez marqué"
+        "sonneborn_berger": "Somme des points des adversaires contre lesquels vous avez marqué",
+        "buchholz": "Somme des scores de tous les adversaires",
+        "buchholz_cut1": "Somme des scores sans le plus bas",
+        "direct_encounter": "Résultat des confrontations directes"
     }
 }

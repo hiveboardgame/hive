@@ -48,3 +48,12 @@ impl From<shared_types::ChallengeError> for DbError {
         }
     }
 }
+
+impl From<String> for DbError {
+    fn from(err: String) -> Self {
+        DbError::InvalidInput {
+            info: String::from("Invalid seeding mode"),
+            error: err,
+        }
+    }
+}

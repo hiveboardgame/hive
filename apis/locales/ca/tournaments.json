@@ -3,6 +3,9 @@
         "raw_points": "Punts totals del torneig obtinguts",
         "head_to_head": "Partides guanyades entre jugadors empatats",
         "wins_as_black": "Partides guanyades jugant amb negres",
-        "sonneborn_berger": "Suma de punts dels oponents contra els quals vas puntuar"
+        "sonneborn_berger": "Suma de punts dels oponents contra els quals vas puntuar",
+        "buchholz": "Suma de punts de tots els oponents",
+        "buchholz_cut1": "Suma de punts sense el més baix",
+        "direct_encounter": "Resultat dels enfrontaments directes"
     }
 }

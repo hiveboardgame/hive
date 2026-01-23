@@ -3,6 +3,9 @@
         "raw_points": "Pontos totais do torneio obtidos",
         "head_to_head": "Jogos ganhos entre jogadores empatados",
         "wins_as_black": "Jogos ganhos jogando com as pretas",
-        "sonneborn_berger": "Soma dos pontos dos oponentes contra os quais pontuou"
+        "sonneborn_berger": "Soma dos pontos dos oponentes contra os quais pontuou",
+        "buchholz": "Soma das pontuações de todos os oponentes",
+        "buchholz_cut1": "Soma das pontuações sem a mais baixa",
+        "direct_encounter": "Resultado dos confrontos diretos"
     }
 }
