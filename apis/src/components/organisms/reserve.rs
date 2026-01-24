@@ -101,6 +101,15 @@ pub fn Reserve(
             .as_ref()
             .is_some_and(|gr| gr.tournament.is_some())
     });
+    let reserve_sepia_class = move || {
+        if !analysis {
+            return "";
+        }
+        if color() != state.with(|s| s.turn_color) {
+            return "sepia-[.75]";
+        }
+        ""
+    };
     let stacked_pieces = move || {
         let reserve_color = color();
         let tournament = tournament.get_untracked();
@@ -196,7 +205,7 @@ pub fn Reserve(
         <svg
             width="100%"
             height="100%"
-            class=format!("duration-300 {viewbox_styles} {extend_tw_classes}")
+            class=move || format!("duration-300 {viewbox_styles} {extend_tw_classes} {}", reserve_sepia_class())
             viewBox=viewbox_str
             xmlns="http://www.w3.org/2000/svg"
         >
