@@ -72,7 +72,7 @@ pub fn GamePreviews(
             }
         };
     view! {
-        <div class="flex flex-row flex-wrap justify-center">
+        <div class="flex flex-row flex-wrap justify-center w-full max-w-full min-w-0 lg:block 2xl:flex">
             <For each=move || games.run(()) key=|g| (g.game_id.clone(), g.turn) let:game>
 
                 {
@@ -95,7 +95,7 @@ pub fn GamePreviews(
                     let white_player = StoredValue::new(game.white_player.clone());
                     let black_player = StoredValue::new(game.black_player.clone());
                     view! {
-                        <div class="flex relative flex-col items-center m-2 size-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900 rounded-lg">
+                        <div class="flex relative flex-col items-center m-2 size-60 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900 rounded-lg lg:inline-flex lg:align-top lg:ml-0 lg:mr-4 lg:mb-4 lg:mt-0 2xl:m-2">
                             <div class="flex flex-col items-center w-full">
                                 <Show
                                     when=finished

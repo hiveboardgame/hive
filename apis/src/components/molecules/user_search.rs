@@ -64,7 +64,7 @@ pub fn UserSearch(
     };
 
     view! {
-        <div class="flex flex-col m-2 w-64 shrink-0">
+        <div class="flex flex-col w-64 shrink-0 my-2 ml-2 mr-2 lg:mr-0 2xl:mr-2">
             <div class="relative">
                 <input
                     class="p-1 w-64 rounded-lg"

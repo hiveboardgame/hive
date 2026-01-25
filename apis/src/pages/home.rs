@@ -6,11 +6,9 @@ use crate::components::organisms::{
 };
 use crate::functions::home_banner;
 use leptos::prelude::*;
-use leptos_use::use_media_query;
 
 #[component]
 pub fn Home() -> impl IntoView {
-    let in_column = use_media_query("(max-width: 1023px)");
     let banner = OnceResource::new(async move { home_banner::get().await.ok().flatten() });
     view! {
         <div class="flex overflow-x-hidden flex-col justify-start items-center pt-20 w-full md:justify-center">
@@ -28,40 +26,33 @@ pub fn Home() -> impl IntoView {
                         })
                 }}
             </Transition>
-            <Show when=in_column>
-                <div class="container flex flex-col justify-center items-center">
-                    <Logo tw_class="flex w-48" />
-                    <div class="flex flex-col items-center w-full">
-                        <QuickPlay />
-                        <Challenges />
+            <div class="grid w-full max-w-screen-xl 2xl:max-w-screen-2xl grid-cols-1 gap-6 items-start px-4 mx-auto lg:grid-cols-[minmax(18rem,20rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(18rem,20rem)_minmax(0,1fr)_minmax(18rem,20rem)]">
+                <div class="contents lg:flex lg:flex-col lg:items-center lg:space-y-4 lg:min-w-0 lg:col-start-1 lg:row-start-1">
+                    <div class="order-1 flex flex-col items-center min-w-0 lg:order-none">
+                        <Logo tw_class="flex w-48 lg:w-72" />
                     </div>
-                    <Tv />
-                    <OnlineUsers />
-                    <div class="mt-4 w-full max-w-md">
+                    <div class="order-4 w-full max-w-md min-w-0 mx-auto mt-4 lg:order-none lg:mt-0 lg:max-h-[50rem] lg:overflow-y-auto">
                         <Calendar />
                     </div>
                 </div>
-            </Show>
-            <Show when=move || !in_column()>
-                <div class="container grid grid-cols-[300px_1fr_300px] gap-6 items-start">
-                    <div class="flex flex-col items-center space-y-4">
-                        <Logo tw_class="flex w-72" />
-                        <div class="w-full max-w-md max-h-[50rem] overflow-y-auto">
-                            <Calendar />
+                <div class="flex flex-col items-center space-y-6 min-w-0 order-2 lg:order-none lg:col-start-2 lg:row-start-1">
+                    <QuickPlay />
+                    <Challenges />
+                    <div class="w-full lg:flex lg:justify-end 2xl:justify-center">
+                        <div class="w-full lg:max-w-screen-md">
+                            <div class="w-full lg:flow-root">
+                                <div class="hidden lg:block 2xl:hidden float-right lg:ml-6">
+                                    <OnlineUsers />
+                                </div>
+                                <Tv />
+                            </div>
                         </div>
                     </div>
-
-                    <div class="flex flex-col items-center space-y-6">
-                        <QuickPlay />
-                        <Challenges />
-                        <Tv />
-                    </div>
-
-                    <div class="flex flex-col items-center">
-                        <OnlineUsers />
-                    </div>
                 </div>
-            </Show>
+                <div class="flex flex-col items-center min-w-0 order-3 lg:hidden 2xl:flex 2xl:order-none 2xl:col-start-3 2xl:row-start-1">
+                    <OnlineUsers />
+                </div>
+            </div>
         </div>
     }
 }

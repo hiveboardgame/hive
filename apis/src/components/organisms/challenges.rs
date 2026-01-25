@@ -188,11 +188,11 @@ pub fn Challenges() -> impl IntoView {
     view! {
         <div class=move || {
             format!(
-                "w-full m-2 overflow-hidden flex justify-center {}",
+                "w-full m-2 overflow-hidden flex justify-center lg:justify-end 2xl:justify-center {}",
                 if not_hidden() { "" } else { "hidden" },
             )
         }>
-            <div class="overflow-y-auto max-w-screen-md max-h-96 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="overflow-y-auto w-full max-w-screen-md max-h-96 rounded-lg border border-gray-200 dark:border-gray-700">
                 <table class="w-full min-w-0 table-fixed">
                     <thead class="sticky top-0 z-10 bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                         <tr>
