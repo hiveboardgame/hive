@@ -8,10 +8,10 @@ use crate::providers::{
 use crate::{
     common::ChallengeAction,
     components::{
-        atoms::create_challenge_button::CreateChallengeButton, organisms::time_select::TimeSelect,
+        molecules::challenge_buttons_trio::ChallengeButtonsTrio, organisms::time_select::TimeSelect,
     },
 };
-use hive_lib::{ColorChoice, GameType};
+use hive_lib::GameType;
 use leptos::prelude::*;
 use reactive_stores::Store;
 use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed, TimeMode};
@@ -195,22 +195,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
                     </div>
                 </div>
             </Show>
-            <div class="flex justify-center items-baseline">
-                <form method="dialog">
-                    <CreateChallengeButton
-                        color_choice=StoredValue::new(ColorChoice::White)
-                        create_challenge
-                    />
-                    <CreateChallengeButton
-                        color_choice=StoredValue::new(ColorChoice::Random)
-                        create_challenge
-                    />
-                    <CreateChallengeButton
-                        color_choice=StoredValue::new(ColorChoice::Black)
-                        create_challenge
-                    />
-                </form>
-            </div>
+            <ChallengeButtonsTrio create_challenge />
         </div>
     }
 }
