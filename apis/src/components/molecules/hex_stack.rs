@@ -7,7 +7,7 @@ use crate::{
 };
 use hive_lib::Position;
 use leptos::either::Either;
-use leptos::ev::touchstart;
+use leptos::ev::{pointerdown, touchstart};
 use leptos::prelude::*;
 use leptos::{
     ev::{pointerup, touchend},
@@ -53,6 +53,12 @@ pub fn HexStack(
                     500.0,
                 );
                 let g_ref = NodeRef::<svg::G>::new();
+                let _ = use_event_listener(g_ref, pointerdown, move |evt| {
+                    evt.prevent_default();
+                    if evt.button() == 2 {
+                        target_stack.set(Some(hex_stack.position));
+                    }
+                });
                 let _ = use_event_listener_with_options(
                     g_ref,
                     touchstart,
@@ -72,12 +78,6 @@ pub fn HexStack(
                     <g node_ref=g_ref>
                         <Hex
                             hex=hex
-                            on:pointerdown=move |evt| {
-                                evt.prevent_default();
-                                if evt.button() == 2 {
-                                    target_stack.set(Some(hex_stack.position));
-                                }
-                            }
                             tile_opts=tile_opts.get_value()
                             target_stack
                         />
