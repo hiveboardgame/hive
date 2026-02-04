@@ -6,12 +6,11 @@ use leptos_router::{
     location::State,
     NavigateOptions,
 };
-use leptos_use::{
-    use_element_bounding, use_infinite_scroll_with_options, UseInfiniteScrollOptions,
-};
 use shared_types::{BatchToken, FinishedGamesQueryOptions, GameProgress};
 use std::str::FromStr;
 use std::sync::Arc;
+
+const ARCHIVE_PAGE_SIZE: usize = 50;
 
 #[derive(Debug, Clone)]
 struct GameSearchViewError(Vec<String>);
@@ -29,55 +28,21 @@ pub fn GameSearch() -> impl IntoView {
     let draft_options = RwSignal::new(FinishedGamesQueryOptions::default());
 
     let games = RwSignal::new(Vec::new());
-    let next_batch = RwSignal::new(None::<BatchToken>);
-    let has_more = StoredValue::new(true);
     let total = RwSignal::new(None::<i64>);
     let errors = RwSignal::new(Vec::<String>::new());
     let applied_options = RwSignal::new(FinishedGamesQueryOptions::default());
     let next_batch_action = ServerAction::<GetFinishedBatchFromOptions>::new();
-    let is_first_batch = StoredValue::new(true);
     let has_searched = RwSignal::new(false);
 
     let scroll_ref = NodeRef::<html::Div>::new();
-    let bounding = use_element_bounding(scroll_ref);
-    let infinite_scroll_batch_size = Signal::derive(move || {
-        let width = bounding.width.get();
-        if width < 640.0 {
-            3
-        } else if width < 1024.0 {
-            4
-        } else {
-            6
-        }
-    });
-
     let is_loading = next_batch_action.pending();
 
-    let dispatch_batch: Arc<dyn Fn(usize, bool) + Send + Sync> = {
-        let options = applied_options;
+    let fetch_page: Arc<dyn Fn(FinishedGamesQueryOptions) + Send + Sync> = {
         let action = next_batch_action;
-        Arc::new(move |batch_size: usize, reset_lists: bool| {
+        Arc::new(move |opts: FinishedGamesQueryOptions| {
             if action.pending().get_untracked() {
                 return;
             }
-            let mut opts = options.get_untracked();
-            opts.batch_size = batch_size;
-            opts.batch_token = if reset_lists {
-                None
-            } else {
-                next_batch.get_untracked()
-            };
-            is_first_batch.set_value(reset_lists);
-
-            if reset_lists {
-                games.set(Vec::new());
-                has_more.set_value(true);
-                next_batch.set(None);
-                total.set(None);
-                errors.set(Vec::new());
-            }
-
-            options.set(opts.clone());
             action.dispatch(GetFinishedBatchFromOptions { options: opts });
         })
     };
@@ -88,25 +53,16 @@ pub fn GameSearch() -> impl IntoView {
             if let Some(result) = next_batch_action.value().get_untracked() {
                 match result {
                     Ok(batch) => {
-                        has_more.set_value(batch.next_batch.is_some());
                         total.set(Some(batch.total));
-                        next_batch.set(batch.next_batch);
                         errors.update(|e| {
                             if !e.is_empty() {
                                 e.clear();
                             }
                         });
-                        games.update(|state| {
-                            if is_first_batch.get_value() {
-                                *state = batch.games;
-                            } else {
-                                state.extend(batch.games);
-                            }
-                        });
+                        games.set(batch.games);
                     }
                     Err(err_msg) => {
                         errors.set(vec![err_msg.to_string()]);
-                        has_more.set_value(false);
                     }
                 }
             }
@@ -114,17 +70,11 @@ pub fn GameSearch() -> impl IntoView {
         true,
     );
 
-    let fetch_more = Arc::new({
-        let dispatch_batch = Arc::clone(&dispatch_batch);
-        move || {
-            dispatch_batch(infinite_scroll_batch_size.get_untracked(), false);
-        }
-    });
-
     let navigate = use_navigate();
     let queries = use_query_map();
     {
-        let dispatch_batch = Arc::clone(&dispatch_batch);
+        let fetch_page = Arc::clone(&fetch_page);
+        let applied_options = applied_options;
 
         Effect::watch(
             queries,
@@ -142,20 +92,20 @@ pub fn GameSearch() -> impl IntoView {
                 errors.set(Vec::new());
                 match FinishedGamesQueryOptions::from_str(&query_string) {
                     Ok(mut opts) => {
-                        opts.batch_size = infinite_scroll_batch_size.get_untracked();
+                        opts.batch_size = ARCHIVE_PAGE_SIZE;
                         opts.batch_token = None;
+                        opts.game_progress = GameProgress::Finished;
                         match opts.validate_all() {
                             Ok(valid) => {
                                 draft_options.set(valid.clone());
                                 applied_options.set(valid.clone());
                                 has_searched.set(true);
-                                dispatch_batch(valid.batch_size, true);
+                                fetch_page(valid);
                             }
                             Err(errs) => {
                                 errors.set(errs.into_iter().map(|e| e.to_string()).collect());
                                 games.set(Vec::new());
                                 total.set(None);
-                                has_more.set_value(false);
                                 has_searched.set(true);
                             }
                         }
@@ -170,7 +120,6 @@ pub fn GameSearch() -> impl IntoView {
                         errors.set(msgs);
                         games.set(Vec::new());
                         total.set(None);
-                        has_more.set_value(false);
                         has_searched.set(true);
                     }
                 }
@@ -190,8 +139,9 @@ pub fn GameSearch() -> impl IntoView {
             };
             errors.set(Vec::new());
             let mut opts = draft_options.get_untracked();
-            opts.batch_size = infinite_scroll_batch_size.get_untracked();
+            opts.batch_size = ARCHIVE_PAGE_SIZE;
             opts.batch_token = None;
+            opts.page = 1;
             opts.game_progress = GameProgress::Finished;
             match opts.validate_all() {
                 Ok(valid) => {
@@ -203,29 +153,11 @@ pub fn GameSearch() -> impl IntoView {
                     errors.set(errs.into_iter().map(|e| e.to_string()).collect());
                     games.set(Vec::new());
                     total.set(None);
-                    has_more.set_value(false);
                     has_searched.set(false);
                 }
             }
         }
     };
-
-    let value = fetch_more.clone();
-    let _ = use_infinite_scroll_with_options(
-        scroll_ref,
-        move |_| {
-            let fetch_more = Arc::clone(&value);
-            async move {
-                if !has_searched() || !has_more.get_value() || is_loading.get() {
-                    return;
-                }
-                fetch_more();
-            }
-        },
-        UseInfiniteScrollOptions::default()
-            .distance(10.0)
-            .interval(300.0),
-    );
 
     view! {
         <div
@@ -256,12 +188,32 @@ pub fn GameSearch() -> impl IntoView {
                     }>
                         {move || {
                             if errors.with(|e| e.is_empty()) {
+                                let navigate = navigate.clone();
+                                let on_page_change = Callback::new(move |new_page: usize| {
+                                    let mut opts = applied_options.get_untracked();
+                                    opts.page = new_page;
+                                    if let Ok(valid) = opts.validate_all() {
+                                        applied_options.set(valid.clone());
+                                        navigate(
+                                            &format!("/archive{valid}",),
+                                            NavigateOptions {
+                                                resolve: true,
+                                                replace: false,
+                                                scroll: true,
+                                                state: State::new(None),
+                                            },
+                                        );
+                                    }
+                                });
                                 Ok(view! {
                                     <ArchiveGameList
                                         games=games
-                        is_loading=is_loading.into()
-                            has_searched=has_searched.into()
+                                        is_loading=is_loading.into()
+                                        has_searched=has_searched.into()
                                         total=total
+                                        page=Signal::derive(move || applied_options.with(|o| o.page))
+                                        batch_size=ARCHIVE_PAGE_SIZE
+                                        on_page_change=on_page_change
                                     />
                                 })
                             } else {

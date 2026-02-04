@@ -37,10 +37,13 @@ impl GameQueryBuilder {
     }
 
     pub fn finished_batch_query(options: &FinishedGamesQueryOptions) -> Self {
-        GameQueryBuilder::finished_base_query(options)
-            .sort(&options.sort)
-            .keyset(&options.sort, options.batch_token.as_ref())
-            .limit(options.batch_size)
+        let base = GameQueryBuilder::finished_base_query(options).sort(&options.sort);
+        match &options.batch_token {
+            Some(token) => base.keyset(&options.sort, Some(token)).limit(options.batch_size),
+            None => base
+                .offset(((options.page - 1) * options.batch_size) as i64)
+                .limit(options.batch_size),
+        }
     }
 
     pub fn apply_finished_options(self, options: &FinishedGamesQueryOptions) -> Self {
@@ -470,6 +473,11 @@ impl GameQueryBuilder {
 
     pub fn limit(mut self, size: usize) -> Self {
         self.query = self.query.limit(size as i64);
+        self
+    }
+
+    pub fn offset(mut self, n: i64) -> Self {
+        self.query = self.query.offset(n);
         self
     }
 

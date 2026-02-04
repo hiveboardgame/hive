@@ -10,26 +10,76 @@ pub fn ArchiveGameList(
     is_loading: Signal<bool>,
     has_searched: Signal<bool>,
     total: RwSignal<Option<i64>>,
+    page: Signal<usize>,
+    batch_size: usize,
+    on_page_change: Callback<usize>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let queries = use_query_map();
 
+    let total_pages = Signal::derive(move || {
+        total
+            .get()
+            .map(|t| {
+                if t == 0 {
+                    0
+                } else {
+                    ((t as usize) + batch_size - 1) / batch_size
+                }
+            })
+            .unwrap_or(0)
+    });
+    let has_prev = Signal::derive(move || page.get() > 1);
+    let has_next = Signal::derive(move || page.get() < total_pages.get());
+
     view! {
         <div class="space-y-2">
             <Show when=move || total.get().is_some()>
-                <div class="max-w-5xl mx-auto px-4 flex gap-1">
+                <div class="max-w-5xl mx-auto px-4 flex flex-wrap items-center gap-2">
                     <p class="text-sm text-gray-700 dark:text-gray-300">
                         {move || {
-                            let loaded = games.with(|g| g.len());
-                            total
-                                .get()
-                                .map(|t| {
-                                    t_string!(i18n, archive.games_loaded_count, loaded = loaded, total = t)
-                                })
-                                .unwrap_or_default()
+                            let t = total.get().unwrap_or(0);
+                            let p = page.get();
+                            let total_pg = total_pages.get();
+                            if total_pg > 0 {
+                                let start = (p - 1) * batch_size + 1;
+                                let end = (p * batch_size).min(t as usize);
+                                t_string!(i18n, archive.page_info, page = p, total_pages = total_pg, start = start, end = end, total = t)
+                            } else {
+                                t_string!(i18n, archive.games_loaded_count, loaded = 0, total = t)
+                            }
                         }}
                     </p>
-                    <a href=move || format!("/archive{}", queries.get().to_query_string())>
+                    <div class="flex gap-2">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-ghost"
+                            disabled=move || !has_prev.get()
+                            on:click=move |_| {
+                                if has_prev.get_untracked() {
+                                    on_page_change.run(page.get_untracked() - 1);
+                                }
+                            }
+                        >
+                            {t!(i18n, archive.prev_page)}
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-ghost"
+                            disabled=move || !has_next.get()
+                            on:click=move |_| {
+                                if has_next.get_untracked() {
+                                    on_page_change.run(page.get_untracked() + 1);
+                                }
+                            }
+                        >
+                            {t!(i18n, archive.next_page)}
+                        </button>
+                    </div>
+                    <a
+                        href=move || format!("/archive{}", queries.get().to_query_string())
+                        class="text-sm link link-hover"
+                    >
                         {t!(i18n, archive.permalink)}
                     </a>
                 </div>
