@@ -6,11 +6,9 @@ use leptos_router::{
     location::State,
     NavigateOptions,
 };
-use shared_types::{BatchToken, FinishedGamesQueryOptions, GameProgress};
+use shared_types::{FinishedGamesQueryOptions, GameProgress};
 use std::str::FromStr;
 use std::sync::Arc;
-
-const ARCHIVE_PAGE_SIZE: usize = 50;
 
 #[derive(Debug, Clone)]
 struct GameSearchViewError(Vec<String>);
@@ -92,7 +90,6 @@ pub fn GameSearch() -> impl IntoView {
                 errors.set(Vec::new());
                 match FinishedGamesQueryOptions::from_str(&query_string) {
                     Ok(mut opts) => {
-                        opts.batch_size = ARCHIVE_PAGE_SIZE;
                         opts.batch_token = None;
                         opts.game_progress = GameProgress::Finished;
                         match opts.validate_all() {
@@ -139,7 +136,6 @@ pub fn GameSearch() -> impl IntoView {
             };
             errors.set(Vec::new());
             let mut opts = draft_options.get_untracked();
-            opts.batch_size = ARCHIVE_PAGE_SIZE;
             opts.batch_token = None;
             opts.page = 1;
             opts.game_progress = GameProgress::Finished;
@@ -159,15 +155,41 @@ pub fn GameSearch() -> impl IntoView {
         }
     };
 
+    let on_search_cb = Callback::new({
+        let start_search = start_search;
+        move |_| start_search(())
+    });
+
+    let on_page_change_cb = Callback::new({
+        let navigate = navigate.clone();
+        let applied = applied_options.clone();
+        move |new_page: usize| {
+            let mut opts = applied.get_untracked();
+            opts.page = new_page;
+            if let Ok(valid) = opts.validate_all() {
+                applied.set(valid.clone());
+                navigate(
+                    &format!("/archive{valid}",),
+                    NavigateOptions {
+                        resolve: true,
+                        replace: false,
+                        scroll: true,
+                        state: State::new(None),
+                    },
+                );
+            }
+        }
+    });
+
     view! {
         <div
             node_ref=scroll_ref
             class="flex flex-col min-h-screen max-h-screen w-full bg-light dark:bg-gray-950 pt-20 overflow-y-auto"
         >
-            <ArchiveSearchForm draft_options=draft_options on_search=Callback::new(move |_| start_search(())) />
+            <ArchiveSearchForm draft_options=draft_options on_search=on_search_cb />
 
-            <div class="px-4 pb-6">
-                <div class="space-y-2">
+            <div class="flex-1 px-4 sm:px-6 pb-8 max-w-5xl mx-auto w-full">
+                <div class="space-y-4">
                     <ErrorBoundary fallback=move |errors_signal| {
                         let messages = Signal::derive(move || {
                             errors_signal
@@ -178,7 +200,7 @@ pub fn GameSearch() -> impl IntoView {
                         });
                         view! {
                             <div class="flex-1 min-h-0 flex flex-col">
-                                <div class="p-2 text-sm text-red-600 dark:text-red-400 space-y-1">
+                                <div class="p-4 rounded-xl border-2 border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-sm text-red-700 dark:text-red-300 space-y-1 shadow-sm">
                                     <For each=move || messages.get() key=|msg| msg.clone() let:msg>
                                         <p>{msg}</p>
                                     </For>
@@ -188,23 +210,6 @@ pub fn GameSearch() -> impl IntoView {
                     }>
                         {move || {
                             if errors.with(|e| e.is_empty()) {
-                                let navigate = navigate.clone();
-                                let on_page_change = Callback::new(move |new_page: usize| {
-                                    let mut opts = applied_options.get_untracked();
-                                    opts.page = new_page;
-                                    if let Ok(valid) = opts.validate_all() {
-                                        applied_options.set(valid.clone());
-                                        navigate(
-                                            &format!("/archive{valid}",),
-                                            NavigateOptions {
-                                                resolve: true,
-                                                replace: false,
-                                                scroll: true,
-                                                state: State::new(None),
-                                            },
-                                        );
-                                    }
-                                });
                                 Ok(view! {
                                     <ArchiveGameList
                                         games=games
@@ -212,8 +217,10 @@ pub fn GameSearch() -> impl IntoView {
                                         has_searched=has_searched.into()
                                         total=total
                                         page=Signal::derive(move || applied_options.with(|o| o.page))
-                                        batch_size=ARCHIVE_PAGE_SIZE
-                                        on_page_change=on_page_change
+                                        batch_size=Signal::derive(move || applied_options.with(|o| o.batch_size))
+                                        on_page_change=on_page_change_cb
+                                        draft_options=draft_options
+                                        on_search=on_search_cb
                                     />
                                 })
                             } else {

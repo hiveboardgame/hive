@@ -255,7 +255,7 @@ impl Default for FinishedGamesQueryOptions {
             date_end: None,
             result_filter: FinishedResultFilter::Any,
             batch_token: None,
-            batch_size: 50,
+            batch_size: 10,
             page: 1,
             sort: FinishedGameSort::default(),
             game_progress: GameProgress::Finished,
@@ -289,7 +289,7 @@ pub enum FinishedGameQueryValidationError {
     DateBoundsInvalid,
     #[error("batch token sort does not match requested sort")]
     BatchTokenSortMismatch,
-    #[error("batch size must be between 1 and 100")]
+    #[error("batch size must be 10, 25, or 50")]
     BatchSizeInvalid,
     #[error("page must be at least 1 and at most 10000")]
     PageOutOfRange,
@@ -327,11 +327,14 @@ pub enum FinishedGamesQueryParseError {
     Generic(String),
 }
 
+/// Allowed page sizes for archive game search.
+pub const ALLOWED_BATCH_SIZES: [usize; 3] = [10, 25, 50];
+
 impl FinishedGamesQueryOptions {
     pub fn validate_all(mut self) -> Result<Self, Vec<FinishedGameQueryValidationError>> {
         let mut errors = Vec::new();
 
-        if self.batch_size == 0 || self.batch_size > 100 {
+        if !ALLOWED_BATCH_SIZES.contains(&self.batch_size) {
             errors.push(FinishedGameQueryValidationError::BatchSizeInvalid);
         }
 
@@ -546,6 +549,9 @@ impl std::fmt::Display for FinishedGamesQueryOptions {
         if self.page > 1 {
             push("page", self.page.to_string());
         }
+        if self.batch_size != 10 {
+            push("batch_size", self.batch_size.to_string());
+        }
 
         if parts.is_empty() {
             write!(f, "")
@@ -754,6 +760,15 @@ impl FinishedGamesQueryOptions {
                             None
                         }
                         _ => Some(FinishedGamesQueryParseError::InvalidPage),
+                    }
+                }
+                "batch_size" => {
+                    match value.trim().parse::<usize>() {
+                        Ok(s) if ALLOWED_BATCH_SIZES.contains(&s) => {
+                            opts.batch_size = s;
+                            None
+                        }
+                        _ => Some(FinishedGamesQueryParseError::InvalidBatchSize),
                     }
                 }
                 _ => None,
@@ -1107,16 +1122,29 @@ mod tests {
     }
 
     #[test]
-    fn rejects_batch_size_over_max() {
-        let options = FinishedGamesQueryOptions {
-            batch_size: 101,
-            ..base_options()
-        };
+    fn rejects_invalid_batch_size() {
+        for invalid in [7, 20, 101] {
+            let options = FinishedGamesQueryOptions {
+                batch_size: invalid,
+                ..base_options()
+            };
+            assert!(
+                options.validate_all().is_err(),
+                "batch_size {} should be rejected",
+                invalid
+            );
+        }
+    }
 
-        assert!(matches!(
-            options.validate_all(),
-            Err(errs) if errs.contains(&FinishedGameQueryValidationError::BatchSizeInvalid)
-        ));
+    #[test]
+    fn accepts_valid_batch_sizes() {
+        for valid in ALLOWED_BATCH_SIZES {
+            let options = FinishedGamesQueryOptions {
+                batch_size: valid,
+                ..base_options()
+            };
+            assert!(options.validate_all().is_ok());
+        }
     }
 
     #[test]
@@ -1222,13 +1250,21 @@ mod tests {
     }
 
     #[test]
-    fn display_omits_batch_size() {
+    fn display_omits_batch_size_when_default() {
         let opts = FinishedGamesQueryOptions {
-            batch_size: 42,
+            batch_size: 10,
             ..FinishedGamesQueryOptions::default()
         };
-
         assert!(!opts.to_string().contains("batch_size="));
+    }
+
+    #[test]
+    fn display_includes_batch_size_when_non_default() {
+        let opts = FinishedGamesQueryOptions {
+            batch_size: 25,
+            ..FinishedGamesQueryOptions::default()
+        };
+        assert!(opts.to_string().contains("batch_size=25"));
     }
 
     #[test]
@@ -1253,6 +1289,18 @@ mod tests {
     fn parse_page() {
         let opts = FinishedGamesQueryOptions::from_str("player1=ion&page=3").unwrap();
         assert_eq!(opts.page, 3);
+    }
+
+    #[test]
+    fn parse_batch_size() {
+        let opts =
+            FinishedGamesQueryOptions::from_str("batch_size=25").unwrap();
+        assert_eq!(opts.batch_size, 25);
+    }
+
+    #[test]
+    fn parse_rejects_invalid_batch_size() {
+        assert!(FinishedGamesQueryOptions::from_str("batch_size=7").is_err());
     }
 
     #[test]

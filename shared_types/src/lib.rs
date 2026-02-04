@@ -30,7 +30,7 @@ pub use game_start::GameStart;
 pub use games_query_options::{
     BatchInfo, BatchToken, FinishedGameQueryValidationError, FinishedGameSort, FinishedGameSortKey,
     FinishedGamesQueryOptions, FinishedGamesQueryParseError, FinishedResultFilter, GameProgress,
-    GamesQueryOptions, PlayerFilter, ResultType, SortValue,
+    GamesQueryOptions, PlayerFilter, ResultType, SortValue, ALLOWED_BATCH_SIZES,
 };
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use pretty_string::PrettyString;
