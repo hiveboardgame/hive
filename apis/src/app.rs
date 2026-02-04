@@ -9,6 +9,7 @@ use crate::{
         config::Config,
         donate::Donate,
         faq::Faq,
+        game_search::GameSearch,
         home::Home,
         login::Login,
         play::Play,
@@ -128,6 +129,7 @@ pub fn App() -> impl IntoView {
                             />
                         </ParentRoute>
                         <Route path=path!("/register") view=|| view! { <Register /> } />
+                        <Route path=path!("/archive") view=|| view! { <GameSearch /> } />
                         <Route path=path!("/top_players") view=|| view! { <TopPlayers /> } />
                         <Route path=path!("/login") view=|| view! { <Login /> } />
                         <ProtectedRoute

@@ -3,7 +3,11 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
-use shared_types::{Conclusion, GameId, GameSpeed, GameStart, TimeMode, TournamentGameResult};
+use shared_types::{
+    BatchToken, Conclusion, GameId, GameSpeed, GameStart, TimeMode, TournamentGameResult,
+};
+#[cfg(feature = "ssr")]
+use shared_types::{FinishedGamesQueryOptions, GamesQueryOptions};
 use std::cmp::Ordering;
 use std::{collections::HashMap, time::Duration};
 use uuid::Uuid;
@@ -65,6 +69,13 @@ pub struct GameResponse {
     pub game_speed: GameSpeed,
     pub move_times: Vec<Option<i64>>,
     pub tournament_game_result: TournamentGameResult,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GameBatchResponse {
+    pub games: Vec<GameResponse>,
+    pub next_batch: Option<BatchToken>,
+    pub total: i64,
 }
 
 impl PartialEq for GameResponse {
@@ -161,7 +172,6 @@ use db_lib::{
 use hive_lib::{
     Color, GameStatus::Finished, Piece,
 };
-use shared_types::GamesQueryOptions;
 use std::{str::FromStr, collections::HashSet};
 
 impl GameResponse {
@@ -181,9 +191,26 @@ impl GameResponse {
         GameResponse::new_from(game, state, conn).await
     }
 
-    pub async fn vec_from_options(options: GamesQueryOptions, conn: &mut DbConn<'_>) -> Result<Vec<Self>> {
+    pub async fn vec_from_options(
+        options: GamesQueryOptions,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Self>> {
         let games = Game::get_rows_from_options(&options, conn).await?;
         Self::from_games_batch(games, conn).await
+    }
+
+    pub async fn batch_from_finished_options(
+        options: FinishedGamesQueryOptions,
+        conn: &mut DbConn<'_>,
+    ) -> Result<GameBatchResponse> {
+        let (games, next_batch, total) =
+            Game::get_finished_rows_from_options(&options, conn).await?;
+        let games = Self::from_games_batch(games, conn).await?;
+        Ok(GameBatchResponse {
+            games,
+            next_batch,
+            total,
+        })
     }
 
     pub async fn from_game_ids(game_ids: &[Uuid], conn: &mut DbConn<'_>) -> Result<Vec<Self>> {

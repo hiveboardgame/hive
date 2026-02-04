@@ -10,7 +10,8 @@
         "title": "Learn",
         "rules": "Rules",
         "rules_summary": "Rules Summary",
-        "analysis": "Analysis"
+        "analysis": "Analysis",
+        "archive": "Archive"
     },
     "tournaments": {
         "title": "Tournaments",

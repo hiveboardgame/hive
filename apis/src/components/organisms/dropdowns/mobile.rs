@@ -48,6 +48,9 @@ pub fn MobileDropdown() -> impl IntoView {
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/analysis">
                     {t!(i18n, header.learn.analysis)}
                 </a>
+                <a class=COMMON_LINK_STYLE on:click=onclick_close href="/archive">
+                    {t!(i18n, header.learn.archive)}
+                </a>
                 {t!(i18n, header.tournaments.title)}
                 <a class=COMMON_LINK_STYLE on:click=onclick_close href="/tournaments">
                     {t!(i18n, header.tournaments.view)}
