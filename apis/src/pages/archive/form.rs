@@ -11,8 +11,11 @@ use std::collections::HashSet;
 use std::str::FromStr;
 
 const SELECT_CLASS: &str =
-    "select select-bordered w-full bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700";
-const PRIMARY_BUTTON_CLASS: &str = "px-4 py-2 font-bold text-white rounded transition-transform duration-200 cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none disabled:opacity-25 disabled:cursor-not-allowed";
+    "select select-bordered w-full min-h-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:ring-2 focus:ring-pillbug-teal/50 focus:border-pillbug-teal";
+const INPUT_CLASS: &str =
+    "input input-bordered w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 shadow-sm focus:ring-2 focus:ring-pillbug-teal/50";
+const PRIMARY_BUTTON_CLASS: &str =
+    "px-6 py-2.5 font-bold text-white rounded-lg shadow-md transition-all duration-200 cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal hover:shadow-lg active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-pillbug-teal/50 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:shadow-md";
 
 fn date_to_input(date: Option<DateTime<Utc>>) -> String {
     date.map(|d| d.format("%Y-%m-%d").to_string())
@@ -162,11 +165,11 @@ fn ArchiveAdvancedFilters(draft_options: RwSignal<FinishedGamesQueryOptions>) ->
                                         });
                                         view! {
                                             <label class=move || {
-                                                let base = "flex items-center gap-2 text-sm px-3 py-1 rounded-lg border shadow-sm";
+                                                let base = "flex items-center gap-2 text-sm px-3 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-600 transition-all duration-150";
                                                 if is_disabled() {
-                                                    format!("{base} cursor-not-allowed opacity-60 bg-gray-100 dark:bg-gray-800/60")
+                                                    format!("{base} cursor-not-allowed opacity-50 bg-gray-100 dark:bg-gray-800/60")
                                                 } else {
-                                                    format!("{base} cursor-pointer bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800")
+                                                    format!("{base} cursor-pointer bg-white hover:bg-gray-50 hover:border-pillbug-teal/40 dark:bg-gray-900 dark:hover:bg-gray-800 dark:hover:border-pillbug-teal/40 shadow-sm")
                                                 }
                                             }>
                                                 <input
@@ -284,14 +287,14 @@ fn ArchiveAdvancedFilters(draft_options: RwSignal<FinishedGamesQueryOptions>) ->
                         }>
                             <label class="block text-sm font-semibold">{t!(i18n, archive.rating_range)}</label>
                             <div class="grid grid-cols-2 gap-2">
-                                <input
-                                    class=move || {
-                                        let mut base = "input input-bordered w-full".to_string();
-                                        if draft_options.with(|o| o.rated != Some(true)) {
-                                            base.push_str(" bg-gray-100 dark:bg-gray-800 cursor-not-allowed");
-                                        }
-                                        base
+                            <input
+                                class=move || {
+                                    let mut base = INPUT_CLASS.to_string();
+                                    if draft_options.with(|o| o.rated != Some(true)) {
+                                        base.push_str(" bg-gray-100 dark:bg-gray-800 cursor-not-allowed");
                                     }
+                                    base
+                                }
                                     placeholder=move || t_string!(i18n, archive.min)
                                     prop:disabled=Signal::derive(move || !draft_options.with(|o| o.rated == Some(true)))
                                     prop:value=Signal::derive(move || {
@@ -307,14 +310,14 @@ fn ArchiveAdvancedFilters(draft_options: RwSignal<FinishedGamesQueryOptions>) ->
                                         });
                                     }
                                 />
-                                <input
-                                    class=move || {
-                                        let mut base = "input input-bordered w-full".to_string();
-                                        if draft_options.with(|o| o.rated != Some(true)) {
-                                            base.push_str(" bg-gray-100 dark:bg-gray-800 cursor-not-allowed");
-                                        }
-                                        base
+                            <input
+                                class=move || {
+                                    let mut base = INPUT_CLASS.to_string();
+                                    if draft_options.with(|o| o.rated != Some(true)) {
+                                        base.push_str(" bg-gray-100 dark:bg-gray-800 cursor-not-allowed");
                                     }
+                                    base
+                                }
                                     placeholder=move || t_string!(i18n, archive.max)
                                     prop:disabled=Signal::derive(move || !draft_options.with(|o| o.rated == Some(true)))
                                     prop:value=Signal::derive(move || {
@@ -339,7 +342,7 @@ fn ArchiveAdvancedFilters(draft_options: RwSignal<FinishedGamesQueryOptions>) ->
                         <label class="block text-sm font-semibold">{t!(i18n, archive.turn_range)}</label>
                         <div class="grid grid-cols-2 gap-2">
                             <input
-                                class="input input-bordered w-full"
+                                class=INPUT_CLASS
                                 placeholder=move || t_string!(i18n, archive.min)
                                 prop:value=Signal::derive(move || {
                                     draft_options.with(|o| o.turn_min.map(|v| v.to_string()).unwrap_or_default())
@@ -350,7 +353,7 @@ fn ArchiveAdvancedFilters(draft_options: RwSignal<FinishedGamesQueryOptions>) ->
                                 }
                             />
                             <input
-                                class="input input-bordered w-full"
+                                class=INPUT_CLASS
                                 placeholder=move || t_string!(i18n, archive.max)
                                 prop:value=Signal::derive(move || {
                                     draft_options.with(|o| o.turn_max.map(|v| v.to_string()).unwrap_or_default())
@@ -366,7 +369,7 @@ fn ArchiveAdvancedFilters(draft_options: RwSignal<FinishedGamesQueryOptions>) ->
                         <label class="block text-sm font-semibold">{t!(i18n, archive.date_range)}</label>
                         <div class="grid grid-cols-2 gap-2">
                             <input
-                                class="input input-bordered w-full"
+                                class=INPUT_CLASS
                                 type="date"
                                 prop:value=Signal::derive(move || draft_options.with(|o| date_to_input(o.date_start)))
                                 on:input=move |ev| {
@@ -375,7 +378,7 @@ fn ArchiveAdvancedFilters(draft_options: RwSignal<FinishedGamesQueryOptions>) ->
                                 }
                             />
                             <input
-                                class="input input-bordered w-full"
+                                class=INPUT_CLASS
                                 type="date"
                                 prop:value=Signal::derive(move || draft_options.with(|o| date_to_input(o.date_end)))
                                 on:input=move |ev| {
@@ -456,9 +459,9 @@ pub fn ArchiveSearchForm(
     let username_placeholder = move || t_string!(i18n, archive.username_placeholder).to_string();
 
     view! {
-        <div class="flex-shrink-0 w-full">
-            <div class="mx-auto max-w-5xl p-4 space-y-3">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div class="flex-shrink-0 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm shadow-sm">
+            <div class="mx-auto max-w-5xl p-4 sm:p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     <div class="space-y-3">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <ArchivePlayerField
@@ -507,12 +510,12 @@ pub fn ArchiveSearchForm(
                         </div>
                     </div>
 
-                    <details class="group md:hidden mt-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                        <summary class="cursor-pointer px-3 py-2 text-sm font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg list-none flex items-center gap-2 [&::-webkit-details-marker]:hidden">
-                            <Icon icon=icondata_lu::LuChevronDown attr:class="size-4 transition-transform group-open:rotate-180" />
+                    <details class="group md:hidden mt-2 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/50 shadow-sm">
+                        <summary class="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-t-xl list-none flex items-center gap-2 [&::-webkit-details-marker]:hidden transition-colors">
+                            <Icon icon=icondata_lu::LuChevronDown attr:class="size-4 transition-transform group-open:rotate-180 text-pillbug-teal" />
                             {t!(i18n, archive.more_filters)}
                         </summary>
-                        <div class="p-3 pt-0 space-y-3">
+                        <div class="p-4 pt-0 space-y-3 border-t border-gray-200 dark:border-gray-700">
                             <ArchiveAdvancedFilters draft_options=draft_options />
                         </div>
                     </details>
@@ -522,8 +525,12 @@ pub fn ArchiveSearchForm(
                     </div>
                 </div>
 
-                <div class="flex gap-2 pt-2">
-                    <button class=PRIMARY_BUTTON_CLASS on:click=move |_| on_search.run(())>
+                <div class="flex flex-wrap gap-3 pt-2 sm:pt-4">
+                    <button
+                        type="button"
+                        class=PRIMARY_BUTTON_CLASS
+                        on:click=move |_| on_search.run(())
+                    >
                         {t!(i18n, archive.search)}
                     </button>
                 </div>
