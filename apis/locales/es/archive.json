@@ -38,7 +38,10 @@
   "more_filters": "Más filtros",
   "search": "Buscar",
   "games_loaded_count": "{{loaded}} games loaded / {{total}} games found",
-  "permalink": "Permalink",
+  "page_info": "Página {{page}} de {{total_pages}} ({{start}}-{{end}} de {{total}})",
+  "prev_page": "Anterior",
+  "next_page": "Siguiente",
+  "permalink": "Enlace permanente",
   "no_games_found": "No games found.",
   "loading_games": "Loading games..."
 }

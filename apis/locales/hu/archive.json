@@ -38,7 +38,10 @@
   "more_filters": "Több szűrő",
   "search": "Keresés",
   "games_loaded_count": "{{loaded}} games loaded / {{total}} games found",
-  "permalink": "Permalink",
+  "page_info": "{{page}}. oldal / {{total_pages}} ({{start}}-{{end}} / {{total}})",
+  "prev_page": "Előző",
+  "next_page": "Következő",
+  "permalink": "Közvetlen link",
   "no_games_found": "No games found.",
   "loading_games": "Loading games..."
 }

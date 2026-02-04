@@ -38,7 +38,10 @@
   "more_filters": "Больше фильтров",
   "search": "Поиск",
   "games_loaded_count": "{{loaded}} games loaded / {{total}} games found",
-  "permalink": "Permalink",
+  "page_info": "Страница {{page}} из {{total_pages}} ({{start}}-{{end}} из {{total}})",
+  "prev_page": "Назад",
+  "next_page": "Вперёд",
+  "permalink": "Прямая ссылка",
   "no_games_found": "No games found.",
   "loading_games": "Loading games..."
 }

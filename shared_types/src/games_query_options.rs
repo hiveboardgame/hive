@@ -230,6 +230,7 @@ pub struct FinishedGamesQueryOptions {
     pub result_filter: FinishedResultFilter,
     pub batch_token: Option<BatchToken>,
     pub batch_size: usize,
+    pub page: usize,
     pub sort: FinishedGameSort,
     pub game_progress: GameProgress,
 }
@@ -254,7 +255,8 @@ impl Default for FinishedGamesQueryOptions {
             date_end: None,
             result_filter: FinishedResultFilter::Any,
             batch_token: None,
-            batch_size: 25,
+            batch_size: 50,
+            page: 1,
             sort: FinishedGameSort::default(),
             game_progress: GameProgress::Finished,
         }
@@ -289,6 +291,8 @@ pub enum FinishedGameQueryValidationError {
     BatchTokenSortMismatch,
     #[error("batch size must be between 1 and 100")]
     BatchSizeInvalid,
+    #[error("page must be at least 1 and at most 10000")]
+    PageOutOfRange,
 }
 
 #[derive(Error, Debug, PartialEq, Eq, Clone)]
@@ -315,6 +319,8 @@ pub enum FinishedGamesQueryParseError {
     InvalidSortDirection,
     #[error("invalid batch size")]
     InvalidBatchSize,
+    #[error("invalid page")]
+    InvalidPage,
     #[error("validation failed: {0:?}")]
     ValidationFailedList(Vec<FinishedGameQueryValidationError>),
     #[error("parse error: {0}")]
@@ -327,6 +333,10 @@ impl FinishedGamesQueryOptions {
 
         if self.batch_size == 0 || self.batch_size > 100 {
             errors.push(FinishedGameQueryValidationError::BatchSizeInvalid);
+        }
+
+        if self.page == 0 || self.page > 10000 {
+            errors.push(FinishedGameQueryValidationError::PageOutOfRange);
         }
 
         let player1 = self.normalize_player(self.player1.as_ref());
@@ -533,6 +543,10 @@ impl std::fmt::Display for FinishedGamesQueryOptions {
         push("sort_key", self.sort.key.to_string());
         push("sort_asc", self.sort.ascending.to_string());
 
+        if self.page > 1 {
+            push("page", self.page.to_string());
+        }
+
         if parts.is_empty() {
             write!(f, "")
         } else {
@@ -733,6 +747,15 @@ impl FinishedGamesQueryOptions {
                     .map(|v| opts.sort.ascending = v)
                     .err()
                     .map(|_| FinishedGamesQueryParseError::InvalidSortDirection),
+                "page" => {
+                    match value.trim().parse::<usize>() {
+                        Ok(p) if p >= 1 && p <= 10000 => {
+                            opts.page = p;
+                            None
+                        }
+                        _ => Some(FinishedGamesQueryParseError::InvalidPage),
+                    }
+                }
                 _ => None,
             };
 
@@ -1206,5 +1229,53 @@ mod tests {
         };
 
         assert!(!opts.to_string().contains("batch_size="));
+    }
+
+    #[test]
+    fn display_includes_page_when_gt_one() {
+        let opts = FinishedGamesQueryOptions {
+            page: 2,
+            ..FinishedGamesQueryOptions::default()
+        };
+        assert!(opts.to_string().contains("page=2"));
+    }
+
+    #[test]
+    fn display_omits_page_when_one() {
+        let opts = FinishedGamesQueryOptions {
+            page: 1,
+            ..FinishedGamesQueryOptions::default()
+        };
+        assert!(!opts.to_string().contains("page=1"));
+    }
+
+    #[test]
+    fn parse_page() {
+        let opts = FinishedGamesQueryOptions::from_str("player1=ion&page=3").unwrap();
+        assert_eq!(opts.page, 3);
+    }
+
+    #[test]
+    fn rejects_page_zero() {
+        let options = FinishedGamesQueryOptions {
+            page: 0,
+            ..base_options()
+        };
+        assert!(matches!(
+            options.validate_all(),
+            Err(errs) if errs.contains(&FinishedGameQueryValidationError::PageOutOfRange)
+        ));
+    }
+
+    #[test]
+    fn rejects_page_over_max() {
+        let options = FinishedGamesQueryOptions {
+            page: 10001,
+            ..base_options()
+        };
+        assert!(matches!(
+            options.validate_all(),
+            Err(errs) if errs.contains(&FinishedGameQueryValidationError::PageOutOfRange)
+        ));
     }
 }
