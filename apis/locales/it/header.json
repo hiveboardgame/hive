@@ -10,7 +10,8 @@
         "title": "Impara",
         "rules": "Regole",
         "analysis": "Analisi",
-        "rules_summary": "Sommario delle Regole"
+        "rules_summary": "Sommario delle Regole",
+        "archive": "Archivio"
     },
     "tournaments": {
         "title": "Tornei",

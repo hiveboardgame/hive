@@ -242,10 +242,10 @@ impl Default for FinishedGamesQueryOptions {
             fixed_colors: false,
             exclude_bots: false,
             only_tournament: false,
-            rated: Some(true),
-            expansions: Some(true),
-            time_mode: Some(TimeMode::RealTime),
-            speeds: GameSpeed::real_time_speeds(),
+            rated: None,
+            expansions: None,
+            time_mode: None,
+            speeds: GameSpeed::all_games(),
             rating_min: None,
             rating_max: None,
             turn_min: None,
@@ -287,7 +287,7 @@ pub enum FinishedGameQueryValidationError {
     DateBoundsInvalid,
     #[error("batch token sort does not match requested sort")]
     BatchTokenSortMismatch,
-    #[error("batch size must be greater than zero")]
+    #[error("batch size must be between 1 and 100")]
     BatchSizeInvalid,
 }
 
@@ -325,7 +325,7 @@ impl FinishedGamesQueryOptions {
     pub fn validate_all(mut self) -> Result<Self, Vec<FinishedGameQueryValidationError>> {
         let mut errors = Vec::new();
 
-        if self.batch_size == 0 {
+        if self.batch_size == 0 || self.batch_size > 100 {
             errors.push(FinishedGameQueryValidationError::BatchSizeInvalid);
         }
 
@@ -1080,6 +1080,19 @@ mod tests {
         assert!(matches!(
             options.validate_all(),
             Err(errs) if errs.contains(&FinishedGameQueryValidationError::TurnBoundsInvalid)
+        ));
+    }
+
+    #[test]
+    fn rejects_batch_size_over_max() {
+        let options = FinishedGamesQueryOptions {
+            batch_size: 101,
+            ..base_options()
+        };
+
+        assert!(matches!(
+            options.validate_all(),
+            Err(errs) if errs.contains(&FinishedGameQueryValidationError::BatchSizeInvalid)
         ));
     }
 

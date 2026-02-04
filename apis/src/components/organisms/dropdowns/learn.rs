@@ -33,6 +33,9 @@ pub fn LearnDropdown() -> impl IntoView {
             <a class=COMMON_LINK_STYLE on:click=onclick_close href="/analysis">
                 {t!(i18n, header.learn.analysis)}
             </a>
+            <a class=COMMON_LINK_STYLE on:click=onclick_close href="/archive">
+                {t!(i18n, header.learn.archive)}
+            </a>
 
         </Hamburger>
     }

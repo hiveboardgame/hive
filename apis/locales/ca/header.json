@@ -10,7 +10,8 @@
         "title": "Aprendre",
         "rules": "Regles",
         "analysis": "Anàlisis",
-        "rules_summary": "Resum de les regles"
+        "rules_summary": "Resum de les regles",
+        "archive": "Arxiu"
     },
     "tournaments": {
         "title": "Torneigs",

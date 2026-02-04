@@ -11,20 +11,32 @@ use std::{
 };
 
 const MIN_SEARCH_LENGTH: usize = 2;
+const MAX_SUGGESTIONS: usize = 10;
 
 #[component]
 pub fn UserSearch(
     #[prop(optional)] placeholder: Option<String>,
     #[prop(optional)] fallback_users: Option<Signal<BTreeMap<String, UserResponse>>>,
     #[prop(optional)] filtered_users: Option<HashSet<String>>,
+    #[prop(optional)] filtered_users_signal: Option<Signal<HashSet<String>>>,
     #[prop(optional)] show_count: Option<Signal<String>>,
+    #[prop(optional)] value: Option<Signal<Option<String>>>,
     actions: Vec<UserAction>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let pattern = RwSignal::new(String::new());
     let pattern_len = Signal::derive(move || pattern().len());
+
+    let excluded_users = move || {
+        filtered_users_signal
+            .as_ref()
+            .map(|s| s())
+            .or_else(|| filtered_users.clone())
+            .unwrap_or_default()
+    };
+
     let user_search = Resource::new(
-        move || (pattern(), filtered_users.clone()),
+        move || (pattern(), excluded_users()),
         async move |(pattern, filtered_users)| {
             if pattern.len() < MIN_SEARCH_LENGTH {
                 None
@@ -33,11 +45,7 @@ pub fn UserSearch(
                 let btree = user_search
                     .unwrap_or_default()
                     .into_iter()
-                    .filter(|user| {
-                        filtered_users
-                            .as_ref()
-                            .is_none_or(|filtered| !filtered.contains(&user.username))
-                    })
+                    .filter(|user| !filtered_users.contains(&user.username))
                     .map(|user| (user.username.clone(), user))
                     .collect();
                 Some(btree)
@@ -45,15 +53,52 @@ pub fn UserSearch(
         },
     );
 
+    let mut clear_callback: Option<Callback<()>> = None;
+    let wrapped_actions: Vec<UserAction> = actions
+        .into_iter()
+        .map(|a| match a {
+            UserAction::Select(cb) => {
+                let cb_clear = cb.clone();
+                clear_callback = Some(Callback::new(move |_| {
+                    cb_clear.run(None);
+                }));
+                UserAction::Select(Callback::new(move |opt| {
+                    pattern.set(String::new());
+                    cb.run(opt);
+                }))
+            }
+            other => other,
+        })
+        .collect();
+
     let debounced_search = debounce(Duration::from_millis(100), move |ev: Event| {
-        pattern.set(event_target_value(&ev));
+        let val = event_target_value(&ev);
+        pattern.set(val.clone());
+        if val.is_empty() {
+            if let Some(ref cb) = clear_callback {
+                cb.run(());
+            }
+        }
     });
 
     let users = Signal::derive(move || {
-        if pattern_len() < MIN_SEARCH_LENGTH {
+        let all = if pattern_len() < MIN_SEARCH_LENGTH {
             fallback_users.map(|f| f()).unwrap_or_default()
         } else {
             user_search.get().flatten().unwrap_or_default()
+        };
+        all.into_iter().take(MAX_SUGGESTIONS).collect::<BTreeMap<_, _>>()
+    });
+
+    let display_value = Signal::derive(move || {
+        let p = pattern();
+        if p.is_empty() {
+            value
+                .as_ref()
+                .and_then(|v| v())
+                .unwrap_or_default()
+        } else {
+            p
         }
     });
 
@@ -63,24 +108,52 @@ pub fn UserSearch(
             .unwrap_or_else(|| t_string!(i18n, home.search_players).to_string())
     };
 
+    // clear_callback is set only when actions contain UserAction::Select; used for × button and backspace-clear
+    let has_select = clear_callback.is_some();
+    let wrapped_actions_stored = StoredValue::new(wrapped_actions);
+    let show_clear = Signal::derive(move || {
+        has_select
+            && value
+                .as_ref()
+                .and_then(|v| v())
+                .is_some()
+    });
+
+    let do_clear = move |_| {
+        pattern.set(String::new());
+        if let Some(ref cb) = clear_callback {
+            cb.run(());
+        }
+    };
+
     view! {
-        <div class="flex flex-col w-64 shrink-0 my-2 ml-2 mr-2 lg:mr-0 2xl:mr-2">
-            <div class="relative">
+        <div class="flex flex-col w-full min-w-0 shrink-0 relative">
+            <div class="relative flex items-center gap-1">
                 <input
-                    class="p-1 w-64 rounded-lg"
+                    class="input input-bordered w-full p-1 rounded-lg min-w-0"
                     type="text"
                     on:input=debounced_search
                     placeholder=input_placeholder
-                    prop:value=pattern
+                    prop:value=display_value
                     maxlength="20"
                 />
-                <div class="h-5">
-                    <Show when=move || { pattern_len() > 0 && pattern().len() < MIN_SEARCH_LENGTH }>
-                        <span class="text-xs text-yellow-600">
-                            {move || format!("Minimum {MIN_SEARCH_LENGTH} characters")}
-                        </span>
-                    </Show>
-                </div>
+                <Show when=show_clear>
+                    <button
+                        type="button"
+                        class="btn btn-ghost btn-sm btn-square shrink-0"
+                        aria-label="Clear selection"
+                        on:click=do_clear
+                    >
+                        "×"
+                    </button>
+                </Show>
+            </div>
+            <div class="h-5">
+                <Show when=move || { pattern_len() > 0 && pattern().len() < MIN_SEARCH_LENGTH }>
+                    <span class="text-xs text-yellow-600">
+                        {move || format!("Minimum {MIN_SEARCH_LENGTH} characters")}
+                    </span>
+                </Show>
             </div>
             <Suspense fallback=move || {
                 view! {
@@ -105,13 +178,15 @@ pub fn UserSearch(
                     </Show>
                 </div>
             </Suspense>
-            <Transition>
-                <div class="overflow-y-auto overflow-x-hidden max-h-96 rounded-lg">
-                    <For each=users key=move |(_, user)| user.uid let:user>
-                        <UserRow actions=actions.clone() user=user.1 />
-                    </For>
-                </div>
-            </Transition>
+            <Show when=move || { pattern_len() >= MIN_SEARCH_LENGTH }>
+                <Transition>
+                    <div class="absolute top-full left-0 right-0 z-50 mt-1 overflow-y-auto overflow-x-hidden max-h-60 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
+                        <For each=users key=move |(_, user)| user.uid let:user>
+                            <UserRow actions=wrapped_actions_stored.get_value() user=user.1 selection_mode=has_select />
+                        </For>
+                    </div>
+                </Transition>
+            </Show>
         </div>
     }
 }

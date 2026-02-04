@@ -7,6 +7,7 @@ pub mod challenge_view;
 pub mod config;
 pub mod donate;
 pub mod faq;
+pub mod archive;
 pub mod game_search;
 pub mod home;
 pub mod login;

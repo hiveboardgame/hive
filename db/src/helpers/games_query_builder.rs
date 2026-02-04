@@ -513,6 +513,7 @@ impl GameQueryBuilder {
         Box::new(games::game_status.eq(GameStatus::Finished(GameResult::Draw).to_string()))
     }
 
+    /// player must already be normalized (lowercase); callers use options from validate_all()
     fn player_in_color(&self, player: &str, color: Color) -> GamePredicate {
         let username = player.to_string();
         let user_ids = users::table
