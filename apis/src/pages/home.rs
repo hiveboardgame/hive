@@ -2,7 +2,8 @@ use crate::components::atoms::logo::Logo;
 use crate::components::molecules::online_users::OnlineUsers;
 use crate::components::molecules::rl_banner::RlBanner;
 use crate::components::organisms::{
-    calendar::Calendar, challenges::Challenges, quickplay::QuickPlay, tv::Tv,
+    calendar::Calendar, challenges::Challenges, featured_video::FeaturedVideo,
+    quickplay::QuickPlay, tv::Tv,
 };
 use crate::functions::home_banner;
 use leptos::prelude::*;
@@ -38,6 +39,7 @@ pub fn Home() -> impl IntoView {
                 <div class="flex flex-col items-center space-y-6 min-w-0 order-2 lg:order-none lg:col-start-2 lg:row-start-1">
                     <QuickPlay />
                     <Challenges />
+                    <FeaturedVideo />
                     <div class="w-full lg:flex lg:justify-end 2xl:justify-center">
                         <div class="w-full lg:max-w-screen-md">
                             <div class="w-full lg:flow-root">
