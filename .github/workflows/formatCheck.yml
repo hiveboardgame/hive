@@ -9,5 +9,5 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
         with: 
-          components: rustfmt, leptosfmt
-      - run: cargo fmt --check && leptosfmt apis -q --check
+          components: rustfmt
+      - run: cargo install leptosfmt && cargo fmt --check && leptosfmt apis -q --check
