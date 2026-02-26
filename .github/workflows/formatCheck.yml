@@ -1,5 +1,5 @@
 name: format check
-on: [push, pull_request]
+on: pull_request
 
 jobs:
   test:
@@ -7,5 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install leptosfmt && cargo fmt --check && leptosfmt apis -q --check
+      - uses: dtolnay/rust-toolchain@nightly
+        with: 
+          components: rustfmt, leptosfmt
+      - run: cargo fmt --check && leptosfmt apis -q --check
