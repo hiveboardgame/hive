@@ -1,6 +1,5 @@
 use hivegame_bot_api::HiveGame;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tokio::sync::{mpsc, Mutex, Semaphore};
 use tracing::{debug, error, info};
 

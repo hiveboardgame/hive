@@ -1,5 +1,7 @@
-use crate::functions::games::get::server_fn::codec;
-use crate::responses::{GameResponse, RatingHistoryResponse};
+use crate::{
+    functions::games::get::server_fn::codec,
+    responses::{GameResponse, RatingHistoryResponse},
+};
 use leptos::prelude::*;
 use shared_types::{GameId, GameSpeed, GamesQueryOptions};
 use uuid::Uuid;

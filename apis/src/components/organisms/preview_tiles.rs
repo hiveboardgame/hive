@@ -1,5 +1,7 @@
 use crate::{
-    common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack, providers::Config,
+    common::HexStack,
+    components::molecules::simple_hex_stack::SimpleHexStack,
+    providers::Config,
 };
 use hive_lib::{GameType, Position, State};
 use leptos::prelude::*;

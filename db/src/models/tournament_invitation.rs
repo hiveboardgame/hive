@@ -2,8 +2,12 @@ use crate::{
     db_error::DbError,
     models::{tournament::Tournament, user::User},
     schema::tournaments_invitations::{
-        self, dsl::invitee_id as invitee_id_column, dsl::tournament_id as tournament_id_column,
-        dsl::tournaments_invitations as tournaments_invitations_table,
+        self,
+        dsl::{
+            invitee_id as invitee_id_column,
+            tournament_id as tournament_id_column,
+            tournaments_invitations as tournaments_invitations_table,
+        },
     },
     DbConn,
 };

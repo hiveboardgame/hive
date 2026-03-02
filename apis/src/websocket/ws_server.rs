@@ -1,23 +1,34 @@
-use super::messages::GameHB;
-use super::WebsocketData;
-use super::{messages::MessageDestination, messages::Ping};
+use super::{
+    messages::{GameHB, MessageDestination, Ping},
+    WebsocketData,
+};
 use crate::{
     common::{
-        ChallengeUpdate, GameUpdate, ScheduleUpdate, ServerMessage, ServerResult, TournamentUpdate,
-        UserStatus, UserUpdate,
+        ChallengeUpdate,
+        GameUpdate,
+        ScheduleUpdate,
+        ServerMessage,
+        ServerResult,
+        TournamentUpdate,
+        UserStatus,
+        UserUpdate,
     },
     responses::{
-        ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse, TournamentResponse,
+        ChallengeResponse,
+        GameResponse,
+        HeartbeatResponse,
+        ScheduleResponse,
+        TournamentResponse,
         UserResponse,
     },
     websocket::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
 };
 use actix::{
     prelude::{Actor, Context, Handler, Recipient},
-    AsyncContext, WrapFuture,
+    AsyncContext,
+    WrapFuture,
 };
-use codee::binary::MsgpackSerdeCodec;
-use codee::Encoder;
+use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{
     get_conn,
     models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
@@ -28,8 +39,10 @@ use hive_lib::GameStatus;
 use log::{error, warn};
 use rand::Rng;
 use shared_types::{GameId, TimeMode};
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 use uuid::Uuid;
 
 #[derive(Debug)]

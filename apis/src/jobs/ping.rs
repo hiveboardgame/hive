@@ -1,5 +1,4 @@
-use crate::websocket::Ping;
-use crate::websocket::WsServer;
+use crate::websocket::{Ping, WsServer};
 use actix::Addr;
 use actix_web::web::Data;
 use std::time::Duration;

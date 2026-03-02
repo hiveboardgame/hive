@@ -1,7 +1,6 @@
 use crate::PrettyString;
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 use thiserror::Error;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]

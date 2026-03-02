@@ -1,10 +1,11 @@
 use crate::{
-    common::UserAction, components::molecules::user_row::UserRow, functions::users::search_users,
-    i18n::*, responses::UserResponse,
+    common::UserAction,
+    components::molecules::user_row::UserRow,
+    functions::users::search_users,
+    i18n::*,
+    responses::UserResponse,
 };
-use leptos::ev::Event;
-use leptos::leptos_dom::helpers::debounce;
-use leptos::prelude::*;
+use leptos::{ev::Event, leptos_dom::helpers::debounce, prelude::*};
 use std::{
     collections::{BTreeMap, HashSet},
     time::Duration,
@@ -64,7 +65,7 @@ pub fn UserSearch(
     };
 
     view! {
-        <div class="flex flex-col w-64 shrink-0 my-2 ml-2 mr-2 lg:mr-0 2xl:mr-2">
+        <div class="flex flex-col my-2 mr-2 ml-2 w-64 lg:mr-0 2xl:mr-2 shrink-0">
             <div class="relative">
                 <input
                     class="p-1 w-64 rounded-lg"

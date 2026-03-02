@@ -1,13 +1,17 @@
-use crate::common::{MoveConfirm, TileDesign, TileDots, TileRotation};
-use crate::common::{PieceType, SvgPos};
-use crate::pages::play::CurrentConfirm;
-use crate::providers::analysis::AnalysisSignal;
-use crate::providers::config::TileOptions;
-use crate::providers::game_state::GameStateSignal;
-use crate::providers::{ApiRequestsProvider, AuthContext, Config};
+use crate::{
+    common::{MoveConfirm, PieceType, SvgPos, TileDesign, TileDots, TileRotation},
+    pages::play::CurrentConfirm,
+    providers::{
+        analysis::AnalysisSignal,
+        config::TileOptions,
+        game_state::GameStateSignal,
+        ApiRequestsProvider,
+        AuthContext,
+        Config,
+    },
+};
 use hive_lib::{Bug, Color, Piece, Position};
-use leptos::either::Either;
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 use web_sys::MouseEvent;
 
 #[component]

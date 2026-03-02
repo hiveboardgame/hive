@@ -1,20 +1,31 @@
-use crate::components::atoms::{og::OG, title::Title};
-use crate::components::molecules::alert::Alert;
-use crate::components::molecules::tournament_ready_popup::TournamentReadyPopup;
-use crate::components::organisms::header::Header;
-use crate::providers::Config;
-use crate::providers::{
-    game_state::GameStateSignal, refocus::RefocusSignal, websocket::WebsocketContext, AuthContext,
-    PingContext, UpdateNotifier,
+use crate::{
+    components::{
+        atoms::{og::OG, title::Title},
+        molecules::{alert::Alert, tournament_ready_popup::TournamentReadyPopup},
+        organisms::header::Header,
+    },
+    providers::{
+        game_state::GameStateSignal,
+        refocus::RefocusSignal,
+        websocket::WebsocketContext,
+        AuthContext,
+        Config,
+        PingContext,
+        UpdateNotifier,
+    },
 };
 use cfg_if::cfg_if;
 use chrono::Utc;
 use hive_lib::GameControl;
 use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_use::core::ConnectionReadyState;
-use leptos_use::utils::Pausable;
-use leptos_use::{use_interval_fn, use_media_query, use_window_focus};
+use leptos_use::{
+    core::ConnectionReadyState,
+    use_interval_fn,
+    use_media_query,
+    use_window_focus,
+    utils::Pausable,
+};
 
 cfg_if! { if #[cfg(not(feature = "ssr"))] {
     use leptos_use::utils::IS_IOS;
@@ -182,7 +193,7 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             <TournamentReadyPopup ready_signal=update_notifier.tournament_ready />
             <Show when=move || ws_ready() != ConnectionReadyState::Open>
                 <div class="flex absolute top-1/2 left-1/2 gap-2 items-center -translate-x-1/2 -translate-y-1/2 z-[60]">
-                    <div class="size-10 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
+                    <div class="rounded-full border-t-2 border-b-2 border-blue-500 animate-spin size-10"></div>
                     <div class="text-lg font-bold text-ladybug-red">Connecting..</div>
                 </div>
             </Show>

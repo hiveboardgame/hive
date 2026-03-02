@@ -1,5 +1,4 @@
-use crate::i18n::*;
-use crate::providers::Config;
+use crate::{i18n::*, providers::Config};
 use leptos::prelude::*;
 
 #[component]
@@ -68,7 +67,7 @@ pub fn BackgroundColorToggle() -> impl IntoView {
                 <Show when=is_using_custom>
                     <button
                         on:click=reset_to_default
-                        class="px-3 py-2 text-sm bg-gray-200 rounded transition-colors duration-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                        class="py-2 px-3 text-sm bg-gray-200 rounded transition-colors duration-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
                         title="Reset to default"
                     >
                         "Reset"

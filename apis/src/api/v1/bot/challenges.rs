@@ -1,10 +1,15 @@
-use crate::api::v1::auth::Auth;
-use crate::api::v1::messages::send::{send_challenge_creation_message, send_challenge_messages};
-use crate::responses::{ChallengeResponse, GameResponse};
-use crate::websocket::{busybee::Busybee, WsServer};
+use crate::{
+    api::v1::{
+        auth::Auth,
+        messages::send::{send_challenge_creation_message, send_challenge_messages},
+    },
+    responses::{ChallengeResponse, GameResponse},
+    websocket::{busybee::Busybee, WsServer},
+};
 use actix::Addr;
 use actix_web::{
-    get, post,
+    get,
+    post,
     web::{Data, Json, Path},
     HttpResponse,
 };
@@ -19,7 +24,11 @@ use rand::random;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use shared_types::{
-    ChallengeDetails, ChallengeId, ChallengeVisibility, CorrespondenceMode, TimeMode,
+    ChallengeDetails,
+    ChallengeId,
+    ChallengeVisibility,
+    CorrespondenceMode,
+    TimeMode,
 };
 use std::str::FromStr;
 use uuid::Uuid;

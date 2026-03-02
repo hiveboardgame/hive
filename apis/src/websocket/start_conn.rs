@@ -3,7 +3,13 @@ use std::sync::Arc;
 use crate::websocket::{ws_connection::WsConnection, ws_server::WsServer, WebsocketData};
 use actix::Addr;
 use actix_identity::Identity;
-use actix_web::{get, web::Data, web::Payload, Error, HttpRequest, HttpResponse};
+use actix_web::{
+    get,
+    web::{Data, Payload},
+    Error,
+    HttpRequest,
+    HttpResponse,
+};
 use actix_web_actors::ws;
 use db_lib::{get_conn, models::User, DbPool};
 use uuid::Uuid;

@@ -1,8 +1,9 @@
-use leptos::prelude::*;
-use leptos::text_prop::TextProp;
+use leptos::{prelude::*, text_prop::TextProp};
 
-use crate::components::{layouts::base_layout::COMMON_LINK_STYLE, molecules::banner::Banner};
-use crate::i18n::*;
+use crate::{
+    components::{layouts::base_layout::COMMON_LINK_STYLE, molecules::banner::Banner},
+    i18n::*,
+};
 
 #[component]
 pub fn Donate() -> impl IntoView {

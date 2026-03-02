@@ -1,8 +1,7 @@
 use anyhow::anyhow;
 use hive_lib::{Color, GameResult};
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, Hash)]
 pub enum TournamentGameResult {

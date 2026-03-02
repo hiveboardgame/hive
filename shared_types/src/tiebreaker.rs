@@ -1,7 +1,5 @@
-use serde::Deserialize;
-use serde::Serialize;
-use std::fmt::Display;
-use std::str::FromStr;
+use serde::{Deserialize, Serialize};
+use std::{fmt::Display, str::FromStr};
 use thiserror::Error;
 
 #[derive(Clone, Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]

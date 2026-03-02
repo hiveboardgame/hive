@@ -1,5 +1,6 @@
 use crate::{
-    common::UserAction, components::molecules::user_search::UserSearch,
+    common::UserAction,
+    components::molecules::user_search::UserSearch,
     responses::TournamentResponse,
 };
 use leptos::prelude::*;

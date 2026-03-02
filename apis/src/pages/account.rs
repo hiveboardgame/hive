@@ -1,11 +1,9 @@
-use crate::components::update_from_event::update_from_input;
-use crate::functions::accounts::edit::EditAccount;
-use crate::functions::oauth::get_discord_handle;
-use crate::providers::ApiRequestsProvider;
-use crate::providers::RefererContext;
-use leptos::form::ActionForm;
-use leptos::leptos_dom::helpers::debounce;
-use leptos::prelude::*;
+use crate::{
+    components::update_from_event::update_from_input,
+    functions::{accounts::edit::EditAccount, oauth::get_discord_handle},
+    providers::{ApiRequestsProvider, RefererContext},
+};
+use leptos::{form::ActionForm, leptos_dom::helpers::debounce, prelude::*};
 use std::time::Duration;
 
 #[component]
@@ -43,13 +41,13 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         <div class=format!(
             "mx-auto w-full max-w-md px-4 pt-20 pb-20 sm:max-w-lg md:max-w-xl pt-20 pb-20 {extend_tw_classes}",
         )>
-            <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+            <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                 <div class="mb-6">
                     <h2 class="mb-4 text-xl font-bold text-center text-indigo-600 dark:text-indigo-400">
                         "🤖 Discord Integration"
                     </h2>
 
-                    <div class="p-4 mb-6 bg-blue-50 rounded-lg border border-blue-200 dark:bg-blue-900/30 dark:border-blue-700">
+                    <div class="p-4 mb-6 bg-blue-50 rounded-lg border border-blue-200 dark:border-blue-700 dark:bg-blue-900/30">
                         <h3 class="mb-2 font-semibold text-blue-800 dark:text-blue-200">
                             "📬 Busybee Messages"
                         </h3>
@@ -75,7 +73,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                             href="https://discord.gg/7EwNTJnfab"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="inline-flex items-center px-4 py-2 font-bold text-white bg-purple-600 rounded-lg shadow-lg transition-all duration-300 cursor-pointer no-link-style hover:bg-purple-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                            class="inline-flex items-center py-2 px-4 font-bold text-white bg-purple-600 rounded-lg shadow-lg transition-all duration-300 cursor-pointer hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:outline-none active:scale-95 no-link-style"
                         >
                             <span class="mr-2 text-white">"💬"</span>
                             <span class="text-white">"Join HiveGame Discord"</span>
@@ -121,7 +119,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
 
                     <div class="text-center">
                         <button
-                            class="px-4 py-3 w-full font-bold text-white bg-purple-600 rounded-lg transition-all duration-300 cursor-pointer hover:bg-purple-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                            class="py-3 px-4 w-full font-bold text-white bg-purple-600 rounded-lg transition-all duration-300 cursor-pointer hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:outline-none active:scale-95"
                             on:click=oauth
                         >
                             <span class="mr-2">"🔗"</span>
@@ -134,7 +132,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                 </div>
             </div>
 
-            <div class="px-8 pt-6 pb-8 mb-4 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+            <div class="px-8 pt-6 pb-8 mb-4 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                 <h2 class="mb-4 text-xl font-bold text-center text-gray-700 dark:text-gray-300">
                     "🔐 Change Password"
                 </h2>
@@ -150,7 +148,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                             Duration::from_millis(350),
                             update_from_input(current_password),
                         )
-                        class="px-3 py-2 mb-3 w-full leading-tight rounded-lg border shadow appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        class="py-2 px-3 mb-3 w-full leading-tight rounded-lg border shadow appearance-none dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         id="old_password"
                         name="password"
                         type="password"
@@ -169,7 +167,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                             Duration::from_millis(350),
                             update_from_input(new_password),
                         )
-                        class="px-3 py-2 mb-3 w-full leading-tight rounded-lg border shadow appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        class="py-2 px-3 mb-3 w-full leading-tight rounded-lg border shadow appearance-none dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         name="new_password"
                         id="new_password"
                         type="password"
@@ -190,7 +188,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                             Duration::from_millis(350),
                             update_from_input(confirm_password),
                         )
-                        class="px-3 py-2 mb-3 w-full leading-tight rounded-lg border shadow appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        class="py-2 px-3 mb-3 w-full leading-tight rounded-lg border shadow appearance-none dark:text-white dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         id="confirm_password"
                         name="new_password_confirmation"
                         type="password"
@@ -209,7 +207,7 @@ pub fn Account(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <input
                         type="submit"
                         disabled=form_invalid
-                        class="px-4 py-3 w-full font-bold text-white bg-green-600 rounded-lg transition-all duration-300 cursor-pointer hover:bg-green-700 active:scale-95 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-25 disabled:cursor-not-allowed"
+                        class="py-3 px-4 w-full font-bold text-white bg-green-600 rounded-lg transition-all duration-300 cursor-pointer hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed"
                         value="💾 Save Changes"
                     />
                     <Show when=display_account_error>

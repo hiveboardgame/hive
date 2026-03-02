@@ -8,7 +8,10 @@ use crate::{
         users::{
             self,
             dsl::{
-                email as email_field, normalized_username, password as password_field, updated_at,
+                email as email_field,
+                normalized_username,
+                password as password_field,
+                updated_at,
                 users as users_table,
             },
             takeback,
@@ -18,8 +21,17 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use diesel::{
-    dsl::exists, query_dsl::BelongingToDsl, select, BoolExpressionMethods, ExpressionMethods,
-    Identifiable, Insertable, PgTextExpressionMethods, QueryDsl, Queryable, Selectable,
+    dsl::exists,
+    query_dsl::BelongingToDsl,
+    select,
+    BoolExpressionMethods,
+    ExpressionMethods,
+    Identifiable,
+    Insertable,
+    PgTextExpressionMethods,
+    QueryDsl,
+    Queryable,
+    Selectable,
     SelectableHelper,
 };
 use diesel_async::RunQueryDsl;

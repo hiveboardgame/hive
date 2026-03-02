@@ -1,12 +1,18 @@
-use crate::common::{Hex, HexStack, HexType, PieceType};
-use crate::components::molecules::analysis_and_download::AnalysisAndDownload;
-use crate::components::molecules::control_buttons::ControlButtons;
-use crate::components::molecules::hex_stack::HexStack;
-use crate::providers::analysis::AnalysisSignal;
-use crate::providers::game_state::{GameStateSignal, View};
-use crate::providers::{AuthContext, Config};
-use hive_lib::History;
-use hive_lib::{Bug, BugStack, Color, GameStatus, Piece, Position, State};
+use crate::{
+    common::{Hex, HexStack, HexType, PieceType},
+    components::molecules::{
+        analysis_and_download::AnalysisAndDownload,
+        control_buttons::ControlButtons,
+        hex_stack::HexStack,
+    },
+    providers::{
+        analysis::AnalysisSignal,
+        game_state::{GameStateSignal, View},
+        AuthContext,
+        Config,
+    },
+};
+use hive_lib::{Bug, BugStack, Color, GameStatus, History, Piece, Position, State};
 use leptos::prelude::*;
 use std::str::FromStr;
 
@@ -208,7 +214,12 @@ pub fn Reserve(
         <svg
             width="100%"
             height="100%"
-            class=move || format!("duration-300 {viewbox_styles} {extend_tw_classes} {}", reserve_sepia_class())
+            class=move || {
+                format!(
+                    "duration-300 {viewbox_styles} {extend_tw_classes} {}",
+                    reserve_sepia_class(),
+                )
+            }
             viewBox=viewbox_str
             xmlns="http://www.w3.org/2000/svg"
         >

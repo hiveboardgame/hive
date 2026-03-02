@@ -1,9 +1,11 @@
 use reqwest::{Client, Error as ReqwestError};
 use serde::{Deserialize, Serialize};
 use serde_json::Error as JsonError;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-use std::time::Duration;
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+    time::Duration,
+};
 use tracing::{debug, info};
 
 const API_TIMEOUT: u64 = 10; // 10 seconds timeout for API calls
@@ -308,9 +310,13 @@ impl HiveGameApi {
 mod tests {
     use super::*;
     use serde_json::json;
-    use wiremock::matchers::{body_json, method, path};
-    use wiremock::Request;
-    use wiremock::{Mock, MockServer, ResponseTemplate};
+    use wiremock::{
+        matchers::{body_json, method, path},
+        Mock,
+        MockServer,
+        Request,
+        ResponseTemplate,
+    };
 
     fn verify_auth_header(req: &Request, expected_key: &str) {
         let auth_header = req

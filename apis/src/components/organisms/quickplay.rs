@@ -1,10 +1,9 @@
-use crate::i18n::*;
-use crate::providers::{challenge_params_cookie, ApiRequestsProvider, ChallengeParams};
 use crate::{
     common::ChallengeAction,
     components::{atoms::rating::icon_for_speed, molecules::modal::Modal},
+    i18n::*,
     pages::{challenge_bot::ChallengeBot, challenge_create::ChallengeCreate},
-    providers::AuthContext,
+    providers::{challenge_params_cookie, ApiRequestsProvider, AuthContext, ChallengeParams},
 };
 use hive_lib::{ColorChoice, GameType};
 use leptos::{ev, html::Dialog, prelude::*};
@@ -12,8 +11,7 @@ use leptos_icons::*;
 use leptos_router::hooks::use_navigate;
 use leptos_use::use_event_listener;
 use reactive_stores::Store;
-use shared_types::ChallengeVisibility;
-use shared_types::{ChallengeDetails, GameSpeed::*, TimeMode};
+use shared_types::{ChallengeDetails, ChallengeVisibility, GameSpeed::*, TimeMode};
 
 pub enum QuickPlayTimeControl {
     Bullet1p2,
@@ -37,12 +35,22 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
         Blitz5p4 => ("5+4".to_owned(), icon_for_speed(Blitz), 5, 4, "Blitz"),
         Rapid10p10 => ("10+10".to_owned(), icon_for_speed(Rapid), 10, 10, "Rapid"),
         Rapid15p10 => ("15+10".to_owned(), icon_for_speed(Rapid), 15, 10, "Rapid"),
-        Classic20p20 => ("20+20".to_owned(), icon_for_speed(Classic), 20, 20, "Classic"),
-        Classic30p30 => ("30+30".to_owned(), icon_for_speed(Classic), 30, 30, "Classic"),
+        Classic20p20 => (
+            "20+20".to_owned(),
+            icon_for_speed(Classic),
+            20,
+            20,
+            "Classic",
+        ),
+        Classic30p30 => (
+            "30+30".to_owned(),
+            icon_for_speed(Classic),
+            30,
+            30,
+            "Classic",
+        ),
     };
-    let hover_text = format!(
-        "{speed_name}\n{base} min base time\n+{increment} sec per move"
-    );
+    let hover_text = format!("{speed_name}\n{base} min base time\n+{increment} sec per move");
     view! {
         <button
             class=BUTTON_STYLE
@@ -98,7 +106,7 @@ pub fn QuickPlay() -> impl IntoView {
             <span class="flex justify-center mb-4 text-xl font-bold">
                 {t!(i18n, home.create_game)}
             </span>
-            <div class="grid grid-cols-3 gap-2 sm:gap-4 w-full">
+            <div class="grid grid-cols-3 gap-2 w-full sm:gap-4">
                 <GridButton time_control=Bullet1p2 />
                 <GridButton time_control=Blitz3p3 />
                 <GridButton time_control=Blitz5p4 />

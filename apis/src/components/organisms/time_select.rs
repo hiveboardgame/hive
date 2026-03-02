@@ -1,7 +1,9 @@
-use crate::components::atoms::input_slider::InputSliderWithCallback;
-use crate::i18n::*;
-use crate::providers::{ChallengeParams, ChallengeParamsStoreFields};
-use crate::{common::TimeParamsStoreFields, components::atoms::rating::icon_for_speed};
+use crate::{
+    common::TimeParamsStoreFields,
+    components::atoms::{input_slider::InputSliderWithCallback, rating::icon_for_speed},
+    i18n::*,
+    providers::{ChallengeParams, ChallengeParamsStoreFields},
+};
 use leptos::prelude::*;
 use leptos_icons::*;
 use reactive_stores::Store;

@@ -1,6 +1,7 @@
 use crate::{
     components::{
-        atoms::toggle_controls::ToggleControls, layouts::base_layout::OrientationSignal,
+        atoms::toggle_controls::ToggleControls,
+        layouts::base_layout::OrientationSignal,
         organisms::dropdowns::chat::ChatDropdown,
     },
     providers::game_state::GameStateSignal,

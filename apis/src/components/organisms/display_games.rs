@@ -1,11 +1,15 @@
-use crate::components::molecules::game_row::GameRow;
-use crate::providers::{calculate_initial_batch_size, load_games, FilterState, GamesSearchContext};
+use crate::{
+    components::molecules::game_row::GameRow,
+    providers::{calculate_initial_batch_size, load_games, FilterState, GamesSearchContext},
+};
 use leptos::prelude::*;
-use leptos_router::hooks::use_params;
-use leptos_router::params::Params;
+use leptos_router::{hooks::use_params, params::Params};
 use leptos_use::{
-    use_element_bounding, use_infinite_scroll_with_options, watch_throttled_with_options,
-    UseInfiniteScrollOptions, WatchThrottledOptions,
+    use_element_bounding,
+    use_infinite_scroll_with_options,
+    watch_throttled_with_options,
+    UseInfiniteScrollOptions,
+    WatchThrottledOptions,
 };
 use shared_types::{BatchInfo, GameProgress};
 

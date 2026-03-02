@@ -16,7 +16,7 @@ pub fn SoundToggle() -> impl IntoView {
     view! {
         <div class="inline-flex justify-center items-center m-1 rounded">
             <button
-                class="flex justify-center items-center px-1 py-2 size-full"
+                class="flex justify-center items-center py-2 px-1 size-full"
                 on:click=move |_| {
                     set_cookie
                         .update(|c| {

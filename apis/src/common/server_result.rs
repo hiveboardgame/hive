@@ -1,13 +1,15 @@
 use super::game_reaction::GameReaction;
 use crate::responses::{
-    ChallengeResponse, GameResponse, HeartbeatResponse, ScheduleResponse, UserResponse,
+    ChallengeResponse,
+    GameResponse,
+    HeartbeatResponse,
+    ScheduleResponse,
+    UserResponse,
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use shared_types::{ChallengeId, ChatMessageContainer};
-use shared_types::{GameId, TournamentId};
-use std::collections::HashMap;
-use std::fmt;
+use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentId};
+use std::{collections::HashMap, fmt};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,6 +1,7 @@
 use crate::{
     components::layouts::base_layout::OrientationSignal,
-    functions::games::get::get_rating_history_resource, responses::RatingHistoryResponse,
+    functions::games::get::get_rating_history_resource,
+    responses::RatingHistoryResponse,
 };
 use chrono::{DateTime, Duration, Utc};
 use leptos::prelude::*;
@@ -47,7 +48,7 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
 
     view! {
         <div
-            class="w-full overflow-x-auto"
+            class="overflow-x-auto w-full"
             style=move || {
                 format!(
                     "padding-right: {}px; padding-left: {}px; padding-bottom: {}px;",
@@ -69,7 +70,7 @@ pub fn RatingGraph(user_id: Uuid, game_speed: GameSpeed) -> impl IntoView {
                                     view! { <p>"No rating history yet."</p> }.into_any()
                                 } else if hist.len() < 5 {
                                     view! {
-                                        <div class="text-center text-gray-600 dark:text-yellow-400 py-8 text-lg">
+                                        <div class="py-8 text-lg text-center text-gray-600 dark:text-yellow-400">
                                             "Not enough games to build a graph 🐝🐝🐝"
                                         </div>
                                     }

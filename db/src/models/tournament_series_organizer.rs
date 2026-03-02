@@ -2,7 +2,8 @@ use crate::{
     db_error::DbError,
     models::{tournament_series::TournamentSeries, user::User},
     schema::tournament_series_organizers::{
-        self, dsl::tournament_series_organizers as tournament_series_organizers_table,
+        self,
+        dsl::tournament_series_organizers as tournament_series_organizers_table,
     },
     DbConn,
 };

@@ -1,8 +1,6 @@
-use crate::color::Color;
-use crate::game_error::GameError;
+use crate::{color::Color, game_error::GameError};
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub enum GameControl {

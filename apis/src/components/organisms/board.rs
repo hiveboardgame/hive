@@ -1,20 +1,41 @@
-use crate::common::SvgPos;
-use crate::common::TileDesign;
-use crate::components::layouts::base_layout::OrientationSignal;
-use crate::components::molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces};
-use crate::providers::analysis::AnalysisSignal;
-use crate::providers::game_state::{GameStateSignal, View};
-use crate::providers::Config;
-use hive_lib::GameStatus;
-use leptos::either::Either;
-use leptos::ev::{
-    contextmenu, pointerdown, pointerleave, pointermove, pointerup, touchmove, touchstart, wheel,
+use crate::{
+    common::{SvgPos, TileDesign},
+    components::{
+        layouts::base_layout::OrientationSignal,
+        molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
+    },
+    providers::{
+        analysis::AnalysisSignal,
+        game_state::{GameStateSignal, View},
+        Config,
+    },
 };
-use leptos::{html, prelude::*, svg};
+use hive_lib::GameStatus;
+use leptos::{
+    either::Either,
+    ev::{
+        contextmenu,
+        pointerdown,
+        pointerleave,
+        pointermove,
+        pointerup,
+        touchmove,
+        touchstart,
+        wheel,
+    },
+    html,
+    prelude::*,
+    svg,
+};
 use leptos_use::{
-    on_click_outside, use_event_listener, use_event_listener_with_options,
-    use_intersection_observer_with_options, use_raf_fn, use_resize_observer,
-    UseEventListenerOptions, UseIntersectionObserverOptions,
+    on_click_outside,
+    use_event_listener,
+    use_event_listener_with_options,
+    use_intersection_observer_with_options,
+    use_raf_fn,
+    use_resize_observer,
+    UseEventListenerOptions,
+    UseIntersectionObserverOptions,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{TouchEvent, WheelEvent};

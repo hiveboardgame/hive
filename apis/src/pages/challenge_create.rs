@@ -1,15 +1,12 @@
-use crate::common::TimeParamsStoreFields;
-use crate::components::atoms::input_slider::InputSliderWithCallback;
-use crate::components::atoms::simple_switch::SimpleSwitchWithCallback;
-use crate::i18n::*;
-use crate::providers::{
-    ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields,
-};
 use crate::{
-    common::ChallengeAction,
+    common::{ChallengeAction, TimeParamsStoreFields},
     components::{
-        molecules::challenge_buttons_trio::ChallengeButtonsTrio, organisms::time_select::TimeSelect,
+        atoms::{input_slider::InputSliderWithCallback, simple_switch::SimpleSwitchWithCallback},
+        molecules::challenge_buttons_trio::ChallengeButtonsTrio,
+        organisms::time_select::TimeSelect,
     },
+    i18n::*,
+    providers::{ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields},
 };
 use hive_lib::GameType;
 use leptos::prelude::*;
@@ -137,7 +134,7 @@ pub fn ChallengeCreate(#[prop(optional)] opponent: Option<String>) -> impl IntoV
         params.is_public().update(|b| *b = !*b);
     });
     view! {
-        <div class="flex flex-col items-center w-72 xs:m-2 xs:w-80 sm:w-96">
+        <div class="flex flex-col items-center w-72 sm:w-96 xs:m-2 xs:w-80">
             <Show when=move || opponent_exists>
                 <div class="block">"Opponent: " {opponent.get_value()}</div>
             </Show>

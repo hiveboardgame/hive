@@ -1,5 +1,4 @@
-use crate::i18n::*;
-use crate::{common::TileRotation, providers::Config};
+use crate::{common::TileRotation, i18n::*, providers::Config};
 use leptos::prelude::*;
 
 #[component]

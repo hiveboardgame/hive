@@ -73,13 +73,13 @@ pub fn ProposalNotification(
             <div class="flex gap-2 justify-center">
                 <button
                     on:click=accept
-                    class="px-3 py-1 text-white bg-green-600 rounded transition-transform duration-300 hover:bg-green-500 active:scale-95"
+                    class="py-1 px-3 text-white bg-green-600 rounded transition-transform duration-300 hover:bg-green-500 active:scale-95"
                 >
                     "Accept"
                 </button>
                 <button
                     on:click=decline
-                    class="px-3 py-1 text-white bg-red-600 rounded transition-transform duration-300 hover:bg-red-500 active:scale-95"
+                    class="py-1 px-3 text-white bg-red-600 rounded transition-transform duration-300 hover:bg-red-500 active:scale-95"
                 >
                     "Decline"
                 </button>

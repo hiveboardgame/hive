@@ -1,10 +1,12 @@
-use crate::components::layouts::base_layout::COMMON_LINK_STYLE;
-use crate::components::molecules::{hamburger::Hamburger, ping::Ping};
-use crate::components::organisms::darkmode_toggle::DarkModeToggle;
-use crate::components::organisms::header::set_redirect;
-use crate::components::organisms::logout::Logout;
-use crate::i18n::*;
-use crate::providers::{AuthContext, RefererContext};
+use crate::{
+    components::{
+        layouts::base_layout::COMMON_LINK_STYLE,
+        molecules::{hamburger::Hamburger, ping::Ping},
+        organisms::{darkmode_toggle::DarkModeToggle, header::set_redirect, logout::Logout},
+    },
+    i18n::*,
+    providers::{AuthContext, RefererContext},
+};
 use leptos::prelude::*;
 
 #[component]

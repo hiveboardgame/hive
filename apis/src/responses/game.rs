@@ -4,8 +4,7 @@ use chrono::{DateTime, Utc};
 use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
 use serde::{Deserialize, Serialize};
 use shared_types::{Conclusion, GameId, GameSpeed, GameStart, TimeMode, TournamentGameResult};
-use std::cmp::Ordering;
-use std::{collections::HashMap, time::Duration};
+use std::{cmp::Ordering, collections::HashMap, time::Duration};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

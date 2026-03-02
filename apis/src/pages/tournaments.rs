@@ -1,11 +1,10 @@
-use crate::components::molecules::tournament_row::TournamentRow;
-use crate::functions::tournaments::{
-    get_by_status, get_hosting_tournaments, get_joined_tournaments,
+use crate::{
+    components::molecules::tournament_row::TournamentRow,
+    functions::tournaments::{get_by_status, get_hosting_tournaments, get_joined_tournaments},
+    providers::AuthContext,
+    responses::TournamentAbstractResponse,
 };
-use crate::providers::AuthContext;
-use crate::responses::TournamentAbstractResponse;
-use leptos::either::Either;
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 use leptos_router::hooks::use_location;
 use shared_types::{TournamentSortOrder, TournamentStatus};
 
@@ -95,7 +94,7 @@ pub fn TournamentList(
         <div class="flex flex-col items-center w-full">
             <input
                 type="text"
-                class="items-center p-2 mx-2 my-2 w-5/6"
+                class="items-center p-2 my-2 mx-2 w-5/6"
                 placeholder="Search tournaments by name"
                 on:input=move |ev| search.set(event_target_value(&ev))
                 prop:value=search

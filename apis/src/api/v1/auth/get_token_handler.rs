@@ -1,15 +1,18 @@
-use super::encode::{jwt_encode, Bot};
-use super::jwt_secret::JwtSecret;
-use actix_web::post;
-use actix_web::web::{Data, Json};
-use actix_web::HttpResponse;
+use super::{
+    encode::{jwt_encode, Bot},
+    jwt_secret::JwtSecret,
+};
+use actix_web::{
+    post,
+    web::{Data, Json},
+    HttpResponse,
+};
 use anyhow::{anyhow, Result};
 use argon2::{
     password_hash::{PasswordHash, PasswordVerifier},
     Argon2,
 };
-use db_lib::get_conn;
-use db_lib::{models::User, DbPool};
+use db_lib::{get_conn, models::User, DbPool};
 use serde_json::json;
 
 #[post("/api/v1/auth/token")]

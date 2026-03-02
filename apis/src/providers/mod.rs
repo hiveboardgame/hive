@@ -23,12 +23,18 @@ pub use alerts::{provide_alerts, AlertType, AlertsContext};
 pub use api_requests::{provide_api_requests, ApiRequestsProvider};
 pub use auth_context::{provide_auth, AuthContext};
 pub use challenge_params::{
-    challenge_params_cookie, provide_challenge_params, ChallengeParams, ChallengeParamsStoreFields,
+    challenge_params_cookie,
+    provide_challenge_params,
+    ChallengeParams,
+    ChallengeParamsStoreFields,
 };
 pub use config::{provide_config, Config};
 pub use game_updater::{provide_server_updates, UpdateNotifier};
 pub use games_search_context::{
-    calculate_initial_batch_size, load_games, provide_games_search_context, FilterState,
+    calculate_initial_batch_size,
+    load_games,
+    provide_games_search_context,
+    FilterState,
     GamesSearchContext,
 };
 pub use notifications::{provide_notifications, NotificationContext};

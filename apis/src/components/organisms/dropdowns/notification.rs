@@ -1,14 +1,20 @@
-use crate::components::molecules::{
-    challenge_row::ChallengeRow,
-    hamburger::Hamburger,
-    schedule_notification::{AcceptanceNotification, ProposalNotification},
-    tournament_invitation_notification::TournamentInvitationNotification,
-    tournament_status_notification::TournamentStatusNotification,
+use crate::{
+    components::molecules::{
+        challenge_row::ChallengeRow,
+        hamburger::Hamburger,
+        schedule_notification::{AcceptanceNotification, ProposalNotification},
+        tournament_invitation_notification::TournamentInvitationNotification,
+        tournament_status_notification::TournamentStatusNotification,
+    },
+    functions::tournaments::get_abstracts_by_ids,
+    providers::{
+        challenges::ChallengeStateSignal,
+        AuthContext,
+        NotificationContext,
+        SchedulesContext,
+    },
+    responses::ScheduleResponse,
 };
-use crate::functions::tournaments::get_abstracts_by_ids;
-use crate::providers::challenges::ChallengeStateSignal;
-use crate::providers::{AuthContext, NotificationContext, SchedulesContext};
-use crate::responses::ScheduleResponse;
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::GameId;

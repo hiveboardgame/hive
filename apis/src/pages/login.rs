@@ -1,8 +1,9 @@
-use crate::functions::auth::login::Login;
-use crate::i18n::*;
-use crate::providers::{AuthContext, RefererContext};
-use leptos::prelude::*;
-use leptos::{form::ActionForm, html};
+use crate::{
+    functions::auth::login::Login,
+    i18n::*,
+    providers::{AuthContext, RefererContext},
+};
+use leptos::{form::ActionForm, html, prelude::*};
 
 #[component]
 pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
@@ -29,7 +30,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                     {t!(i18n, user_config.login.email)}
                     <input
                         node_ref=my_input
-                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
+                        class="py-2 px-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="email"
                         id="email"
                         type="text"
@@ -40,7 +41,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                 <label class="block font-bold" for="password">
                     {t!(i18n, user_config.login.password)}
                     <input
-                        class="px-3 py-2 mb-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
+                        class="py-2 px-3 mb-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="password"
                         id="password"
                         type="password"
@@ -57,7 +58,7 @@ pub fn Login(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView
                     </Show>
                 </p>
                 <input
-                    class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none"
+                    class="py-2 px-4 font-bold text-white rounded transition-transform duration-300 cursor-pointer focus:outline-none active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                     type="submit"
                     value=move || t_string!(i18n, user_config.login.login_button)
                 />

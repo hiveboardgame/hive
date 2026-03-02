@@ -1,9 +1,9 @@
-use crate::common::SvgPos;
-use crate::common::TileDesign;
-use crate::providers::Config;
-use crate::{common::HexStack, components::molecules::simple_hex_stack::SimpleHexStack};
-use hive_lib::Board;
-use hive_lib::Position;
+use crate::{
+    common::{HexStack, SvgPos, TileDesign},
+    components::molecules::simple_hex_stack::SimpleHexStack,
+    providers::Config,
+};
+use hive_lib::{Board, Position};
 use leptos::prelude::*;
 
 #[component]

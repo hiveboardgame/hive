@@ -2,7 +2,13 @@ use super::{GameResponse, UserResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    ScoringMode, Standings, StartMode, Tiebreaker, TimeMode, TournamentId, TournamentStatus,
+    ScoringMode,
+    Standings,
+    StartMode,
+    Tiebreaker,
+    TimeMode,
+    TournamentId,
+    TournamentStatus,
 };
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;

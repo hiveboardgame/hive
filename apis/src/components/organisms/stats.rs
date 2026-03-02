@@ -1,7 +1,13 @@
-use crate::components::atoms::rating::{icon_for_speed, Rating};
-use crate::components::atoms::rating_history::RatingGraph;
-use crate::components::molecules::modal::Modal;
-use crate::responses::{RatingResponse, UserResponse};
+use crate::{
+    components::{
+        atoms::{
+            rating::{icon_for_speed, Rating},
+            rating_history::RatingGraph,
+        },
+        molecules::modal::Modal,
+    },
+    responses::{RatingResponse, UserResponse},
+};
 use leptos::{html::Dialog, prelude::*};
 use leptos_icons::*;
 use shared_types::GameSpeed;
@@ -31,7 +37,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                 .map(|rating| {
                     view! {
                         <button
-                            class="flex flex-col md:flex-row items-center gap-1 p-2 rounded-lg bg-gray-50 hover:bg-blue-50 dark:bg-gray-800 dark:hover:bg-gray-700 transition-all duration-200 cursor-pointer border border-gray-200 hover:border-blue-300 dark:border-gray-600 dark:hover:border-gray-500 shadow-sm hover:shadow-md hover:scale-[1.02] flex-shrink-0 w-fit"
+                            class="flex flex-col flex-shrink-0 gap-1 items-center p-2 bg-gray-50 rounded-lg border border-gray-200 shadow-sm transition-all duration-200 cursor-pointer md:flex-row dark:bg-gray-800 dark:border-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:shadow-md w-fit dark:hover:bg-gray-700 dark:hover:border-gray-500 hover:scale-[1.02]"
                             on:click={
                                 let rating = rating.clone();
                                 move |_| {
@@ -53,12 +59,12 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                 </div>
                             </div>
 
-                            <div class="hidden text-xs text-gray-500 md:block dark:text-gray-400 lg:hidden">
+                            <div class="hidden text-xs text-gray-500 md:block lg:hidden dark:text-gray-400">
                                 {rating.played} " games"
                             </div>
 
                             <div class="hidden lg:flex lg:flex-col lg:items-start lg:min-w-0">
-                                <div class="max-w-full text-sm font-medium text-gray-900 truncate dark:text-gray-100">
+                                <div class="max-w-full text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                                     {rating.speed.to_string()}
                                 </div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">
@@ -77,7 +83,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                     .get()
                     .map(|rating| {
                         view! {
-                            <div class="p-4 w-full max-w-md mx-auto">
+                            <div class="p-4 mx-auto w-full max-w-md">
                                 <div class="flex gap-2 items-center mb-4">
                                     <Icon icon=icon_for_speed(rating.speed) attr:class="size-6" />
                                     <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -112,7 +118,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                     </div>
                                     <div class="grid grid-cols-4 gap-2">
                                         <div class="p-2 min-w-0 text-center bg-gray-50 rounded-lg dark:bg-gray-800">
-                                            <div class="text-xs text-gray-500 truncate dark:text-gray-400">
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
                                                 Total
                                             </div>
                                             <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -120,7 +126,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                             </div>
                                         </div>
                                         <div class="p-2 min-w-0 text-center bg-green-50 rounded-lg dark:bg-green-900/20">
-                                            <div class="text-xs text-green-600 truncate dark:text-green-400">
+                                            <div class="text-xs text-green-600 dark:text-green-400 truncate">
                                                 Wins
                                             </div>
                                             <div class="text-sm font-semibold text-green-600 dark:text-green-400">
@@ -128,7 +134,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                             </div>
                                         </div>
                                         <div class="p-2 min-w-0 text-center bg-red-50 rounded-lg dark:bg-red-900/20">
-                                            <div class="text-xs text-red-600 truncate dark:text-red-400">
+                                            <div class="text-xs text-red-600 dark:text-red-400 truncate">
                                                 Losses
                                             </div>
                                             <div class="text-sm font-semibold text-red-600 dark:text-red-400">
@@ -136,7 +142,7 @@ pub fn Stats(user: UserResponse) -> impl IntoView {
                                             </div>
                                         </div>
                                         <div class="p-2 min-w-0 text-center bg-yellow-50 rounded-lg dark:bg-yellow-900/20">
-                                            <div class="text-xs text-yellow-600 truncate dark:text-yellow-400">
+                                            <div class="text-xs text-yellow-600 dark:text-yellow-400 truncate">
                                                 Draws
                                             </div>
                                             <div class="text-sm font-semibold text-yellow-600 dark:text-yellow-400">

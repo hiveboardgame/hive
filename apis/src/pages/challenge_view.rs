@@ -1,11 +1,11 @@
-use crate::components::molecules::challenge_row::ChallengeRow;
-use crate::functions::{challenges::get::get_challenge, hostname::hostname_and_port};
-use crate::providers::AuthContext;
-use leptos::either::Either;
-use leptos::prelude::*;
+use crate::{
+    components::molecules::challenge_row::ChallengeRow,
+    functions::{challenges::get::get_challenge, hostname::hostname_and_port},
+    providers::AuthContext,
+};
+use leptos::{either::Either, prelude::*};
 use leptos_icons::*;
-use leptos_router::hooks::use_params;
-use leptos_router::params::Params;
+use leptos_router::{hooks::use_params, params::Params};
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
 use shared_types::ChallengeId;
 

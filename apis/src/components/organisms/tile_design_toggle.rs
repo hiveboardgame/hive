@@ -1,5 +1,4 @@
-use crate::i18n::*;
-use crate::{common::TileDesign, providers::Config};
+use crate::{common::TileDesign, i18n::*, providers::Config};
 use leptos::prelude::*;
 
 #[component]
@@ -7,7 +6,7 @@ pub fn TileDesignToggle() -> impl IntoView {
     let i18n = use_i18n();
     view! {
         <p class="m-1 text-black dark:text-white">{t!(i18n, user_config.piece_style)}</p>
-        <div class="mb-2 p-2 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md">
+        <div class="p-2 mb-2 bg-yellow-50 rounded-md border border-yellow-200 dark:bg-yellow-900 dark:border-yellow-700">
             <p class="text-sm text-yellow-800 dark:text-yellow-200">
                 "⚠️ Note: Not all browsers support all tile designs. For the best experience, we recommend using Firefox."
             </p>
@@ -89,24 +88,24 @@ pub fn TilePreview(tile_design: TileDesign) -> impl IntoView {
             <img
                 src=format!("/assets/tiles/{}/white.svg", design_folder)
                 alt="White Background"
-                class="absolute inset-0 size-full object-contain dark:hidden"
+                class="object-contain absolute inset-0 dark:hidden size-full"
             />
             <img
                 src=format!("/assets/tiles/{}/black.svg", design_folder)
                 alt="Black Background"
-                class="absolute inset-0 size-full object-contain hidden dark:block"
+                class="hidden object-contain absolute inset-0 dark:block size-full"
             />
 
             // Piece overlay - black piece for light mode, white piece for dark mode
             <img
                 src=format!("/assets/tiles/{}/{}", design_folder, light_piece_name)
                 alt=format!("{:?} Ant (Light Mode)", tile_design)
-                class="absolute inset-0 size-full object-contain dark:hidden"
+                class="object-contain absolute inset-0 dark:hidden size-full"
             />
             <img
                 src=format!("/assets/tiles/{}/{}", design_folder, dark_piece_name)
                 alt=format!("{:?} Ant (Dark Mode)", tile_design)
-                class="absolute inset-0 size-full object-contain hidden dark:block"
+                class="hidden object-contain absolute inset-0 dark:block size-full"
             />
         </div>
     }

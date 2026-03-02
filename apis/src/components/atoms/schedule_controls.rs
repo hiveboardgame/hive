@@ -1,10 +1,11 @@
-use crate::common::ScheduleAction;
-use crate::components::atoms::date_time_picker::DateTimePicker;
-use crate::providers::ApiRequestsProvider;
-use crate::responses::ScheduleResponse;
+use crate::{
+    common::ScheduleAction,
+    components::atoms::date_time_picker::DateTimePicker,
+    providers::ApiRequestsProvider,
+    responses::ScheduleResponse,
+};
 use chrono::{DateTime, Duration, Local, Utc};
-use leptos::callback::Callback;
-use leptos::prelude::*;
+use leptos::{callback::Callback, prelude::*};
 use shared_types::GameId;
 use uuid::Uuid;
 
@@ -33,14 +34,14 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
         api.schedule_action(ScheduleAction::Accept(id));
     });
     view! {
-        <div class={format!(
+        <div class=format!(
             "flex justify-between p-2 rounded text-gray-900 dark:text-gray-100 {}",
             if agreed {
                 "bg-green-200 dark:bg-green-900"
             } else {
                 "bg-yellow-200 dark:bg-yellow-600"
-            }
-        )}>
+            },
+        )>
             <div class=format!(
                 "flex items-center {}",
                 if agreed { "font-bold" } else { "" },
@@ -48,7 +49,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
             <Show when=move || !agreed && proposer_id != player_id>
                 <button
                     on:click=move |_| accept.run((id,))
-                    class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                    class="py-2 px-2 m-1 text-white rounded transition-transform duration-300 active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                 >
 
                     "Accept"
@@ -60,7 +61,7 @@ pub fn GameDateControls(player_id: Uuid, schedule: ScheduleResponse) -> impl Int
                     api.schedule_action(ScheduleAction::Cancel(id));
                 }
 
-                class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 bg-ladybug-red hover:bg-red-400 active:scale-95"
+                class="py-2 px-2 m-1 text-white rounded transition-transform duration-300 hover:bg-red-400 active:scale-95 bg-ladybug-red"
             >
                 {(if proposer_id == player_id || agreed { "Cancel" } else { "Reject" }).to_string()}
             </button>
@@ -89,7 +90,7 @@ pub fn ProposeDateControls(game_id: GameId) -> impl IntoView {
             />
 
             <button
-                class="px-2 py-2 m-1 text-white rounded transition-transform duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                class="py-2 px-2 m-1 text-white rounded transition-transform duration-300 active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                 on:click=move |_| propose.run((selected_time.get(),))
             >
 

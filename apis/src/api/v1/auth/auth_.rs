@@ -1,11 +1,15 @@
 use super::jwt_secret::JwtSecret;
 use actix_web::{
-    dev::Payload, error::InternalError, http::header, FromRequest, HttpRequest, HttpResponse,
+    dev::Payload,
+    error::InternalError,
+    http::header,
+    FromRequest,
+    HttpRequest,
+    HttpResponse,
 };
 use db_lib::{get_conn, models::User, DbPool};
 use serde_json::json;
-use std::future::Future;
-use std::pin::Pin;
+use std::{future::Future, pin::Pin};
 pub struct Auth(pub User);
 use actix_web::web::Data;
 

@@ -1,17 +1,23 @@
-use crate::api::v1::auth::Auth;
-use crate::api::v1::messages::send::{send_control_messages, send_turn_messages};
-use crate::websocket::WsServer;
+use crate::{
+    api::v1::{
+        auth::Auth,
+        messages::send::{send_control_messages, send_turn_messages},
+    },
+    websocket::WsServer,
+};
 use actix::Addr;
-use actix_web::web::{Data, Json};
-use actix_web::{post, HttpResponse};
+use actix_web::{
+    post,
+    web::{Data, Json},
+    HttpResponse,
+};
 use anyhow::{anyhow, Result};
 use db_lib::{
     get_conn,
     models::{Game, User},
     DbPool,
 };
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::{Color, GameControl, Piece, Position, State, Turn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;

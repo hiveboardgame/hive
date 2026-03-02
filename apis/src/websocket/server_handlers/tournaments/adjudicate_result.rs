@@ -8,8 +8,7 @@ use db_lib::{
     models::{Game, Schedule, Tournament},
     DbPool,
 };
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use shared_types::{GameId, TournamentGameResult, TournamentId};
 use uuid::Uuid;
 

@@ -33,7 +33,7 @@ pub fn InviteButton(user_id: Uuid, tournament_id: TournamentId) -> impl IntoView
             <button
                 title="Invite to tournament"
                 on:click=invite
-                class="p-1 mx-2 text-white rounded transition-transform duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                class="p-1 mx-2 text-white rounded transition-transform duration-300 active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
             >
                 <Icon icon=icondata_ai::AiUserAddOutlined attr:class="size-6" />
             </button>

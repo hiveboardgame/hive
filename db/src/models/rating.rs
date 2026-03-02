@@ -7,10 +7,18 @@ use crate::{
 use bb8::PooledConnection;
 use chrono::{DateTime, Utc};
 use diesel::{
-    prelude::*, AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable,
+    prelude::*,
+    AsChangeset,
+    Associations,
+    Identifiable,
+    Insertable,
+    Queryable,
+    Selectable,
 };
 use diesel_async::{
-    pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl,
+    pooled_connection::AsyncDieselConnectionManager,
+    AsyncPgConnection,
+    RunQueryDsl,
 };
 use hive_lib::{Color, GameResult};
 use serde::{Deserialize, Serialize};

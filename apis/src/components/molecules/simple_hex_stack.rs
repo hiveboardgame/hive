@@ -1,6 +1,8 @@
-use crate::common::HexStack;
-use crate::components::atoms::simple_hex::SimpleHex;
-use crate::providers::config::TileOptions;
+use crate::{
+    common::HexStack,
+    components::atoms::simple_hex::SimpleHex,
+    providers::config::TileOptions,
+};
 use leptos::prelude::*;
 
 #[component]

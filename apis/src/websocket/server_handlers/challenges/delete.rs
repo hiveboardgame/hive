@@ -1,11 +1,10 @@
-use crate::websocket::messages::{InternalServerMessage, MessageDestination};
 use crate::{
     common::{ChallengeUpdate, ServerMessage},
     responses::ChallengeResponse,
+    websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
-use db_lib::get_conn;
-use db_lib::{models::Challenge, DbPool};
+use db_lib::{get_conn, models::Challenge, DbPool};
 use shared_types::{ChallengeError, ChallengeId, ChallengeVisibility};
 use uuid::Uuid;
 

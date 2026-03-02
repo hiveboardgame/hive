@@ -1,10 +1,9 @@
-use crate::common::ActiveState;
-use crate::common::SvgPos;
-use crate::providers::game_state::GameStateSignal;
+use crate::{
+    common::{ActiveState, SvgPos},
+    providers::game_state::GameStateSignal,
+};
 use hive_lib::Position;
-use leptos::either::Either;
-use leptos::prelude::*;
-use leptos::text_prop::TextProp;
+use leptos::{either::Either, prelude::*, text_prop::TextProp};
 
 #[component]
 pub fn Active(

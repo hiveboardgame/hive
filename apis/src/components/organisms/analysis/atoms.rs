@@ -1,6 +1,10 @@
-use crate::pages::analysis::ToggleStates;
-use crate::providers::analysis::{AnalysisSignal, TreeNode};
-use crate::providers::game_state::GameStateSignal;
+use crate::{
+    pages::analysis::ToggleStates,
+    providers::{
+        analysis::{AnalysisSignal, TreeNode},
+        game_state::GameStateSignal,
+    },
+};
 use leptos::{html, prelude::*};
 use leptos_icons::Icon;
 use tree_ds::prelude::Node;
@@ -38,7 +42,7 @@ pub fn UndoButton() -> impl IntoView {
 
     view! {
         <button
-            class="flex justify-center place-items-center m-1 h-7 rounded-md border-2 border-cyan-500 drop-shadow-lg transition-transform duration-300 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 dark:border-button-twilight disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+            class="flex justify-center place-items-center m-1 h-7 rounded-md border-2 border-cyan-500 transition-transform duration-300 active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed drop-shadow-lg dark:hover:bg-pillbug-teal dark:border-button-twilight hover:bg-pillbug-teal disabled:hover:bg-transparent"
             on:click=undo
             prop:disabled=is_disabled
         >

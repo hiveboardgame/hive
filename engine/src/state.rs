@@ -1,17 +1,18 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::str::FromStr;
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
-use crate::bug::Bug;
-use crate::color::Color;
-use crate::game_error::GameError;
-use crate::game_result::GameResult;
-use crate::game_status::GameStatus;
-use crate::history::History;
-use crate::piece::Piece;
-use crate::player::Player;
-use crate::position::Position;
-use crate::{board::Board, game_type::GameType};
+use crate::{
+    board::Board,
+    bug::Bug,
+    color::Color,
+    game_error::GameError,
+    game_result::GameResult,
+    game_status::GameStatus,
+    game_type::GameType,
+    history::History,
+    piece::Piece,
+    player::Player,
+    position::Position,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct State {

@@ -1,6 +1,7 @@
 use db_lib::{
     config::DbConfig,
-    get_conn, get_pool,
+    get_conn,
+    get_pool,
     models::{NewUser, User},
 };
 

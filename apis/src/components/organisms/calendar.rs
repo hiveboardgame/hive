@@ -1,9 +1,14 @@
-use crate::components::molecules::upcoming_game_row::UpcomingGameRow;
-use crate::functions::schedules::get_upcoming_tournament_games;
+use crate::{
+    components::molecules::upcoming_game_row::UpcomingGameRow,
+    functions::schedules::get_upcoming_tournament_games,
+};
 use chrono::{DateTime, Duration, Local};
 use leptos::prelude::*;
 use leptos_use::{
-    use_interval_fn_with_options, utils::Pausable, watch_with_options, UseIntervalFnOptions,
+    use_interval_fn_with_options,
+    utils::Pausable,
+    watch_with_options,
+    UseIntervalFnOptions,
     WatchOptions,
 };
 

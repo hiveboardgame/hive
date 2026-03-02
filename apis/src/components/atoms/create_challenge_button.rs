@@ -21,7 +21,7 @@ pub fn CreateChallengeButton(
             title=color_choice.get_value().to_string()
             formmethod="dialog"
             type="submit"
-            class="m-1 h-[4.5rem] w-16 bg-odd-light dark:bg-gray-700 my-1 p-1 transform transition-transform duration-300 active:scale-95 hover:shadow-xl dark:hover:shadow dark:hover:shadow-gray-500 drop-shadow-lg dark:shadow-gray-600 rounded"
+            class="p-1 m-1 my-1 w-16 rounded transition-transform duration-300 transform dark:bg-gray-700 hover:shadow-xl active:scale-95 h-[4.5rem] bg-odd-light drop-shadow-lg dark:hover:shadow dark:hover:shadow-gray-500 dark:shadow-gray-600"
 
             on:click=move |_| { create_challenge.run(color_choice.get_value()) }
         >

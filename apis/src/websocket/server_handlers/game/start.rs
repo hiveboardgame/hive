@@ -14,8 +14,7 @@ use db_lib::{
     models::{Game, Schedule},
     DbPool,
 };
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use shared_types::GameId;
 use uuid::Uuid;
 

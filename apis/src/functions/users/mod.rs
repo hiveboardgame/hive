@@ -18,8 +18,7 @@ pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError>
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::User;
+    use db_lib::{get_conn, models::User};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     Ok(User::username_exists(&username, &mut conn).await?)
@@ -31,8 +30,10 @@ pub async fn get_top_users(
     limit: i64,
 ) -> Result<Vec<UserResponse>, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::{Rating, User};
+    use db_lib::{
+        get_conn,
+        models::{Rating, User},
+    };
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let top_users: Vec<(User, Rating)> = User::get_top_users(&game_speed, limit, &mut conn).await?;

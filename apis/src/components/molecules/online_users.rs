@@ -1,6 +1,7 @@
-use crate::i18n::*;
 use crate::{
-    common::UserAction, components::molecules::user_search::UserSearch,
+    common::UserAction,
+    components::molecules::user_search::UserSearch,
+    i18n::*,
     providers::online_users::OnlineUsersSignal,
 };
 use leptos::prelude::*;
@@ -18,10 +19,6 @@ pub fn OnlineUsers() -> impl IntoView {
     });
 
     view! {
-        <UserSearch
-            fallback_users=fallback_users
-            show_count
-            actions=vec![UserAction::Challenge]
-        />
+        <UserSearch fallback_users=fallback_users show_count actions=vec![UserAction::Challenge] />
     }
 }

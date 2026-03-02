@@ -1,21 +1,29 @@
-use crate::direction::Direction;
-use crate::hasher::Hasher;
-use crate::position::{CircleIter, Rotation};
-use crate::SvgPosition;
 use crate::{
-    bug::Bug, bug_stack::BugStack, color::Color, dfs_info::DfsInfo, game_error::GameError,
-    game_result::GameResult, game_type::GameType, piece::Piece, position::Position,
+    bug::Bug,
+    bug_stack::BugStack,
+    color::Color,
+    dfs_info::DfsInfo,
+    direction::Direction,
+    game_error::GameError,
+    game_result::GameResult,
+    game_type::GameType,
+    hasher::Hasher,
+    piece::Piece,
+    position::{CircleIter, Position, Rotation},
     torus_array::TorusArray,
+    SvgPosition,
 };
 use anyhow::Result;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::fmt::{self, Write};
-use std::fs::{self, OpenOptions};
-use std::io::{BufWriter, Write as Writer};
-use std::path::PathBuf;
+use std::{
+    cmp::Ordering,
+    collections::HashMap,
+    fmt::{self, Write},
+    fs::{self, OpenOptions},
+    io::{BufWriter, Write as Writer},
+    path::PathBuf,
+};
 
 pub const BOARD_SIZE: i32 = 32;
 lazy_static! {

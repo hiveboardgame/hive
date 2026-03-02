@@ -1,6 +1,8 @@
-use crate::components::molecules::invite_user::InviteUser;
-use crate::components::molecules::user_row::UserRow;
-use crate::{common::UserAction, responses::TournamentResponse};
+use crate::{
+    common::UserAction,
+    components::molecules::{invite_user::InviteUser, user_row::UserRow},
+    responses::TournamentResponse,
+};
 use leptos::prelude::*;
 
 #[component]

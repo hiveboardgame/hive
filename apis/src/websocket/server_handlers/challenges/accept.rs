@@ -1,8 +1,10 @@
-use crate::websocket::busybee::Busybee;
 use crate::{
     common::{ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        busybee::Busybee,
+        messages::{InternalServerMessage, MessageDestination},
+    },
 };
 use anyhow::Result;
 use db_lib::{
@@ -10,8 +12,7 @@ use db_lib::{
     models::{Challenge, Game, NewGame, Rating, User},
     DbPool,
 };
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use shared_types::{ChallengeId, GameSpeed};
 use uuid::Uuid;
 

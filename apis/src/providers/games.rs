@@ -1,14 +1,13 @@
 use super::AuthContext;
-use crate::responses::AccountResponse;
-use crate::responses::GameResponse;
+use crate::responses::{AccountResponse, GameResponse};
 use chrono::{DateTime, Utc};
 use hive_lib::{Color, GameControl};
 use leptos::prelude::*;
-use shared_types::GameId;
-use shared_types::TimeMode;
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
-use std::collections::HashMap;
+use shared_types::{GameId, TimeMode};
+use std::{
+    cmp::Ordering,
+    collections::{BinaryHeap, HashMap},
+};
 
 #[derive(Clone, Debug, Copy)]
 pub struct GamesSignal {

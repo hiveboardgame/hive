@@ -1,8 +1,6 @@
-use crate::providers::websocket::WebsocketContext;
-use crate::providers::PingContext;
+use crate::providers::{websocket::WebsocketContext, PingContext};
 use chrono::Utc;
-use leptos::either::Either;
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 use leptos_icons::*;
 use leptos_use::core::ConnectionReadyState;
 

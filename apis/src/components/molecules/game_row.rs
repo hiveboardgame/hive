@@ -1,15 +1,18 @@
-use crate::i18n::*;
 use crate::{
     common::RatingChangeInfo,
     components::{
         atoms::{
-            download_pgn::DownloadPgn, profile_link::ProfileLink, status_indicator::StatusIndicator,
+            download_pgn::DownloadPgn,
+            profile_link::ProfileLink,
+            status_indicator::StatusIndicator,
         },
         molecules::{
-            rating_and_change::RatingAndChange, thumbnail_pieces::ThumbnailPieces,
+            rating_and_change::RatingAndChange,
+            thumbnail_pieces::ThumbnailPieces,
             time_row::TimeRow,
         },
     },
+    i18n::*,
     responses::GameResponse,
 };
 use chrono::Utc;
@@ -136,7 +139,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
         }
     };
     view! {
-        <article class="relative flex flex-col w-full min-h-[10rem] sm:min-h-[14rem] duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+        <article class="flex relative flex-col w-full duration-300 min-h-[10rem] sm:min-h-[14rem] dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="flex justify-between items-start m-2">
                 <div class="flex flex-col gap-1">
                     <p class="flex gap-1 truncate">{rated_string} <TimeRow time_info /></p>
@@ -153,11 +156,11 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                 </div>
                 <div class="flex flex-col flex-1 min-w-0">
                     <Show when=move || { is_tournament }>
-                        <div class="flex pb-1 mb-1 border-b border-gray-200 dark:border-gray-700 md:place-content-center">
+                        <div class="flex pb-1 mb-1 border-b border-gray-200 md:place-content-center dark:border-gray-700">
                             <p class="flex gap-1 text-sm truncate">
                                 {t!(i18n, game.played_in)}
                                 <a
-                                    class="relative z-30 text-blue-500 truncate hover:underline"
+                                    class="relative z-30 text-blue-500 hover:underline truncate"
                                     href=format!("/tournament/{}", tournament_id)
                                 >
                                     {tournament_name.clone()}
@@ -167,8 +170,8 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                     </Show>
                     <p class="mb-2 font-semibold text-center">{status_string}</p>
 
-                    <div class="flex gap-1 justify-between items-center mb-2 overflow-hidden">
-                        <div class="flex flex-col items-center min-w-0 w-[45%] overflow-hidden">
+                    <div class="flex overflow-hidden gap-1 justify-between items-center mb-2">
+                        <div class="flex overflow-hidden flex-col items-center min-w-0 w-[45%]">
                             <div class=player_class(Color::White)>
                                 <StatusIndicator username=white_player.username.clone() />
                                 <ProfileLink
@@ -188,7 +191,7 @@ pub fn GameRow(game: GameResponse) -> impl IntoView {
                             attr:class="flex-shrink-0 mx-1 text-sm"
                         />
 
-                        <div class="flex flex-col items-center min-w-0 w-[45%] overflow-hidden">
+                        <div class="flex overflow-hidden flex-col items-center min-w-0 w-[45%]">
                             <div class=player_class(Color::Black)>
                                 <ProfileLink
                                     username=black_player.username.clone()

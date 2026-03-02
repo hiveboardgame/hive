@@ -175,7 +175,7 @@ fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 moves.push(
                         view! {
                             <div
-                                class="underline cursor-pointer no-link-style hover:text-pillbug-teal active:scale-95"
+                                class="underline cursor-pointer active:scale-95 no-link-style hover:text-pillbug-teal"
                                 on:click=move |_| {
                                     analysis
                                         .update(|a| {

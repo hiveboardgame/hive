@@ -1,8 +1,6 @@
 use crate::challenge::ChallengeError;
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
-use std::time::Duration;
+use std::{fmt, str::FromStr, time::Duration};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum TimeMode {

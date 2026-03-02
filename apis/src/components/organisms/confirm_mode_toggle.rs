@@ -1,5 +1,4 @@
-use crate::i18n::*;
-use crate::{common::MoveConfirm, providers::Config};
+use crate::{common::MoveConfirm, i18n::*, providers::Config};
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use shared_types::GameSpeed;

@@ -1,5 +1,4 @@
-use crate::common::RatingChangeInfo;
-use crate::providers::game_state::GameStateSignal;
+use crate::{common::RatingChangeInfo, providers::game_state::GameStateSignal};
 use hive_lib::Color;
 use leptos::prelude::*;
 use std::cmp::Ordering;

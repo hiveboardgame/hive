@@ -1,7 +1,6 @@
 use itertools::Itertools;
 
-use crate::color::Color;
-use crate::piece::Piece;
+use crate::{color::Color, piece::Piece};
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

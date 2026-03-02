@@ -1,9 +1,8 @@
-use crate::common::MoveConfirm;
-use crate::common::SvgPos;
-use crate::pages::play::CurrentConfirm;
-use crate::providers::analysis::AnalysisSignal;
-use crate::providers::game_state::GameStateSignal;
-use crate::providers::ApiRequestsProvider;
+use crate::{
+    common::{MoveConfirm, SvgPos},
+    pages::play::CurrentConfirm,
+    providers::{analysis::AnalysisSignal, game_state::GameStateSignal, ApiRequestsProvider},
+};
 use hive_lib::Position;
 use leptos::prelude::*;
 

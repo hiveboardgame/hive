@@ -1,7 +1,5 @@
 use crate::{
-    common::{
-        GameReaction, {GameActionResponse, GameUpdate, ServerMessage},
-    },
+    common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
@@ -9,10 +7,10 @@ use anyhow::Result;
 use db_lib::{
     get_conn,
     models::{Game, User},
-    DbConn, DbPool,
+    DbConn,
+    DbPool,
 };
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::{GameControl, GameError};
 use shared_types::{GameId, TimeMode};
 use uuid::Uuid;

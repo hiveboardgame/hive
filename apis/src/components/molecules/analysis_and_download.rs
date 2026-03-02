@@ -1,5 +1,4 @@
-use crate::components::atoms::download_pgn::DownloadPgn;
-use crate::providers::game_state::GameStateSignal;
+use crate::{components::atoms::download_pgn::DownloadPgn, providers::game_state::GameStateSignal};
 use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
@@ -36,7 +35,7 @@ pub fn AnalysisAndDownload() -> impl IntoView {
             <div class="flex justify-center items-center place-self-start">
                 <a
                     href=analysis_url
-                    class="justify-self-end place-self-center m-1 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
+                    class="justify-self-end place-self-center m-1 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                 >
                     <Icon icon=icondata_tb::TbMicroscopeOutline attr:class="py-1 size-7" />
                 </a>

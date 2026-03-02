@@ -3,7 +3,8 @@ use crate::{
     get_conn,
     models::{tournament::Tournament, user::User},
     schema::tournaments_organizers::{
-        self, dsl::tournaments_organizers as tournament_organizer_table,
+        self,
+        dsl::tournaments_organizers as tournament_organizer_table,
     },
     DbPool,
 };

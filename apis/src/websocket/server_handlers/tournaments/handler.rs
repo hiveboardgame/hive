@@ -1,11 +1,20 @@
 use std::sync::Arc;
 
 use super::{
-    abandon::AbandonHandler, adjudicate_result::AdjudicateResultHandler, create::CreateHandler,
-    delete::DeleteHandler, finish::FinishHandler, invitation_accept::InvitationAccept,
-    invitation_create::InvitationCreate, invitation_decline::InvitationDecline,
-    invitation_retract::InvitationRetract, join::JoinHandler, kick::KickHandler,
-    leave::LeaveHandler, progress_to_next_round::SwissRoundHandler, start::StartHandler,
+    abandon::AbandonHandler,
+    adjudicate_result::AdjudicateResultHandler,
+    create::CreateHandler,
+    delete::DeleteHandler,
+    finish::FinishHandler,
+    invitation_accept::InvitationAccept,
+    invitation_create::InvitationCreate,
+    invitation_decline::InvitationDecline,
+    invitation_retract::InvitationRetract,
+    join::JoinHandler,
+    kick::KickHandler,
+    leave::LeaveHandler,
+    progress_to_next_round::SwissRoundHandler,
+    start::StartHandler,
 };
 use crate::{
     common::TournamentAction,

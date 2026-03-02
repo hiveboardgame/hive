@@ -36,11 +36,12 @@ pub async fn register(
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2,
     };
-    use db_lib::db_error::DbError;
-    use db_lib::get_conn;
-    use db_lib::models::{NewUser, User};
-    use diesel_async::scoped_futures::ScopedFutureExt;
-    use diesel_async::AsyncConnection;
+    use db_lib::{
+        db_error::DbError,
+        get_conn,
+        models::{NewUser, User},
+    };
+    use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 
     validate_password(&password, &password_confirmation).map_err(ServerFnError::new)?;
 

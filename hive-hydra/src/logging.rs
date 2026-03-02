@@ -3,7 +3,8 @@ use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::{self, time::UtcTime},
     layer::SubscriberExt,
-    EnvFilter, Registry,
+    EnvFilter,
+    Registry,
 };
 
 pub fn setup_logging() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {

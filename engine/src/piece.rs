@@ -1,10 +1,7 @@
-use crate::bug::Bug;
-use crate::color::Color;
-use crate::game_error::GameError;
+use crate::{bug::Bug, color::Color, game_error::GameError};
 use bitfield_struct::bitfield;
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 #[bitfield(u8)]
 #[derive(Serialize, Deserialize, PartialEq, Hash, Eq, PartialOrd, Ord)]

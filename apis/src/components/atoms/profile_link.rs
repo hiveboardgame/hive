@@ -1,7 +1,5 @@
-use crate::components::molecules::hover_ratings::HoverRating;
-use crate::responses::UserResponse;
-use leptos::html;
-use leptos::prelude::*;
+use crate::{components::molecules::hover_ratings::HoverRating, responses::UserResponse};
+use leptos::{html, prelude::*};
 use leptos_icons::*;
 
 #[component]
@@ -38,7 +36,7 @@ pub fn ProfileLink(
                     {username} <Show when=patreon>
                         <Icon icon=icondata_lu::LuCrown attr:class="size-2" />
                     </Show> <Show when=bot>
-                        <span class="text-[80%] ml-1">BOT</span>
+                        <span class="ml-1 text-[80%]">BOT</span>
                     </Show>
                 </div>
             </a>

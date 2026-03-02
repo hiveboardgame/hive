@@ -1,21 +1,22 @@
-use crate::common::HexType;
-use crate::common::PieceType;
-use crate::providers::config::TileOptions;
 use crate::{
-    common::{ActiveState, HexStack},
+    common::{ActiveState, HexStack, HexType, PieceType},
     components::atoms::hex::Hex,
+    providers::config::TileOptions,
 };
 use hive_lib::Position;
-use leptos::either::Either;
-use leptos::ev::{pointerdown, touchstart};
-use leptos::prelude::*;
 use leptos::{
-    ev::{pointerup, touchend},
+    either::Either,
+    ev::{pointerdown, pointerup, touchend, touchstart},
+    prelude::*,
     svg,
 };
 use leptos_use::{
-    use_event_listener, use_event_listener_with_options, use_timeout_fn, use_window,
-    UseEventListenerOptions, UseTimeoutFnReturn,
+    use_event_listener,
+    use_event_listener_with_options,
+    use_timeout_fn,
+    use_window,
+    UseEventListenerOptions,
+    UseTimeoutFnReturn,
 };
 
 #[component]
@@ -76,11 +77,7 @@ pub fn HexStack(
                 );
                 Either::Left(view! {
                     <g node_ref=g_ref>
-                        <Hex
-                            hex=hex
-                            tile_opts=tile_opts.get_value()
-                            target_stack
-                        />
+                        <Hex hex=hex tile_opts=tile_opts.get_value() target_stack />
                     </g>
                 })
             } else {
