@@ -1,20 +1,23 @@
-use super::start::StartHandler;
 use super::{
-    control_handler::GameControlHandler, join_handler::JoinHandler,
-    timeout_handler::TimeoutHandler, turn_handler::TurnHandler,
+    control_handler::GameControlHandler,
+    join_handler::JoinHandler,
+    start::StartHandler,
+    timeout_handler::TimeoutHandler,
+    turn_handler::TurnHandler,
 };
-use crate::common::GameAction;
-use crate::websocket::messages::{InternalServerMessage, WsMessage};
-use crate::websocket::WebsocketData;
+use crate::{
+    common::GameAction,
+    websocket::{
+        messages::{InternalServerMessage, WsMessage},
+        WebsocketData,
+    },
+};
 use anyhow::Result;
-use db_lib::get_conn;
-use db_lib::{models::Game, DbPool};
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
+use db_lib::{get_conn, models::Game, DbPool};
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::{GameError, GameStatus};
 use shared_types::GameId;
-use std::str::FromStr;
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 use uuid::Uuid;
 pub struct GameActionHandler {
     game_action: GameAction,

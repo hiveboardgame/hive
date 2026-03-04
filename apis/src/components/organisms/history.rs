@@ -1,8 +1,14 @@
-use crate::components::atoms::history_button::set_timer_from_response;
-use crate::components::molecules::history_controls::HistoryControls;
-use crate::components::organisms::side_board::move_query_signal;
-use crate::providers::game_state::{self, GameStateSignal};
-use crate::providers::timer::TimerSignal;
+use crate::{
+    components::{
+        atoms::history_button::set_timer_from_response,
+        molecules::history_controls::HistoryControls,
+        organisms::side_board::move_query_signal,
+    },
+    providers::{
+        game_state::{self, GameStateSignal},
+        timer::TimerSignal,
+    },
+};
 use hive_lib::GameStatus;
 use leptos::{html, prelude::*};
 use leptos_icons::*;
@@ -158,7 +164,7 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
                     <div class="col-span-4 text-center">{conclusion}</div>
                     <a
                         href=analysis_url
-                        class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
+                        class="col-span-4 place-self-center w-4/5 text-white rounded duration-300 no-link-style bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                     >
                         <div class="flex gap-1 justify-center items-center">
                             <Icon icon=icondata_tb::TbMicroscopeOutline attr:class="py-1 size-7" />

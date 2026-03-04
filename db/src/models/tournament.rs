@@ -2,15 +2,24 @@ use super::{Game, NewGame, TournamentInvitation};
 use crate::{
     db_error::DbError,
     models::{
-        tournament_organizer::TournamentOrganizer, tournament_user::TournamentUser, user::User,
+        tournament_organizer::TournamentOrganizer,
+        tournament_user::TournamentUser,
+        user::User,
     },
     schema::{
         games::{self, tournament_id as tournament_id_column},
         tournaments::{
-            self, ends_at, nanoid as nanoid_field, series as series_column, started_at, starts_at,
-            status as status_column, updated_at,
+            self,
+            ends_at,
+            nanoid as nanoid_field,
+            series as series_column,
+            started_at,
+            starts_at,
+            status as status_column,
+            updated_at,
         },
-        tournaments_organizers, users,
+        tournaments_organizers,
+        users,
     },
     DbConn,
 };
@@ -20,15 +29,20 @@ use diesel_async::RunQueryDsl;
 use hive_lib::Color;
 use itertools::Itertools;
 use nanoid::nanoid;
-use rand::rng;
-use rand::seq::SliceRandom;
+use rand::{rng, seq::SliceRandom};
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    Standings, Tiebreaker, TimeMode, TournamentDetails, TournamentGameResult, TournamentId,
-    TournamentMode, TournamentSortOrder, TournamentStatus,
+    Standings,
+    Tiebreaker,
+    TimeMode,
+    TournamentDetails,
+    TournamentGameResult,
+    TournamentId,
+    TournamentMode,
+    TournamentSortOrder,
+    TournamentStatus,
 };
-use std::collections::VecDeque;
-use std::str::FromStr;
+use std::{collections::VecDeque, str::FromStr};
 use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
@@ -684,7 +698,7 @@ impl Tournament {
             for (white, black) in [(p1, p2), (p2, p1)] {
                 let new_game = NewGame::new_from_tournament(white, black, self);
                 let game = Game::create(new_game, conn).await?;
-                
+
                 if let Some(winner) = if white == bye_player.id {
                     Some(Color::Black)
                 } else if black == bye_player.id {
@@ -699,7 +713,7 @@ impl Tournament {
                     )
                     .await?;
                 }
-                
+
                 games.push(game);
             }
         }
@@ -861,8 +875,9 @@ impl Tournament {
         let bye_player = User::find_by_username("SwissByePlayer", conn).await?;
         for (a, b) in pairings {
             for (white, black) in [(a, b), (b, a)] {
-                let game = Game::create(NewGame::new_from_tournament(white, black, self), conn).await?;
-                
+                let game =
+                    Game::create(NewGame::new_from_tournament(white, black, self), conn).await?;
+
                 if let Some(winner) = if white == bye_player.id {
                     Some(Color::Black)
                 } else if black == bye_player.id {
@@ -877,7 +892,7 @@ impl Tournament {
                     )
                     .await?;
                 }
-                
+
                 games.push(game);
             }
         }

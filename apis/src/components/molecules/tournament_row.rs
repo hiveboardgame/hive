@@ -1,10 +1,10 @@
-use crate::components::atoms::progress_bar::ProgressBar;
-use crate::components::molecules::time_row::TimeRow;
-use crate::responses::TournamentAbstractResponse;
+use crate::{
+    components::{atoms::progress_bar::ProgressBar, molecules::time_row::TimeRow},
+    responses::TournamentAbstractResponse,
+};
 use chrono::Local;
 use leptos::prelude::*;
-use shared_types::PrettyString;
-use shared_types::{TimeInfo, TournamentMode, TournamentStatus};
+use shared_types::{PrettyString, TimeInfo, TournamentMode, TournamentStatus};
 
 #[component]
 pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
@@ -44,12 +44,18 @@ pub fn TournamentRow(tournament: TournamentAbstractResponse) -> impl IntoView {
     let total_games = tournament.games_total;
     let finished_games = Signal::derive(move || tournament.games_played);
     view! {
-        <article class="flex relative flex-col justify-between items-center px-2 py-4 mx-2 w-5/6 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
+        <article class="flex relative flex-col justify-between items-center py-4 px-2 mx-2 w-5/6 duration-300 dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light hover:bg-blue-light hover:dark:bg-teal-900">
             <div class="flex justify-center w-full font-bold break-words">{tournament.name}</div>
             <div class="flex flex-row justify-between w-full">
                 <div class="flex flex-col">
                     <div class="flex gap-1">
-                        <div>{tournament.mode.parse::<TournamentMode>().map(|m| m.pretty_string()).unwrap_or_default()}</div>
+                        <div>
+                            {tournament
+                                .mode
+                                .parse::<TournamentMode>()
+                                .map(|m| m.pretty_string())
+                                .unwrap_or_default()}
+                        </div>
                     </div>
                     <TimeRow time_info />
                     <div>{seats_taken}</div>

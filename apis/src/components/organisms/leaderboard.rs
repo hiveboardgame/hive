@@ -1,9 +1,9 @@
-use crate::common::UserAction;
-use crate::components::atoms::rating::icon_for_speed;
-use crate::{components::molecules::user_row::UserRow, functions::users::get_top_users};
-use leptos::either::Either;
-use leptos::logging::log;
-use leptos::prelude::*;
+use crate::{
+    common::UserAction,
+    components::{atoms::rating::icon_for_speed, molecules::user_row::UserRow},
+    functions::users::get_top_users,
+};
+use leptos::{either::Either, logging::log, prelude::*};
 use leptos_icons::Icon;
 use shared_types::GameSpeed;
 
@@ -40,7 +40,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                                 if !is_empty() { "hidden" } else { "flex" },
                                             )
                                         }>{move || if is_empty() { "No one yet" } else { "" }}</div>
-                                        <div class="rounded-lg overflow-hidden">
+                                        <div class="overflow-hidden rounded-lg">
                                             <For
                                                 each=move || { users.get_value() }
 

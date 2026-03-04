@@ -1,5 +1,7 @@
-use std::io::Write;
-use std::process::{Child, Command, Stdio};
+use std::{
+    io::Write,
+    process::{Child, Command, Stdio},
+};
 use tracing::info;
 
 #[derive(Debug)]

@@ -1,5 +1,7 @@
-use crate::providers::game_state::{GameState, GameStateSignal};
-use crate::responses::GameResponse;
+use crate::{
+    providers::game_state::{GameState, GameStateSignal},
+    responses::GameResponse,
+};
 use bimap::BiMap;
 use hive_lib::{GameError, GameType, History, State};
 use leptos::prelude::*;

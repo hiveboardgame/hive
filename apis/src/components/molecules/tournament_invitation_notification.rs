@@ -1,7 +1,9 @@
-use crate::common::TournamentAction;
-use crate::components::molecules::time_row::TimeRow;
-use crate::providers::ApiRequestsProvider;
-use crate::responses::TournamentAbstractResponse;
+use crate::{
+    common::TournamentAction,
+    components::molecules::time_row::TimeRow,
+    providers::ApiRequestsProvider,
+    responses::TournamentAbstractResponse,
+};
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::TimeInfo;
@@ -32,16 +34,16 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
     };
 
     view! {
-        <div class="flex items-center justify-between text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light w-full p-2">
+        <div class="flex justify-between items-center p-2 w-full text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
             <div class="flex relative flex-grow">
-                <div class="xs:py-1 xs:px-1 sm:py-2 sm:px-2">
+                <div class="sm:py-2 sm:px-2 xs:py-1 xs:px-1">
                     <div class="text-sm font-medium">Tournament Invitation</div>
                     <div class="font-bold">{tournament.name}</div>
                 </div>
-                <div class="xs:py-1 xs:px-1 sm:py-2 sm:px-2">
+                <div class="sm:py-2 sm:px-2 xs:py-1 xs:px-1">
                     <TimeRow time_info />
                 </div>
-                <div class="xs:py-1 xs:px-1 sm:py-2 sm:px-2">
+                <div class="sm:py-2 sm:px-2 xs:py-1 xs:px-1">
                     <div>Players: {seats_taken}</div>
                 </div>
                 <a
@@ -54,14 +56,14 @@ pub fn TournamentInvitationNotification(tournament: TournamentAbstractResponse) 
                     title="Accept Invitation"
                     on:click=accept
                     prop:disabled=seats_full
-                    class="z-20 p-1 text-white rounded transition-transform duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    class="z-20 p-1 text-white rounded transition-transform duration-300 active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal disabled:hover:bg-transparent"
                 >
                     <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
                 </button>
                 <button
                     title="Decline Invitation"
                     on:click=decline
-                    class="z-20 p-1 text-white rounded transition-transform duration-300 bg-ladybug-red hover:bg-red-400 active:scale-95"
+                    class="z-20 p-1 text-white rounded transition-transform duration-300 hover:bg-red-400 active:scale-95 bg-ladybug-red"
                 >
                     <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
                 </button>

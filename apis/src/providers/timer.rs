@@ -1,10 +1,8 @@
 use crate::responses::{GameResponse, HeartbeatResponse};
-use chrono::DateTime;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use hive_lib::Color;
 use leptos::prelude::*;
-use shared_types::GameId;
-use shared_types::TimeMode;
+use shared_types::{GameId, TimeMode};
 use std::time::Duration;
 
 #[derive(Clone, Debug, Copy)]

@@ -1,5 +1,4 @@
-use crate::components::molecules::banner::Banner;
-use crate::i18n::*;
+use crate::{components::molecules::banner::Banner, i18n::*};
 use leptos::prelude::*;
 
 #[component]
@@ -16,7 +15,7 @@ pub fn Faq() -> impl IntoView {
 
                 <div class="space-y-6">
 
-                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                         <h2 class="mb-4 text-xl font-bold text-center text-blue-600 dark:text-blue-400">
                             {t!(i18n, faq.sections.getting_started)}
                         </h2>
@@ -25,11 +24,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.what_is_hive.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -53,11 +48,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.hive_rules.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -83,11 +74,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.expansions_supported.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -107,11 +94,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.can_i_play_base_game.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -131,11 +114,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.resign_ok.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -155,11 +134,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.signup_required.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -179,11 +154,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.mobile_friendly.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -203,11 +174,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.mobile_app.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -227,11 +194,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.profile_navigation.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -249,7 +212,7 @@ pub fn Faq() -> impl IntoView {
                         </div>
                     </div>
 
-                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                         <h2 class="mb-4 text-xl font-bold text-center text-green-600 dark:text-green-400">
                             {t!(i18n, faq.sections.game_settings)}
                         </h2>
@@ -258,11 +221,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.game_types.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -282,11 +241,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.start_game.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -306,11 +261,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.time_controls.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -330,11 +281,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.realtime_vs_correspondence.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -354,11 +301,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.casual_vs_rated.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -378,11 +321,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.why_elo_has_questionmark.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -402,11 +341,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.base_vs_mlp.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -426,11 +361,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.private_vs_public.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -450,11 +381,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.rating_range.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -474,11 +401,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.color_selection.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -498,11 +421,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.how_to_check_stack.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -522,11 +441,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.spectate_games.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -546,11 +461,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.turn_alerts.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -572,11 +483,7 @@ pub fn Faq() -> impl IntoView {
                                         {t!(i18n, faq.correspondence_notifications.question)}
                                     </span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -596,11 +503,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.chat_basics.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -618,7 +521,7 @@ pub fn Faq() -> impl IntoView {
                         </div>
                     </div>
 
-                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                         <h2 class="mb-4 text-xl font-bold text-center text-purple-600 dark:text-purple-400">
                             {t!(i18n, faq.sections.tournaments)}
                         </h2>
@@ -627,11 +530,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.can_i_set_up_a_tournament.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -651,11 +550,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.tournament_entry.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -675,11 +570,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.tournament_duration.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -699,11 +590,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.tournament_stats.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -723,11 +610,7 @@ pub fn Faq() -> impl IntoView {
                                 <summary class="flex justify-between items-center p-3 font-medium text-gray-700 rounded-lg cursor-pointer dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                     <span>{t!(i18n, faq.tournament_games.question)}</span>
                                     <span class="flex-shrink-0 ml-1.5 transition group-open:rotate-180">
-                                        <svg
-                                            class="size-5"
-                                            viewBox="0 0 20 20"
-                                            fill="currentColor"
-                                        >
+                                        <svg class="size-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path
                                                 fill-rule="evenodd"
                                                 d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -745,7 +628,7 @@ pub fn Faq() -> impl IntoView {
                         </div>
                     </div>
 
-                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                         <h2 class="mb-4 text-xl font-bold text-center text-orange-600 dark:text-orange-400">
                             {t!(i18n, faq.sections.account_configuration)}
                         </h2>
@@ -828,7 +711,7 @@ pub fn Faq() -> impl IntoView {
                         </div>
                     </div>
 
-                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                         <h2 class="mb-4 text-xl font-bold text-center text-red-600 dark:text-red-400">
                             {t!(i18n, faq.sections.more_features)}
                         </h2>
@@ -883,7 +766,7 @@ pub fn Faq() -> impl IntoView {
                         </div>
                     </div>
 
-                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                         <h2 class="mb-4 text-xl font-bold text-center text-indigo-600 dark:text-indigo-400">
                             {t!(i18n, faq.sections.community_support)}
                         </h2>
@@ -1080,7 +963,7 @@ pub fn Faq() -> impl IntoView {
                         </div>
                     </div>
 
-                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 dark:bg-slate-800 border-stone-400 dark:border-slate-600">
+                    <div class="px-8 pt-6 pb-8 mb-6 rounded-lg border shadow-lg bg-stone-300 border-stone-400 dark:bg-slate-800 dark:border-slate-600">
                         <h2 class="mb-4 text-xl font-bold text-center text-yellow-600 dark:text-yellow-400">
                             {t!(i18n, faq.sections.donating)}
                         </h2>

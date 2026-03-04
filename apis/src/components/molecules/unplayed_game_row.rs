@@ -1,7 +1,9 @@
-use crate::providers::schedules::SchedulesContext;
-use crate::providers::ApiRequestsProvider;
-use crate::responses::GameResponse;
-use crate::{common::TournamentAction, components::atoms::profile_link::ProfileLink};
+use crate::{
+    common::TournamentAction,
+    components::atoms::profile_link::ProfileLink,
+    providers::{schedules::SchedulesContext, ApiRequestsProvider},
+    responses::GameResponse,
+};
 use chrono::{DateTime, Duration, Local, Utc};
 use hive_lib::Color;
 use leptos::prelude::*;
@@ -183,7 +185,7 @@ pub fn UnplayedGameRow(
                         fallback=move || {
                             view! {
                                 <button
-                                    class="flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-ladybug-red hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                                    class="flex justify-center items-center py-2 px-4 font-bold text-white rounded active:scale-95 bg-ladybug-red dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                                     on:click=toggle_adjudicate
                                 >
                                     {"Cancel"}
@@ -192,7 +194,7 @@ pub fn UnplayedGameRow(
                         }
                     >
                         <button
-                            class="flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-ladybug-red hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                            class="flex justify-center items-center py-2 px-4 font-bold text-white rounded active:scale-95 bg-ladybug-red dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                             on:click=move |_| adjudicate(TournamentGameResult::Unknown)
                         >
                             {"Delete"}

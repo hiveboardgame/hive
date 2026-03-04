@@ -1,5 +1,4 @@
-use crate::components::molecules::banner::Banner;
-use crate::i18n::*;
+use crate::{components::molecules::banner::Banner, i18n::*};
 use leptos::prelude::*;
 
 #[component]

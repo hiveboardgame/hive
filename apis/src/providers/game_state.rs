@@ -1,16 +1,20 @@
 use std::str::FromStr;
 
-use crate::common::{MoveInfo, PieceType};
-use crate::responses::GameResponse;
+use crate::{
+    common::{MoveInfo, PieceType},
+    responses::GameResponse,
+};
 use hive_lib::{Color, GameControl, GameStatus, GameType, Piece, Position, State, Turn};
-use leptos::logging::log;
-use leptos::prelude::*;
+use leptos::{logging::log, prelude::*};
 use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
-use super::analysis::AnalysisSignal;
-use super::api_requests::ApiRequests;
-use super::{auth_context::AuthContext, ApiRequestsProvider};
+use super::{
+    analysis::AnalysisSignal,
+    api_requests::ApiRequests,
+    auth_context::AuthContext,
+    ApiRequestsProvider,
+};
 
 #[derive(Clone, Debug, Copy)]
 pub struct GameStateSignal {

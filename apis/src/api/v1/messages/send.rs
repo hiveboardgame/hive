@@ -1,8 +1,15 @@
-use crate::common::{
-    ChallengeUpdate, GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult,
+use crate::{
+    common::{
+        ChallengeUpdate,
+        GameActionResponse,
+        GameReaction,
+        GameUpdate,
+        ServerMessage,
+        ServerResult,
+    },
+    responses::{ChallengeResponse, GameResponse},
+    websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer},
 };
-use crate::responses::{ChallengeResponse, GameResponse};
-use crate::websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer};
 use actix::Addr;
 use actix_web::web::Data;
 use anyhow::Result;

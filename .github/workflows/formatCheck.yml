@@ -1,0 +1,11 @@
+name: Format Check
+on: pull_request
+jobs:
+  format_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+        with: 
+          components: rustfmt
+      - run: cargo install leptosfmt && cargo fmt -q --check && leptosfmt apis -q --check

@@ -1,6 +1,10 @@
-use crate::components::layouts::base_layout::{COMMON_LINK_STYLE, DROPDOWN_MENU_STYLE};
-use crate::components::molecules::hamburger::Hamburger;
-use crate::i18n::*;
+use crate::{
+    components::{
+        layouts::base_layout::{COMMON_LINK_STYLE, DROPDOWN_MENU_STYLE},
+        molecules::hamburger::Hamburger,
+    },
+    i18n::*,
+};
 use leptos::prelude::*;
 use leptos_icons::*;
 

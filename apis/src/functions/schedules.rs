@@ -4,10 +4,8 @@ use leptos::prelude::*;
 
 #[server]
 pub async fn mark_schedule_seen(schedule_id: String) -> Result<(), ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::Schedule;
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, models::Schedule};
     use uuid::Uuid;
     let user_id = uuid().await?;
     let pool = pool().await?;
@@ -23,10 +21,8 @@ pub async fn mark_schedule_seen(schedule_id: String) -> Result<(), ServerFnError
 #[server]
 pub async fn get_upcoming_tournament_games(
 ) -> Result<Vec<(DateTime<Utc>, GameResponse)>, ServerFnError> {
-    use crate::functions::db::pool;
-    use crate::responses::GameResponse;
-    use db_lib::get_conn;
-    use db_lib::models::Schedule;
+    use crate::{functions::db::pool, responses::GameResponse};
+    use db_lib::{get_conn, models::Schedule};
 
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;

@@ -1,6 +1,10 @@
 use crate::{
-    color::Color, game_error::GameError, game_result::GameResult, game_status::GameStatus,
-    game_type::GameType, state::State,
+    color::Color,
+    game_error::GameError,
+    game_result::GameResult,
+    game_status::GameStatus,
+    game_type::GameType,
+    state::State,
 };
 use lazy_static::lazy_static;
 use regex::Regex;

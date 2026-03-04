@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-use crate::components::layouts::base_layout::OrientationSignal;
-use crate::i18n::*;
-use crate::providers::game_state::GameStateSignal;
-use crate::providers::ApiRequestsProvider;
+use crate::{
+    components::layouts::base_layout::OrientationSignal,
+    i18n::*,
+    providers::{game_state::GameStateSignal, ApiRequestsProvider},
+};
 use leptos::prelude::*;
 use leptos_icons::*;
 use shared_types::{GameId, ReadyUser};
@@ -89,7 +90,7 @@ pub fn Unstarted(
                     <button
                         on:click=start
 
-                        class="flex justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                        class="flex justify-center items-center py-2 px-4 font-bold text-white rounded active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                     >
                         Ready
                     </button>

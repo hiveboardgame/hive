@@ -1,9 +1,14 @@
 use crate::{
     common::GameActionResponse,
-    providers::{AlertType, AlertsContext, AuthContext, SoundType, Sounds},
-};
-use crate::{
-    providers::{games::GamesSignal, UpdateNotifier},
+    providers::{
+        games::GamesSignal,
+        AlertType,
+        AlertsContext,
+        AuthContext,
+        SoundType,
+        Sounds,
+        UpdateNotifier,
+    },
     responses::GameResponse,
 };
 use hive_lib::GameControl;

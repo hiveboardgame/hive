@@ -1,8 +1,5 @@
-use crate::components::atoms::rating::RatingWithIcon;
-use crate::responses::UserResponse;
-use leptos::either::Either;
-use leptos::html;
-use leptos::prelude::*;
+use crate::{components::atoms::rating::RatingWithIcon, responses::UserResponse};
+use leptos::{either::Either, html, prelude::*};
 use shared_types::GameSpeed;
 
 #[component]
@@ -33,7 +30,7 @@ pub fn HoverRating(user: UserResponse, anchor_ref: NodeRef<html::A>) -> impl Int
 
     view! {
         <div
-            class="fixed z-50 p-2 rounded bg-even-light dark:bg-gray-950 pointer-events-none left-[var(--popup-x)] top-[var(--popup-y)]"
+            class="fixed z-50 p-2 rounded pointer-events-none bg-even-light left-[var(--popup-x)] top-[var(--popup-y)] dark:bg-gray-950"
             style=position_vars
         >
             {ratings}

@@ -1,7 +1,9 @@
 use super::Game;
-use crate::schema::{schedules, tournaments};
-use crate::DbConn;
-use crate::{db_error::DbError, schema::games};
+use crate::{
+    db_error::DbError,
+    schema::{games, schedules, tournaments},
+    DbConn,
+};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;

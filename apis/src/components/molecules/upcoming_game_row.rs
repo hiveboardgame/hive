@@ -1,7 +1,8 @@
-use crate::components::atoms::profile_link::ProfileLink;
-use crate::components::molecules::time_row::TimeRow;
-use crate::providers::AuthContext;
-use crate::responses::GameResponse;
+use crate::{
+    components::{atoms::profile_link::ProfileLink, molecules::time_row::TimeRow},
+    providers::AuthContext,
+    responses::GameResponse,
+};
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -93,7 +94,7 @@ pub fn UpcomingGameRow(
 
                 <Show when=show_button>
                     <a
-                        class="flex items-center justify-center px-3 py-1 text-sm font-medium text-white rounded no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 min-w-[5rem]"
+                        class="flex justify-center items-center py-1 px-3 text-sm font-medium text-white rounded active:scale-95 no-link-style bg-button-dawn min-w-[5rem] dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                         href=format!("/game/{}", game.game_id)
                     >
                         {move || {

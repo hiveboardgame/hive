@@ -1,16 +1,19 @@
-use crate::components::organisms::analysis::atoms::{
-    CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation,
+use crate::{
+    components::organisms::{
+        analysis::{
+            atoms::{CollapsibleMove, HistoryButton, HistoryMove, HistoryNavigation},
+            DownloadTree,
+            LoadTree,
+            UndoButton,
+        },
+        reserve::{Alignment, Reserve},
+    },
+    providers::analysis::{AnalysisSignal, AnalysisTree, TreeNode},
 };
-use crate::components::organisms::{
-    analysis::{DownloadTree, LoadTree, UndoButton},
-    reserve::{Alignment, Reserve},
-};
-use crate::providers::analysis::{AnalysisSignal, AnalysisTree, TreeNode};
 use hive_lib::Color;
 use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
-use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::{cmp::Ordering, collections::HashMap};
 use tree_ds::prelude::*;
 
 const BTN_CLASS: &str = "flex z-20 justify-center items-center m-1 w-44 h-10 text-white rounded-sm transition-transform duration-300 aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
@@ -121,8 +124,7 @@ fn render_history_items(
 
                 if let Some(node) = maybe_node {
                     // Plain row: children render via their own entries, so has_children=false.
-                    view! { <HistoryMove current_path node has_children=false /> }
-                    .into_any()
+                    view! { <HistoryMove current_path node has_children=false /> }.into_any()
                 } else {
                     view! { <div>"Invalid node"</div> }.into_any()
                 }
@@ -134,8 +136,7 @@ fn render_history_items(
                 if let Some(node) = maybe_node {
                     let inner_view = render_history_items(inner, analysis, current_path);
 
-                    view! { <CollapsibleMove current_path node inner=inner_view /> }
-                    .into_any()
+                    view! { <CollapsibleMove current_path node inner=inner_view /> }.into_any()
                 } else {
                     view! { <div>"Invalid node"</div> }.into_any()
                 }

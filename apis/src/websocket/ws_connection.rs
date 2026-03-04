@@ -1,14 +1,28 @@
-use super::WebsocketData;
-use super::{messages::MessageDestination, server_handlers::request_handler::RequestHandler};
-use crate::common::{ClientRequest, ExternalServerError, ServerResult};
-use crate::websocket::server_handlers::request_handler::RequestHandlerError;
-use crate::websocket::{
-    messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
-    ws_server::WsServer,
+use super::{
+    messages::MessageDestination,
+    server_handlers::request_handler::RequestHandler,
+    WebsocketData,
+};
+use crate::{
+    common::{ClientRequest, ExternalServerError, ServerResult},
+    websocket::{
+        messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
+        server_handlers::request_handler::RequestHandlerError,
+        ws_server::WsServer,
+    },
 };
 use actix::{
-    fut, Actor, ActorContext, ActorFutureExt, Addr, AsyncContext, ContextFutureSpawner, Handler,
-    Running, StreamHandler, WrapFuture,
+    fut,
+    Actor,
+    ActorContext,
+    ActorFutureExt,
+    Addr,
+    AsyncContext,
+    ContextFutureSpawner,
+    Handler,
+    Running,
+    StreamHandler,
+    WrapFuture,
 };
 use actix_web_actors::ws::{self};
 use anyhow::Result;
@@ -16,8 +30,10 @@ use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 use db_lib::DbPool;
 use indoc::printdoc;
 use shared_types::SimpleUser;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use uuid::Uuid;
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);

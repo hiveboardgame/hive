@@ -9,17 +9,21 @@ pub async fn edit_account(
     password: String,
     pathname: String,
 ) -> Result<AccountResponse, ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::auth::register::validate_password;
-    use crate::functions::db::pool;
+    use crate::functions::{
+        auth::{identity::uuid, register::validate_password},
+        db::pool,
+    };
     use argon2::{
         password_hash::{
-            rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
+            rand_core::OsRng,
+            PasswordHash,
+            PasswordHasher,
+            PasswordVerifier,
+            SaltString,
         },
         Argon2,
     };
-    use db_lib::get_conn;
-    use db_lib::models::User;
+    use db_lib::{get_conn, models::User};
 
     validate_password(&new_password, &new_password_confirmation).map_err(ServerFnError::new)?;
     let uuid = uuid().await?;
@@ -49,10 +53,8 @@ pub async fn edit_account(
 
 #[server]
 pub async fn edit_takeback(takeback: Takeback) -> Result<(), ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::User;
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, models::User};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let user = User::find_by_uuid(&uuid().await?, &mut conn).await?;

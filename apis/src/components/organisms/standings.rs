@@ -1,9 +1,5 @@
-use crate::components::molecules::score_row::ScoreRow;
-use crate::i18n::*;
-use crate::responses::TournamentResponse;
-use leptos::ev;
-use leptos::html::Div;
-use leptos::prelude::*;
+use crate::{components::molecules::score_row::ScoreRow, i18n::*, responses::TournamentResponse};
+use leptos::{ev, html::Div, prelude::*};
 use leptos_icons::*;
 use leptos_use::on_click_outside;
 use shared_types::Tiebreaker;
@@ -38,25 +34,26 @@ fn TiebreakerHeader(tiebreaker: Tiebreaker) -> impl IntoView {
             <div node_ref=container_ref class="relative">
                 <button
                     type="button"
-                    class="flex items-center justify-center gap-1 cursor-pointer flex-wrap xs:flex-nowrap text-center w-full"
+                    class="flex flex-wrap gap-1 justify-center items-center w-full text-center cursor-pointer xs:flex-nowrap"
                     on:click=toggle_tooltip
                     title="Click for explanation"
                     attr:aria-expanded=move || is_open.get().to_string()
                 >
-                    <span class="hover:cursor-help whitespace-normal xs:whitespace-nowrap" title=explanation.clone()>
+                    <span
+                        class="whitespace-normal xs:whitespace-nowrap hover:cursor-help"
+                        title=explanation.clone()
+                    >
                         {tiebreaker.pretty_str().to_owned()}
                     </span>
-                    <div class="hidden xs:inline-flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <div class="hidden justify-center items-center w-4 h-4 text-gray-500 sm:w-5 sm:h-5 dark:text-gray-400 hover:text-gray-700 xs:inline-flex dark:hover:text-gray-200">
                         <Icon icon=icondata_bi::BiInfoCircleRegular attr:class="w-5 h-5" />
                     </div>
                 </button>
                 <Show when=move || is_open.get()>
-                    <div
-                        class="absolute left-1/2 top-full -translate-x-1/2 z-50 mt-1 p-2 text-xs font-normal normal-case text-left bg-white text-gray-900 border border-gray-200 rounded-lg shadow-lg dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 whitespace-normal break-words w-fit max-w-[18rem] text-wrap"
-                    >
+                    <div class="absolute left-1/2 top-full z-50 p-2 mt-1 text-xs font-normal text-left text-gray-900 normal-case whitespace-normal break-words bg-white rounded-lg border border-gray-200 shadow-lg -translate-x-1/2 dark:text-gray-200 dark:bg-gray-700 dark:border-gray-600 w-fit max-w-[18rem] text-wrap">
                         <div class="relative">
                             {explanation()}
-                            <div class="absolute left-1/2 -top-1 -translate-x-1/2 w-2 h-2 bg-white border-l border-t border-gray-200 dark:bg-gray-700 dark:border-gray-600 rotate-45"></div>
+                            <div class="absolute -top-1 left-1/2 w-2 h-2 bg-white border-t border-l border-gray-200 rotate-45 -translate-x-1/2 dark:bg-gray-700 dark:border-gray-600"></div>
                         </div>
                     </div>
                 </Show>
@@ -87,7 +84,7 @@ pub fn Standings(tournament: Signal<TournamentResponse>) -> impl IntoView {
 
     view! {
         <div class="relative">
-            <table class="m-2 table-auto w-full sm:w-auto h-fit">
+            <table class="m-2 w-full table-auto sm:w-auto h-fit">
                 <thead>
                     <tr class="[&>th:nth-child(3)]:pl-2 sm:[&>th:nth-child(3)]:pl-3">
                         <th class=TH_CLASS>Pos</th>

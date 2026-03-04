@@ -19,7 +19,7 @@ pub fn DarkModeToggle(#[prop(optional)] extend_tw_classes: &'static str) -> impl
                         });
                 }
 
-                class="flex justify-center items-center px-1 py-2 size-full"
+                class="flex justify-center items-center py-2 px-1 size-full"
                 value=move || { if config().prefers_dark { "dark" } else { "light" } }
                 inner_html=move || {
                     if config().prefers_dark {

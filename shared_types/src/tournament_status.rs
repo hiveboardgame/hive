@@ -1,7 +1,6 @@
 use crate::PrettyString;
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default, Hash)]
 pub enum TournamentStatus {

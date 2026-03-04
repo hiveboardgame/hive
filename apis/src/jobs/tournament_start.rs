@@ -1,15 +1,20 @@
-use crate::common::{
-    GameActionResponse, GameReaction, GameUpdate, ServerMessage, ServerResult, TournamentUpdate,
+use crate::{
+    common::{
+        GameActionResponse,
+        GameReaction,
+        GameUpdate,
+        ServerMessage,
+        ServerResult,
+        TournamentUpdate,
+    },
+    responses::GameResponse,
+    websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer},
 };
-use crate::responses::GameResponse;
-use crate::websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer};
 use actix::Addr;
 use actix_web::web::Data;
-use codee::binary::MsgpackSerdeCodec;
-use codee::Encoder;
+use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{get_conn, models::Tournament, DbPool};
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use shared_types::TournamentId;
 use std::time::Duration;
 

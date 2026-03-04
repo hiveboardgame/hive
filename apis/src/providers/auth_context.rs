@@ -1,7 +1,8 @@
-use crate::functions::accounts::get::get_account;
-use crate::functions::auth::logout::Logout;
-use crate::providers::websocket::WebsocketContext;
-use crate::responses::AccountResponse;
+use crate::{
+    functions::{accounts::get::get_account, auth::logout::Logout},
+    providers::websocket::WebsocketContext,
+    responses::AccountResponse,
+};
 use leptos::prelude::*;
 #[derive(Clone)]
 pub struct AuthContext {

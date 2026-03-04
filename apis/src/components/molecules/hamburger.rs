@@ -1,5 +1,4 @@
-use leptos::html::Div;
-use leptos::prelude::*;
+use leptos::{html::Div, prelude::*};
 use leptos_use::{on_click_outside_with_options, OnClickOutsideOptions};
 
 #[component]

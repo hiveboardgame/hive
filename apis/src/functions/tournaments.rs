@@ -9,8 +9,7 @@ pub async fn get_all_abstract(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::Tournament;
+    use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let tournaments = Tournament::get_all(sort_order, &mut conn).await?;
@@ -30,8 +29,7 @@ pub async fn get_complete(
     tournament_id: TournamentId,
 ) -> Result<TournamentResponse, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::Tournament;
+    use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let tournament = Tournament::find_by_tournament_id(&tournament_id, &mut conn).await?;
@@ -48,8 +46,7 @@ pub async fn get_by_status(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::Tournament;
+    use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let tournaments = Tournament::get_by_status(status, sort_order, &mut conn).await?;
@@ -69,8 +66,7 @@ pub async fn get_abstracts_by_ids(
     tournament_ids: HashSet<TournamentId>,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
     use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::Tournament;
+    use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let tournament_ids: Vec<TournamentId> = tournament_ids.into_iter().collect();
@@ -91,10 +87,8 @@ pub async fn get_abstracts_by_ids(
 pub async fn get_hosting_tournaments(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::Tournament;
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let user_id = uuid().await?;
@@ -114,10 +108,8 @@ pub async fn get_hosting_tournaments(
 pub async fn get_joined_tournaments(
     sort_order: TournamentSortOrder,
 ) -> Result<Vec<TournamentAbstractResponse>, ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::Tournament;
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, models::Tournament};
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
     let user_id = uuid().await?;
@@ -138,10 +130,8 @@ pub async fn update_description(
     tournament_id: String,
     description: String,
 ) -> Result<(), ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::Tournament;
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, models::Tournament};
 
     if description.len() < 50 {
         return Err(ServerFnError::new(

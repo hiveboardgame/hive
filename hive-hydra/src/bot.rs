@@ -1,9 +1,13 @@
-use crate::config::BotConfig;
-use crate::hivegame_bot_api::HiveGameApi;
-use crate::turn_tracker::{TurnTracker, TurnTracking};
-use crate::BotGameTurn;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use crate::{
+    config::BotConfig,
+    hivegame_bot_api::HiveGameApi,
+    turn_tracker::{TurnTracker, TurnTracking},
+    BotGameTurn,
+};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tokio::sync::{mpsc, Mutex, Semaphore};
 use tracing::{debug, error, info};
 

@@ -1,7 +1,6 @@
 use config::{Config as ConfigBuilder, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -58,8 +57,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
-    use std::fs;
+    use std::{env, fs};
 
     use tempfile::TempDir;
 

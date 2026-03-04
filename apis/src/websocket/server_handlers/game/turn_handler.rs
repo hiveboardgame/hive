@@ -1,5 +1,4 @@
-use crate::websocket::busybee::Busybee;
-use crate::websocket::WebsocketData;
+use crate::websocket::{busybee::Busybee, WebsocketData};
 
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
@@ -12,12 +11,10 @@ use db_lib::{
     models::{Game, Tournament, User},
     DbPool,
 };
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::{GameError, State, Turn};
 use shared_types::{GameId, TimeMode};
-use std::str::FromStr;
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 use uuid::Uuid;
 
 pub struct TurnHandler {

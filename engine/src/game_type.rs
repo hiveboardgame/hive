@@ -1,7 +1,6 @@
 use crate::game_error::GameError;
 use serde::Serialize;
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq, Copy, Default, serde_with::DeserializeFromStr)]
 pub enum GameType {

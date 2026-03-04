@@ -1,10 +1,9 @@
-use super::challenges::ChallengeStateSignal;
-use super::games::GamesSignal;
-use super::{auth_context, websocket};
-use crate::common::{ChallengeAction, ScheduleAction, TournamentAction};
-use crate::common::{ClientRequest, GameAction};
-use crate::providers::websocket::WebsocketContext;
-use crate::responses::{create_challenge_handler, AccountResponse};
+use super::{auth_context, challenges::ChallengeStateSignal, games::GamesSignal, websocket};
+use crate::{
+    common::{ChallengeAction, ClientRequest, GameAction, ScheduleAction, TournamentAction},
+    providers::websocket::WebsocketContext,
+    responses::{create_challenge_handler, AccountResponse},
+};
 use hive_lib::{GameControl, Turn};
 use leptos::prelude::*;
 use shared_types::{ChallengeId, ChatMessageContainer, GameId, TournamentGameResult, TournamentId};

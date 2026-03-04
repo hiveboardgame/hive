@@ -1,14 +1,19 @@
-use crate::components::atoms::status_indicator::StatusIndicator;
-use crate::components::molecules::time_row::TimeRow;
-use crate::i18n::*;
-use crate::providers::{ApiRequestsProvider, Config};
 use crate::{
-    components::atoms::game_type::GameType, components::atoms::profile_link::ProfileLink,
-    functions::hostname::hostname_and_port, responses::ChallengeResponse,
+    components::{
+        atoms::{
+            game_type::GameType,
+            profile_link::ProfileLink,
+            status_indicator::StatusIndicator,
+        },
+        molecules::time_row::TimeRow,
+    },
+    functions::hostname::hostname_and_port,
+    i18n::*,
+    providers::{ApiRequestsProvider, Config},
+    responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
-use leptos::either::Either;
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 use leptos_icons::*;
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
 use shared_types::{ChallengeId, ChallengeVisibility, TimeInfo};
@@ -145,7 +150,7 @@ pub fn ChallengeRow(
         increment: challenge.time_increment,
     };
     view! {
-        <tr class="items-center text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light max-w-fit">
+        <tr class="items-center text-center cursor-pointer max-w-fit dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
             <td class=td_class>
                 <div>
                     <Icon icon=Signal::derive(icon) attr:class=Signal::derive(icon_class) />
@@ -164,7 +169,7 @@ pub fn ChallengeRow(
                         {if group_count > 1 {
                             Either::Left(
                                 view! {
-                                    <span class="ml-1 px-1.5 py-0.5 text-xs font-bold bg-pillbug-teal text-white rounded-full">
+                                    <span class="py-0.5 px-1.5 ml-1 text-xs font-bold text-white rounded-full bg-pillbug-teal">
                                         {format!("x{}", group_count)}
                                     </span>
                                 },
@@ -228,8 +233,11 @@ pub fn ChallengeRow(
                                 <button
                                     on:click=move |_| {
                                         let ids = all_challenge_ids.get_value();
-                                        let ids_to_cancel =
-                                            if ids.is_empty() { vec![challenge_id.get_value()] } else { ids };
+                                        let ids_to_cancel = if ids.is_empty() {
+                                            vec![challenge_id.get_value()]
+                                        } else {
+                                            ids
+                                        };
                                         api.get().challenges_cancel(ids_to_cancel);
                                     }
                                     class=cancel_button_classes.get_value()
@@ -255,8 +263,11 @@ pub fn ChallengeRow(
                                     <button
                                         on:click=move |_| {
                                             let ids = all_challenge_ids.get_value();
-                                            let ids_to_cancel =
-                                                if ids.is_empty() { vec![challenge_id.get_value()] } else { ids };
+                                            let ids_to_cancel = if ids.is_empty() {
+                                                vec![challenge_id.get_value()]
+                                            } else {
+                                                ids
+                                            };
                                             api.get().challenges_cancel(ids_to_cancel);
                                         }
                                         class=cancel_button_classes.get_value()

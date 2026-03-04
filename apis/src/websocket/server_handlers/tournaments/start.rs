@@ -1,13 +1,14 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage, TournamentUpdate},
     responses::GameResponse,
-    websocket::busybee::Busybee,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        busybee::Busybee,
+        messages::{InternalServerMessage, MessageDestination},
+    },
 };
 use anyhow::Result;
 use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
-use diesel_async::scoped_futures::ScopedFutureExt;
-use diesel_async::AsyncConnection;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use shared_types::TournamentId;
 use uuid::Uuid;
 

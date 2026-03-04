@@ -9,8 +9,10 @@ pub mod websocket;
 use std::sync::Arc;
 
 use actix_session::config::PersistentSession;
-use actix_web::cookie::{time::Duration, SameSite};
-use actix_web::middleware::Compress;
+use actix_web::{
+    cookie::{time::Duration, SameSite},
+    middleware::Compress,
+};
 use leptos_meta::{HashedStylesheet, MetaTags};
 use websocket::WebsocketData;
 

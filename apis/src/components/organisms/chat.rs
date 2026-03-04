@@ -56,7 +56,7 @@ pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
         <input
             node_ref=my_input
             type="text"
-            class="box-border px-2 py-4 w-full rounded-lg resize-none bg-odd-light dark:bg-odd-dark focus:outline-none shrink-0"
+            class="py-4 px-2 w-full rounded-lg resize-none focus:outline-none box-border bg-odd-light shrink-0 dark:bg-odd-dark"
             prop:value=chat.typed_message
             prop:placeholder=placeholder
             on:input=update_from_input(chat.typed_message)

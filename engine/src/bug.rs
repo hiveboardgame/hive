@@ -1,6 +1,10 @@
 use crate::{
-    board::Board, game_error::GameError, game_type::GameType, mid_move_board::MidMoveBoard,
-    position::Position, torus_array::TorusArray,
+    board::Board,
+    game_error::GameError,
+    game_type::GameType,
+    mid_move_board::MidMoveBoard,
+    position::Position,
+    torus_array::TorusArray,
 };
 use serde::{Deserialize, Serialize};
 use std::{

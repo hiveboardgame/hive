@@ -1,5 +1,4 @@
-use leptos::ev::Event;
-use leptos::prelude::*;
+use leptos::{ev::Event, prelude::*};
 use std::str::FromStr;
 
 pub fn update_from_input(signal_to_update: RwSignal<String>) -> impl Fn(web_sys::Event) + Clone {

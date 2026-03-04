@@ -1,17 +1,21 @@
 use std::sync::Arc;
 
-use super::challenges::handler::ChallengeHandler;
-use super::chat::handler::ChatHandler;
-use super::game::handler::GameActionHandler;
-use super::oauth::handler::OauthHandler;
-use super::schedules::ScheduleHandler;
-use super::tournaments::handler::TournamentHandler;
-use super::user_status::handler::UserStatusHandler;
-use crate::common::{ClientRequest, GameAction};
-use crate::websocket::messages::AuthError;
-use crate::websocket::messages::InternalServerMessage;
-use crate::websocket::messages::WsMessage;
-use crate::websocket::WebsocketData;
+use super::{
+    challenges::handler::ChallengeHandler,
+    chat::handler::ChatHandler,
+    game::handler::GameActionHandler,
+    oauth::handler::OauthHandler,
+    schedules::ScheduleHandler,
+    tournaments::handler::TournamentHandler,
+    user_status::handler::UserStatusHandler,
+};
+use crate::{
+    common::{ClientRequest, GameAction},
+    websocket::{
+        messages::{AuthError, InternalServerMessage, WsMessage},
+        WebsocketData,
+    },
+};
 use db_lib::DbPool;
 use shared_types::{ChatDestination, SimpleUser};
 use thiserror::Error;

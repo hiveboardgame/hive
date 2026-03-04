@@ -1,7 +1,9 @@
 use crate::{
     components::{
-        atoms::simple_switch::SimpleSwitch, molecules::rl_banner::RlBanner,
-        organisms::chat::ChatWindow, update_from_event::update_from_input,
+        atoms::simple_switch::SimpleSwitch,
+        molecules::rl_banner::RlBanner,
+        organisms::chat::ChatWindow,
+        update_from_event::update_from_input,
     },
     functions::home_banner,
     providers::AuthContext,
@@ -47,7 +49,7 @@ fn EditBanner() -> impl IntoView {
                         view! {
                             <button
                                 on:click=move |_| show_preview.update(|b| *b = !*b)
-                                class="flex gap-1 justify-center items-center px-4 m-4 h-7 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                                class="flex gap-1 justify-center items-center px-4 m-4 h-7 font-bold text-white rounded active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                             >
                                 {move || {
                                     if !show_preview() { "Preview Banner" } else { "Edit Banner" }
@@ -65,7 +67,7 @@ fn EditBanner() -> impl IntoView {
                                     <div class="flex flex-col m-2">
                                         <label for="title">Title:</label>
                                         <input
-                                            class="px-3 py-2 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
+                                            class="py-2 px-3 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
                                             name="title"
                                             type="text"
                                             prop:value=title
@@ -75,7 +77,7 @@ fn EditBanner() -> impl IntoView {
                                     </div>
 
                                     <textarea
-                                        class="px-3 py-2 m-2 w-10/12 h-32 leading-tight rounded border shadow appearance-none focus:outline-none"
+                                        class="py-2 px-3 m-2 w-10/12 h-32 leading-tight rounded border shadow appearance-none focus:outline-none"
                                         name="content"
                                         prop:value=content
                                         on:input=update_from_input(content)
@@ -95,7 +97,7 @@ fn EditBanner() -> impl IntoView {
 
                                     <button
                                         type="submit"
-                                        class="flex gap-1 justify-center items-center px-4 h-7 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                                        class="flex gap-1 justify-center items-center px-4 h-7 font-bold text-white rounded active:scale-95 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                                     >
                                         "Submit"
                                     </button>

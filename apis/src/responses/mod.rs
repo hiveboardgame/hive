@@ -19,6 +19,5 @@ pub use invitation::InvitationResponse;
 pub use rating::RatingResponse;
 pub use rating_history::RatingHistoryResponse;
 pub use schedules::ScheduleResponse;
-pub use tournament::TournamentAbstractResponse;
-pub use tournament::TournamentResponse;
+pub use tournament::{TournamentAbstractResponse, TournamentResponse};
 pub use user::UserResponse;

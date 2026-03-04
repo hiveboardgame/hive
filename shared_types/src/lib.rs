@@ -28,15 +28,18 @@ pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;
 pub use games_query_options::{
-    BatchInfo, GameProgress, GamesQueryOptions, PlayerFilter, ResultType,
+    BatchInfo,
+    GameProgress,
+    GamesQueryOptions,
+    PlayerFilter,
+    ResultType,
 };
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use pretty_string::PrettyString;
 pub use ready_user::ReadyUser;
 pub use scoring_mode::ScoringMode;
 pub use simple_user::SimpleUser;
-pub use standings::PlayerScores;
-pub use standings::Standings;
+pub use standings::{PlayerScores, Standings};
 pub use start_mode::StartMode;
 pub use takeback_conf::Takeback;
 pub use tiebreaker::Tiebreaker;

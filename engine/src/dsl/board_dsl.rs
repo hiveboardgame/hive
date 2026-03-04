@@ -1,13 +1,9 @@
-use crate::board::Board;
-use crate::piece::Piece;
-use crate::position::Position;
+use crate::{board::Board, piece::Piece, position::Position};
 use itertools::Itertools;
-use std::collections::HashMap;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
 
-use pest::iterators::Pair;
-use pest::Parser;
+use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 
 type Result<T> = std::result::Result<T, ParserError>;
@@ -378,8 +374,7 @@ impl BoardParser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bug::Bug;
-    use crate::color::Color;
+    use crate::{bug::Bug, color::Color};
 
     #[test]
     pub fn test_dsl_conversion() {

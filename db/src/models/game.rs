@@ -13,11 +13,17 @@ use ::nanoid::nanoid;
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 use diesel::{prelude::*, ExpressionMethods, Insertable};
 use diesel_async::RunQueryDsl;
-use itertools::Itertools;
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    ChallengeId, Conclusion, GameId, GameSpeed, GameStart, GamesQueryOptions, TimeMode,
+    ChallengeId,
+    Conclusion,
+    GameId,
+    GameSpeed,
+    GameStart,
+    GamesQueryOptions,
+    TimeMode,
     TournamentGameResult,
 };
 use std::{str::FromStr, time::Duration};
@@ -1244,26 +1250,31 @@ impl Game {
             .await?;
 
         Ok(games_preload
-        .into_iter()
-        .chunk_by(|game| {
-            let utc = game.updated_at.with_timezone(&Utc);
-            (utc.year(), utc.month(), utc.day())
-        })
-        .into_iter()
-        .filter_map(|((_y, _m, _d), group)| {
-            let last = group.last()?;
-            let utc_day = last.updated_at.with_timezone(&Utc).date_naive();
-            let utc_datetime = Utc.from_local_datetime(&utc_day.and_hms_opt(0, 0, 0)?)
-                .single()?;
-            Some(GameRatings {
-                speed: last.speed.clone(),
-                white_rating: last.white_rating.map(|r| r + last.white_rating_change.unwrap_or(0.0)),
-                black_rating: last.black_rating.map(|r| r + last.black_rating_change.unwrap_or(0.0)),
-                white_id: last.white_id,
-                black_id: last.black_id,
-                updated_at: utc_datetime,
+            .into_iter()
+            .chunk_by(|game| {
+                let utc = game.updated_at.with_timezone(&Utc);
+                (utc.year(), utc.month(), utc.day())
             })
-        })
-        .collect())
+            .into_iter()
+            .filter_map(|((_y, _m, _d), group)| {
+                let last = group.last()?;
+                let utc_day = last.updated_at.with_timezone(&Utc).date_naive();
+                let utc_datetime = Utc
+                    .from_local_datetime(&utc_day.and_hms_opt(0, 0, 0)?)
+                    .single()?;
+                Some(GameRatings {
+                    speed: last.speed.clone(),
+                    white_rating: last
+                        .white_rating
+                        .map(|r| r + last.white_rating_change.unwrap_or(0.0)),
+                    black_rating: last
+                        .black_rating
+                        .map(|r| r + last.black_rating_change.unwrap_or(0.0)),
+                    white_id: last.white_id,
+                    black_id: last.black_id,
+                    updated_at: utc_datetime,
+                })
+            })
+            .collect())
     }
 }

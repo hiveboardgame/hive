@@ -1,11 +1,10 @@
-use crate::functions::auth::register::Register;
-use crate::functions::users::username_taken;
-use crate::i18n::*;
-use crate::providers::RefererContext;
-use crate::{components::update_from_event::update_from_input, providers::AuthContext};
-use leptos::leptos_dom::helpers::debounce;
-use leptos::prelude::*;
-use leptos::{form::ActionForm, html};
+use crate::{
+    components::update_from_event::update_from_input,
+    functions::{auth::register::Register, users::username_taken},
+    i18n::*,
+    providers::{AuthContext, RefererContext},
+};
+use leptos::{form::ActionForm, html, leptos_dom::helpers::debounce, prelude::*};
 use std::time::Duration;
 use web_sys::Event;
 
@@ -89,7 +88,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <input
                         on:input=validate_username
                         node_ref=my_input
-                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
+                        class="py-2 px-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="username"
                         type="text"
                         prop:value=username
@@ -128,7 +127,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                                 email.update(|v| v.clone_from(&event_target_value(&evt)));
                             },
                         )
-                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
+                        class="py-2 px-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="email"
                         type="email"
                         inputmode="email"
@@ -151,7 +150,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <p class="font-bold">{t!(i18n, user_config.create_account.password)}</p>
                     <input
                         on:input=debounce(Duration::from_millis(350), update_from_input(pw))
-                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
+                        class="py-2 px-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="password"
                         type="password"
                         prop:value=pw
@@ -166,7 +165,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <p class="font-bold">{t!(i18n, user_config.create_account.confirm_password)}</p>
                     <input
                         on:input=debounce(Duration::from_millis(350), update_from_input(pw_confirm))
-                        class="px-3 py-2 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
+                        class="py-2 px-3 w-full leading-tight rounded border shadow appearance-none focus:outline-none"
                         name="password_confirmation"
                         type="password"
                         prop:value=pw_confirm
@@ -186,7 +185,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     <input
                         on:change=move |_| agree.update(|b| *b = !*b)
                         type="checkbox"
-                        class="size-4 text-blue-600 bg-gray-100 rounded border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                        class="text-blue-600 bg-gray-100 rounded border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:ring-offset-gray-800 focus:ring-2 focus:ring-blue-500 size-4 dark:focus:ring-blue-600"
                         prop:value=agree
                     />
                     <label
@@ -199,7 +198,7 @@ pub fn Register(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 <input
                     type="submit"
                     disabled=conditionally_disable
-                    class="px-4 py-2 font-bold text-white rounded transition-transform duration-300 cursor-pointer bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 focus:outline-none disabled:opacity-25 disabled:cursor-not-allowed"
+                    class="py-2 px-4 font-bold text-white rounded transition-transform duration-300 cursor-pointer focus:outline-none active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                     value=move || t_string!(i18n, user_config.create_account.signup_button)
                 />
                 <Show when=display_register_error>

@@ -1,5 +1,4 @@
-use crate::components::atoms::rating::icon_for_speed;
-use crate::i18n::*;
+use crate::{components::atoms::rating::icon_for_speed, i18n::*};
 use leptos::{either::EitherOf3, prelude::*};
 use leptos_icons::*;
 use shared_types::{GameSpeed, TimeInfo, TimeMode};

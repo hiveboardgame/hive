@@ -1,6 +1,4 @@
-use crate::functions::accounts::edit::EditTakeback;
-use crate::i18n::*;
-use crate::providers::AuthContext;
+use crate::{functions::accounts::edit::EditTakeback, i18n::*, providers::AuthContext};
 use leptos::prelude::*;
 use shared_types::Takeback;
 

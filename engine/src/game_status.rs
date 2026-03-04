@@ -1,9 +1,6 @@
-use crate::color::Color;
-use crate::game_error::GameError;
-use crate::game_result::GameResult;
+use crate::{color::Color, game_error::GameError, game_result::GameResult};
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 pub enum GameStatus {

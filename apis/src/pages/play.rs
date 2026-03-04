@@ -4,8 +4,10 @@ use crate::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         layouts::base_layout::{ControlsSignal, OrientationSignal},
         molecules::{
-            analysis_and_download::AnalysisAndDownload, control_buttons::ControlButtons,
-            game_info::GameInfo, user_with_rating::UserWithRating,
+            analysis_and_download::AnalysisAndDownload,
+            control_buttons::ControlButtons,
+            game_info::GameInfo,
+            user_with_rating::UserWithRating,
         },
         organisms::{
             board::Board,
@@ -21,7 +23,11 @@ use crate::{
         game_state::{GameStateSignal, View},
         timer::TimerSignal,
         websocket::WebsocketContext,
-        ApiRequestsProvider, AuthContext, SoundType, Sounds, UpdateNotifier,
+        ApiRequestsProvider,
+        AuthContext,
+        SoundType,
+        Sounds,
+        UpdateNotifier,
     },
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
@@ -381,7 +387,7 @@ fn VerticalLayout(
                     <Reserve alignment=Alignment::SingleRow color=top_color />
                     <DisplayTimer vertical=true placement=Placement::Top />
                 </div>
-                <div class="flex gap-1 border-b-[1px] border-dashed border-gray-500 justify-between px-1 bg-inherit">
+                <div class="flex gap-1 justify-between px-1 border-gray-500 border-dashed border-b-[1px] bg-inherit">
                     <UserWithRating side=top_color vertical />
                     <GameInfo />
                 </div>
@@ -389,7 +395,7 @@ fn VerticalLayout(
             </div>
             <BoardOrUnstarted show_board user_is_player game_id white_and_black_ids />
             <div class="flex flex-col shrink bg-board-dawn dark:bg-reserve-twilight">
-                <div class="flex gap-1 border-t-[1px] border-dashed border-gray-500">
+                <div class="flex gap-1 border-gray-500 border-dashed border-t-[1px]">
                     <UserWithRating side=player_color vertical />
                 </div>
                 <div class="flex justify-between mb-2 ml-1 h-full max-h-16">

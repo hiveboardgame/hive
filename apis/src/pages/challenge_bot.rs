@@ -1,6 +1,11 @@
-use crate::components::molecules::challenge_buttons_trio::ChallengeButtonsTrio;
-use crate::providers::ApiRequestsProvider;
-use crate::{common::ChallengeAction, components::atoms::simple_switch::SimpleSwitch};
+use crate::{
+    common::ChallengeAction,
+    components::{
+        atoms::simple_switch::SimpleSwitch,
+        molecules::challenge_buttons_trio::ChallengeButtonsTrio,
+    },
+    providers::ApiRequestsProvider,
+};
 use hive_lib::GameType;
 use leptos::prelude::*;
 use shared_types::{ChallengeDetails, ChallengeVisibility, TimeMode};
@@ -62,7 +67,7 @@ pub fn ChallengeBot() -> impl IntoView {
     });
 
     view! {
-        <div class="flex flex-col items-center w-72 xs:m-2 xs:w-80 sm:w-96">
+        <div class="flex flex-col items-center w-72 sm:w-96 xs:m-2 xs:w-80">
             <div class="flex gap-1 p-1">Play an unrated game vs our bot</div>
             <div class="flex gap-1 p-1">Base <SimpleSwitch checked=expansions />MLP</div>
 
@@ -88,7 +93,7 @@ pub fn ChallengeBot() -> impl IntoView {
                     </div>
                 </div>
             </div>
-            <ChallengeButtonsTrio create_challenge/>
+            <ChallengeButtonsTrio create_challenge />
         </div>
     }
 }

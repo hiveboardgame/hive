@@ -1,27 +1,39 @@
-use crate::common::{markdown_to_html, ScheduleAction, TournamentAction};
-use crate::components::{
-    atoms::progress_bar::ProgressBar,
-    molecules::{
-        game_previews::GamePreviews, my_schedules::MySchedules, time_row::TimeRow,
-        unplayed_game_row::UnplayedGameRow, user_row::UserRow,
+use crate::{
+    common::{markdown_to_html, ScheduleAction, TournamentAction},
+    components::{
+        atoms::progress_bar::ProgressBar,
+        molecules::{
+            game_previews::GamePreviews,
+            my_schedules::MySchedules,
+            time_row::TimeRow,
+            unplayed_game_row::UnplayedGameRow,
+            user_row::UserRow,
+        },
+        organisms::{
+            chat::ChatWindow,
+            standings::Standings,
+            tournament_admin::TournamentAdminControls,
+        },
+        update_from_event::update_from_input,
     },
-    organisms::{
-        chat::ChatWindow, standings::Standings, tournament_admin::TournamentAdminControls,
-    },
-    update_from_event::update_from_input,
+    functions::tournaments::{get_complete, UpdateDescription},
+    providers::{websocket::WebsocketContext, ApiRequestsProvider, AuthContext, UpdateNotifier},
+    responses::{GameResponse, TournamentResponse},
 };
-use crate::functions::tournaments::{get_complete, UpdateDescription};
-use crate::providers::AuthContext;
-use crate::providers::{websocket::WebsocketContext, ApiRequestsProvider, UpdateNotifier};
-use crate::responses::{GameResponse, TournamentResponse};
 use chrono::Local;
 use hive_lib::GameStatus;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::core::ConnectionReadyState;
 use shared_types::{
-    Conclusion, GameSpeed, PrettyString, TimeInfo, TournamentGameResult, TournamentId,
-    TournamentMode, TournamentStatus,
+    Conclusion,
+    GameSpeed,
+    PrettyString,
+    TimeInfo,
+    TournamentGameResult,
+    TournamentId,
+    TournamentMode,
+    TournamentStatus,
 };
 use std::collections::HashMap;
 
@@ -299,7 +311,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         />
                         <Show when=user_is_organizer_or_admin>
                             <button
-                                class="px-4 py-2 mb-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal active:scale-95"
+                                class="py-2 px-4 mb-2 font-bold text-white rounded active:scale-95 bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
                                 on:click=move |_| {
                                     description_text.set(current_description.get_untracked());
                                     editing_description.set(true);
@@ -323,7 +335,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         fallback=move || {
                             view! {
                                 <textarea
-                                    class="px-3 py-2 m-2 w-full h-32 leading-tight rounded border shadow appearance-none focus:outline-none"
+                                    class="py-2 px-3 m-2 w-full h-32 leading-tight rounded border shadow appearance-none focus:outline-none"
                                     name="description"
                                     prop:value=description_text
                                     on:input=update_from_input(description_text)
@@ -381,7 +393,13 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                 <div class=INFO_STYLE>Tournament Info</div>
                 <div class="m-2">
                     <span class="font-bold">"Type: "</span>
-                    {tournament.with_value(|t| t.mode.parse::<TournamentMode>().map(|m| m.pretty_string()).unwrap_or_default())}
+                    {tournament
+                        .with_value(|t| {
+                            t.mode
+                                .parse::<TournamentMode>()
+                                .map(|m| m.pretty_string())
+                                .unwrap_or_default()
+                        })}
                 </div>
                 <div class="flex gap-1 m-2">
                     <span class="font-bold">"Time control: "</span>

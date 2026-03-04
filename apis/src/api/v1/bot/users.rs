@@ -1,5 +1,4 @@
-use crate::api::v1::auth::Auth;
-use crate::responses::UserResponse;
+use crate::{api::v1::auth::Auth, responses::UserResponse};
 use actix_web::{
     get,
     web::{Data, Path},

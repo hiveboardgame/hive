@@ -30,7 +30,7 @@ pub fn TournamentStatusNotification(
     };
 
     view! {
-        <div class="flex items-center justify-between text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light w-full p-2">
+        <div class="flex justify-between items-center p-2 w-full text-center cursor-pointer dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
             <div class="flex relative flex-grow">
                 <div class=div_class>
                     <div>{notification_text}</div>
@@ -44,7 +44,7 @@ pub fn TournamentStatusNotification(
                 <button
                     title="Dismiss"
                     on:click=dismiss
-                    class="z-20 p-1 text-white rounded transition-transform duration-300 bg-ladybug-red hover:bg-red-400 active:scale-95"
+                    class="z-20 p-1 text-white rounded transition-transform duration-300 hover:bg-red-400 active:scale-95 bg-ladybug-red"
                 >
                     <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
                 </button>

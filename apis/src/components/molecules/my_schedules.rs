@@ -1,18 +1,16 @@
-use crate::providers::schedules::SchedulesContext;
-use crate::responses::GameResponse;
-use crate::responses::ScheduleResponse;
 use crate::{
     components::atoms::{
         profile_link::ProfileLink,
         schedule_controls::{GameDateControls, ProposeDateControls},
     },
     pages::tournament::INFO_STYLE,
+    providers::schedules::SchedulesContext,
+    responses::{GameResponse, ScheduleResponse},
 };
 use chrono::{Duration, Utc};
 use hive_lib::GameStatus;
 use leptos::prelude::*;
-use shared_types::Conclusion;
-use shared_types::GameId;
+use shared_types::{Conclusion, GameId};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -121,13 +119,16 @@ fn MySchedulesInner(
 
                                     let:schedule
                                 >
-                                    <GameDateControls player_id=user_id() schedule=schedule.clone() />
+                                    <GameDateControls
+                                        player_id=user_id()
+                                        schedule=schedule.clone()
+                                    />
 
                                 </For>
                             </div>
                             <ProposeDateControls game_id=game_id() />
                             <a
-                                class="flex gap-1 justify-center items-center place-self-center px-4 py-2 w-2/5 font-bold text-white rounded no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                                class="flex gap-1 justify-center items-center place-self-center py-2 px-4 w-2/5 font-bold text-white rounded active:scale-95 no-link-style bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                                 href=format!("/game/{}", &game_id())
                             >
                                 "Join Game"

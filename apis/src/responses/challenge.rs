@@ -1,11 +1,9 @@
-use crate::common::ChallengeAction;
-use crate::responses::user::UserResponse;
+use crate::{common::ChallengeAction, responses::user::UserResponse};
 use chrono::prelude::*;
 use hive_lib::{ColorChoice, GameType};
 use serde::{Deserialize, Serialize};
 use shared_types::{ChallengeDetails, ChallengeId, ChallengeVisibility, GameSpeed, TimeMode};
-use std::str;
-use std::str::FromStr;
+use std::{str, str::FromStr};
 use uuid::Uuid;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]

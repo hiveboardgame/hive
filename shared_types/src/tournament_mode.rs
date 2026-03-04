@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use crate::PrettyString;
 

@@ -28,11 +28,18 @@ pub use piece_type::PieceType;
 pub use rating_change_info::RatingChangeInfo;
 pub use schedule_action::ScheduleAction;
 pub use server_result::{
-    ChallengeUpdate, ExternalServerError, GameActionResponse, GameUpdate, ScheduleUpdate,
-    ServerMessage, ServerResult, TournamentUpdate, UserStatus, UserUpdate,
+    ChallengeUpdate,
+    ExternalServerError,
+    GameActionResponse,
+    GameUpdate,
+    ScheduleUpdate,
+    ServerMessage,
+    ServerResult,
+    TournamentUpdate,
+    UserStatus,
+    UserUpdate,
 };
 pub use svg_pos::SvgPos;
 pub use time_signals::{TimeParams, TimeParamsStoreFields};
-pub use tournament_action::TournamentAction;
-pub use tournament_action::TournamentResponseDepth;
+pub use tournament_action::{TournamentAction, TournamentResponseDepth};
 pub use user_action::UserAction;

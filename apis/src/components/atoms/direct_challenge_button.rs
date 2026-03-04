@@ -1,5 +1,6 @@
 use crate::{
-    components::molecules::modal::Modal, pages::challenge_create::ChallengeCreate,
+    components::molecules::modal::Modal,
+    pages::challenge_create::ChallengeCreate,
     providers::AuthContext,
 };
 use leptos::{html::Dialog, prelude::*};
@@ -34,7 +35,7 @@ pub fn DirectChallengeButton(
                         let _ = dialog_el.show_modal();
                     }
                 }
-                class="p-1 mx-2 text-white rounded transition-transform duration-300 transform bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed"
+                class="p-1 mx-2 text-white rounded transition-transform duration-300 transform active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
             >
                 <Icon icon=icondata_ri::RiSwordOthersLine attr:class="size-6" />
             </button>

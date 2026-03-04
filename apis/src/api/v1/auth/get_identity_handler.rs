@@ -1,6 +1,5 @@
 use super::Auth;
-use actix_web::get;
-use actix_web::HttpResponse;
+use actix_web::{get, HttpResponse};
 use serde_json::json;
 
 #[get("/api/v1/auth/id")]

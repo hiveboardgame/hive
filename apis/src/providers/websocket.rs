@@ -1,10 +1,11 @@
-use crate::common::{ClientRequest, ServerResult};
-use crate::functions::hostname::{hostname_and_port, Address};
-use crate::websocket::client_handlers::response_handler::handle_response;
+use crate::{
+    common::{ClientRequest, ServerResult},
+    functions::hostname::{hostname_and_port, Address},
+    websocket::client_handlers::response_handler::handle_response,
+};
 use codee::binary::MsgpackSerdeCodec;
 use leptos::prelude::*;
-use leptos_use::core::ConnectionReadyState;
-use leptos_use::*;
+use leptos_use::{core::ConnectionReadyState, *};
 use std::sync::Arc;
 
 #[derive(Clone)]

@@ -1,11 +1,12 @@
-use super::accept::AcceptHandler;
-use super::create::CreateHandler;
-use super::delete::DeleteHandler;
-use super::get::GetHandler;
-use super::get_own::GetOwnHandler;
-use super::get_public::GetPublicHandler;
-use crate::common::ChallengeAction;
-use crate::websocket::messages::InternalServerMessage;
+use super::{
+    accept::AcceptHandler,
+    create::CreateHandler,
+    delete::DeleteHandler,
+    get::GetHandler,
+    get_own::GetOwnHandler,
+    get_public::GetPublicHandler,
+};
+use crate::{common::ChallengeAction, websocket::messages::InternalServerMessage};
 use anyhow::Result;
 use db_lib::DbPool;
 use uuid::Uuid;

@@ -2,7 +2,12 @@ use super::Config;
 use leptos::prelude::*;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{js_sys::ArrayBuffer, js_sys::Math::random, AudioBuffer, AudioContext, Response};
+use web_sys::{
+    js_sys::{ArrayBuffer, Math::random},
+    AudioBuffer,
+    AudioContext,
+    Response,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SoundType {

@@ -1,9 +1,14 @@
-use crate::i18n::*;
-use crate::providers::{ApiRequestsProvider, AuthContext};
+use crate::{
+    i18n::*,
+    providers::{ApiRequestsProvider, AuthContext},
+};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::{
-    use_interval_fn_with_options, use_timeout_fn, UseIntervalFnOptions, UseTimeoutFnReturn,
+    use_interval_fn_with_options,
+    use_timeout_fn,
+    UseIntervalFnOptions,
+    UseTimeoutFnReturn,
 };
 use shared_types::{GameId, ReadyUser};
 use std::collections::{HashMap, HashSet};
@@ -189,7 +194,7 @@ pub fn TournamentReadyPopup(
                 <div class="flex gap-4 justify-center">
                     <button
                         on:click=accept_game
-                    class="px-4 py-2 font-bold text-white bg-green-600 rounded transition-transform duration-300 hover:bg-green-700 active:scale-95"
+                        class="py-2 px-4 font-bold text-white bg-green-600 rounded transition-transform duration-300 hover:bg-green-700 active:scale-95"
                     >
                         {t!(i18n, game.tournament_ready_accept)}
                     </button>
@@ -197,7 +202,7 @@ pub fn TournamentReadyPopup(
                     <Show when=move || !is_on_game_page.get()>
                         <button
                             on:click=view_game
-                            class="px-4 py-2 font-bold text-white bg-blue-600 rounded transition-transform duration-300 hover:bg-blue-700 active:scale-95"
+                            class="py-2 px-4 font-bold text-white bg-blue-600 rounded transition-transform duration-300 hover:bg-blue-700 active:scale-95"
                         >
                             {t!(i18n, game.tournament_ready_view_game)}
                         </button>
@@ -205,7 +210,7 @@ pub fn TournamentReadyPopup(
 
                     <button
                         on:click=close_popup
-                        class="px-4 py-2 font-bold text-white bg-gray-600 rounded transition-transform duration-300 hover:bg-gray-700 active:scale-95"
+                        class="py-2 px-4 font-bold text-white bg-gray-600 rounded transition-transform duration-300 hover:bg-gray-700 active:scale-95"
                     >
                         {t!(i18n, game.tournament_ready_close)}
                     </button>

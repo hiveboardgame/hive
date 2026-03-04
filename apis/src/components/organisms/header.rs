@@ -1,20 +1,26 @@
-use crate::components::atoms::next_game_button::NextGameButton;
-use crate::components::molecules::chat_and_controls::ChatAndControls;
-use crate::components::organisms::{
-    darkmode_toggle::DarkModeToggle,
-    dropdowns::{
-        community::CommunityDropdown, learn::LearnDropdown, locale::LocaleDropdown,
-        mobile::MobileDropdown, notification::NotificationDropdown, tournament::TournamentDropdown,
-        user::UserDropdown,
+use crate::{
+    components::{
+        atoms::next_game_button::NextGameButton,
+        molecules::chat_and_controls::ChatAndControls,
+        organisms::{
+            darkmode_toggle::DarkModeToggle,
+            dropdowns::{
+                community::CommunityDropdown,
+                learn::LearnDropdown,
+                locale::LocaleDropdown,
+                mobile::MobileDropdown,
+                notification::NotificationDropdown,
+                tournament::TournamentDropdown,
+                user::UserDropdown,
+            },
+            sound_toggle::SoundToggle,
+        },
     },
-    sound_toggle::SoundToggle,
+    i18n::*,
+    providers::{games::GamesSignal, AuthContext, RefererContext},
+    responses::AccountResponse,
 };
-use crate::i18n::*;
-use crate::providers::games::GamesSignal;
-use crate::providers::{AuthContext, RefererContext};
-use crate::responses::AccountResponse;
-use leptos::either::Either;
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 use leptos_router::hooks::use_location;
 use shared_types::TimeMode;
 
@@ -23,12 +29,12 @@ pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let i18n = use_i18n();
     view! {
-        <header class="w-full fixed top-0 flex justify-between items-center bg-gray-300 dark:bg-header-twilight z-50 max-w-[100vw] select-none">
+        <header class="flex fixed top-0 z-50 justify-between items-center w-full bg-gray-300 select-none max-w-[100vw] dark:bg-header-twilight">
             <div class="flex gap-1 items-center">
                 <MobileDropdown />
-                <div class="hidden lg:flex lg:items-center lg:gap-1">
+                <div class="hidden lg:flex lg:gap-1 lg:items-center">
                     <a
-                        class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 no-link-style hover:text-pillbug-teal active:scale-95"
+                        class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 active:scale-95 no-link-style hover:text-pillbug-teal"
                         href="/"
                     >
                         {t!(i18n, header.home)}
@@ -37,7 +43,7 @@ pub fn Header() -> impl IntoView {
                     <LearnDropdown />
                     <TournamentDropdown />
                     <a
-                        class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 no-link-style hover:text-pillbug-teal active:scale-95"
+                        class="block p-2 h-full font-bold whitespace-nowrap transition-transform duration-300 active:scale-95 no-link-style hover:text-pillbug-teal"
                         href="https://www.gen42.com/"
                         rel="external"
                         target="_blank"
@@ -45,7 +51,7 @@ pub fn Header() -> impl IntoView {
                         {t!(i18n, header.buy_game)}
                     </a>
                     <a
-                        class="no-link-style block p-2 h-full font-bold uppercase whitespace-nowrap transition-transform duration-300 dark:text-[#FAB93F] text-[#2A6560] hover:text-pillbug-teal active:scale-95"
+                        class="block p-2 h-full font-bold uppercase whitespace-nowrap transition-transform duration-300 active:scale-95 no-link-style text-[#2A6560] dark:text-[#FAB93F] hover:text-pillbug-teal"
                         href="/donate"
                     >
                         {t!(i18n, header.donate)}
@@ -67,7 +73,7 @@ fn GuestActions() -> impl IntoView {
             <LocaleDropdown />
             <DarkModeToggle extend_tw_classes="max-h-6 sm:max-h-7" />
             <a
-                class="px-4 py-1 m-1 font-bold text-white rounded transition-transform duration-300 no-link-style bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95"
+                class="py-1 px-4 m-1 font-bold text-white rounded transition-transform duration-300 active:scale-95 no-link-style bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                 href="/login"
                 on:focus=move |_| set_redirect(referrer)
             >

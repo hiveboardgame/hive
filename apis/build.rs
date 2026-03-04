@@ -1,6 +1,5 @@
 use leptos_i18n_build::{Config, ParseOptions, TranslationsInfos};
-use std::error::Error;
-use std::path::PathBuf;
+use std::{error::Error, path::PathBuf};
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=build.rs");

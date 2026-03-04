@@ -1,7 +1,9 @@
-use crate::components::atoms::rating::icon_for_speed;
-use crate::i18n::*;
-use crate::pages::profile_view::tab_from_path;
-use crate::providers::{load_games, FilterState, GamesSearchContext};
+use crate::{
+    components::atoms::rating::icon_for_speed,
+    i18n::*,
+    pages::profile_view::tab_from_path,
+    providers::{load_games, FilterState, GamesSearchContext},
+};
 use hive_lib::Color;
 use leptos::{html, prelude::*};
 use leptos_i18n::I18nContext;
@@ -173,13 +175,13 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
     view! {
         <div class="relative">
             <details node_ref=dropdown_ref>
-                <summary class="px-2 py-1 ml-0.5 text-sm font-semibold text-gray-900 bg-gray-100 rounded-lg border-2 border-transparent cursor-pointer max-w-fit hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+                <summary class="py-1 px-2 ml-0.5 text-sm font-semibold text-gray-900 bg-gray-100 rounded-lg border-2 border-transparent cursor-pointer dark:text-gray-100 dark:bg-gray-800 hover:bg-gray-200 max-w-fit dark:hover:bg-gray-700">
                     "🔧 Filters"
                 </summary>
-                <div class="absolute right-0 top-full z-40 p-2 mt-1 max-w-screen-sm bg-white rounded-lg border border-gray-200 shadow-lg w-[90vw] lg:p-0 lg:mt-2 lg:shadow-xl lg:w-96 lg:max-w-none dark:bg-gray-900 dark:border-gray-700">
+                <div class="absolute right-0 top-full z-40 p-2 mt-1 max-w-screen-sm bg-white rounded-lg border border-gray-200 shadow-lg lg:p-0 lg:mt-2 lg:w-96 lg:max-w-none lg:shadow-xl dark:bg-gray-900 dark:border-gray-700 w-[90vw]">
                     <ActiveFiltersDisplay ctx current_tab i18n />
 
-                    <div class="space-y-2 lg:space-y-0 lg:flex">
+                    <div class="space-y-2 lg:flex lg:space-y-0">
                         <div class="space-y-2 lg:flex-1 lg:p-4 lg:border-r lg:border-gray-200 lg:dark:border-gray-700">
                             <TriStateFilter
                                 filter_type=TriStateType::Color
@@ -189,7 +191,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
 
                             <Show when=move || current_tab() == GameProgress::Finished>
                                 <div class="space-y-1 lg:space-y-2">
-                                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 lg:text-sm">
+                                    <label class="block text-xs font-medium text-gray-700 lg:text-sm dark:text-gray-300">
                                         {t!(i18n, profile.game_result)}
                                     </label>
                                     <div class="grid grid-cols-2 gap-1 lg:gap-2">
@@ -240,7 +242,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                             </Show>
 
                             <div class="space-y-1 lg:space-y-2">
-                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 lg:text-sm">
+                                <label class="block text-xs font-medium text-gray-700 lg:text-sm dark:text-gray-300">
                                     {t!(i18n, profile.include_speeds)}
                                 </label>
                                 <div class="grid grid-cols-3 gap-1 lg:gap-2">
@@ -283,7 +285,7 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                             </div>
 
                             <div class="flex justify-between items-center lg:pt-2">
-                                <span class="text-xs font-medium text-gray-700 dark:text-gray-300 lg:text-sm">
+                                <span class="text-xs font-medium text-gray-700 lg:text-sm dark:text-gray-300">
                                     "Bot Games:"
                                 </span>
                                 <FilterButton
@@ -309,12 +311,12 @@ pub fn GamesFilter(username: String, ctx: GamesSearchContext) -> impl IntoView {
                     </div>
 
                     <Show when=no_speeds>
-                        <div class="px-3 py-2 mx-0 mb-0 text-sm text-yellow-800 bg-yellow-100 rounded-lg border border-yellow-300 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700 lg:mx-4 lg:mb-4">
+                        <div class="py-2 px-3 mx-0 mb-0 text-sm text-yellow-800 bg-yellow-100 rounded-lg border border-yellow-300 lg:mx-4 lg:mb-4 dark:text-yellow-200 dark:bg-yellow-900 dark:border-yellow-700">
                             "Please select at least one game speed"
                         </div>
                     </Show>
 
-                    <div class="flex gap-1 pt-2 mt-3 border-t border-gray-200 xs:gap-2 dark:border-gray-700 lg:gap-3 lg:justify-end lg:p-4 lg:bg-gray-50 lg:dark:bg-gray-800/30 lg:border-gray-200 lg:dark:border-gray-700">
+                    <div class="flex gap-1 pt-2 mt-3 border-t border-gray-200 lg:gap-3 lg:justify-end lg:p-4 lg:bg-gray-50 lg:border-gray-200 dark:border-gray-700 xs:gap-2 lg:dark:bg-gray-800/30 lg:dark:border-gray-700">
                         <ActionButton
                             on_click=apply_filters
                             disabled=Signal::derive(move || no_changes() || no_speeds())
@@ -364,7 +366,7 @@ fn ActiveFiltersDisplay(
 ) -> impl IntoView {
     view! {
         <div class="pb-2 mb-2 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex flex-wrap gap-1 items-center min-h-[24px] p-2">
+            <div class="flex flex-wrap gap-1 items-center p-2 min-h-[24px]">
                 <span class="mr-1 text-xs font-medium text-gray-600 dark:text-gray-400">
                     "Active:"
                 </span>
@@ -433,7 +435,7 @@ fn ActiveFiltersDisplay(
 #[component]
 fn FilterPill(children: Children) -> impl IntoView {
     view! {
-        <div class="flex gap-0.5 items-center px-2 py-0.5 text-xs rounded-full border bg-pillbug-teal/10 text-pillbug-teal border-pillbug-teal/20">
+        <div class="flex gap-0.5 items-center py-0.5 px-2 text-xs rounded-full border bg-pillbug-teal/10 text-pillbug-teal border-pillbug-teal/20">
             {children()}
         </div>
     }
@@ -491,7 +493,7 @@ fn TriStateFilter(
 
     view! {
         <div class="space-y-1 lg:space-y-2">
-            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 lg:text-sm">
+            <label class="block text-xs font-medium text-gray-700 lg:text-sm dark:text-gray-300">
                 {move || match filter_type {
                     TriStateType::Color => "Player Color",
                     TriStateType::Expansion => "Expansions",

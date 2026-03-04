@@ -3,10 +3,11 @@ use server_fn::codec;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn delete_account() -> Result<(), ServerFnError> {
-    use crate::functions::auth::{identity::uuid, logout::logout};
-    use crate::functions::db::pool;
-    use db_lib::get_conn;
-    use db_lib::models::User;
+    use crate::functions::{
+        auth::{identity::uuid, logout::logout},
+        db::pool,
+    };
+    use db_lib::{get_conn, models::User};
     let uuid = uuid().await?;
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;

@@ -2,7 +2,13 @@ use crate::schema::{games, users};
 use diesel::{prelude::*, sql_types, BoxableExpression, ExpressionMethods, QueryDsl};
 use hive_lib::{Color, GameResult, GameStatus, GameType};
 use shared_types::{
-    BatchInfo, Conclusion, GameProgress, GameSpeed, GameStart, PlayerFilter, ResultType,
+    BatchInfo,
+    Conclusion,
+    GameProgress,
+    GameSpeed,
+    GameStart,
+    PlayerFilter,
+    ResultType,
 };
 
 pub struct GameQueryBuilder {

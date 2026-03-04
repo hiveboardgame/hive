@@ -1,7 +1,8 @@
-use crate::i18n::*;
-use crate::providers::{online_users::OnlineUsersSignal, AuthContext};
-use leptos::form::ActionForm;
-use leptos::prelude::*;
+use crate::{
+    i18n::*,
+    providers::{online_users::OnlineUsersSignal, AuthContext},
+};
+use leptos::{form::ActionForm, prelude::*};
 
 #[component]
 pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
@@ -23,7 +24,7 @@ pub fn Logout(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVie
                             });
                     }
 
-                    class="flex place-content-start px-4 py-2 size-full font-bold text-white rounded transition-transform duration-300 bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red active:scale-95"
+                    class="flex place-content-start py-2 px-4 font-bold text-white rounded transition-transform duration-300 active:scale-95 size-full bg-button-dawn dark:bg-button-twilight hover:bg-ladybug-red"
                     type="submit"
                 >
                     {t!(i18n, header.user_menu.logout)}

@@ -1,20 +1,29 @@
-use crate::common::{markdown_to_html, TimeParamsStoreFields, TournamentAction};
-use crate::components::atoms::{
-    date_time_picker::DateTimePicker, input_slider::InputSlider, select_options::SelectOption,
-    simple_switch::SimpleSwitch,
-};
-use crate::components::organisms::time_select::TimeSelect;
-use crate::components::update_from_event::{update_from_input, update_from_input_parsed};
-use crate::providers::{
-    ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields,
+use crate::{
+    common::{markdown_to_html, TimeParamsStoreFields, TournamentAction},
+    components::{
+        atoms::{
+            date_time_picker::DateTimePicker,
+            input_slider::InputSlider,
+            select_options::SelectOption,
+            simple_switch::SimpleSwitch,
+        },
+        organisms::time_select::TimeSelect,
+        update_from_event::{update_from_input, update_from_input_parsed},
+    },
+    providers::{ApiRequestsProvider, AuthContext, ChallengeParams, ChallengeParamsStoreFields},
 };
 use chrono::{DateTime, Duration, Local, Utc};
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
 use reactive_stores::Store;
-use shared_types::PrettyString;
 use shared_types::{
-    CorrespondenceMode, ScoringMode, StartMode, Tiebreaker, TimeMode, TournamentDetails,
+    CorrespondenceMode,
+    PrettyString,
+    ScoringMode,
+    StartMode,
+    Tiebreaker,
+    TimeMode,
+    TournamentDetails,
     TournamentMode,
 };
 use uuid::Uuid;
@@ -224,11 +233,9 @@ pub fn TournamentCreate() -> impl IntoView {
     let is_not_preview_desc = RwSignal::new(true);
     let markdown_desc = move || markdown_to_html(&tournament.description.get());
 
-    let max_seats = Signal::derive(move || {
-        match tournament.mode.get() {
-            TournamentMode::DoubleSwiss => 64,
-            _ => 16,
-        }
+    let max_seats = Signal::derive(move || match tournament.mode.get() {
+        TournamentMode::DoubleSwiss => 64,
+        _ => 16,
     });
     Effect::new(move || {
         let current_max = max_seats.get();
@@ -244,7 +251,7 @@ pub fn TournamentCreate() -> impl IntoView {
                     <div class="flex flex-col">
                         Tournament name:
                         <input
-                            class="px-3 py-2 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
+                            class="py-2 px-3 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
                             name="Tournament name"
                             type="text"
                             prop:value=tournament.name
@@ -270,7 +277,7 @@ pub fn TournamentCreate() -> impl IntoView {
                             }
                         >
                             <textarea
-                                class="px-3 py-2 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
+                                class="py-2 px-3 w-10/12 leading-tight rounded border shadow appearance-none focus:outline-none"
                                 name="Tournament description"
                                 prop:value=tournament.description
                                 placeholder="At least a 50 character description.\nMarkdown supported, for links do <https://example.com> or check below."
@@ -281,7 +288,7 @@ pub fn TournamentCreate() -> impl IntoView {
                         <div class="flex flex-row gap-1 p-1">
                             <button
                                 on:click=move |_| is_not_preview_desc.update(|b| *b = !*b)
-                                class="flex gap-1 justify-center items-center px-4 mr-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed"
+                                class="flex gap-1 justify-center items-center px-4 mr-4 font-bold text-white rounded active:scale-95 disabled:opacity-25 disabled:cursor-not-allowed bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
                             >
                                 {move || if is_not_preview_desc() { "Preview" } else { "Edit" }}
                             </button>
@@ -320,7 +327,7 @@ pub fn TournamentCreate() -> impl IntoView {
                     <div>
                         Mode:
                         <select
-                            class="bg-odd-light dark:bg-gray-700"
+                            class="dark:bg-gray-700 bg-odd-light"
                             name="Tournament Mode"
                             on:change=update_from_input_parsed(tournament.mode)
                         >
@@ -351,7 +358,7 @@ pub fn TournamentCreate() -> impl IntoView {
                     <div>
                         Scoring:
                         <select
-                            class="bg-odd-light dark:bg-gray-700"
+                            class="dark:bg-gray-700 bg-odd-light"
                             name="Scoring Mode"
                             on:change=update_from_input_parsed(tournament.scoring)
                         >

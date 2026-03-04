@@ -103,7 +103,7 @@ pub fn SideboardTabs(
         )>
 
             <div>
-                <div class="z-10 border-b-2 border-black dark:border-white flex justify-between [&>*]:grow sticky top-0 bg-inherit">
+                <div class="flex sticky top-0 z-10 justify-between border-b-2 border-black dark:border-white [&>*]:grow bg-inherit">
                     <TriggerButton name=TabView::Reserve tab />
                     <TriggerButton name=TabView::History tab />
                     <TriggerButton name=TabView::Chat tab />

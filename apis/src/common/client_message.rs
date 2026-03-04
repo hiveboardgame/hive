@@ -1,5 +1,9 @@
-use super::game_action::GameAction;
-use super::{challenge_action::ChallengeAction, ScheduleAction, TournamentAction};
+use super::{
+    challenge_action::ChallengeAction,
+    game_action::GameAction,
+    ScheduleAction,
+    TournamentAction,
+};
 use serde::{Deserialize, Serialize};
 use shared_types::{ChatMessageContainer, GameId};
 

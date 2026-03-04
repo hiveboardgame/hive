@@ -1,12 +1,17 @@
-use crate::components::atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator};
-use crate::components::organisms::{games_filter::GamesFilter, stats::Stats};
-use crate::functions::users::get_profile;
-use crate::i18n::*;
-use crate::providers::{calculate_initial_batch_size, provide_games_search_context};
-use leptos::either::Either;
-use leptos::{html, prelude::*};
-use leptos_router::hooks::use_params;
-use leptos_router::{hooks::use_location, params::Params};
+use crate::{
+    components::{
+        atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator},
+        organisms::{games_filter::GamesFilter, stats::Stats},
+    },
+    functions::users::get_profile,
+    i18n::*,
+    providers::{calculate_initial_batch_size, provide_games_search_context},
+};
+use leptos::{either::Either, html, prelude::*};
+use leptos_router::{
+    hooks::{use_location, use_params},
+    params::Params,
+};
 use leptos_use::use_element_bounding;
 use shared_types::GameProgress;
 
@@ -63,9 +68,9 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let i18n = use_i18n();
     let radio_classes = |active| {
         format!("no-link-style py-1 px-2 text-sm font-semibold rounded-lg border-2 transition-all duration-200 transform hover:scale-[1.02] cursor-pointer shadow-sm hover:shadow-md {}", 
-            if active { 
+            if active {
                 "bg-pillbug-teal border-pillbug-teal text-white hover:bg-pillbug-teal/90" 
-            } else { 
+            } else {
                 "bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:border-gray-500" 
             })
     };
@@ -93,7 +98,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     );
 
     view! {
-        <div class="flex flex-col pt-12 px-3 bg-light dark:bg-gray-950 h-[100vh] overflow-hidden">
+        <div class="flex overflow-hidden flex-col px-3 pt-12 bg-light h-[100vh] dark:bg-gray-950">
             <Transition fallback=move || {
                 view! { <p>"Loading Profile..."</p> }
             }>
@@ -117,10 +122,10 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                 </div>
                                             </div>
 
-                                            <div class="lg:flex lg:flex-col lg:items-center lg:max-w-4xl lg:mx-auto">
+                                            <div class="lg:flex lg:flex-col lg:items-center lg:mx-auto lg:max-w-4xl">
                                                 <Stats user />
 
-                                                <div class="grid grid-cols-[1fr_auto] gap-1 items-start m-1 lg:flex lg:items-center lg:gap-4 lg:mt-4">
+                                                <div class="grid gap-1 items-start m-1 lg:flex lg:gap-4 lg:items-center lg:mt-4 grid-cols-[1fr_auto]">
                                                     <div class="flex flex-wrap gap-1 min-w-0">
                                                         <a
                                                             href=format!("/@/{}/unstarted", username.get_value())

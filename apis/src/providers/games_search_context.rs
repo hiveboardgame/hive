@@ -1,5 +1,4 @@
-use crate::functions::games::get::GetBatchFromOptions;
-use crate::responses::GameResponse;
+use crate::{functions::games::get::GetBatchFromOptions, responses::GameResponse};
 use codee::{binary::MsgpackSerdeCodec, string::Base64};
 use cookie::SameSite;
 use hive_lib::Color;
@@ -7,7 +6,12 @@ use leptos::{html, prelude::*};
 use leptos_use::{use_cookie_with_options, UseCookieOptions};
 use serde::{Deserialize, Serialize};
 use shared_types::{
-    BatchInfo, GameProgress, GameSpeed, GamesQueryOptions, PlayerFilter, ResultType,
+    BatchInfo,
+    GameProgress,
+    GameSpeed,
+    GamesQueryOptions,
+    PlayerFilter,
+    ResultType,
 };
 
 const GAMES_FILTER_COOKIE: &str = "games_filter";

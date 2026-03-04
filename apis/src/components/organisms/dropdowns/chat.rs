@@ -1,6 +1,7 @@
-use crate::components::molecules::hamburger::Hamburger;
-use crate::components::organisms::chat::ChatWindow;
-use crate::providers::chat::Chat;
+use crate::{
+    components::{molecules::hamburger::Hamburger, organisms::chat::ChatWindow},
+    providers::chat::Chat,
+};
 use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_router::hooks::use_params_map;

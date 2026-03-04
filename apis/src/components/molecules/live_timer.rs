@@ -1,13 +1,21 @@
 use crate::providers::{
-    game_state::GameStateSignal, timer::TimerSignal, ApiRequestsProvider, AuthContext, SoundType,
+    game_state::GameStateSignal,
+    timer::TimerSignal,
+    ApiRequestsProvider,
+    AuthContext,
+    SoundType,
     Sounds,
 };
 use hive_lib::{Color, GameStatus};
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 use leptos_use::{
-    use_interval_fn_with_options, utils::Pausable, watch_with_options, whenever_with_options,
-    UseIntervalFnOptions, WatchOptions,
+    use_interval_fn_with_options,
+    utils::Pausable,
+    watch_with_options,
+    whenever_with_options,
+    UseIntervalFnOptions,
+    WatchOptions,
 };
 use shared_types::GameId;
 use std::time::Duration;
@@ -137,14 +145,12 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
     );
 
     view! {
-        <div
-            class=move || {
-                format!(
-                    "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
-                    if timed_out() { "bg-ladybug-red" } else { "" },
-                )
-            }
-        >
+        <div class=move || {
+            format!(
+                "flex resize h-full select-none items-center justify-center text-xl md:text-2xl lg:text-4xl {}",
+                if timed_out() { "bg-ladybug-red" } else { "" },
+            )
+        }>
             {move || {
                 timer
                     .with(|t| {
