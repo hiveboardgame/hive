@@ -11,7 +11,7 @@ use shared_types::{GameId, GameSpeed, Takeback};
 use uuid::Uuid;
 
 use super::{
-    analysis::AnalysisSignal,
+    analysis::AnalysisStore,
     api_requests::ApiRequests,
     auth_context::AuthContext,
     ApiRequestsProvider,
@@ -75,20 +75,16 @@ impl GameStateStore {
             }
         })
     }
-
-    pub fn undo_move(&self) {
-        self.0.update(|s| {
-            if let Some(turn) = s.history_turn {
-                s.state.undo();
-                if turn > 0 {
-                    s.history_turn = Some(turn - 1);
-                } else {
-                    s.history_turn = None;
-                }
-            };
-        })
+    pub fn undo_n_moves(&self, n: usize) {
+        if let Some(turn) = self.history_turn().get() {
+            self.state().update(|s| s.undo(n));
+            if turn >= n {
+                self.history_turn().set(Some(turn - n));
+            } else {
+                self.history_turn().set(None);
+            }
+        }
     }
-
     pub fn set_game_status(&self, status: GameStatus) {
         self.state().update(|state| {
             state.game_status = status;
@@ -147,20 +143,20 @@ impl GameStateStore {
         self.move_info().update(|move_info| move_info.reset())
     }
 
-    pub fn move_active(&self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
-        self.0.update(|s| s.move_active(analysis, api))
+    pub fn move_active(&self, analysis: Option<AnalysisStore>, api: ApiRequests) {
+        self.update(|s| s.move_active(analysis, api))
     }
 
     pub fn is_move_allowed(&self, in_analysis: bool) -> bool {
-        self.0.with_untracked(|gs| gs.is_move_allowed(in_analysis))
+        self.with_untracked(|gs| gs.is_move_allowed(in_analysis))
     }
 
     pub fn show_moves(&self, piece: Piece, position: Position) {
-        self.0.update(|s| s.show_moves(piece, position))
+        self.update(|s| s.show_moves(piece, position))
     }
 
     pub fn show_spawns(&self, piece: Piece, position: Position) {
-        self.0.update(|s| s.show_spawns(piece, position))
+        self.update(|s| s.show_spawns(piece, position))
     }
 
     pub fn set_target(&self, position: Position) {
@@ -361,24 +357,25 @@ impl GameState {
         })
     }
 
-    pub fn move_active(&mut self, analysis: Option<AnalysisSignal>, api: ApiRequests) {
+    pub fn move_active(&mut self, analysis: Option<AnalysisStore>, api: ApiRequests) {
         if let (Some((active, _)), Some(position)) =
             (self.move_info.active, self.move_info.target_position)
         {
             if let Err(e) = self.state.play_turn_from_position(active, position) {
                 log!("Could not play turn: {} {} {}", active, position, e);
             } else if let Some(analysis) = analysis {
-                analysis.0.update(|analysis| {
-                    let moves = self.state.history.moves.clone();
-                    let hashes = self.state.hashes.clone();
-                    let last_index = moves.len() - 1;
-                    if moves[last_index].0 == "pass" {
-                        //if move is pass, add prev move
-                        analysis.add_node(moves[last_index - 1].clone(), hashes[last_index - 1]);
-                    }
-                    analysis.add_node(moves[last_index].clone(), hashes[last_index]);
-                    self.move_info.reset();
-                });
+                let moves = self.state.history.moves.clone();
+                let hashes = self.state.hashes.clone();
+                let last_index = moves.len() - 1;
+                if moves[last_index].0 == "pass" {
+                    //if move is pass, add prev move
+                    analysis.update(|a| {
+                        a.add_node(moves[last_index - 1].clone(), hashes[last_index - 1])
+                    });
+                }
+                analysis.update(|a| a.add_node(moves[last_index].clone(), hashes[last_index]));
+                self.history_turn = Some(moves.len());
+                self.move_info.reset();
             } else if let Some(ref game_id) = self.game_id {
                 let turn = Turn::Move(active, position);
                 api.turn(game_id.to_owned(), turn);

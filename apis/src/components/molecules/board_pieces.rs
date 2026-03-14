@@ -15,12 +15,10 @@ pub fn BoardPieces(
     target_stack: RwSignal<Option<Position>>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
-    let move_info = Signal::derive(move || game_state.move_info().get());
-    let state = Signal::derive(move || game_state.state().get());
     // TODO get the BOARD_SIZE from board
     let board = move || {
-        let move_info = move_info();
-        state.with(|state| {
+        let move_info = game_state.move_info().get();
+        game_state.state().with(|state| {
             let mut board = Vec::new();
             let targets = move_info.target_positions;
             let last_move = state.board.last_move;

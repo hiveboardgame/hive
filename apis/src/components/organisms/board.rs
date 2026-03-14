@@ -5,7 +5,7 @@ use crate::{
         molecules::{board_pieces::BoardPieces, history_pieces::HistoryPieces},
     },
     providers::{
-        analysis::AnalysisSignal,
+        analysis::AnalysisStore,
         game_state::{GameStateStore, GameStateStoreFields, View},
         Config,
     },
@@ -124,7 +124,7 @@ impl ViewBoxState {
 #[component]
 pub fn Board() -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
-    let analysis = use_context::<AnalysisSignal>();
+    let analysis = use_context::<AnalysisStore>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let target_stack = RwSignal::new(None);
     let config = expect_context::<Config>().0;

@@ -11,7 +11,7 @@ use crate::{
     functions::games::get::get_game_from_nanoid,
     pages::play::CurrentConfirm,
     providers::{
-        analysis::{AnalysisSignal, AnalysisTree, TreeNode},
+        analysis::{AnalysisStore, AnalysisTree, TreeNode},
         game_state::GameStateStore,
         AuthContext,
     },
@@ -20,6 +20,7 @@ use crate::{
 use hive_lib::{Color, GameStatus, GameType};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
+use reactive_stores::Store;
 use shared_types::{GameId, TimeMode};
 use std::collections::HashSet;
 
@@ -58,11 +59,31 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 || Some(user_id) == Some(game_response.black_player.uid))
     };
 
-    let game_resource = Resource::new(game_id, move |game_id| async move {
-        if let Some(game_id) = game_id {
+    let game_resource = OnceResource::new(async move {
+        if let Some(game_id) = game_id.get() {
             get_game_from_nanoid(game_id).await
         } else {
             Err(leptos::prelude::ServerFnError::new("No game ID provided"))
+        }
+    });
+    let analysis_signal = AnalysisStore(Store::new(
+        uhp_string
+            .get_value()
+            .and_then(|uhp| AnalysisTree::from_uhp(game_state, uhp).ok())
+            .unwrap_or_else(|| AnalysisTree::new_blank_analysis(game_state, GameType::MLP)),
+    ));
+    provide_context(analysis_signal.clone());
+    Effect::new(move |_| {
+        if let Some(Ok(game_response)) = game_resource.get() {
+            if should_block_analysis(&game_response) {
+                return;
+            }
+            if let Some(analysis_tree) =
+                AnalysisTree::from_game_response(&game_response, move_number.get_value())
+            {
+                analysis_signal.0.set(analysis_tree);
+                analysis_signal.sync_game_state(game_state);
+            }
         }
     });
 
@@ -77,84 +98,44 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                 },
             )
         }>
-            <Suspense fallback=move || {
-                view! { <div>"Loading analysis..."</div> }
-            }>
-                {move || {
-                    let analysis_signal = game_resource
-                        .with(|gr| {
-                            let analysis_tree = match gr {
-                                Some(Ok(game_response)) if !should_block_analysis(game_response) => {
-                                    AnalysisTree::from_game_response(
-                                            game_response,
-                                            game_state,
-                                            move_number.get_value(),
-                                        )
-                                        .unwrap_or_default()
-                                }
-                                _ => {
-                                    uhp_string
-                                        .get_value()
-                                        .and_then(|uhp| {
-                                            AnalysisTree::from_uhp(game_state, uhp).ok()
-                                        })
-                                        .unwrap_or_else(|| {
-                                            AnalysisTree::new_blank_analysis(game_state, GameType::MLP)
-                                        })
-                                }
-                            };
-                            AnalysisSignal(RwSignal::new(analysis_tree))
-                        });
-                    provide_context(analysis_signal);
-
+            <Show
+                when=vertical
+                fallback=move || {
                     view! {
-                        <Show
-                            when=vertical
-                            fallback=move || {
-                                view! {
-                                    <AnalysisInfo extend_tw_classes="absolute pl-4 pt-2 bg-transparent" />
-                                    <Board />
-                                    <div class="flex flex-col col-span-2 row-span-6 p-1 h-full border-2 border-black select-none dark:border-white">
-                                        <History />
-                                    </div>
-                                }
-                            }
-                        >
-                            <div class="flex flex-col h-[85dvh]">
-                                <div class="flex flex-col flex-grow shrink">
-                                    <div class="flex justify-between h-full max-h-16">
-                                        <Reserve
-                                            alignment=Alignment::SingleRow
-                                            color=Color::White
-                                        />
-                                    </div>
-                                </div>
-                                <AnalysisInfo />
-                                <Board />
-                                <div class="flex flex-col flex-grow shrink">
-                                    <div class="flex justify-between h-full max-h-16">
-                                        <Reserve
-                                            alignment=Alignment::SingleRow
-                                            color=Color::Black
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <History mobile=true />
-                        </Show>
+                        <AnalysisInfo extend_tw_classes="absolute pl-4 pt-2 bg-transparent" />
+                        <Board />
+                        <div class="flex flex-col col-span-2 row-span-6 p-1 h-full border-2 border-black select-none dark:border-white">
+                            <History />
+                        </div>
                     }
-                }}
-            </Suspense>
+                }
+            >
+                <div class="flex flex-col h-[85dvh]">
+                    <div class="flex flex-col flex-grow shrink">
+                        <div class="flex justify-between h-full max-h-16">
+                            <Reserve alignment=Alignment::SingleRow color=Color::White />
+                        </div>
+                    </div>
+                    <AnalysisInfo />
+                    <Board />
+                    <div class="flex flex-col flex-grow shrink">
+                        <div class="flex justify-between h-full max-h-16">
+                            <Reserve alignment=Alignment::SingleRow color=Color::Black />
+                        </div>
+                    </div>
+                </div>
+                <History mobile=true />
+            </Show>
         </div>
     }
 }
 
 #[component]
 fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
+    let analysis = expect_context::<AnalysisStore>();
     let game_state = expect_context::<GameStateStore>();
     let moves = move || {
-        analysis.with(|a| {
+        analysis.0.with(|a| {
             let tree = &a.tree;
             let mut moves = Vec::new();
             let sibling_nodes = a.current_node
@@ -172,17 +153,16 @@ fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
                     piece,
                     position,
                 })) = s.get_value() {
+                let analysis = analysis.clone();
                 moves.push(
                         view! {
                             <div
                                 class="underline cursor-pointer active:scale-95 no-link-style hover:text-pillbug-teal"
                                 on:click=move |_| {
-                                    analysis
-                                        .update(|a| {
-                                            if let Ok(node_id) = s.get_node_id() {
-                                                a.update_node(node_id, Some(game_state));
-                                            }
-                                        })
+                                    if let Ok(node_id) = s.get_node_id() {
+                                        analysis.update_node(node_id);
+                                        analysis.sync_game_state(game_state);
+                                    }
                                 }
                             >
                                 {format!("{turn}. {piece} {position}")}

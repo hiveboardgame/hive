@@ -6,7 +6,7 @@ use crate::{
         hex_stack::HexStack,
     },
     providers::{
-        analysis::AnalysisSignal,
+        analysis::AnalysisStore,
         game_state::{GameStateStore, GameStateStoreFields, View},
         AuthContext,
         Config,
@@ -70,7 +70,7 @@ pub fn Reserve(
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
-    let analysis = use_context::<AnalysisSignal>().is_some();
+    let analysis = use_context::<AnalysisStore>().is_some();
     let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;

@@ -1,7 +1,7 @@
 use crate::{
     common::{MoveConfirm, SvgPos},
     pages::play::CurrentConfirm,
-    providers::{analysis::AnalysisSignal, game_state::GameStateStore, ApiRequestsProvider},
+    providers::{analysis::AnalysisStore, game_state::GameStateStore, ApiRequestsProvider},
 };
 use hive_lib::Position;
 use leptos::prelude::*;
@@ -17,7 +17,7 @@ pub fn Target(
     let center = move || SvgPos::center_for_level(position, level(), straight);
     let transform = move || format!("translate({},{})", center().0, center().1);
     let game_state = expect_context::<GameStateStore>();
-    let analysis = use_context::<AnalysisSignal>();
+    let analysis = use_context::<AnalysisStore>();
     let api = expect_context::<ApiRequestsProvider>().0;
     // Select the target position and make a move if it's the correct mode
     let onclick = move |_| {

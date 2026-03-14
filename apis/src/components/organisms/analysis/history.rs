@@ -8,11 +8,12 @@ use crate::{
         },
         reserve::{Alignment, Reserve},
     },
-    providers::analysis::{AnalysisSignal, AnalysisTree, TreeNode},
+    providers::analysis::{AnalysisStore, AnalysisTree, TreeNode},
 };
 use hive_lib::Color;
 use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
+use reactive_stores::Store;
 use std::{cmp::Ordering, collections::HashMap};
 use tree_ds::prelude::*;
 
@@ -113,7 +114,7 @@ fn build_history_model(tree: &Tree<i32, TreeNode>) -> Option<Vec<HistoryItem>> {
 
 fn render_history_items(
     items: &[HistoryItem],
-    analysis: RwSignal<AnalysisTree>,
+    analysis: Store<AnalysisTree>,
     current_path: Memo<Vec<i32>>,
 ) -> AnyView {
     items
@@ -148,7 +149,7 @@ fn render_history_items(
 
 #[component]
 pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
+    let analysis = expect_context::<AnalysisStore>().0;
     let current_path = Memo::new(move |_| {
         analysis.with(|a| {
             a.current_node
@@ -204,6 +205,7 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                     }
                 }
             }
+            a.recompute_full_path_from_current();
         });
     };
 

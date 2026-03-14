@@ -2,7 +2,7 @@ use crate::{
     common::{MoveConfirm, PieceType, SvgPos, TileDesign, TileDots, TileRotation},
     pages::play::CurrentConfirm,
     providers::{
-        analysis::AnalysisSignal,
+        analysis::AnalysisStore,
         config::TileOptions,
         game_state::{GameStateStore, GameStateStoreFields},
         ApiRequestsProvider,
@@ -195,7 +195,7 @@ pub fn PieceWithOnClick(
     #[prop(optional, into)] piece_type: PieceType,
     tile_opts: TileOptions,
 ) -> impl IntoView {
-    let analysis = use_context::<AnalysisSignal>();
+    let analysis = use_context::<AnalysisStore>();
     let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
