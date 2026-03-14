@@ -20,7 +20,7 @@ use crate::{
     functions::games::get::get_game_from_nanoid,
     providers::{
         config::Config,
-        game_state::{GameStateSignal, View},
+        game_state::{GameStateStore, GameStateStoreFields, View},
         timer::TimerSignal,
         websocket::WebsocketContext,
         ApiRequestsProvider,
@@ -45,7 +45,7 @@ pub struct CurrentConfirm(pub Memo<MoveConfirm>);
 pub fn Play() -> impl IntoView {
     provide_context(TimerSignal::new());
     let timer = expect_context::<TimerSignal>();
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
@@ -75,7 +75,6 @@ pub fn Play() -> impl IntoView {
         config.with(|cfg| {
             let preferred_confirms = &cfg.confirm_mode;
             game_state
-                .signal
                 .with(|gs| gs.get_game_speed())
                 .and_then(|game_speed| preferred_confirms.get(&game_speed).cloned())
                 .unwrap_or_default()
@@ -83,7 +82,8 @@ pub fn Play() -> impl IntoView {
     });
     provide_context(CurrentConfirm(current_confirm));
     let user = auth_context.user;
-    let white_and_black_ids = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
+    let white_and_black_ids =
+        Signal::derive(move || (game_state.white_id().get(), game_state.black_id().get()));
     let user_is_player = Signal::derive(move || {
         user.with(|a| {
             if let Some(user) = a {
@@ -113,8 +113,8 @@ pub fn Play() -> impl IntoView {
         }
     };
 
-    let show_board = create_read_slice(game_state.signal, |gs| {
-        !gs.game_response.as_ref().is_some_and(|gr| {
+    let show_board = Signal::derive(move || {
+        !game_state.game_response().get().as_ref().is_some_and(|gr| {
             gr.game_start == GameStart::Ready && matches!(gr.game_status, GameStatus::NotStarted)
         })
     });
@@ -151,11 +151,9 @@ pub fn Play() -> impl IntoView {
                     }
                     let url_number = move_number.get_untracked();
                     if url_number.is_some_and(|v| {
-                        game_state
-                            .signal
-                            .with_untracked(|gs| v < gs.state.turn.saturating_sub(1))
+                        game_state.with_untracked(|gs| v < gs.state.turn.saturating_sub(1))
                     }) {
-                        game_state.signal.update(|s| {
+                        game_state.update(|s| {
                             s.history_turn = url_number;
                             s.view = View::History;
                         });
@@ -180,8 +178,8 @@ pub fn Play() -> impl IntoView {
                             game_state.clear_gc();
                             game_state.set_game_response(gar.game.clone());
                             sounds.play_sound(SoundType::Turn);
-                            let (pos, reserve_pos, history_moves, active) =
-                                game_state.signal.with_untracked(|gs| {
+                            let (pos, reserve_pos, history_moves, active) = game_state
+                                .with_untracked(|gs| {
                                     (
                                         gs.move_info.current_position,
                                         gs.move_info.reserve_position,
@@ -232,7 +230,7 @@ pub fn Play() -> impl IntoView {
                                 }
                                 GameControl::TakebackAccept(_) => {
                                     timer.update_from(&gar.game);
-                                    reset_game_state_for_takeback(&gar.game, &mut game_state);
+                                    reset_game_state_for_takeback(&gar.game, &game_state);
                                 }
                                 GameControl::TakebackRequest(_)
                                 | GameControl::DrawOffer(_)
@@ -360,11 +358,11 @@ fn VerticalLayout(
     white_and_black_ids: Signal<(Option<Uuid>, Option<Uuid>)>,
     game_id: Memo<GameId>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let controls_signal = expect_context::<ControlsSignal>();
     let vertical = true;
     let go_to_game = Callback::new(move |()| {
-        if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
+        if game_state.with_untracked(|gs| gs.is_last_turn()) {
             game_state.view_game();
         }
     });

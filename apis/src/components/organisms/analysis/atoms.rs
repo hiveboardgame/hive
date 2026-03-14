@@ -2,7 +2,7 @@ use crate::{
     pages::analysis::ToggleStates,
     providers::{
         analysis::{AnalysisSignal, TreeNode},
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
     },
 };
 use leptos::{html, prelude::*};
@@ -12,7 +12,7 @@ use tree_ds::prelude::Node;
 #[component]
 pub fn UndoButton() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let analysis = StoredValue::new(analysis.clone());
     let is_disabled = move || analysis.get_value().0.with(|a| a.current_node.is_none());
     let undo = move |_| {
@@ -66,7 +66,7 @@ pub fn HistoryButton(
     #[prop(optional)] node_ref: Option<NodeRef<html::Button>>,
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let cloned_action = action.clone();
     let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
@@ -141,7 +141,7 @@ pub fn HistoryMove(
     has_children: bool,
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     if let (Ok(Some(value)), Ok(node_id)) = (node.get_value(), node.get_node_id()) {
         let class = move || {
             let margin = if has_children { "" } else { "ml-[15px] " };
@@ -158,9 +158,8 @@ pub fn HistoryMove(
             });
         };
         let history_index = value.turn - 1;
-        let game_state = expect_context::<GameStateSignal>();
-        let repetitions =
-            create_read_slice(game_state.signal, |gs| gs.state.repeating_moves.clone());
+        let game_state = expect_context::<GameStateStore>();
+        let repetitions = Signal::derive(move || game_state.state().get().repeating_moves.clone());
         let rep = move || {
             if repetitions.with(|r| r.contains(&history_index))
                 && current_path.with(|p| p.contains(&node_id))

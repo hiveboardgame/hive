@@ -1,6 +1,6 @@
 use crate::providers::{
     analysis::{AnalysisSignal, AnalysisTree},
-    game_state::GameStateSignal,
+    game_state::GameStateStore,
 };
 use hive_lib::History;
 use leptos::{html, logging, prelude::*};
@@ -63,7 +63,7 @@ fn blob_and_filename(tree: String) -> (Blob, String) {
 #[component]
 pub fn LoadTree() -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let input_ref = NodeRef::<html::Input>::new();
 
     let from_pgn = move |string: JsValue| {
@@ -72,7 +72,7 @@ pub fn LoadTree() -> impl IntoView {
             .and_then(|string| History::from_pgn_str(string).ok())
             .and_then(|history| hive_lib::State::new_from_history(&history).ok())
             .map(|state| {
-                game_state.signal.update(|gs| gs.state = state.clone());
+                game_state.update(|gs| gs.state = state.clone());
                 let tree = AnalysisTree::from_loaded_state(game_state, &state);
                 analysis.set(tree);
             })

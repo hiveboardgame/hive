@@ -6,7 +6,7 @@ use crate::{
     },
     providers::{
         analysis::AnalysisSignal,
-        game_state::{GameStateSignal, View},
+        game_state::{GameStateStore, GameStateStoreFields, View},
         Config,
     },
 };
@@ -123,7 +123,7 @@ impl ViewBoxState {
 
 #[component]
 pub fn Board() -> impl IntoView {
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let analysis = use_context::<AnalysisSignal>();
     let orientation_signal = expect_context::<OrientationSignal>();
     let target_stack = RwSignal::new(None);
@@ -136,8 +136,8 @@ pub fn Board() -> impl IntoView {
     let g_ref = NodeRef::<svg::G>::new();
     let div_ref = NodeRef::<html::Div>::new();
     let last_turn = game_state.is_last_turn_as_signal();
-    let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
-    let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
+    let board_view = Signal::derive(move || game_state.view().get());
+    let game_status = Signal::derive(move || game_state.state().get().game_status.clone());
     let board_style = move || {
         if orientation_signal.orientation_vertical.get() {
             "flex grow min-h-0"
@@ -166,9 +166,7 @@ pub fn Board() -> impl IntoView {
         viewbox_signal.with(|vb| format!("translate({},{})", vb.x_transform, vb.y_transform))
     };
 
-    let current_center = game_state
-        .signal
-        .with_untracked(|gs| gs.state.board.center_coordinates());
+    let current_center = game_state.with_untracked(|gs| gs.state.board.center_coordinates());
 
     let straight = config.with_untracked(|c| c.tile.design == TileDesign::ThreeD);
     let tile_opts = Signal::derive(move || config.with(|c| c.tile.clone()));

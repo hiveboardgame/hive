@@ -4,7 +4,7 @@ use crate::{
     providers::{
         analysis::AnalysisSignal,
         config::TileOptions,
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
         ApiRequestsProvider,
         AuthContext,
         Config,
@@ -21,7 +21,7 @@ pub fn PieceWithoutOnClick(
     #[prop(into)] level: Signal<usize>,
     #[prop(into)] tile_opts: TileOptions,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let piece = piece.get_untracked();
     let tile_opts = StoredValue::new(tile_opts);
     let three_d = move || tile_opts.read_value().is_three_d();
@@ -82,9 +82,9 @@ pub fn PieceWithoutOnClick(
         },
     };
 
-    let active_piece = create_read_slice(game_state.signal, |gs| gs.move_info.active);
-    let last_move = create_read_slice(game_state.signal, |gs| gs.state.board.last_move);
-    let board_state = create_read_slice(game_state.signal, |gs| gs.state.board.clone());
+    let active_piece = Signal::derive(move || game_state.move_info().get().active);
+    let last_move = Signal::derive(move || game_state.state().get().board.last_move);
+    let board_state = Signal::derive(move || game_state.state().get().board.clone());
     let top_piece = move || board_state.with(|board| board.top_piece(position).unwrap_or(piece));
     let show_ds = move || {
         let top_piece = top_piece();
@@ -196,7 +196,7 @@ pub fn PieceWithOnClick(
     tile_opts: TileOptions,
 ) -> impl IntoView {
     let analysis = use_context::<AnalysisSignal>();
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let current_confirm = expect_context::<CurrentConfirm>().0;
@@ -205,7 +205,7 @@ pub fn PieceWithOnClick(
         evt.stop_propagation();
         let piece_value = piece.get_untracked();
         let in_analysis = analysis.is_some();
-        let current_turn_color = game_state.signal.with_untracked(|gs| gs.state.turn_color);
+        let current_turn_color = game_state.with_untracked(|gs| gs.state.turn_color);
 
         let is_selectable_piece = config.get_untracked().allow_preselect
             && match piece_type {
@@ -215,7 +215,7 @@ pub fn PieceWithOnClick(
                 }
                 _ => false,
             };
-        let is_current_player = game_state.signal.with_untracked(|gs| {
+        let is_current_player = game_state.with_untracked(|gs| {
             auth_context
                 .user
                 .with_untracked(|a| gs.uid_is_player(a.as_ref().map(|u| u.id)))
@@ -236,7 +236,7 @@ pub fn PieceWithOnClick(
                 _ => {}
             };
         } else if !in_analysis && is_current_player && is_selectable_piece {
-            game_state.signal.update(|v| {
+            game_state.update(|v| {
                 v.move_info.active = Some((piece_value, piece_type));
                 if piece_type == PieceType::Board {
                     v.move_info.current_position = Some(position);

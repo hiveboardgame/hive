@@ -5,7 +5,7 @@ use crate::{
         organisms::header::Header,
     },
     providers::{
-        game_state::GameStateSignal,
+        game_state::{GameState, GameStateStore, GameStateStoreFields},
         refocus::RefocusSignal,
         websocket::WebsocketContext,
         AuthContext,
@@ -26,6 +26,7 @@ use leptos_use::{
     use_window_focus,
     utils::Pausable,
 };
+use reactive_stores::Store;
 
 cfg_if! { if #[cfg(not(feature = "ssr"))] {
     use leptos_use::utils::IS_IOS;
@@ -52,13 +53,13 @@ pub struct OrientationSignal {
 
 #[component]
 pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
-    provide_context(GameStateSignal::new());
+    provide_context(GameStateStore(Store::new(GameState::new())));
     let config = expect_context::<Config>().0;
     let ping = expect_context::<PingContext>();
     let ws = expect_context::<WebsocketContext>();
     let ws_ready = ws.ready_state;
     let auth_context = expect_context::<AuthContext>();
-    let gamestate = expect_context::<GameStateSignal>();
+    let gamestate = expect_context::<GameStateStore>();
     let mut refocus = expect_context::<RefocusSignal>();
     let update_notifier = expect_context::<UpdateNotifier>();
     let orientation_vertical = use_media_query("(orientation: portrait), (max-width: 640px)");
@@ -93,11 +94,12 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
             .with_untracked(|a| a.as_ref().map(|user| user.id))
     });
     let user_color = gamestate.user_color_as_signal(user_id);
-    let has_gamecontrol = create_read_slice(gamestate.signal, move |gs| {
+    let pending_gc = gamestate.game_control_pending();
+    let has_gamecontrol = Signal::derive(move || {
         if let Some(color) = user_color() {
             let opp_color = color.opposite_color();
             matches!(
-                gs.game_control_pending,
+                pending_gc.get(),
                 Some(GameControl::TakebackRequest(color) | GameControl::DrawOffer(color)) if color == opp_color
             )
         } else {

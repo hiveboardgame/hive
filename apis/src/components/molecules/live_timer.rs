@@ -1,5 +1,5 @@
 use crate::providers::{
-    game_state::GameStateSignal,
+    game_state::{GameStateStore, GameStateStoreFields},
     timer::TimerSignal,
     ApiRequestsProvider,
     AuthContext,
@@ -22,7 +22,7 @@ use std::time::Duration;
 
 #[component]
 pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let sounds = expect_context::<Sounds>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
@@ -40,8 +40,10 @@ pub fn LiveTimer(side: Signal<Color>) -> impl IntoView {
             .with_untracked(|a| a.as_ref().map(|user| user.id))
     });
     let user_color = game_state.user_color_as_signal(user_id);
-    let in_progress = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
+    let in_progress = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
             .as_ref()
             .is_some_and(|gr| gr.game_status == GameStatus::InProgress)
     });

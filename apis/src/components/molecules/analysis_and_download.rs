@@ -1,4 +1,7 @@
-use crate::{components::atoms::download_pgn::DownloadPgn, providers::game_state::GameStateSignal};
+use crate::{
+    components::atoms::download_pgn::DownloadPgn,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
+};
 use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
@@ -6,11 +9,11 @@ use shared_types::GameSpeed;
 
 #[component]
 pub fn AnalysisAndDownload() -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let params = use_params_map();
     let queries = use_query_map();
-    let correspondence = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().is_some_and(|gr| {
+    let correspondence = Signal::derive(move || {
+        game_state.game_response().get().as_ref().is_some_and(|gr| {
             gr.speed == GameSpeed::Correspondence || gr.speed == GameSpeed::Untimed
         })
     });
