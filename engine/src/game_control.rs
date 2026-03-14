@@ -2,7 +2,7 @@ use crate::{color::Color, game_error::GameError};
 use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Copy)]
 pub enum GameControl {
     Abort(Color),
     DrawAccept(Color),
