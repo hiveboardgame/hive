@@ -37,6 +37,13 @@
             "yes": "Ja",
             "no": "Nein"
         }
+    },
+    "challenge_tabs": {
+        "humans": "Menschen",
+        "bots": "Bots",
+        "empty_state": {
+            "humans": "Es gibt keine offenen Herausforderungen von Menschen. Erstelle oben eine, um eine Partie zu starten.",
+            "bots": "Zurzeit gibt es keine offenen Bot-Herausforderungen."
+        }
     }
 }
-

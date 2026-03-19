@@ -37,5 +37,13 @@
             "yes": "Yes",
             "no": "No"
         }
+    },
+    "challenge_tabs": {
+        "humans": "Humans",
+        "bots": "Bots",
+        "empty_state": {
+            "humans": "No human challenges are open. Create one above to get a game started.",
+            "bots": "No bot challenges are open right now."
+        }
     }
 }

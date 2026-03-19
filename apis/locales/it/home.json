@@ -35,5 +35,13 @@
             "no": "No"
         }
     },
+    "challenge_tabs": {
+        "humans": "Umani",
+        "bots": "Bot",
+        "empty_state": {
+            "humans": "Non ci sono sfide umane aperte. Creane una qui sopra per iniziare una partita.",
+            "bots": "Al momento non ci sono sfide contro i bot aperte."
+        }
+    },
     "found_players": "Trovato:"
 }

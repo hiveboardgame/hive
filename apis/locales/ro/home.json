@@ -36,5 +36,13 @@
             "yes": "Da",
             "no": "Nu"
         }
+    },
+    "challenge_tabs": {
+        "humans": "Oameni",
+        "bots": "Boți",
+        "empty_state": {
+            "humans": "Nu există provocări deschise de la oameni. Creează una mai sus ca să începi un joc.",
+            "bots": "Nu există provocări deschise cu boți în acest moment."
+        }
     }
 }

@@ -29,6 +29,14 @@
         },
         "time": "Durée"
     },
+    "challenge_tabs": {
+        "humans": "Humains",
+        "bots": "Bots",
+        "empty_state": {
+            "humans": "Aucun défi humain n'est ouvert. Créez-en un au-dessus pour lancer une partie.",
+            "bots": "Aucun défi contre un bot n'est ouvert pour le moment."
+        }
+    },
     "found_players": "Trouvé :",
     "search_players": "Rechercher des joueurs",
     "create_game": "Créer une partie",

@@ -1,1 +1,10 @@
-{}
+{
+    "challenge_tabs": {
+        "humans": "Människor",
+        "bots": "Bottar",
+        "empty_state": {
+            "humans": "Det finns inga öppna utmaningar från människor. Skapa en ovanför för att starta en match.",
+            "bots": "Det finns inga öppna bottutmaningar just nu."
+        }
+    }
+}

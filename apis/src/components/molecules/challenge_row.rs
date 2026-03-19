@@ -9,7 +9,7 @@ use crate::{
     },
     functions::hostname::hostname_and_port,
     i18n::*,
-    providers::{ApiRequestsProvider, Config},
+    providers::{ApiRequestsProvider, AuthContext, Config},
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
@@ -17,7 +17,6 @@ use leptos::{either::Either, prelude::*};
 use leptos_icons::*;
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
 use shared_types::{ChallengeId, ChallengeVisibility, TimeInfo};
-use uuid::Uuid;
 
 const BUTTON_BASE_CLASSES: &str = "px-1 py-1 m-1 text-white rounded transition-transform duration-300 transform active:scale-95 focus:outline-none focus:shadow-outline font-bold";
 
@@ -25,18 +24,35 @@ const BUTTON_BASE_CLASSES: &str = "px-1 py-1 m-1 text-white rounded transition-t
 pub fn ChallengeRow(
     challenge: ChallengeResponse,
     single: bool,
-    uid: Option<Uuid>,
     #[prop(default = 1)] count: usize,
     #[prop(default = Vec::new())] challenge_ids: Vec<ChallengeId>,
 ) -> impl IntoView {
+    let ChallengeResponse {
+        challenge_id,
+        challenger,
+        opponent,
+        game_type,
+        rated,
+        visibility,
+        color_choice,
+        challenger_rating,
+        time_mode,
+        time_base,
+        time_increment,
+        speed,
+        ..
+    } = challenge;
     let i18n = use_i18n();
     let config = expect_context::<Config>().0;
     let api = expect_context::<ApiRequestsProvider>().0;
-    let challenge_id = StoredValue::new(challenge.challenge_id);
-    let visibility = StoredValue::new(challenge.visibility);
+    let user = expect_context::<AuthContext>().user;
+    let challenger_id = challenger.uid;
+    let has_opponent = opponent.is_some();
+    let challenge_id = StoredValue::new(challenge_id);
+    let visibility = StoredValue::new(visibility);
     let all_challenge_ids = StoredValue::new(challenge_ids);
     let group_count = count;
-    let color_choice = StoredValue::new(challenge.color_choice);
+    let color_choice = StoredValue::new(color_choice);
     let icon = move || {
         let prefers_dark = config.with(|c| c.prefers_dark);
         match color_choice.get_value() {
@@ -117,37 +133,32 @@ pub fn ChallengeRow(
     let cancel_button_classes = StoredValue::new(format!(
         "{BUTTON_BASE_CLASSES} bg-ladybug-red hover:bg-red-400"
     ));
-    let time_mode = challenge.time_mode;
-    let (username, patreon, bot, rating) =
-        if let (Some(uid), Some(ref opponent)) = (uid, &challenge.opponent) {
-            if challenge.challenger.uid == uid {
-                (
-                    opponent.username.as_str(),
+    let displayed_user = Memo::new(move |_| {
+        if user.with(|a| a.as_ref().map(|user| user.id)) == Some(challenger_id) {
+            if let Some(opponent) = opponent.as_ref() {
+                return (
+                    opponent.username.clone(),
                     opponent.patreon,
                     opponent.bot,
-                    opponent.rating_for_speed(&challenge.speed),
-                )
-            } else {
-                (
-                    challenge.challenger.username.as_str(),
-                    challenge.challenger.patreon,
-                    challenge.challenger.bot,
-                    challenge.challenger_rating,
-                )
+                    opponent.rating_for_speed(&speed),
+                );
             }
-        } else {
-            (
-                challenge.challenger.username.as_str(),
-                challenge.challenger.patreon,
-                challenge.challenger.bot,
-                challenge.challenger_rating,
-            )
-        };
+        }
+
+        (
+            challenger.username.clone(),
+            challenger.patreon,
+            challenger.bot,
+            challenger_rating,
+        )
+    });
+    let viewer_is_challenger =
+        move || user.with(|a| a.as_ref().map(|user| user.id)) == Some(challenger_id);
 
     let time_info = TimeInfo {
         mode: time_mode,
-        base: challenge.time_base,
-        increment: challenge.time_increment,
+        base: time_base,
+        increment: time_increment,
     };
     view! {
         <tr class="items-center text-center cursor-pointer max-w-fit dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
@@ -158,36 +169,43 @@ pub fn ChallengeRow(
             </td>
             <td class=format!("w-10 sm:w-24 {td_class}")>
                 <div class="flex justify-center items-center">
-                    <div class="flex items-center">
-                        <StatusIndicator username=username.to_string() />
-                        <ProfileLink
-                            username=username.to_string()
-                            patreon
-                            bot
-                            extend_tw_classes="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[140px] lg:max-w-[160px]"
-                        />
-                        {if group_count > 1 {
-                            Either::Left(
+                    {move || {
+                        displayed_user
+                            .with(|(username, patreon, bot, _)| {
                                 view! {
-                                    <span class="py-0.5 px-1.5 ml-1 text-xs font-bold text-white rounded-full bg-pillbug-teal">
-                                        {format!("x{}", group_count)}
-                                    </span>
-                                },
-                            )
-                        } else {
-                            Either::Right(view! { "" })
-                        }}
-                    </div>
+                                    <div class="flex items-center">
+                                        <StatusIndicator username=username.clone() />
+                                        <ProfileLink
+                                            username=username.clone()
+                                            patreon=*patreon
+                                            bot=*bot
+                                            extend_tw_classes="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[140px] lg:max-w-[160px]"
+                                        />
+                                        {if group_count > 1 {
+                                            Either::Left(
+                                                view! {
+                                                    <span class="py-0.5 px-1.5 ml-1 text-xs font-bold text-white rounded-full bg-pillbug-teal">
+                                                        {format!("x{}", group_count)}
+                                                    </span>
+                                                },
+                                            )
+                                        } else {
+                                            Either::Right(view! { "" })
+                                        }}
+                                    </div>
+                                }
+                            })
+                    }}
                 </div>
             </td>
             <td class=td_class>
                 <div class="flex justify-center items-center">
-                    <p>{rating}</p>
+                    <p>{move || displayed_user.with(|(_, _, _, rating)| *rating)}</p>
                 </div>
             </td>
             <td class=td_class>
                 <div class="flex justify-center items-center">
-                    <GameType game_type=challenge.game_type />
+                    <GameType game_type />
                 </div>
             </td>
             <td class=td_class>
@@ -202,7 +220,7 @@ pub fn ChallengeRow(
                 <div class="flex justify-center items-center">
                     <span class="font-bold">
                         {move || {
-                            if challenge.rated {
+                            if rated {
                                 t_string!(i18n, home.challenge_details.rated.yes)
                             } else {
                                 t_string!(i18n, home.challenge_details.rated.no)
@@ -215,7 +233,7 @@ pub fn ChallengeRow(
             <td class=td_class>
                 <div class="flex justify-center items-center">
                     <Show
-                        when=move || { uid != Some(challenge.challenger.uid) }
+                        when=move || { !viewer_is_challenger() }
 
                         fallback=move || {
                             view! {
@@ -257,7 +275,7 @@ pub fn ChallengeRow(
                             <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
 
                         </button>
-                        {if challenge.opponent.is_some() {
+                        {if has_opponent {
                             Either::Left(
                                 view! {
                                     <button

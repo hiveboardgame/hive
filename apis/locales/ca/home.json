@@ -36,5 +36,13 @@
             "no": "No"
         }
     },
+    "challenge_tabs": {
+        "humans": "Humans",
+        "bots": "Bots",
+        "empty_state": {
+            "humans": "No hi ha reptes d'humans oberts. Crea'n un a sobre per començar una partida.",
+            "bots": "Ara mateix no hi ha reptes de bots oberts."
+        }
+    },
     "found_players": "Trobat:"
 }

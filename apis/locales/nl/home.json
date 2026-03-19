@@ -1,1 +1,10 @@
-{}
+{
+    "challenge_tabs": {
+        "humans": "Mensen",
+        "bots": "Bots",
+        "empty_state": {
+            "humans": "Er staan geen menselijke uitdagingen open. Maak er hierboven een aan om een partij te starten.",
+            "bots": "Er staan nu geen botuitdagingen open."
+        }
+    }
+}
