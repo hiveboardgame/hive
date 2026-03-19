@@ -35,6 +35,14 @@
         "player": "Jogador",
         "time": "Tempo"
     },
+    "challenge_tabs": {
+        "humans": "Humanos",
+        "bots": "Bots",
+        "empty_state": {
+            "humans": "Não há desafios humanos abertos. Cria um acima para começar uma partida.",
+            "bots": "Não há desafios de bots abertos neste momento."
+        }
+    },
     "create_game": "Cria um jogo",
     "search_players": "Procura jogadores"
 }

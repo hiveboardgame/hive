@@ -36,5 +36,13 @@
         },
         "time": "Idő"
     },
+    "challenge_tabs": {
+        "humans": "Emberek",
+        "bots": "Botok",
+        "empty_state": {
+            "humans": "Nincs nyitott emberi kihívás. Hozz létre egyet fent, hogy elinduljon a játék.",
+            "bots": "Jelenleg nincs nyitott bot kihívás."
+        }
+    },
     "found_players": "Találatok:"
 }

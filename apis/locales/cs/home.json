@@ -1,1 +1,10 @@
-{}
+{
+    "challenge_tabs": {
+        "humans": "Lidé",
+        "bots": "Boti",
+        "empty_state": {
+            "humans": "Nejsou otevřené žádné výzvy od lidí. Vytvořte jednu výše a začněte hrát.",
+            "bots": "Teď nejsou otevřené žádné výzvy od botů."
+        }
+    }
+}

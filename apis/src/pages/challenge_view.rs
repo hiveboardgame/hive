@@ -17,7 +17,7 @@ struct ChallengeParams {
 #[component]
 pub fn ChallengeView() -> impl IntoView {
     let params = use_params::<ChallengeParams>();
-    let auth_context = expect_context::<AuthContext>();
+    let user = expect_context::<AuthContext>().user;
     let nanoid = Signal::derive(move || {
         params.with(|params| {
             params
@@ -59,7 +59,6 @@ pub fn ChallengeView() -> impl IntoView {
             format!("{base_classes} bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal")
         }
     };
-    let uid = move || auth_context.user.with(|a| a.as_ref().map(|user| user.id));
     view! {
         <div class="flex flex-col items-center pt-20 mx-auto">
             <Suspense fallback=move || {
@@ -103,7 +102,6 @@ pub fn ChallengeView() -> impl IntoView {
                                     )
                                 }
                                 Ok(challenge) => {
-                                    let user = auth_context.user;
                                     Either::Right(
                                         view! {
                                             <Show when=move || {
@@ -136,7 +134,7 @@ pub fn ChallengeView() -> impl IntoView {
                                                     "The first person to come to this URL will play with you."
                                                 </p>
                                             </Show>
-                                            <ChallengeRow challenge=challenge single=true uid=uid() />
+                                            <ChallengeRow challenge=challenge single=true />
                                         },
                                     )
                                 }

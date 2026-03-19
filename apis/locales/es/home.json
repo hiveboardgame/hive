@@ -36,5 +36,13 @@
             "no": "No"
         }
     },
+    "challenge_tabs": {
+        "humans": "Humanos",
+        "bots": "Bots",
+        "empty_state": {
+            "humans": "No hay desafíos humanos abiertos. Crea uno arriba para empezar una partida.",
+            "bots": "No hay desafíos de bots abiertos en este momento."
+        }
+    },
     "found_players": "Encontrado:"
 }

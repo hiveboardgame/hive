@@ -7,12 +7,7 @@ use crate::{
         tournament_status_notification::TournamentStatusNotification,
     },
     functions::tournaments::get_abstracts_by_ids,
-    providers::{
-        challenges::ChallengeStateSignal,
-        AuthContext,
-        NotificationContext,
-        SchedulesContext,
-    },
+    providers::{challenges::ChallengeStateSignal, NotificationContext, SchedulesContext},
     responses::ScheduleResponse,
 };
 use leptos::prelude::*;
@@ -37,8 +32,6 @@ fn get_schedule_details(
 
 #[component]
 pub fn NotificationDropdown() -> impl IntoView {
-    let auth_context = expect_context::<AuthContext>();
-    let uid = move || auth_context.user.with(|a| a.as_ref().map(|user| user.id));
     let hamburger_show = RwSignal::new(false);
     let notifications_context = expect_context::<NotificationContext>();
     let challenges = expect_context::<ChallengeStateSignal>();
@@ -122,7 +115,6 @@ pub fn NotificationDropdown() -> impl IntoView {
                                         .expect("Challenge exists")
                                         .clone()
                                     single=false
-                                    uid=uid()
                                     attr:class="p-2 text-sm rounded dark:bg-header-twilight bg-odd-light"
                                 />
                             </tbody>
