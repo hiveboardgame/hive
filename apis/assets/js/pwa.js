@@ -119,7 +119,7 @@ window.addEventListener('pageshow', updatePwaLayout);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/assets/js/sw.js')
+    navigator.serviceWorker.register('/assets/js/sw.js', { updateViaCache: 'none' })
       .then((registration) => {
         console.log('ServiceWorker registration successful:', registration);
       })
