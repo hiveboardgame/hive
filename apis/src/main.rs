@@ -13,7 +13,6 @@ use actix_web::{
     cookie::{time::Duration, SameSite},
     middleware::Compress,
 };
-use leptos_meta::{HashedStylesheet, MetaTags};
 use websocket::WebsocketData;
 
 cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
@@ -36,6 +35,8 @@ async fn main() -> std::io::Result<()> {
     use diesel::pg::PgConnection;
     use diesel::Connection;
     use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+    use apis::components::layouts::document_shell::DocumentShell;
+    use functions::pwa::PwaManifest;
     use leptos::prelude::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
     use sha2::*;
@@ -69,21 +70,25 @@ async fn main() -> std::io::Result<()> {
     jobs::ping(Data::clone(&websocket_server));
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
+    let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);
 
     println!("listening on http://{}", &addr);
 
     HttpServer::new(move || {
         let leptos_options = &conf.leptos_options;
         let site_root = &leptos_options.site_root;
+        let pwa_manifest = pwa_manifest.clone();
+        let pwa_assets = pwa_manifest.document_assets();
 
         App::new()
             .app_data(Data::new(pool.clone()))
             .app_data(Data::clone(&websocket_server))
             .app_data(Data::clone(&data))
             .app_data(Data::clone(&jwt_key))
-            .app_data(Data::new(site_root.to_string()))
+            .app_data(Data::new(pwa_manifest.clone()))
             // serve JS/WASM/CSS from `pkg`
             .service(Files::new("/pkg", format!("{site_root}/pkg")))
+            .service(functions::pwa::worker)
             // serve other assets from the `assets` directory
             .service(Files::new("/assets", site_root.as_ref()))
             // serve the favicon from /favicon.ico
@@ -106,24 +111,17 @@ async fn main() -> std::io::Result<()> {
             // .leptos_routes(leptos_options.to_owned(), routes.to_owned(), App)
             .leptos_routes(routes.to_owned(), {
                 let leptos_options = leptos_options.clone();
+                let pwa_assets = pwa_assets.clone();
                 move || {
-                    use leptos::prelude::*;
-
                     view! {
-                        <!DOCTYPE html>
-                        <html lang="en">
-                            <head>
-                                <meta charset="utf-8"/>
-                                <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                                <AutoReload options=leptos_options.clone() />
-                                <HydrationScripts options=leptos_options.clone()/>
-                                <MetaTags/>
-                                <HashedStylesheet options=leptos_options.clone() id="leptos"/>
-                            </head>
-                            <body>
-                                <App/>
-                            </body>
-                        </html>
+                        <DocumentShell
+                            leptos_options=leptos_options.clone()
+                            manifest_href=pwa_assets.manifest_href.clone()
+                            apple_touch_icon_href=pwa_assets.apple_touch_icon_href.clone()
+                            pwa_script_src=pwa_assets.pwa_script_src.clone()
+                        >
+                            <App/>
+                        </DocumentShell>
                     }
             }})
             .app_data(Data::new(leptos_options.to_owned()))
