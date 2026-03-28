@@ -28,22 +28,25 @@ pub async fn username_taken(username: String) -> Result<bool, ServerFnError> {
 pub async fn get_top_users(
     game_speed: GameSpeed,
     limit: i64,
-) -> Result<Vec<UserResponse>, ServerFnError> {
-    use crate::functions::db::pool;
+) -> Result<Vec<(usize, UserResponse)>, ServerFnError> {
+    use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{
         get_conn,
         models::{Rating, User},
     };
     let pool = pool().await?;
     let mut conn = get_conn(&pool).await?;
-    let top_users: Vec<(User, Rating)> = User::get_top_users(&game_speed, limit, &mut conn).await?;
-    let mut results: Vec<UserResponse> = Vec::new();
-    for (user, _rating) in top_users.iter() {
-        results.push(
+    let maybe_user = uuid().await.ok();
+    let top_users: Vec<(User, Rating, i64)> =
+        User::get_top_users(&game_speed, maybe_user, limit, &mut conn).await?;
+    let mut results: Vec<(usize, UserResponse)> = Vec::new();
+    for (user, _rating, rank) in top_users.iter() {
+        results.push((
+            *rank as usize,
             UserResponse::from_model(user, &mut conn)
                 .await
                 .map_err(ServerFnError::new)?,
-        )
+        ))
     }
     Ok(results)
 }

@@ -21,7 +21,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use diesel::{
-    dsl::exists,
+    dsl::{exists, sql},
     query_dsl::BelongingToDsl,
     select,
     BoolExpressionMethods,
@@ -143,6 +143,23 @@ pub struct User {
 }
 
 impl User {
+    fn assign_ranks(rows: Vec<(User, Rating)>) -> Vec<(User, Rating, i64)> {
+        let mut last_rating: Option<f64> = None;
+        let mut last_rank = 0_i64;
+
+        rows.into_iter()
+            .enumerate()
+            .map(|(idx, (user, rating_row))| {
+                let position = idx as i64 + 1;
+                if last_rating != Some(rating_row.rating) {
+                    last_rating = Some(rating_row.rating);
+                    last_rank = position;
+                }
+                (user, rating_row, last_rank)
+            })
+            .collect()
+    }
+
     pub async fn create(new_user: NewUser, conn: &mut DbConn<'_>) -> Result<User, DbError> {
         let user: User = diesel::insert_into(users::table)
             .values(new_user)
@@ -300,17 +317,56 @@ impl User {
 
     pub async fn get_top_users(
         game_speed: &GameSpeed,
+        maybe_user: Option<Uuid>,
         limit: i64,
         conn: &mut DbConn<'_>,
-    ) -> Result<Vec<(User, Rating)>, DbError> {
-        Ok(users::table
+    ) -> Result<Vec<(User, Rating, i64)>, DbError> {
+        let speed = game_speed.to_string();
+        let mut top = Self::assign_ranks(
+            users::table
+                .inner_join(ratings::table)
+                .filter(ratings::deviation.le(shared_types::RANKABLE_DEVIATION))
+                .filter(ratings::speed.eq(speed.clone()))
+                .select((User::as_select(), Rating::as_select()))
+                .order_by(rating.desc())
+                .limit(limit)
+                .load::<(User, Rating)>(conn)
+                .await?,
+        );
+
+        let Some(user_id) = maybe_user else {
+            return Ok(top);
+        };
+
+        if top.iter().any(|(user, _, _)| user.id == user_id) {
+            return Ok(top);
+        }
+
+        let viewer_row = match users::table
             .inner_join(ratings::table)
             .filter(ratings::deviation.le(shared_types::RANKABLE_DEVIATION))
-            .filter(ratings::speed.eq(game_speed.to_string()))
-            .order_by(rating.desc())
-            .limit(limit)
-            .load::<(User, Rating)>(conn)
-            .await?)
+            .filter(ratings::speed.eq(speed))
+            .select((
+                User::as_select(),
+                Rating::as_select(),
+                sql::<diesel::sql_types::BigInt>("RANK() OVER (ORDER BY ratings.rating DESC)"),
+            ))
+            .order_by(ratings::rating.desc())
+            .load::<(User, Rating, i64)>(conn)
+            .await
+        {
+            Ok(rows) => match rows.into_iter().find(|(user, _, _)| user.id == user_id) {
+                Some(row) => row,
+                None => return Ok(top),
+            },
+            Err(_) => return Ok(top),
+        };
+
+        if viewer_row.2 > limit {
+            top.push(viewer_row);
+        }
+
+        Ok(top)
     }
 
     pub async fn get_username_by_id(uuid: &Uuid, conn: &mut DbConn<'_>) -> Result<String, DbError> {
