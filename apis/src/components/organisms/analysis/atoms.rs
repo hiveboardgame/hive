@@ -78,6 +78,8 @@ pub fn HistoryButton(
 ) -> impl IntoView {
     let analysis = expect_context::<AnalysisStore>();
     let game_state = expect_context::<GameStateStore>();
+    let current_node = analysis.current_node();
+    let tree = analysis.tree();
     let cloned_action = action.clone();
     let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
@@ -87,32 +89,31 @@ pub fn HistoryButton(
     };
 
     let is_disabled = move || {
-        analysis.0.with(|analysis_tree| {
-            if let Some(n) = &analysis_tree.current_node {
-                match cloned_action {
-                    HistoryNavigation::First => n.get_node_id().map_or(true, |node_id| {
+        if let Some(n) = current_node.get() {
+            match cloned_action {
+                HistoryNavigation::First => n.get_node_id().map_or(true, |node_id| {
+                    tree.with(|analysis_tree| {
                         analysis_tree
-                            .tree
                             .get_ancestor_ids(&node_id)
                             .map_or(true, |ids| ids.is_empty())
-                    }),
-                    HistoryNavigation::Next => n
-                        .get_children_ids()
-                        .map_or(true, |children| children.is_empty()),
-                    HistoryNavigation::Previous => n.get_parent_id().map_or(true, |p| p.is_none()),
-                }
-            } else {
-                false
+                    })
+                }),
+                HistoryNavigation::Next => n
+                    .get_children_ids()
+                    .map_or_else(|_| true, |children| children.is_empty()),
+                HistoryNavigation::Previous => n.get_parent_id().map_or(true, |p| p.is_none()),
             }
-        })
+        } else {
+            false
+        }
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        let updated_node_id = analysis.0.with(|a| {
-            a.current_node.as_ref().and_then(|n| match action {
+        let updated_node_id = current_node.with_untracked(|a| {
+            a.as_ref().and_then(|n| match action {
                 HistoryNavigation::First => n
                     .get_node_id()
                     .ok()
-                    .and_then(|node_id| a.tree.get_ancestor_ids(&node_id).ok())
+                    .and_then(|node_id| tree.with_untracked(|t| t.get_ancestor_ids(&node_id).ok()))
                     .and_then(|ids| ids.last().cloned()),
                 HistoryNavigation::Next => n
                     .get_children_ids()
@@ -135,7 +136,7 @@ pub fn HistoryButton(
         <button
             node_ref=_definite_node_ref
             class=nav_buttons_style
-            prop:disabled=is_disabled
+            disabled=is_disabled
             on:click=debounced_action
         >
 

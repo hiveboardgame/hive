@@ -3,8 +3,8 @@ use crate::{
     responses::GameResponse,
 };
 use bimap::BiMap;
-use hive_lib::{GameError, GameType, History, State};
-use leptos::{logging, prelude::*};
+use hive_lib::{GameType, History, State};
+use leptos::prelude::*;
 use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
 use std::{ops::Deref, vec};
@@ -36,9 +36,10 @@ impl AnalysisStore {
 
     pub fn sync_game_state(&self, game: GameStateStore) -> Option<()> {
         let mut success = true;
-        let history_turn = game.history_turn().get().unwrap_or_default();
-        if let Some(current_id) = self.current_node().get().and_then(|n| n.get_node_id().ok()) {
+        let current_node_id = self.current_node().get().and_then(|n| n.get_node_id().ok());
+        if let Some(current_id) = current_node_id {
             if let Some(path_pos) = self.full_path().get().iter().position(|n| n == &current_id) {
+                let history_turn = game.history_turn().get().unwrap_or_default();
                 let path_pos = path_pos + 1;
                 if path_pos <= history_turn {
                     game.undo_n_moves(history_turn - path_pos);
@@ -99,14 +100,19 @@ pub struct AnalysisTree {
 }
 
 impl AnalysisTree {
-    pub fn new_blank_analysis(game_state: GameStateStore, game_type: GameType) -> Self {
+    fn update_node_if_in_range(&mut self, move_number: Option<usize>) {
+        let Some(move_idx) = move_number else {
+            return;
+        };
+        let node_id = move_idx as i32;
+        if self.tree.get_node_by_id(&node_id).is_some() {
+            self.update_node(node_id);
+        }
+    }
+
+    pub fn new_blank_analysis(game_type: GameType) -> Self {
         let tree = Tree::new(Some("analysis"));
         let hashes = BiMap::new();
-        game_state.update(|gs| {
-            *gs = GameState::new_with_game_type(game_type);
-            gs.view = game_state::View::Game;
-        });
-
         Self {
             current_node: None,
             tree,
@@ -116,11 +122,11 @@ impl AnalysisTree {
         }
     }
 
-    pub fn from_loaded_state(game_state: GameStateStore, state: &State) -> Self {
+    pub fn from_loaded_state(state: &State, move_number: Option<usize>) -> Self {
         let mut tree = Tree::new(Some("analysis"));
         let mut hashes = BiMap::new();
         let mut previous = None;
-
+        let mut full_path = Vec::new();
         for (i, (piece, position)) in state.history.moves.iter().enumerate() {
             let new_node = Node::new(
                 i as i32,
@@ -133,84 +139,27 @@ impl AnalysisTree {
             if let Ok(new_id) = new_node.get_node_id() {
                 let hash = state.history.hashes[i];
                 tree.add_node(new_node, previous.as_ref()).ok();
+                full_path.push(new_id);
                 hashes.insert(hash, new_id);
                 previous = Some(new_id);
             }
         }
 
-        let current_node = previous.and_then(|p| tree.get_node_by_id(&p));
-
-        game_state.update(|gs| {
-            gs.view = game_state::View::Game;
-        });
-
-        Self {
-            current_node,
-            tree,
-            hashes,
-            game_type: state.game_type,
-            full_path: vec![],
-        }
-    }
-
-    pub fn from_game_response(
-        game_response: &GameResponse,
-        move_number: Option<usize>,
-    ) -> Option<Self> {
-        let state = game_response.create_state();
-        let mut tree = Tree::new(Some("analysis"));
-        let mut hashes = BiMap::new();
-        let mut previous = None;
-
-        for (i, (piece, position)) in state.history.moves.iter().enumerate() {
-            let new_node = Node::new(
-                i as i32,
-                Some(TreeNode {
-                    turn: i + 1,
-                    piece: piece.to_string(),
-                    position: position.to_string(),
-                }),
-            );
-            if let Ok(new_id) = new_node.get_node_id() {
-                let hash = state.history.hashes[i];
-                tree.add_node(new_node, previous.as_ref()).ok()?;
-                hashes.insert(hash, new_id);
-                previous = Some(new_id);
-            }
-        }
         let current_node = previous.and_then(|p| tree.get_node_by_id(&p));
         let mut analysis_tree = Self {
             current_node,
             tree,
             hashes,
             game_type: state.game_type,
-            full_path: vec![],
+            full_path,
         };
-
-        let move_count = state.history.moves.len();
-        let target_move_id = move_number.unwrap_or(move_count.saturating_sub(1)) as i32;
-        analysis_tree.update_node(target_move_id);
-        Some(analysis_tree)
+        analysis_tree.update_node_if_in_range(move_number);
+        analysis_tree
     }
 
-    pub fn from_uhp(
-        game_state: GameStateStore,
-        uhp_string: impl Into<String>,
-    ) -> Result<Self, GameError> {
-        let normalized_uhp = normalize_uhp_metadata(uhp_string);
-        let history = match History::from_uhp_str(normalized_uhp) {
-            Ok(history) => history,
-            Err(GameError::PartialHistory { history, .. }) => history,
-            Err(err) => return Err(err),
-        };
-        let state = State::new_from_history(&history)?;
-
-        game_state.update(|gs| {
-            gs.state = state.clone();
-            gs.view = game_state::View::Game;
-        });
-
-        Ok(Self::from_loaded_state(game_state, &state))
+    pub fn from_game_response(game_response: &GameResponse, move_number: Option<usize>) -> Self {
+        let state = game_response.create_state();
+        Self::from_loaded_state(&state, move_number)
     }
 
     pub fn update_node(&mut self, node_id: i32) {
@@ -248,7 +197,7 @@ impl AnalysisTree {
         self.full_path = full_path;
     }
 
-    fn state_and_turn_for_node(&self) -> Option<(State, Option<usize>)> {
+    pub fn state_and_turn_for_node(&self) -> Option<(State, Option<usize>)> {
         let node_id = self
             .current_node
             .as_ref()
@@ -353,7 +302,6 @@ impl AnalysisTree {
             self.full_path.clear();
         }
         self.full_path.push(new_id);
-        logging::log!("{:?}", self.full_path);
     }
 
     pub fn reset(&mut self, game_state: GameStateStore) {
@@ -365,24 +313,5 @@ impl AnalysisTree {
             *gs = GameState::new_with_game_type(self.game_type);
             gs.view = game_state::View::Game;
         });
-    }
-}
-
-fn normalize_uhp_metadata(uhp_string: impl Into<String>) -> String {
-    let input = uhp_string.into();
-    let mut split = input.splitn(2, ';');
-    let header = split.next().unwrap_or_default();
-    let rest = split.next();
-
-    // Query parameters decode '+' into ' ', so restore it for the game type metadata token.
-    if header.starts_with("Base") && header.contains(' ') && !header.contains('+') {
-        let normalized_header = header.replace(' ', "+");
-        match rest {
-            Some("") => normalized_header,
-            Some(rest) => format!("{normalized_header};{rest}"),
-            None => normalized_header,
-        }
-    } else {
-        input
     }
 }

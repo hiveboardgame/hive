@@ -1,6 +1,6 @@
 use crate::providers::{
     analysis::{AnalysisStore, AnalysisTree},
-    game_state::GameStateStore,
+    game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::History;
 use leptos::{html, logging, prelude::*};
@@ -79,6 +79,7 @@ pub fn LoadTree() -> impl IntoView {
             |ext| {
                 let ext = ext.to_os_string();
                 let analysis = analysis.clone();
+                let game_state = game_state.clone();
                 spawn_local(async move {
                     let text = JsFuture::from(file.text()).await.ok();
                     let result = if ext == "json" {
@@ -88,14 +89,20 @@ pub fn LoadTree() -> impl IntoView {
                                 .and_then(|string| {
                                     serde_json::from_str::<AnalysisTree>(&string).ok()
                                 })
-                                .map(|tree| {
-                                    analysis.0.set(tree.clone());
-                                    if let Some(node) = tree.current_node {
-                                        if let Ok(node_id) = node.get_node_id() {
-                                            analysis.update_node(node_id);
-                                            analysis.sync_game_state(game_state);
-                                        }
+                                .map(|mut tree| {
+                                    let loaded_current_node_id = tree
+                                        .current_node
+                                        .as_ref()
+                                        .and_then(|node| node.get_node_id().ok());
+                                    if let Some(node_id) = loaded_current_node_id {
+                                        tree.current_node = tree.tree.get_node_by_id(&node_id);
                                     }
+                                    tree.recompute_full_path_from_current();
+                                    if let Some((state, turn)) = tree.state_and_turn_for_node() {
+                                        game_state.history_turn().set(turn);
+                                        game_state.state().set(state);
+                                    }
+                                    analysis.set(tree);
                                 })
                         })
                     } else if ext == "pgn" {
@@ -107,9 +114,12 @@ pub fn LoadTree() -> impl IntoView {
                                     hive_lib::State::new_from_history(&history).ok()
                                 })
                                 .map(|state| {
-                                    game_state.update(|gs| gs.state = state.clone());
-                                    let tree = AnalysisTree::from_loaded_state(game_state, &state);
+                                    let tree = AnalysisTree::from_loaded_state(&state, None);
                                     analysis.0.set(tree);
+                                    game_state
+                                        .history_turn()
+                                        .set(Some(state.history.moves.len()));
+                                    game_state.state().set(state);
                                 })
                         })
                     } else {
