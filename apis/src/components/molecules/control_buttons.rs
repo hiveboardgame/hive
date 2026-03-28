@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use hive_lib::{ColorChoice, GameControl};
-use leptos::prelude::*;
+use leptos::{either::EitherOf3, prelude::*};
 use leptos_router::hooks::use_navigate;
 use shared_types::{ChallengeDetails, ChallengeVisibility};
 
@@ -25,7 +25,7 @@ pub fn ControlButtons() -> impl IntoView {
                 .expect("Control buttons show only for logged in players")
         })
     };
-
+    let is_finished = game_state.is_finished();
     let color = Signal::derive(move || {
         game_state
             .user_color_as_signal(Some(user_id()).into())
@@ -55,11 +55,11 @@ pub fn ControlButtons() -> impl IntoView {
             Default::default(),
         );
     };
-    let pending_draw = move || match pending() {
+    let pending_draw = Signal::derive(move || match pending() {
         Some(GameControl::DrawOffer(gc_color)) => gc_color.opposite_color() == color(),
 
         _ => false,
-    };
+    });
 
     let pending_takeback = move || match pending() {
         Some(GameControl::TakebackRequest(gc_color)) => gc_color.opposite_color() == color(),
@@ -181,113 +181,10 @@ pub fn ControlButtons() -> impl IntoView {
             });
         }
     };
-
-    view! {
-        <div class="flex justify-around items-center w-full grow shrink">
-            <Show
-                when=game_state.is_finished()
-                fallback=move || {
-                    view! {
-                        <div class="flex flex-col w-full">
-                            <div class="flex justify-around items-center pt-1 grow shrink">
-                                <Show when=not_tournament>
-                                    <div class="relative">
-                                        <ConfirmButton
-                                            game_control=StoredValue::new(GameControl::Abort(color()))
-                                            user_id=user_id()
-                                            hidden=memo_for_hidden_class(move || {
-                                                game_state.signal.with(|gs| gs.state.turn > 1)
-                                            })
-                                        />
-                                        <Show when=takeback_allowed>
-                                            <ConfirmButton
-                                                game_control=StoredValue::new(
-                                                    GameControl::TakebackRequest(color()),
-                                                )
-
-                                                user_id=user_id()
-                                                hidden=memo_for_hidden_class(move || {
-                                                    pending_takeback()
-                                                        || game_state.signal.with(|gs| gs.state.turn < 2)
-                                                })
-                                            />
-
-                                            <AcceptDenyGc
-                                                game_control=StoredValue::new(
-                                                    GameControl::TakebackAccept(color()),
-                                                )
-
-                                                user_id=user_id()
-                                                hidden=memo_for_hidden_class(move || !pending_takeback())
-                                            />
-                                            <AcceptDenyGc
-                                                game_control=StoredValue::new(
-                                                    GameControl::TakebackReject(color()),
-                                                )
-
-                                                user_id=user_id()
-                                                hidden=memo_for_hidden_class(move || !pending_takeback())
-                                            />
-                                        </Show>
-                                    </div>
-                                </Show>
-                                <div class="relative">
-                                    <ConfirmButton
-                                        game_control=StoredValue::new(
-                                            GameControl::DrawOffer(color()),
-                                        )
-                                        user_id=user_id()
-                                        hidden=memo_for_hidden_class(pending_draw)
-                                    />
-
-                                    <AcceptDenyGc
-                                        game_control=StoredValue::new(
-                                            GameControl::DrawAccept(color()),
-                                        )
-                                        user_id=user_id()
-                                        hidden=memo_for_hidden_class(move || !pending_draw())
-                                    />
-                                    <AcceptDenyGc
-                                        game_control=StoredValue::new(
-                                            GameControl::DrawReject(color()),
-                                        )
-                                        user_id=user_id()
-                                        hidden=memo_for_hidden_class(move || !pending_draw())
-                                    />
-                                </div>
-                                <ConfirmButton
-                                    game_control=StoredValue::new(GameControl::Resign(color()))
-                                    user_id=user_id()
-                                />
-                            </div>
-
-                            <div class="flex justify-center w-full h-5">
-                                <Show when=pending_takeback>
-                                    <span class="font-bold">"Opponent wants a takeback"</span>
-                                </Show>
-                                <Show when=pending_draw>
-                                    <span class="font-bold">"Opponent offers a draw"</span>
-                                </Show>
-                            </div>
-                        </div>
-                    }
-                }
-            >
-
-                <Show
-                    when=not_tournament
-                    fallback=move || {
-                        view! {
-                            <button
-                                class="flex-shrink-0 py-1 px-2 m-1 h-7 font-bold text-white rounded transition-transform duration-300 active:scale-95 grow bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
-                                on:click=navigate_to_tournament
-                            >
-                                View tournament
-                            </button>
-                        }
-                    }
-                >
-
+    move || {
+        if is_finished() {
+            if not_tournament() {
+                EitherOf3::A(view! {
                     <button
                         class=move || {
                             format!(
@@ -307,18 +204,89 @@ pub fn ControlButtons() -> impl IntoView {
                     >
                         New Game
                     </button>
-                </Show>
-            </Show>
-        </div>
-    }
-}
-
-fn memo_for_hidden_class(condition: impl Fn() -> bool + Send + Sync + 'static) -> Memo<String> {
-    Memo::new(move |_| {
-        if condition() {
-            String::from("hidden")
+                })
+            } else {
+                EitherOf3::B(view! {
+                    <button
+                        class="flex-shrink-0 py-1 px-2 m-1 h-7 font-bold text-white rounded transition-transform duration-300 active:scale-95 grow bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                        on:click=navigate_to_tournament
+                    >
+                        View tournament
+                    </button>
+                })
+            }
         } else {
-            String::new()
+            EitherOf3::C(view! {
+                <div class="flex flex-col w-full">
+                    <div class="flex justify-around items-center pt-1 grow shrink">
+                        <Show when=not_tournament>
+                            <div class="relative">
+                                <ConfirmButton
+                                    game_control=GameControl::Abort(color())
+                                    user_id=user_id()
+
+                                    hidden=Signal::derive(move || {
+                                        game_state.signal.with(|gs| gs.state.turn > 1)
+                                    })
+                                />
+                                <Show when=takeback_allowed>
+                                    <ConfirmButton
+                                        game_control=GameControl::TakebackRequest(color())
+                                        user_id=user_id()
+                                        hidden=Signal::derive(move || {
+                                            pending_takeback()
+                                                || game_state.signal.with(|gs| gs.state.turn < 2)
+                                        })
+                                    />
+
+                                    <AcceptDenyGc
+                                        game_control=GameControl::TakebackAccept(color())
+
+                                        user_id=user_id()
+                                        hidden=Signal::derive(move || !pending_takeback())
+                                    />
+                                    <AcceptDenyGc
+                                        game_control=GameControl::TakebackReject(color())
+                                        user_id=user_id()
+                                        hidden=Signal::derive(move || !pending_takeback())
+                                    />
+                                </Show>
+                            </div>
+                        </Show>
+                        <div class="relative">
+                            <ConfirmButton
+                                game_control=GameControl::DrawOffer(color())
+                                user_id=user_id()
+                                hidden=pending_draw
+                            />
+
+                            <AcceptDenyGc
+                                game_control=GameControl::DrawAccept(color())
+                                user_id=user_id()
+                                hidden=Signal::derive(move || !pending_draw())
+                            />
+                            <AcceptDenyGc
+                                game_control=GameControl::DrawReject(color())
+                                user_id=user_id()
+                                hidden=Signal::derive(move || !pending_draw())
+                            />
+                        </div>
+                        <ConfirmButton
+                            game_control=GameControl::Resign(color())
+                            user_id=user_id()
+                        />
+                    </div>
+
+                    <div class="flex justify-center w-full h-5">
+                        <Show when=pending_takeback>
+                            <span class="font-bold">"Opponent wants a takeback"</span>
+                        </Show>
+                        <Show when=pending_draw>
+                            <span class="font-bold">"Opponent offers a draw"</span>
+                        </Show>
+                    </div>
+                </div>
+            })
         }
-    })
+    }
 }
