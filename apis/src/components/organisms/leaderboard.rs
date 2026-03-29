@@ -2,6 +2,7 @@ use crate::{
     common::UserAction,
     components::{atoms::rating::icon_for_speed, molecules::user_row::UserRow},
     functions::users::get_top_users,
+    providers::AuthContext,
 };
 use leptos::{either::Either, logging::log, prelude::*};
 use leptos_icons::Icon;
@@ -10,7 +11,15 @@ use shared_types::GameSpeed;
 #[component]
 pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
     let speed = Signal::derive(move || speed);
-    let top_users = OnceResource::new(get_top_users(speed(), 10));
+    let auth_context = expect_context::<AuthContext>();
+    let top_users = LocalResource::new(move || async move { get_top_users(speed(), 10).await });
+    Effect::watch(
+        auth_context.logout.version(),
+        move |_, _, _| {
+            top_users.refetch();
+        },
+        false,
+    );
     view! {
         <Transition>
             {move || {
@@ -24,8 +33,7 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                             )
                         }
                         Ok(users) => {
-                            let users = StoredValue::new(users);
-                            let is_empty = move || users.with_value(|u| u.is_empty());
+                            let is_empty = users.is_empty();
                             Either::Right(
                                 view! {
                                     <div class="flex flex-col m-2 rounded-lg w-fit">
@@ -37,21 +45,26 @@ pub fn Leaderboard(speed: GameSpeed) -> impl IntoView {
                                         <div class=move || {
                                             format!(
                                                 "p-1 h-6 {}",
-                                                if !is_empty() { "hidden" } else { "flex" },
+                                                if !is_empty { "hidden" } else { "flex" },
                                             )
-                                        }>{move || if is_empty() { "No one yet" } else { "" }}</div>
+                                        }>{move || if is_empty { "No one yet" } else { "" }}</div>
                                         <div class="overflow-hidden rounded-lg">
                                             <For
-                                                each=move || { users.get_value() }
+                                                each=move || { users.clone() }
 
-                                                key=|users| users.uid
-                                                let:user
+                                                key=|(_,user)| user.uid
+                                                let:((rank,user))
                                             >
-                                                <UserRow
-                                                    actions=vec![UserAction::Challenge]
-                                                    user
-                                                    game_speed=StoredValue::new(speed())
-                                                />
+                                                <div class="flex gap-2 items-center">
+                                                    <span class="w-6 text-sm text-right text-stone-500">
+                                                        {rank}
+                                                    </span>
+                                                    <UserRow
+                                                        actions=vec![UserAction::Challenge]
+                                                        user
+                                                        game_speed=StoredValue::new(speed())
+                                                    />
+                                                </div>
                                             </For>
                                         </div>
                                     </div>
