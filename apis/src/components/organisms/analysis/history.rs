@@ -205,7 +205,6 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
                     }
                 }
             }
-            a.recompute_full_path_from_current();
         });
     };
 
@@ -213,12 +212,13 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     let next_button = NodeRef::<html::Button>::new();
     Effect::new(move |_| {
         _ = use_event_listener(document().body(), keydown, move |evt| {
-            if evt.key() == "ArrowLeft" {
+            let has_modifier = evt.alt_key() || evt.ctrl_key() || evt.meta_key() || evt.shift_key();
+            if !has_modifier && evt.key() == "ArrowLeft" {
                 evt.prevent_default();
                 if let Some(prev) = prev_button.get_untracked() {
                     prev.click()
                 }
-            } else if evt.key() == "ArrowRight" {
+            } else if !has_modifier && evt.key() == "ArrowRight" {
                 evt.prevent_default();
                 if let Some(next) = next_button.get_untracked() {
                     next.click()
