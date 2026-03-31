@@ -1,4 +1,7 @@
-use crate::{common::RatingChangeInfo, providers::game_state::GameStateSignal};
+use crate::{
+    common::RatingChangeInfo,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
+};
 use hive_lib::Color;
 use leptos::prelude::*;
 use std::cmp::Ordering;
@@ -32,9 +35,11 @@ pub fn RatingAndChangeDynamic(
     #[prop(optional)] extend_tw_classes: &'static str,
     side: Color,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
-    let ratings = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
+    let game_state = expect_context::<GameStateStore>();
+    let ratings = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
             .as_ref()
             .map(RatingChangeInfo::from_game_response)
     });

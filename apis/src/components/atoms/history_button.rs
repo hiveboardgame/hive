@@ -1,11 +1,11 @@
 use crate::{
     components::organisms::side_board::move_query_signal,
     providers::{
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
         timer::{Timer, TimerSignal},
     },
 };
-use hive_lib::{Color, GameResult, GameStatus};
+use hive_lib::{Color, GameResult, GameStatus, StateStoreFields};
 use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
 use leptos_icons::*;
 use shared_types::{Conclusion, TimeMode};
@@ -25,7 +25,7 @@ pub fn HistoryButton(
     #[prop(optional)] post_action: Option<Callback<()>>,
     #[prop(optional)] node_ref: Option<NodeRef<html::Button>>,
 ) -> impl IntoView {
-    let game_state_signal = expect_context::<GameStateSignal>();
+    let game_state_signal = expect_context::<GameStateStore>();
     let timer = expect_context::<TimerSignal>();
     let (_move, set_move) = move_query_signal();
     let is_last_turn = game_state_signal.is_last_turn_as_signal();
@@ -51,8 +51,10 @@ pub fn HistoryButton(
         if let Some(post_action) = post_action {
             post_action.run(())
         }
-        let turn = game_state_signal.signal.with_untracked(|gs| match action {
-            HistoryNavigation::Last => Some(gs.state.turn),
+        let turn = game_state_signal.with_untracked(|gs| match action {
+            HistoryNavigation::Last => {
+                Some(game_state_signal.state().turn().get_untracked())
+            }
             HistoryNavigation::MobileLast => None,
             _ => gs.history_turn.map(|v| v + 1),
         });
@@ -73,24 +75,16 @@ pub fn HistoryButton(
     }
 }
 
-fn send_action(
-    action: &HistoryNavigation,
-    mut game_state_signal: GameStateSignal,
-    timer: TimerSignal,
-) {
+fn send_action(action: &HistoryNavigation, game_state_signal: GameStateStore, timer: TimerSignal) {
     match action {
         HistoryNavigation::First => game_state_signal.first_history_turn(),
         HistoryNavigation::Last => game_state_signal.view_history(),
         HistoryNavigation::Next => game_state_signal.next_history_turn(),
         HistoryNavigation::Previous => game_state_signal.previous_history_turn(),
         HistoryNavigation::MobileLast => {
-            if game_state_signal
-                .signal
-                .with_untracked(|gs| gs.state.turn > 0)
-            {
-                game_state_signal
-                    .signal
-                    .update_untracked(|s| s.history_turn = Some(s.state.turn - 1));
+            let turn = game_state_signal.state().turn().get_untracked();
+            if turn > 0 {
+                game_state_signal.update_untracked(|s| s.history_turn = Some(turn - 1));
             }
             game_state_signal.view_game()
         }
@@ -98,17 +92,17 @@ fn send_action(
     set_timer_from_response(game_state_signal, timer);
 }
 
-pub fn set_timer_from_response(game_state_signal: GameStateSignal, timer: TimerSignal) {
-    game_state_signal.signal.with(|gs| {
+pub fn set_timer_from_response(game_state_signal: GameStateStore, timer: TimerSignal) {
+    game_state_signal.with(|gs| {
         if !matches!(
-            gs.state.game_status,
+            game_state_signal.state().game_status().get(),
             GameStatus::Finished(_) | GameStatus::Adjudicated
         ) {
             return;
         }
         let turn = gs.history_turn.unwrap_or_default();
         let response = gs.game_response.as_ref();
-        let timed_out = turn == gs.state.turn - 1
+        let timed_out = turn == game_state_signal.state().turn().get() - 1
             && response.is_some_and(|r| r.conclusion == Conclusion::Timeout);
         if let Some(response) = response {
             if !matches!(response.time_mode, TimeMode::RealTime) {

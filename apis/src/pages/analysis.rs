@@ -12,7 +12,7 @@ use crate::{
     pages::play::CurrentConfirm,
     providers::{
         analysis::{AnalysisSignal, AnalysisTree, TreeNode},
-        game_state::GameStateSignal,
+        game_state::GameStateStore,
         AuthContext,
     },
     responses::GameResponse,
@@ -28,7 +28,7 @@ pub struct ToggleStates(pub RwSignal<HashSet<i32>>);
 
 #[component]
 pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let params = use_params_map();
     let queries = use_query_map();
@@ -152,7 +152,7 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
 #[component]
 fn AnalysisInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let analysis = expect_context::<AnalysisSignal>().0;
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let moves = move || {
         analysis.with(|a| {
             let tree = &a.tree;

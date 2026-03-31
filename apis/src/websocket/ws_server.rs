@@ -37,7 +37,6 @@ use db_lib::{
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::GameStatus;
 use log::{error, warn};
-use rand::Rng;
 use shared_types::{GameId, TimeMode};
 use std::{
     collections::{HashMap, HashSet},
@@ -87,9 +86,8 @@ impl Handler<Ping> for WsServer {
     type Result = ();
 
     fn handle(&mut self, _msg: Ping, _ctx: &mut Context<Self>) {
-        let mut rng = rand::rng();
         for user_id in self.sessions.keys() {
-            let nonce = rng.random::<u64>();
+            let nonce = rand::random::<u64>();
             self.data.pings.set_nonce(*user_id, nonce);
             let message = ServerResult::Ok(Box::new(ServerMessage::Ping {
                 nonce,
