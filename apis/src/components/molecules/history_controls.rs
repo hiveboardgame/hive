@@ -5,7 +5,7 @@ use crate::{
     },
     providers::game_state::{GameStateStore, GameStateStoreFields},
 };
-use hive_lib::{Color, StateStoreFields};
+use hive_lib::Color;
 use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 
@@ -47,7 +47,7 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
             let parent = parent.get_untracked().expect("div to be loaded");
             parent.set_scroll_top(parent.scroll_height());
         }
-        game_state.show_history_turn(game_state.state().turn().get_untracked() - 1);
+        game_state.show_history_turn(game_state.state().with_untracked(|state| state.turn) - 1);
     });
     let if_last_go_to_end = Callback::new(move |()| {
         focus.run(());

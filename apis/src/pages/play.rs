@@ -31,7 +31,7 @@ use crate::{
     },
     websocket::client_handlers::game::{reset_game_state, reset_game_state_for_takeback},
 };
-use hive_lib::{Color, GameControl, GameResult, GameStatus, StateStoreFields, Turn};
+use hive_lib::{Color, GameControl, GameResult, GameStatus, Turn};
 use leptos::prelude::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
 use shared_types::{GameId, GameStart};
@@ -151,11 +151,7 @@ pub fn Play() -> impl IntoView {
                     }
                     let url_number = move_number.get_untracked();
                     if url_number.is_some_and(|v| {
-                        v < game_state
-                            .state()
-                            .turn()
-                            .get_untracked()
-                            .saturating_sub(1)
+                        v < game_state.state().with_untracked(|state| state.turn).saturating_sub(1)
                     }) {
                         game_state.update(|s| {
                             s.history_turn = url_number;
@@ -187,7 +183,9 @@ pub fn Play() -> impl IntoView {
                                     (
                                         gs.move_info.current_position,
                                         gs.move_info.reserve_position,
-                                        game_state.state().history().get_untracked().moves,
+                                        game_state
+                                            .state()
+                                            .with_untracked(|state| state.history.moves.clone()),
                                         gs.move_info.active,
                                     )
                                 });

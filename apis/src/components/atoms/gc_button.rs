@@ -1,5 +1,5 @@
 use crate::providers::game_state::{GameStateStore, GameStateStoreFields};
-use hive_lib::{GameControl, StateStoreFields};
+use hive_lib::GameControl;
 use icondata_core;
 use leptos::prelude::*;
 use leptos_icons::*;
@@ -52,7 +52,7 @@ pub fn ConfirmButton(
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateStore>();
     let pending_slice = Signal::derive(move || game_state.game_control_pending().get());
-    let turn = Signal::derive(move || game_state.state().turn().get() as i32);
+    let turn = Signal::derive(move || game_state.state().with(|state| state.turn as i32));
     let (icon, title) = get_icon_and_title(game_control);
     let color = game_control.color();
     let is_clicked = RwSignal::new(false);

@@ -5,7 +5,7 @@ use crate::{
         timer::{Timer, TimerSignal},
     },
 };
-use hive_lib::{Color, GameResult, GameStatus, StateStoreFields};
+use hive_lib::{Color, GameResult, GameStatus};
 use leptos::{html, leptos_dom::helpers::debounce, prelude::*};
 use leptos_icons::*;
 use shared_types::{Conclusion, TimeMode};
@@ -53,7 +53,7 @@ pub fn HistoryButton(
         }
         let turn = game_state_signal.with_untracked(|gs| match action {
             HistoryNavigation::Last => {
-                Some(game_state_signal.state().turn().get_untracked())
+                Some(game_state_signal.state().with_untracked(|state| state.turn))
             }
             HistoryNavigation::MobileLast => None,
             _ => gs.history_turn.map(|v| v + 1),
@@ -82,7 +82,7 @@ fn send_action(action: &HistoryNavigation, game_state_signal: GameStateStore, ti
         HistoryNavigation::Next => game_state_signal.next_history_turn(),
         HistoryNavigation::Previous => game_state_signal.previous_history_turn(),
         HistoryNavigation::MobileLast => {
-            let turn = game_state_signal.state().turn().get_untracked();
+            let turn = game_state_signal.state().with_untracked(|state| state.turn);
             if turn > 0 {
                 game_state_signal.update_untracked(|s| s.history_turn = Some(turn - 1));
             }
@@ -95,14 +95,16 @@ fn send_action(action: &HistoryNavigation, game_state_signal: GameStateStore, ti
 pub fn set_timer_from_response(game_state_signal: GameStateStore, timer: TimerSignal) {
     game_state_signal.with(|gs| {
         if !matches!(
-            game_state_signal.state().game_status().get(),
+            game_state_signal
+                .state()
+                .with(|state| state.game_status.clone()),
             GameStatus::Finished(_) | GameStatus::Adjudicated
         ) {
             return;
         }
         let turn = gs.history_turn.unwrap_or_default();
         let response = gs.game_response.as_ref();
-        let timed_out = turn == game_state_signal.state().turn().get() - 1
+        let timed_out = turn == game_state_signal.state().with(|state| state.turn) - 1
             && response.is_some_and(|r| r.conclusion == Conclusion::Timeout);
         if let Some(response) = response {
             if !matches!(response.time_mode, TimeMode::RealTime) {

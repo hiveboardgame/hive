@@ -10,7 +10,7 @@ use crate::{
         Config,
     },
 };
-use hive_lib::{GameStatus, StateStoreFields};
+use hive_lib::GameStatus;
 use leptos::{
     either::Either,
     ev::{
@@ -172,8 +172,7 @@ pub fn Board() -> impl IntoView {
 
     let current_center = game_state
         .state()
-        .board()
-        .with_untracked(|b| b.center_coordinates());
+        .with_untracked(|state| state.board.center_coordinates());
 
     let straight = config.with_untracked(|c| c.tile.design == TileDesign::ThreeD);
     let tile_opts = Signal::derive(move || config.with(|c| c.tile.clone()));

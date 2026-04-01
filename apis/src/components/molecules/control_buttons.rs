@@ -8,7 +8,7 @@ use crate::{
         AuthContext,
     },
 };
-use hive_lib::{ColorChoice, GameControl, StateStoreFields};
+use hive_lib::{ColorChoice, GameControl};
 use leptos::{either::EitherOf3, prelude::*};
 use leptos_router::hooks::use_navigate;
 use shared_types::{ChallengeDetails, ChallengeVisibility};
@@ -234,7 +234,7 @@ pub fn ControlButtons() -> impl IntoView {
                                         user_id=user_id()
                                         hidden=Signal::derive(move || {
                                             pending_takeback()
-                                                || game_state.state().turn().get() < 2
+                                                || game_state.state().with(|state| state.turn) < 2
                                         })
                                     />
 

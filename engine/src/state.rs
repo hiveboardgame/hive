@@ -13,9 +13,7 @@ use crate::{
     player::Player,
     position::Position,
 };
-use reactive_stores::Store;
-
-#[derive(Clone, Debug, PartialEq, Eq, Store)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct State {
     pub game_id: u64,
     pub board: Board,

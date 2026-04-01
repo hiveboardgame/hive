@@ -10,7 +10,7 @@ use crate::{
         Config,
     },
 };
-use hive_lib::{Bug, Color, Piece, Position, StateStoreFields};
+use hive_lib::{Bug, Color, Piece, Position};
 use leptos::{either::Either, prelude::*};
 use web_sys::MouseEvent;
 
@@ -88,8 +88,7 @@ pub fn PieceWithoutOnClick(
             .state()
             .with(|state| state.board.last_move)
     });
-    let board_state =
-        Signal::derive(move || game_state.state().board().get());
+    let board_state = Signal::derive(move || game_state.state().with(|state| state.board.clone()));
     let top_piece = move || board_state.with(|board| board.top_piece(position).unwrap_or(piece));
     let show_ds = move || {
         let top_piece = top_piece();
@@ -210,7 +209,7 @@ pub fn PieceWithOnClick(
         evt.stop_propagation();
         let piece_value = piece.get_untracked();
         let in_analysis = analysis.is_some();
-        let current_turn_color = game_state.state().turn_color().get_untracked();
+        let current_turn_color = game_state.state().with_untracked(|state| state.turn_color);
 
         let is_selectable_piece = config.get_untracked().allow_preselect
             && match piece_type {
