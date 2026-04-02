@@ -1,4 +1,5 @@
 pub mod app;
+pub mod chat;
 pub mod common;
 pub mod components;
 pub mod functions;

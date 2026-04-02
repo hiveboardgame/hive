@@ -12,6 +12,7 @@ pub struct ChatReadReceipt {
     pub channel_type: String,
     pub channel_id: String,
     pub last_read_at: DateTime<Utc>,
+    pub game_id: Option<Uuid>,
 }
 
 #[derive(Insertable, Debug)]
@@ -21,4 +22,5 @@ pub struct NewChatReadReceipt<'a> {
     pub channel_type: &'a str,
     pub channel_id: &'a str,
     pub last_read_at: DateTime<Utc>,
+    pub game_id: Option<Uuid>,
 }

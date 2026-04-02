@@ -3,10 +3,10 @@
 use crate::{
     db_error::DbError,
     models::{NewUserBlock, NewUserTournamentChatMute, Tournament},
-    schema::{tournaments, user_blocks, user_tournament_chat_mutes},
+    schema::{tournaments, user_blocks, user_tournament_chat_mutes, users},
     DbConn,
 };
-use diesel::prelude::*;
+use diesel::{dsl::exists, prelude::*, select};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
@@ -20,6 +20,15 @@ pub async fn block_user(
         return Err(DbError::InvalidInput {
             info: "Cannot block yourself".to_string(),
             error: "blocker_id == blocked_id".to_string(),
+        });
+    }
+    let blocked_user_exists: bool = select(exists(users::table.filter(users::id.eq(blocked_id))))
+        .get_result(conn)
+        .await
+        .map_err(DbError::from)?;
+    if !blocked_user_exists {
+        return Err(DbError::NotFound {
+            reason: "User not found.".to_string(),
         });
     }
     diesel::insert_into(user_blocks::table)
@@ -42,7 +51,11 @@ pub async fn unblock_user(
     blocked_id: Uuid,
 ) -> Result<(), DbError> {
     diesel::delete(
-        user_blocks::table.filter(user_blocks::blocker_id.eq(blocker_id).and(user_blocks::blocked_id.eq(blocked_id))),
+        user_blocks::table.filter(
+            user_blocks::blocker_id
+                .eq(blocker_id)
+                .and(user_blocks::blocked_id.eq(blocked_id)),
+        ),
     )
     .execute(conn)
     .await
@@ -56,26 +69,27 @@ pub async fn is_blocked(
     blocker_id: Uuid,
     blocked_id: Uuid,
 ) -> Result<bool, DbError> {
-    let exists: bool = user_blocks::table
-        .filter(user_blocks::blocker_id.eq(blocker_id))
-        .filter(user_blocks::blocked_id.eq(blocked_id))
-        .count()
-        .get_result(conn)
-        .await
-        .map(|c: i64| c > 0)
-        .map_err(DbError::from)?;
-    Ok(exists)
+    select(exists(
+        user_blocks::table
+            .filter(user_blocks::blocker_id.eq(blocker_id))
+            .filter(user_blocks::blocked_id.eq(blocked_id)),
+    ))
+    .get_result(conn)
+    .await
+    .map_err(DbError::from)
 }
 
 /// All user IDs that this user has blocked. Used to filter DM list and history.
-pub async fn get_blocked_user_ids(conn: &mut DbConn<'_>, blocker_id: Uuid) -> Result<Vec<Uuid>, DbError> {
-    let ids: Vec<Uuid> = user_blocks::table
+pub async fn get_blocked_user_ids(
+    conn: &mut DbConn<'_>,
+    blocker_id: Uuid,
+) -> Result<Vec<Uuid>, DbError> {
+    user_blocks::table
         .filter(user_blocks::blocker_id.eq(blocker_id))
         .select(user_blocks::blocked_id)
         .load(conn)
         .await
-        .map_err(DbError::from)?;
-    Ok(ids)
+        .map_err(DbError::from)
 }
 
 /// Mute tournament lobby chat for this user. Idempotent. tournament_nanoid is the tournament's nanoid.
@@ -90,7 +104,10 @@ pub async fn mute_tournament_chat(
             user_id,
             tournament_id: tournament.id,
         })
-        .on_conflict((user_tournament_chat_mutes::user_id, user_tournament_chat_mutes::tournament_id))
+        .on_conflict((
+            user_tournament_chat_mutes::user_id,
+            user_tournament_chat_mutes::tournament_id,
+        ))
         .do_nothing()
         .execute(conn)
         .await
@@ -126,18 +143,21 @@ pub async fn is_tournament_chat_muted(
         Ok(t) => t,
         Err(_) => return Ok(false),
     };
-    let count: i64 = user_tournament_chat_mutes::table
-        .filter(user_tournament_chat_mutes::user_id.eq(user_id))
-        .filter(user_tournament_chat_mutes::tournament_id.eq(tournament.id))
-        .count()
-        .get_result(conn)
-        .await
-        .map_err(DbError::from)?;
-    Ok(count > 0)
+    select(exists(
+        user_tournament_chat_mutes::table
+            .filter(user_tournament_chat_mutes::user_id.eq(user_id))
+            .filter(user_tournament_chat_mutes::tournament_id.eq(tournament.id)),
+    ))
+    .get_result(conn)
+    .await
+    .map_err(DbError::from)
 }
 
 /// Tournament UUIDs this user has muted. Used to filter live delivery in ws_server.
-pub async fn get_muted_tournament_ids(conn: &mut DbConn<'_>, user_id: Uuid) -> Result<std::collections::HashSet<Uuid>, DbError> {
+pub async fn get_muted_tournament_ids(
+    conn: &mut DbConn<'_>,
+    user_id: Uuid,
+) -> Result<std::collections::HashSet<Uuid>, DbError> {
     let ids: Vec<Uuid> = user_tournament_chat_mutes::table
         .filter(user_tournament_chat_mutes::user_id.eq(user_id))
         .select(user_tournament_chat_mutes::tournament_id)
@@ -148,10 +168,15 @@ pub async fn get_muted_tournament_ids(conn: &mut DbConn<'_>, user_id: Uuid) -> R
 }
 
 /// Tournament nanoids this user has muted. Used to filter unread counts and conversation list.
-pub async fn get_muted_tournament_nanoids(conn: &mut DbConn<'_>, user_id: Uuid) -> Result<std::collections::HashSet<String>, DbError> {
+pub async fn get_muted_tournament_nanoids(
+    conn: &mut DbConn<'_>,
+    user_id: Uuid,
+) -> Result<std::collections::HashSet<String>, DbError> {
     let nanoids: Vec<String> = user_tournament_chat_mutes::table
         .filter(user_tournament_chat_mutes::user_id.eq(user_id))
-        .inner_join(tournaments::table.on(user_tournament_chat_mutes::tournament_id.eq(tournaments::id)))
+        .inner_join(
+            tournaments::table.on(user_tournament_chat_mutes::tournament_id.eq(tournaments::id)),
+        )
         .select(tournaments::nanoid)
         .load(conn)
         .await

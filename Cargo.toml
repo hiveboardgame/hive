@@ -98,6 +98,7 @@ web-sys = { version = "0.3.85", features = [
     "Blob",
     "Clipboard",
     "HtmlDocument",
+    "Location",
     "SvgPoint",
     "SvgsvgElement",
     "SvgGraphicsElement",

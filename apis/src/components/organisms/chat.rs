@@ -1,19 +1,15 @@
 use crate::{
+    chat::ChannelKey,
     components::update_from_event::update_from_input,
     functions::blocks_mutes::get_blocked_user_ids,
+    i18n::*,
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
 use chrono::{Duration, Local};
-use leptos::{html, prelude::*};
-use leptos::task::spawn_local;
+use leptos::{html, leptos_dom::helpers::request_animation_frame, prelude::*, task::spawn_local};
 use leptos_router::hooks::use_params_map;
-use leptos::leptos_dom::helpers::request_animation_frame;
 use leptos_use::use_interval_fn;
-use shared_types::{
-    ChatDestination, ChatMessage, GameId, SimpleDestination,
-    CHANNEL_TYPE_GAME_PLAYERS, CHANNEL_TYPE_GAME_SPECTATORS, CHANNEL_TYPE_GLOBAL,
-    CHANNEL_TYPE_TOURNAMENT_LOBBY,
-};
+use shared_types::{ChatDestination, ChatMessage, GameId, SimpleDestination};
 use std::collections::HashSet;
 use uuid::Uuid;
 
@@ -43,100 +39,138 @@ pub(crate) fn messages_with_header_flags(messages: &[ChatMessage]) -> Vec<(ChatM
         .collect()
 }
 
+fn unread_divider_split_idx(message_count: usize, unread_at_open: Option<i64>) -> Option<usize> {
+    if message_count == 0 {
+        return None;
+    }
+
+    let unread_count = unread_at_open.unwrap_or(0).max(0) as usize;
+    if unread_count == 0 {
+        None
+    } else {
+        Some(message_count.saturating_sub(unread_count))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct MessageId {
+    timestamp_millis: i64,
+    user_id: Uuid,
+    turn: Option<usize>,
+    message: String,
+}
+
+#[derive(Clone, PartialEq)]
+struct MessageRow {
+    id: MessageId,
+    message: ChatMessage,
+    show_header: bool,
+    is_current_user: bool,
+    show_unread_divider_before: bool,
+}
+
+fn message_id(message: &ChatMessage) -> MessageId {
+    MessageId {
+        timestamp_millis: message.timestamp.map(|t| t.timestamp_millis()).unwrap_or(0),
+        user_id: message.user_id,
+        turn: message.turn,
+        message: message.message.clone(),
+    }
+}
+
 #[component]
 pub fn Message(
     message: ChatMessage,
     #[prop(optional)] is_current_user: bool,
     /// When false, only the message bubble is shown (for consecutive messages from the same user).
-    #[prop(optional, default = true)] show_header: bool,
+    #[prop(optional, default = true)]
+    show_header: bool,
     /// When true, show "Message hidden. Click to expand." (Discord-style for blocked users in shared channels).
-    #[prop(optional)] sender_blocked: bool,
+    #[prop(optional)]
+    sender_blocked: bool,
     /// When sender_blocked, parent-owned expanded state so it survives re-renders. If None, component uses internal state.
-    #[prop(optional)] expanded_signal: Option<Signal<bool>>,
+    #[prop(optional)]
+    expanded_signal: Option<Signal<bool>>,
     /// Callback when user clicks "Click to expand". Parent should add this message to its expanded set.
-    #[prop(optional)] on_click_expand: Option<Callback<(), ()>>,
+    #[prop(optional)]
+    on_click_expand: Option<Callback<(), ()>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
+    let ChatMessage {
+        username,
+        message: body,
+        timestamp,
+        turn,
+        ..
+    } = message;
+
     let expanded_inner = RwSignal::new(false);
     let is_expanded = move || {
-        match (expanded_signal.as_ref(), on_click_expand.as_ref()) {
-            (Some(s), _) => s.get(),
-            _ => expanded_inner.get(),
-        }
+        expanded_signal
+            .as_ref()
+            .map(|signal| signal.get())
+            .unwrap_or_else(|| expanded_inner.get())
     };
+
     let on_expand = move |_| {
-        if let Some(ref cb) = on_click_expand {
+        if let Some(cb) = on_click_expand.as_ref() {
             cb.run(());
         } else {
             expanded_inner.set(true);
         }
     };
-    let outer_margin = move || {
-        if show_header {
-            "mb-3"
-        } else {
-            "mb-1"
-        }
+
+    let margin = if show_header { "mb-3" } else { "mb-1" };
+    let outer_class = if is_current_user {
+        format!("flex flex-col items-end {margin} w-full")
+    } else {
+        format!("flex flex-col items-start {margin} w-full")
     };
+
+    let bubble_class = if is_current_user {
+        "px-3 py-2 rounded-2xl rounded-br-md max-w-[85%] sm:max-w-[75%] \
+         bg-pillbug-teal/90 dark:bg-pillbug-teal/80 text-white text-sm break-words shadow-sm"
+    } else {
+        "px-3 py-2 rounded-2xl rounded-bl-md max-w-[85%] sm:max-w-[75%] \
+         bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm break-words shadow-sm"
+    };
+
+    let user_local_time = timestamp
+        .map(|t| t.with_timezone(&Local).format("%d/%m %H:%M").to_string())
+        .unwrap_or_default();
+    let username = StoredValue::new(username);
+    let body = StoredValue::new(body);
+    let user_local_time = StoredValue::new(user_local_time);
+
     view! {
-        <div class=move || {
-            let margin = outer_margin();
-            if is_current_user {
-                format!("flex flex-col items-end {} w-full", margin)
-            } else {
-                format!("flex flex-col items-start {} w-full", margin)
-            }
-        }>
-            {move || {
-                let show_hidden = sender_blocked && !is_expanded();
-                let m = message.clone();
-                if show_hidden {
-                    view! {
-                        <button
-                            type="button"
-                            class="mb-1 px-3 py-2 rounded-lg max-w-[85%] sm:max-w-[75%] text-left text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
-                            on:click=on_expand
-                        >
-                            "Message hidden. Click to expand."
-                        </button>
-                    }.into_any()
-                } else {
-                    let user_local_time = m
-                        .timestamp
-                        .map(|t| t.with_timezone(&Local).format("%d/%m %H:%M").to_string())
-                        .unwrap_or_default();
-                    let turn = m.turn.map(|turn| format!(" · turn {turn}"));
-                    view! {
-                        {if show_header {
-                            view! {
-                                <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-1 px-1 max-w-[85%] sm:max-w-[75%]">
-                                    <span class="font-semibold text-sm text-gray-800 dark:text-gray-200 truncate">
-                                        {m.username}
-                                    </span>
-                                    <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                        {user_local_time}
-                                        {turn}
-                                    </span>
-                                </div>
-                            }.into_any()
-                        } else {
-                            view! {}.into_any()
-                        }}
-                        <div class=move || {
-                            if is_current_user {
-                                "px-3 py-2 rounded-2xl rounded-br-md max-w-[85%] sm:max-w-[75%] \
-                                 bg-pillbug-teal/90 dark:bg-pillbug-teal/80 text-white text-sm break-words \
-                                 shadow-sm"
-                            } else {
-                                "px-3 py-2 rounded-2xl rounded-bl-md max-w-[85%] sm:max-w-[75%] \
-                                 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm break-words \
-                                 shadow-sm"
-                            }
-                        }>
-                            {m.message}
-                        </div>
-                    }.into_any()
-                }
-            }}
+        <div class=outer_class>
+            <Show when=move || sender_blocked && !is_expanded()>
+                <button
+                    type="button"
+                    class="py-2 px-3 mb-1 text-sm text-left text-gray-500 bg-gray-100 rounded-lg border border-gray-200 transition-colors dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600 hover:bg-gray-200 max-w-[85%] sm:max-w-[75%] dark:hover:bg-gray-700"
+                    on:click=on_expand
+                >
+                    {t!(i18n, messages.chat.hidden_message)}
+                </button>
+            </Show>
+            <Show when=move || !sender_blocked || is_expanded()>
+                <Show when=move || show_header>
+                    <div class="flex flex-wrap gap-y-0.5 gap-x-2 items-baseline px-1 mb-1 max-w-[85%] sm:max-w-[75%]">
+                        <span class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
+                            {username.get_value()}
+                        </span>
+                        <span class="text-xs text-gray-500 whitespace-nowrap dark:text-gray-400">
+                            {user_local_time.get_value()}
+                            {move || {
+                                turn
+                                    .map(|turn| t_string!(i18n, messages.chat.turn, turn = turn))
+                                    .unwrap_or_default()
+                            }}
+                        </span>
+                    </div>
+                </Show>
+                <div class=bubble_class>{body.get_value()}</div>
+            </Show>
         </div>
     }
 }
@@ -147,12 +181,13 @@ pub fn ChatInput(
     disabled: impl Fn() -> bool + 'static + Send + Sync,
 ) -> impl IntoView {
     let chat = expect_context::<Chat>();
+    let i18n = use_i18n();
     let game_state = use_context::<GameStateSignal>();
     let turn = move || game_state.map(|gs| gs.signal.with(|state| state.state.turn));
-    let is_disabled = Signal::derive(move || disabled());
-    let is_disabled_send = is_disabled.clone();
-    let is_disabled_placeholder = is_disabled.clone();
-    let is_disabled_keydown = is_disabled.clone();
+    let is_disabled = Signal::derive(disabled);
+    let is_disabled_send = is_disabled;
+    let is_disabled_placeholder = is_disabled;
+    let is_disabled_keydown = is_disabled;
     let send = move || {
         if is_disabled_send.get() {
             return;
@@ -165,12 +200,16 @@ pub fn ChatInput(
     };
     let placeholder = move || {
         if is_disabled_placeholder.get() {
-            "Admin only"
+            t_string!(i18n, messages.chat.admin_only)
         } else {
             match destination() {
-                ChatDestination::GamePlayers(_, _, _) => "Chat with opponent",
-                ChatDestination::GameSpectators(_, _, _) => "Chat with spectators",
-                _ => "Chat",
+                ChatDestination::GamePlayers(_, _, _) => {
+                    t_string!(i18n, messages.chat.with_opponent)
+                }
+                ChatDestination::GameSpectators(_, _, _) => {
+                    t_string!(i18n, messages.chat.with_spectators)
+                }
+                _ => t_string!(i18n, messages.chat.placeholder),
             }
         }
     };
@@ -183,10 +222,7 @@ pub fn ChatInput(
             node_ref=my_input
             type="text"
             disabled=move || is_disabled.get()
-            class="box-border w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 \
-                   bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 \
-                   focus:outline-none focus:ring-2 focus:ring-pillbug-teal/50 focus:border-pillbug-teal \
-                   transition-shadow shrink-0 shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
+            class="py-3 px-4 w-full placeholder-gray-500 text-black bg-white rounded-xl border border-gray-300 shadow-inner transition-shadow dark:placeholder-gray-400 dark:text-white dark:bg-gray-800 dark:border-gray-600 focus:ring-2 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed box-border shrink-0 focus:ring-pillbug-teal/50 focus:border-pillbug-teal"
             prop:value=chat.typed_message
             prop:placeholder=placeholder
             on:input=update_from_input(chat.typed_message)
@@ -212,12 +248,16 @@ pub fn ChatWindow(
     /// When Some and true, input is disabled (e.g. tournament read-only for non-participants).
     #[prop(optional)]
     input_disabled: Option<Signal<bool>>,
+    /// Optional explicit game metadata for non-game pages that still render a game chat thread.
+    #[prop(optional)]
+    game_data: Option<Signal<Option<(GameId, Uuid, Uuid, bool)>>>,
     /// When Some, for Game destination use this (true = Players, false = Spectators) instead of uid_is_player.
     #[prop(optional)]
     game_channel_override: Option<Signal<bool>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let params = use_params_map();
-    let game_id = move || {
+    let route_game_id = move || {
         params
             .get()
             .get("nanoid")
@@ -226,94 +266,149 @@ pub fn ChatWindow(
     };
     let chat = expect_context::<Chat>();
     let auth_context = expect_context::<AuthContext>();
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = use_context::<GameStateSignal>();
+    let me_uid = Memo::new(move |_| auth_context.user.with(|a| a.as_ref().map(|a| a.user.uid)));
     let uid = auth_context
         .user
         .with_untracked(|a| a.as_ref().map(|user| user.user.uid));
-    let white_id_slice = create_read_slice(game_state.signal, |gs| gs.white_id);
-    let black_id_slice = create_read_slice(game_state.signal, |gs| gs.black_id);
-    let white_id = move || white_id_slice();
-    let black_id = move || black_id_slice();
+    let white_id = move || {
+        game_state
+            .as_ref()
+            .and_then(|gs| gs.signal.with(|state| state.white_id))
+    };
+    let black_id = move || {
+        game_state
+            .as_ref()
+            .and_then(|gs| gs.signal.with(|state| state.black_id))
+    };
+    let game_finished = move || {
+        game_state.as_ref().is_some_and(|gs| {
+            gs.signal
+                .with(|state| state.game_response.as_ref().is_some_and(|gr| gr.finished))
+        })
+    };
+    let uid_is_player = move || {
+        game_state
+            .as_ref()
+            .is_some_and(|gs| gs.signal.with(|state| state.uid_is_player(uid)))
+    };
 
-    let correspondant_id = Signal::derive(move || correspondant_id.map_or(Uuid::new_v4(), |id| id));
-    let correspondant_username = Signal::derive(move || correspondant_username.clone());
+    let dm_peer = StoredValue::new((
+        correspondant_id.unwrap_or_else(Uuid::new_v4),
+        correspondant_username,
+    ));
+    let destination_for_actual = destination.clone();
     let destination_for_fetch = destination.clone();
     let destination_for_loading = destination.clone();
     let div = NodeRef::<html::Div>::new();
     let first_unread_ref = NodeRef::<html::Div>::new();
-    let (unread_at_open, set_unread_at_open) = signal::<Option<i64>>(None);
-    let block_list = Resource::new(|| (), |_| async move { get_blocked_user_ids().await });
-    let expanded_hidden_messages =
-        RwSignal::new(HashSet::<(i64, Uuid, String)>::new());
-
-    let game_state_ready = move || white_id().is_some() && black_id().is_some();
-    let actual_destination = Signal::derive(move || match destination.clone() {
-        SimpleDestination::Game => {
-            match (white_id(), black_id()) {
-                (Some(w), Some(b)) => {
-                    let use_players = game_channel_override
-                        .as_ref()
-                        .map(|s| s.get())
-                        .unwrap_or_else(|| game_state.signal.with(|gs| gs.uid_is_player(uid)));
-                    if use_players {
-                        ChatDestination::GamePlayers(game_id(), w, b)
-                    } else {
-                        ChatDestination::GameSpectators(game_id(), w, b)
-                    }
-                }
-                _ => ChatDestination::Global,
-            }
-        }
-        SimpleDestination::User => {
-            ChatDestination::User((correspondant_id(), correspondant_username()))
-        }
-        SimpleDestination::Global => ChatDestination::Global,
-        SimpleDestination::Tournament(tournament_id) => {
-            ChatDestination::TournamentLobby(tournament_id)
-        }
-    });
-
-    // Fetch chat history on mount when ChatWindow shows tournament or game.
-    // For finished games, fetch both channels and merge.
-    Effect::watch(
-        move || {
-            match &destination_for_fetch {
-                SimpleDestination::Tournament(tid) => {
-                    vec![(CHANNEL_TYPE_TOURNAMENT_LOBBY.to_string(), tid.0.clone())]
-                }
-                SimpleDestination::Game => {
-                    let gid = game_id();
-                    if gid.0.is_empty() {
-                        vec![]
-                    } else if game_state.signal.with(|gs| {
-                        gs.game_response
-                            .as_ref()
-                            .map_or(false, |gr| gr.finished)
-                    }) {
-                        vec![
-                            (CHANNEL_TYPE_GAME_PLAYERS.to_string(), gid.0.clone()),
-                            (CHANNEL_TYPE_GAME_SPECTATORS.to_string(), gid.0.clone()),
-                        ]
-                    } else {
-                        let ct = if game_state.signal.with(|gs| gs.uid_is_player(uid)) {
-                            CHANNEL_TYPE_GAME_PLAYERS.to_string()
-                        } else {
-                            CHANNEL_TYPE_GAME_SPECTATORS.to_string()
-                        };
-                        vec![(ct, gid.0)]
-                    }
-                }
-                _ => vec![],
+    let unread_at_open = RwSignal::new(None::<i64>);
+    let block_list = Resource::new(
+        move || (me_uid.get(), chat.block_list_version.get()),
+        move |(viewer_id, _)| async move {
+            if viewer_id.is_none() {
+                Ok(Vec::new())
+            } else {
+                get_blocked_user_ids().await
             }
         },
-        move |channels, _, _| {
-            for (ct, cid) in channels {
-                let chat = chat.clone();
-                let ct = ct.clone();
-                let cid = cid.clone();
+    );
+    let expanded_hidden_messages = RwSignal::new(HashSet::<MessageId>::new());
+
+    let route_game_data = Memo::new(move |_| match (white_id(), black_id()) {
+        (Some(w), Some(b)) => Some((route_game_id(), w, b, game_finished())),
+        _ => None,
+    });
+    let current_game_data = Memo::new(move |_| {
+        game_data
+            .as_ref()
+            .and_then(|signal| signal.get())
+            .or_else(|| route_game_data.get())
+    });
+    let game_state_ready = Memo::new(move |_| current_game_data.get().is_some());
+    let actual_destination = Memo::new(move |_| match &destination_for_actual {
+        SimpleDestination::Game => match current_game_data.get() {
+            Some((game_id, white_id, black_id, _finished)) => {
+                let use_players = game_channel_override
+                    .as_ref()
+                    .map(|s| s.get())
+                    .unwrap_or_else(uid_is_player);
+                if use_players {
+                    Some(ChatDestination::GamePlayers(game_id, white_id, black_id))
+                } else {
+                    Some(ChatDestination::GameSpectators(game_id, white_id, black_id))
+                }
+            }
+            _ => None,
+        },
+        SimpleDestination::User => {
+            let (id, username) = dm_peer.get_value();
+            Some(ChatDestination::User((id, username)))
+        }
+        SimpleDestination::Global => Some(ChatDestination::Global),
+        SimpleDestination::Tournament(tournament_id) => {
+            Some(ChatDestination::TournamentLobby(tournament_id.clone()))
+        }
+    });
+    let actual_destination_signal =
+        Signal::derive(move || actual_destination.get().unwrap_or(ChatDestination::Global));
+    let actual_channel_key = Memo::new(move |_| {
+        actual_destination
+            .get()
+            .as_ref()
+            .and_then(|destination| ChannelKey::from_destination(destination, me_uid.get()))
+    });
+    let show_loading = Memo::new(move |_| {
+        matches!(&destination_for_loading, SimpleDestination::Game) && !game_state_ready.get()
+    });
+
+    // Fetch chat history when the thread changes.
+    // Finished games preload both channels so Players/Spectators toggles stay instant.
+    Effect::watch(
+        move || match &destination_for_fetch {
+            SimpleDestination::User => me_uid
+                .get()
+                .zip(correspondant_id)
+                .map(|(current_user_id, other_user_id)| {
+                    vec![ChannelKey::direct(current_user_id, other_user_id)]
+                })
+                .unwrap_or_default(),
+            SimpleDestination::Global => vec![ChannelKey::global()],
+            SimpleDestination::Tournament(tid) => {
+                vec![ChannelKey::tournament(tid)]
+            }
+            SimpleDestination::Game => match current_game_data.get() {
+                Some((game_id, _white_id, _black_id, finished)) if finished => vec![
+                    ChannelKey::game_players(&game_id),
+                    ChannelKey::game_spectators(&game_id),
+                ],
+                Some((game_id, _white_id, _black_id, _finished)) => {
+                    let use_players = game_channel_override
+                        .as_ref()
+                        .map(|signal| signal.get())
+                        .unwrap_or_else(uid_is_player);
+                    let channel_key = if use_players {
+                        ChannelKey::game_players(&game_id)
+                    } else {
+                        ChannelKey::game_spectators(&game_id)
+                    };
+                    vec![channel_key]
+                }
+                None => {
+                    vec![]
+                }
+            },
+        },
+        move |channels, prev_channels, _| {
+            if prev_channels.is_some_and(|prev| prev == channels) {
+                return;
+            }
+            for key in channels {
+                let chat = chat;
+                let key = key.clone();
                 spawn_local(async move {
-                    if let Ok(messages) = chat.fetch_channel_history(&ct, &cid).await {
-                        chat.inject_history(&ct, &cid, messages);
+                    if let Ok(messages) = chat.fetch_channel_history(&key).await {
+                        chat.inject_history(&key, messages);
                     }
                 });
             }
@@ -321,74 +416,41 @@ pub fn ChatWindow(
         true,
     );
 
-    // Mark channel as read on server when viewing tournament lobby, DM, or game chat.
+    // Mark channel as read when destination changes and track which channel is visible.
     // Capture unread count before marking so we can show divider and scroll to first unread.
     Effect::watch(
-        move || {
-            let dest = actual_destination();
-            let msg_count = match &dest {
-                ChatDestination::TournamentLobby(tid) => (chat.tournament_lobby_messages)()
-                    .get(tid)
-                    .map(|v| v.len())
-                    .unwrap_or(0),
-                ChatDestination::User((id, _)) => (chat.users_messages)()
-                    .get(id)
-                    .map(|v| v.len())
-                    .unwrap_or(0),
-                ChatDestination::GamePlayers(gid, ..) | ChatDestination::GameSpectators(gid, ..) => {
-                    (chat.games_private_messages)()
-                        .get(gid)
-                        .map(|v| v.len())
-                        .unwrap_or(0)
-                        + (chat.games_public_messages)()
-                            .get(gid)
-                            .map(|v| v.len())
-                            .unwrap_or(0)
-                }
-                _ => 0,
+        move || actual_channel_key.get(),
+        move |channel_key, previous, _| {
+            if let Some(previous_key) = previous.cloned().flatten() {
+                chat.clear_channel_visible(&previous_key);
+            }
+
+            unread_at_open.set(None);
+            let Some(channel_key) = channel_key.clone() else {
+                return;
             };
-            (dest, msg_count)
-        },
-        move |(dest, _), _, _| {
-            set_unread_at_open.set(None); // Reset when dest changes; set below if this channel has unread
-            let unread = match &dest {
-                ChatDestination::TournamentLobby(tid) => chat.unread_count_for_tournament(tid),
-                ChatDestination::User((other_id, _)) => auth_context
-                    .user
-                    .with_untracked(|a| a.as_ref().map_or(0, |a| chat.unread_count_for_dm(*other_id, a.user.uid))),
-                ChatDestination::GamePlayers(gid, ..) | ChatDestination::GameSpectators(gid, ..) => {
-                    chat.unread_count_for_game(gid)
-                }
-                ChatDestination::Global => chat.unread_count_for_global(),
-            };
+            let unread_key = channel_key.clone();
+            let unread = untrack(move || chat.unread_count_for_channel(&unread_key));
             if unread > 0 {
-                set_unread_at_open.set(Some(unread));
+                unread_at_open.set(Some(unread));
             }
-            match &dest {
-                ChatDestination::TournamentLobby(tournament_id) => {
-                    chat.seen_tournament_lobby(tournament_id.clone());
-                }
-                ChatDestination::User((other_id, _)) => {
-                    if let Some(current_id) = auth_context.user.with_untracked(|a| a.as_ref().map(|a| a.user.uid)) {
-                        chat.seen_dm(*other_id, current_id);
-                    }
-                }
-                ChatDestination::GamePlayers(game_id, ..) | ChatDestination::GameSpectators(game_id, ..) => {
-                    chat.seen_messages(game_id.clone());
-                }
-                ChatDestination::Global => {
-                    chat.mark_read(CHANNEL_TYPE_GLOBAL, CHANNEL_TYPE_GLOBAL);
-                }
-            }
+
+            chat.set_channel_visible(&channel_key);
+            chat.open_channel(&channel_key);
         },
         true,
     );
+    on_cleanup(move || {
+        if let Some(channel_key) = actual_channel_key.get_untracked() {
+            chat.clear_channel_visible(&channel_key);
+        }
+    });
 
     // Clear divider after 10 seconds
     use_interval_fn(
         move || {
             if unread_at_open.get_untracked().is_some() {
-                set_unread_at_open.set(None);
+                unread_at_open.set(None);
             }
         },
         10_000,
@@ -396,17 +458,60 @@ pub fn ChatWindow(
 
     // Scroll: on destination change / initial load → first unread (if any) or bottom. When a NEW message
     // arrives (same destination, count N→N+1) → scroll to bottom so the newest message is visible.
-    let first_unread_ref = first_unread_ref.clone();
     Effect::watch(
         move || {
-            let dest = actual_destination();
+            let dest = actual_destination.get();
             let count = match &dest {
-                ChatDestination::TournamentLobby(tid) => (chat.tournament_lobby_messages)().get(tid).map(|v| v.len()).unwrap_or(0),
-                ChatDestination::GamePlayers(gid, ..) | ChatDestination::GameSpectators(gid, ..) => {
-                    (chat.games_private_messages)().get(gid).map(|v| v.len()).unwrap_or(0)
-                        + (chat.games_public_messages)().get(gid).map(|v| v.len()).unwrap_or(0)
+                Some(ChatDestination::TournamentLobby(tid)) => (chat.tournament_lobby_messages)()
+                    .get(tid)
+                    .map(|v| v.len())
+                    .unwrap_or(0),
+                Some(ChatDestination::GamePlayers(gid, ..)) => {
+                    let private_count = (chat.games_private_messages)()
+                        .get(gid)
+                        .map(|v| v.len())
+                        .unwrap_or(0);
+                    let public_count = (chat.games_public_messages)()
+                        .get(gid)
+                        .map(|v| v.len())
+                        .unwrap_or(0);
+                    let finished = current_game_data
+                        .get()
+                        .map(|(_, _, _, finished)| finished)
+                        .unwrap_or(false);
+                    let single_channel = game_channel_override.is_some();
+                    if finished && !single_channel {
+                        private_count + public_count
+                    } else {
+                        private_count
+                    }
                 }
-                _ => 0,
+                Some(ChatDestination::GameSpectators(gid, ..)) => {
+                    let private_count = (chat.games_private_messages)()
+                        .get(gid)
+                        .map(|v| v.len())
+                        .unwrap_or(0);
+                    let public_count = (chat.games_public_messages)()
+                        .get(gid)
+                        .map(|v| v.len())
+                        .unwrap_or(0);
+                    let finished = current_game_data
+                        .get()
+                        .map(|(_, _, _, finished)| finished)
+                        .unwrap_or(false);
+                    let single_channel = game_channel_override.is_some();
+                    if finished && !single_channel {
+                        private_count + public_count
+                    } else {
+                        public_count
+                    }
+                }
+                Some(ChatDestination::User((id, _))) => (chat.users_messages)()
+                    .get(id)
+                    .map(|v| v.len())
+                    .unwrap_or(0),
+                Some(ChatDestination::Global) => chat.global_messages.get().len(),
+                None => 0,
             };
             (dest, count)
         },
@@ -431,7 +536,7 @@ pub fn ChatWindow(
                         c.set_scroll_top(c.scroll_height());
                     }
                 } else if let Some(t) = target {
-                    let _ = t.scroll_into_view_with_bool(true);
+                    t.scroll_into_view_with_bool(true);
                 } else if let Some(c) = container {
                     c.set_scroll_top(c.scroll_height());
                 }
@@ -440,13 +545,15 @@ pub fn ChatWindow(
         true,
     );
 
-    let messages = move || {
-        let mut v = match actual_destination() {
-            ChatDestination::TournamentLobby(tournament) => (chat.tournament_lobby_messages)()
-                .get(&tournament)
-                .cloned()
-                .unwrap_or_default(),
-            ChatDestination::GamePlayers(game_id, ..) => {
+    let merged_messages = Memo::new(move |_| {
+        let mut messages = match actual_destination.get() {
+            Some(ChatDestination::TournamentLobby(tournament)) => {
+                (chat.tournament_lobby_messages)()
+                    .get(&tournament)
+                    .cloned()
+                    .unwrap_or_default()
+            }
+            Some(ChatDestination::GamePlayers(game_id, ..)) => {
                 let private_msgs = (chat.games_private_messages)()
                     .get(&game_id)
                     .cloned()
@@ -455,11 +562,10 @@ pub fn ChatWindow(
                     .get(&game_id)
                     .cloned()
                     .unwrap_or_default();
-                let finished = game_state.signal.with(|gs| {
-                    gs.game_response
-                        .as_ref()
-                        .map_or(false, |gr| gr.finished)
-                });
+                let finished = current_game_data
+                    .get()
+                    .map(|(_, _, _, finished)| finished)
+                    .unwrap_or(false);
                 let single_channel = game_channel_override.is_some();
                 if finished && !single_channel {
                     let mut merged = private_msgs;
@@ -469,7 +575,7 @@ pub fn ChatWindow(
                     private_msgs
                 }
             }
-            ChatDestination::GameSpectators(game_id, ..) => {
+            Some(ChatDestination::GameSpectators(game_id, ..)) => {
                 let private_msgs = (chat.games_private_messages)()
                     .get(&game_id)
                     .cloned()
@@ -478,11 +584,10 @@ pub fn ChatWindow(
                     .get(&game_id)
                     .cloned()
                     .unwrap_or_default();
-                let finished = game_state.signal.with(|gs| {
-                    gs.game_response
-                        .as_ref()
-                        .map_or(false, |gr| gr.finished)
-                });
+                let finished = current_game_data
+                    .get()
+                    .map(|(_, _, _, finished)| finished)
+                    .unwrap_or(false);
                 let single_channel = game_channel_override.is_some();
                 if finished && !single_channel {
                     let mut merged = private_msgs;
@@ -492,139 +597,204 @@ pub fn ChatWindow(
                     public_msgs
                 }
             }
-            ChatDestination::User((correspondant_id, _username)) => (chat.users_messages)()
+            Some(ChatDestination::User((correspondant_id, _username))) => (chat.users_messages)()
                 .get(&correspondant_id)
                 .cloned()
                 .unwrap_or_default(),
-            _ => Vec::new(),
+            Some(ChatDestination::Global) => chat.global_messages.get(),
+            None => Vec::new(),
         };
-        v.sort_by_key(|m| m.timestamp.map(|t| t.timestamp()).unwrap_or(0));
-        v
-    };
-    let show_loading = move || {
-        matches!(destination_for_loading.clone(), SimpleDestination::Game) && !game_state_ready()
-    };
-    let me_uid = move || auth_context.user.with_untracked(|a| a.as_ref().map(|a| a.user.uid));
+        messages.sort_by_key(|m| m.timestamp.map(|t| t.timestamp_millis()).unwrap_or(0));
+        messages
+    });
+
+    let render_rows = Memo::new(move |_| {
+        let messages = merged_messages.get();
+        if messages.is_empty() {
+            return Vec::new();
+        }
+
+        let split_idx = unread_divider_split_idx(messages.len(), unread_at_open.get());
+        let current_user_id = me_uid.get();
+
+        messages_with_header_flags(&messages)
+            .into_iter()
+            .enumerate()
+            .map(|(idx, (message, show_header))| {
+                let user_id = message.user_id;
+                MessageRow {
+                    id: message_id(&message),
+                    message,
+                    show_header,
+                    is_current_user: current_user_id.is_some_and(|me| me == user_id),
+                    show_unread_divider_before: split_idx == Some(idx),
+                }
+            })
+            .collect::<Vec<_>>()
+    });
+
     view! {
         <div
             id="ignoreChat"
-            class="flex flex-col flex-grow justify-between w-full min-w-full max-w-full h-full min-h-0 overflow-hidden"
+            class="flex overflow-hidden flex-col flex-grow justify-between w-full min-w-full max-w-full h-full min-h-0"
         >
-            <div node_ref=div class="overflow-y-auto flex-grow w-full min-w-full h-0 min-h-0 p-4">
-                {move || {
-                    if show_loading() {
+            <div node_ref=div class="overflow-y-auto flex-grow p-4 w-full min-w-full h-0 min-h-0">
+                <Show
+                    when=move || show_loading.get()
+                    fallback=move || {
                         view! {
-                            <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400 text-sm">
-                                "Loading chat…"
-                            </div>
-                        }
-                            .into_any()
-                    } else {
-                        let msgs = messages();
-                        let empty_thread = msgs.is_empty();
-                        if empty_thread {
-                            view! {
-                                <div class="flex flex-col items-center justify-center h-full min-h-[8rem] text-gray-500 dark:text-gray-400 gap-2">
-                                    <span class="text-3xl opacity-40">"✉️"</span>
-                                    <p class="text-sm font-medium">"No messages yet"</p>
-                                    <p class="text-xs">"Send a message to start the conversation."</p>
-                                </div>
-                            }
-                                .into_any()
-                        } else {
-                            let n_unread = unread_at_open.get().unwrap_or(0) as usize;
-                            let _ = unread_at_open.get();
-                            let (read_msgs, unread_msgs) = if n_unread > 0 && n_unread <= msgs.len() {
-                                let split_idx = msgs.len() - n_unread;
-                                let (r, u) = msgs.split_at(split_idx);
-                                (r.to_vec(), u.to_vec())
-                            } else {
-                                (msgs.clone(), vec![])
-                            };
-                            let read_with_flags = messages_with_header_flags(&read_msgs);
-                            let unread_with_flags = messages_with_header_flags(&unread_msgs);
-                            let me = me_uid();
-                            let blocked_ids: HashSet<Uuid> = block_list
-                                .get()
-                                .and_then(Result::ok)
-                                .unwrap_or_default()
-                                .into_iter()
-                                .collect();
-                            let blocked_ids2 = blocked_ids.clone();
-                            let is_shared_channel = matches!(
-                                actual_destination(),
-                                ChatDestination::GamePlayers(_, _, _)
-                                    | ChatDestination::GameSpectators(_, _, _)
-                                    | ChatDestination::TournamentLobby(_)
-                                    | ChatDestination::Global
-                            );
-                            let expanded_set = expanded_hidden_messages;
-                            view! {
-                                <For each=move || read_with_flags.clone() key=|item| (item.0.timestamp.map(|t| t.timestamp()).unwrap_or(0), item.0.message.clone()) let:item>
-                                    {let is_me = me.is_some_and(|u| item.0.user_id == u);
-                                    let sender_blocked = is_shared_channel && blocked_ids.contains(&item.0.user_id);
-                                    let key = (item.0.timestamp.map(|t| t.timestamp()).unwrap_or(0), item.0.user_id, item.0.message.clone());
-                                    let key_cb = key.clone();
-                                    let expanded_signal = Signal::derive(move || expanded_set.get().contains(&key));
-                                    let on_expand = Callback::new(move |()| {
-                                        expanded_set.update(|s| { s.insert(key_cb.clone()); });
-                                    });
-                                    view! {
-                                        <Message message=item.0 is_current_user=is_me show_header=item.1 sender_blocked=sender_blocked expanded_signal=expanded_signal on_click_expand=on_expand />
-                                    }}
-                                </For>
-                                {move || {
-                                    if n_unread > 0 && unread_at_open.get().is_some() {
+                            <Transition fallback=move || {
+                                view! {
+                                    <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
+                                        {t!(i18n, messages.chat.loading)}
+                                    </div>
+                                }
+                            }>
+                                <ShowLet
+                                    some=move || {
+                                        let rows = render_rows.get();
+                                        if rows.is_empty() { None } else { Some(rows) }
+                                    }
+                                    let:rows
+                                    fallback=move || {
                                         view! {
-                                            <div
-                                                node_ref=first_unread_ref
-                                                class="relative my-4 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400"
-                                            >
-                                                <div class="absolute inset-x-0 border-b border-gray-300 dark:border-gray-600"></div>
-                                                <span class="relative z-10 bg-white dark:bg-gray-900 px-2">"New Messages"</span>
+                                            <div class="flex flex-col gap-2 justify-center items-center h-full text-gray-500 dark:text-gray-400 min-h-[8rem]">
+                                                <span class="text-3xl opacity-40">"✉️"</span>
+                                                <p class="text-sm font-medium">
+                                                    {t!(i18n, messages.chat.empty_title)}
+                                                </p>
+                                                <p class="text-xs">{t!(i18n, messages.chat.empty_body)}</p>
                                             </div>
                                         }
-                                            .into_any()
-                                    } else {
-                                        view! {}.into_any()
                                     }
-                                }}
-                                <For each=move || unread_with_flags.clone() key=|item| (item.0.timestamp.map(|t| t.timestamp()).unwrap_or(0), item.0.message.clone()) let:item>
-                                    {let is_me = me.is_some_and(|u| item.0.user_id == u);
-                                    let sender_blocked2 = is_shared_channel && blocked_ids2.contains(&item.0.user_id);
-                                    let key2 = (item.0.timestamp.map(|t| t.timestamp()).unwrap_or(0), item.0.user_id, item.0.message.clone());
-                                    let key_cb2 = key2.clone();
-                                    let expanded_signal2 = Signal::derive(move || expanded_set.get().contains(&key2));
-                                    let on_expand2 = Callback::new(move |()| {
-                                        expanded_set.update(|s| { s.insert(key_cb2.clone()); });
-                                    });
-                                    view! {
-                                        <Message message=item.0 is_current_user=is_me show_header=item.1 sender_blocked=sender_blocked2 expanded_signal=expanded_signal2 on_click_expand=on_expand2 />
-                                    }}
-                                </For>
-                            }
-                                .into_any()
+                                >
+                                    <ShowLet
+                                        some=move || {
+                                            Some(
+                                                block_list.get().and_then(Result::ok).unwrap_or_default(),
+                                            )
+                                        }
+                                        let:blocked_users
+                                    >
+                                        {
+                                            let blocked_set = std::sync::Arc::new(
+                                                blocked_users.into_iter().collect::<HashSet<Uuid>>(),
+                                            );
+                                            let is_shared_channel = matches!(
+                                                actual_destination.get(),
+                                                Some(ChatDestination::GamePlayers(_, _, _))
+                                                | Some(ChatDestination::GameSpectators(_, _, _))
+                                                | Some(ChatDestination::TournamentLobby(_))
+                                                | Some(ChatDestination::Global)
+                                            );
+                                            let rows_for_render = StoredValue::new(rows.clone());
+                                            view! {
+                                                <For
+                                                    each=move || rows_for_render.get_value()
+                                                    key=|row| row.id.clone()
+                                                    let:row
+                                                >
+                                                    {
+                                                        let MessageRow {
+                                                            id,
+                                                            message,
+                                                            show_header,
+                                                            is_current_user,
+                                                            show_unread_divider_before,
+                                                        } = row;
+                                                        let expanded_set = expanded_hidden_messages;
+                                                        let expanded_key = id.clone();
+                                                        let expand_callback_key = id.clone();
+                                                        let blocked_for_row = blocked_set.clone();
+                                                        let sender_blocked = is_shared_channel
+                                                            && blocked_for_row.contains(&message.user_id);
+                                                        let expanded_signal = Signal::derive(move || {
+                                                            expanded_set.with(|set| set.contains(&expanded_key))
+                                                        });
+                                                        let on_expand = Callback::new(move |()| {
+                                                            expanded_set
+                                                                .update(|set| {
+                                                                    set.insert(expand_callback_key.clone());
+                                                                });
+                                                        });
+                                                        view! {
+                                                            <ShowLet
+                                                                some=move || {
+                                                                    if show_unread_divider_before {
+                                                                        unread_at_open.get()
+                                                                    } else {
+                                                                        None
+                                                                    }
+                                                                }
+                                                                let:_n
+                                                            >
+                                                                <div
+                                                                    node_ref=first_unread_ref
+                                                                    class="flex relative justify-center items-center my-4 text-xs text-gray-500 dark:text-gray-400"
+                                                                >
+                                                                    <div class="absolute inset-x-0 border-b border-gray-300 dark:border-gray-600"></div>
+                                                                    <span class="relative z-10 px-2 bg-white dark:bg-gray-900">
+                                                                        {t!(i18n, messages.chat.new_messages)}
+                                                                    </span>
+                                                                </div>
+                                                            </ShowLet>
+                                                            <Message
+                                                                message
+                                                                is_current_user
+                                                                show_header
+                                                                sender_blocked
+                                                                expanded_signal
+                                                                on_click_expand=on_expand
+                                                            />
+                                                        }
+                                                    }
+                                                </For>
+                                            }
+                                        }
+                                    </ShowLet>
+                                </ShowLet>
+                            </Transition>
                         }
                     }
-                }}
+                >
+                    <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
+                        {t!(i18n, messages.chat.loading)}
+                    </div>
+                </Show>
             </div>
-            <div class="shrink-0 border-t border-gray-200 dark:border-gray-700">
-                <ChatInput
-                    destination=actual_destination
-                    disabled=move || {
-                        let extra = input_disabled.as_ref().map(|s| s.get()).unwrap_or(false);
-                        if extra {
-                            true
-                        } else {
-                            match actual_destination() {
-                                ChatDestination::Global => !auth_context
-                                    .user
-                                    .with_untracked(|u| u.as_ref().is_some_and(|a| a.user.admin)),
-                                _ => false,
-                            }
+            <div class="border-t border-gray-200 dark:border-gray-700 shrink-0">
+                <Show
+                    when=move || !show_loading.get()
+                    fallback=move || {
+                        view! {
+                            <div class="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">
+                                {t!(i18n, messages.chat.loading)}
+                            </div>
                         }
                     }
-                />
+                >
+                    <ChatInput
+                        destination=actual_destination_signal
+                        disabled=move || {
+                            let extra = input_disabled.as_ref().map(|s| s.get()).unwrap_or(false);
+                            if extra {
+                                true
+                            } else {
+                                match actual_destination.get() {
+                                    Some(ChatDestination::Global) => {
+                                        !auth_context
+                                            .user
+                                            .with_untracked(|u| {
+                                                u.as_ref().is_some_and(|a| a.user.admin)
+                                            })
+                                    }
+                                    None => true,
+                                    _ => false,
+                                }
+                            }
+                        }
+                    />
+                </Show>
             </div>
         </div>
     }

@@ -1,0 +1,62 @@
+{
+    "chat": {
+        "players": "Jogadores",
+        "spectators": "Espectadores",
+        "players_chat": "Chat dos jogadores",
+        "spectator_chat": "Chat dos espectadores",
+        "spectator_unlock": "O chat dos espectadores desbloqueia quando a partida termina.",
+        "admin_only": "Apenas administradores",
+        "with_opponent": "Chat com o oponente",
+        "with_spectators": "Chat com os espectadores",
+        "placeholder": "Chat",
+        "loading": "A carregar chat...",
+        "empty_title": "Ainda nao ha mensagens",
+        "empty_body": "Envia uma mensagem para iniciar a conversa.",
+        "new_messages": "Novas mensagens",
+        "hidden_message": "Mensagem oculta. Clica para expandir.",
+        "tournament_title": "Chat do torneio",
+        "tournament_send_restricted": "So os participantes podem enviar mensagens.",
+        "tournament_read_restricted": "So os participantes podem conversar aqui.",
+        "turn": " - turno {{turn}}"
+    },
+    "block_dialog": {
+        "block_user": "Bloquear utilizador",
+        "unblock_user": "Desbloquear utilizador",
+        "title": "Bloquear este utilizador?",
+        "body": "Ele deixara de te poder enviar mensagens diretas. Nos chats de jogo e torneio, as mensagens dele ficarao ocultas por defeito (podes clicar para mostrar). Podes desbloquea-lo mais tarde no perfil dele ou em Mensagens.",
+        "cancel": "Cancelar",
+        "confirm": "Bloquear"
+    },
+    "page": {
+        "title": "Mensagens",
+        "loading": "A carregar...",
+        "failed_conversations": "Falha ao carregar conversas",
+        "select_conversation": "Seleciona uma conversa",
+        "choose_conversation": "Escolhe um chat na barra lateral para comecar a enviar mensagens.",
+        "back_to_conversations": "Voltar as conversas",
+        "conversations": "Conversas",
+        "unknown_user": "Desconhecido",
+        "view_profile": "Ver perfil ->",
+        "view_tournament": "Ver torneio ->",
+        "view_game": "Ver jogo ->",
+        "mute_tournament_chat": "Silenciar chat do torneio",
+        "unmute_tournament_chat": "Ativar chat do torneio",
+        "failed_game": "Falha ao carregar jogo",
+        "game_id_tooltip": "ID do jogo (corresponde ao URL)",
+        "result_won": "{{winner}} venceu {{conclusion}}",
+        "result_draw": "Empate {{conclusion}}",
+        "state_finished": "Terminado:",
+        "state_started": "Iniciado",
+        "message_button": "Mensagem"
+    },
+    "sections": {
+        "dms": "DMs",
+        "tournaments": "Torneios",
+        "games": "Jogos",
+        "global": "Global",
+        "no_dms": "Ainda sem DMs",
+        "no_tournament_chats": "Sem chats de torneio",
+        "no_game_chats": "Sem chats de jogo",
+        "muted": "Silenciado"
+    }
+}

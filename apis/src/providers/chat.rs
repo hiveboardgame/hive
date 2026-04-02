@@ -1,5 +1,8 @@
-use crate::functions::chat::{get_chat_unread_counts, mark_chat_read};
-use crate::responses::AccountResponse;
+use crate::{
+    chat::ChannelKey,
+    functions::chat::{get_chat_history, get_chat_unread_counts, mark_chat_read},
+    responses::AccountResponse,
+};
 
 use super::{
     api_requests::ApiRequests,
@@ -8,77 +11,121 @@ use super::{
     AlertsContext,
     ApiRequestsProvider,
 };
-use leptos::prelude::*;
-use leptos::task::spawn_local;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsCast;
+use leptos::{prelude::*, task::spawn_local};
 use shared_types::{
-    canonical_dm_channel_id, ChatDestination, ChatMessage, ChatMessageContainer,
-    CHANNEL_TYPE_DIRECT, CHANNEL_TYPE_GAME_PLAYERS, CHANNEL_TYPE_GAME_SPECTATORS,
-    CHANNEL_TYPE_GLOBAL, CHANNEL_TYPE_TOURNAMENT_LOBBY, GameId, TournamentId,
+    other_user_from_dm_channel,
+    ChatDestination,
+    ChatMessage,
+    ChatMessageContainer,
+    GameId,
+    TournamentId,
+    CHANNEL_TYPE_DIRECT,
+    CHANNEL_TYPE_GAME_PLAYERS,
+    CHANNEL_TYPE_GAME_SPECTATORS,
+    CHANNEL_TYPE_GLOBAL,
+    CHANNEL_TYPE_TOURNAMENT_LOBBY,
 };
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::{closure::Closure, JsCast};
 
-/// Key for deduplicating messages when merging (timestamp ms, user_id, body).
-fn message_dedup_key(m: &ChatMessage) -> (i64, Uuid, String) {
-    let ts = m.timestamp.map(|t| t.timestamp_millis()).unwrap_or(0);
-    (ts, m.user_id, m.message.clone())
+const RECENT_ANNOUNCEMENTS_LIMIT: usize = 3;
+const HISTORY_TIMESTAMP_SKEW_MILLIS: i64 = 500;
+
+fn live_message_match_score(a: &ChatMessage, b: &ChatMessage) -> Option<i64> {
+    (a == b).then_some(0)
 }
 
-/// True if m is effectively a duplicate of something in existing.
-/// Uses exact (ts, user_id, message) match, and also (user_id, message) within 5s
-/// to catch REST/WebSocket races where timestamps differ slightly.
-fn is_duplicate_message(existing: &[ChatMessage], m: &ChatMessage) -> bool {
-    let key = message_dedup_key(m);
-    let seen_exact: HashSet<_> = existing.iter().map(message_dedup_key).collect();
-    if seen_exact.contains(&key) {
-        return true;
+fn history_message_match_score(a: &ChatMessage, b: &ChatMessage) -> Option<i64> {
+    if a.user_id != b.user_id || a.turn != b.turn || a.message != b.message {
+        return None;
     }
-    let incoming_ts_ms = m.timestamp.map(|t| t.timestamp_millis()).unwrap_or(0);
-    existing.iter().any(|e| {
-        e.user_id == m.user_id
-            && e.message == m.message
-            && {
-                let existing_ts = e.timestamp.map(|t| t.timestamp_millis()).unwrap_or(0);
-                (incoming_ts_ms - existing_ts).abs() < 5000
-            }
-    })
+    match (a.timestamp.as_ref(), b.timestamp.as_ref()) {
+        // Live websocket timestamps are taken slightly before DB insert time.
+        // Use a tight skew window so history merges duplicate copies while
+        // still preserving intentional repeated messages.
+        (Some(left), Some(right)) => {
+            let delta = left.timestamp_millis().abs_diff(right.timestamp_millis()) as i64;
+            (delta <= HISTORY_TIMESTAMP_SKEW_MILLIS).then_some(delta)
+        }
+        // Keep pre-existing fallback behavior for missing timestamps.
+        _ => Some(HISTORY_TIMESTAMP_SKEW_MILLIS + 1),
+    }
 }
 
 /// Filter incoming messages to only those not already in existing.
-fn filter_duplicate_messages(
+/// Matches one incoming to at most one existing entry so repeated legitimate
+/// messages are not dropped when only one prior message matches.
+/// Candidate pairs are matched by the best score first to avoid order-sensitive
+/// mismatches when tolerant matching is used.
+fn filter_duplicate_messages_by(
     existing: &[ChatMessage],
     incoming: impl IntoIterator<Item = ChatMessage>,
+    match_score: fn(&ChatMessage, &ChatMessage) -> Option<i64>,
 ) -> Vec<ChatMessage> {
+    let incoming: Vec<_> = incoming.into_iter().collect();
+    let mut candidate_pairs = Vec::new();
+    for (existing_idx, existing_message) in existing.iter().enumerate() {
+        for (incoming_idx, incoming_message) in incoming.iter().enumerate() {
+            if let Some(score) = match_score(existing_message, incoming_message) {
+                candidate_pairs.push((score, existing_idx, incoming_idx));
+            }
+        }
+    }
+    candidate_pairs
+        .sort_by_key(|(score, existing_idx, incoming_idx)| (*score, *existing_idx, *incoming_idx));
+
+    let mut matched_existing = vec![false; existing.len()];
+    let mut matched_incoming = vec![false; incoming.len()];
+    for (_, existing_idx, incoming_idx) in candidate_pairs {
+        if matched_existing[existing_idx] || matched_incoming[incoming_idx] {
+            continue;
+        }
+        matched_existing[existing_idx] = true;
+        matched_incoming[incoming_idx] = true;
+    }
+
     incoming
         .into_iter()
-        .filter(|m| !is_duplicate_message(existing, m))
+        .enumerate()
+        .filter_map(|(idx, message)| (!matched_incoming[idx]).then_some(message))
         .collect()
 }
 
-/// Merge existing and incoming, deduplicate by (timestamp_ms, user_id, message), sort by timestamp.
+/// Filter duplicate messages for live WebSocket delivery. Uses strict equality
+/// so users can intentionally send the same text repeatedly.
+fn filter_duplicate_live_messages(
+    existing: &[ChatMessage],
+    incoming: impl IntoIterator<Item = ChatMessage>,
+) -> Vec<ChatMessage> {
+    filter_duplicate_messages_by(existing, incoming, live_message_match_score)
+}
+
+/// Filter duplicate messages when merging fetched history into local state.
+/// Uses a small timestamp skew window to reconcile websocket-vs-persisted
+/// duplicates while preserving repeated messages separated in time.
+fn filter_duplicate_history_messages(
+    existing: &[ChatMessage],
+    incoming: impl IntoIterator<Item = ChatMessage>,
+) -> Vec<ChatMessage> {
+    filter_duplicate_messages_by(existing, incoming, history_message_match_score)
+}
+
+/// Merge existing and incoming, deduplicate, sort by timestamp.
 /// Used to avoid losing WebSocket messages when REST fetch completes after live delivery.
 fn merge_and_dedupe(existing: Vec<ChatMessage>, incoming: Vec<ChatMessage>) -> Vec<ChatMessage> {
-    let new_only = filter_duplicate_messages(&existing, incoming);
+    let new_only = filter_duplicate_history_messages(&existing, incoming);
     let mut merged: Vec<_> = existing.into_iter().chain(new_only).collect();
-    merged.sort_by_key(|m| m.timestamp.map(|t| t.timestamp()).unwrap_or(0));
+    merged.sort_by_key(|m| m.timestamp.map(|t| t.timestamp_millis()).unwrap_or(0));
     merged
 }
 
-fn other_user_from_dm_channel(channel_id: &str, me: Uuid) -> Option<Uuid> {
-    let parts: Vec<&str> = channel_id.split("::").collect();
-    if parts.len() != 2 {
-        return None;
-    }
-    let a: Uuid = parts[0].parse().ok()?;
-    let b: Uuid = parts[1].parse().ok()?;
-    if a == me {
-        Some(b)
-    } else if b == me {
-        Some(a)
-    } else {
-        None
+fn retain_recent_announcements(messages: &mut Vec<ChatMessage>) {
+    messages.sort_by_key(|m| m.timestamp.map(|t| t.timestamp_millis()).unwrap_or(0));
+    if messages.len() > RECENT_ANNOUNCEMENTS_LIMIT {
+        let trim_count = messages.len() - RECENT_ANNOUNCEMENTS_LIMIT;
+        messages.drain(0..trim_count);
     }
 }
 
@@ -93,11 +140,23 @@ pub struct Chat {
     pub tournament_lobby_messages: RwSignal<HashMap<TournamentId, Vec<ChatMessage>>>, // tournament_id -> Messages
     pub tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
     pub global_messages: RwSignal<Vec<ChatMessage>>,
+    pub global_new_messages: RwSignal<bool>,
     pub typed_message: RwSignal<String>,
     /// Server-backed unread counts: (channel_type, channel_id, count). Refreshed via refresh_unread_counts().
     pub unread_counts: RwSignal<Vec<(String, String, i64)>>,
+    /// Channels currently marked read optimistically; stale refreshes should not reintroduce unread.
+    pending_read_channels: RwSignal<HashSet<ChannelKey>>,
+    /// Channels currently visible in the UI. Used to suppress unread bumps for live messages in open threads.
+    visible_channels: RwSignal<HashMap<ChannelKey, usize>>,
+    /// Visible channels with a debounced read flush already scheduled.
+    pending_visible_channel_reads: RwSignal<HashSet<ChannelKey>>,
+    /// Live unread that arrived while a channel was visible and is waiting for the debounced
+    /// read flush to either confirm read or restore unread if the channel closes first.
+    deferred_visible_unread_counts: RwSignal<HashMap<ChannelKey, i64>>,
     /// Bump to invalidate conversation list (Messages hub sidebar). Resource key in messages.rs.
     pub conversation_list_version: RwSignal<u32>,
+    /// Bump to invalidate any cached block list snapshots used by chat UIs.
+    pub block_list_version: RwSignal<u32>,
     user: Signal<Option<AccountResponse>>,
     api: Signal<ApiRequests>,
 }
@@ -114,74 +173,267 @@ impl Chat {
             tournament_lobby_messages: RwSignal::new(HashMap::new()),
             tournament_lobby_new_messages: RwSignal::new(HashMap::new()),
             global_messages: RwSignal::new(Vec::new()),
+            global_new_messages: RwSignal::new(false),
             typed_message: RwSignal::new(String::new()),
             unread_counts: RwSignal::new(Vec::new()),
+            pending_read_channels: RwSignal::new(HashSet::new()),
+            visible_channels: RwSignal::new(HashMap::new()),
+            pending_visible_channel_reads: RwSignal::new(HashSet::new()),
+            deferred_visible_unread_counts: RwSignal::new(HashMap::new()),
             conversation_list_version: RwSignal::new(0),
+            block_list_version: RwSignal::new(0),
             user,
             api,
         }
     }
 
-    /// Call when a DM is received (or sent) so the Messages hub conversation list refetches.
+    /// Bump the Messages hub conversation resource key so the sidebar refetches.
     pub fn invalidate_conversation_list(&self) {
         self.conversation_list_version.update(|v| *v += 1);
     }
 
-    /// True if there are local "new" messages or server-backed unread count for this game.
-    pub fn has_messages(&self, game_id: GameId) -> bool {
-        self.games_public_new_messages
-            .with_untracked(|m| m.get(&game_id).is_some_and(|v| *v))
-            || self.games_private_new_messages
-                .with_untracked(|m| m.get(&game_id).is_some_and(|v| *v))
-            || self.unread_count_for_game(&game_id) > 0
+    pub fn invalidate_block_list(&self) {
+        self.block_list_version.update(|v| *v += 1);
     }
 
-    /// Mark a channel as read on the server (fire-and-forget). Also refreshes unread counts after.
+    /// Refetch conversations now and again shortly after to absorb async DB chat persistence.
+    fn invalidate_conversation_list_with_retry(&self) {
+        self.invalidate_conversation_list();
+        #[cfg(target_arch = "wasm32")]
+        {
+            let chat = *self;
+            if let Some(window) = web_sys::window() {
+                let callback = Closure::once(move || {
+                    chat.invalidate_conversation_list();
+                });
+                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
+                    callback.as_ref().unchecked_ref(),
+                    900,
+                );
+                callback.forget();
+            }
+        }
+    }
+
+    async fn fetch_and_store_unread_counts(self) {
+        match get_chat_unread_counts().await {
+            Ok(counts) => self.apply_server_unread_counts(counts),
+            Err(_) => {}
+        }
+    }
+
+    /// Apply a fresh server snapshot of unread counts while preserving optimistic local state.
+    pub fn apply_server_unread_counts(&self, counts: Vec<(String, String, i64)>) {
+        let merged = self.merge_server_counts_with_optimistic(counts);
+        self.unread_counts.set(merged);
+    }
+
+    /// Mark a channel as read on the server (fire-and-forget).
     /// Optimistically zeros the count locally so badges update immediately.
-    pub fn mark_read(&self, channel_type: &str, channel_id: &str) {
-        self.optimistically_clear_unread(channel_type, channel_id);
-        let channel_type = channel_type.to_string();
-        let channel_id = channel_id.to_string();
-        let unread_counts = self.unread_counts;
+    pub fn mark_read(&self, key: &ChannelKey) {
+        self.optimistically_clear_unread(key);
+        let mark_key = key.clone();
+        self.pending_read_channels.update(|pending| {
+            pending.insert(mark_key.clone());
+        });
+        let chat = *self;
         spawn_local(async move {
-            let _ = mark_chat_read(channel_type, channel_id).await;
-            if let Ok(counts) = get_chat_unread_counts().await {
-                unread_counts.set(counts);
+            let did_mark =
+                mark_chat_read(mark_key.channel_type.clone(), mark_key.channel_id.clone())
+                    .await
+                    .is_ok();
+            if !did_mark {
+                chat.pending_read_channels.update(|pending| {
+                    pending.remove(&mark_key);
+                });
+                chat.fetch_and_store_unread_counts().await;
             }
         });
     }
 
+    pub fn set_channel_visible(&self, key: &ChannelKey) {
+        self.visible_channels.update(|visible| {
+            *visible.entry(key.clone()).or_insert(0) += 1;
+        });
+    }
+
+    pub fn clear_channel_visible(&self, key: &ChannelKey) {
+        self.visible_channels.update(|visible| {
+            if let Some(count) = visible.get_mut(&key) {
+                if *count <= 1 {
+                    visible.remove(key);
+                } else {
+                    *count -= 1;
+                }
+            }
+        });
+    }
+
+    fn is_channel_visible(&self, key: &ChannelKey) -> bool {
+        self.visible_channels
+            .with_untracked(|visible| visible.get(&key).copied().unwrap_or(0) > 0)
+    }
+
+    fn schedule_visible_channel_read_flush(&self, key: &ChannelKey) {
+        if self
+            .pending_visible_channel_reads
+            .with_untracked(|pending| pending.contains(&key))
+        {
+            return;
+        }
+        self.pending_visible_channel_reads.update(|pending| {
+            pending.insert(key.clone());
+        });
+        #[cfg(target_arch = "wasm32")]
+        {
+            let chat = *self;
+            if let Some(window) = web_sys::window() {
+                let callback_key = key.clone();
+                let callback = Closure::once(move || {
+                    chat.pending_visible_channel_reads.update(|pending| {
+                        pending.remove(&callback_key);
+                    });
+                    if chat.is_channel_visible(&callback_key) {
+                        chat.clear_deferred_visible_unread(&callback_key);
+                        chat.mark_read(&callback_key);
+                    } else {
+                        chat.restore_deferred_visible_unread(&callback_key);
+                    }
+                });
+                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
+                    callback.as_ref().unchecked_ref(),
+                    250,
+                );
+                callback.forget();
+            }
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.pending_visible_channel_reads.update(|pending| {
+                pending.remove(&key);
+            });
+            self.clear_deferred_visible_unread(key);
+        }
+    }
+
+    fn defer_visible_channel_unread(&self, key: &ChannelKey) {
+        self.deferred_visible_unread_counts.update(|pending| {
+            pending
+                .entry(key.clone())
+                .and_modify(|count| *count += 1)
+                .or_insert(1);
+        });
+        self.schedule_visible_channel_read_flush(key);
+    }
+
+    fn clear_deferred_visible_unread(&self, key: &ChannelKey) {
+        self.deferred_visible_unread_counts.update(|pending| {
+            pending.remove(key);
+        });
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn take_deferred_visible_unread(&self, key: &ChannelKey) -> i64 {
+        let deferred = self
+            .deferred_visible_unread_counts
+            .with_untracked(|pending| pending.get(&key).copied())
+            .unwrap_or(0)
+            .max(0);
+        self.deferred_visible_unread_counts.update(|pending| {
+            pending.remove(key);
+        });
+        deferred
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn restore_deferred_visible_unread(&self, key: &ChannelKey) {
+        let deferred = self.take_deferred_visible_unread(key);
+        if deferred == 0 {
+            return;
+        }
+        match key.channel_type.as_str() {
+            CHANNEL_TYPE_DIRECT => {
+                let Some(other_user_id) = self.other_user_id_from_direct_key(key) else {
+                    return;
+                };
+                self.users_new_messages.update(|messages| {
+                    messages
+                        .entry(other_user_id)
+                        .and_modify(|value| *value = true)
+                        .or_insert(true);
+                });
+                self.optimistically_increment_unread_by(key, deferred);
+            }
+            CHANNEL_TYPE_TOURNAMENT_LOBBY => {
+                self.tournament_lobby_new_messages.update(|messages| {
+                    messages
+                        .entry(TournamentId(key.channel_id.clone()))
+                        .and_modify(|value| *value = true)
+                        .or_insert(true);
+                });
+                self.optimistically_increment_unread_by(key, deferred);
+            }
+            CHANNEL_TYPE_GAME_PLAYERS => {
+                self.games_private_new_messages.update(|messages| {
+                    messages
+                        .entry(GameId(key.channel_id.clone()))
+                        .and_modify(|value| *value = true)
+                        .or_insert(true);
+                });
+                self.optimistically_increment_unread_by(key, deferred);
+            }
+            CHANNEL_TYPE_GLOBAL => {
+                self.global_new_messages.set(true);
+                self.optimistically_increment_unread_by(key, deferred);
+            }
+            _ => {}
+        }
+    }
+
     /// Optimistically set unread count for channel(s) to 0 so badges update immediately.
-    fn optimistically_clear_unread(&self, channel_type: &str, channel_id: &str) {
+    fn optimistically_clear_unread(&self, key: &ChannelKey) {
         self.unread_counts.update(|counts| {
             for (_, _, n) in counts
                 .iter_mut()
-                .filter(|(ct, cid, _)| ct.as_str() == channel_type && cid.as_str() == channel_id)
+                .filter(|(ct, cid, _)| ct == &key.channel_type && cid == &key.channel_id)
             {
                 *n = 0;
             }
         });
+        if key.channel_type == CHANNEL_TYPE_GLOBAL && key.channel_id == CHANNEL_TYPE_GLOBAL {
+            self.global_new_messages.set(false);
+        }
     }
 
     /// Optimistically increment unread count when a live message arrives so badges update immediately.
-    fn optimistically_increment_unread(&self, channel_type: &str, channel_id: &str) {
+    fn optimistically_increment_unread(&self, key: &ChannelKey) {
+        self.optimistically_increment_unread_by(key, 1);
+    }
+
+    fn optimistically_increment_unread_by(&self, key: &ChannelKey, delta: i64) {
+        if delta <= 0 {
+            return;
+        }
+        self.pending_read_channels.update(|pending| {
+            pending.remove(key);
+        });
         self.unread_counts.update(|counts| {
             if let Some((_, _, n)) = counts
                 .iter_mut()
-                .find(|(ct, cid, _)| ct.as_str() == channel_type && cid.as_str() == channel_id)
+                .find(|(ct, cid, _)| ct == &key.channel_type && cid == &key.channel_id)
             {
-                *n += 1;
+                *n += delta;
             } else {
-                counts.push((
-                    channel_type.to_string(),
-                    channel_id.to_string(),
-                    1,
-                ));
+                counts.push((key.channel_type.clone(), key.channel_id.clone(), delta));
             }
         });
+        if key.channel_type == CHANNEL_TYPE_GLOBAL && key.channel_id == CHANNEL_TYPE_GLOBAL {
+            self.global_new_messages.set(true);
+        }
     }
 
-    /// Clear local "new" state for game chat and mark both game_players and game_spectators as read on the server.
+    /// Clear local "new" state for game chat.
+    /// This is safe to call from passive UI flows and does not write server read receipts.
     pub fn seen_messages(&self, game_id: GameId) {
         self.games_public_new_messages.update(|m| {
             m.entry(game_id.clone())
@@ -189,30 +441,105 @@ impl Chat {
                 .or_insert(false);
         });
         self.games_private_new_messages.update(|m| {
-            m.entry(game_id.clone()).and_modify(|b| *b = false).or_insert(false);
+            m.entry(game_id.clone())
+                .and_modify(|b| *b = false)
+                .or_insert(false);
         });
-        let nanoid = game_id.0.clone();
-        self.mark_read(CHANNEL_TYPE_GAME_PLAYERS, &nanoid);
-        self.mark_read(CHANNEL_TYPE_GAME_SPECTATORS, &nanoid);
     }
 
-    /// Clear local "new" state for tournament lobby chat and mark as read on the server.
-    pub fn seen_tournament_lobby(&self, tournament_id: TournamentId) {
+    pub fn clear_game_thread(&self, game_id: &GameId) {
+        let players_key = ChannelKey::game_players(game_id);
+        let spectators_key = ChannelKey::game_spectators(game_id);
+
+        self.games_private_messages.update(|games| {
+            games.remove(game_id);
+        });
+        self.games_public_messages.update(|games| {
+            games.remove(game_id);
+        });
+        self.games_private_new_messages.update(|games| {
+            games.remove(game_id);
+        });
+        self.games_public_new_messages.update(|games| {
+            games.remove(game_id);
+        });
+        self.unread_counts.update(|counts| {
+            counts.retain(|(channel_type, channel_id, _)| {
+                channel_id != &game_id.0
+                    || !matches!(
+                        channel_type.as_str(),
+                        CHANNEL_TYPE_GAME_PLAYERS | CHANNEL_TYPE_GAME_SPECTATORS
+                    )
+            });
+        });
+        self.pending_read_channels.update(|pending| {
+            pending.remove(&players_key);
+            pending.remove(&spectators_key);
+        });
+        self.visible_channels.update(|visible| {
+            visible.remove(&players_key);
+            visible.remove(&spectators_key);
+        });
+        self.pending_visible_channel_reads.update(|pending| {
+            pending.remove(&players_key);
+            pending.remove(&spectators_key);
+        });
+        self.deferred_visible_unread_counts.update(|counts| {
+            counts.remove(&players_key);
+            counts.remove(&spectators_key);
+        });
+    }
+
+    fn clear_tournament_lobby_new_messages(&self, tournament_id: &TournamentId) {
         self.tournament_lobby_new_messages.update(|m| {
             m.entry(tournament_id.clone())
                 .and_modify(|b| *b = false)
                 .or_insert(false);
         });
-        self.mark_read(CHANNEL_TYPE_TOURNAMENT_LOBBY, &tournament_id.0);
     }
 
-    /// Clear local "new" state for DM and mark as read on the server. Requires current user id.
-    pub fn seen_dm(&self, other_user_id: Uuid, current_user_id: Uuid) {
+    fn clear_dm_new_messages(&self, other_user_id: Uuid) {
         self.users_new_messages.update(|m| {
-            m.entry(other_user_id).and_modify(|b| *b = false).or_insert(false);
+            m.entry(other_user_id)
+                .and_modify(|b| *b = false)
+                .or_insert(false);
         });
-        let channel_id = canonical_dm_channel_id(current_user_id, other_user_id);
-        self.mark_read(CHANNEL_TYPE_DIRECT, &channel_id);
+    }
+
+    fn other_user_id_from_direct_key(&self, key: &ChannelKey) -> Option<Uuid> {
+        let current_user_id = self.user.get_untracked().as_ref().map(|a| a.user.uid)?;
+        other_user_from_dm_channel(&key.channel_id, current_user_id)
+    }
+
+    fn clear_local_new_for_channel(&self, key: &ChannelKey) {
+        match key.channel_type.as_str() {
+            CHANNEL_TYPE_DIRECT => {
+                if let Some(other_user_id) = self.other_user_id_from_direct_key(key) {
+                    self.clear_dm_new_messages(other_user_id);
+                }
+            }
+            CHANNEL_TYPE_TOURNAMENT_LOBBY => {
+                self.clear_tournament_lobby_new_messages(&TournamentId(key.channel_id.clone()));
+            }
+            CHANNEL_TYPE_GAME_PLAYERS | CHANNEL_TYPE_GAME_SPECTATORS => {
+                self.seen_messages(GameId(key.channel_id.clone()));
+            }
+            CHANNEL_TYPE_GLOBAL => {
+                self.global_new_messages.set(false);
+            }
+            _ => {}
+        }
+    }
+
+    pub fn open_channel(&self, key: &ChannelKey) {
+        self.clear_local_new_for_channel(key);
+        self.mark_read(key);
+    }
+
+    fn refresh_conversation_list_for_live_thread_activity(&self, is_live: bool) {
+        if is_live {
+            self.invalidate_conversation_list_with_retry();
+        }
     }
 
     /// Merge server counts with local "new" flags so optimistic unread is not overwritten by stale server state (e.g. 0 before message is persisted).
@@ -220,17 +547,19 @@ impl Chat {
         &self,
         server: Vec<(String, String, i64)>,
     ) -> Vec<(String, String, i64)> {
-        let mut map: HashMap<(String, String), i64> = server
+        let mut map: HashMap<ChannelKey, i64> = server
             .into_iter()
-            .map(|(ct, cid, n)| ((ct, cid), n))
+            .map(|(channel_type, channel_id, count)| {
+                (ChannelKey::new(channel_type, channel_id), count)
+            })
             .collect();
+        let server_map = map.clone();
         let me = self.user.get_untracked().as_ref().map(|a| a.user.uid);
         self.users_new_messages.with_untracked(|m| {
             for (other_id, &has_new) in m.iter() {
                 if has_new {
                     if let Some(current_id) = me {
-                        let cid = canonical_dm_channel_id(current_id, *other_id);
-                        map.entry((CHANNEL_TYPE_DIRECT.to_string(), cid))
+                        map.entry(ChannelKey::direct(current_id, *other_id))
                             .and_modify(|n| *n = (*n).max(1))
                             .or_insert(1);
                     }
@@ -240,28 +569,50 @@ impl Chat {
         self.tournament_lobby_new_messages.with_untracked(|m| {
             for (tid, &has_new) in m.iter() {
                 if has_new {
-                    let key = (CHANNEL_TYPE_TOURNAMENT_LOBBY.to_string(), tid.0.clone());
-                    map.entry(key).and_modify(|n| *n = (*n).max(1)).or_insert(1);
+                    map.entry(ChannelKey::tournament(tid))
+                        .and_modify(|n| *n = (*n).max(1))
+                        .or_insert(1);
                 }
             }
         });
         self.games_private_new_messages.with_untracked(|m| {
             for (gid, &has_new) in m.iter() {
                 if has_new {
-                    let key = (CHANNEL_TYPE_GAME_PLAYERS.to_string(), gid.0.clone());
-                    map.entry(key).and_modify(|n| *n = (*n).max(1)).or_insert(1);
+                    map.entry(ChannelKey::game_players(gid))
+                        .and_modify(|n| *n = (*n).max(1))
+                        .or_insert(1);
                 }
             }
         });
-        self.games_public_new_messages.with_untracked(|m| {
-            for (gid, &has_new) in m.iter() {
-                if has_new {
-                    let key = (CHANNEL_TYPE_GAME_SPECTATORS.to_string(), gid.0.clone());
-                    map.entry(key).and_modify(|n| *n = (*n).max(1)).or_insert(1);
+        if self.global_new_messages.get_untracked() {
+            map.entry(ChannelKey::global())
+                .and_modify(|n| *n = (*n).max(1))
+                .or_insert(1);
+        }
+        let pending_keys: Vec<ChannelKey> = self
+            .pending_read_channels
+            .with_untracked(|pending| pending.iter().cloned().collect());
+        if !pending_keys.is_empty() {
+            let mut resolved = Vec::new();
+            for key in pending_keys {
+                let server_count = server_map.get(&key).copied().unwrap_or(0);
+                if server_count == 0 {
+                    resolved.push(key);
+                } else {
+                    map.insert(key, 0);
                 }
             }
-        });
-        map.into_iter().map(|((ct, cid), n)| (ct, cid, n)).collect()
+            if !resolved.is_empty() {
+                self.pending_read_channels.update(|pending| {
+                    for key in resolved {
+                        pending.remove(&key);
+                    }
+                });
+            }
+        }
+        map.into_iter()
+            .map(|(key, count)| (key.channel_type, key.channel_id, count))
+            .collect()
     }
 
     /// Fetch unread counts from the server and update unread_counts signal.
@@ -269,40 +620,24 @@ impl Chat {
     pub fn refresh_unread_counts(&self) {
         let chat = *self;
         spawn_local(async move {
-            if let Ok(counts) = get_chat_unread_counts().await {
-                let merged = chat.merge_server_counts_with_optimistic(counts);
-                chat.unread_counts.set(merged);
-            }
+            chat.fetch_and_store_unread_counts().await;
         });
     }
 
     /// Total unread count across all channels (for Messages link badge).
-    /// Uses with_untracked to allow safe calls from Effect callbacks and event handlers.
     pub fn total_unread_count(&self) -> i64 {
         self.unread_counts
-            .with_untracked(|counts| counts.iter().map(|(_, _, n)| n).sum::<i64>())
+            .with(|counts| counts.iter().map(|(_, _, n)| n).sum::<i64>())
     }
 
-    /// Unread count for a game (players + spectators channels). Use for game list badges.
-    /// Uses with_untracked to allow safe calls from Effect callbacks (non-reactive context).
-    /// If local "new" flag is set for either channel, returns at least 1 so badge is not lost.
+    /// Unread count for a game (players channel only). Use for game list badges.
+    /// Spectator messages intentionally do not contribute to badges/notifications.
+    /// If local "new" flag is set, returns at least 1 so badge is not lost.
     pub fn unread_count_for_game(&self, game_id: &GameId) -> i64 {
-        let from_list = self.unread_counts.with_untracked(|counts| {
-            counts
-                .iter()
-                .filter(|(ct, cid, _)| {
-                    (ct.as_str() == CHANNEL_TYPE_GAME_PLAYERS
-                        || ct.as_str() == CHANNEL_TYPE_GAME_SPECTATORS)
-                        && cid == &game_id.0
-                })
-                .map(|(_, _, n)| *n)
-                .sum::<i64>()
-        });
-        let has_local_new = self.games_private_new_messages.with_untracked(|m| {
-            m.get(game_id).copied().unwrap_or(false)
-        }) || self
-            .games_public_new_messages
-            .with_untracked(|m| m.get(game_id).copied().unwrap_or(false));
+        let from_list = self.unread_count_for_channel(&ChannelKey::game_players(game_id));
+        let has_local_new = self
+            .games_private_new_messages
+            .with(|m| m.get(game_id).copied().unwrap_or(false));
         if has_local_new {
             from_list.max(1)
         } else {
@@ -311,22 +646,12 @@ impl Chat {
     }
 
     /// Unread count for a tournament lobby. Use for tournament page badge.
-    /// Uses with_untracked to allow safe calls from Effect callbacks (non-reactive context).
     /// If local "new" flag is set, returns at least 1 so badge is not lost before server state is updated.
     pub fn unread_count_for_tournament(&self, tournament_id: &TournamentId) -> i64 {
-        let from_list = self.unread_counts.with_untracked(|counts| {
-            counts
-                .iter()
-                .filter(|(ct, cid, _)| {
-                    ct.as_str() == CHANNEL_TYPE_TOURNAMENT_LOBBY && cid == &tournament_id.0
-                })
-                .map(|(_, _, n)| *n)
-                .next()
-                .unwrap_or(0)
-        });
-        let has_local_new = self.tournament_lobby_new_messages.with_untracked(|m| {
-            m.get(tournament_id).copied().unwrap_or(false)
-        });
+        let from_list = self.unread_count_for_channel(&ChannelKey::tournament(tournament_id));
+        let has_local_new = self
+            .tournament_lobby_new_messages
+            .with(|m| m.get(tournament_id).copied().unwrap_or(false));
         if has_local_new {
             from_list.max(1)
         } else {
@@ -335,21 +660,13 @@ impl Chat {
     }
 
     /// Unread count for a DM with another user. Use for DM list badge.
-    /// Uses with_untracked to allow safe calls from Effect callbacks (non-reactive context).
     /// If local "new" flag is set, returns at least 1 so badge is not lost before server state is updated.
     pub fn unread_count_for_dm(&self, other_user_id: Uuid, current_user_id: Uuid) -> i64 {
-        let from_list = self.unread_counts.with_untracked(|counts| {
-            let channel_id = canonical_dm_channel_id(current_user_id, other_user_id);
-            counts
-                .iter()
-                .filter(|(ct, cid, _)| ct.as_str() == CHANNEL_TYPE_DIRECT && cid == &channel_id)
-                .map(|(_, _, n)| *n)
-                .next()
-                .unwrap_or(0)
-        });
+        let from_list =
+            self.unread_count_for_channel(&ChannelKey::direct(current_user_id, other_user_id));
         let has_local_new = self
             .users_new_messages
-            .with_untracked(|m| m.get(&other_user_id).copied().unwrap_or(false));
+            .with(|m| m.get(&other_user_id).copied().unwrap_or(false));
         if has_local_new {
             from_list.max(1)
         } else {
@@ -358,12 +675,17 @@ impl Chat {
     }
 
     /// Unread count for global chat.
-    /// Uses with_untracked to allow safe calls from Effect callbacks (non-reactive context).
     pub fn unread_count_for_global(&self) -> i64 {
-        self.unread_counts.with_untracked(|counts| {
+        self.unread_count_for_channel(&ChannelKey::global())
+    }
+
+    pub fn unread_count_for_channel(&self, key: &ChannelKey) -> i64 {
+        self.unread_counts.with(|counts| {
             counts
                 .iter()
-                .find(|(ct, cid, _)| ct.as_str() == CHANNEL_TYPE_GLOBAL && cid.as_str() == CHANNEL_TYPE_GLOBAL)
+                .find(|(channel_type, channel_id, _)| {
+                    channel_type == &key.channel_type && channel_id == &key.channel_id
+                })
                 .map(|(_, _, n)| *n)
                 .unwrap_or(0)
         })
@@ -372,12 +694,12 @@ impl Chat {
     /// Injects fetched history into the correct in-memory map so the thread view can display it.
     /// Merges with existing messages and deduplicates to avoid losing WebSocket messages when REST
     /// fetch completes after live delivery.
-    pub fn inject_history(&self, channel_type: &str, channel_id: &str, messages: Vec<ChatMessage>) {
+    pub fn inject_history(&self, key: &ChannelKey, messages: Vec<ChatMessage>) {
         let current_user_id = self.user.get_untracked().as_ref().map(|a| a.user.uid);
-        match channel_type {
+        match key.channel_type.as_str() {
             CHANNEL_TYPE_DIRECT => {
                 let Some(me) = current_user_id else { return };
-                let other = other_user_from_dm_channel(channel_id, me);
+                let other = other_user_from_dm_channel(&key.channel_id, me);
                 if let Some(other_id) = other {
                     self.users_messages.update(|m| {
                         let existing = m.get(&other_id).cloned().unwrap_or_default();
@@ -386,21 +708,21 @@ impl Chat {
                 }
             }
             CHANNEL_TYPE_TOURNAMENT_LOBBY => {
-                let tid = TournamentId(channel_id.to_string());
+                let tid = TournamentId(key.channel_id.clone());
                 self.tournament_lobby_messages.update(|m| {
                     let existing = m.get(&tid).cloned().unwrap_or_default();
                     m.insert(tid, merge_and_dedupe(existing, messages));
                 });
             }
             CHANNEL_TYPE_GAME_PLAYERS => {
-                let gid = GameId(channel_id.to_string());
+                let gid = GameId(key.channel_id.clone());
                 self.games_private_messages.update(|m| {
                     let existing = m.get(&gid).cloned().unwrap_or_default();
                     m.insert(gid, merge_and_dedupe(existing, messages));
                 });
             }
             CHANNEL_TYPE_GAME_SPECTATORS => {
-                let gid = GameId(channel_id.to_string());
+                let gid = GameId(key.channel_id.clone());
                 self.games_public_messages.update(|m| {
                     let existing = m.get(&gid).cloned().unwrap_or_default();
                     m.insert(gid, merge_and_dedupe(existing, messages));
@@ -409,79 +731,33 @@ impl Chat {
             CHANNEL_TYPE_GLOBAL => {
                 self.global_messages.update(|existing| {
                     *existing = merge_and_dedupe(std::mem::take(existing), messages);
+                    retain_recent_announcements(existing);
                 });
             }
             _ => {}
         }
     }
 
-    /// Fetches channel history from GET /api/v1/chat/channel and returns messages (or empty on error).
-    /// Does not inject; call inject_history after if needed. Client-only (no-op on server).
+    /// Loads channel history through the server-fn path and returns messages without injecting them.
     pub fn fetch_channel_history(
         &self,
-        channel_type: &str,
-        channel_id: &str,
+        key: &ChannelKey,
     ) -> impl std::future::Future<Output = Result<Vec<ChatMessage>, String>> + '_ {
-        let _ct = channel_type.to_string();
-        let _cid = channel_id.to_string();
+        let key = key.clone();
         async move {
-            #[cfg(not(target_arch = "wasm32"))]
-            return Err("fetch not available on server".to_string());
-
-            #[cfg(target_arch = "wasm32")]
-            {
-            let url = format!(
-                "/api/v1/chat/channel?channel_type={}&channel_id={}&limit=100",
-                urlencoding::encode(&_ct),
-                urlencoding::encode(&_cid),
-            );
-            let req = window().fetch_with_str(&url);
-            let resp_value = wasm_bindgen_futures::JsFuture::from(req)
-                .await
-                .map_err(|e| e.as_string().unwrap_or_else(|| "fetch failed".to_string()))?;
-            let resp: web_sys::Response = resp_value
-                .dyn_into()
-                .map_err(|_| "expected Response".to_string())?;
-            if !resp.ok() {
-                return Err("Failed to load messages".to_string());
-            }
-            let text_promise = resp.text().map_err(|_| "text() failed".to_string())?;
-            let text_js = wasm_bindgen_futures::JsFuture::from(text_promise)
-                .await
-                .map_err(|e| e.as_string().unwrap_or_else(|| "text await failed".to_string()))?;
-            let text_str = text_js
-                .as_string()
-                .ok_or("expected string body".to_string())?;
-            let json: serde_json::Value =
-                serde_json::from_str(&text_str).map_err(|e| e.to_string())?;
-            let data = json
-                .get("data")
-                .and_then(|d| d.as_array())
-                .ok_or("Invalid response")?;
-            let messages: Vec<ChatMessage> = data
-                .iter()
-                .filter_map(|m| {
-                    let obj = m.as_object()?;
-                    let username = obj.get("username")?.as_str()?.to_string();
-                    let body = obj.get("body")?.as_str()?.to_string();
-                    let sender_id = Uuid::parse_str(obj.get("sender_id")?.as_str()?).ok()?;
-                    let created_at = obj
-                        .get("created_at")
-                        .and_then(|v| v.as_str())
-                        .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
-                        .map(|dt| dt.with_timezone(&chrono::Utc));
-                    let turn = obj.get("turn").and_then(|v| v.as_i64()).map(|t| t as usize);
-                    Some(ChatMessage {
-                        user_id: sender_id,
-                        username,
-                        timestamp: created_at,
-                        message: body,
-                        turn,
-                    })
-                })
-                .collect();
-            Ok(messages)
-            }
+            let history_limit = if key.channel_type == CHANNEL_TYPE_GLOBAL {
+                RECENT_ANNOUNCEMENTS_LIMIT as i64
+            } else {
+                100
+            };
+            get_chat_history(
+                key.channel_type.clone(),
+                key.channel_id.clone(),
+                Some(history_limit),
+                None,
+            )
+            .await
+            .map_err(|error| error.to_string())
         }
     }
 
@@ -510,12 +786,19 @@ impl Chat {
 
     pub fn recv(&mut self, containers: &[ChatMessageContainer]) {
         if let Some(last_message) = containers.last() {
+            let is_live = containers.len() == 1;
+            let from_self = self
+                .user
+                .get_untracked()
+                .as_ref()
+                .is_some_and(|a| last_message.message.user_id == a.user.uid);
             match &last_message.destination {
                 ChatDestination::TournamentLobby(id) => {
-                    let new_messages: Vec<ChatMessage> = self.tournament_lobby_messages
-                        .with_untracked(|messages| {
+                    let channel_key = ChannelKey::tournament(id);
+                    let new_messages: Vec<ChatMessage> =
+                        self.tournament_lobby_messages.with_untracked(|messages| {
                             let existing = messages.get(id).map(Vec::as_slice).unwrap_or(&[]);
-                            filter_duplicate_messages(
+                            filter_duplicate_live_messages(
                                 existing,
                                 containers.iter().map(|c| c.message.clone()),
                             )
@@ -529,23 +812,19 @@ impl Chat {
                             .or_default()
                             .extend(new_messages);
                     });
-                    // Only treat as "new" when this is a single live message from someone else.
-                    let is_live = containers.len() == 1;
-                    let from_self = self.user.get_untracked().as_ref().map_or(false, |a| {
-                        last_message.message.user_id == a.user.uid
-                    });
+                    self.refresh_conversation_list_for_live_thread_activity(is_live);
                     if is_live && !from_self {
-                        self.tournament_lobby_new_messages.update(|m| {
-                            m.entry(id.clone())
-                                .and_modify(|value| *value = true)
-                                .or_insert(true);
-                        });
-                        self.optimistically_increment_unread(CHANNEL_TYPE_TOURNAMENT_LOBBY, &id.0);
-                        self.invalidate_conversation_list();
-                        // Refresh so UI re-renders and shows new messages (merge in refresh preserves optimistic badge).
-                        self.refresh_unread_counts();
-                    } else if !is_live {
-                        self.seen_tournament_lobby(id.clone());
+                        if self.is_channel_visible(&channel_key) {
+                            self.clear_tournament_lobby_new_messages(id);
+                            self.defer_visible_channel_unread(&channel_key);
+                        } else {
+                            self.tournament_lobby_new_messages.update(|m| {
+                                m.entry(id.clone())
+                                    .and_modify(|value| *value = true)
+                                    .or_insert(true);
+                            });
+                            self.optimistically_increment_unread(&channel_key);
+                        }
                     }
                 }
 
@@ -557,47 +836,51 @@ impl Chat {
                         Some(me) if last_message.message.user_id == me => *dest_id, // I sent: other is recipient
                         _ => last_message.message.user_id, // I received: other is sender
                     };
-                    let new_messages: Vec<ChatMessage> = self.users_messages.with_untracked(|messages| {
-                        let existing = messages.get(&thread_other_id).map(Vec::as_slice).unwrap_or(&[]);
-                        filter_duplicate_messages(
-                            existing,
-                            containers.iter().map(|c| c.message.clone()),
-                        )
-                    });
+                    let channel_key = current_user_id
+                        .map(|current_id| ChannelKey::direct(current_id, thread_other_id));
+                    let new_messages: Vec<ChatMessage> =
+                        self.users_messages.with_untracked(|messages| {
+                            let existing = messages
+                                .get(&thread_other_id)
+                                .map(Vec::as_slice)
+                                .unwrap_or(&[]);
+                            filter_duplicate_live_messages(
+                                existing,
+                                containers.iter().map(|c| c.message.clone()),
+                            )
+                        });
                     if new_messages.is_empty() {
                         return;
                     }
                     self.users_messages.update(|users| {
-                        users.entry(thread_other_id).or_default().extend(new_messages);
+                        users
+                            .entry(thread_other_id)
+                            .or_default()
+                            .extend(new_messages);
                     });
-                    let is_live = containers.len() == 1;
-                    let from_self = self.user.get_untracked().as_ref().map_or(false, |a| {
-                        last_message.message.user_id == a.user.uid
-                    });
+                    self.refresh_conversation_list_for_live_thread_activity(is_live);
                     if is_live && !from_self {
-                        self.users_new_messages.update(|m| {
-                            m.entry(thread_other_id)
-                                .and_modify(|value| *value = true)
-                                .or_insert(true);
-                        });
-                        if let Some(current_id) = current_user_id {
-                            let channel_id = canonical_dm_channel_id(current_id, thread_other_id);
-                            self.optimistically_increment_unread(CHANNEL_TYPE_DIRECT, &channel_id);
-                        }
-                        self.invalidate_conversation_list();
-                        // Refresh so UI re-renders and shows new messages (merge in refresh preserves optimistic badge).
-                        self.refresh_unread_counts();
-                    } else if !is_live {
-                        if let Some(current_id) = current_user_id {
-                            self.seen_dm(thread_other_id, current_id);
+                        if let Some(channel_key) = channel_key {
+                            if self.is_channel_visible(&channel_key) {
+                                self.clear_dm_new_messages(thread_other_id);
+                                self.defer_visible_channel_unread(&channel_key);
+                            } else {
+                                self.users_new_messages.update(|m| {
+                                    m.entry(thread_other_id)
+                                        .and_modify(|value| *value = true)
+                                        .or_insert(true);
+                                });
+                                self.optimistically_increment_unread(&channel_key);
+                            }
                         }
                     }
                 }
                 ChatDestination::GamePlayers(id, ..) => {
-                    let new_messages: Vec<ChatMessage> = self.games_private_messages
-                        .with_untracked(|messages| {
+                    let channel_key = ChannelKey::game_players(id);
+                    let new_messages: Vec<ChatMessage> =
+                        self.games_private_messages.with_untracked(|messages| {
                             let existing = messages.get(id).map(Vec::as_slice).unwrap_or(&[]);
-                            filter_duplicate_messages(
+                            filter_duplicate_live_messages(
                                 existing,
                                 containers.iter().map(|c| c.message.clone()),
                             )
@@ -608,28 +891,27 @@ impl Chat {
                     self.games_private_messages.update(|games| {
                         games.entry(id.clone()).or_default().extend(new_messages);
                     });
-                    // Only treat as "new" (red tab) when this is a single live message from someone else.
-                    let is_live = containers.len() == 1;
-                    let from_self = self.user.get_untracked().as_ref().map_or(false, |a| {
-                        last_message.message.user_id == a.user.uid
-                    });
+                    self.refresh_conversation_list_for_live_thread_activity(is_live);
                     if is_live && !from_self {
-                        self.games_private_new_messages.update(|m| {
-                            m.entry(id.clone())
-                                .and_modify(|value| *value = true)
-                                .or_insert(true);
-                        });
-                        self.optimistically_increment_unread(CHANNEL_TYPE_GAME_PLAYERS, &id.0);
-                        self.refresh_unread_counts();
-                    } else if !is_live {
-                        self.seen_messages(id.clone());
+                        if self.is_channel_visible(&channel_key) {
+                            self.seen_messages(id.clone());
+                            self.defer_visible_channel_unread(&channel_key);
+                        } else {
+                            self.games_private_new_messages.update(|m| {
+                                m.entry(id.clone())
+                                    .and_modify(|value| *value = true)
+                                    .or_insert(true);
+                            });
+                            self.optimistically_increment_unread(&channel_key);
+                        }
                     }
                 }
                 ChatDestination::GameSpectators(id, ..) => {
-                    let new_messages: Vec<ChatMessage> = self.games_public_messages
-                        .with_untracked(|messages| {
+                    let channel_key = ChannelKey::game_spectators(id);
+                    let new_messages: Vec<ChatMessage> =
+                        self.games_public_messages.with_untracked(|messages| {
                             let existing = messages.get(id).map(Vec::as_slice).unwrap_or(&[]);
-                            filter_duplicate_messages(
+                            filter_duplicate_live_messages(
                                 existing,
                                 containers.iter().map(|c| c.message.clone()),
                             )
@@ -640,29 +922,36 @@ impl Chat {
                     self.games_public_messages.update(|games| {
                         games.entry(id.clone()).or_default().extend(new_messages);
                     });
-                    // Only treat as "new" (red tab) when this is a single live message from someone else.
-                    let is_live = containers.len() == 1;
-                    let from_self = self.user.get_untracked().as_ref().map_or(false, |a| {
-                        last_message.message.user_id == a.user.uid
-                    });
+                    self.refresh_conversation_list_for_live_thread_activity(is_live);
                     if is_live && !from_self {
-                        self.games_public_new_messages.update(|m| {
-                            m.entry(id.clone())
-                                .and_modify(|value| *value = true)
-                                .or_insert(true);
-                        });
-                        self.optimistically_increment_unread(CHANNEL_TYPE_GAME_SPECTATORS, &id.0);
-                        self.refresh_unread_counts();
-                    } else if !is_live {
-                        self.seen_messages(id.clone());
+                        if self.is_channel_visible(&channel_key) {
+                            self.seen_messages(id.clone());
+                            self.schedule_visible_channel_read_flush(&channel_key);
+                        }
+                        // Spectator chat intentionally does not contribute to unread badges/notifications.
                     }
                 }
                 ChatDestination::Global => {
+                    let channel_key = ChannelKey::global();
                     let to_add = self.global_messages.with_untracked(|msgs| {
-                        filter_duplicate_messages(msgs, containers.iter().map(|c| c.message.clone()))
+                        filter_duplicate_live_messages(
+                            msgs,
+                            containers.iter().map(|c| c.message.clone()),
+                        )
                     });
                     if !to_add.is_empty() {
-                        self.global_messages.update(|m| m.extend(to_add));
+                        self.global_messages.update(|m| {
+                            m.extend(to_add);
+                            retain_recent_announcements(m);
+                        });
+
+                        if is_live && !from_self {
+                            if self.is_channel_visible(&channel_key) {
+                                self.defer_visible_channel_unread(&channel_key);
+                            } else {
+                                self.optimistically_increment_unread(&channel_key);
+                            }
+                        }
                     }
                     let alerts = expect_context::<AlertsContext>();
                     alerts.last_alert.update(|v| {
@@ -678,4 +967,113 @@ pub fn provide_chat() {
     let user = expect_context::<AuthContext>().user;
     let api = expect_context::<ApiRequestsProvider>().0;
     provide_context(Chat::new(user, api))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        filter_duplicate_history_messages,
+        filter_duplicate_live_messages,
+        merge_and_dedupe,
+    };
+    use chrono::{TimeZone, Utc};
+    use shared_types::ChatMessage;
+    use uuid::Uuid;
+
+    fn message(user_id: Uuid, body: &str, timestamp_millis: Option<i64>) -> ChatMessage {
+        ChatMessage {
+            user_id,
+            username: "tester".to_string(),
+            timestamp: timestamp_millis
+                .map(|millis| Utc.timestamp_millis_opt(millis).single().unwrap()),
+            message: body.to_string(),
+            turn: Some(5),
+        }
+    }
+
+    #[test]
+    fn live_dedupe_keeps_repeated_message_with_different_timestamp() {
+        let user_id = Uuid::new_v4();
+        let existing = vec![message(user_id, "gg", Some(1_000))];
+        let incoming = vec![message(user_id, "gg", Some(1_500))];
+        let result = filter_duplicate_live_messages(&existing, incoming);
+        assert_eq!(result.len(), 1);
+    }
+
+    #[test]
+    fn live_dedupe_removes_exact_duplicate() {
+        let user_id = Uuid::new_v4();
+        let existing_message = message(user_id, "gg", Some(1_000));
+        let existing = vec![existing_message.clone()];
+        let incoming = vec![existing_message];
+        let result = filter_duplicate_live_messages(&existing, incoming);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn history_dedupe_only_consumes_one_match_per_existing_message() {
+        let user_id = Uuid::new_v4();
+        let existing = vec![message(user_id, "gg", None)];
+        let incoming_first = message(user_id, "gg", Some(1_000));
+        let incoming_second = message(user_id, "gg", Some(2_000));
+        let result = filter_duplicate_history_messages(
+            &existing,
+            vec![incoming_first, incoming_second.clone()],
+        );
+        assert_eq!(result, vec![incoming_second]);
+    }
+
+    #[test]
+    fn history_dedupe_removes_duplicate_with_small_timestamp_skew() {
+        let user_id = Uuid::new_v4();
+        let existing = vec![message(user_id, "gg", Some(1_000))];
+        let incoming = vec![message(user_id, "gg", Some(1_220))];
+        let result = filter_duplicate_history_messages(&existing, incoming);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn history_dedupe_prefers_exact_timestamp_match_when_order_is_inverted() {
+        let user_id = Uuid::new_v4();
+        let existing = vec![message(user_id, "gg", Some(1_000))];
+        let newer_message = message(user_id, "gg", Some(4_000));
+        let exact_duplicate = message(user_id, "gg", Some(1_000));
+
+        let result = filter_duplicate_history_messages(
+            &existing,
+            vec![newer_message.clone(), exact_duplicate],
+        );
+
+        assert_eq!(result, vec![newer_message]);
+    }
+
+    #[test]
+    fn history_dedupe_keeps_distinct_repeated_messages_during_reconnect_merge() {
+        let user_id = Uuid::new_v4();
+        let existing = vec![
+            message(user_id, "gg", Some(1_000)),
+            message(user_id, "gg", Some(3_000)),
+        ];
+        let incoming_unique = message(user_id, "gg", Some(2_000));
+        let incoming_duplicate = message(user_id, "gg", Some(3_000));
+
+        let result = filter_duplicate_history_messages(
+            &existing,
+            vec![incoming_unique.clone(), incoming_duplicate],
+        );
+
+        assert_eq!(result, vec![incoming_unique]);
+    }
+
+    #[test]
+    fn merge_preserves_millisecond_order_within_same_second() {
+        let user_id = Uuid::new_v4();
+        let existing = vec![message(user_id, "live", Some(1_950))];
+        let incoming = vec![message(user_id, "history", Some(1_120))];
+
+        let result = merge_and_dedupe(existing, incoming);
+        let bodies: Vec<_> = result.into_iter().map(|m| m.message).collect();
+
+        assert_eq!(bodies, vec!["history".to_string(), "live".to_string()]);
+    }
 }

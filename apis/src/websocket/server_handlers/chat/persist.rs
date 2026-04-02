@@ -1,6 +1,7 @@
 //! Converts `ChatMessageContainer` into the form needed for DB persistence.
 //! Uses `shared_types::chat_channel` for (channel_type, channel_id) mapping.
 
+use chrono::{DateTime, Utc};
 use db_lib::models::NewChatMessage;
 use shared_types::{chat_channel, ChatMessageContainer};
 use uuid::Uuid;
@@ -15,14 +16,18 @@ pub struct PersistableChatMessage {
     pub username: String,
     pub body: String,
     pub turn: Option<i32>,
+    pub created_at: DateTime<Utc>,
 }
 
 impl PersistableChatMessage {
     /// Build from a container (e.g. after `container.time()` has been called).
     /// Uses `shared_types::chat_channel(container.destination, container.message.user_id)` for channel mapping.
     pub fn from_container(container: &ChatMessageContainer) -> Self {
-        let (channel_type, channel_id) = chat_channel(&container.destination, container.message.user_id);
+        let (channel_type, channel_id) =
+            chat_channel(&container.destination, container.message.user_id);
         let turn = container.message.turn.map(|u| u as i32);
+        // Preserve send-time ordering for unread/read logic even if DB persistence is delayed.
+        let created_at = container.message.timestamp.unwrap_or_else(Utc::now);
         Self {
             channel_type: channel_type.to_string(),
             channel_id,
@@ -30,6 +35,7 @@ impl PersistableChatMessage {
             username: container.message.username.clone(),
             body: container.message.message.clone(),
             turn,
+            created_at,
         }
     }
 
@@ -49,6 +55,7 @@ impl PersistableChatMessage {
             username,
             body,
             turn,
+            created_at: Utc::now(),
         }
     }
 
@@ -61,6 +68,8 @@ impl PersistableChatMessage {
             username: self.username.as_str(),
             body: self.body.as_str(),
             turn: self.turn,
+            created_at: self.created_at,
+            game_id: None,
         }
     }
 }

@@ -1,6 +1,9 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    websocket::{messages::{InternalServerMessage, MessageDestination}, WebsocketData},
+    websocket::{
+        messages::{InternalServerMessage, MessageDestination},
+        WebsocketData,
+    },
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Tournament, DbPool};

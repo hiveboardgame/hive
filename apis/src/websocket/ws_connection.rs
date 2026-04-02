@@ -183,7 +183,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                     RequestHandlerError::Forbidden(_) => {
                                         http::StatusCode::FORBIDDEN
                                     }
-                                    _ => http::StatusCode::NOT_IMPLEMENTED,
+                                    _ => http::StatusCode::INTERNAL_SERVER_ERROR,
                                 };
                                 printdoc! {r#"
                                     -----------------ERROR-----------------

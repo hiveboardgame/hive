@@ -1,20 +1,28 @@
 use crate::{
     components::{
         atoms::{
-            block_button::BlockButton,
+            block_toggle_button::BlockToggleButton,
             profile_link::ProfileLink,
             status_indicator::StatusIndicator,
-            unblock_button::UnblockButton,
         },
         organisms::{games_filter::GamesFilter, stats::Stats},
     },
-    functions::{blocks_mutes::get_blocked_user_ids, users::get_profile},
+    functions::{
+        blocks_mutes::get_blocked_user_ids,
+        users::{can_message_user, get_profile},
+    },
     i18n::*,
-    providers::{calculate_initial_batch_size, provide_games_search_context, AuthContext},
+    providers::{
+        calculate_initial_batch_size,
+        chat::Chat,
+        provide_games_search_context,
+        AuthContext,
+    },
 };
 use leptos::{either::Either, html, prelude::*};
 use leptos_icons::*;
 use leptos_router::{
+    components::A,
     hooks::{use_location, use_params},
     params::Params,
 };
@@ -24,17 +32,82 @@ use uuid::Uuid;
 
 #[component]
 fn ProfileBlockUnblock(profile_user_id: Uuid) -> impl IntoView {
-    let block_list = Resource::new(|| (), |_| async move { get_blocked_user_ids().await });
-    view! {
-        {move || {
-            let blocked = block_list.get().and_then(Result::ok).unwrap_or_default();
-            let is_blocked = blocked.contains(&profile_user_id);
-            if is_blocked {
-                view! { <UnblockButton blocked_user_id=profile_user_id /> }.into_any()
+    let auth_context = expect_context::<AuthContext>();
+    let chat = expect_context::<Chat>();
+    let viewer_id =
+        Signal::derive(move || auth_context.user.with(|u| u.as_ref().map(|a| a.user.uid)));
+    let block_list = Resource::new(
+        move || (viewer_id.get(), chat.block_list_version.get()),
+        move |(viewer_id, _)| async move {
+            if viewer_id.is_none() {
+                Ok(Vec::new())
             } else {
-                view! { <BlockButton blocked_user_id=profile_user_id /> }.into_any()
+                get_blocked_user_ids().await
             }
-        }}
+        },
+    );
+    let is_blocked = RwSignal::new(false);
+    Effect::watch(
+        move || block_list.get(),
+        move |result, _, _| {
+            if let Some(Ok(blocked)) = result.clone() {
+                is_blocked.set(blocked.contains(&profile_user_id));
+            }
+        },
+        true,
+    );
+    view! {
+        <BlockToggleButton
+            blocked_user_id=profile_user_id
+            is_blocked=Signal::derive(move || is_blocked.get())
+            on_success=Callback::new(move |is_now_blocked| is_blocked.set(is_now_blocked))
+        />
+    }
+}
+
+#[component]
+fn ProfileHeaderActions(
+    profile_user_id: Uuid,
+    profile_username: String,
+    profile_is_bot: bool,
+    viewer_id: Signal<Option<Uuid>>,
+) -> impl IntoView {
+    let i18n = use_i18n();
+    let can_message = Resource::new(
+        move || viewer_id.get(),
+        move |viewer_id| async move {
+            if profile_is_bot || viewer_id.is_none_or(|vid| vid == profile_user_id) {
+                Ok(false)
+            } else {
+                can_message_user(profile_user_id).await
+            }
+        },
+    );
+    let show_actions =
+        Signal::derive(move || viewer_id.get().is_some_and(|vid| vid != profile_user_id));
+    let show_message = Signal::derive(move || matches!(can_message.get(), Some(Ok(true))));
+    let message_href = StoredValue::new(format!(
+        "/messages?dm={}&username={}",
+        profile_user_id,
+        urlencoding::encode(&profile_username)
+    ));
+
+    view! {
+        <Show when=move || show_actions.get()>
+            <Show when=move || show_message.get()>
+                <A
+                    href=move || message_href.get_value()
+                    attr:class="no-link-style inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg bg-pillbug-teal text-white hover:bg-pillbug-teal/90 dark:bg-pillbug-teal dark:text-white dark:hover:bg-pillbug-teal/90 transition-colors [&_svg]:text-inherit"
+                >
+                    <Icon
+                        icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg
+                        attr:class="size-5 shrink-0"
+                    />
+                    {t!(i18n, messages.page.message_button)}
+                </A>
+            </Show>
+            <ProfileBlockUnblock profile_user_id />
+        </Show>
     }
 }
 
@@ -89,6 +162,8 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let location = use_location();
     let current_tab = Signal::derive(move || tab_from_path(&location.pathname.get()));
     let i18n = use_i18n();
+    let auth_context = expect_context::<AuthContext>();
+    let viewer_id = Memo::new(move |_| auth_context.user.with(|u| u.as_ref().map(|a| a.user.uid)));
     let radio_classes = |active| {
         format!("no-link-style py-1 px-2 text-sm font-semibold rounded-lg border-2 transition-all duration-200 transform hover:scale-[1.02] cursor-pointer shadow-sm hover:shadow-md {}", 
             if active {
@@ -136,7 +211,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                     view! {
                                         <div class="flex-shrink-0">
                                             <div class="flex flex-row flex-wrap justify-center mx-1 w-full text-lg sm:text-xl">
-                                                <div class="flex items-center gap-2">
+                                                <div class="flex gap-2 items-center">
                                                     <span class="shrink-0 [&_svg]:!size-5 [&_svg]:!min-w-5 [&_svg]:!min-h-5">
                                                         <StatusIndicator username=username.get_value() />
                                                     </span>
@@ -146,33 +221,12 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                                                         username=username.get_value()
                                                         extend_tw_classes="truncate max-w-[125px]"
                                                     />
-                                                    {move || {
-                                                        let auth = expect_context::<AuthContext>();
-                                                        let viewer_id = auth.user.get().as_ref().map(|a| a.user.uid);
-                                                        let is_other = viewer_id.map(|vid| vid != msg_uid).unwrap_or(false);
-                                                        if is_other {
-                                                            let username_encoded = urlencoding::encode(&msg_username).to_string();
-                                                            view! {
-                                                                <a
-                                                                    href=format!(
-                                                                        "/messages?dm={}&username={}",
-                                                                        msg_uid,
-                                                                        username_encoded
-                                                                    )
-                                                                    class="no-link-style inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg bg-pillbug-teal text-white hover:bg-pillbug-teal/90 dark:bg-pillbug-teal dark:text-white dark:hover:bg-pillbug-teal/90 transition-colors [&_svg]:text-inherit"
-                                                                >
-                                                                    <Icon
-                                                                        icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg
-                                                                        attr:class="size-5 shrink-0"
-                                                                    />
-                                                                    "Message"
-                                                                </a>
-                                                                <ProfileBlockUnblock profile_user_id=msg_uid />
-                                                            }.into_any()
-                                                        } else {
-                                                            view! {}.into_any()
-                                                        }
-                                                    }}
+                                                    <ProfileHeaderActions
+                                                        profile_user_id=msg_uid
+                                                        profile_username=msg_username.clone()
+                                                        profile_is_bot=user.bot
+                                                        viewer_id=Signal::derive(move || viewer_id.get())
+                                                    />
                                                 </div>
                                             </div>
 
@@ -181,30 +235,30 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
 
                                                 <div class="grid gap-1 items-start m-1 lg:flex lg:gap-4 lg:items-center lg:mt-4 grid-cols-[1fr_auto]">
                                                     <div class="flex flex-wrap gap-1 min-w-0">
-                                                        <a
+                                                        <A
                                                             href=format!("/@/{}/unstarted", username.get_value())
-                                                            class=move || radio_classes(
+                                                            attr:class=move || radio_classes(
                                                                 current_tab() == GameProgress::Unstarted,
                                                             )
                                                         >
                                                             {t!(i18n, profile.game_buttons.pending)}
-                                                        </a>
-                                                        <a
+                                                        </A>
+                                                        <A
                                                             href=format!("/@/{}/playing", username.get_value())
-                                                            class=move || radio_classes(
+                                                            attr:class=move || radio_classes(
                                                                 current_tab() == GameProgress::Playing,
                                                             )
                                                         >
                                                             {t!(i18n, profile.game_buttons.playing)}
-                                                        </a>
-                                                        <a
+                                                        </A>
+                                                        <A
                                                             href=format!("/@/{}/finished", username.get_value())
-                                                            class=move || radio_classes(
+                                                            attr:class=move || radio_classes(
                                                                 current_tab() == GameProgress::Finished,
                                                             )
                                                         >
                                                             {t!(i18n, profile.game_buttons.finished)}
-                                                        </a>
+                                                        </A>
                                                     </div>
 
                                                     <GamesFilter

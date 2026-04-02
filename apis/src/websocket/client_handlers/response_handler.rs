@@ -8,10 +8,14 @@ use super::{
     tournament::handler::handle_tournament,
     user_status::handle::handle_user_status,
 };
-use crate::common::{ServerMessage::*, ServerResult};
-use crate::providers::{AlertType, AlertsContext};
-use leptos::prelude::{use_context, Update};
-use leptos::logging::log;
+use crate::{
+    common::{ServerMessage::*, ServerResult},
+    providers::{AlertType, AlertsContext},
+};
+use leptos::{
+    logging::log,
+    prelude::{use_context, Update},
+};
 use leptos_router::hooks::use_navigate;
 
 pub fn handle_response(m: ServerResult) {

@@ -6,8 +6,7 @@ use uuid::Uuid;
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn add_block(blocked_id: Uuid) -> Result<(), ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::db::pool;
+    use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, helpers::block_user};
     let blocker_id = uuid().await?;
     let pool = pool().await?;
@@ -19,8 +18,7 @@ pub async fn add_block(blocked_id: Uuid) -> Result<(), ServerFnError> {
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn remove_block(blocked_id: Uuid) -> Result<(), ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::db::pool;
+    use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, helpers::unblock_user};
     let blocker_id = uuid().await?;
     let pool = pool().await?;
@@ -32,8 +30,7 @@ pub async fn remove_block(blocked_id: Uuid) -> Result<(), ServerFnError> {
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_blocked_user_ids() -> Result<Vec<Uuid>, ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::db::pool;
+    use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, helpers::get_blocked_user_ids as db_get_blocked};
     let user_id = uuid().await?;
     let pool = pool().await?;
@@ -45,8 +42,7 @@ pub async fn get_blocked_user_ids() -> Result<Vec<Uuid>, ServerFnError> {
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn mute_tournament_chat(tournament_id: String) -> Result<(), ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::db::pool;
+    use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, helpers::mute_tournament_chat as db_mute};
     let user_id = uuid().await?;
     let pool = pool().await?;
@@ -58,8 +54,7 @@ pub async fn mute_tournament_chat(tournament_id: String) -> Result<(), ServerFnE
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn unmute_tournament_chat(tournament_id: String) -> Result<(), ServerFnError> {
-    use crate::functions::auth::identity::uuid;
-    use crate::functions::db::pool;
+    use crate::functions::{auth::identity::uuid, db::pool};
     use db_lib::{get_conn, helpers::unmute_tournament_chat as db_unmute};
     let user_id = uuid().await?;
     let pool = pool().await?;

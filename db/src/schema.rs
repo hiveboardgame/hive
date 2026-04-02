@@ -30,6 +30,7 @@ diesel::table! {
         body -> Text,
         turn -> Nullable<Int4>,
         created_at -> Timestamptz,
+        game_id -> Nullable<Uuid>,
     }
 }
 
@@ -39,6 +40,7 @@ diesel::table! {
         channel_type -> Text,
         channel_id -> Text,
         last_read_at -> Timestamptz,
+        game_id -> Nullable<Uuid>,
     }
 }
 
@@ -227,7 +229,9 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(chat_messages -> games (game_id));
 diesel::joinable!(chat_messages -> users (sender_id));
+diesel::joinable!(chat_read_receipts -> games (game_id));
 diesel::joinable!(chat_read_receipts -> users (user_id));
 diesel::joinable!(games_users -> games (game_id));
 diesel::joinable!(games_users -> users (user_id));

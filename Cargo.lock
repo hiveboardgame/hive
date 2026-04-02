@@ -1466,6 +1466,7 @@ dependencies = [
  "hive",
  "itertools",
  "lazy_static",
+ "log",
  "nanoid",
  "rand 0.9.2",
  "regex",

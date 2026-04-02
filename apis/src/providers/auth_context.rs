@@ -9,7 +9,7 @@ pub struct AuthContext {
     pub logout: ServerAction<Logout>,
     pub user: Signal<Option<AccountResponse>>,
     /// Used to avoid redirecting to login while auth is still loading (e.g. on refresh).
-    pub action: Action<(), Result<AccountResponse, ServerFnError>>,
+    pub action: Action<(), Result<Option<AccountResponse>, ServerFnError>>,
     ws_refresh: StoredValue<bool>,
 }
 
@@ -27,7 +27,7 @@ pub fn provide_auth() {
     // Get the current user and place it in Context
     action.dispatch(());
 
-    let user = Signal::derive(move || action.value().get().and_then(|v| v.ok()));
+    let user = Signal::derive(move || action.value().get().and_then(|v| v.ok().flatten()));
     let ws_refresh = StoredValue::new(false);
 
     provide_context(AuthContext {

@@ -1,0 +1,62 @@
+{
+    "chat": {
+        "players": "Jucatori",
+        "spectators": "Spectatori",
+        "players_chat": "Chat jucatori",
+        "spectator_chat": "Chat spectatori",
+        "spectator_unlock": "Chatul spectatorilor se deblocheaza cand se termina jocul.",
+        "admin_only": "Doar administratori",
+        "with_opponent": "Chat cu adversarul",
+        "with_spectators": "Chat cu spectatorii",
+        "placeholder": "Chat",
+        "loading": "Se incarca chatul...",
+        "empty_title": "Inca nu exista mesaje",
+        "empty_body": "Trimite un mesaj pentru a incepe conversatia.",
+        "new_messages": "Mesaje noi",
+        "hidden_message": "Mesaj ascuns. Apasa pentru extindere.",
+        "tournament_title": "Chat turneu",
+        "tournament_send_restricted": "Doar participantii pot trimite mesaje.",
+        "tournament_read_restricted": "Doar participantii pot discuta aici.",
+        "turn": " - tura {{turn}}"
+    },
+    "block_dialog": {
+        "block_user": "Blocheaza utilizatorul",
+        "unblock_user": "Deblocheaza utilizatorul",
+        "title": "Blochezi acest utilizator?",
+        "body": "Nu iti va mai putea trimite mesaje directe. In chaturile de joc si turneu, mesajele lui vor fi ascunse implicit (poti apasa pentru a le afisa). Il poti debloca mai tarziu din profilul lui sau din Mesaje.",
+        "cancel": "Anuleaza",
+        "confirm": "Blocheaza"
+    },
+    "page": {
+        "title": "Mesaje",
+        "loading": "Se incarca...",
+        "failed_conversations": "Nu s-au putut incarca conversatiile",
+        "select_conversation": "Selecteaza o conversatie",
+        "choose_conversation": "Alege un chat din bara laterala pentru a incepe sa trimiti mesaje.",
+        "back_to_conversations": "Inapoi la conversatii",
+        "conversations": "Conversatii",
+        "unknown_user": "Necunoscut",
+        "view_profile": "Vezi profil ->",
+        "view_tournament": "Vezi turneu ->",
+        "view_game": "Vezi joc ->",
+        "mute_tournament_chat": "Dezactiveaza chatul turneului",
+        "unmute_tournament_chat": "Activeaza chatul turneului",
+        "failed_game": "Nu s-a putut incarca jocul",
+        "game_id_tooltip": "ID joc (se potriveste cu URL-ul)",
+        "result_won": "{{winner}} a castigat {{conclusion}}",
+        "result_draw": "Remiza {{conclusion}}",
+        "state_finished": "Terminat:",
+        "state_started": "Pornit",
+        "message_button": "Mesaj"
+    },
+    "sections": {
+        "dms": "DM-uri",
+        "tournaments": "Turnee",
+        "games": "Jocuri",
+        "global": "Global",
+        "no_dms": "Inca nu exista DM-uri",
+        "no_tournament_chats": "Nu exista chaturi de turneu",
+        "no_game_chats": "Nu exista chaturi de joc",
+        "muted": "Mut"
+    }
+}

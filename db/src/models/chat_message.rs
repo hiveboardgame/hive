@@ -16,6 +16,7 @@ pub struct ChatMessage {
     pub body: String,
     pub turn: Option<i32>,
     pub created_at: DateTime<Utc>,
+    pub game_id: Option<Uuid>,
 }
 
 #[derive(Insertable, Debug)]
@@ -27,6 +28,8 @@ pub struct NewChatMessage<'a> {
     pub username: &'a str,
     pub body: &'a str,
     pub turn: Option<i32>,
+    pub created_at: DateTime<Utc>,
+    pub game_id: Option<Uuid>,
 }
 
 impl NewChatMessage<'_> {

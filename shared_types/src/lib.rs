@@ -24,11 +24,25 @@ mod tournament_status;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
 pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
 pub use chat_message::{
-    canonical_dm_channel_id, chat_channel, ChatDestination, ChatMessage, ChatMessageContainer,
+    canonical_dm_channel_id,
+    canonicalize_dm_channel_id_for_user,
+    chat_channel,
+    direct_other_user_for_sender,
+    dm_channel_like_patterns,
+    is_valid_chat_channel_type,
+    other_user_from_dm_channel,
+    ChatDestination,
+    ChatMessage,
+    ChatMessageContainer,
+    DirectChannelParseError,
     SimpleDestination,
     // Channel type constants for persistent chat
-    CHANNEL_TYPE_DIRECT, CHANNEL_TYPE_GAME_PLAYERS, CHANNEL_TYPE_GAME_SPECTATORS,
-    CHANNEL_TYPE_GLOBAL, CHANNEL_TYPE_TOURNAMENT_LOBBY,
+    CHANNEL_TYPE_DIRECT,
+    CHANNEL_TYPE_GAME_PLAYERS,
+    CHANNEL_TYPE_GAME_SPECTATORS,
+    CHANNEL_TYPE_GLOBAL,
+    CHANNEL_TYPE_TOURNAMENT_LOBBY,
+    CHAT_CHANNEL_TYPES,
 };
 pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;

@@ -79,8 +79,11 @@ impl ChatHandler {
         };
 
         // Update in-memory recent cache (last 50 per channel)
-        let (channel_type, channel_id) = chat_channel(&self.container.destination, self.container.message.user_id);
-        self.data.chat_storage.push_recent(channel_type, &channel_id, self.container.clone());
+        let (channel_type, channel_id) =
+            chat_channel(&self.container.destination, self.container.message.user_id);
+        self.data
+            .chat_storage
+            .push_recent(channel_type, &channel_id, self.container.clone());
 
         // Persist to Postgres in a spawned task (do not block the response)
         let persistable = PersistableChatMessage::from_container(&self.container);

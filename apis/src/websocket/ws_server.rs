@@ -28,7 +28,7 @@ use actix::{
     AsyncContext,
     WrapFuture,
 };
-use codee::{binary::MsgpackSerdeCodec, Encoder};
+use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 use db_lib::{
     get_conn,
     helpers::get_user_ids_who_muted_tournament,
@@ -481,11 +481,8 @@ impl Handler<ClientActorMessage> for WsServer {
                 let sessions = self.sessions.clone();
                 let serialized = cam.serialized.clone();
                 let game_id_clone = game_id.clone();
-                let users_set: HashSet<Uuid> = self
-                    .games_users
-                    .get(&game_id)
-                    .cloned()
-                    .unwrap_or_default();
+                let users_set: HashSet<Uuid> =
+                    self.games_users.get(&game_id).cloned().unwrap_or_default();
                 let future = async move {
                     let send_to_all = if let Ok(mut conn) = get_conn(&pool).await {
                         Game::find_by_game_id(&game_id_clone, &mut conn)
@@ -512,7 +509,7 @@ impl Handler<ClientActorMessage> for WsServer {
                     }
                 };
                 let actor_future = future.into_actor(self);
-                ctx.wait(actor_future);
+                ctx.spawn(actor_future);
             }
             MessageDestination::User(user_id) => {
                 self.send_message(&cam.serialized, &user_id);
@@ -520,14 +517,26 @@ impl Handler<ClientActorMessage> for WsServer {
             MessageDestination::Tournament(tournament) => {
                 let pool = self.pool.clone();
                 let sessions = self.sessions.clone();
+                let serialized = cam.serialized.clone();
+                let sender_id = cam.from;
+                let decoded_message: Result<ServerResult, _> =
+                    MsgpackSerdeCodec::decode(&serialized);
+                let is_chat_message = matches!(
+                    decoded_message,
+                    Ok(ServerResult::Ok(server_message)) if matches!(&*server_message, ServerMessage::Chat(_))
+                );
                 let future = async move {
                     if let Ok(mut conn) = get_conn(&pool).await {
                         if let Ok(tournament) =
                             Tournament::from_nanoid(&tournament.to_string(), &mut conn).await
                         {
-                            let muted_ids = get_user_ids_who_muted_tournament(&mut conn, tournament.id)
-                                .await
-                                .unwrap_or_default();
+                            let muted_ids = if is_chat_message {
+                                get_user_ids_who_muted_tournament(&mut conn, tournament.id)
+                                    .await
+                                    .unwrap_or_default()
+                            } else {
+                                HashSet::new()
+                            };
                             let mut user_ids = HashSet::new();
                             if let Ok(players) = tournament.players(&mut conn).await {
                                 for player in players {
@@ -540,12 +549,15 @@ impl Handler<ClientActorMessage> for WsServer {
                                 }
                             }
                             for user_id in user_ids.clone() {
-                                if muted_ids.contains(&user_id) {
+                                if is_chat_message
+                                    && muted_ids.contains(&user_id)
+                                    && Some(user_id) != sender_id
+                                {
                                     continue;
                                 }
                                 if let Some(sockets) = sessions.get(&user_id) {
                                     for socket in sockets {
-                                        socket.do_send(WsMessage(cam.serialized.clone()));
+                                        socket.do_send(WsMessage(serialized.clone()));
                                     }
                                 } else {
                                     println!("Couldn't find socket for {user_id}");

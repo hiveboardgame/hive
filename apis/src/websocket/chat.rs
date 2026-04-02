@@ -28,7 +28,11 @@ impl Chats {
     }
 
     /// Returns a clone of the cached recent messages for the channel, if any.
-    pub fn get_recent(&self, channel_type: &str, channel_id: &str) -> Option<Vec<ChatMessageContainer>> {
+    pub fn get_recent(
+        &self,
+        channel_type: &str,
+        channel_id: &str,
+    ) -> Option<Vec<ChatMessageContainer>> {
         let cache = self.recent_cache.read().unwrap();
         cache
             .get(&(channel_type.to_string(), channel_id.to_string()))
@@ -37,7 +41,12 @@ impl Chats {
     }
 
     /// Stores up to CHAT_RECENT_CACHE_MAX most recent messages for the channel (replaces existing cache entry).
-    pub fn put_recent(&self, channel_type: &str, channel_id: &str, messages: Vec<ChatMessageContainer>) {
+    pub fn put_recent(
+        &self,
+        channel_type: &str,
+        channel_id: &str,
+        messages: Vec<ChatMessageContainer>,
+    ) {
         let key = (channel_type.to_string(), channel_id.to_string());
         let trimmed = if messages.len() > CHAT_RECENT_CACHE_MAX {
             messages[messages.len() - CHAT_RECENT_CACHE_MAX..].to_vec()

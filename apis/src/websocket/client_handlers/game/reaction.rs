@@ -1,6 +1,7 @@
 use crate::{
     common::GameActionResponse,
     providers::{
+        chat::Chat,
         games::GamesSignal,
         AlertType,
         AlertsContext,
@@ -23,6 +24,9 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
     match game_control {
         GameControl::Abort(_) => {
             games.own_games_remove(&gar.game.game_id);
+            let chat = expect_context::<Chat>();
+            chat.clear_game_thread(&gar.game.game_id);
+            chat.invalidate_conversation_list();
             let alerts = expect_context::<AlertsContext>();
             alerts.last_alert.update(|v| {
                 *v = Some(AlertType::Warn(format!(

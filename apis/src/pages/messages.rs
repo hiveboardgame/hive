@@ -1,25 +1,40 @@
-//! Messages hub: /messages — DMs, Tournaments, Games, Global. Supports ?dm=:uuid to open a DM from profile.
+//! Messages hub: /messages — DMs, Tournaments, Games, and recent announcements.
+//! Supports ?dm=:uuid to open a DM from profile.
 
-use crate::components::atoms::{block_button::BlockButton, unblock_button::UnblockButton};
-use crate::components::organisms::chat::{messages_with_header_flags, ChatInput, Message};
-use crate::components::molecules::time_row::TimeRow;
-use crate::functions::blocks_mutes::{mute_tournament_chat, unmute_tournament_chat};
-use crate::functions::chat::{get_my_chat_conversations, MyConversations};
-use crate::functions::games::get::get_game_from_nanoid;
-use crate::providers::{chat::Chat, AuthContext};
-use hive_lib::{Color, GameResult, GameStatus};
-use leptos::html;
-use leptos::leptos_dom::helpers::request_animation_frame;
-use leptos::prelude::*;
-use leptos::task::spawn_local;
-use leptos_use::use_interval_fn;
-use leptos_router::hooks::use_query_map;
-use shared_types::{
-    canonical_dm_channel_id, ChatDestination, ChatMessage, GameId, PrettyString, TimeInfo,
-    TournamentId,
-    CHANNEL_TYPE_DIRECT, CHANNEL_TYPE_GAME_PLAYERS, CHANNEL_TYPE_GAME_SPECTATORS,
-    CHANNEL_TYPE_GLOBAL, CHANNEL_TYPE_TOURNAMENT_LOBBY,
+use crate::{
+    components::{
+        atoms::block_toggle_button::BlockToggleButton,
+        molecules::time_row::TimeRow,
+        organisms::chat::ChatWindow,
+    },
+    functions::{
+        blocks_mutes::{mute_tournament_chat, unmute_tournament_chat},
+        chat::{
+            get_messages_hub_data,
+            DmConversation,
+            GameChannel,
+            MyConversations,
+            TournamentChannel,
+        },
+        games::get::get_game_from_nanoid,
+    },
+    i18n::*,
+    providers::{chat::Chat, AuthContext},
+    responses::GameResponse,
 };
+use hive_lib::{Color, GameResult, GameStatus};
+use leptos::prelude::*;
+use leptos_router::{components::A, hooks::use_query_map};
+use shared_types::{
+    GameId,
+    PrettyString,
+    SimpleDestination,
+    TimeInfo,
+    TournamentId,
+    CHANNEL_TYPE_GAME_PLAYERS,
+    CHANNEL_TYPE_GAME_SPECTATORS,
+};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -31,45 +46,12 @@ pub enum SelectedChannel {
 }
 
 impl SelectedChannel {
-    fn channel_type_and_id(&self, me: Uuid) -> (String, String) {
-        match self {
-            SelectedChannel::Dm(other_id, _) => {
-                (CHANNEL_TYPE_DIRECT.to_string(), canonical_dm_channel_id(me, *other_id))
-            }
-            SelectedChannel::Tournament(nanoid, _, _, _) => {
-                (CHANNEL_TYPE_TOURNAMENT_LOBBY.to_string(), nanoid.clone())
-            }
-            SelectedChannel::Game(ct, cid, _, _, _, _) => (ct.clone(), cid.clone()),
-            SelectedChannel::Global => (CHANNEL_TYPE_GLOBAL.to_string(), CHANNEL_TYPE_GLOBAL.to_string()),
-        }
-    }
-
-    fn label(&self) -> String {
+    fn label(&self, global_label: &str) -> String {
         match self {
             SelectedChannel::Dm(_, username) => username.clone(),
             SelectedChannel::Tournament(_, name, _, _) => name.clone(),
             SelectedChannel::Game(_, _, label, _, _, _) => label.clone(),
-            SelectedChannel::Global => "Global".to_string(),
-        }
-    }
-
-    fn to_destination(&self) -> ChatDestination {
-        match self {
-            SelectedChannel::Dm(other_id, username) => {
-                ChatDestination::User((*other_id, username.clone()))
-            }
-            SelectedChannel::Tournament(nanoid, _, _, _) => {
-                ChatDestination::TournamentLobby(TournamentId(nanoid.clone()))
-            }
-            SelectedChannel::Game(ct, cid, _, white_id, black_id, _) => {
-                let game_id = GameId(cid.clone());
-                if ct.as_str() == CHANNEL_TYPE_GAME_PLAYERS {
-                    ChatDestination::GamePlayers(game_id, *white_id, *black_id)
-                } else {
-                    ChatDestination::GameSpectators(game_id, *white_id, *black_id)
-                }
-            }
-            SelectedChannel::Global => ChatDestination::Global,
+            SelectedChannel::Global => global_label.to_string(),
         }
     }
 }
@@ -78,6 +60,7 @@ impl SelectedChannel {
 pub fn Messages() -> impl IntoView {
     let auth = expect_context::<AuthContext>();
     let chat = expect_context::<Chat>();
+    let i18n = use_i18n();
     let current_user_id = move || auth.user.with_untracked(|a| a.as_ref().map(|a| a.user.uid));
 
     let query_map = use_query_map();
@@ -89,27 +72,31 @@ pub fn Messages() -> impl IntoView {
             .and_then(|s| Uuid::parse_str(&s).ok())
     };
     let dm_username_param = move || {
-        query_map.get().get("username").map(|s| s.to_string()).unwrap_or_default()
+        query_map
+            .get()
+            .get("username")
+            .map(|s| s.to_string())
+            .unwrap_or_default()
     };
-
-    let conversations = Resource::new(
+    let hub_data = Resource::new(
         move || chat.conversation_list_version.get(),
-        move |_| async move { get_my_chat_conversations().await },
+        move |_| async move { get_messages_hub_data().await },
     );
-    let block_list_version = RwSignal::new(0);
-    let block_list = Resource::new(
-        move || block_list_version.get(),
-        move |_| async move { crate::functions::blocks_mutes::get_blocked_user_ids().await },
+    let blocked_ids = RwSignal::new(HashSet::<Uuid>::new());
+    Effect::watch(
+        move || hub_data.get(),
+        move |result, _, _| {
+            if let Some(Ok(data)) = result.clone() {
+                blocked_ids.set(data.blocked_user_ids.iter().copied().collect());
+                chat.apply_server_unread_counts(data.unread_counts.clone());
+            }
+        },
+        true,
     );
-    // Keys of blocked-user messages that the user has expanded (so state survives re-renders).
-    let expanded_hidden_messages = RwSignal::new(std::collections::HashSet::<(i64, Uuid, String)>::new());
 
-    let (selected, set_selected) = signal::<Option<SelectedChannel>>(None);
-    let (unread_at_open, set_unread_at_open) = signal::<Option<i64>>(None);
+    let selected = RwSignal::new(None::<SelectedChannel>);
     // On mobile: true = show channel list (drawer open), false = show thread full width. Desktop always shows both.
     let mobile_drawer_open = RwSignal::new(true);
-    let message_container_ref = NodeRef::<html::Div>::new();
-    let first_unread_ref = NodeRef::<html::Div>::new();
 
     // On mobile: close drawer when a conversation is selected (thread full width); open drawer when none selected.
     Effect::new(move |_| {
@@ -124,509 +111,424 @@ pub fn Messages() -> impl IntoView {
     Effect::new(move |_| {
         let dm_uid = dm_param();
         if let Some(other_id) = dm_uid {
-            let conv = conversations.get().and_then(Result::ok);
+            let selected_channel = selected.get_untracked();
+            let manual_selection_exists = selected_channel.as_ref().is_some_and(
+                |current| !matches!(current, SelectedChannel::Dm(id, _) if *id == other_id),
+            );
+            if manual_selection_exists {
+                return;
+            }
+
+            let conv = hub_data
+                .get()
+                .and_then(Result::ok)
+                .map(|data| data.conversations);
             let username_from_query = dm_username_param();
             let username = conv
                 .as_ref()
                 .and_then(|c| {
-                    c.dms.iter().find(|d| d.other_user_id == other_id).map(|d| d.username.clone())
+                    c.dms
+                        .iter()
+                        .find(|d| d.other_user_id == other_id)
+                        .map(|d| d.username.clone())
                 })
-                .or_else(|| {
+                .or({
                     if username_from_query.is_empty() {
                         None
                     } else {
                         Some(username_from_query)
                     }
                 })
-                .unwrap_or_else(|| "Unknown".to_string());
-            set_selected.set(Some(SelectedChannel::Dm(other_id, username)));
+                .unwrap_or_else(|| t_string!(i18n, messages.page.unknown_user).to_string());
+            selected.set(Some(SelectedChannel::Dm(other_id, username)));
         }
     });
-
-    // When selected channel changes: capture unread (for scroll-to-first-unread), mark as read, then fetch history.
-    // Only run when a channel IS selected — we do not mark-as-read or refresh when none selected, so optimistic
-    // unread from a just-received DM/tournament message is not overwritten by server state (fixes feedback #1).
-    // Scroll-to-first-unread only for DM, Game, Tournament — not Global.
-    Effect::new(move |_| {
-        let sel = selected.get();
-        let me = match current_user_id() {
-            Some(u) => u,
-            None => return,
-        };
-        if let Some(ref ch) = sel {
-            set_unread_at_open.set(None);
-            let unread = match ch {
-                SelectedChannel::Dm(other_id, _) => chat.unread_count_for_dm(*other_id, me),
-                SelectedChannel::Tournament(nanoid, _, _, _) => {
-                    chat.unread_count_for_tournament(&TournamentId(nanoid.clone()))
-                }
-                SelectedChannel::Game(_, cid, _, _, _, _) => chat.unread_count_for_game(&GameId(cid.clone())),
-                SelectedChannel::Global => chat.unread_count_for_global(),
-            };
-            if unread > 0 {
-                set_unread_at_open.set(Some(unread));
-            }
-
-            let (ct, cid) = ch.channel_type_and_id(me);
-            let chat = chat.clone();
-            let ct2 = ct.clone();
-            let cid2 = cid.clone();
-
-            // Mark as read immediately so the badge disappears right away
-            match ch {
-                SelectedChannel::Dm(other_id, _) => chat.seen_dm(*other_id, me),
-                SelectedChannel::Tournament(nanoid, _, _, _) => {
-                    chat.seen_tournament_lobby(TournamentId(nanoid.clone()))
-                }
-                SelectedChannel::Game(_, cid, _, _, _, _) => chat.seen_messages(GameId(cid.clone())),
-                SelectedChannel::Global => chat.mark_read(&ct2, &cid2),
-            }
-            chat.refresh_unread_counts();
-
-            // Fetch history: for finished games fetch both channels; otherwise fetch single channel
-            let fetch_finished = matches!(ch, SelectedChannel::Game(_, _, _, _, _, true));
-            let cid_for_fetch = cid2.clone();
-            spawn_local(async move {
-                if fetch_finished {
-                    let cid = cid_for_fetch.clone();
-                    if let Ok(m) = chat.fetch_channel_history(CHANNEL_TYPE_GAME_PLAYERS, &cid).await {
-                        chat.inject_history(CHANNEL_TYPE_GAME_PLAYERS, &cid, m);
-                    }
-                    if let Ok(m) = chat.fetch_channel_history(CHANNEL_TYPE_GAME_SPECTATORS, &cid).await {
-                        chat.inject_history(CHANNEL_TYPE_GAME_SPECTATORS, &cid, m);
-                    }
-                } else if let Ok(messages) = chat.fetch_channel_history(&ct2, &cid2).await {
-                    chat.inject_history(&ct2, &cid2, messages);
-                }
-            });
-        }
+    let selected_game_summary_key = Memo::new(move |_| {
+        selected.get().and_then(|channel| match channel {
+            SelectedChannel::Game(_, channel_id, ..) => Some(GameId(channel_id)),
+            _ => None,
+        })
     });
-
-    // When new messages arrive for the selected channel, mark as read so badge doesn't appear while viewing
-    Effect::new(move |_| {
-        let sel = selected.get();
-        let me = match current_user_id() {
-            Some(u) => u,
-            None => return,
-        };
-        // Create reactive dependency on message count for the selected channel
-        let _msg_count = match &sel {
-            Some(SelectedChannel::Dm(other_id, _)) => chat
-                .users_messages
-                .get()
-                .get(other_id)
-                .map(|v| v.len())
-                .unwrap_or(0),
-            Some(SelectedChannel::Tournament(nanoid, _, _, _)) => chat
-                .tournament_lobby_messages
-                .get()
-                .get(&TournamentId(nanoid.clone()))
-                .map(|v| v.len())
-                .unwrap_or(0),
-            Some(SelectedChannel::Game(_ct, cid, _, _, _, _finished)) => {
-                let gid = GameId(cid.clone());
-                let private_len = chat
-                    .games_private_messages
-                    .get()
-                    .get(&gid)
-                    .map(|v| v.len())
-                    .unwrap_or(0);
-                let public_len = chat
-                    .games_public_messages
-                    .get()
-                    .get(&gid)
-                    .map(|v| v.len())
-                    .unwrap_or(0);
-                private_len + public_len
-            }
-            Some(SelectedChannel::Global) => chat.global_messages.get().len(),
-            None => 0,
-        };
-        if let Some(ref ch) = sel {
-            match ch {
-                SelectedChannel::Dm(other_id, _) => chat.seen_dm(*other_id, me),
-                SelectedChannel::Tournament(nanoid, _, _, _) => {
-                    chat.seen_tournament_lobby(TournamentId(nanoid.clone()))
-                }
-                SelectedChannel::Game(_, cid, _, _, _, _) => chat.seen_messages(GameId(cid.clone())),
-                SelectedChannel::Global => {
-                    let (ct, cid) = ch.channel_type_and_id(me);
-                    chat.mark_read(&ct, &cid);
-                }
-            }
-        }
-    });
-
-    // Memo ensures we re-render when message maps change (WebSocket recv, fetch complete).
-    // Plain closure called in a block can miss updates due to reactive scope boundaries.
-    let messages_list = Signal::derive(move || {
-        let sel = selected.get()?;
-        let me = current_user_id()?;
-        let (ct, _cid) = sel.channel_type_and_id(me);
-        let msgs: Vec<ChatMessage> = match &sel {
-            SelectedChannel::Dm(other_id, _) => chat.users_messages.get().get(other_id).cloned().unwrap_or_default(),
-            SelectedChannel::Tournament(nanoid, _, _, _) => chat
-                .tournament_lobby_messages
-                .get()
-                .get(&TournamentId(nanoid.clone()))
-                .cloned()
-                .unwrap_or_default(),
-            SelectedChannel::Game(_, cid, _, _, _, _) => {
-                let gid = GameId(cid.clone());
-                let private_msgs = chat.games_private_messages.get().get(&gid).cloned().unwrap_or_default();
-                let public_msgs = chat.games_public_messages.get().get(&gid).cloned().unwrap_or_default();
-                if ct == CHANNEL_TYPE_GAME_PLAYERS {
-                    private_msgs
-                } else {
-                    public_msgs
-                }
-            }
-            SelectedChannel::Global => chat.global_messages.get(),
-        };
-        Some(msgs)
-    });
-
-    let destination_signal = Signal::derive(move || {
-        selected.get().map(|s| s.to_destination())
-    });
-
-    // Clear scroll-to-first-unread divider after 10 seconds
-    use_interval_fn(
-        move || {
-            if unread_at_open.get_untracked().is_some() {
-                set_unread_at_open.set(None);
-            }
+    let selected_game_summary = Resource::new(
+        move || selected_game_summary_key.get(),
+        move |game_id| async move {
+            let game_id = game_id?;
+            Some(get_game_from_nanoid(game_id).await)
         },
-        10_000,
     );
-
-    // Scroll: on channel change / initial load → first unread (if any) or bottom. When a NEW message
-    // arrives (same channel, count N→N+1) → scroll to bottom so the newest message is visible.
-    // Throttle only for "new message" scrolls to avoid jank; never throttle channel change or 0→N load.
-    let scroll_last_run = std::cell::RefCell::new(0_f64);
-    Effect::watch(
-        move || {
-            let sel = selected.get();
-            let count = messages_list
-                .get()
-                .as_ref()
-                .map(|v| v.len() as i64)
-                .unwrap_or(0);
-            (sel, count)
-        },
-        move |(sel, count), prev, _| {
-            let (run, is_new_message) = match prev {
-                None => (true, false),
-                Some((prev_sel, prev_count)) => {
-                    let channel_changed = sel != prev_sel;
-                    let count_increased = *count > *prev_count;
-                    // Only treat as "new message" when count increased on same channel and we already had messages (not initial load 0→N).
-                    let is_new_message = count_increased && sel == prev_sel && *prev_count > 0;
-                    (channel_changed || count_increased, is_new_message)
-                }
-            };
-            if !run {
-                return;
-            }
-            // Throttle only when scrolling due to a new message (N→N+1); allow channel change and initial load (0→N) every time.
-            if is_new_message {
-                let now = web_sys::js_sys::Date::now();
-                if now - *scroll_last_run.borrow() < 300.0 {
-                    return;
-                }
-                scroll_last_run.replace(now);
-            }
-            // Clone refs for the rAF closure; read them inside rAF so the DOM (and first-unread divider) are updated before we scroll.
-            let container_ref = message_container_ref.clone();
-            let first_unread_ref_clone = first_unread_ref.clone();
-            request_animation_frame(move || {
-                let container = container_ref.get_untracked();
-                let target = first_unread_ref_clone.get_untracked();
-                if is_new_message {
-                    if let Some(c) = container {
-                        c.set_scroll_top(c.scroll_height());
-                    }
-                } else if let Some(t) = target {
-                    let _ = t.scroll_into_view_with_bool(true);
-                } else if let Some(c) = container {
-                    c.set_scroll_top(c.scroll_height());
-                }
-            });
-        },
-        true,
-    );
+    let selected_game_data = Signal::derive(move || match selected.get() {
+        Some(SelectedChannel::Game(_, channel_id, _, white_id, black_id, finished)) => {
+            Some((GameId(channel_id), white_id, black_id, finished))
+        }
+        _ => None,
+    });
+    let selected_game_show_players = Signal::derive(move || {
+        matches!(
+            selected.get(),
+            Some(SelectedChannel::Game(channel_type, ..))
+                if channel_type == CHANNEL_TYPE_GAME_PLAYERS
+        )
+    });
 
     view! {
-        <div class="fixed top-12 left-0 right-0 bottom-0 flex flex-col sm:flex-row overflow-hidden bg-gray-100 dark:bg-gray-950 z-0">
-            <aside
-                class=move || format!(
+        <div class="flex overflow-hidden fixed right-0 bottom-0 left-0 top-12 z-0 flex-col bg-gray-100 sm:flex-row dark:bg-gray-950">
+            <aside class=move || {
+                format!(
                     "w-full sm:w-72 flex-shrink-0 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-gray-900 shadow-lg sm:rounded-r-xl border-l border-gray-200 dark:border-gray-700 {} sm:!flex",
-                    if mobile_drawer_open.get() { "" } else { "hidden " }
+                    if mobile_drawer_open.get() { "" } else { "hidden " },
                 )
-            >
-                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                    <h1 class="text-xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
-                        "Messages"
+            }>
+                <div class="py-3 px-4 bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
+                    <h1 class="text-xl font-bold tracking-tight text-gray-800 dark:text-gray-100">
+                        {t!(i18n, messages.page.title)}
                     </h1>
                 </div>
-                <div class="flex-1 min-h-0 overflow-y-auto p-2 pb-6 sm:pb-2">
-                    {move || {
-                        let conv = conversations.get();
-                        match conv {
-                            Some(Ok(c)) => {
-                                view! {
-                                    <ChannelLists
-                                        conv=c
-                                        current_user_id=current_user_id
-                                        selected=selected
-                                        set_selected=set_selected
-                                        chat=chat
-                                    />
-                                }
-                                    .into_any()
+                <div class="overflow-y-auto flex-1 p-2 pb-6 min-h-0 sm:pb-2">
+                    <ShowLet
+                        some=move || hub_data.get()
+                        let:hub_result
+                        fallback=move || {
+                            view! {
+                                <p class="p-3 text-sm text-gray-500 animate-pulse dark:text-gray-400">
+                                    {t!(i18n, messages.page.loading)}
+                                </p>
                             }
-                            Some(Err(_)) => view! { <p class="p-3 text-sm text-red-600 dark:text-red-400">"Failed to load conversations"</p> }.into_any(),
-                            None => view! { <p class="p-3 text-sm text-gray-500 dark:text-gray-400 animate-pulse">"Loading…"</p> }.into_any(),
                         }
-                    }}
+                    >
+                        <ShowLet
+                            some=move || hub_result.as_ref().ok().cloned()
+                            let:hub_page_data
+                            fallback=move || {
+                                view! {
+                                    <p class="p-3 text-sm text-red-600 dark:text-red-400">
+                                        {t!(i18n, messages.page.failed_conversations)}
+                                    </p>
+                                }
+                            }
+                        >
+                            <ChannelLists
+                                conv=hub_page_data.conversations
+                                current_user_id=current_user_id
+                                selected=selected
+                                chat=chat
+                            />
+                        </ShowLet>
+                    </ShowLet>
                 </div>
             </aside>
-            <main
-                class=move || format!(
+            <main class=move || {
+                format!(
                     "flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden {} sm:!flex",
-                    if mobile_drawer_open.get() { "hidden " } else { "" }
+                    if mobile_drawer_open.get() { "hidden " } else { "" },
                 )
-            >
-                {move || {
-                    if destination_signal.get().is_none() {
-                        return view! {
-                            <div class="flex-1 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 p-8 gap-2">
+            }>
+                <Show
+                    when=move || selected.get().is_some()
+                    fallback=move || {
+                        view! {
+                            <div class="flex flex-col flex-1 gap-2 justify-center items-center p-8 text-gray-500 dark:text-gray-400">
                                 <span class="text-4xl opacity-50">"💬"</span>
-                                <p class="text-center font-medium">"Select a conversation"</p>
-                                <p class="text-sm text-center max-w-xs">"Choose a chat from the sidebar to start messaging."</p>
+                                <p class="font-medium text-center">
+                                    {t!(i18n, messages.page.select_conversation)}
+                                </p>
+                                <p class="max-w-xs text-sm text-center">
+                                    {t!(i18n, messages.page.choose_conversation)}
+                                </p>
                             </div>
                         }
-                            .into_any();
                     }
-                    let mut msgs = messages_list.get().unwrap_or_default();
-                    msgs.sort_by_key(|m| m.timestamp.map(|t| t.timestamp()).unwrap_or(0));
-                    let empty_thread = msgs.is_empty();
-                    let sel = selected.get();
-                    let sel_for_messages = sel.clone();
-                    let me_uid = current_user_id();
-                    view! {
-                        <div class="flex flex-col flex-1 min-h-0 overflow-hidden bg-white dark:bg-gray-900 sm:rounded-l-xl border-r border-gray-200 dark:border-gray-700 shadow-inner">
-                            <div class="flex items-center gap-2 px-2 py-3 sm:px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 shrink-0 min-h-[2.75rem]">
-                                <button
-                                    type="button"
-                                    class="sm:hidden flex-shrink-0 flex items-center justify-center gap-1 min-h-[2.25rem] min-w-[2.25rem] -ml-1 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-                                    aria-label="Back to conversations"
-                                    on:click=move |_| mobile_drawer_open.set(true)
-                                >
-                                    <span class="text-lg" aria-hidden="true">"←"</span>
-                                    <span class="text-sm font-medium">"Conversations"</span>
-                                </button>
-                                <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100 truncate min-w-0 flex-1">
-                                    {sel.as_ref().map(|s| s.label()).unwrap_or_default()}
-                                </h2>
-                            </div>
-                            {move || {
-                                let s = sel.clone();
-                                match s.as_ref() {
-                                    Some(SelectedChannel::Dm(other_id, username)) => {
-                                        let other_id_val = *other_id;
-                                        let block_list_ref = block_list.clone();
-                                        let set_block_version = move || block_list_version.update(|v| *v += 1);
-                                        let is_blocked = move || {
-                                            block_list_ref.get().and_then(Result::ok).map_or(false, |ids: Vec<Uuid>| ids.contains(&other_id_val))
-                                        };
-                                        view! {
-                                            <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/30 shrink-0 flex flex-wrap items-center gap-2">
-                                                <a
-                                                    href=format!("/@/{}", username)
-                                                    class="inline-flex items-center text-sm font-medium text-pillbug-teal hover:text-pillbug-teal/80 dark:text-pillbug-teal dark:hover:text-pillbug-teal/90 transition-colors"
-                                                >
-                                                    "View profile →"
-                                                </a>
-                                                <Show when=move || is_blocked()>
-                                                    <UnblockButton
-                                                        blocked_user_id=other_id_val
-                                                        on_success=Callback::new(move |()| set_block_version())
-                                                    />
-                                                </Show>
-                                                <Show when=move || !is_blocked()>
-                                                    <BlockButton
-                                                        blocked_user_id=other_id_val
-                                                        on_success=Callback::new(move |()| set_block_version())
-                                                    />
-                                                </Show>
-                                            </div>
-                                        }.into_any()
-                                    }
-                                    Some(SelectedChannel::Game(ct, cid, label, white_id, black_id, finished)) => view! {
-                                        <GameChatHeader
-                                            channel_type=ct.clone()
-                                            channel_id=cid.clone()
-                                            label=label.clone()
-                                            white_id=*white_id
-                                            black_id=*black_id
-                                            finished=*finished
-                                            set_selected=set_selected
-                                        />
-                                    }.into_any(),
-                                    Some(SelectedChannel::Tournament(nanoid, name, is_participant, muted)) => {
-                                        let nanoid_clone = nanoid.clone();
-                                        let name_clone = name.clone();
-                                        let muted_val = *muted;
-                                        let is_participant_val = *is_participant;
-                                        let set_selected_mute = set_selected.clone();
-                                        let chat_mute = chat.clone();
-                                        view! {
-                                            <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/30 shrink-0 flex flex-col gap-1">
-                                                <div class="flex flex-wrap items-center gap-2">
-                                                    <a
-                                                        href=format!("/tournament/{}", nanoid)
-                                                        class="inline-flex items-center text-sm font-medium text-pillbug-teal hover:text-pillbug-teal/80 dark:text-pillbug-teal dark:hover:text-pillbug-teal/90 transition-colors"
-                                                    >
-                                                        "View tournament →"
-                                                    </a>
-                                                    <button
-                                                        type="button"
-                                                        class="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-pillbug-teal dark:hover:text-pillbug-teal/90 transition-colors"
-                                                        on:click=move |_| {
-                                                            let nanoid = nanoid_clone.clone();
-                                                            let name = name_clone.clone();
-                                                            let set_sel = set_selected_mute.clone();
-                                                            let chat_ctx = chat_mute.clone();
-                                                            let currently_muted = muted_val;
-                                                            spawn_local(async move {
-                                                                let new_muted = if currently_muted {
-                                                                    let _ = unmute_tournament_chat(nanoid.clone()).await;
-                                                                    false
-                                                                } else {
-                                                                    let _ = mute_tournament_chat(nanoid.clone()).await;
-                                                                    true
-                                                                };
-                                                                chat_ctx.invalidate_conversation_list();
-                                                                set_sel.set(Some(SelectedChannel::Tournament(nanoid, name, is_participant_val, new_muted)));
-                                                            });
-                                                        }
-                                                    >
-                                                        {if muted_val { "Unmute tournament chat" } else { "Mute tournament chat" }}
-                                                    </button>
-                                                </div>
-                                                {if !is_participant_val {
-                                                    view! { <p class="text-xs text-gray-500 dark:text-gray-400">"Only participants can chat here."</p> }.into_any()
-                                                } else {
-                                                    view! {}.into_any()
-                                                }}
-                                            </div>
-                                        }.into_any()
-                                    }
-                                    _ => view! {}.into_any(),
-                                }
-                            }}
-                            <div node_ref=message_container_ref class="flex-1 overflow-y-auto overflow-x-hidden p-4 min-h-0">
+                >
+                    <div class="flex overflow-hidden flex-col flex-1 min-h-0 bg-white border-r border-gray-200 shadow-inner sm:rounded-l-xl dark:bg-gray-900 dark:border-gray-700">
+                        <div class="flex gap-2 items-center py-3 px-2 bg-gray-50 border-b border-gray-200 sm:px-4 dark:border-gray-700 shrink-0 min-h-[2.75rem] dark:bg-gray-800/50">
+                            <button
+                                type="button"
+                                class="flex flex-shrink-0 gap-1 justify-center items-center -ml-1 text-gray-600 rounded-lg transition-colors sm:hidden dark:text-gray-400 hover:text-gray-900 hover:bg-gray-200 min-h-[2.25rem] min-w-[2.25rem] dark:hover:bg-gray-700 dark:hover:text-gray-100"
+                                aria-label=t_string!(i18n, messages.page.back_to_conversations)
+                                on:click=move |_| mobile_drawer_open.set(true)
+                            >
+                                <span class="text-lg" aria-hidden="true">
+                                    "←"
+                                </span>
+                                <span class="text-sm font-medium">
+                                    {t!(i18n, messages.page.conversations)}
+                                </span>
+                            </button>
+                            <h2 class="flex-1 min-w-0 text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">
                                 {move || {
-                                    if empty_thread {
+                                    selected
+                                        .get()
+                                        .as_ref()
+                                        .map(|s| s.label(ANNOUNCEMENTS_LABEL))
+                                        .unwrap_or_default()
+                                }}
+                            </h2>
+                        </div>
+                        <SelectedChannelActions
+                            selected=selected
+                            blocked_ids=blocked_ids
+                            chat=chat
+                            game_summary=Signal::derive(move || {
+                                selected_game_summary.get().flatten()
+                            })
+                        />
+                        <div class="overflow-hidden flex-1 min-h-0">
+                            <ShowLet some=move || selected.get() let:selected_channel>
+                                {move || match selected_channel.clone() {
+                                    SelectedChannel::Dm(other_id, username) => {
                                         view! {
-                                            <div class="flex flex-col items-center justify-center h-full min-h-[12rem] text-gray-500 dark:text-gray-400 gap-2">
-                                                <span class="text-3xl opacity-40">"✉️"</span>
-                                                <p class="text-sm font-medium">"No messages yet"</p>
-                                                <p class="text-xs">"Send a message to start the conversation."</p>
-                                            </div>
-                                        }.into_any()
-                                    } else {
-                                        let use_scroll_to_unread = selected.get().is_some();
-                                        let n_unread = unread_at_open.get().unwrap_or(0) as usize;
-                                        let _ = unread_at_open.get();
-                                        let (read_msgs, unread_msgs, show_divider) = if use_scroll_to_unread && n_unread > 0 && n_unread <= msgs.len() {
-                                            let split_idx = msgs.len() - n_unread;
-                                            let (r, u) = msgs.split_at(split_idx);
-                                            (r.to_vec(), u.to_vec(), unread_at_open.get().is_some())
-                                        } else {
-                                            (msgs.clone(), vec![], false)
-                                        };
-                                        let read_with_flags = messages_with_header_flags(&read_msgs);
-                                        let unread_with_flags = messages_with_header_flags(&unread_msgs);
-                                        let blocked_ids: std::collections::HashSet<Uuid> = block_list
-                                            .get()
-                                            .and_then(Result::ok)
-                                            .unwrap_or_default()
-                                            .into_iter()
-                                            .collect();
-                                        let blocked_ids2 = blocked_ids.clone();
-                                        let is_dm = matches!(sel_for_messages, Some(SelectedChannel::Dm(_, _)));
-                                        let expanded_set = expanded_hidden_messages;
+                                            <ChatWindow
+                                                destination=SimpleDestination::User
+                                                correspondant_id=other_id
+                                                correspondant_username=username
+                                            />
+                                        }
+                                            .into_any()
+                                    }
+                                    SelectedChannel::Tournament(nanoid, _, is_participant, _) => {
+                                        let input_disabled = Signal::derive(move || {
+                                            !is_participant
+                                        });
                                         view! {
-                                            <For each=move || read_with_flags.clone() key=|item| (item.0.timestamp.map(|t| t.timestamp()).unwrap_or(0), item.0.message.clone()) let:item>
-                                                {let is_me = me_uid.map(|u| item.0.user_id == u).unwrap_or(false);
-                                                let sender_blocked = !is_dm && blocked_ids.contains(&item.0.user_id);
-                                                let key = (item.0.timestamp.map(|t| t.timestamp()).unwrap_or(0), item.0.user_id, item.0.message.clone());
-                                                let key_cb = key.clone();
-                                                let expanded_signal = Signal::derive(move || expanded_set.get().contains(&key));
-                                                let on_expand = Callback::new(move |()| {
-                                                    expanded_set.update(|s| { s.insert(key_cb.clone()); });
-                                                });
-                                                view! {
-                                                    <Message message=item.0 is_current_user=is_me show_header=item.1 sender_blocked=sender_blocked expanded_signal=expanded_signal on_click_expand=on_expand />
-                                                }}
-                                            </For>
-                                            {if show_divider {
-                                                view! {
-                                                    <div
-                                                        node_ref=first_unread_ref
-                                                        class="relative my-4 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400"
-                                                    >
-                                                        <div class="absolute inset-x-0 border-b border-gray-300 dark:border-gray-600"></div>
-                                                        <span class="relative z-10 bg-white dark:bg-gray-900 px-2">"New Messages"</span>
-                                                    </div>
-                                                }
-                                                    .into_any()
-                                            } else {
-                                                view! {}.into_any()
-                                            }}
-                                            <For each=move || unread_with_flags.clone() key=|item| (item.0.timestamp.map(|t| t.timestamp()).unwrap_or(0), item.0.message.clone()) let:item>
-                                                {let is_me = me_uid.map(|u| item.0.user_id == u).unwrap_or(false);
-                                                let sender_blocked = !is_dm && blocked_ids2.contains(&item.0.user_id);
-                                                let key2 = (item.0.timestamp.map(|t| t.timestamp()).unwrap_or(0), item.0.user_id, item.0.message.clone());
-                                                let key_cb2 = key2.clone();
-                                                let expanded_signal2 = Signal::derive(move || expanded_set.get().contains(&key2));
-                                                let on_expand2 = Callback::new(move |()| {
-                                                    expanded_set.update(|s| { s.insert(key_cb2.clone()); });
-                                                });
-                                                view! {
-                                                    <Message message=item.0 is_current_user=is_me show_header=item.1 sender_blocked=sender_blocked expanded_signal=expanded_signal2 on_click_expand=on_expand2 />
-                                                }}
-                                            </For>
+                                            <ChatWindow
+                                                destination=SimpleDestination::Tournament(
+                                                    TournamentId(nanoid),
+                                                )
+                                                input_disabled
+                                            />
+                                        }
+                                            .into_any()
+                                    }
+                                    SelectedChannel::Game(..) => {
+                                        view! {
+                                            <ChatWindow
+                                                destination=SimpleDestination::Game
+                                                game_data=selected_game_data
+                                                game_channel_override=selected_game_show_players
+                                            />
+                                        }
+                                            .into_any()
+                                    }
+                                    SelectedChannel::Global => {
+                                        view! {
+                                            <ChatWindow destination=SimpleDestination::Global />
                                         }
                                             .into_any()
                                     }
                                 }}
-                            </div>
-                            <div class="p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30 shrink-0">
-                                <ChatInput
-                                    destination=Signal::derive(move || selected.get().map(|s| s.to_destination()).unwrap_or(ChatDestination::Global))
-                                    disabled=move || {
-                                        let s = selected.get();
-                                        if let Some(ref ch) = s {
-                                            if matches!(ch, SelectedChannel::Global) {
-                                                return !auth.user.with_untracked(|u| u.as_ref().is_some_and(|a| a.user.admin));
-                                            }
-                                            if matches!(ch, SelectedChannel::Tournament(_, _, false, _)) {
-                                                return true;
-                                            }
-                                        }
-                                        false
-                                    }
-                                />
-                            </div>
+                            </ShowLet>
                         </div>
-                    }
-                        .into_any()
-                }}
+                    </div>
+                </Show>
             </main>
         </div>
+    }
+}
+
+#[component]
+fn ChannelHeaderBar(children: Children) -> impl IntoView {
+    view! {
+        <div class="py-2 px-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 shrink-0 dark:bg-gray-800/30">
+            {children()}
+        </div>
+    }
+}
+
+#[component]
+fn SelectedChannelActions(
+    selected: RwSignal<Option<SelectedChannel>>,
+    blocked_ids: RwSignal<HashSet<Uuid>>,
+    chat: Chat,
+    game_summary: Signal<Option<Result<GameResponse, ServerFnError>>>,
+) -> impl IntoView {
+    let selected_dm = Memo::new(move |_| match selected.get() {
+        Some(SelectedChannel::Dm(other_id, username)) => Some((other_id, username)),
+        _ => None,
+    });
+    let selected_game = Memo::new(move |_| match selected.get() {
+        Some(SelectedChannel::Game(
+            channel_type,
+            channel_id,
+            label,
+            white_id,
+            black_id,
+            finished,
+        )) => Some((
+            channel_type,
+            channel_id,
+            label,
+            white_id,
+            black_id,
+            finished,
+        )),
+        _ => None,
+    });
+    let selected_tournament = Memo::new(move |_| match selected.get() {
+        Some(SelectedChannel::Tournament(nanoid, name, is_participant, _)) => {
+            Some((nanoid, name, is_participant))
+        }
+        _ => None,
+    });
+
+    view! {
+        <ShowLet some=move || selected_dm.get() let:dm>
+            <DmChannelActions other_id=dm.0 username=dm.1 blocked_ids />
+        </ShowLet>
+        <ShowLet some=move || selected_game.get() let:game>
+            <GameChatHeader
+                channel_type=game.0
+                channel_id=game.1
+                label=game.2
+                white_id=game.3
+                black_id=game.4
+                finished=game.5
+                selected=selected
+                game_summary
+            />
+        </ShowLet>
+        <ShowLet some=move || selected_tournament.get() let:tournament>
+            <TournamentChannelActions
+                selected=selected
+                nanoid=tournament.0
+                name=tournament.1
+                is_participant=tournament.2
+                chat
+            />
+        </ShowLet>
+    }
+}
+
+#[component]
+fn DmChannelActions(
+    other_id: Uuid,
+    username: String,
+    blocked_ids: RwSignal<HashSet<Uuid>>,
+) -> impl IntoView {
+    let i18n = use_i18n();
+    let is_blocked = Signal::derive(move || blocked_ids.with(|ids| ids.contains(&other_id)));
+    let on_block_toggle_success = Callback::new(move |is_now_blocked| {
+        blocked_ids.update(|ids| {
+            if is_now_blocked {
+                ids.insert(other_id);
+            } else {
+                ids.remove(&other_id);
+            }
+        });
+    });
+
+    view! {
+        <ChannelHeaderBar>
+            <div class="flex flex-wrap gap-2 items-center">
+                <A
+                    href=format!("/@/{}", username)
+                    attr:class="inline-flex items-center text-sm font-medium text-pillbug-teal hover:text-pillbug-teal/80 dark:text-pillbug-teal dark:hover:text-pillbug-teal/90 transition-colors"
+                >
+                    {t!(i18n, messages.page.view_profile)}
+                </A>
+                <BlockToggleButton
+                    blocked_user_id=other_id
+                    is_blocked
+                    on_success=on_block_toggle_success
+                />
+            </div>
+        </ChannelHeaderBar>
+    }
+}
+
+#[component]
+fn TournamentChannelActions(
+    selected: RwSignal<Option<SelectedChannel>>,
+    nanoid: String,
+    name: String,
+    is_participant: bool,
+    chat: Chat,
+) -> impl IntoView {
+    let i18n = use_i18n();
+    let nanoid_for_href = nanoid.clone();
+    let nanoid_for_muted = nanoid.clone();
+    let nanoid_for_action = nanoid.clone();
+    let name_for_action = name.clone();
+    let is_muted = Signal::derive(move || {
+        selected.with(|current| {
+            matches!(
+                current,
+                Some(SelectedChannel::Tournament(current_nanoid, _, _, true))
+                    if *current_nanoid == nanoid_for_muted
+            )
+        })
+    });
+    let selected_for_action = selected;
+    let chat_for_action = chat;
+    let is_participant_for_action = is_participant;
+    let toggle_mute = Action::new(move |currently_muted: &bool| {
+        let currently_muted = *currently_muted;
+        let nanoid = nanoid_for_action.clone();
+        let name = name_for_action.clone();
+        async move {
+            let new_muted = if currently_muted {
+                if unmute_tournament_chat(nanoid.clone()).await.is_err() {
+                    return;
+                }
+                false
+            } else {
+                if mute_tournament_chat(nanoid.clone()).await.is_err() {
+                    return;
+                }
+                true
+            };
+            let should_update_selection = selected_for_action.with_untracked(|current| {
+                matches!(
+                    current,
+                    Some(SelectedChannel::Tournament(current_nanoid, _, _, _))
+                        if *current_nanoid == nanoid
+                )
+            });
+            if should_update_selection {
+                selected_for_action.set(Some(SelectedChannel::Tournament(
+                    nanoid,
+                    name,
+                    is_participant_for_action,
+                    new_muted,
+                )));
+            }
+            chat_for_action.invalidate_conversation_list();
+            chat_for_action.refresh_unread_counts();
+        }
+    });
+
+    view! {
+        <ChannelHeaderBar>
+            <div class="flex flex-col gap-1">
+                <div class="flex flex-wrap gap-2 items-center">
+                    <A
+                        href=format!("/tournament/{}", nanoid_for_href)
+                        attr:class="inline-flex items-center text-sm font-medium text-pillbug-teal hover:text-pillbug-teal/80 dark:text-pillbug-teal dark:hover:text-pillbug-teal/90 transition-colors"
+                    >
+                        {t!(i18n, messages.page.view_tournament)}
+                    </A>
+                    <button
+                        type="button"
+                        disabled=move || toggle_mute.pending().get()
+                        class="text-sm font-medium text-gray-600 transition-colors dark:text-gray-400 disabled:text-gray-400 dark:hover:text-pillbug-teal/90 dark:disabled:text-gray-500 hover:text-pillbug-teal"
+                        on:click=move |_| {
+                            toggle_mute.dispatch(is_muted.get_untracked());
+                        }
+                    >
+                        {move || {
+                            if is_muted.get() {
+                                t_string!(i18n, messages.page.unmute_tournament_chat)
+                            } else {
+                                t_string!(i18n, messages.page.mute_tournament_chat)
+                            }
+                        }}
+                    </button>
+                </div>
+                <Show when=move || !is_participant>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        {t!(i18n, messages.chat.tournament_read_restricted)}
+                    </p>
+                </Show>
+            </div>
+        </ChannelHeaderBar>
     }
 }
 
@@ -638,13 +540,14 @@ fn GameChatToggle(
     white_id: Uuid,
     black_id: Uuid,
     finished: bool,
-    set_selected: WriteSignal<Option<SelectedChannel>>,
+    selected: RwSignal<Option<SelectedChannel>>,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let viewing_players = channel_type == CHANNEL_TYPE_GAME_PLAYERS;
     let channel_id_players = channel_id.clone();
     let label_players = label.clone();
     let switch_to_players = move |_| {
-        set_selected.set(Some(SelectedChannel::Game(
+        selected.set(Some(SelectedChannel::Game(
             CHANNEL_TYPE_GAME_PLAYERS.to_string(),
             channel_id_players.clone(),
             label_players.clone(),
@@ -654,7 +557,7 @@ fn GameChatToggle(
         )));
     };
     let switch_to_spectators = move |_| {
-        set_selected.set(Some(SelectedChannel::Game(
+        selected.set(Some(SelectedChannel::Game(
             CHANNEL_TYPE_GAME_SPECTATORS.to_string(),
             channel_id.clone(),
             label.clone(),
@@ -664,37 +567,41 @@ fn GameChatToggle(
         )));
     };
     view! {
-        <div class="flex rounded-lg border border-gray-300 dark:border-gray-600 p-0.5 bg-gray-100 dark:bg-gray-800">
+        <div class="flex p-0.5 bg-gray-100 rounded-lg border border-gray-300 dark:bg-gray-800 dark:border-gray-600">
             <button
                 type="button"
-                class=move || format!(
-                    "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors {}",
-                    if viewing_players {
-                        "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                    } else {
-                        "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                    }
-                )
+                class=move || {
+                    format!(
+                        "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors {}",
+                        if viewing_players {
+                            "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                        } else {
+                            "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                        },
+                    )
+                }
                 on:click=switch_to_players
             >
-                "Players"
+                {t!(i18n, messages.chat.players)}
             </button>
             <button
                 type="button"
                 disabled=move || !finished
-                class=move || format!(
-                    "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors {}",
-                    if !viewing_players {
-                        "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                    } else if finished {
-                        "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                    } else {
-                        "text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                    }
-                )
+                class=move || {
+                    format!(
+                        "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors {}",
+                        if !viewing_players {
+                            "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+                        } else if finished {
+                            "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                        } else {
+                            "text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                        },
+                    )
+                }
                 on:click=switch_to_spectators
             >
-                "Spectators"
+                {t!(i18n, messages.chat.spectators)}
             </button>
         </div>
     }
@@ -708,93 +615,157 @@ fn GameChatHeader(
     white_id: Uuid,
     black_id: Uuid,
     finished: bool,
-    set_selected: WriteSignal<Option<SelectedChannel>>,
+    selected: RwSignal<Option<SelectedChannel>>,
+    game_summary: Signal<Option<Result<GameResponse, ServerFnError>>>,
 ) -> impl IntoView {
     let auth = expect_context::<AuthContext>();
+    let i18n = use_i18n();
     let current_user_id = move || auth.user.with_untracked(|a| a.as_ref().map(|a| a.user.uid));
-    let game_id = GameId(channel_id.clone());
-    let game = Resource::new(
-        move || game_id.clone(),
-        move |id| async move { get_game_from_nanoid(id).await },
-    );
-    let is_player = move || {
-        current_user_id().is_some_and(|uid| uid == white_id || uid == black_id)
-    };
+    let is_player = move || current_user_id().is_some_and(|uid| uid == white_id || uid == black_id);
+    let channel_type_for_label = channel_type.clone();
+    let static_chat_label = Signal::derive(move || {
+        if channel_type_for_label == CHANNEL_TYPE_GAME_PLAYERS {
+            t_string!(i18n, messages.chat.players_chat)
+        } else {
+            t_string!(i18n, messages.chat.spectator_chat)
+        }
+    });
     view! {
-        <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/30 shrink-0 flex flex-col gap-2">
-            {move || {
-                if is_player() {
-                    view! {
-                        <GameChatToggle
-                            channel_type=channel_type.clone()
-                            channel_id=channel_id.clone()
-                            label=label.clone()
-                            white_id=white_id
-                            black_id=black_id
-                            finished=finished
-                            set_selected=set_selected
-                        />
-                    }
-                        .into_any()
-                } else {
-                    view! {}.into_any()
-                }
-            }}
-            {move || {
-                let g = game.get();
-                match g {
-                    Some(Ok(gr)) => {
-                        let time_info = TimeInfo {
-                            mode: gr.time_mode,
-                            base: gr.time_base,
-                            increment: gr.time_increment,
-                        };
-                        let (state_label, result_str) = if gr.finished {
-                            let detail = match (&gr.game_status, &gr.conclusion) {
-                                (GameStatus::Finished(GameResult::Winner(color)), c) => {
-                                    let winner = match color {
-                                        Color::White => gr.white_player.username.clone(),
-                                        Color::Black => gr.black_player.username.clone(),
-                                    };
-                                    format!("{} won {}", winner, c.pretty_string())
-                                }
-                                (GameStatus::Finished(GameResult::Draw), c) => {
-                                    format!("Draw {}", c.pretty_string())
-                                }
-                                (GameStatus::Adjudicated, _) => gr.tournament_game_result.to_string(),
-                                _ => String::new(),
-                            };
-                            ("Finished:", detail)
-                        } else {
-                            ("Started", String::new())
-                        };
-                        let created = gr.created_at.format("%Y-%m-%d %H:%M").to_string();
-                        let nanoid = gr.game_id.0.clone();
+        <ChannelHeaderBar>
+            <div class="flex flex-col gap-2">
+                <Show
+                    when=move || is_player() && finished
+                    fallback=move || {
                         view! {
-                            <div class="flex flex-wrap gap-x-3 gap-y-1 items-center text-sm">
-                                <span class="font-medium text-gray-700 dark:text-gray-300">{state_label}</span>
-                                {if !result_str.is_empty() {
-                                    view! { <span class="text-gray-600 dark:text-gray-400">{result_str}</span> }.into_any()
-                                } else {
-                                    view! {}.into_any()
-                                }}
-                                <a
-                                    href=format!("/game/{}", nanoid)
-                                    class="font-medium text-pillbug-teal hover:text-pillbug-teal/80 dark:text-pillbug-teal dark:hover:text-pillbug-teal/90 transition-colors"
-                                >
-                                    "View game →"
-                                </a>
-                                <span class="text-gray-500 dark:text-gray-400 text-xs font-mono" title="Game ID (match to URL)">{nanoid}</span>
-                                <TimeRow time_info extend_tw_classes="text-gray-600 dark:text-gray-400" />
-                                <span class="text-gray-500 dark:text-gray-400 text-xs">{created}</span>
+                            <div class="flex flex-col gap-1">
+                                <span class="inline-flex items-center py-1 px-2.5 text-xs font-medium text-gray-700 bg-white rounded-full border border-gray-300 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-600 w-fit">
+                                    {move || static_chat_label.get()}
+                                </span>
+                                <Show when=move || is_player() && !finished>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        {t!(i18n, messages.chat.spectator_unlock)}
+                                    </p>
+                                </Show>
                             </div>
                         }
-                            .into_any()
                     }
-                    Some(Err(_)) => view! { <div class="text-sm text-red-600 dark:text-red-400">"Failed to load game"</div> }.into_any(),
-                    None => view! { <div class="text-sm text-gray-500 dark:text-gray-400 animate-pulse">"Loading…"</div> }.into_any(),
-                }
-            }}
+                >
+                    <GameChatToggle
+                        channel_type=channel_type.clone()
+                        channel_id=channel_id.clone()
+                        label=label.clone()
+                        white_id=white_id
+                        black_id=black_id
+                        finished=finished
+                        selected=selected
+                    />
+                </Show>
+                <ShowLet
+                    some=move || game_summary.get()
+                    let:game_result
+                    fallback=move || {
+                        view! {
+                            <div class="text-sm text-gray-500 animate-pulse dark:text-gray-400">
+                                {t!(i18n, messages.page.loading)}
+                            </div>
+                        }
+                    }
+                >
+                    <ShowLet
+                        some=move || game_result.as_ref().ok().cloned()
+                        let:game_data
+                        fallback=move || {
+                            view! {
+                                <div class="text-sm text-red-600 dark:text-red-400">
+                                    {t!(i18n, messages.page.failed_game)}
+                                </div>
+                            }
+                        }
+                    >
+                        <GameChatSummary game=game_data />
+                    </ShowLet>
+                </ShowLet>
+            </div>
+        </ChannelHeaderBar>
+    }
+}
+
+#[component]
+fn GameChatSummary(game: GameResponse) -> impl IntoView {
+    let i18n = use_i18n();
+    let time_info = TimeInfo {
+        mode: game.time_mode,
+        base: game.time_base,
+        increment: game.time_increment,
+    };
+    let game_finished = game.finished;
+    let game_status = game.game_status.clone();
+    let conclusion = game.conclusion.clone();
+    let white_username = game.white_player.username.clone();
+    let black_username = game.black_player.username.clone();
+    let tournament_game_result = game.tournament_game_result.to_string();
+    let state_label = Signal::derive(move || {
+        if game_finished {
+            t_string!(i18n, messages.page.state_finished)
+        } else {
+            t_string!(i18n, messages.page.state_started)
+        }
+    });
+    let result_text = Signal::derive(move || {
+        if !game_finished {
+            return None;
+        }
+        let detail = match (&game_status, &conclusion) {
+            (GameStatus::Finished(GameResult::Winner(color)), conclusion) => {
+                let winner = if *color == Color::White {
+                    white_username.clone()
+                } else {
+                    black_username.clone()
+                };
+                t_string!(
+                    i18n,
+                    messages.page.result_won,
+                    winner = winner,
+                    conclusion = conclusion.pretty_string()
+                )
+            }
+            (GameStatus::Finished(GameResult::Draw), conclusion) => {
+                t_string!(
+                    i18n,
+                    messages.page.result_draw,
+                    conclusion = conclusion.pretty_string()
+                )
+            }
+            (GameStatus::Adjudicated, _) => tournament_game_result.clone(),
+            _ => String::new(),
+        };
+        (!detail.is_empty()).then_some(detail)
+    });
+    let created = game.created_at.format("%Y-%m-%d %H:%M").to_string();
+    let nanoid = game.game_id.0.clone();
+
+    view! {
+        <div class="flex flex-wrap gap-y-1 gap-x-3 items-center text-sm">
+            <span class="font-medium text-gray-700 dark:text-gray-300">
+                {move || state_label.get()}
+            </span>
+            <ShowLet some=move || result_text.get() let:text>
+                <span class="text-gray-600 dark:text-gray-400">{text}</span>
+            </ShowLet>
+            <A
+                href=format!("/game/{}", nanoid.clone())
+                attr:class="font-medium text-pillbug-teal hover:text-pillbug-teal/80 dark:text-pillbug-teal dark:hover:text-pillbug-teal/90 transition-colors"
+            >
+                {t!(i18n, messages.page.view_game)}
+            </A>
+            <span
+                class="font-mono text-xs text-gray-500 dark:text-gray-400"
+                title=move || t_string!(i18n, messages.page.game_id_tooltip)
+            >
+                {nanoid}
+            </span>
+            <TimeRow time_info extend_tw_classes="text-gray-600 dark:text-gray-400" />
+            <span class="text-xs text-gray-500 dark:text-gray-400">{created}</span>
         </div>
     }
 }
@@ -806,192 +777,401 @@ const SECTION_HEADER_BTN: &str = "sticky top-0 z-10 w-full text-left flex items-
     text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider \
     border-l-2 border-pillbug-teal/50 dark:border-pillbug-teal/40 \
     bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-r transition-colors min-h-[2.75rem]";
+const EMPTY_HINT_CLASS: &str = "px-2 py-1.5 text-sm text-gray-400 dark:text-gray-500 italic";
+const CHANNEL_BTN_BASE: &str =
+    "w-full text-left px-3 py-2 rounded-lg flex justify-between items-center gap-2 \
+    transition-colors duration-150 truncate text-sm min-h-[2.75rem]";
+const CHANNEL_BTN_SELECTED: &str =
+    "bg-pillbug-teal/25 dark:bg-pillbug-teal/35 text-gray-900 dark:text-gray-100 font-medium";
+const CHANNEL_BTN_IDLE: &str =
+    "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300";
+const ANNOUNCEMENTS_LABEL: &str = "Recent announcements";
+
+fn channel_button_class(is_selected: bool) -> String {
+    format!(
+        "{} {}",
+        CHANNEL_BTN_BASE,
+        if is_selected {
+            CHANNEL_BTN_SELECTED
+        } else {
+            CHANNEL_BTN_IDLE
+        }
+    )
+}
 
 #[component]
 fn ChannelLists(
     conv: MyConversations,
     current_user_id: impl Fn() -> Option<Uuid> + 'static,
-    selected: ReadSignal<Option<SelectedChannel>>,
-    set_selected: WriteSignal<Option<SelectedChannel>>,
+    selected: RwSignal<Option<SelectedChannel>>,
     chat: Chat,
 ) -> impl IntoView {
     let me = current_user_id();
-    let has_global = conv.has_global;
-    let dms_open = RwSignal::new(true);
-    let tournaments_open = RwSignal::new(true);
-    let games_open = RwSignal::new(true);
-    let global_open = RwSignal::new(true);
-    let conv_stored = StoredValue::new(conv);
-    let empty_hint = "px-2 py-1.5 text-sm text-gray-400 dark:text-gray-500 italic";
-    let btn_base = "w-full text-left px-3 py-2 rounded-lg flex justify-between items-center gap-2 \
-                    transition-colors duration-150 truncate text-sm min-h-[2.75rem]";
+    let MyConversations {
+        dms,
+        tournaments,
+        games,
+        has_global: _has_global,
+    } = conv;
     view! {
-        <section class="mb-2 flex flex-col min-h-0">
-            <button type="button" class=SECTION_HEADER_BTN on:click=move |_| dms_open.update(|o| *o = !*o)>
-                <span>"DMs"</span>
-                <span class="text-[0.65rem] opacity-70">{move || if dms_open.get() { "▼" } else { "▶" }}</span>
-            </button>
-            <Show when=move || dms_open.get() fallback=|| view! {}.into_any()>
+        <DmChannelsSection dms=dms me=me selected=selected chat=chat />
+        <TournamentChannelsSection tournaments=tournaments selected=selected chat=chat />
+        <GameChannelsSection games=games selected=selected chat=chat />
+        <GlobalChannelSection selected=selected />
+    }
+}
+
+#[component]
+fn SectionHeaderButton(title: Signal<String>, open: RwSignal<bool>) -> impl IntoView {
+    view! {
+        <button type="button" class=SECTION_HEADER_BTN on:click=move |_| open.update(|o| *o = !*o)>
+            <span>{move || title.get()}</span>
+            <span class="opacity-70 text-[0.65rem]">
+                {move || if open.get() { "▼" } else { "▶" }}
+            </span>
+        </button>
+    }
+}
+
+#[component]
+fn DmChannelsSection(
+    dms: Vec<DmConversation>,
+    me: Option<Uuid>,
+    selected: RwSignal<Option<SelectedChannel>>,
+    chat: Chat,
+) -> impl IntoView {
+    let i18n = use_i18n();
+    let open = RwSignal::new(true);
+    let dms = std::sync::Arc::new(dms);
+    let is_empty = dms.is_empty();
+    view! {
+        <section class="flex flex-col mb-2 min-h-0">
+            <SectionHeaderButton
+                title=Signal::derive(move || t_string!(i18n, messages.sections.dms)).into()
+                open=open
+            />
+            <Show when=move || open.get()>
                 <div class=SECTION_LIST_MAX_H>
-                    {move || conv_stored.get_value().dms.is_empty().then(|| view! { <p class=empty_hint>"No DMs yet"</p> })}
-                    <For each=move || conv_stored.get_value().dms key=|d| d.other_user_id let:d>
-                {let is_selected = move || selected.get().as_ref().is_some_and(|s| matches!(s, SelectedChannel::Dm(id, _) if *id == d.other_user_id));
-                let d_other = d.other_user_id;
-                view! {
-                    <button
-                        type="button"
-                        class=move || format!(
-                            "{} {}",
-                            btn_base,
-                            if is_selected() {
-                                "bg-pillbug-teal/25 dark:bg-pillbug-teal/35 text-gray-900 dark:text-gray-100 font-medium"
-                            } else {
-                                "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                    {is_empty
+                        .then(|| {
+                            view! {
+                                <p class=EMPTY_HINT_CLASS>{t!(i18n, messages.sections.no_dms)}</p>
                             }
-                        )
-                        on:click=move |_| set_selected.set(Some(SelectedChannel::Dm(d.other_user_id, d.username.clone())))
-                    >
-                        <span class="truncate">{d.username.clone()}</span>
-                        {move || {
-                            let _ = chat.unread_counts.get();
-                            let unread = me.map(|u| chat.unread_count_for_dm(d_other, u)).unwrap_or(0);
-                            (unread > 0).then(|| view! { <span class="shrink-0 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs font-medium leading-none text-white bg-ladybug-red dark:bg-red-500 rounded-full">{if unread > 99 { "99+".to_string() } else { unread.to_string() }}</span> })
-                        }}
-                    </button>
-                }}
-            </For>
+                        })}
+                    <For
+                        each={
+                            let dms = dms.clone();
+                            move || (*dms).clone()
+                        }
+                        key=|dm| dm.other_user_id
+                        children=move |dm| {
+                            view! { <DmChannelItem dm=dm me=me selected=selected chat=chat /> }
+                        }
+                    />
                 </div>
             </Show>
         </section>
-        <section class="mb-2 flex flex-col min-h-0">
-            <button type="button" class=SECTION_HEADER_BTN on:click=move |_| tournaments_open.update(|o| *o = !*o)>
-                <span>"Tournaments"</span>
-                <span class="text-[0.65rem] opacity-70">{move || if tournaments_open.get() { "▼" } else { "▶" }}</span>
-            </button>
-            <Show when=move || tournaments_open.get() fallback=|| view! {}.into_any()>
-                <div class=SECTION_LIST_MAX_H>
-                    {move || conv_stored.get_value().tournaments.is_empty().then(|| view! { <p class=empty_hint>"No tournament chats"</p> })}
-                    <For each=move || conv_stored.get_value().tournaments key=|t| t.nanoid.clone() let:t>
-                {let nanoid = t.nanoid.clone();
-                let name = t.name.clone();
-                let nanoid_cmp = nanoid.clone();
-                let tid = TournamentId(nanoid.clone());
-                let is_selected = move || selected.get().as_ref().is_some_and(|s| matches!(s, SelectedChannel::Tournament(n, _, _, _) if *n == nanoid_cmp));
-                view! {
-                    <button
-                        type="button"
-                        class=move || format!(
-                            "{} {}",
-                            btn_base,
-                            if is_selected() {
-                                "bg-pillbug-teal/25 dark:bg-pillbug-teal/35 text-gray-900 dark:text-gray-100 font-medium"
-                            } else {
-                                "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                            }
-                        )
-                        on:click=move |_| set_selected.set(Some(SelectedChannel::Tournament(nanoid.clone(), name.clone(), t.is_participant, t.muted)))
-                    >
-                        <span class="truncate flex items-center gap-1">
-                            {name.clone()}
-                            {if t.muted {
-                                view! { <span class="shrink-0 text-[0.65rem] uppercase text-gray-400 dark:text-gray-500" title="Muted">"Muted"</span> }.into_any()
-                            } else {
-                                view! {}.into_any()
-                            }}
-                        </span>
-                        {move || {
-                            let _ = chat.unread_counts.get();
-                            let unread = chat.unread_count_for_tournament(&tid);
-                            (unread > 0).then(|| view! { <span class="shrink-0 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs font-medium leading-none text-white bg-ladybug-red dark:bg-red-500 rounded-full">{if unread > 99 { "99+".to_string() } else { unread.to_string() }}</span> })
-                        }}
-                    </button>
-                }}
-            </For>
-                </div>
-            </Show>
-        </section>
-        <section class="mb-2 flex flex-col min-h-0">
-            <button type="button" class=SECTION_HEADER_BTN on:click=move |_| games_open.update(|o| *o = !*o)>
-                <span>"Games"</span>
-                <span class="text-[0.65rem] opacity-70">{move || if games_open.get() { "▼" } else { "▶" }}</span>
-            </button>
-            <Show when=move || games_open.get() fallback=|| view! {}.into_any()>
-                <div class=SECTION_LIST_MAX_H>
-                    {move || conv_stored.get_value().games.is_empty().then(|| view! { <p class=empty_hint>"No game chats"</p> })}
-                    <For each=move || conv_stored.get_value().games key=|g| format!("{}::{}", g.channel_type, g.channel_id) let:g>
-                {let channel_type = g.channel_type.clone();
-                let channel_id = g.channel_id.clone();
-                let label = g.label.clone();
-                let display_label = label
-                    .replace(" (players)", "")
-                    .replace(" (spectators)", "");
-                let display_label_with_nanoid = format!("{} ({})", display_label, channel_id);
-                let white_id = g.white_id;
-                let black_id = g.black_id;
-                let cid_cmp = channel_id.clone();
-                let gid = GameId(channel_id.clone());
-                let is_selected = move || selected.get().as_ref().is_some_and(|s| matches!(s, SelectedChannel::Game(_, cid, _, _, _, _) if *cid == cid_cmp));
-                view! {
-                    <button
-                        type="button"
-                        class=move || format!(
-                            "{} {}",
-                            btn_base,
-                            if is_selected() {
-                                "bg-pillbug-teal/25 dark:bg-pillbug-teal/35 text-gray-900 dark:text-gray-100 font-medium"
-                            } else {
-                                "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                            }
-                        )
-                        on:click=move |_| set_selected.set(Some(SelectedChannel::Game(
-                            channel_type.clone(),
-                            channel_id.clone(),
-                            label.clone(),
-                            white_id,
-                            black_id,
-                            g.finished,
-                        )))
-                    >
-                        <span class="truncate" title=display_label_with_nanoid.clone()>{display_label_with_nanoid.clone()}</span>
-                        {move || {
-                            let _ = chat.unread_counts.get();
-                            let unread = chat.unread_count_for_game(&gid);
-                            (unread > 0).then(|| view! { <span class="shrink-0 h-5 min-w-5 flex items-center justify-center px-1.5 text-xs font-medium leading-none text-white bg-ladybug-red dark:bg-red-500 rounded-full">{if unread > 99 { "99+".to_string() } else { unread.to_string() }}</span> })
-                        }}
-                    </button>
-                }}
-            </For>
-                </div>
-            </Show>
-        </section>
-        {has_global.then(|| {
-            view! {
-                <section class="mb-2 flex flex-col min-h-0">
-                    <button type="button" class=SECTION_HEADER_BTN on:click=move |_| global_open.update(|o| *o = !*o)>
-                        <span>"Global"</span>
-                        <span class="text-[0.65rem] opacity-70">{move || if global_open.get() { "▼" } else { "▶" }}</span>
-                    </button>
-                    <Show when=move || global_open.get() fallback=|| view! {}.into_any()>
-                        <div class=SECTION_LIST_MAX_H>
-                    <button
-                        type="button"
-                        class=move || format!(
-                            "{} {}",
-                            btn_base,
-                            if selected.get().as_ref().is_some_and(|s| matches!(s, SelectedChannel::Global)) {
-                                "bg-pillbug-teal/25 dark:bg-pillbug-teal/35 text-gray-900 dark:text-gray-100 font-medium"
-                            } else {
-                                "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                            }
-                        )
-                        on:click=move |_| set_selected.set(Some(SelectedChannel::Global))
-                    >
-                        "Global"
-                    </button>
-                        </div>
-                    </Show>
-                </section>
+    }
+}
+
+#[component]
+fn DmChannelItem(
+    dm: DmConversation,
+    me: Option<Uuid>,
+    selected: RwSignal<Option<SelectedChannel>>,
+    chat: Chat,
+) -> impl IntoView {
+    let DmConversation {
+        other_user_id,
+        username,
+        ..
+    } = dm;
+    let username_for_selection = username.clone();
+    let is_selected = move || {
+        selected
+            .get()
+            .as_ref()
+            .is_some_and(|s| matches!(s, SelectedChannel::Dm(id, _) if *id == other_user_id))
+    };
+    let unread = Signal::derive(move || {
+        me.map(|uid| chat.unread_count_for_dm(other_user_id, uid))
+            .unwrap_or(0)
+    });
+    view! {
+        <button
+            type="button"
+            class=move || channel_button_class(is_selected())
+            on:click=move |_| {
+                selected
+                    .set(Some(SelectedChannel::Dm(other_user_id, username_for_selection.clone())));
             }
-        })}
+        >
+            <span class="truncate">{username}</span>
+            <ChannelUnreadBadge unread=unread />
+        </button>
+    }
+}
+
+#[component]
+fn TournamentChannelsSection(
+    tournaments: Vec<TournamentChannel>,
+    selected: RwSignal<Option<SelectedChannel>>,
+    chat: Chat,
+) -> impl IntoView {
+    let i18n = use_i18n();
+    let open = RwSignal::new(true);
+    let tournaments = std::sync::Arc::new(tournaments);
+    let is_empty = tournaments.is_empty();
+    view! {
+        <section class="flex flex-col mb-2 min-h-0">
+            <SectionHeaderButton
+                title=Signal::derive(move || t_string!(i18n, messages.sections.tournaments)).into()
+                open=open
+            />
+            <Show when=move || open.get()>
+                <div class=SECTION_LIST_MAX_H>
+                    {is_empty
+                        .then(|| {
+                            view! {
+                                <p class=EMPTY_HINT_CLASS>
+                                    {t!(i18n, messages.sections.no_tournament_chats)}
+                                </p>
+                            }
+                        })}
+                    <For
+                        each={
+                            let tournaments = tournaments.clone();
+                            move || (*tournaments).clone()
+                        }
+                        key=|tournament| tournament.nanoid.clone()
+                        children=move |tournament| {
+                            view! {
+                                <TournamentChannelItem
+                                    tournament=tournament
+                                    selected=selected
+                                    chat=chat
+                                />
+                            }
+                        }
+                    />
+                </div>
+            </Show>
+        </section>
+    }
+}
+
+#[component]
+fn TournamentChannelItem(
+    tournament: TournamentChannel,
+    selected: RwSignal<Option<SelectedChannel>>,
+    chat: Chat,
+) -> impl IntoView {
+    let i18n = use_i18n();
+    let TournamentChannel {
+        nanoid,
+        name,
+        is_participant,
+        muted,
+        ..
+    } = tournament;
+    let nanoid_for_selection = nanoid.clone();
+    let name_for_selection = name.clone();
+    let nanoid_for_match = nanoid.clone();
+    let nanoid_for_current_mute = nanoid.clone();
+    let tournament_id = TournamentId(nanoid.clone());
+    let is_selected = move || {
+        selected.get().as_ref().is_some_and(
+            |s| matches!(s, SelectedChannel::Tournament(channel_nanoid, _, _, _) if *channel_nanoid == nanoid_for_match),
+        )
+    };
+    let unread = Signal::derive(move || chat.unread_count_for_tournament(&tournament_id));
+    view! {
+        <button
+            type="button"
+            class=move || channel_button_class(is_selected())
+            on:click=move |_| {
+                let muted_for_selection = selected
+                    .with_untracked(|current| {
+                        match current {
+                            Some(
+                                SelectedChannel::Tournament(current_nanoid, _, _, current_muted),
+                            ) if *current_nanoid == nanoid_for_current_mute => *current_muted,
+                            _ => muted,
+                        }
+                    });
+                selected
+                    .set(
+                        Some(
+                            SelectedChannel::Tournament(
+                                nanoid_for_selection.clone(),
+                                name_for_selection.clone(),
+                                is_participant,
+                                muted_for_selection,
+                            ),
+                        ),
+                    );
+            }
+        >
+            <span class="flex gap-1 items-center truncate">
+                {name}
+                {muted
+                    .then(|| {
+                        view! {
+                            <span
+                                class="text-gray-400 uppercase dark:text-gray-500 shrink-0 text-[0.65rem]"
+                                title=move || t_string!(i18n, messages.sections.muted)
+                            >
+                                {t!(i18n, messages.sections.muted)}
+                            </span>
+                        }
+                    })}
+            </span>
+            <ChannelUnreadBadge unread=unread />
+        </button>
+    }
+}
+
+#[component]
+fn GameChannelsSection(
+    games: Vec<GameChannel>,
+    selected: RwSignal<Option<SelectedChannel>>,
+    chat: Chat,
+) -> impl IntoView {
+    let i18n = use_i18n();
+    let open = RwSignal::new(true);
+    let games = std::sync::Arc::new(games);
+    let is_empty = games.is_empty();
+    view! {
+        <section class="flex flex-col mb-2 min-h-0">
+            <SectionHeaderButton
+                title=Signal::derive(move || t_string!(i18n, messages.sections.games)).into()
+                open=open
+            />
+            <Show when=move || open.get()>
+                <div class=SECTION_LIST_MAX_H>
+                    {is_empty
+                        .then(|| {
+                            view! {
+                                <p class=EMPTY_HINT_CLASS>
+                                    {t!(i18n, messages.sections.no_game_chats)}
+                                </p>
+                            }
+                        })}
+                    <For
+                        each={
+                            let games = games.clone();
+                            move || (*games).clone()
+                        }
+                        key=|game| format!("{}::{}", game.channel_type, game.channel_id)
+                        children=move |game| {
+                            view! { <GameChannelItem game=game selected=selected chat=chat /> }
+                        }
+                    />
+                </div>
+            </Show>
+        </section>
+    }
+}
+
+#[component]
+fn GameChannelItem(
+    game: GameChannel,
+    selected: RwSignal<Option<SelectedChannel>>,
+    chat: Chat,
+) -> impl IntoView {
+    let GameChannel {
+        channel_type,
+        channel_id,
+        label,
+        white_id,
+        black_id,
+        finished,
+        ..
+    } = game;
+    let display_label = label
+        .rsplit_once(" (")
+        .map(|(base, _)| base.to_string())
+        .unwrap_or_else(|| label.clone());
+    let display_label_with_nanoid = format!("{} ({})", display_label, channel_id);
+    let channel_id_for_match = channel_id.clone();
+    let channel_type_for_selection = channel_type.clone();
+    let channel_id_for_selection = channel_id.clone();
+    let label_for_selection = label.clone();
+    let game_id = GameId(channel_id.clone());
+    let is_selected = move || {
+        selected.get().as_ref().is_some_and(
+            |s| matches!(s, SelectedChannel::Game(_, cid, _, _, _, _) if *cid == channel_id_for_match),
+        )
+    };
+    let unread = Signal::derive(move || chat.unread_count_for_game(&game_id));
+    view! {
+        <button
+            type="button"
+            class=move || channel_button_class(is_selected())
+            on:click=move |_| {
+                selected
+                    .set(
+                        Some(
+                            SelectedChannel::Game(
+                                channel_type_for_selection.clone(),
+                                channel_id_for_selection.clone(),
+                                label_for_selection.clone(),
+                                white_id,
+                                black_id,
+                                finished,
+                            ),
+                        ),
+                    );
+            }
+        >
+            <span class="truncate" title=display_label_with_nanoid.clone()>
+                {display_label_with_nanoid.clone()}
+            </span>
+            <ChannelUnreadBadge unread=unread />
+        </button>
+    }
+}
+
+#[component]
+fn GlobalChannelSection(selected: RwSignal<Option<SelectedChannel>>) -> impl IntoView {
+    let open = RwSignal::new(true);
+    let is_selected = move || {
+        selected
+            .get()
+            .as_ref()
+            .is_some_and(|s| matches!(s, SelectedChannel::Global))
+    };
+    view! {
+        <section class="flex flex-col mb-2 min-h-0">
+            <SectionHeaderButton
+                title=Signal::derive(move || ANNOUNCEMENTS_LABEL.to_string())
+                open=open
+            />
+            <Show when=move || open.get()>
+                <div class=SECTION_LIST_MAX_H>
+                    <button
+                        type="button"
+                        class=move || channel_button_class(is_selected())
+                        on:click=move |_| selected.set(Some(SelectedChannel::Global))
+                    >
+                        {ANNOUNCEMENTS_LABEL}
+                    </button>
+                </div>
+            </Show>
+        </section>
+    }
+}
+
+#[component]
+fn ChannelUnreadBadge(unread: Signal<i64>) -> impl IntoView {
+    view! {
+        <Show when=move || unread.get() != 0>
+            <span class="flex justify-center items-center px-1.5 h-5 text-xs font-medium leading-none text-white rounded-full dark:bg-red-500 shrink-0 min-w-5 bg-ladybug-red">
+                {move || {
+                    let count = unread.get();
+                    if count > 99 { "99+".to_string() } else { count.to_string() }
+                }}
+            </span>
+        </Show>
     }
 }

@@ -63,6 +63,25 @@ pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn can_message_user(other_user_id: Uuid) -> Result<bool, ServerFnError> {
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, helpers::is_blocked};
+
+    let user_id = uuid().await?;
+    if user_id == other_user_id {
+        return Ok(false);
+    }
+
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool).await?;
+
+    is_blocked(&mut conn, other_user_id, user_id)
+        .await
+        .map(|blocked| !blocked)
+        .map_err(ServerFnError::new)
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn search_users(pattern: String) -> Result<Vec<UserResponse>, ServerFnError> {
     use crate::functions::db::pool;
     use db_lib::get_conn;
