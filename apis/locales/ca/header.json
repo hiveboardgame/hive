@@ -22,10 +22,11 @@
     "login": "Iniciar sessió",
     "support": "Suport",
     "user_menu": {
+        "profile": "Perfil",
+        "messages": "Missatges",
         "edit_account": "Editar el compte",
         "logout": "Sortir",
         "login": "Iniciar sessió",
-        "profile": "Perfil",
         "config": "Configuració"
     }
 }

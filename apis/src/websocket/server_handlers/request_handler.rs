@@ -16,8 +16,13 @@ use crate::{
         WebsocketData,
     },
 };
-use db_lib::DbPool;
-use shared_types::{ChatDestination, SimpleUser};
+use db_lib::{
+    get_conn,
+    helpers::is_blocked,
+    models::{Game, Tournament},
+    DbPool,
+};
+use shared_types::{ChatDestination, GameId, SimpleUser};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -25,6 +30,8 @@ use uuid::Uuid;
 pub enum RequestHandlerError {
     InternalError(#[from] anyhow::Error),
     AuthError(#[from] AuthError),
+    /// Operation not allowed (e.g. recipient has blocked the sender for DMs). Use 403, not 401.
+    Forbidden(String),
 }
 
 impl std::fmt::Display for RequestHandlerError {
@@ -32,6 +39,7 @@ impl std::fmt::Display for RequestHandlerError {
         match self {
             RequestHandlerError::InternalError(e) => write!(f, "{e}"),
             RequestHandlerError::AuthError(e) => write!(f, "{e}"),
+            RequestHandlerError::Forbidden(msg) => write!(f, "{msg}"),
         }
     }
 }
@@ -91,7 +99,83 @@ impl RequestHandler {
                 if message_container.destination == ChatDestination::Global {
                     self.ensure_admin()?;
                 }
-                ChatHandler::new(message_container, self.data.clone()).handle()
+                if let ChatDestination::TournamentLobby(tournament_id) = &message_container.destination
+                {
+                    let pool = self.pool.clone();
+                    let user_id = self.user_id;
+                    let nanoid = tournament_id.0.clone();
+                    let check = async move {
+                        let mut conn = get_conn(&pool).await.map_err(|_| AuthError::Unauthorized)?;
+                        let tournament = Tournament::from_nanoid(&nanoid, &mut conn)
+                            .await
+                            .map_err(|_| AuthError::Unauthorized)?;
+                        let is_player = tournament
+                            .players(&mut conn)
+                            .await
+                            .map(|p| p.iter().any(|u| u.id == user_id))
+                            .unwrap_or(false);
+                        let is_organizer = tournament
+                            .organizers(&mut conn)
+                            .await
+                            .map(|o| o.iter().any(|u| u.id == user_id))
+                            .unwrap_or(false);
+                        if !is_player && !is_organizer {
+                            Err(AuthError::Unauthorized)
+                        } else {
+                            Ok(())
+                        }
+                    };
+                    check.await?;
+                }
+                if let ChatDestination::GamePlayers(game_id, ..) = &message_container.destination {
+                    let pool = self.pool.clone();
+                    let user_id = self.user_id;
+                    let nanoid = game_id.0.clone();
+                    let check = async move {
+                        let mut conn = get_conn(&pool).await.map_err(|_| AuthError::Unauthorized)?;
+                        let game = Game::find_by_game_id(&GameId(nanoid), &mut conn)
+                        .await
+                        .map_err(|_| AuthError::Unauthorized)?;
+                        if user_id != game.white_id && user_id != game.black_id {
+                            Err(AuthError::Unauthorized)
+                        } else {
+                            Ok(())
+                        }
+                    };
+                    check.await?;
+                }
+                if let ChatDestination::GameSpectators(game_id, ..) = &message_container.destination {
+                    let pool = self.pool.clone();
+                    let user_id = self.user_id;
+                    let nanoid = game_id.0.clone();
+                    let check = async move {
+                        let mut conn = get_conn(&pool).await.map_err(|_| AuthError::Unauthorized)?;
+                        let game = Game::find_by_game_id(&GameId(nanoid), &mut conn)
+                            .await
+                            .map_err(|_| AuthError::Unauthorized)?;
+                        if user_id == game.white_id || user_id == game.black_id {
+                            Err(AuthError::Unauthorized)
+                        } else {
+                            Ok(())
+                        }
+                    };
+                    check.await?;
+                }
+                // Recipient has blocked sender: do not deliver or persist (DM only). Return 403 so client shows message, not redirect to login.
+                if let ChatDestination::User((recipient_id, _)) = &message_container.destination {
+                    let blocked = {
+                        let mut conn = get_conn(&self.pool).await.map_err(|_| AuthError::Unauthorized)?;
+                        is_blocked(&mut conn, *recipient_id, self.user_id)
+                            .await
+                            .map_err(|_| AuthError::Unauthorized)?
+                    };
+                    if blocked {
+                        return Err(RequestHandlerError::Forbidden(
+                            "You cannot send messages to this user".to_string(),
+                        ));
+                    }
+                }
+                ChatHandler::new(message_container, self.data.clone(), self.pool.clone()).handle()
             }
             ClientRequest::Tournament(tournament_action) => {
                 TournamentHandler::new(

@@ -15,6 +15,8 @@ use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 use std::{cmp::Ordering, collections::HashMap};
 use tree_ds::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::{HtmlInputElement, HtmlTextAreaElement};
 
 const BTN_CLASS: &str = "flex z-20 justify-center items-center m-1 w-44 h-10 text-white rounded-sm transition-transform duration-300 aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
 
@@ -211,6 +213,14 @@ pub fn History(#[prop(optional)] mobile: bool) -> impl IntoView {
     let next_button = NodeRef::<html::Button>::new();
     Effect::new(move |_| {
         _ = use_event_listener(document().body(), keydown, move |evt| {
+            // Don't capture arrow keys when focus is in an input or textarea (e.g. chat box)
+            if let Some(target) = evt.target() {
+                if target.dyn_ref::<HtmlInputElement>().is_some()
+                    || target.dyn_ref::<HtmlTextAreaElement>().is_some()
+                {
+                    return;
+                }
+            }
             if evt.key() == "ArrowLeft" {
                 evt.prevent_default();
                 if let Some(prev) = prev_button.get_untracked() {

@@ -1,4 +1,5 @@
 pub mod active;
+pub mod block_button;
 pub mod create_challenge_button;
 pub mod date_time_picker;
 pub mod direct_challenge_button;
@@ -28,4 +29,5 @@ pub mod status_indicator;
 pub mod target;
 pub mod title;
 pub mod toggle_controls;
+pub mod unblock_button;
 pub mod uninvite_button;

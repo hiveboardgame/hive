@@ -59,17 +59,8 @@ impl JoinHandler {
                 username: self.username.to_owned(),
             }))),
         });
-        let chat = if self.user_id == self.game.white_id || self.user_id == self.game.black_id {
-            self.data.chat_storage.games_private.read().unwrap()
-        } else {
-            self.data.chat_storage.games_public.read().unwrap()
-        };
-        if let Some(messages_to_push) = chat.get(&GameId(self.game.nanoid.clone())) {
-            messages.push(InternalServerMessage {
-                destination: MessageDestination::User(self.user_id),
-                message: ServerMessage::Chat(messages_to_push.clone()),
-            });
-        };
+
+        // Chat history is fetched by the client via REST when viewing the game chat.
         Ok(messages)
     }
 }

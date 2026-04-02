@@ -10,6 +10,7 @@ opt-level = 'z'
 
 [workspace.dependencies]
 actix = "0.13.5"
+actix-http = "3.11"
 actix-files = { version = "0.6" }
 actix-identity = { version = "0.9" }
 actix-rt = "2.10.0"
@@ -31,6 +32,7 @@ diesel = { version = "2.3", features = [
     "chrono",
     "uuid",
     "serde_json",
+    "64-column-tables",
 ] }
 diesel-async = { version = "0.7", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.3", features = ["postgres"] }
@@ -45,6 +47,7 @@ icondata_fa = "0.1"
 icondata_io = "0.1"
 icondata_bs = "0.1"
 icondata_ch = "0.1"
+icondata_hi = "0.1"
 icondata_lu = "0.1"
 icondata_ri = "0.1"
 icondata_ti = "0.1"
@@ -80,6 +83,7 @@ skillratings = "0.28.2"
 thiserror = "2.0.18"
 tokio = { version = "1.49", features = ["full"] }
 tree-ds = { version = "0.2.0", features = ["serde", "compact_serde", "async"] }
+urlencoding = "2.1"
 uuid = { version = "1.17", features = ["v4", "js", "serde"] }
 walkdir = "2.5"
 wasm-bindgen = "0.2.106"

@@ -31,6 +31,7 @@ use actix::{
 use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{
     get_conn,
+    helpers::get_user_ids_who_muted_tournament,
     models::{Challenge, Game, Schedule, Tournament, TournamentInvitation, User},
     DbPool,
 };
@@ -475,16 +476,43 @@ impl Handler<ClientActorMessage> for WsServer {
                         .or_default()
                         .insert(from);
                 }
-                // Send the message to everyone except white_id and black_id
-                if let Some(users) = self.games_users.get(&game_id) {
-                    users.iter().for_each(|user| {
-                        if *user != white_id && *user != black_id {
-                            self.send_message(&cam.serialized, user);
+                // When game is finished, send to everyone (including players). When ongoing, spectators only.
+                let pool = self.pool.clone();
+                let sessions = self.sessions.clone();
+                let serialized = cam.serialized.clone();
+                let game_id_clone = game_id.clone();
+                let users_set: HashSet<Uuid> = self
+                    .games_users
+                    .get(&game_id)
+                    .cloned()
+                    .unwrap_or_default();
+                let future = async move {
+                    let send_to_all = if let Ok(mut conn) = get_conn(&pool).await {
+                        Game::find_by_game_id(&game_id_clone, &mut conn)
+                            .await
+                            .map(|g| g.finished)
+                            .unwrap_or(false)
+                    } else {
+                        false
+                    };
+                    let recipient_ids: Vec<Uuid> = if send_to_all {
+                        users_set.into_iter().collect()
+                    } else {
+                        users_set
+                            .into_iter()
+                            .filter(|u| *u != white_id && *u != black_id)
+                            .collect()
+                    };
+                    for user_id in recipient_ids {
+                        if let Some(sockets) = sessions.get(&user_id) {
+                            for socket in sockets {
+                                socket.do_send(WsMessage(serialized.clone()));
+                            }
                         }
-                    });
-                } else {
-                    warn!("Game '{game_id}' not found in games_users when sending game spectators message");
-                }
+                    }
+                };
+                let actor_future = future.into_actor(self);
+                ctx.wait(actor_future);
             }
             MessageDestination::User(user_id) => {
                 self.send_message(&cam.serialized, &user_id);
@@ -497,6 +525,9 @@ impl Handler<ClientActorMessage> for WsServer {
                         if let Ok(tournament) =
                             Tournament::from_nanoid(&tournament.to_string(), &mut conn).await
                         {
+                            let muted_ids = get_user_ids_who_muted_tournament(&mut conn, tournament.id)
+                                .await
+                                .unwrap_or_default();
                             let mut user_ids = HashSet::new();
                             if let Ok(players) = tournament.players(&mut conn).await {
                                 for player in players {
@@ -509,6 +540,9 @@ impl Handler<ClientActorMessage> for WsServer {
                                 }
                             }
                             for user_id in user_ids.clone() {
+                                if muted_ids.contains(&user_id) {
+                                    continue;
+                                }
                                 if let Some(sockets) = sessions.get(&user_id) {
                                     for socket in sockets {
                                         socket.do_send(WsMessage(cam.serialized.clone()));

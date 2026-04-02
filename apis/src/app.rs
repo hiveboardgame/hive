@@ -11,6 +11,7 @@ use crate::{
         faq::Faq,
         home::Home,
         login::Login,
+        messages::Messages,
         play::Play,
         profile_view::ProfileView,
         puzzles::Puzzles,
@@ -27,7 +28,7 @@ use crate::{
     },
     providers::{
         challenges::provide_challenges,
-        chat::provide_chat,
+        chat::{provide_chat, Chat},
         games::provide_games,
         online_users::provide_users,
         provide_alerts,
@@ -91,7 +92,22 @@ pub fn App() -> impl IntoView {
     //expects auth, api_requests, gameStateSignal
     provide_chat();
     let auth = expect_context::<AuthContext>();
-    let is_logged_in = move || auth.user.with(|a| a.is_some()).into();
+    let chat = expect_context::<Chat>();
+    // Refresh server-backed unread counts when user is logged in (for badges)
+    Effect::new(move |_| {
+        if auth.user.with(|u| u.is_some()) {
+            chat.refresh_unread_counts();
+        }
+    });
+    // Allow access while auth is still loading (e.g. on refresh) so we don't redirect to login before get_account() resolves.
+    // ProtectedRoute condition: Option<bool> — None = loading (don't redirect), Some(true) = allow, Some(false) = redirect.
+    let is_logged_in = Signal::derive(move || {
+        if auth.action.pending().get() {
+            None
+        } else {
+            Some(auth.user.with(|a| a.is_some()))
+        }
+    });
     let is_admin = move || Some(auth.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin)));
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
@@ -143,6 +159,12 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/register") view=|| view! { <Register /> } />
                         <Route path=path!("/top_players") view=|| view! { <TopPlayers /> } />
                         <Route path=path!("/login") view=|| view! { <Login /> } />
+                        <ProtectedRoute
+                            condition=is_logged_in
+                            path=path!("/messages")
+                            redirect_path=|| "/login"
+                            view=|| view! { <Messages /> }
+                        />
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/account")

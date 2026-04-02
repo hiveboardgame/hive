@@ -23,6 +23,7 @@
     "support": "Támogatás",
     "user_menu": {
         "profile": "Profil",
+        "messages": "Üzenetek",
         "edit_account": "Fiók szerkesztése",
         "config": "Konfiguráció",
         "logout": "Kijelentkezés",

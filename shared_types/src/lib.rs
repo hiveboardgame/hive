@@ -23,7 +23,13 @@ mod tournament_sort_order;
 mod tournament_status;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
 pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
-pub use chat_message::{ChatDestination, ChatMessage, ChatMessageContainer, SimpleDestination};
+pub use chat_message::{
+    canonical_dm_channel_id, chat_channel, ChatDestination, ChatMessage, ChatMessageContainer,
+    SimpleDestination,
+    // Channel type constants for persistent chat
+    CHANNEL_TYPE_DIRECT, CHANNEL_TYPE_GAME_PLAYERS, CHANNEL_TYPE_GAME_SPECTATORS,
+    CHANNEL_TYPE_GLOBAL, CHANNEL_TYPE_TOURNAMENT_LOBBY,
+};
 pub use conclusion::Conclusion;
 pub use game_speed::GameSpeed;
 pub use game_start::GameStart;

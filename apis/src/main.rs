@@ -24,6 +24,10 @@ async fn main() -> std::io::Result<()> {
     use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::{api_control, api_play}, challenges::{api_accept_challenge, api_create_challenge, api_get_challenges}};
     use api::v1::auth::get_token_handler::get_token;
     use api::v1::auth::get_identity_handler::get_identity;
+    use api::v1::chat::send::send_chat;
+    use api::v1::chat::history::get_channel_history;
+    use api::v1::users::blocks::{add_block, list_blocks, remove_block};
+    use api::v1::users::tournament_chat_mutes::{add_mute, remove_mute};
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
     use actix::Actor;
@@ -96,6 +100,13 @@ async fn main() -> std::io::Result<()> {
             .service(functions::oauth::callback)
             .service(get_token)
             .service(get_identity)
+            .service(send_chat)
+            .service(get_channel_history)
+            .service(add_block)
+            .service(remove_block)
+            .service(list_blocks)
+            .service(add_mute)
+            .service(remove_mute)
             .service(api_play)
             .service(api_control)
             .service(api_get_game)
@@ -166,6 +177,109 @@ async fn favicon(
     Ok(actix_files::NamedFile::open(format!(
         "{site_root}/favicon.ico"
     ))?)
+}
+
+#[cfg(test)]
+mod tests {
+    use actix_http::Request;
+    use actix_web::{dev::ServiceResponse, test, web::Data, App};
+    use crate::api::v1::chat::history::get_channel_history;
+    use crate::api::v1::chat::send::send_chat;
+    use crate::api::v1::users::blocks::{add_block, list_blocks, remove_block};
+    use crate::api::v1::users::tournament_chat_mutes::{add_mute, remove_mute};
+
+    /// Build minimal app with chat routes. Requires DATABASE_URL; test is skipped if unset.
+    async fn init_chat_app() -> Option<(impl actix_web::dev::Service<
+        Request,
+        Response = ServiceResponse,
+        Error = actix_web::Error,
+    >,)> {
+        let database_url = std::env::var("DATABASE_URL").ok()?;
+        let pool = db_lib::get_pool(&database_url).await.ok()?;
+        let app = test::init_service(
+            App::new()
+                .app_data(Data::new(pool))
+                .service(send_chat)
+                .service(get_channel_history)
+                .service(add_block)
+                .service(remove_block)
+                .service(list_blocks)
+                .service(add_mute)
+                .service(remove_mute),
+        )
+        .await;
+        Some((app,))
+    }
+
+    #[actix_web::test]
+    async fn test_send_chat_returns_401_without_auth() {
+        let Some((app,)) = init_chat_app().await else {
+            return; // skip when DATABASE_URL not set
+        };
+        let req = test::TestRequest::post()
+            .uri("/api/v1/chat/send")
+            .set_payload(r#"{"channel_type":"global","channel_id":"global","body":"hi"}"#)
+            .insert_header((actix_web::http::header::CONTENT_TYPE, "application/json"))
+            .to_request();
+        let resp: ServiceResponse = test::call_service(&app, req).await;
+        assert!(resp.status().is_client_error(), "expected 4xx");
+        assert_eq!(resp.status().as_u16(), 401, "expected 401 Unauthorized");
+    }
+
+    #[actix_web::test]
+    async fn test_get_channel_returns_401_without_auth() {
+        let Some((app,)) = init_chat_app().await else {
+            return; // skip when DATABASE_URL not set
+        };
+        let req = test::TestRequest::get()
+            .uri("/api/v1/chat/channel?channel_type=global&channel_id=global")
+            .to_request();
+        let resp: ServiceResponse = test::call_service(&app, req).await;
+        assert!(resp.status().is_client_error(), "expected 4xx");
+        assert_eq!(resp.status().as_u16(), 401, "expected 401 Unauthorized");
+    }
+
+    #[actix_web::test]
+    async fn test_blocks_api_returns_401_without_auth() {
+        let Some((app,)) = init_chat_app().await else {
+            return;
+        };
+        let req = test::TestRequest::post()
+            .uri("/api/v1/users/me/blocks")
+            .set_json(&serde_json::json!({ "user_id": "00000000-0000-0000-0000-000000000001" }))
+            .to_request();
+        let resp: ServiceResponse = test::call_service(&app, req).await;
+        assert_eq!(resp.status().as_u16(), 401, "POST /users/me/blocks must require auth");
+
+        let req = test::TestRequest::delete()
+            .uri("/api/v1/users/me/blocks/00000000-0000-0000-0000-000000000001")
+            .to_request();
+        let resp: ServiceResponse = test::call_service(&app, req).await;
+        assert_eq!(resp.status().as_u16(), 401, "DELETE /users/me/blocks must require auth");
+
+        let req = test::TestRequest::get().uri("/api/v1/users/me/blocks").to_request();
+        let resp: ServiceResponse = test::call_service(&app, req).await;
+        assert_eq!(resp.status().as_u16(), 401, "GET /users/me/blocks must require auth");
+    }
+
+    #[actix_web::test]
+    async fn test_tournament_chat_mutes_api_returns_401_without_auth() {
+        let Some((app,)) = init_chat_app().await else {
+            return;
+        };
+        let req = test::TestRequest::post()
+            .uri("/api/v1/users/me/tournament-chat-mutes")
+            .set_json(&serde_json::json!({ "tournament_id": "some-nanoid" }))
+            .to_request();
+        let resp: ServiceResponse = test::call_service(&app, req).await;
+        assert_eq!(resp.status().as_u16(), 401, "POST tournament-chat-mutes must require auth");
+
+        let req = test::TestRequest::delete()
+            .uri("/api/v1/users/me/tournament-chat-mutes/some-nanoid")
+            .to_request();
+        let resp: ServiceResponse = test::call_service(&app, req).await;
+        assert_eq!(resp.status().as_u16(), 401, "DELETE tournament-chat-mutes must require auth");
+    }
 }
 
 }}

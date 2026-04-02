@@ -41,11 +41,15 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
         TabView::History => "History".to_string(),
         TabView::Chat => "Chat".to_string(),
     };
+    let unread = move || {
+        let _ = chat.unread_counts.get();
+        chat.unread_count_for_game(&game_id())
+    };
     let mut game_state = expect_context::<GameStateSignal>();
     view! {
         <div
             on:click=move |_| {
-                if tab() == TabView::Chat {
+                if name == TabView::Chat {
                     chat.seen_messages(game_id());
                     let is_game_view = game_state.signal.with_untracked(|gs| gs.view == View::Game);
                     if is_game_view {
@@ -68,8 +72,6 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
                     "flex place-content-center transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal {}",
                     if tab() == name {
                         "dark:bg-button-twilight bg-slate-400"
-                    } else if name == TabView::Chat && chat.has_messages(game_id()) {
-                        "bg-ladybug-red"
                     } else {
                         "bg-inherit"
                     },
@@ -77,6 +79,11 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
             }
         >
             {string.clone()}
+            {move || (name == TabView::Chat && unread() > 0).then(|| view! {
+                <span class="h-5 min-w-5 flex items-center justify-center px-1 text-xs font-bold leading-none text-white bg-ladybug-red dark:bg-red-500 rounded-full">
+                    {if unread() > 99 { "99+".to_string() } else { unread().to_string() }}
+                </span>
+            })}
         </div>
     }
 }
@@ -97,6 +104,12 @@ pub fn SideboardTabs(
             Some(user.id) == black_id || Some(user.id) == white_id
         })
     });
+    let game_finished = create_read_slice(game_state.signal, |gs| {
+        gs.game_response
+            .as_ref()
+            .map_or(false, |gr| gr.finished)
+    });
+    let game_show_players = RwSignal::new(true);
     view! {
         <div class=format!(
             "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",
@@ -118,10 +131,70 @@ pub fn SideboardTabs(
             <TabsContent
                 tab
                 value=TabView::Chat
-                class="flex flex-col flex-grow h-full max-h-full justify-beetween"
+                class="flex flex-col flex-grow min-h-0 h-full overflow-hidden"
             >
                 <HistoryControls />
-                <ChatWindow destination=SimpleDestination::Game />
+                {move || {
+                    if show_buttons() {
+                        let finished = game_finished();
+                        view! {
+                            <div class="shrink-0 flex border-b border-black/30 dark:border-white/30 p-1 gap-0.5 bg-inherit">
+                                <button
+                                    type="button"
+                                    class=move || format!(
+                                        "flex-1 px-2 py-1 text-xs font-medium rounded border border-transparent transition-colors {}",
+                                        if game_show_players.get() {
+                                            "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
+                                        } else {
+                                            "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
+                                        }
+                                    )
+                                    on:click=move |_| game_show_players.set(true)
+                                >
+                                    "Players"
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled=move || !game_finished()
+                                    class=move || format!(
+                                        "flex-1 px-2 py-1 text-xs font-medium rounded border border-transparent transition-colors {}",
+                                        if !game_show_players.get() {
+                                            "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
+                                        } else if finished {
+                                            "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
+                                        } else {
+                                            "bg-transparent text-gray-500 dark:text-gray-500 cursor-not-allowed"
+                                        }
+                                    )
+                                    on:click=move |_| game_show_players.set(false)
+                                >
+                                    "Spectators"
+                                </button>
+                            </div>
+                        }
+                            .into_any()
+                    } else {
+                        view! {}.into_any()
+                    }
+                }}
+                <div class="flex-1 min-h-0 overflow-hidden flex flex-col">
+                    {move || {
+                        if show_buttons() {
+                            view! {
+                                <ChatWindow
+                                    destination=SimpleDestination::Game
+                                    game_channel_override=Signal::derive(move || game_show_players.get())
+                                />
+                            }
+                                .into_any()
+                        } else {
+                            view! {
+                                <ChatWindow destination=SimpleDestination::Game />
+                            }
+                                .into_any()
+                        }
+                    }}
+                </div>
             </TabsContent>
         </div>
     }

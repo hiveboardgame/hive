@@ -3,10 +3,29 @@ use crate::{
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
-use db_lib::{get_conn, models::Tournament, DbPool};
+use db_lib::{db_error::DbError, get_conn, models::Tournament, DbPool};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use shared_types::TournamentId;
 use uuid::Uuid;
+
+async fn decline_invitation_tx(
+    pool: &DbPool,
+    tournament_id: TournamentId,
+    user_id: Uuid,
+) -> Result<db_lib::models::Tournament, DbError> {
+    let mut conn = get_conn(pool).await?;
+    conn.transaction::<_, DbError, _>(move |tc| {
+        let tournament_id = tournament_id;
+        let user_id = user_id;
+        async move {
+            let tournament =
+                Tournament::find_by_tournament_id(&tournament_id, tc).await?;
+            tournament.decline_invitation(&user_id, tc).await
+        }
+        .scope_boxed()
+    })
+    .await
+}
 
 pub struct InvitationDecline {
     tournament_id: TournamentId,
@@ -24,17 +43,13 @@ impl InvitationDecline {
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        let mut conn = get_conn(&self.pool).await?;
-        let tournament = conn
-            .transaction::<_, anyhow::Error, _>(move |tc| {
-                async move {
-                    let tournament =
-                        Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
-                    Ok(tournament.decline_invitation(&self.user_id, tc).await?)
-                }
-                .scope_boxed()
-            })
-            .await?;
+        let tournament = decline_invitation_tx(
+            &self.pool,
+            self.tournament_id.clone(),
+            self.user_id,
+        )
+        .await
+        .map_err(anyhow::Error::from)?;
 
         let response = TournamentId(tournament.nanoid.clone());
         Ok(vec![

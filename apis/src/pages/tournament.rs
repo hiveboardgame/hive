@@ -141,6 +141,8 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             }
         })
     });
+    let tournament_chat_read_only =
+        Signal::derive(move || !(user_is_organizer_or_admin() || user_joined()));
     let send_action = move |action: TournamentAction| {
         let api = api.get();
         api.tournament(action);
@@ -541,12 +543,25 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                 </details>
             </Show>
         </div>
-        <Show when=move || user_is_organizer_or_admin() || user_joined()>
-            <div class="p-3 m-2 w-full max-w-full h-60 whitespace-normal break-words sm:w-2/3 bg-even-light dark:bg-even-dark">
-                <ChatWindow destination=shared_types::SimpleDestination::Tournament(
-                    tournament_id.get_value(),
-                ) />
+        <div class="m-2 w-full max-w-full sm:w-2/3 flex flex-col h-[20rem] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-inner overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 shrink-0">
+                <h3 class="text-base font-semibold text-gray-800 dark:text-gray-100">"Tournament chat"</h3>
+                {move || {
+                    if tournament_chat_read_only.get() {
+                        view! {
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">"Only participants can send messages."</p>
+                        }.into_any()
+                    } else {
+                        view! {}.into_any()
+                    }
+                }}
             </div>
-        </Show>
+            <div class="flex-1 min-h-0 overflow-hidden flex flex-col">
+                <ChatWindow
+                    destination=shared_types::SimpleDestination::Tournament(tournament_id.get_value())
+                    input_disabled=tournament_chat_read_only
+                />
+            </div>
+        </div>
     }
 }

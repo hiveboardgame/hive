@@ -1,17 +1,21 @@
 use crate::{
     common::UserAction,
     components::atoms::{
+        block_button::BlockButton,
         direct_challenge_button::DirectChallengeButton,
         invite_button::InviteButton,
         kick_button::KickButton,
         profile_link::ProfileLink,
         rating::Rating,
         status_indicator::StatusIndicator,
+        unblock_button::UnblockButton,
         uninvite_button::UninviteButton,
     },
+    providers::AuthContext,
     responses::UserResponse,
 };
-use leptos::{either::EitherOf5, prelude::*};
+use leptos::prelude::*;
+use leptos_icons::Icon;
 use shared_types::GameSpeed;
 
 #[component]
@@ -36,30 +40,42 @@ pub fn UserRow(
     };
 
     let display_actions = {
-        let user_id = user_id.get_value();
+        let user_id_val = user_id.get_value();
         actions
-            .into_iter()
+            .iter()
             .filter_map(|action| match action {
-                UserAction::Challenge => Some(if user.bot {
-                    //TODO: Allow users to direct challenge the bot once it can manage it's own time
-                    EitherOf5::A(view! { <DirectChallengeButton user_id opponent=username.get_value() disabled=true /> })
-                } else {
-                    EitherOf5::B(
-                        view! { <DirectChallengeButton user_id opponent=username.get_value() /> },
-                    )
-                }),
-                UserAction::Invite(tournament_id) => Some(EitherOf5::C(
-                    view! { <InviteButton user_id tournament_id /> },
-                )),
-                UserAction::Uninvite(tournament_id) => Some(EitherOf5::D(
-                    view! { <UninviteButton user_id tournament_id /> },
-                )),
-                UserAction::Kick(tournament) => Some(EitherOf5::E(
-                    view! { <KickButton user_id tournament=*tournament /> },
-                )),
+                UserAction::Challenge => Some(view! {
+                    <DirectChallengeButton
+                        user_id=user_id_val
+                        opponent=username.get_value()
+                        disabled=user.bot
+                    />
+                }.into_any()),
+                UserAction::Invite(tournament_id) => Some(view! {
+                    <InviteButton user_id=user_id_val tournament_id=tournament_id.clone() />
+                }.into_any()),
+                UserAction::Uninvite(tournament_id) => Some(view! {
+                    <UninviteButton user_id=user_id_val tournament_id=tournament_id.clone() />
+                }.into_any()),
+                UserAction::Kick(tournament) => Some(view! {
+                    <KickButton user_id=user_id_val tournament=(**tournament).clone() />
+                }.into_any()),
                 _ => None,
             })
             .collect_view()
+    };
+
+    let (show_block, show_unblock) = {
+        let has_block = actions.iter().any(|a| matches!(a, UserAction::Block));
+        let has_unblock = actions.iter().any(|a| matches!(a, UserAction::Unblock));
+        (has_block, has_unblock)
+    };
+    let show_message = actions.iter().any(|a| matches!(a, UserAction::Message));
+    let user_id_for_buttons = user_id.get_value();
+    let auth = expect_context::<AuthContext>();
+    let message_href = move || {
+        let username_encoded = urlencoding::encode(&user.username).to_string();
+        format!("/messages?dm={}&username={}", user_id_for_buttons, username_encoded)
     };
 
     view! {
@@ -80,7 +96,24 @@ pub fn UserRow(
                 </Show>
 
             </div>
-            {display_actions}
+            <div class="flex items-center gap-1">
+                {display_actions}
+                <Show when=move || show_message && !user.bot && auth.user.get().as_ref().map_or(false, |me| me.user.uid != user_id_for_buttons)>
+                    <a
+                        href=message_href()
+                        class="no-link-style inline-flex items-center justify-center size-8 rounded-lg text-white bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 transition-transform duration-300 [&_svg]:size-5 [&_svg]:shrink-0"
+                        title="Message"
+                    >
+                        <Icon icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg attr:class="size-5" />
+                    </a>
+                </Show>
+                <Show when=move || show_block>
+                    <BlockButton blocked_user_id=user_id_for_buttons />
+                </Show>
+                <Show when=move || show_unblock>
+                    <UnblockButton blocked_user_id=user_id_for_buttons />
+                </Show>
+            </div>
         </div>
     }
 }

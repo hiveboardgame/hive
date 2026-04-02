@@ -8,8 +8,9 @@ use leptos::prelude::*;
 pub struct AuthContext {
     pub logout: ServerAction<Logout>,
     pub user: Signal<Option<AccountResponse>>,
+    /// Used to avoid redirecting to login while auth is still loading (e.g. on refresh).
+    pub action: Action<(), Result<AccountResponse, ServerFnError>>,
     ws_refresh: StoredValue<bool>,
-    action: Action<(), Result<AccountResponse, ServerFnError>>,
 }
 
 impl AuthContext {
@@ -32,8 +33,8 @@ pub fn provide_auth() {
     provide_context(AuthContext {
         user,
         logout,
-        action,
         ws_refresh,
+        action,
     });
 
     let ctx = use_context::<AuthContext>().unwrap();

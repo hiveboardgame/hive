@@ -9,6 +9,8 @@ use super::{
     user_status::handle::handle_user_status,
 };
 use crate::common::{ServerMessage::*, ServerResult};
+use crate::providers::{AlertType, AlertsContext};
+use leptos::prelude::{use_context, Update};
 use leptos::logging::log;
 use leptos_router::hooks::use_navigate;
 
@@ -32,8 +34,20 @@ pub fn handle_response(m: ServerResult) {
         },
         ServerResult::Err(e) => {
             if e.status_code == http::StatusCode::UNAUTHORIZED {
-                let navegate = use_navigate();
-                navegate("/login", Default::default());
+                let navigate = use_navigate();
+                navigate("/login", Default::default());
+            } else {
+                // 403 Forbidden (e.g. blocked from DM), 5xx, etc.: show message, do not redirect to login
+                let message = if e.reason.is_empty() {
+                    format!("{}", e.status_code)
+                } else {
+                    e.reason.clone()
+                };
+                if let Some(alerts) = use_context::<AlertsContext>() {
+                    alerts.last_alert.update(|v| {
+                        *v = Some(AlertType::Error(message));
+                    });
+                }
             }
             log!("Got error from server: {e}");
         }

@@ -9,6 +9,7 @@ pub mod donate;
 pub mod faq;
 pub mod home;
 pub mod login;
+pub mod messages;
 pub mod play;
 pub mod profile_view;
 pub mod puzzles;

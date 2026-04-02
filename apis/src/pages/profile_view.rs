@@ -1,19 +1,42 @@
 use crate::{
     components::{
-        atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator},
+        atoms::{
+            block_button::BlockButton,
+            profile_link::ProfileLink,
+            status_indicator::StatusIndicator,
+            unblock_button::UnblockButton,
+        },
         organisms::{games_filter::GamesFilter, stats::Stats},
     },
-    functions::users::get_profile,
+    functions::{blocks_mutes::get_blocked_user_ids, users::get_profile},
     i18n::*,
-    providers::{calculate_initial_batch_size, provide_games_search_context},
+    providers::{calculate_initial_batch_size, provide_games_search_context, AuthContext},
 };
 use leptos::{either::Either, html, prelude::*};
+use leptos_icons::*;
 use leptos_router::{
     hooks::{use_location, use_params},
     params::Params,
 };
 use leptos_use::use_element_bounding;
 use shared_types::GameProgress;
+use uuid::Uuid;
+
+#[component]
+fn ProfileBlockUnblock(profile_user_id: Uuid) -> impl IntoView {
+    let block_list = Resource::new(|| (), |_| async move { get_blocked_user_ids().await });
+    view! {
+        {move || {
+            let blocked = block_list.get().and_then(Result::ok).unwrap_or_default();
+            let is_blocked = blocked.contains(&profile_user_id);
+            if is_blocked {
+                view! { <UnblockButton blocked_user_id=profile_user_id /> }.into_any()
+            } else {
+                view! { <BlockButton blocked_user_id=profile_user_id /> }.into_any()
+            }
+        }}
+    }
+}
 
 pub fn tab_from_path(path: &str) -> GameProgress {
     if path.ends_with("/unstarted") {
@@ -107,18 +130,49 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         .map(|user| {
                             if let Ok(user) = user {
                                 let username = StoredValue::new(user.username.clone());
+                                let msg_uid = user.uid;
+                                let msg_username = user.username.clone();
                                 Either::Left(
                                     view! {
                                         <div class="flex-shrink-0">
                                             <div class="flex flex-row flex-wrap justify-center mx-1 w-full text-lg sm:text-xl">
-                                                <div class="flex items-center">
-                                                    <StatusIndicator username=username.get_value() />
+                                                <div class="flex items-center gap-2">
+                                                    <span class="shrink-0 [&_svg]:!size-5 [&_svg]:!min-w-5 [&_svg]:!min-h-5">
+                                                        <StatusIndicator username=username.get_value() />
+                                                    </span>
                                                     <ProfileLink
                                                         patreon=user.patreon
                                                         bot=user.bot
                                                         username=username.get_value()
                                                         extend_tw_classes="truncate max-w-[125px]"
                                                     />
+                                                    {move || {
+                                                        let auth = expect_context::<AuthContext>();
+                                                        let viewer_id = auth.user.get().as_ref().map(|a| a.user.uid);
+                                                        let is_other = viewer_id.map(|vid| vid != msg_uid).unwrap_or(false);
+                                                        if is_other {
+                                                            let username_encoded = urlencoding::encode(&msg_username).to_string();
+                                                            view! {
+                                                                <a
+                                                                    href=format!(
+                                                                        "/messages?dm={}&username={}",
+                                                                        msg_uid,
+                                                                        username_encoded
+                                                                    )
+                                                                    class="no-link-style inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg bg-pillbug-teal text-white hover:bg-pillbug-teal/90 dark:bg-pillbug-teal dark:text-white dark:hover:bg-pillbug-teal/90 transition-colors [&_svg]:text-inherit"
+                                                                >
+                                                                    <Icon
+                                                                        icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg
+                                                                        attr:class="size-5 shrink-0"
+                                                                    />
+                                                                    "Message"
+                                                                </a>
+                                                                <ProfileBlockUnblock profile_user_id=msg_uid />
+                                                            }.into_any()
+                                                        } else {
+                                                            view! {}.into_any()
+                                                        }
+                                                    }}
                                                 </div>
                                             </div>
 
