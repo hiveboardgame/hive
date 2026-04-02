@@ -33,7 +33,10 @@ impl Chats {
         channel_type: &str,
         channel_id: &str,
     ) -> Option<Vec<ChatMessageContainer>> {
-        let cache = self.recent_cache.read().unwrap();
+        let cache = self
+            .recent_cache
+            .read()
+            .unwrap_or_else(|error| error.into_inner());
         cache
             .get(&(channel_type.to_string(), channel_id.to_string()))
             .filter(|v| !v.is_empty())
@@ -53,14 +56,20 @@ impl Chats {
         } else {
             messages
         };
-        let mut cache = self.recent_cache.write().unwrap();
+        let mut cache = self
+            .recent_cache
+            .write()
+            .unwrap_or_else(|error| error.into_inner());
         cache.insert(key, trimmed);
     }
 
     /// Appends one message to the channel's recent cache, keeping at most CHAT_RECENT_CACHE_MAX.
     pub fn push_recent(&self, channel_type: &str, channel_id: &str, msg: ChatMessageContainer) {
         let key = (channel_type.to_string(), channel_id.to_string());
-        let mut cache = self.recent_cache.write().unwrap();
+        let mut cache = self
+            .recent_cache
+            .write()
+            .unwrap_or_else(|error| error.into_inner());
         let entry = cache.entry(key).or_default();
         entry.push(msg);
         if entry.len() > CHAT_RECENT_CACHE_MAX {

@@ -1,4 +1,5 @@
 use crate::{
+    chat::SimpleDestination,
     components::{molecules::hamburger::Hamburger, organisms::chat::ChatWindow},
     i18n::*,
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
@@ -6,7 +7,7 @@ use crate::{
 use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_router::hooks::use_params_map;
-use shared_types::{GameId, SimpleDestination};
+use shared_types::GameId;
 
 #[component]
 pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {

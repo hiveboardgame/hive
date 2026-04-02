@@ -2,6 +2,7 @@
 //! Supports ?dm=:uuid to open a DM from profile.
 
 use crate::{
+    chat::SimpleDestination,
     components::{
         atoms::block_toggle_button::BlockToggleButton,
         molecules::time_row::TimeRow,
@@ -26,31 +27,44 @@ use hive_lib::{Color, GameResult, GameStatus};
 use leptos::prelude::*;
 use leptos_router::{components::A, hooks::use_query_map};
 use shared_types::{
+    ChannelType,
     GameId,
     PrettyString,
-    SimpleDestination,
     TimeInfo,
     TournamentId,
-    CHANNEL_TYPE_GAME_PLAYERS,
-    CHANNEL_TYPE_GAME_SPECTATORS,
 };
 use std::collections::HashSet;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SelectedChannel {
-    Dm(Uuid, String),
-    Tournament(String, String, bool, bool), // nanoid, name, is_participant, muted
-    Game(String, String, String, Uuid, Uuid, bool),
+    Dm {
+        other_id: Uuid,
+        username: String,
+    },
+    Tournament {
+        nanoid: String,
+        name: String,
+        is_participant: bool,
+        muted: bool,
+    },
+    Game {
+        channel_type: ChannelType,
+        channel_id: String,
+        label: String,
+        white_id: Uuid,
+        black_id: Uuid,
+        finished: bool,
+    },
     Global,
 }
 
 impl SelectedChannel {
     fn label(&self, global_label: &str) -> String {
         match self {
-            SelectedChannel::Dm(_, username) => username.clone(),
-            SelectedChannel::Tournament(_, name, _, _) => name.clone(),
-            SelectedChannel::Game(_, _, label, _, _, _) => label.clone(),
+            SelectedChannel::Dm { username, .. } => username.clone(),
+            SelectedChannel::Tournament { name, .. } => name.clone(),
+            SelectedChannel::Game { label, .. } => label.clone(),
             SelectedChannel::Global => global_label.to_string(),
         }
     }
@@ -113,7 +127,9 @@ pub fn Messages() -> impl IntoView {
         if let Some(other_id) = dm_uid {
             let selected_channel = selected.get_untracked();
             let manual_selection_exists = selected_channel.as_ref().is_some_and(
-                |current| !matches!(current, SelectedChannel::Dm(id, _) if *id == other_id),
+                |current| {
+                    !matches!(current, SelectedChannel::Dm { other_id: id, .. } if *id == other_id)
+                },
             );
             if manual_selection_exists {
                 return;
@@ -140,12 +156,12 @@ pub fn Messages() -> impl IntoView {
                     }
                 })
                 .unwrap_or_else(|| t_string!(i18n, messages.page.unknown_user).to_string());
-            selected.set(Some(SelectedChannel::Dm(other_id, username)));
+            selected.set(Some(SelectedChannel::Dm { other_id, username }));
         }
     });
     let selected_game_summary_key = Memo::new(move |_| {
         selected.get().and_then(|channel| match channel {
-            SelectedChannel::Game(_, channel_id, ..) => Some(GameId(channel_id)),
+            SelectedChannel::Game { channel_id, .. } => Some(GameId(channel_id)),
             _ => None,
         })
     });
@@ -157,7 +173,13 @@ pub fn Messages() -> impl IntoView {
         },
     );
     let selected_game_data = Signal::derive(move || match selected.get() {
-        Some(SelectedChannel::Game(_, channel_id, _, white_id, black_id, finished)) => {
+        Some(SelectedChannel::Game {
+            channel_id,
+            white_id,
+            black_id,
+            finished,
+            ..
+        }) => {
             Some((GameId(channel_id), white_id, black_id, finished))
         }
         _ => None,
@@ -165,8 +187,8 @@ pub fn Messages() -> impl IntoView {
     let selected_game_show_players = Signal::derive(move || {
         matches!(
             selected.get(),
-            Some(SelectedChannel::Game(channel_type, ..))
-                if channel_type == CHANNEL_TYPE_GAME_PLAYERS
+            Some(SelectedChannel::Game { channel_type, .. })
+                if channel_type == ChannelType::GamePlayers
         )
     });
 
@@ -258,7 +280,14 @@ pub fn Messages() -> impl IntoView {
                                     selected
                                         .get()
                                         .as_ref()
-                                        .map(|s| s.label(ANNOUNCEMENTS_LABEL))
+                                        .map(|s| {
+                                            s.label(
+                                                &t_string!(
+                                                    i18n,
+                                                    messages.sections.recent_announcements
+                                                ),
+                                            )
+                                        })
                                         .unwrap_or_default()
                                 }}
                             </h2>
@@ -274,7 +303,7 @@ pub fn Messages() -> impl IntoView {
                         <div class="overflow-hidden flex-1 min-h-0">
                             <ShowLet some=move || selected.get() let:selected_channel>
                                 {move || match selected_channel.clone() {
-                                    SelectedChannel::Dm(other_id, username) => {
+                                    SelectedChannel::Dm { other_id, username } => {
                                         view! {
                                             <ChatWindow
                                                 destination=SimpleDestination::User
@@ -284,7 +313,11 @@ pub fn Messages() -> impl IntoView {
                                         }
                                             .into_any()
                                     }
-                                    SelectedChannel::Tournament(nanoid, _, is_participant, _) => {
+                                    SelectedChannel::Tournament {
+                                        nanoid,
+                                        is_participant,
+                                        ..
+                                    } => {
                                         let input_disabled = Signal::derive(move || {
                                             !is_participant
                                         });
@@ -298,7 +331,7 @@ pub fn Messages() -> impl IntoView {
                                         }
                                             .into_any()
                                     }
-                                    SelectedChannel::Game(..) => {
+                                    SelectedChannel::Game { .. } => {
                                         view! {
                                             <ChatWindow
                                                 destination=SimpleDestination::Game
@@ -341,18 +374,18 @@ fn SelectedChannelActions(
     game_summary: Signal<Option<Result<GameResponse, ServerFnError>>>,
 ) -> impl IntoView {
     let selected_dm = Memo::new(move |_| match selected.get() {
-        Some(SelectedChannel::Dm(other_id, username)) => Some((other_id, username)),
+        Some(SelectedChannel::Dm { other_id, username }) => Some((other_id, username)),
         _ => None,
     });
     let selected_game = Memo::new(move |_| match selected.get() {
-        Some(SelectedChannel::Game(
+        Some(SelectedChannel::Game {
             channel_type,
             channel_id,
             label,
             white_id,
             black_id,
             finished,
-        )) => Some((
+        }) => Some((
             channel_type,
             channel_id,
             label,
@@ -363,7 +396,12 @@ fn SelectedChannelActions(
         _ => None,
     });
     let selected_tournament = Memo::new(move |_| match selected.get() {
-        Some(SelectedChannel::Tournament(nanoid, name, is_participant, _)) => {
+        Some(SelectedChannel::Tournament {
+            nanoid,
+            name,
+            is_participant,
+            ..
+        }) => {
             Some((nanoid, name, is_participant))
         }
         _ => None,
@@ -451,8 +489,11 @@ fn TournamentChannelActions(
         selected.with(|current| {
             matches!(
                 current,
-                Some(SelectedChannel::Tournament(current_nanoid, _, _, true))
-                    if *current_nanoid == nanoid_for_muted
+                Some(SelectedChannel::Tournament {
+                    nanoid: current_nanoid,
+                    muted: true,
+                    ..
+                }) if *current_nanoid == nanoid_for_muted
             )
         })
     });
@@ -478,17 +519,17 @@ fn TournamentChannelActions(
             let should_update_selection = selected_for_action.with_untracked(|current| {
                 matches!(
                     current,
-                    Some(SelectedChannel::Tournament(current_nanoid, _, _, _))
+                    Some(SelectedChannel::Tournament { nanoid: current_nanoid, .. })
                         if *current_nanoid == nanoid
                 )
             });
             if should_update_selection {
-                selected_for_action.set(Some(SelectedChannel::Tournament(
+                selected_for_action.set(Some(SelectedChannel::Tournament {
                     nanoid,
                     name,
-                    is_participant_for_action,
-                    new_muted,
-                )));
+                    is_participant: is_participant_for_action,
+                    muted: new_muted,
+                }));
             }
             chat_for_action.invalidate_conversation_list();
             chat_for_action.refresh_unread_counts();
@@ -534,7 +575,7 @@ fn TournamentChannelActions(
 
 #[component]
 fn GameChatToggle(
-    channel_type: String,
+    channel_type: ChannelType,
     channel_id: String,
     label: String,
     white_id: Uuid,
@@ -543,28 +584,28 @@ fn GameChatToggle(
     selected: RwSignal<Option<SelectedChannel>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let viewing_players = channel_type == CHANNEL_TYPE_GAME_PLAYERS;
+    let viewing_players = channel_type == ChannelType::GamePlayers;
     let channel_id_players = channel_id.clone();
     let label_players = label.clone();
     let switch_to_players = move |_| {
-        selected.set(Some(SelectedChannel::Game(
-            CHANNEL_TYPE_GAME_PLAYERS.to_string(),
-            channel_id_players.clone(),
-            label_players.clone(),
+        selected.set(Some(SelectedChannel::Game {
+            channel_type: ChannelType::GamePlayers,
+            channel_id: channel_id_players.clone(),
+            label: label_players.clone(),
             white_id,
             black_id,
             finished,
-        )));
+        }));
     };
     let switch_to_spectators = move |_| {
-        selected.set(Some(SelectedChannel::Game(
-            CHANNEL_TYPE_GAME_SPECTATORS.to_string(),
-            channel_id.clone(),
-            label.clone(),
+        selected.set(Some(SelectedChannel::Game {
+            channel_type: ChannelType::GameSpectators,
+            channel_id: channel_id.clone(),
+            label: label.clone(),
             white_id,
             black_id,
             finished,
-        )));
+        }));
     };
     view! {
         <div class="flex p-0.5 bg-gray-100 rounded-lg border border-gray-300 dark:bg-gray-800 dark:border-gray-600">
@@ -609,7 +650,7 @@ fn GameChatToggle(
 
 #[component]
 fn GameChatHeader(
-    channel_type: String,
+    channel_type: ChannelType,
     channel_id: String,
     label: String,
     white_id: Uuid,
@@ -624,7 +665,7 @@ fn GameChatHeader(
     let is_player = move || current_user_id().is_some_and(|uid| uid == white_id || uid == black_id);
     let channel_type_for_label = channel_type.clone();
     let static_chat_label = Signal::derive(move || {
-        if channel_type_for_label == CHANNEL_TYPE_GAME_PLAYERS {
+        if channel_type_for_label == ChannelType::GamePlayers {
             t_string!(i18n, messages.chat.players_chat)
         } else {
             t_string!(i18n, messages.chat.spectator_chat)
@@ -785,7 +826,6 @@ const CHANNEL_BTN_SELECTED: &str =
     "bg-pillbug-teal/25 dark:bg-pillbug-teal/35 text-gray-900 dark:text-gray-100 font-medium";
 const CHANNEL_BTN_IDLE: &str =
     "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300";
-const ANNOUNCEMENTS_LABEL: &str = "Recent announcements";
 
 fn channel_button_class(is_selected: bool) -> String {
     format!(
@@ -891,7 +931,9 @@ fn DmChannelItem(
         selected
             .get()
             .as_ref()
-            .is_some_and(|s| matches!(s, SelectedChannel::Dm(id, _) if *id == other_user_id))
+            .is_some_and(|s| {
+                matches!(s, SelectedChannel::Dm { other_id: id, .. } if *id == other_user_id)
+            })
     };
     let unread = Signal::derive(move || {
         me.map(|uid| chat.unread_count_for_dm(other_user_id, uid))
@@ -902,8 +944,10 @@ fn DmChannelItem(
             type="button"
             class=move || channel_button_class(is_selected())
             on:click=move |_| {
-                selected
-                    .set(Some(SelectedChannel::Dm(other_user_id, username_for_selection.clone())));
+                selected.set(Some(SelectedChannel::Dm {
+                    other_id: other_user_id,
+                    username: username_for_selection.clone(),
+                }));
             }
         >
             <span class="truncate">{username}</span>
@@ -981,7 +1025,15 @@ fn TournamentChannelItem(
     let tournament_id = TournamentId(nanoid.clone());
     let is_selected = move || {
         selected.get().as_ref().is_some_and(
-            |s| matches!(s, SelectedChannel::Tournament(channel_nanoid, _, _, _) if *channel_nanoid == nanoid_for_match),
+            |s| {
+                matches!(
+                    s,
+                    SelectedChannel::Tournament {
+                        nanoid: channel_nanoid,
+                        ..
+                    } if *channel_nanoid == nanoid_for_match
+                )
+            },
         )
     };
     let unread = Signal::derive(move || chat.unread_count_for_tournament(&tournament_id));
@@ -993,23 +1045,20 @@ fn TournamentChannelItem(
                 let muted_for_selection = selected
                     .with_untracked(|current| {
                         match current {
-                            Some(
-                                SelectedChannel::Tournament(current_nanoid, _, _, current_muted),
-                            ) if *current_nanoid == nanoid_for_current_mute => *current_muted,
+                            Some(SelectedChannel::Tournament {
+                                nanoid: current_nanoid,
+                                muted: current_muted,
+                                ..
+                            }) if *current_nanoid == nanoid_for_current_mute => *current_muted,
                             _ => muted,
                         }
                     });
-                selected
-                    .set(
-                        Some(
-                            SelectedChannel::Tournament(
-                                nanoid_for_selection.clone(),
-                                name_for_selection.clone(),
-                                is_participant,
-                                muted_for_selection,
-                            ),
-                        ),
-                    );
+                selected.set(Some(SelectedChannel::Tournament {
+                    nanoid: nanoid_for_selection.clone(),
+                    name: name_for_selection.clone(),
+                    is_participant,
+                    muted: muted_for_selection,
+                }));
             }
         >
             <span class="flex gap-1 items-center truncate">
@@ -1094,13 +1143,18 @@ fn GameChannelItem(
         .unwrap_or_else(|| label.clone());
     let display_label_with_nanoid = format!("{} ({})", display_label, channel_id);
     let channel_id_for_match = channel_id.clone();
-    let channel_type_for_selection = channel_type.clone();
     let channel_id_for_selection = channel_id.clone();
     let label_for_selection = label.clone();
     let game_id = GameId(channel_id.clone());
+    let parsed_channel_type = channel_type.parse::<ChannelType>().ok();
     let is_selected = move || {
         selected.get().as_ref().is_some_and(
-            |s| matches!(s, SelectedChannel::Game(_, cid, _, _, _, _) if *cid == channel_id_for_match),
+            |s| {
+                matches!(
+                    s,
+                    SelectedChannel::Game { channel_id: cid, .. } if *cid == channel_id_for_match
+                )
+            },
         )
     };
     let unread = Signal::derive(move || chat.unread_count_for_game(&game_id));
@@ -1109,19 +1163,17 @@ fn GameChannelItem(
             type="button"
             class=move || channel_button_class(is_selected())
             on:click=move |_| {
-                selected
-                    .set(
-                        Some(
-                            SelectedChannel::Game(
-                                channel_type_for_selection.clone(),
-                                channel_id_for_selection.clone(),
-                                label_for_selection.clone(),
-                                white_id,
-                                black_id,
-                                finished,
-                            ),
-                        ),
-                    );
+                let Some(channel_type) = parsed_channel_type else {
+                    return;
+                };
+                selected.set(Some(SelectedChannel::Game {
+                    channel_type,
+                    channel_id: channel_id_for_selection.clone(),
+                    label: label_for_selection.clone(),
+                    white_id,
+                    black_id,
+                    finished,
+                }));
             }
         >
             <span class="truncate" title=display_label_with_nanoid.clone()>
@@ -1134,6 +1186,7 @@ fn GameChannelItem(
 
 #[component]
 fn GlobalChannelSection(selected: RwSignal<Option<SelectedChannel>>) -> impl IntoView {
+    let i18n = use_i18n();
     let open = RwSignal::new(true);
     let is_selected = move || {
         selected
@@ -1144,7 +1197,9 @@ fn GlobalChannelSection(selected: RwSignal<Option<SelectedChannel>>) -> impl Int
     view! {
         <section class="flex flex-col mb-2 min-h-0">
             <SectionHeaderButton
-                title=Signal::derive(move || ANNOUNCEMENTS_LABEL.to_string())
+                title=Signal::derive(move || {
+                    t_string!(i18n, messages.sections.recent_announcements)
+                }).into()
                 open=open
             />
             <Show when=move || open.get()>
@@ -1154,7 +1209,7 @@ fn GlobalChannelSection(selected: RwSignal<Option<SelectedChannel>>) -> impl Int
                         class=move || channel_button_class(is_selected())
                         on:click=move |_| selected.set(Some(SelectedChannel::Global))
                     >
-                        {ANNOUNCEMENTS_LABEL}
+                        {t!(i18n, messages.sections.recent_announcements)}
                     </button>
                 </div>
             </Show>

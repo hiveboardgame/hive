@@ -10,7 +10,7 @@ use super::{
     user_status::handler::UserStatusHandler,
 };
 use crate::{
-    chat::access::{authorize_chat_send_and_resolve_channel_id, ChatSendAccessError},
+    chat::{access::{authorize_chat_send_and_resolve_channel_id, ChatSendAccessError}, ChannelKey},
     common::{ClientRequest, GameAction},
     websocket::{
         messages::{AuthError, InternalServerMessage, WsMessage},
@@ -19,7 +19,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use db_lib::{get_conn, DbPool};
-use shared_types::{chat_channel, SimpleUser};
+use shared_types::SimpleUser;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -105,8 +105,8 @@ impl RequestHandler {
                 if self.user_id != message_container.message.user_id {
                     Err(AuthError::Unauthorized)?
                 }
-                let (channel_type, channel_id) =
-                    chat_channel(&message_container.destination, self.user_id);
+                let channel_key =
+                    ChannelKey::from_destination_for_user(&message_container.destination, self.user_id);
                 let mut conn = get_conn(&self.pool)
                     .await
                     .map_err(|e| Self::db_connection_error("checking chat send permissions", e))?;
@@ -114,12 +114,14 @@ impl RequestHandler {
                     &mut conn,
                     self.user_id,
                     self.admin,
-                    channel_type,
-                    &channel_id,
+                    channel_key.channel_type.as_str(),
+                    &channel_key.channel_id,
                 )
                 .await
                 .map_err(Self::map_chat_send_access_error)?;
-                ChatHandler::new(message_container, self.data.clone(), self.pool.clone()).handle()
+                ChatHandler::new(message_container, self.data.clone(), self.pool.clone())
+                    .handle()
+                    .await?
             }
             ClientRequest::Tournament(tournament_action) => {
                 TournamentHandler::new(

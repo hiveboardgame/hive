@@ -14,16 +14,15 @@ use super::{
 use leptos::{prelude::*, task::spawn_local};
 use shared_types::{
     other_user_from_dm_channel,
+    ChannelType,
     ChatDestination,
     ChatMessage,
     ChatMessageContainer,
     GameId,
     TournamentId,
-    CHANNEL_TYPE_DIRECT,
     CHANNEL_TYPE_GAME_PLAYERS,
     CHANNEL_TYPE_GAME_SPECTATORS,
     CHANNEL_TYPE_GLOBAL,
-    CHANNEL_TYPE_TOURNAMENT_LOBBY,
 };
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -32,6 +31,44 @@ use wasm_bindgen::{closure::Closure, JsCast};
 
 const RECENT_ANNOUNCEMENTS_LIMIT: usize = 3;
 const HISTORY_TIMESTAMP_SKEW_MILLIS: i64 = 500;
+const MAX_STORED_MESSAGES_PER_CHANNEL: usize = 200;
+const MAX_STORED_CHANNELS_PER_SECTION: usize = 128;
+
+fn last_message_timestamp(messages: &[ChatMessage]) -> i64 {
+    messages
+        .last()
+        .and_then(|message| message.timestamp.map(|timestamp| timestamp.timestamp_millis()))
+        .unwrap_or(0)
+}
+
+fn trim_stored_messages(messages: &mut Vec<ChatMessage>) {
+    if messages.len() > MAX_STORED_MESSAGES_PER_CHANNEL {
+        let trim_count = messages.len() - MAX_STORED_MESSAGES_PER_CHANNEL;
+        messages.drain(0..trim_count);
+    }
+}
+
+fn evict_oldest_channels<K>(
+    messages: &mut HashMap<K, Vec<ChatMessage>>,
+    max_channels: usize,
+) -> Vec<K>
+where
+    K: Clone + Eq + std::hash::Hash,
+{
+    let mut removed_keys = Vec::new();
+    while messages.len() > max_channels {
+        let Some(oldest_key) = messages
+            .iter()
+            .min_by_key(|(_, stored_messages)| last_message_timestamp(stored_messages))
+            .map(|(key, _)| key.clone())
+        else {
+            break;
+        };
+        messages.remove(&oldest_key);
+        removed_keys.push(oldest_key);
+    }
+    removed_keys
+}
 
 fn live_message_match_score(a: &ChatMessage, b: &ChatMessage) -> Option<i64> {
     (a == b).then_some(0)
@@ -196,21 +233,126 @@ impl Chat {
         self.block_list_version.update(|v| *v += 1);
     }
 
-    /// Refetch conversations now and again shortly after to absorb async DB chat persistence.
+    fn remove_channel_keys(&self, keys: impl IntoIterator<Item = ChannelKey>) {
+        let keys: HashSet<_> = keys.into_iter().collect();
+        if keys.is_empty() {
+            return;
+        }
+
+        // Preserve server-backed unread counts when only the cached message body is pruned.
+        // The Messages hub and header badge still read unread state for channels whose thread
+        // contents are no longer resident locally.
+        self.pending_read_channels.update(|pending| {
+            pending.retain(|key| !keys.contains(key));
+        });
+        self.visible_channels.update(|visible| {
+            visible.retain(|key, _| !keys.contains(key));
+        });
+        self.pending_visible_channel_reads.update(|pending| {
+            pending.retain(|key| !keys.contains(key));
+        });
+        self.deferred_visible_unread_counts.update(|counts| {
+            counts.retain(|key, _| !keys.contains(key));
+        });
+    }
+
+    fn prune_dm_threads(&self) {
+        let mut removed_user_ids = Vec::new();
+        self.users_messages.update(|messages| {
+            removed_user_ids = evict_oldest_channels(messages, MAX_STORED_CHANNELS_PER_SECTION);
+        });
+        if removed_user_ids.is_empty() {
+            return;
+        }
+        self.users_new_messages.update(|messages| {
+            for user_id in &removed_user_ids {
+                messages.remove(user_id);
+            }
+        });
+        let Some(current_user_id) = self.user.get_untracked().as_ref().map(|a| a.user.uid) else {
+            return;
+        };
+        self.remove_channel_keys(
+            removed_user_ids
+                .into_iter()
+                .map(|other_user_id| ChannelKey::direct(current_user_id, other_user_id)),
+        );
+    }
+
+    fn prune_tournament_threads(&self) {
+        let mut removed_tournament_ids = Vec::new();
+        self.tournament_lobby_messages.update(|messages| {
+            removed_tournament_ids =
+                evict_oldest_channels(messages, MAX_STORED_CHANNELS_PER_SECTION);
+        });
+        if removed_tournament_ids.is_empty() {
+            return;
+        }
+        self.tournament_lobby_new_messages.update(|messages| {
+            for tournament_id in &removed_tournament_ids {
+                messages.remove(tournament_id);
+            }
+        });
+        self.remove_channel_keys(
+            removed_tournament_ids
+                .into_iter()
+                .map(|tournament_id| ChannelKey::tournament(&tournament_id)),
+        );
+    }
+
+    fn prune_game_threads(&self, channel_type: ChannelType) {
+        let mut removed_game_ids = Vec::new();
+        match channel_type {
+            ChannelType::GamePlayers => {
+                self.games_private_messages.update(|messages| {
+                    removed_game_ids =
+                        evict_oldest_channels(messages, MAX_STORED_CHANNELS_PER_SECTION);
+                });
+                self.games_private_new_messages.update(|messages| {
+                    for game_id in &removed_game_ids {
+                        messages.remove(game_id);
+                    }
+                });
+            }
+            ChannelType::GameSpectators => {
+                self.games_public_messages.update(|messages| {
+                    removed_game_ids =
+                        evict_oldest_channels(messages, MAX_STORED_CHANNELS_PER_SECTION);
+                });
+                self.games_public_new_messages.update(|messages| {
+                    for game_id in &removed_game_ids {
+                        messages.remove(game_id);
+                    }
+                });
+            }
+            _ => return,
+        }
+
+        if removed_game_ids.is_empty() {
+            return;
+        }
+
+        self.remove_channel_keys(removed_game_ids.into_iter().map(|game_id| match channel_type {
+            ChannelType::GamePlayers => ChannelKey::game_players(&game_id),
+            ChannelType::GameSpectators => ChannelKey::game_spectators(&game_id),
+            _ => unreachable!(),
+        }));
+    }
+
+    /// Refetch conversations now and again shortly after to absorb delayed sidebar state updates.
     fn invalidate_conversation_list_with_retry(&self) {
         self.invalidate_conversation_list();
         #[cfg(target_arch = "wasm32")]
         {
             let chat = *self;
             if let Some(window) = web_sys::window() {
-                let callback = Closure::once(move || {
+                let callback = Closure::once_into_js(move || {
                     chat.invalidate_conversation_list();
                 });
                 let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                    callback.as_ref().unchecked_ref(),
+                    callback.unchecked_ref(),
                     900,
                 );
-                callback.forget();
             }
         }
     }
@@ -239,7 +381,7 @@ impl Chat {
         let chat = *self;
         spawn_local(async move {
             let did_mark =
-                mark_chat_read(mark_key.channel_type.clone(), mark_key.channel_id.clone())
+                mark_chat_read(mark_key.channel_type.to_string(), mark_key.channel_id.clone())
                     .await
                     .is_ok();
             if !did_mark {
@@ -289,7 +431,7 @@ impl Chat {
             let chat = *self;
             if let Some(window) = web_sys::window() {
                 let callback_key = key.clone();
-                let callback = Closure::once(move || {
+                let callback = Closure::once_into_js(move || {
                     chat.pending_visible_channel_reads.update(|pending| {
                         pending.remove(&callback_key);
                     });
@@ -301,10 +443,9 @@ impl Chat {
                     }
                 });
                 let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                    callback.as_ref().unchecked_ref(),
+                    callback.unchecked_ref(),
                     250,
                 );
-                callback.forget();
             }
         }
         #[cfg(not(target_arch = "wasm32"))]
@@ -351,8 +492,8 @@ impl Chat {
         if deferred == 0 {
             return;
         }
-        match key.channel_type.as_str() {
-            CHANNEL_TYPE_DIRECT => {
+        match key.channel_type {
+            ChannelType::Direct => {
                 let Some(other_user_id) = self.other_user_id_from_direct_key(key) else {
                     return;
                 };
@@ -364,7 +505,7 @@ impl Chat {
                 });
                 self.optimistically_increment_unread_by(key, deferred);
             }
-            CHANNEL_TYPE_TOURNAMENT_LOBBY => {
+            ChannelType::TournamentLobby => {
                 self.tournament_lobby_new_messages.update(|messages| {
                     messages
                         .entry(TournamentId(key.channel_id.clone()))
@@ -373,7 +514,7 @@ impl Chat {
                 });
                 self.optimistically_increment_unread_by(key, deferred);
             }
-            CHANNEL_TYPE_GAME_PLAYERS => {
+            ChannelType::GamePlayers => {
                 self.games_private_new_messages.update(|messages| {
                     messages
                         .entry(GameId(key.channel_id.clone()))
@@ -382,11 +523,11 @@ impl Chat {
                 });
                 self.optimistically_increment_unread_by(key, deferred);
             }
-            CHANNEL_TYPE_GLOBAL => {
+            ChannelType::Global => {
                 self.global_new_messages.set(true);
                 self.optimistically_increment_unread_by(key, deferred);
             }
-            _ => {}
+            ChannelType::GameSpectators => {}
         }
     }
 
@@ -395,12 +536,12 @@ impl Chat {
         self.unread_counts.update(|counts| {
             for (_, _, n) in counts
                 .iter_mut()
-                .filter(|(ct, cid, _)| ct == &key.channel_type && cid == &key.channel_id)
+                .filter(|(ct, cid, _)| ct == key.channel_type.as_str() && cid == &key.channel_id)
             {
                 *n = 0;
             }
         });
-        if key.channel_type == CHANNEL_TYPE_GLOBAL && key.channel_id == CHANNEL_TYPE_GLOBAL {
+        if key.channel_type == ChannelType::Global && key.channel_id == CHANNEL_TYPE_GLOBAL {
             self.global_new_messages.set(false);
         }
     }
@@ -420,14 +561,14 @@ impl Chat {
         self.unread_counts.update(|counts| {
             if let Some((_, _, n)) = counts
                 .iter_mut()
-                .find(|(ct, cid, _)| ct == &key.channel_type && cid == &key.channel_id)
+                .find(|(ct, cid, _)| ct == key.channel_type.as_str() && cid == &key.channel_id)
             {
                 *n += delta;
             } else {
-                counts.push((key.channel_type.clone(), key.channel_id.clone(), delta));
+                counts.push((key.channel_type.to_string(), key.channel_id.clone(), delta));
             }
         });
-        if key.channel_type == CHANNEL_TYPE_GLOBAL && key.channel_id == CHANNEL_TYPE_GLOBAL {
+        if key.channel_type == ChannelType::Global && key.channel_id == CHANNEL_TYPE_GLOBAL {
             self.global_new_messages.set(true);
         }
     }
@@ -512,22 +653,21 @@ impl Chat {
     }
 
     fn clear_local_new_for_channel(&self, key: &ChannelKey) {
-        match key.channel_type.as_str() {
-            CHANNEL_TYPE_DIRECT => {
+        match key.channel_type {
+            ChannelType::Direct => {
                 if let Some(other_user_id) = self.other_user_id_from_direct_key(key) {
                     self.clear_dm_new_messages(other_user_id);
                 }
             }
-            CHANNEL_TYPE_TOURNAMENT_LOBBY => {
+            ChannelType::TournamentLobby => {
                 self.clear_tournament_lobby_new_messages(&TournamentId(key.channel_id.clone()));
             }
-            CHANNEL_TYPE_GAME_PLAYERS | CHANNEL_TYPE_GAME_SPECTATORS => {
+            ChannelType::GamePlayers | ChannelType::GameSpectators => {
                 self.seen_messages(GameId(key.channel_id.clone()));
             }
-            CHANNEL_TYPE_GLOBAL => {
+            ChannelType::Global => {
                 self.global_new_messages.set(false);
             }
-            _ => {}
         }
     }
 
@@ -549,8 +689,8 @@ impl Chat {
     ) -> Vec<(String, String, i64)> {
         let mut map: HashMap<ChannelKey, i64> = server
             .into_iter()
-            .map(|(channel_type, channel_id, count)| {
-                (ChannelKey::new(channel_type, channel_id), count)
+            .filter_map(|(channel_type, channel_id, count)| {
+                ChannelKey::from_raw(&channel_type, channel_id).map(|key| (key, count))
             })
             .collect();
         let server_map = map.clone();
@@ -611,7 +751,7 @@ impl Chat {
             }
         }
         map.into_iter()
-            .map(|(key, count)| (key.channel_type, key.channel_id, count))
+            .map(|(key, count)| (key.channel_type.to_string(), key.channel_id, count))
             .collect()
     }
 
@@ -684,7 +824,7 @@ impl Chat {
             counts
                 .iter()
                 .find(|(channel_type, channel_id, _)| {
-                    channel_type == &key.channel_type && channel_id == &key.channel_id
+                    channel_type == key.channel_type.as_str() && channel_id == &key.channel_id
                 })
                 .map(|(_, _, n)| *n)
                 .unwrap_or(0)
@@ -696,45 +836,56 @@ impl Chat {
     /// fetch completes after live delivery.
     pub fn inject_history(&self, key: &ChannelKey, messages: Vec<ChatMessage>) {
         let current_user_id = self.user.get_untracked().as_ref().map(|a| a.user.uid);
-        match key.channel_type.as_str() {
-            CHANNEL_TYPE_DIRECT => {
+        match key.channel_type {
+            ChannelType::Direct => {
                 let Some(me) = current_user_id else { return };
                 let other = other_user_from_dm_channel(&key.channel_id, me);
                 if let Some(other_id) = other {
                     self.users_messages.update(|m| {
                         let existing = m.get(&other_id).cloned().unwrap_or_default();
-                        m.insert(other_id, merge_and_dedupe(existing, messages));
+                        let mut merged = merge_and_dedupe(existing, messages);
+                        trim_stored_messages(&mut merged);
+                        m.insert(other_id, merged);
                     });
+                    self.prune_dm_threads();
                 }
             }
-            CHANNEL_TYPE_TOURNAMENT_LOBBY => {
+            ChannelType::TournamentLobby => {
                 let tid = TournamentId(key.channel_id.clone());
                 self.tournament_lobby_messages.update(|m| {
                     let existing = m.get(&tid).cloned().unwrap_or_default();
-                    m.insert(tid, merge_and_dedupe(existing, messages));
+                    let mut merged = merge_and_dedupe(existing, messages);
+                    trim_stored_messages(&mut merged);
+                    m.insert(tid, merged);
                 });
+                self.prune_tournament_threads();
             }
-            CHANNEL_TYPE_GAME_PLAYERS => {
+            ChannelType::GamePlayers => {
                 let gid = GameId(key.channel_id.clone());
                 self.games_private_messages.update(|m| {
                     let existing = m.get(&gid).cloned().unwrap_or_default();
-                    m.insert(gid, merge_and_dedupe(existing, messages));
+                    let mut merged = merge_and_dedupe(existing, messages);
+                    trim_stored_messages(&mut merged);
+                    m.insert(gid, merged);
                 });
+                self.prune_game_threads(ChannelType::GamePlayers);
             }
-            CHANNEL_TYPE_GAME_SPECTATORS => {
+            ChannelType::GameSpectators => {
                 let gid = GameId(key.channel_id.clone());
                 self.games_public_messages.update(|m| {
                     let existing = m.get(&gid).cloned().unwrap_or_default();
-                    m.insert(gid, merge_and_dedupe(existing, messages));
+                    let mut merged = merge_and_dedupe(existing, messages);
+                    trim_stored_messages(&mut merged);
+                    m.insert(gid, merged);
                 });
+                self.prune_game_threads(ChannelType::GameSpectators);
             }
-            CHANNEL_TYPE_GLOBAL => {
+            ChannelType::Global => {
                 self.global_messages.update(|existing| {
                     *existing = merge_and_dedupe(std::mem::take(existing), messages);
                     retain_recent_announcements(existing);
                 });
             }
-            _ => {}
         }
     }
 
@@ -745,13 +896,13 @@ impl Chat {
     ) -> impl std::future::Future<Output = Result<Vec<ChatMessage>, String>> + '_ {
         let key = key.clone();
         async move {
-            let history_limit = if key.channel_type == CHANNEL_TYPE_GLOBAL {
+            let history_limit = if key.channel_type == ChannelType::Global {
                 RECENT_ANNOUNCEMENTS_LIMIT as i64
             } else {
                 100
             };
             get_chat_history(
-                key.channel_type.clone(),
+                key.channel_type.to_string(),
                 key.channel_id.clone(),
                 Some(history_limit),
                 None,
@@ -807,11 +958,11 @@ impl Chat {
                         return;
                     }
                     self.tournament_lobby_messages.update(|tournament| {
-                        tournament
-                            .entry(id.clone())
-                            .or_default()
-                            .extend(new_messages);
+                        let entry = tournament.entry(id.clone()).or_default();
+                        entry.extend(new_messages);
+                        trim_stored_messages(entry);
                     });
+                    self.prune_tournament_threads();
                     self.refresh_conversation_list_for_live_thread_activity(is_live);
                     if is_live && !from_self {
                         if self.is_channel_visible(&channel_key) {
@@ -853,11 +1004,11 @@ impl Chat {
                         return;
                     }
                     self.users_messages.update(|users| {
-                        users
-                            .entry(thread_other_id)
-                            .or_default()
-                            .extend(new_messages);
+                        let entry = users.entry(thread_other_id).or_default();
+                        entry.extend(new_messages);
+                        trim_stored_messages(entry);
                     });
+                    self.prune_dm_threads();
                     self.refresh_conversation_list_for_live_thread_activity(is_live);
                     if is_live && !from_self {
                         if let Some(channel_key) = channel_key {
@@ -889,8 +1040,11 @@ impl Chat {
                         return;
                     }
                     self.games_private_messages.update(|games| {
-                        games.entry(id.clone()).or_default().extend(new_messages);
+                        let entry = games.entry(id.clone()).or_default();
+                        entry.extend(new_messages);
+                        trim_stored_messages(entry);
                     });
+                    self.prune_game_threads(ChannelType::GamePlayers);
                     self.refresh_conversation_list_for_live_thread_activity(is_live);
                     if is_live && !from_self {
                         if self.is_channel_visible(&channel_key) {
@@ -920,8 +1074,11 @@ impl Chat {
                         return;
                     }
                     self.games_public_messages.update(|games| {
-                        games.entry(id.clone()).or_default().extend(new_messages);
+                        let entry = games.entry(id.clone()).or_default();
+                        entry.extend(new_messages);
+                        trim_stored_messages(entry);
                     });
+                    self.prune_game_threads(ChannelType::GameSpectators);
                     self.refresh_conversation_list_for_live_thread_activity(is_live);
                     if is_live && !from_self {
                         if self.is_channel_visible(&channel_key) {
@@ -972,12 +1129,15 @@ pub fn provide_chat() {
 #[cfg(test)]
 mod tests {
     use super::{
+        Chat,
+        MAX_STORED_CHANNELS_PER_SECTION,
         filter_duplicate_history_messages,
         filter_duplicate_live_messages,
         merge_and_dedupe,
     };
     use chrono::{TimeZone, Utc};
-    use shared_types::ChatMessage;
+    use leptos::prelude::*;
+    use shared_types::{ChatMessage, TournamentId, CHANNEL_TYPE_TOURNAMENT_LOBBY};
     use uuid::Uuid;
 
     fn message(user_id: Uuid, body: &str, timestamp_millis: Option<i64>) -> ChatMessage {
@@ -1075,5 +1235,45 @@ mod tests {
         let bodies: Vec<_> = result.into_iter().map(|m| m.message).collect();
 
         assert_eq!(bodies, vec!["history".to_string(), "live".to_string()]);
+    }
+
+    #[test]
+    fn pruning_cached_threads_keeps_server_unread_counts() {
+        let owner = Owner::new();
+        owner.set();
+
+        let chat = Chat::new(
+            Signal::derive(|| None),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let user_id = Uuid::new_v4();
+        let evicted_tournament = TournamentId("old-thread".to_string());
+
+        chat.unread_counts.set(vec![(
+            CHANNEL_TYPE_TOURNAMENT_LOBBY.to_string(),
+            evicted_tournament.0.clone(),
+            4,
+        )]);
+        chat.tournament_lobby_messages.update(|messages| {
+            messages.insert(
+                evicted_tournament.clone(),
+                vec![message(user_id, "old", Some(1))],
+            );
+            for idx in 0..MAX_STORED_CHANNELS_PER_SECTION {
+                messages.insert(
+                    TournamentId(format!("recent-{idx}")),
+                    vec![message(user_id, "recent", Some(1_000 + idx as i64))],
+                );
+            }
+        });
+
+        chat.prune_tournament_threads();
+
+        assert!(
+            chat.tournament_lobby_messages
+                .with_untracked(|messages| !messages.contains_key(&evicted_tournament))
+        );
+        assert_eq!(chat.unread_count_for_tournament(&evicted_tournament), 4);
+        assert_eq!(chat.total_unread_count(), 4);
     }
 }

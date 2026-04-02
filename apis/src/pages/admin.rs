@@ -1,4 +1,5 @@
 use crate::{
+    chat::SimpleDestination,
     components::{
         atoms::simple_switch::SimpleSwitch,
         molecules::rl_banner::RlBanner,
@@ -9,7 +10,6 @@ use crate::{
     providers::AuthContext,
 };
 use leptos::prelude::*;
-use shared_types::SimpleDestination;
 
 const LINE_CLASS: &str = "flex items-center py-3 text-sm before:flex-1 before:border-t before:border-black before:me-6 after:flex-1 after:border-t after:border-black after:ms-6 dark:text-white dark:before:border-neutral-600 dark:after:border-neutral-600";
 

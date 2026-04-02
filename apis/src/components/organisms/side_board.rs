@@ -1,4 +1,5 @@
 use crate::{
+    chat::SimpleDestination,
     components::{
         molecules::history_controls::HistoryControls,
         organisms::{chat::ChatWindow, history::History, reserve::ReserveContent},
@@ -17,7 +18,7 @@ use leptos_router::{
     location::State,
     NavigateOptions,
 };
-use shared_types::{GameId, SimpleDestination};
+use shared_types::GameId;
 
 #[derive(Clone, PartialEq, Copy)]
 pub enum TabView {

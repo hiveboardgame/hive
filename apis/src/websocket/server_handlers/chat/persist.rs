@@ -1,9 +1,9 @@
 //! Converts `ChatMessageContainer` into the form needed for DB persistence.
-//! Uses `shared_types::chat_channel` for (channel_type, channel_id) mapping.
 
+use crate::chat::ChannelKey;
 use chrono::{DateTime, Utc};
 use db_lib::models::NewChatMessage;
-use shared_types::{chat_channel, ChatMessageContainer};
+use shared_types::ChatMessageContainer;
 use uuid::Uuid;
 
 /// Owned form of a chat message suitable for building `db_lib::NewChatMessage`.
@@ -21,16 +21,15 @@ pub struct PersistableChatMessage {
 
 impl PersistableChatMessage {
     /// Build from a container (e.g. after `container.time()` has been called).
-    /// Uses `shared_types::chat_channel(container.destination, container.message.user_id)` for channel mapping.
     pub fn from_container(container: &ChatMessageContainer) -> Self {
-        let (channel_type, channel_id) =
-            chat_channel(&container.destination, container.message.user_id);
+        let channel_key =
+            ChannelKey::from_destination_for_user(&container.destination, container.message.user_id);
         let turn = container.message.turn.map(|u| u as i32);
         // Preserve send-time ordering for unread/read logic even if DB persistence is delayed.
         let created_at = container.message.timestamp.unwrap_or_else(Utc::now);
         Self {
-            channel_type: channel_type.to_string(),
-            channel_id,
+            channel_type: channel_key.channel_type.to_string(),
+            channel_id: channel_key.channel_id,
             sender_id: container.message.user_id,
             username: container.message.username.clone(),
             body: container.message.message.clone(),

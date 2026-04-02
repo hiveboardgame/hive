@@ -6,9 +6,7 @@ use db_lib::{
 };
 use shared_types::{
     canonical_dm_channel_id,
-    direct_other_user_for_sender,
-    is_valid_chat_channel_type,
-    DirectChannelParseError,
+    ChannelType,
     GameId,
     CHANNEL_TYPE_DIRECT,
     CHANNEL_TYPE_GAME_PLAYERS,
@@ -44,29 +42,31 @@ fn map_not_found(
 }
 
 fn parse_direct_other_user(channel_id: &str, sender_id: Uuid) -> Result<Uuid, ChatSendAccessError> {
-    if channel_id.contains("::") {
-        return match direct_other_user_for_sender(channel_id, sender_id) {
-            Ok(other) => Ok(other),
-            Err(DirectChannelParseError::InvalidFormat) => Err(ChatSendAccessError::BadRequest(
-                "Invalid DM channel_id format",
-            )),
-            Err(DirectChannelParseError::InvalidUuid) => Err(ChatSendAccessError::BadRequest(
-                "Invalid UUID in channel_id",
-            )),
-            Err(DirectChannelParseError::NotParticipant) => Err(ChatSendAccessError::Forbidden(
-                "You are not a participant in this DM",
-            )),
-        };
+    if !channel_id.contains("::") {
+        return Uuid::parse_str(channel_id)
+            .map_err(|_| ChatSendAccessError::BadRequest("Invalid channel_id for DM"));
     }
 
-    match direct_other_user_for_sender(channel_id, sender_id) {
-        Ok(other) => Ok(other),
-        Err(DirectChannelParseError::InvalidUuid) => {
-            Err(ChatSendAccessError::BadRequest("Invalid channel_id for DM"))
-        }
-        Err(DirectChannelParseError::InvalidFormat | DirectChannelParseError::NotParticipant) => {
-            Err(ChatSendAccessError::BadRequest("Invalid channel_id for DM"))
-        }
+    let Some((a_raw, b_raw)) = channel_id.split_once("::") else {
+        return Err(ChatSendAccessError::BadRequest("Invalid DM channel_id format"));
+    };
+    if b_raw.contains("::") {
+        return Err(ChatSendAccessError::BadRequest("Invalid DM channel_id format"));
+    }
+
+    let a = Uuid::parse_str(a_raw)
+        .map_err(|_| ChatSendAccessError::BadRequest("Invalid UUID in channel_id"))?;
+    let b = Uuid::parse_str(b_raw)
+        .map_err(|_| ChatSendAccessError::BadRequest("Invalid UUID in channel_id"))?;
+
+    if a == sender_id {
+        Ok(b)
+    } else if b == sender_id {
+        Ok(a)
+    } else {
+        Err(ChatSendAccessError::Forbidden(
+            "You are not a participant in this DM",
+        ))
     }
 }
 
@@ -86,7 +86,7 @@ pub async fn authorize_chat_send_and_resolve_channel_id(
     channel_type: &str,
     channel_id: &str,
 ) -> Result<String, ChatSendAccessError> {
-    if !is_valid_chat_channel_type(channel_type) {
+    if channel_type.parse::<ChannelType>().is_err() {
         return Err(ChatSendAccessError::BadRequest("Invalid channel_type"));
     }
 

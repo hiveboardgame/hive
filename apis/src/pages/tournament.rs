@@ -1,4 +1,5 @@
 use crate::{
+    chat::SimpleDestination,
     common::{markdown_to_html, ScheduleAction, TournamentAction},
     components::{
         atoms::progress_bar::ProgressBar,
@@ -568,9 +569,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     }
                 >
                     <ChatWindow
-                        destination=shared_types::SimpleDestination::Tournament(
-                            tournament_id.get_value(),
-                        )
+                        destination=SimpleDestination::Tournament(tournament_id.get_value())
                         input_disabled=tournament_chat_read_only
                     />
                 </Show>

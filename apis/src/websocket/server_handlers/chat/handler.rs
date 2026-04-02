@@ -1,15 +1,18 @@
 use std::sync::Arc;
 
+use anyhow::{Context, Result};
+
 use crate::{
+    chat::ChannelKey,
     common::ServerMessage,
     websocket::{
         messages::{InternalServerMessage, MessageDestination},
-        server_handlers::chat::persist::PersistableChatMessage,
+        server_handlers::chat::{metrics, persist::PersistableChatMessage},
         WebsocketData,
     },
 };
 use db_lib::{get_conn, helpers::insert_chat_message, DbPool};
-use shared_types::{chat_channel, ChatDestination, ChatMessageContainer};
+use shared_types::{ChatDestination, ChatMessageContainer};
 
 pub struct ChatHandler {
     container: ChatMessageContainer,
@@ -24,6 +27,11 @@ impl ChatHandler {
         pool: DbPool,
     ) -> Self {
         container.time();
+        let original_body = container.message.message.clone();
+        container.message.normalize();
+        if container.message.message != original_body {
+            metrics::record_message_normalization();
+        }
         Self {
             container,
             data,
@@ -31,7 +39,7 @@ impl ChatHandler {
         }
     }
 
-    pub fn handle(&self) -> Vec<InternalServerMessage> {
+    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut messages = Vec::new();
         match &self.container.destination {
             ChatDestination::TournamentLobby(tournament_id) => {
@@ -78,26 +86,39 @@ impl ChatHandler {
             }),
         };
 
-        // Update in-memory recent cache (last 50 per channel)
-        let (channel_type, channel_id) =
-            chat_channel(&self.container.destination, self.container.message.user_id);
+        let persistable = PersistableChatMessage::from_container(&self.container);
+        metrics::record_persist_attempt();
+        let mut conn = get_conn(&self.pool)
+            .await
+            .context("getting chat persistence connection")?;
+        if let Err(error) = insert_chat_message(&mut conn, persistable.as_new()).await {
+            metrics::record_persist_failure();
+            let snapshot = metrics::snapshot();
+            log::error!(
+                "chat persist failed (attempts_total={}, successes_total={}, failures_total={}, normalizations_total={}): {}",
+                snapshot.persist_attempts_total,
+                snapshot.persist_successes_total,
+                snapshot.persist_failures_total,
+                snapshot.message_normalizations_total,
+                error
+            );
+            return Err(error.into());
+        }
+        metrics::record_persist_success();
+
+        // Update in-memory recent cache (last 50 per channel) after persistence succeeds.
+        let channel_key = ChannelKey::from_destination_for_user(
+            &self.container.destination,
+            self.container.message.user_id,
+        );
         self.data
             .chat_storage
-            .push_recent(channel_type, &channel_id, self.container.clone());
+            .push_recent(
+                channel_key.channel_type.as_str(),
+                &channel_key.channel_id,
+                self.container.clone(),
+            );
 
-        // Persist to Postgres in a spawned task (do not block the response)
-        let persistable = PersistableChatMessage::from_container(&self.container);
-        let pool = self.pool.clone();
-        actix_rt::spawn(async move {
-            if let Ok(mut conn) = get_conn(&pool).await {
-                if let Err(e) = insert_chat_message(&mut conn, persistable.as_new()).await {
-                    log::error!("chat persist: insert failed: {}", e);
-                }
-            } else {
-                log::error!("chat persist: failed to get connection");
-            }
-        });
-
-        messages
+        Ok(messages)
     }
 }

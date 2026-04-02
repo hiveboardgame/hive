@@ -1,5 +1,5 @@
 use crate::{
-    chat::ChannelKey,
+    chat::{ChannelKey, SimpleDestination},
     components::update_from_event::update_from_input,
     functions::blocks_mutes::get_blocked_user_ids,
     i18n::*,
@@ -9,7 +9,7 @@ use chrono::{Duration, Local};
 use leptos::{html, leptos_dom::helpers::request_animation_frame, prelude::*, task::spawn_local};
 use leptos_router::hooks::use_params_map;
 use leptos_use::use_interval_fn;
-use shared_types::{ChatDestination, ChatMessage, GameId, SimpleDestination};
+use shared_types::{ChatDestination, ChatMessage, GameId};
 use std::collections::HashSet;
 use uuid::Uuid;
 

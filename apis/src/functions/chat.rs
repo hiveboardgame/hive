@@ -18,8 +18,17 @@ use db_lib::helpers::{
     upsert_chat_read_receipt,
 };
 use leptos::prelude::*;
+use shared_types::{
+    canonical_dm_channel_id,
+    other_user_from_dm_channel,
+    ChannelType,
+    ChatMessage,
+    CHANNEL_TYPE_DIRECT,
+    CHANNEL_TYPE_GLOBAL,
+};
 #[cfg(feature = "ssr")]
 use std::collections::HashMap;
+use uuid::Uuid;
 
 #[cfg(feature = "ssr")]
 use chrono::Duration;
@@ -38,7 +47,7 @@ const MESSAGES_HUB_SECTION_LIMIT: usize = 25;
 pub async fn mark_chat_read(channel_type: String, channel_id: String) -> Result<(), ServerFnError> {
     // Trim in case client sends trailing/leading spaces; other endpoints use exact constants.
     let channel_type = channel_type.trim();
-    if !shared_types::is_valid_chat_channel_type(channel_type) {
+    if channel_type.parse::<ChannelType>().is_err() {
         return Err(ServerFnError::new("Invalid channel_type"));
     }
     let user_id: uuid::Uuid = uuid().await?;
@@ -88,7 +97,7 @@ pub async fn get_chat_history(
     before_id: Option<i64>,
 ) -> Result<Vec<shared_types::ChatMessage>, ServerFnError> {
     let channel_type = channel_type.trim();
-    if !shared_types::is_valid_chat_channel_type(channel_type) {
+    if channel_type.parse::<ChannelType>().is_err() {
         return Err(ServerFnError::new("Invalid channel_type"));
     }
 
@@ -99,15 +108,23 @@ pub async fn get_chat_history(
     let requested_limit = limit.unwrap_or(DEFAULT_HISTORY_LIMIT);
     let capped_limit = requested_limit.clamp(1, MAX_HISTORY_LIMIT);
     let (effective_limit, effective_before_id) =
-        if channel_type == shared_types::CHANNEL_TYPE_GLOBAL {
+        if channel_type == CHANNEL_TYPE_GLOBAL {
             (capped_limit.min(GLOBAL_ANNOUNCEMENTS_LIMIT), None)
         } else {
             (capped_limit, before_id)
         };
 
-    let channel_id = if channel_type == shared_types::CHANNEL_TYPE_DIRECT {
-        shared_types::canonicalize_dm_channel_id_for_user(&channel_id, user_id)
-            .unwrap_or(channel_id)
+    let channel_id = if channel_type == CHANNEL_TYPE_DIRECT {
+        if channel_id.contains("::") {
+            other_user_from_dm_channel(&channel_id, user_id)
+                .map(|other_user_id| canonical_dm_channel_id(user_id, other_user_id))
+                .unwrap_or(channel_id)
+        } else {
+            channel_id
+                .parse::<Uuid>()
+                .map(|other_user_id| canonical_dm_channel_id(user_id, other_user_id))
+                .unwrap_or(channel_id)
+        }
     } else {
         channel_id
     };
@@ -129,7 +146,7 @@ pub async fn get_chat_history(
     .await
     .map_err(ServerFnError::new)?;
 
-    if channel_type == shared_types::CHANNEL_TYPE_DIRECT {
+    if channel_type == CHANNEL_TYPE_DIRECT {
         let blocked_ids = get_blocked_user_ids(&mut conn, user_id)
             .await
             .map_err(ServerFnError::new)?;
@@ -139,7 +156,7 @@ pub async fn get_chat_history(
 
     Ok(messages
         .into_iter()
-        .map(|message| shared_types::ChatMessage {
+        .map(|message| ChatMessage {
             user_id: message.sender_id,
             username: message.username,
             timestamp: Some(message.created_at),

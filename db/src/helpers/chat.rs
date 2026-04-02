@@ -166,7 +166,7 @@ pub async fn can_user_access_chat_channel(
 ) -> Result<bool, DbError> {
     match channel_type {
         shared_types::CHANNEL_TYPE_DIRECT => {
-            Ok(other_user_from_dm_channel(channel_id, user_id).is_some())
+            Ok(shared_types::other_user_from_dm_channel(channel_id, user_id).is_some())
         }
         shared_types::CHANNEL_TYPE_GLOBAL => Ok(true),
         shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY => {
@@ -249,7 +249,7 @@ pub async fn get_dm_conversation_summaries_for_user(
         let Some(last_message_at) = last_message_at else {
             continue;
         };
-        let Some(other_id) = other_user_from_dm_channel(&channel_id, user_id) else {
+        let Some(other_id) = shared_types::other_user_from_dm_channel(&channel_id, user_id) else {
             continue;
         };
         if blocked_ids.contains(&other_id) {
@@ -300,19 +300,12 @@ pub async fn get_dm_conversation_summaries_for_user(
     Ok(result)
 }
 
-fn other_user_from_dm_channel(channel_id: &str, me: Uuid) -> Option<Uuid> {
-    shared_types::other_user_from_dm_channel(channel_id, me)
-}
-
-fn dm_channel_like_patterns(user_id: Uuid) -> (String, String) {
-    shared_types::dm_channel_like_patterns(user_id)
-}
-
 async fn get_dm_channel_activity_for_user(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
 ) -> Result<Vec<(String, Option<DateTime<Utc>>)>, DbError> {
-    let (prefix_pattern, suffix_pattern) = dm_channel_like_patterns(user_id);
+    let prefix_pattern = format!("{user_id}::%");
+    let suffix_pattern = format!("%::{user_id}");
     chat_messages::table
         .filter(chat_messages::channel_type.eq(shared_types::CHANNEL_TYPE_DIRECT))
         .filter(
