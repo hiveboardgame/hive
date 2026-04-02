@@ -159,11 +159,8 @@ pub fn HistoryMove(
         };
         let history_index = value.turn - 1;
         let game_state = expect_context::<GameStateStore>();
-        let repetitions = Signal::derive(move || {
-            game_state
-                .state()
-                .with(|s| s.repeating_moves.clone())
-        });
+        let repetitions =
+            Signal::derive(move || game_state.state().with(|s| s.repeating_moves.clone()));
         let rep = move || {
             if repetitions.with(|r| r.contains(&history_index))
                 && current_path.with(|p| p.contains(&node_id))

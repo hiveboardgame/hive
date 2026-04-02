@@ -83,11 +83,7 @@ pub fn PieceWithoutOnClick(
     };
 
     let active_piece = Signal::derive(move || game_state.move_info().get().active);
-    let last_move = Signal::derive(move || {
-        game_state
-            .state()
-            .with(|state| state.board.last_move)
-    });
+    let last_move = Signal::derive(move || game_state.state().with(|state| state.board.last_move));
     let board_state = Signal::derive(move || game_state.state().with(|state| state.board.clone()));
     let top_piece = move || board_state.with(|board| board.top_piece(position).unwrap_or(piece));
     let show_ds = move || {

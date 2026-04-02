@@ -1,6 +1,6 @@
 use crate::providers::{
     analysis::{AnalysisSignal, AnalysisTree},
-    game_state::{GameStateStore},
+    game_state::GameStateStore,
 };
 use hive_lib::History;
 use leptos::{html, logging, prelude::*};

@@ -151,7 +151,10 @@ pub fn Play() -> impl IntoView {
                     }
                     let url_number = move_number.get_untracked();
                     if url_number.is_some_and(|v| {
-                        v < game_state.state().with_untracked(|state| state.turn).saturating_sub(1)
+                        v < game_state
+                            .state()
+                            .with_untracked(|state| state.turn)
+                            .saturating_sub(1)
                     }) {
                         game_state.update(|s| {
                             s.history_turn = url_number;

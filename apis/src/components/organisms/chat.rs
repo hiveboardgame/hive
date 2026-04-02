@@ -39,7 +39,7 @@ pub fn Message(message: ChatMessage) -> impl IntoView {
 pub fn ChatInput(destination: Signal<ChatDestination>) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let game_state = use_context::<GameStateStore>();
-    
+
     let turn = move || game_state.map(|g| g.state().with(|state| state.turn));
     let send = move || {
         let message = chat.typed_message.get();

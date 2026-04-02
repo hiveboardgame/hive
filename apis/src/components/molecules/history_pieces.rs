@@ -17,11 +17,8 @@ pub fn HistoryPieces(
     let game_state = expect_context::<GameStateStore>();
 
     let history_turn = Signal::derive(move || game_state.history_turn().get());
-    let history_moves = Signal::derive(move || {
-        game_state
-            .state()
-            .with(|state| state.history.moves.clone())
-    });
+    let history_moves =
+        Signal::derive(move || game_state.state().with(|state| state.history.moves.clone()));
 
     let history_state = Memo::new(move |_| {
         history_moves.with(|moves| {

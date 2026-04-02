@@ -137,11 +137,8 @@ pub fn Board() -> impl IntoView {
     let div_ref = NodeRef::<html::Div>::new();
     let last_turn = game_state.is_last_turn_as_signal();
     let board_view = Signal::derive(move || game_state.view().get());
-    let game_status = Signal::derive(move || {
-        game_state
-            .state()
-            .with(|state| state.game_status.clone())
-    });
+    let game_status =
+        Signal::derive(move || game_state.state().with(|state| state.game_status.clone()));
     let board_style = move || {
         if orientation_signal.orientation_vertical.get() {
             "flex grow min-h-0"

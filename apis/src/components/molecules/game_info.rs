@@ -23,11 +23,8 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             )
         })
     });
-    let game_status = Signal::derive(move || {
-        game_state
-            .state()
-            .with(|state| state.game_status.clone())
-    });
+    let game_status =
+        Signal::derive(move || game_state.state().with(|state| state.game_status.clone()));
     let tournament_game_result = Signal::derive(move || {
         game_state
             .game_response()
