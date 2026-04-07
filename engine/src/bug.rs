@@ -341,12 +341,14 @@ impl Bug {
     fn ladybug_moves(position: Position, board: &Board) -> Vec<Position> {
         // find all adjacent bugs to climb on
         let first = Bug::climb(position, board);
-        // stay on top of the hive by performing another climb
+        // stay on top of the hive by moving on to an adjacent occupied hex
         let second: HashSet<Position> = first
             .flat_map(|first_pos| {
-                Bug::climb(first_pos, board)
-                    .filter(|pos| *pos != position && *pos != first_pos)
-                    .collect::<HashSet<Position>>()
+                let current_height = board.level(first_pos) + 1;
+                board.positions_taken_around(first_pos).filter(move |pos| {
+                    *pos != position
+                        && !board.gated(current_height.max(board.level(*pos) + 1), first_pos, *pos)
+                })
             })
             .collect::<HashSet<Position>>();
         // then find available and ungated positions
@@ -355,7 +357,7 @@ impl Bug {
             .flat_map(|pos| {
                 board
                     .positions_available_around(*pos)
-                    .filter(|p| !board.gated(board.level(*pos) + 1, *pos, *p) && *p != position)
+                    .filter(|p| !board.gated(board.level(*pos) + 1, *pos, *p))
                     .collect::<HashSet<Position>>()
             })
             .collect::<HashSet<Position>>();
