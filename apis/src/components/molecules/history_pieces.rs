@@ -1,7 +1,10 @@
 use crate::{
     common::HexStack,
     components::molecules::hex_stack::HexStack as HexStackView,
-    providers::{config::TileOptions, game_state::GameStateSignal},
+    providers::{
+        config::TileOptions,
+        game_state::{GameStateStore, GameStateStoreFields},
+    },
 };
 use hive_lib::{History, Position, State};
 use leptos::prelude::*;
@@ -11,10 +14,11 @@ pub fn HistoryPieces(
     tile_opts: TileOptions,
     target_stack: RwSignal<Option<Position>>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
 
-    let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
-    let history_moves = create_read_slice(game_state.signal, |gs| gs.state.history.moves.clone());
+    let history_turn = Signal::derive(move || game_state.history_turn().get());
+    let history_moves =
+        Signal::derive(move || game_state.state().with(|state| state.history.moves.clone()));
 
     let history_state = Memo::new(move |_| {
         history_moves.with(|moves| {

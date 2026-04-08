@@ -3,7 +3,7 @@ use crate::{
         atoms::history_button::{HistoryButton, HistoryNavigation},
         organisms::reserve::{Alignment, Reserve},
     },
-    providers::game_state::GameStateSignal,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::Color;
 use leptos::{ev::keydown, html, prelude::*};
@@ -11,7 +11,7 @@ use leptos_use::{use_event_listener, use_window};
 
 #[component]
 pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let window = use_window();
     let active = Signal::derive_local(move || {
         window.as_ref().and_then(|w| {
@@ -47,11 +47,11 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
             let parent = parent.get_untracked().expect("div to be loaded");
             parent.set_scroll_top(parent.scroll_height());
         }
-        game_state.show_history_turn(game_state.signal.with_untracked(|gs| gs.state.turn - 1));
+        game_state.show_history_turn(game_state.state().with_untracked(|state| state.turn) - 1);
     });
     let if_last_go_to_end = Callback::new(move |()| {
         focus.run(());
-        if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
+        if game_state.with_untracked(|gs| gs.is_last_turn()) {
             go_to_end.run(());
         }
     });

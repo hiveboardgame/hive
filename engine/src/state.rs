@@ -13,7 +13,6 @@ use crate::{
     player::Player,
     position::Position,
 };
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct State {
     pub game_id: u64,

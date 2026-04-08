@@ -2,6 +2,7 @@ use crate::responses::user::UserResponse;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use hive_lib::{Bug, GameControl, GameResult, GameStatus, GameType, History, Position, State};
+use reactive_stores::Store;
 use serde::{Deserialize, Serialize};
 use shared_types::{Conclusion, GameId, GameSpeed, GameStart, TimeMode, TournamentGameResult};
 use std::{cmp::Ordering, collections::HashMap, time::Duration};
@@ -24,7 +25,7 @@ pub struct GameAbstractResponse {
     pub conclusion: Conclusion,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Store)]
 pub struct GameResponse {
     pub uuid: Uuid,
     pub game_id: GameId,

@@ -5,7 +5,7 @@ use crate::{
         organisms::side_board::move_query_signal,
     },
     providers::{
-        game_state::{self, GameStateSignal},
+        game_state::{GameStateStore, GameStateStoreFields},
         timer::TimerSignal,
     },
 };
@@ -25,22 +25,20 @@ pub fn HistoryMove(
     repetition: bool,
     parent_div: NodeRef<html::Div>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let div_ref = NodeRef::<html::Div>::new();
     let timer = expect_context::<TimerSignal>();
     let (_move, set_move) = move_query_signal();
     let onclick = move |_| {
         game_state.show_history_turn(turn);
-        set_move.set(
-            game_state
-                .signal
-                .with_untracked(|gs| gs.history_turn.map(|v| v + 1)),
-        );
+        set_move.set(game_state.with_untracked(|gs| gs.history_turn.map(|v| v + 1)));
         set_timer_from_response(game_state, timer);
     };
-    let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
-    let is_realtime = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
+    let history_turn = Signal::derive(move || game_state.history_turn().get());
+    let is_realtime = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
             .as_ref()
             .is_some_and(|gr| gr.time_mode == TimeMode::RealTime)
     });
@@ -70,7 +68,7 @@ pub fn HistoryMove(
         if turn < 2 {
             return None;
         }
-        let response = game_state.signal.with(|gs| gs.game_response.clone())?;
+        let response = game_state.game_response().get()?;
         let increment = response.time_increment? as i64 * NANOS_IN_SECOND as i64;
         let time_left = (*response.move_times.get(turn)?)?;
         let prev_time = (*response.move_times.get(turn - 2)?)?;
@@ -91,12 +89,16 @@ pub fn HistoryMove(
 
 #[component]
 pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
-    let game_state = expect_context::<game_state::GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let params = use_params_map();
     let queries = use_query_map();
-    let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
-    let repetitions = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map(|gr| gr.repetitions.clone())
+    let state = Signal::derive(move || game_state.state().get());
+    let repetitions = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
+            .as_ref()
+            .map(|gr| gr.repetitions.clone())
     });
     let history_moves = move || {
         state()
@@ -114,8 +116,8 @@ pub fn History(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoVi
         _ => "".to_string(),
     };
 
-    let conclusion = create_read_slice(game_state.signal, |gs| {
-        if let Some(game) = &gs.game_response {
+    let conclusion = Signal::derive(move || {
+        if let Some(game) = &game_state.game_response().get() {
             game.conclusion.pretty_string()
         } else {
             String::from("No data")

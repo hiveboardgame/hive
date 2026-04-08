@@ -3,7 +3,7 @@ use crate::{
     components::atoms::gc_button::{AcceptDenyGc, ConfirmButton},
     providers::{
         challenges::ChallengeStateSignal,
-        game_state::GameStateSignal,
+        game_state::{GameStateStore, GameStateStoreFields},
         ApiRequestsProvider,
         AuthContext,
     },
@@ -15,7 +15,7 @@ use shared_types::{ChallengeDetails, ChallengeVisibility};
 
 #[component]
 pub fn ControlButtons() -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let user_id = move || {
@@ -32,25 +32,26 @@ pub fn ControlButtons() -> impl IntoView {
             .get()
             .expect("User_id is one of the players in this game")
     });
-    let pending = create_read_slice(game_state.signal, |gs| gs.game_control_pending.clone());
-    let not_tournament = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
-            .as_ref()
+    let pending = Signal::derive(move || game_state.game_control_pending().get());
+    let not_tournament = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
             .is_some_and(|gr| gr.tournament.is_none())
     });
-    let takeback_allowed = create_read_slice(game_state.signal, |gs| gs.takeback_allowed());
+    let takeback_allowed = Signal::derive(move || game_state.takeback_allowed());
     //TODO: Check whether this button works as intended
     let navigate_to_tournament = move |_| {
         let navigate = use_navigate();
+        let game_response = game_state.game_response().get();
         navigate(
             &format!(
                 "/tournament/{}",
-                game_state
-                    .signal
-                    .with(|gs| gs.game_response.as_ref().map_or(String::new(), |gr| gr
-                        .tournament
+                game_response.as_ref().map_or(String::new(), |gr| {
+                    gr.tournament
                         .as_ref()
-                        .map_or(String::new(), |t| t.tournament_id.to_string())))
+                        .map_or(String::new(), |t| t.tournament_id.to_string())
+                })
             ),
             Default::default(),
         );
@@ -68,7 +69,7 @@ pub fn ControlButtons() -> impl IntoView {
     };
 
     let new_opponent = move |_| {
-        game_state.signal.with_untracked(|gs| {
+        game_state.with_untracked(|gs| {
             if let Some(game) = &gs.game_response {
                 let details = ChallengeDetails {
                     rated: game.rated,
@@ -93,30 +94,28 @@ pub fn ControlButtons() -> impl IntoView {
 
     let rematch_present = move || {
         let challenge_state_signal = expect_context::<ChallengeStateSignal>();
-        game_state.signal.with(|gs| {
-            if let Some(game_response) = &gs.game_response {
-                challenge_state_signal.signal.with(|cs| {
-                    cs.challenges
-                        .values()
-                        .find(|challenge| {
-                            challenge.visibility == ChallengeVisibility::Direct
-                                && challenge.opponent.clone().is_some_and(|ref opponent| {
-                                    opponent.uid == game_response.black_player.uid
-                                        || opponent.uid == game_response.white_player.uid
-                                })
-                                && (challenge.challenger.uid == game_response.black_player.uid
-                                    || challenge.challenger.uid == game_response.white_player.uid)
-                                && challenge.game_type == game_response.game_type.to_string()
-                                && challenge.time_mode == game_response.time_mode
-                                && challenge.time_base == game_response.time_base
-                                && challenge.time_increment == game_response.time_increment
-                        })
-                        .cloned()
-                })
-            } else {
-                None
-            }
-        })
+        if let Some(game_response) = game_state.game_response().get() {
+            challenge_state_signal.signal.with(|cs| {
+                cs.challenges
+                    .values()
+                    .find(|challenge| {
+                        challenge.visibility == ChallengeVisibility::Direct
+                            && challenge.opponent.clone().is_some_and(|ref opponent| {
+                                opponent.uid == game_response.black_player.uid
+                                    || opponent.uid == game_response.white_player.uid
+                            })
+                            && (challenge.challenger.uid == game_response.black_player.uid
+                                || challenge.challenger.uid == game_response.white_player.uid)
+                            && challenge.game_type == game_response.game_type.to_string()
+                            && challenge.time_mode == game_response.time_mode
+                            && challenge.time_base == game_response.time_base
+                            && challenge.time_increment == game_response.time_increment
+                    })
+                    .cloned()
+            })
+        } else {
+            None
+        }
     };
 
     let sent_challenge = move || {
@@ -152,7 +151,7 @@ pub fn ControlButtons() -> impl IntoView {
             let api = api.get();
             api.challenge_accept(challenge.challenge_id);
         } else if let Some(user_id) = auth_context.user.with(|a| a.as_ref().map(|u| u.id)) {
-            game_state.signal.with_untracked(|gs| {
+            game_state.with_untracked(|gs| {
                 if let Some(game) = &gs.game_response {
                     // TODO: color and opponent
                     let (color_choice, opponent) = if user_id == game.black_player.uid {
@@ -226,7 +225,7 @@ pub fn ControlButtons() -> impl IntoView {
                                     user_id=user_id()
 
                                     hidden=Signal::derive(move || {
-                                        game_state.signal.with(|gs| gs.state.turn > 1)
+                                        game_state.state().with(|state| state.turn > 1)
                                     })
                                 />
                                 <Show when=takeback_allowed>
@@ -235,7 +234,7 @@ pub fn ControlButtons() -> impl IntoView {
                                         user_id=user_id()
                                         hidden=Signal::derive(move || {
                                             pending_takeback()
-                                                || game_state.signal.with(|gs| gs.state.turn < 2)
+                                                || game_state.state().with(|state| state.turn) < 2
                                         })
                                     />
 

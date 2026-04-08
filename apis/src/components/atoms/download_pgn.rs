@@ -4,22 +4,25 @@ use leptos_icons::*;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{js_sys::Array, Blob, Url};
 
-use crate::{providers::game_state::GameStateSignal, responses::GameResponse};
+use crate::{
+    providers::game_state::{GameStateStore, GameStateStoreFields},
+    responses::GameResponse,
+};
 
 #[component]
 pub fn DownloadPgn(
     #[prop(optional, into)] game: Option<StoredValue<GameResponse>>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let maybe_game = move || {
         if let Some(game) = game {
             Some(game)
         } else {
-            game_state.signal.with(|gs| {
-                gs.game_response
-                    .as_ref()
-                    .map(|v| StoredValue::new(v.clone()))
-            })
+            game_state
+                .game_response()
+                .get()
+                .as_ref()
+                .map(|v| StoredValue::new(v.clone()))
         }
     };
     let download = move |_| {

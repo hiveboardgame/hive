@@ -7,7 +7,7 @@ use crate::{
         atoms::{profile_link::ProfileLink, rating::Rating, status_indicator::StatusIndicator},
         molecules::rating_and_change::RatingAndChangeDynamic,
     },
-    providers::game_state::GameStateSignal,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 
 #[component]
@@ -16,8 +16,8 @@ pub fn UserWithRating(
     #[prop(optional)] text_color: &'static str,
     #[prop(optional)] vertical: bool,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
-    let game_response = create_read_slice(game_state.signal, |gs| gs.game_response.clone());
+    let game_state = expect_context::<GameStateStore>();
+    let game_response = Signal::derive(move || game_state.game_response().get());
     let player = Signal::derive(move || match side() {
         Color::White => game_response.with(|g| g.as_ref().map(|g| g.white_player.clone())),
         Color::Black => game_response.with(|g| g.as_ref().map(|g| g.black_player.clone())),

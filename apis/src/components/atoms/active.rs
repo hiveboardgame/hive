@@ -1,6 +1,6 @@
 use crate::{
     common::{ActiveState, SvgPos},
-    providers::game_state::GameStateSignal,
+    providers::game_state::GameStateStore,
 };
 use hive_lib::Position;
 use leptos::{either::Either, prelude::*, text_prop::TextProp};
@@ -13,7 +13,7 @@ pub fn Active(
     active_state: ActiveState,
     straight: bool,
 ) -> impl IntoView {
-    let mut game_signal = expect_context::<GameStateSignal>();
+    let game_signal = expect_context::<GameStateStore>();
     let center = move || SvgPos::center_for_level(position, level, straight);
     let transform = TextProp::from(move || format!("translate({},{})", center().0, center().1));
     match active_state {

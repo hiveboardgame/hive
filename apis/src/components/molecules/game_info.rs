@@ -1,7 +1,7 @@
 use crate::{
     components::molecules::time_row::TimeRow,
     i18n::*,
-    providers::game_state::GameStateSignal,
+    providers::game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::{Color, GameResult, GameStatus};
 use leptos::{either::Either, prelude::*};
@@ -10,9 +10,9 @@ use shared_types::{Conclusion, PrettyString, TimeInfo, TournamentGameResult, Tou
 #[component]
 pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoView {
     let i18n = use_i18n();
-    let game_state = expect_context::<GameStateSignal>();
-    let game_info = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map(|gr| {
+    let game_state = expect_context::<GameStateStore>();
+    let game_info = Signal::derive(move || {
+        game_state.game_response().get().as_ref().map(|gr| {
             (
                 TimeInfo {
                     mode: gr.time_mode,
@@ -23,29 +23,40 @@ pub fn GameInfo(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             )
         })
     });
-    let game_status = create_read_slice(game_state.signal, |gs| gs.state.game_status.clone());
-    let tournament_game_result = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
+    let game_status =
+        Signal::derive(move || game_state.state().with(|state| state.game_status.clone()));
+    let tournament_game_result = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
             .as_ref()
             .map(|gr| gr.tournament_game_result.clone())
     });
-    let game_conclusion = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map(|gr| gr.conclusion.clone())
+    let game_conclusion = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
+            .as_ref()
+            .map(|gr| gr.conclusion.clone())
     });
-    let white_username = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
+    let white_username = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
             .as_ref()
             .map(|gr| gr.white_player.username.clone())
             .unwrap_or_default()
     });
-    let black_username = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
+    let black_username = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
             .as_ref()
             .map(|gr| gr.black_player.username.clone())
             .unwrap_or_default()
     });
-    let tournament_info = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().map(|gr| {
+    let tournament_info = Signal::derive(move || {
+        game_state.game_response().get().as_ref().map(|gr| {
             (
                 gr.tournament.is_some(),
                 gr.tournament.as_ref().map(|t| t.name.clone()),
