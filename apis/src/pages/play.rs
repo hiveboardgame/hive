@@ -144,7 +144,7 @@ pub fn Play() -> impl IntoView {
                     if let Some((_turn, gc)) = game.game_control_history.last() {
                         match gc {
                             GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
-                                game_state.set_pending_gc(gc.clone())
+                                game_state.set_pending_gc(*gc)
                             }
                             _ => {}
                         }
@@ -214,7 +214,7 @@ pub fn Play() -> impl IntoView {
                             }
                         }
                         GameReaction::Control(game_control) => {
-                            game_state.set_pending_gc(game_control.clone());
+                            game_state.set_pending_gc(game_control);
 
                             match game_control {
                                 GameControl::DrawAccept(_) => {

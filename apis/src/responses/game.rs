@@ -114,6 +114,19 @@ impl GameResponse {
         .expect("State to be valid, as game was")
     }
 
+    pub fn organizer_can_adjudicate(&self) -> bool {
+        matches!(
+            self.conclusion,
+            Conclusion::Unknown | Conclusion::Committee | Conclusion::Forfeit
+        ) && self.turn == 0
+            && self.history.is_empty()
+            && self.game_start == GameStart::Ready
+            && matches!(
+                self.game_status,
+                GameStatus::NotStarted | GameStatus::Adjudicated
+            )
+    }
+
     pub fn time_left(&self) -> Result<std::time::Duration> {
         if self.turn < 2 {
             return Ok(std::time::Duration::from_nanos(u64::MAX));

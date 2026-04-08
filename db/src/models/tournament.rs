@@ -1,4 +1,4 @@
-use super::{Game, NewGame, TournamentInvitation};
+use super::{Game, NewGame, Schedule, TournamentInvitation};
 use crate::{
     db_error::DbError,
     models::{
@@ -26,12 +26,13 @@ use crate::{
 use chrono::{prelude::*, TimeDelta};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use hive_lib::Color;
+use hive_lib::{Color, GameStatus};
 use itertools::Itertools;
 use nanoid::nanoid;
 use rand::{rng, seq::SliceRandom};
 use serde::{Deserialize, Serialize};
 use shared_types::{
+    Conclusion,
     Standings,
     Tiebreaker,
     TimeMode,
@@ -320,6 +321,91 @@ impl Tournament {
             .get_result(conn)
             .await?;
         Ok(tournament)
+    }
+
+    pub async fn double_forfeit_unstarted_games(
+        &self,
+        user_id: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<usize, DbError> {
+        self.ensure_inprogress()?;
+        self.ensure_user_is_organizer_or_admin(user_id, conn)
+            .await?;
+
+        let unstarted_game_ids = self
+            .game_ids_with_status(GameStatus::NotStarted, conn)
+            .await?;
+
+        if unstarted_game_ids.is_empty() {
+            return Ok(0);
+        }
+
+        let updated_games =
+            diesel::update(games::table.filter(games::id.eq_any(&unstarted_game_ids)))
+                .set((
+                    games::finished.eq(true),
+                    games::conclusion.eq(Conclusion::Forfeit.to_string()),
+                    games::game_status.eq(GameStatus::Adjudicated.to_string()),
+                    games::tournament_game_result
+                        .eq(TournamentGameResult::DoubeForfeit.to_string()),
+                    games::updated_at.eq(Utc::now()),
+                    games::last_interaction.eq(Utc::now()),
+                ))
+                .execute(conn)
+                .await?;
+
+        Schedule::delete_for_games(&unstarted_game_ids, conn).await?;
+
+        Ok(updated_games)
+    }
+
+    pub async fn reset_adjudicated_games(
+        &self,
+        user_id: &Uuid,
+        conn: &mut DbConn<'_>,
+    ) -> Result<usize, DbError> {
+        self.ensure_inprogress()?;
+        self.ensure_user_is_organizer_or_admin(user_id, conn)
+            .await?;
+
+        let unstarted_game_ids = self
+            .game_ids_with_status(GameStatus::Adjudicated, conn)
+            .await?;
+
+        if unstarted_game_ids.is_empty() {
+            return Ok(0);
+        }
+
+        let updated_games =
+            diesel::update(games::table.filter(games::id.eq_any(&unstarted_game_ids)))
+                .set((
+                    games::finished.eq(false),
+                    games::conclusion.eq(Conclusion::Unknown.to_string()),
+                    games::game_status.eq(GameStatus::NotStarted.to_string()),
+                    games::tournament_game_result.eq(TournamentGameResult::Unknown.to_string()),
+                    games::updated_at.eq(Utc::now()),
+                    games::last_interaction.eq::<Option<DateTime<Utc>>>(None),
+                    games::turn.eq(0),
+                ))
+                .execute(conn)
+                .await?;
+
+        Schedule::delete_for_games(&unstarted_game_ids, conn).await?;
+
+        Ok(updated_games)
+    }
+
+    async fn game_ids_with_status(
+        &self,
+        status: GameStatus,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Uuid>, DbError> {
+        Ok(games::table
+            .filter(tournament_id_column.eq(self.id))
+            .filter(games::game_status.eq(status.to_string()))
+            .select(games::id)
+            .get_results(conn)
+            .await?)
     }
 
     pub async fn retract_invitation(
@@ -670,7 +756,6 @@ impl Tournament {
     }
 
     async fn swiss_create_first_round(&self, conn: &mut DbConn<'_>) -> Result<Vec<Game>, DbError> {
-        let organizer = &self.organizers(conn).await?[0].id;
         let mut players = self.players(conn).await?;
         let mut games = Vec::new();
 
@@ -706,12 +791,8 @@ impl Tournament {
                 } else {
                     None
                 } {
-                    game.adjudicate_tournament_result(
-                        organizer,
-                        &TournamentGameResult::Winner(winner),
-                        conn,
-                    )
-                    .await?;
+                    game.assign_tournament_result(&TournamentGameResult::Winner(winner), conn)
+                        .await?;
                 }
 
                 games.push(game);
@@ -825,9 +906,22 @@ impl Tournament {
 
     pub async fn swiss_create_next_round(
         &self,
-        user_id: &Uuid,
+        organizer: &Uuid,
         conn: &mut DbConn<'_>,
     ) -> Result<Vec<Game>, DbError> {
+        self.ensure_inprogress()?;
+        self.ensure_user_is_organizer_or_admin(organizer, conn)
+            .await?;
+        self.ensure_games_finished(conn).await?;
+
+        if TournamentMode::from_str(&self.mode).expect("Only valid modes should make it to the DB")
+            != TournamentMode::DoubleSwiss
+        {
+            return Err(DbError::InvalidAction {
+                info: String::from("Only Swiss tournaments can progress to the next round"),
+            });
+        }
+
         let played_games = self.games(conn).await?;
         let mut games = Vec::new();
         let mut standings = Standings::new();
@@ -885,12 +979,8 @@ impl Tournament {
                 } else {
                     None
                 } {
-                    game.adjudicate_tournament_result(
-                        user_id,
-                        &TournamentGameResult::Winner(winner),
-                        conn,
-                    )
-                    .await?;
+                    game.assign_tournament_result(&TournamentGameResult::Winner(winner), conn)
+                        .await?;
                 }
 
                 games.push(game);

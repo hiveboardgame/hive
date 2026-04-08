@@ -13,6 +13,8 @@ pub enum TournamentAction {
     Abandon(TournamentId),
     // TODO: AddToSeries(TournamentId),
     AdjudicateResult(GameId, TournamentGameResult),
+    DoubleForfeitUnstartedGames(TournamentId),
+    ResetAdjudicatedGames(TournamentId),
     Create(Box<TournamentDetails>),
     Delete(TournamentId),
     Finish(TournamentId),
