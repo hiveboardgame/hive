@@ -67,17 +67,22 @@ impl GameControlHandler {
                 username: self.username.to_owned(),
             }))),
         });
-        match self.control {
-            GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
-                let current_user = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
-                let games = current_user.get_games_with_notifications(&mut conn).await?;
-                let game_responses = GameResponse::from_games_batch(games, &mut conn).await?;
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(game.current_player_id),
-                    message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
-                });
+
+        // Only notify the opponent about a *pending* control.
+        if game.has_unanswered_game_control() {
+            match self.control {
+                GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
+                    let current_user =
+                        User::find_by_uuid(&game.current_player_id, &mut conn).await?;
+                    let games = current_user.get_games_with_notifications(&mut conn).await?;
+                    let game_responses = GameResponse::from_games_batch(games, &mut conn).await?;
+                    messages.push(InternalServerMessage {
+                        destination: MessageDestination::User(game.current_player_id),
+                        message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
+                    });
+                }
+                _ => {}
             }
-            _ => {}
         }
         if game_response.time_mode == TimeMode::RealTime {
             messages.push(InternalServerMessage {
@@ -123,19 +128,16 @@ impl GameControlHandler {
     }
 
     async fn handle_takeback_request(&self, conn: &mut DbConn<'_>) -> Result<Game> {
-        let game = self.game.write_game_control(&self.control, conn).await?;
-        Ok(game)
+        Ok(self.game.write_game_control(&self.control, conn).await?)
     }
 
     async fn handle_takeback_accept(&self, conn: &mut DbConn<'_>) -> Result<Game> {
         self.ensure_previous_gc_present()?;
-        let game = self.game.accept_takeback(&self.control, conn).await?;
-        Ok(game)
+        Ok(self.game.accept_takeback(&self.control, conn).await?)
     }
 
     async fn handle_resign(&self, conn: &mut DbConn<'_>) -> Result<Game> {
-        let game = self.game.resign(&self.control, conn).await?;
-        Ok(game)
+        Ok(self.game.resign(&self.control, conn).await?)
     }
 
     async fn handle_abort(&self, conn: &mut DbConn<'_>) -> Result<()> {
@@ -147,25 +149,21 @@ impl GameControlHandler {
 
     async fn handle_draw_reject(&self, conn: &mut DbConn<'_>) -> Result<Game> {
         self.ensure_previous_gc_present()?;
-        let game = self.game.write_game_control(&self.control, conn).await?;
-        Ok(game)
+        Ok(self.game.write_game_control(&self.control, conn).await?)
     }
 
     async fn handle_draw_offer(&self, conn: &mut DbConn<'_>) -> Result<Game> {
-        let game = self.game.write_game_control(&self.control, conn).await?;
-        Ok(game)
+        Ok(self.game.write_game_control(&self.control, conn).await?)
     }
 
     async fn handle_draw_accept(&self, conn: &mut DbConn<'_>) -> Result<Game> {
         self.ensure_previous_gc_present()?;
-        let game = self.game.accept_draw(&self.control, conn).await?;
-        Ok(game)
+        Ok(self.game.accept_draw(&self.control, conn).await?)
     }
 
     async fn handle_takeback_reject(&self, conn: &mut DbConn<'_>) -> Result<Game> {
         self.ensure_previous_gc_present()?;
-        let game = self.game.write_game_control(&self.control, conn).await?;
-        Ok(game)
+        Ok(self.game.write_game_control(&self.control, conn).await?)
     }
 
     async fn match_control(&self, conn: &mut DbConn<'_>) -> Result<Game> {

@@ -37,6 +37,8 @@ pub struct HiveGame {
     pub player_turn: String,
     #[serde(rename = "history", default)]
     pub moves: String,
+    #[serde(default)]
+    pub game_control_history: String,
     // Additional fields from API response - we can ignore most of these
     #[serde(skip_serializing_if = "Option::is_none")]
     pub nanoid: Option<String>,
@@ -128,6 +130,12 @@ impl HiveGame {
 struct PlayMove {
     game_id: String,
     piece_pos: String,
+}
+
+#[derive(Debug, Serialize)]
+struct GameControlRequest {
+    game_id: String,
+    control: String,
 }
 
 pub struct HiveGameApi {
@@ -233,6 +241,37 @@ impl HiveGameApi {
             });
         }
 
+        Ok(())
+    }
+
+    /// Send a game control to the server (e.g. takeback_accept)
+    pub async fn control_game(
+        &self,
+        game_id: &str,
+        control: &str,
+        token: &str,
+    ) -> Result<(), ApiError> {
+        let url = format!("{}/api/v1/bot/games/control", self.base_url);
+        let payload = GameControlRequest {
+            game_id: game_id.to_string(),
+            control: control.to_string(),
+        };
+
+        let response = self
+            .client
+            .post(&url)
+            .header("Authorization", format!("Bearer {token}"))
+            .json(&payload)
+            .send()
+            .await?;
+
+        let status = response.status();
+        if !status.is_success() {
+            return Err(ApiError::Server {
+                status_code: status,
+                message: response.text().await.unwrap_or_default(),
+            });
+        }
         Ok(())
     }
 

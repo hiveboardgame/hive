@@ -201,6 +201,16 @@ async fn handle_control(
             }
             GameControl::Abort(bot_color)
         }
+        "takeback_accept" => {
+            if game.turn < 2 {
+                return Err(anyhow!("Cannot accept takeback before turn 2"));
+            }
+            let expected = GameControl::TakebackRequest(bot_color.opposite_color());
+            if game.last_game_control() != Some(expected) {
+                return Err(anyhow!("No pending takeback request to accept"));
+            }
+            GameControl::TakebackAccept(bot_color)
+        }
         _ => return Err(anyhow!("Invalid control type: {}", req.control)),
     };
 
@@ -221,6 +231,7 @@ async fn handle_control(
                         game_copy.finished = true;
                         game_copy
                     }
+                    GameControl::TakebackAccept(_) => game.accept_takeback(&game_control, tc).await?,
                     _ => unreachable!(),
                 };
 
