@@ -60,9 +60,11 @@ impl State {
         Ok(state)
     }
 
-    pub fn undo(&mut self) {
+    pub fn undo(&mut self, n: usize) {
         let mut moves = self.history.moves.clone();
-        moves.pop();
+        for _ in 0..n {
+            moves.pop();
+        }
         let moves = moves
             .iter()
             .map(|(piece, mov)| format!("{piece} {mov}"))

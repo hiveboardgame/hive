@@ -6,8 +6,8 @@ use crate::{
         hex_stack::HexStack,
     },
     providers::{
-        analysis::AnalysisSignal,
-        game_state::{GameStateSignal, View},
+        analysis::AnalysisStore,
+        game_state::{GameStateStore, GameStateStoreFields, View},
         AuthContext,
         Config,
     },
@@ -70,8 +70,8 @@ pub fn Reserve(
     #[prop(optional)] extend_tw_classes: &'static str,
     #[prop(optional)] viewbox_str: Option<&'static str>,
 ) -> impl IntoView {
-    let analysis = use_context::<AnalysisSignal>().is_some();
-    let game_state = expect_context::<GameStateSignal>();
+    let analysis = use_context::<AnalysisStore>().is_some();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let config = expect_context::<Config>().0;
     let tile_opts = Signal::derive(move || config().tile);
@@ -86,13 +86,15 @@ pub fn Reserve(
         }
     };
     // TODO: Should be a Store, this is hacky
-    let board_view = create_read_slice(game_state.signal, |gs| gs.view.clone());
-    let move_info = create_read_slice(game_state.signal, |gs| gs.move_info.clone());
-    let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
-    let state = create_read_slice(game_state.signal, |gs| gs.state.clone());
+    let board_view = Signal::derive(move || game_state.view().get());
+    let move_info = Signal::derive(move || game_state.move_info().get());
+    let history_turn = Signal::derive(move || game_state.history_turn().get());
+    let state = Signal::derive(move || game_state.state().get());
     let last_turn = game_state.is_last_turn_as_signal();
-    let status = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
+    let status = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
             .as_ref()
             .map_or(GameStatus::NotStarted, |g| g.game_status.clone())
     });
@@ -102,8 +104,10 @@ pub fn Reserve(
             .with_untracked(|a| a.as_ref().map(|user| user.id))
     });
     let user_color = game_state.user_color_as_signal(user_id);
-    let tournament = create_read_slice(game_state.signal, |gs| {
-        gs.game_response
+    let tournament = Signal::derive(move || {
+        game_state
+            .game_response()
+            .get()
             .as_ref()
             .is_some_and(|gr| gr.tournament.is_some())
     });

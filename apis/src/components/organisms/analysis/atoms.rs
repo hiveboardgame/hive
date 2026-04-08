@@ -1,8 +1,8 @@
 use crate::{
     pages::analysis::ToggleStates,
     providers::{
-        analysis::{AnalysisSignal, TreeNode},
-        game_state::GameStateSignal,
+        analysis::{AnalysisStore, AnalysisTreeStoreFields, TreeNode},
+        game_state::{GameStateStore, GameStateStoreFields},
     },
 };
 use leptos::{html, prelude::*};
@@ -11,16 +11,24 @@ use tree_ds::prelude::Node;
 
 #[component]
 pub fn UndoButton() -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>();
-    let game_state = expect_context::<GameStateSignal>();
-    let analysis = StoredValue::new(analysis.clone());
-    let is_disabled = move || analysis.get_value().0.with(|a| a.current_node.is_none());
+    let analysis = expect_context::<AnalysisStore>();
+    let game_state = expect_context::<GameStateStore>();
+    let disabled_analysis = analysis.clone();
+    let is_disabled = move || disabled_analysis.current_node().get().is_none();
     let undo = move |_| {
-        analysis.get_value().0.update(|a| {
+        let mut needs_sync = false;
+        analysis.update(|a| {
             if let Some(node) = &a.current_node {
                 if let Ok(node_id) = node.get_node_id() {
                     if let Ok(Some(new_current)) = node.get_parent_id() {
-                        a.update_node(new_current, Some(game_state));
+                        while let Some(v) = a.full_path.last() {
+                            if v != &node_id {
+                                a.full_path.pop();
+                            }
+                        }
+                        a.full_path.pop();
+                        a.current_node = a.tree.get_node_by_id(&new_current);
+                        needs_sync = true;
                         if let Ok(tree) = a.tree.get_subtree(&node_id, None) {
                             tree.get_nodes().iter().for_each(|n| {
                                 if let Ok(n_id) = n.get_node_id() {
@@ -38,6 +46,9 @@ pub fn UndoButton() -> impl IntoView {
                 }
             }
         });
+        if needs_sync {
+            analysis.sync_game_state(game_state);
+        }
     };
 
     view! {
@@ -65,8 +76,10 @@ pub fn HistoryButton(
     post_action: Option<Callback<()>>,
     #[prop(optional)] node_ref: Option<NodeRef<html::Button>>,
 ) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
-    let game_state = expect_context::<GameStateSignal>();
+    let analysis = expect_context::<AnalysisStore>();
+    let game_state = expect_context::<GameStateStore>();
+    let current_node = analysis.current_node();
+    let tree = analysis.tree();
     let cloned_action = action.clone();
     let nav_buttons_style = "flex place-items-center justify-center hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 m-1 h-7 rounded-md border-cyan-500 dark:border-button-twilight border-2 drop-shadow-lg disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent";
     let icon = match action {
@@ -76,32 +89,31 @@ pub fn HistoryButton(
     };
 
     let is_disabled = move || {
-        analysis.with(|analysis| {
-            if let Some(n) = &analysis.current_node {
-                match cloned_action {
-                    HistoryNavigation::First => n.get_node_id().map_or(true, |node_id| {
-                        analysis
-                            .tree
+        if let Some(n) = current_node.get() {
+            match cloned_action {
+                HistoryNavigation::First => n.get_node_id().map_or(true, |node_id| {
+                    tree.with(|analysis_tree| {
+                        analysis_tree
                             .get_ancestor_ids(&node_id)
                             .map_or(true, |ids| ids.is_empty())
-                    }),
-                    HistoryNavigation::Next => n
-                        .get_children_ids()
-                        .map_or(true, |children| children.is_empty()),
-                    HistoryNavigation::Previous => n.get_parent_id().map_or(true, |p| p.is_none()),
-                }
-            } else {
-                false
+                    })
+                }),
+                HistoryNavigation::Next => n
+                    .get_children_ids()
+                    .map_or_else(|_| true, |children| children.is_empty()),
+                HistoryNavigation::Previous => n.get_parent_id().map_or(true, |p| p.is_none()),
             }
-        })
+        } else {
+            false
+        }
     };
     let debounced_action = debounce(std::time::Duration::from_millis(10), move |_| {
-        let updated_node_id = analysis.with(|a| {
-            a.current_node.as_ref().and_then(|n| match action {
+        let updated_node_id = current_node.with_untracked(|a| {
+            a.as_ref().and_then(|n| match action {
                 HistoryNavigation::First => n
                     .get_node_id()
                     .ok()
-                    .and_then(|node_id| a.tree.get_ancestor_ids(&node_id).ok())
+                    .and_then(|node_id| tree.with_untracked(|t| t.get_ancestor_ids(&node_id).ok()))
                     .and_then(|ids| ids.last().cloned()),
                 HistoryNavigation::Next => n
                     .get_children_ids()
@@ -111,9 +123,8 @@ pub fn HistoryButton(
             })
         });
         if let Some(updated_node_id) = updated_node_id {
-            analysis.update(|a| {
-                a.update_node(updated_node_id, Some(game_state));
-            });
+            analysis.update_node(updated_node_id);
+            analysis.sync_game_state(game_state);
         }
         if let Some(post_action) = post_action {
             post_action.run(())
@@ -125,7 +136,7 @@ pub fn HistoryButton(
         <button
             node_ref=_definite_node_ref
             class=nav_buttons_style
-            prop:disabled=is_disabled
+            disabled=is_disabled
             on:click=debounced_action
         >
 
@@ -140,12 +151,14 @@ pub fn HistoryMove(
     current_path: Memo<Vec<i32>>,
     has_children: bool,
 ) -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
-    let game_state = expect_context::<GameStateSignal>();
+    let analysis = expect_context::<AnalysisStore>();
+    let game_state = expect_context::<GameStateStore>();
     if let (Ok(Some(value)), Ok(node_id)) = (node.get_value(), node.get_node_id()) {
+        let is_current =
+            Signal::derive(move || analysis.current_node().get().is_some_and(|c| c == node));
         let class = move || {
             let margin = if has_children { "" } else { "ml-[15px] " };
-            let bg_color = if current_path.with(|path| path.first() == Some(&node_id)) {
+            let bg_color = if is_current() {
                 "bg-orange-twilight "
             } else {
                 ""
@@ -153,14 +166,12 @@ pub fn HistoryMove(
             format!("{margin}w-fit transition-transform duration-300 transform hover:bg-pillbug-teal dark:hover:bg-pillbug-teal {bg_color}active:scale-95")
         };
         let onclick = move |_| {
-            analysis.update(|a| {
-                a.update_node(node_id, Some(game_state));
-            });
+            analysis.update_node(node_id);
+            analysis.sync_game_state(game_state);
         };
         let history_index = value.turn - 1;
-        let game_state = expect_context::<GameStateSignal>();
-        let repetitions =
-            create_read_slice(game_state.signal, |gs| gs.state.repeating_moves.clone());
+        let game_state = expect_context::<GameStateStore>();
+        let repetitions = Signal::derive(move || game_state.state().get().repeating_moves.clone());
         let rep = move || {
             if repetitions.with(|r| r.contains(&history_index))
                 && current_path.with(|p| p.contains(&node_id))

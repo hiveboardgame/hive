@@ -1,6 +1,6 @@
 use crate::providers::{
-    analysis::{AnalysisSignal, AnalysisTree},
-    game_state::GameStateSignal,
+    analysis::{AnalysisStore, AnalysisTree},
+    game_state::{GameStateStore, GameStateStoreFields},
 };
 use hive_lib::History;
 use leptos::{html, logging, prelude::*};
@@ -13,7 +13,7 @@ const BTN_CLASS: &str = "z-20 content-center text-center m-1 w-1/3 h-7 text-whit
 
 #[component]
 pub fn DownloadTree() -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
+    let analysis = expect_context::<AnalysisStore>().0;
 
     let download = move |_| {
         let tree_json = analysis.with_untracked(|a| {
@@ -22,6 +22,7 @@ pub fn DownloadTree() -> impl IntoView {
                 tree: a.tree.clone(),
                 hashes: a.hashes.clone(),
                 game_type: a.game_type,
+                full_path: a.full_path.clone(),
             };
             serde_json::to_string(&out).unwrap()
         });
@@ -62,36 +63,9 @@ fn blob_and_filename(tree: String) -> (Blob, String) {
 
 #[component]
 pub fn LoadTree() -> impl IntoView {
-    let analysis = expect_context::<AnalysisSignal>().0;
-    let game_state = expect_context::<GameStateSignal>();
+    let analysis = expect_context::<AnalysisStore>();
+    let game_state = expect_context::<GameStateStore>();
     let input_ref = NodeRef::<html::Input>::new();
-
-    let from_pgn = move |string: JsValue| {
-        string
-            .as_string()
-            .and_then(|string| History::from_pgn_str(string).ok())
-            .and_then(|history| hive_lib::State::new_from_history(&history).ok())
-            .map(|state| {
-                game_state.signal.update(|gs| gs.state = state.clone());
-                let tree = AnalysisTree::from_loaded_state(game_state, &state);
-                analysis.set(tree);
-            })
-    };
-    let from_json = move |string: JsValue| {
-        string
-            .as_string()
-            .and_then(|string| serde_json::from_str::<AnalysisTree>(&string).ok())
-            .map(|tree| {
-                analysis.set(tree.clone());
-                if let Some(node) = tree.current_node {
-                    if let Ok(node_id) = node.get_node_id() {
-                        analysis.update(|a| {
-                            a.update_node(node_id, Some(game_state));
-                        });
-                    }
-                }
-            })
-    };
     let oninput = move |_| {
         let file = input_ref
             .get_untracked()
@@ -104,12 +78,50 @@ pub fn LoadTree() -> impl IntoView {
             || logging::log!("Couldn't open file"),
             |ext| {
                 let ext = ext.to_os_string();
+                let analysis = analysis.clone();
+                let game_state = game_state.clone();
                 spawn_local(async move {
                     let text = JsFuture::from(file.text()).await.ok();
                     let result = if ext == "json" {
-                        text.and_then(from_json)
+                        text.and_then(|value: JsValue| {
+                            value
+                                .as_string()
+                                .and_then(|string| {
+                                    serde_json::from_str::<AnalysisTree>(&string).ok()
+                                })
+                                .map(|mut tree| {
+                                    let loaded_current_node_id = tree
+                                        .current_node
+                                        .as_ref()
+                                        .and_then(|node| node.get_node_id().ok());
+                                    if let Some(node_id) = loaded_current_node_id {
+                                        tree.current_node = tree.tree.get_node_by_id(&node_id);
+                                    }
+                                    tree.recompute_full_path_from_current();
+                                    if let Some((state, turn)) = tree.state_and_turn_for_node() {
+                                        game_state.history_turn().set(turn);
+                                        game_state.state().set(state);
+                                    }
+                                    analysis.set(tree);
+                                })
+                        })
                     } else if ext == "pgn" {
-                        text.and_then(from_pgn)
+                        text.and_then(|value: JsValue| {
+                            value
+                                .as_string()
+                                .and_then(|string| History::from_pgn_str(string).ok())
+                                .and_then(|history| {
+                                    hive_lib::State::new_from_history(&history).ok()
+                                })
+                                .map(|state| {
+                                    let tree = AnalysisTree::from_loaded_state(&state, None);
+                                    analysis.0.set(tree);
+                                    game_state
+                                        .history_turn()
+                                        .set(Some(state.history.moves.len()));
+                                    game_state.state().set(state);
+                                })
+                        })
                     } else {
                         logging::log!("Unsupported file type");
                         None

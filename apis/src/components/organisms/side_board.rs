@@ -5,7 +5,7 @@ use crate::{
     },
     providers::{
         chat::Chat,
-        game_state::{GameStateSignal, View},
+        game_state::{GameStateStore, GameStateStoreFields, View},
         AuthContext,
     },
 };
@@ -41,20 +41,20 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
         TabView::History => "History".to_string(),
         TabView::Chat => "Chat".to_string(),
     };
-    let mut game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     view! {
         <div
             on:click=move |_| {
                 if tab() == TabView::Chat {
                     chat.seen_messages(game_id());
-                    let is_game_view = game_state.signal.with_untracked(|gs| gs.view == View::Game);
+                    let is_game_view = game_state.with_untracked(|gs| gs.view == View::Game);
                     if is_game_view {
                         set_move.set(None);
                     }
                 }
                 if name == TabView::History {
                     game_state.view_history();
-                    let history_turn = game_state.signal.with_untracked(|gs| gs.history_turn);
+                    let history_turn = game_state.with_untracked(|gs| gs.history_turn);
                     set_move.set(history_turn.map(|v| v + 1));
                 } else if name == TabView::Reserve {
                     game_state.view_game();
@@ -87,10 +87,11 @@ pub fn SideboardTabs(
     tab: RwSignal<TabView>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
-    let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
+    let white_and_black =
+        Signal::derive(move || (game_state.white_id().get(), game_state.black_id().get()));
     let show_buttons = Signal::derive(move || {
         user().is_some_and(|user| {
             let (white_id, black_id) = white_and_black();

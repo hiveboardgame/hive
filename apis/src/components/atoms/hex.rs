@@ -1,7 +1,7 @@
 use crate::{
     common::{Direction, Hex, HexType, PieceType},
     components::atoms::{active::Active, last_move::LastMove, piece::Piece, target::Target},
-    providers::{config::TileOptions, game_state::GameStateSignal},
+    providers::{config::TileOptions, game_state::GameStateStore},
 };
 use hive_lib::Position;
 use leptos::{either::EitherOf4, prelude::*};
@@ -12,7 +12,7 @@ pub fn Hex(
     tile_opts: TileOptions,
     target_stack: RwSignal<Option<Position>>,
 ) -> impl IntoView {
-    let game_state = expect_context::<GameStateSignal>();
+    let game_state = expect_context::<GameStateStore>();
     let straight = tile_opts.clone().is_three_d();
     let level_multiplier = move || match target_stack() {
         Some(pos) => {
@@ -30,9 +30,7 @@ pub fn Hex(
 
     match hex.kind {
         HexType::Active(active_state) => {
-            let level = if game_state
-                .signal
-                .with_untracked(|gs| gs.move_info.target_position.is_none())
+            let level = if game_state.with_untracked(|gs| gs.move_info.target_position.is_none())
                 || hex.level == 0
             {
                 expanded_level.get_untracked()
