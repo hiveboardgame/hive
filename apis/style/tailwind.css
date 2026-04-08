@@ -7,6 +7,11 @@
 @source "../src/**/*.rs";
 @source "../*.html";
 
+/* CSS viewport units are unreliable in refreshed standalone PWAs on mobile. */
+html[data-display-mode="standalone"] {
+  --app-height: 100svh;
+}
+
 /* Custom raw-height variant as a media range for v4 (block form) */
 @custom-variant short {
   @media (height <=700px) {
@@ -17,6 +22,15 @@
 /* Override dark mode to class strategy (respect .dark on root) */
 @custom-variant dark {
   &:where(.dark, .dark *) {
+    @slot;
+  }
+}
+
+@custom-variant standalone {
+  &:where(
+    html[data-display-mode="standalone"],
+    html[data-display-mode="standalone"] *
+  ) {
     @slot;
   }
 }

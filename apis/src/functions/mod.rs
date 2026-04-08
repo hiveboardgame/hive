@@ -7,6 +7,7 @@ pub mod games;
 pub mod home_banner;
 pub mod hostname;
 pub mod oauth;
+#[cfg(feature = "ssr")]
 pub mod pwa;
 pub mod schedules;
 pub mod tournaments;
