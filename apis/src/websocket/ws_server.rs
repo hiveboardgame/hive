@@ -548,6 +548,14 @@ impl Handler<ClientActorMessage> for WsServer {
                                     user_ids.insert(org.id);
                                 }
                             }
+                            if is_chat_message {
+                                if let Some(sender_id) = sender_id {
+                                    // Admins may send/read tournament chat without becoming
+                                    // tournament members, so include the sender for the normal
+                                    // websocket echo path only.
+                                    user_ids.insert(sender_id);
+                                }
+                            }
                             for user_id in user_ids.clone() {
                                 if is_chat_message
                                     && muted_ids.contains(&user_id)

@@ -26,6 +26,7 @@ diesel::table! {
         channel_type -> Text,
         channel_id -> Text,
         sender_id -> Uuid,
+        recipient_id -> Nullable<Uuid>,
         username -> Text,
         body -> Text,
         turn -> Nullable<Int4>,
@@ -230,7 +231,6 @@ diesel::table! {
 }
 
 diesel::joinable!(chat_messages -> games (game_id));
-diesel::joinable!(chat_messages -> users (sender_id));
 diesel::joinable!(chat_read_receipts -> games (game_id));
 diesel::joinable!(chat_read_receipts -> users (user_id));
 diesel::joinable!(games_users -> games (game_id));

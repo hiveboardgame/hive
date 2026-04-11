@@ -16,6 +16,7 @@ use shared_types::{ChatDestination, ChatMessageContainer};
 
 pub struct ChatHandler {
     container: ChatMessageContainer,
+    channel_key: ChannelKey,
     data: Arc<WebsocketData>,
     pool: DbPool,
 }
@@ -23,6 +24,7 @@ pub struct ChatHandler {
 impl ChatHandler {
     pub fn new(
         mut container: ChatMessageContainer,
+        channel_key: ChannelKey,
         data: Arc<WebsocketData>,
         pool: DbPool,
     ) -> Self {
@@ -34,6 +36,7 @@ impl ChatHandler {
         }
         Self {
             container,
+            channel_key,
             data,
             pool,
         }
@@ -86,7 +89,10 @@ impl ChatHandler {
             }),
         };
 
-        let persistable = PersistableChatMessage::from_container(&self.container);
+        let persistable = PersistableChatMessage::from_container(
+            &self.container,
+            &self.channel_key,
+        );
         metrics::record_persist_attempt();
         let mut conn = get_conn(&self.pool)
             .await
@@ -106,16 +112,12 @@ impl ChatHandler {
         }
         metrics::record_persist_success();
 
-        // Update in-memory recent cache (last 50 per channel) after persistence succeeds.
-        let channel_key = ChannelKey::from_destination_for_user(
-            &self.container.destination,
-            self.container.message.user_id,
-        );
+        // Update the in-memory recent cache only after persistence succeeds.
         self.data
             .chat_storage
             .push_recent(
-                channel_key.channel_type.as_str(),
-                &channel_key.channel_id,
+                self.channel_key.channel_type.as_str(),
+                &self.channel_key.channel_id,
                 self.container.clone(),
             );
 

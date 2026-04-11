@@ -145,7 +145,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         })
     });
     let tournament_chat_read_only =
-        Signal::derive(move || !(user_is_organizer_or_admin() || user_joined()));
+        Signal::derive(move || !(user_is_organizer_or_admin.get() || user_joined()));
     let send_action = move |action: TournamentAction| {
         let api = api.get();
         api.tournament(action);
@@ -551,11 +551,6 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                 <h3 class="text-base font-semibold text-gray-800 dark:text-gray-100">
                     {t!(i18n, messages.chat.tournament_title)}
                 </h3>
-                <Show when=move || tournament_chat_read_only.get()>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {t!(i18n, messages.chat.tournament_read_restricted)}
-                    </p>
-                </Show>
             </div>
             <div class="flex overflow-hidden flex-col flex-1 min-h-0">
                 <Show

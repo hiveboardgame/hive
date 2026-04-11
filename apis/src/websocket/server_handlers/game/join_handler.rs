@@ -1,11 +1,8 @@
-use std::sync::Arc;
-
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
     websocket::{
         messages::{InternalServerMessage, MessageDestination, WsMessage},
-        WebsocketData,
     },
 };
 use anyhow::Result;
@@ -17,7 +14,6 @@ use uuid::Uuid;
 pub struct JoinHandler {
     pool: DbPool,
     received_from: actix::Recipient<WsMessage>,
-    data: Arc<WebsocketData>,
     user_id: Uuid,
     username: String,
     game: Game,
@@ -29,7 +25,6 @@ impl JoinHandler {
         username: &str,
         user_id: Uuid,
         received_from: actix::Recipient<WsMessage>,
-        data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Self {
         Self {
@@ -37,7 +32,6 @@ impl JoinHandler {
             game: game.to_owned(),
             user_id,
             username: username.to_owned(),
-            data,
             pool: pool.clone(),
         }
     }

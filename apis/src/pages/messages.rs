@@ -2,11 +2,11 @@
 //! Supports ?dm=:uuid to open a DM from profile.
 
 use crate::{
-    chat::SimpleDestination,
+    chat::{ChannelKey, SimpleDestination},
     components::{
         atoms::block_toggle_button::BlockToggleButton,
         molecules::time_row::TimeRow,
-        organisms::chat::ChatWindow,
+        organisms::chat::{ChatWindow, GameChatData},
     },
     functions::{
         blocks_mutes::{mute_tournament_chat, unmute_tournament_chat},
@@ -20,11 +20,11 @@ use crate::{
         games::get::get_game_from_nanoid,
     },
     i18n::*,
-    providers::{chat::Chat, AuthContext},
+    providers::{chat::Chat, AlertType, AlertsContext, AuthContext},
     responses::GameResponse,
 };
 use hive_lib::{Color, GameResult, GameStatus};
-use leptos::prelude::*;
+use leptos::{prelude::*, task::spawn_local};
 use leptos_router::{components::A, hooks::use_query_map};
 use shared_types::{
     ChannelType,
@@ -38,6 +38,8 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SelectedChannel {
+    // TODO: Collapse this toward selected identity plus narrow local UI overrides.
+    // It still carries some mutable sidebar snapshot data for pragmatic optimistic updates.
     Dm {
         other_id: Uuid,
         username: String,
@@ -68,6 +70,30 @@ impl SelectedChannel {
             SelectedChannel::Global => global_label.to_string(),
         }
     }
+}
+
+fn refresh_open_dm_thread(
+    chat: Chat,
+    alerts: Option<AlertsContext>,
+    current_user_id: Option<Uuid>,
+    other_id: Uuid,
+) {
+    let Some(current_user_id) = current_user_id else {
+        return;
+    };
+    let key = ChannelKey::direct(current_user_id, other_id);
+    spawn_local(async move {
+        match chat.fetch_channel_history(&key).await {
+            Ok(messages) => chat.replace_history(&key, messages),
+            Err(error) => {
+                if let Some(alerts) = alerts {
+                    alerts.last_alert.update(|last| {
+                        *last = Some(AlertType::Error(error));
+                    });
+                }
+            }
+        }
+    });
 }
 
 #[component]
@@ -179,9 +205,12 @@ pub fn Messages() -> impl IntoView {
             black_id,
             finished,
             ..
-        }) => {
-            Some((GameId(channel_id), white_id, black_id, finished))
-        }
+        }) => Some(GameChatData {
+            game_id: GameId(channel_id),
+            white_id,
+            black_id,
+            finished,
+        }),
         _ => None,
     });
     let selected_game_show_players = Signal::derive(move || {
@@ -282,7 +311,7 @@ pub fn Messages() -> impl IntoView {
                                         .as_ref()
                                         .map(|s| {
                                             s.label(
-                                                &t_string!(
+                                                t_string!(
                                                     i18n,
                                                     messages.sections.recent_announcements
                                                 ),
@@ -441,6 +470,9 @@ fn DmChannelActions(
     username: String,
     blocked_ids: RwSignal<HashSet<Uuid>>,
 ) -> impl IntoView {
+    let auth = expect_context::<AuthContext>();
+    let chat = expect_context::<Chat>();
+    let alerts = use_context::<AlertsContext>();
     let i18n = use_i18n();
     let is_blocked = Signal::derive(move || blocked_ids.with(|ids| ids.contains(&other_id)));
     let on_block_toggle_success = Callback::new(move |is_now_blocked| {
@@ -451,6 +483,12 @@ fn DmChannelActions(
                 ids.remove(&other_id);
             }
         });
+        refresh_open_dm_thread(
+            chat,
+            alerts.clone(),
+            auth.user.with_untracked(|u| u.as_ref().map(|u| u.user.uid)),
+            other_id,
+        );
     });
 
     view! {
@@ -481,9 +519,11 @@ fn TournamentChannelActions(
     chat: Chat,
 ) -> impl IntoView {
     let i18n = use_i18n();
+    let mute_error = RwSignal::new(None::<String>);
     let nanoid_for_href = nanoid.clone();
     let nanoid_for_muted = nanoid.clone();
     let nanoid_for_action = nanoid.clone();
+    let nanoid_for_selection = nanoid.clone();
     let name_for_action = name.clone();
     let is_muted = Signal::derive(move || {
         selected.with(|current| {
@@ -503,38 +543,54 @@ fn TournamentChannelActions(
     let toggle_mute = Action::new(move |currently_muted: &bool| {
         let currently_muted = *currently_muted;
         let nanoid = nanoid_for_action.clone();
-        let name = name_for_action.clone();
         async move {
-            let new_muted = if currently_muted {
-                if unmute_tournament_chat(nanoid.clone()).await.is_err() {
-                    return;
-                }
-                false
+            if currently_muted {
+                unmute_tournament_chat(nanoid)
+                    .await
+                    .map(|_| false)
+                    .map_err(|error| error.to_string())
             } else {
-                if mute_tournament_chat(nanoid.clone()).await.is_err() {
-                    return;
-                }
-                true
-            };
-            let should_update_selection = selected_for_action.with_untracked(|current| {
-                matches!(
-                    current,
-                    Some(SelectedChannel::Tournament { nanoid: current_nanoid, .. })
-                        if *current_nanoid == nanoid
-                )
-            });
-            if should_update_selection {
-                selected_for_action.set(Some(SelectedChannel::Tournament {
-                    nanoid,
-                    name,
-                    is_participant: is_participant_for_action,
-                    muted: new_muted,
-                }));
+                mute_tournament_chat(nanoid)
+                    .await
+                    .map(|_| true)
+                    .map_err(|error| error.to_string())
             }
-            chat_for_action.invalidate_conversation_list();
-            chat_for_action.refresh_unread_counts();
         }
     });
+    Effect::watch(
+        toggle_mute.version(),
+        move |_, _, _| {
+            let Some(result) = toggle_mute.value().get() else {
+                return;
+            };
+            match result {
+                Ok(new_muted) => {
+                    mute_error.set(None);
+                    let should_update_selection = selected_for_action.with_untracked(|current| {
+                        matches!(
+                            current,
+                            Some(SelectedChannel::Tournament {
+                                nanoid: current_nanoid,
+                                ..
+                            }) if *current_nanoid == nanoid_for_selection
+                        )
+                    });
+                    if should_update_selection {
+                        selected_for_action.set(Some(SelectedChannel::Tournament {
+                            nanoid: nanoid_for_selection.clone(),
+                            name: name_for_action.clone(),
+                            is_participant: is_participant_for_action,
+                            muted: new_muted,
+                        }));
+                    }
+                    chat_for_action.invalidate_conversation_list();
+                    chat_for_action.refresh_unread_counts();
+                }
+                Err(error) => mute_error.set(Some(error)),
+            }
+        },
+        false,
+    );
 
     view! {
         <ChannelHeaderBar>
@@ -551,6 +607,7 @@ fn TournamentChannelActions(
                         disabled=move || toggle_mute.pending().get()
                         class="text-sm font-medium text-gray-600 transition-colors dark:text-gray-400 disabled:text-gray-400 dark:hover:text-pillbug-teal/90 dark:disabled:text-gray-500 hover:text-pillbug-teal"
                         on:click=move |_| {
+                            mute_error.set(None);
                             toggle_mute.dispatch(is_muted.get_untracked());
                         }
                     >
@@ -566,6 +623,11 @@ fn TournamentChannelActions(
                 <Show when=move || !is_participant>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                         {t!(i18n, messages.chat.tournament_read_restricted)}
+                    </p>
+                </Show>
+                <Show when=move || mute_error.get().is_some()>
+                    <p class="text-xs text-red-600 dark:text-red-400">
+                        {move || mute_error.get().unwrap_or_default()}
                     </p>
                 </Show>
             </div>
@@ -663,7 +725,7 @@ fn GameChatHeader(
     let i18n = use_i18n();
     let current_user_id = move || auth.user.with_untracked(|a| a.as_ref().map(|a| a.user.uid));
     let is_player = move || current_user_id().is_some_and(|uid| uid == white_id || uid == black_id);
-    let channel_type_for_label = channel_type.clone();
+    let channel_type_for_label = channel_type;
     let static_chat_label = Signal::derive(move || {
         if channel_type_for_label == ChannelType::GamePlayers {
             t_string!(i18n, messages.chat.players_chat)
@@ -692,7 +754,7 @@ fn GameChatHeader(
                     }
                 >
                     <GameChatToggle
-                        channel_type=channel_type.clone()
+                        channel_type=channel_type
                         channel_id=channel_id.clone()
                         label=label.clone()
                         white_id=white_id
@@ -851,7 +913,6 @@ fn ChannelLists(
         dms,
         tournaments,
         games,
-        has_global: _has_global,
     } = conv;
     view! {
         <DmChannelsSection dms=dms me=me selected=selected chat=chat />
@@ -1023,6 +1084,19 @@ fn TournamentChannelItem(
     let nanoid_for_match = nanoid.clone();
     let nanoid_for_current_mute = nanoid.clone();
     let tournament_id = TournamentId(nanoid.clone());
+    let selected_muted_override = Signal::derive(move || {
+        selected.with(|current| match current {
+            Some(SelectedChannel::Tournament {
+                nanoid: current_nanoid,
+                muted: current_muted,
+                ..
+            }) if *current_nanoid == nanoid_for_current_mute => Some(*current_muted),
+            _ => None,
+        })
+    });
+    let muted_for_display = Signal::derive(move || {
+        selected_muted_override.get().unwrap_or(muted)
+    });
     let is_selected = move || {
         selected.get().as_ref().is_some_and(
             |s| {
@@ -1042,28 +1116,17 @@ fn TournamentChannelItem(
             type="button"
             class=move || channel_button_class(is_selected())
             on:click=move |_| {
-                let muted_for_selection = selected
-                    .with_untracked(|current| {
-                        match current {
-                            Some(SelectedChannel::Tournament {
-                                nanoid: current_nanoid,
-                                muted: current_muted,
-                                ..
-                            }) if *current_nanoid == nanoid_for_current_mute => *current_muted,
-                            _ => muted,
-                        }
-                    });
                 selected.set(Some(SelectedChannel::Tournament {
                     nanoid: nanoid_for_selection.clone(),
                     name: name_for_selection.clone(),
                     is_participant,
-                    muted: muted_for_selection,
+                    muted: muted_for_display.get_untracked(),
                 }));
             }
         >
             <span class="flex gap-1 items-center truncate">
                 {name}
-                {muted
+                {move || muted_for_display.get()
                     .then(|| {
                         view! {
                             <span

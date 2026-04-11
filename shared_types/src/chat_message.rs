@@ -82,6 +82,86 @@ impl FromStr for ChannelType {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ChannelKey {
+    pub channel_type: ChannelType,
+    pub channel_id: String,
+}
+
+impl ChannelKey {
+    pub fn new(channel_type: ChannelType, channel_id: impl Into<String>) -> Self {
+        Self {
+            channel_type,
+            channel_id: channel_id.into(),
+        }
+    }
+
+    pub fn from_raw(channel_type: &str, channel_id: impl Into<String>) -> Option<Self> {
+        Some(Self::new(channel_type.parse().ok()?, channel_id))
+    }
+
+    pub fn direct(current_user_id: Uuid, other_user_id: Uuid) -> Self {
+        Self::new(
+            ChannelType::Direct,
+            canonical_dm_channel_id(current_user_id, other_user_id),
+        )
+    }
+
+    pub fn tournament(tournament_id: &TournamentId) -> Self {
+        Self::new(ChannelType::TournamentLobby, tournament_id.0.clone())
+    }
+
+    pub fn game_players(game_id: &GameId) -> Self {
+        Self::new(ChannelType::GamePlayers, game_id.0.clone())
+    }
+
+    pub fn game_spectators(game_id: &GameId) -> Self {
+        Self::new(ChannelType::GameSpectators, game_id.0.clone())
+    }
+
+    pub fn global() -> Self {
+        Self::new(ChannelType::Global, CHANNEL_TYPE_GLOBAL)
+    }
+
+    pub fn from_destination(
+        destination: &ChatDestination,
+        current_user_id: Option<Uuid>,
+    ) -> Option<Self> {
+        match destination {
+            ChatDestination::TournamentLobby(tournament_id) => {
+                Some(Self::tournament(tournament_id))
+            }
+            ChatDestination::User((other_user_id, _)) => {
+                current_user_id.map(|user_id| Self::direct(user_id, *other_user_id))
+            }
+            ChatDestination::GamePlayers(game_id, ..) => Some(Self::game_players(game_id)),
+            ChatDestination::GameSpectators(game_id, ..) => Some(Self::game_spectators(game_id)),
+            ChatDestination::Global => Some(Self::global()),
+        }
+    }
+
+    pub fn from_destination_for_user(
+        destination: &ChatDestination,
+        current_user_id: Uuid,
+    ) -> Self {
+        match destination {
+            ChatDestination::TournamentLobby(tournament_id) => Self::tournament(tournament_id),
+            ChatDestination::User((other_user_id, _)) => {
+                Self::direct(current_user_id, *other_user_id)
+            }
+            ChatDestination::GamePlayers(game_id, ..) => Self::game_players(game_id),
+            ChatDestination::GameSpectators(game_id, ..) => Self::game_spectators(game_id),
+            ChatDestination::Global => Self::global(),
+        }
+    }
+
+    pub fn direct_other_user_id(&self, current_user_id: Uuid) -> Option<Uuid> {
+        (self.channel_type == ChannelType::Direct)
+            .then(|| other_user_from_dm_channel(&self.channel_id, current_user_id))
+            .flatten()
+    }
+}
+
 /// Canonical channel_id for a DM between two users (sorted UUIDs so both participants use the same key).
 pub fn canonical_dm_channel_id(a: Uuid, b: Uuid) -> String {
     if a < b {
@@ -177,6 +257,7 @@ impl ChatMessage {
 mod tests {
     use super::{
         canonical_dm_channel_id,
+        ChannelKey,
         ChannelType,
         MAX_CHAT_MESSAGE_LENGTH,
         normalize_chat_message,
@@ -199,5 +280,15 @@ mod tests {
         let parsed = "game_players".parse::<ChannelType>();
         assert_eq!(parsed, Ok(ChannelType::GamePlayers));
         assert_eq!(ChannelType::GamePlayers.to_string(), "game_players");
+    }
+
+    #[test]
+    fn direct_channel_key_returns_the_other_user() {
+        let a = Uuid::new_v4();
+        let b = Uuid::new_v4();
+        let key = ChannelKey::direct(a, b);
+
+        assert_eq!(key.direct_other_user_id(a), Some(b));
+        assert_eq!(key.direct_other_user_id(b), Some(a));
     }
 }

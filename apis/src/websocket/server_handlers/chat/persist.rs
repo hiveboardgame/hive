@@ -1,9 +1,8 @@
 //! Converts `ChatMessageContainer` into the form needed for DB persistence.
 
-use crate::chat::ChannelKey;
 use chrono::{DateTime, Utc};
 use db_lib::models::NewChatMessage;
-use shared_types::ChatMessageContainer;
+use shared_types::{ChannelKey, ChatMessageContainer};
 use uuid::Uuid;
 
 /// Owned form of a chat message suitable for building `db_lib::NewChatMessage`.
@@ -21,15 +20,13 @@ pub struct PersistableChatMessage {
 
 impl PersistableChatMessage {
     /// Build from a container (e.g. after `container.time()` has been called).
-    pub fn from_container(container: &ChatMessageContainer) -> Self {
-        let channel_key =
-            ChannelKey::from_destination_for_user(&container.destination, container.message.user_id);
+    pub fn from_container(container: &ChatMessageContainer, channel_key: &ChannelKey) -> Self {
         let turn = container.message.turn.map(|u| u as i32);
         // Preserve send-time ordering for unread/read logic even if DB persistence is delayed.
         let created_at = container.message.timestamp.unwrap_or_else(Utc::now);
         Self {
             channel_type: channel_key.channel_type.to_string(),
-            channel_id: channel_key.channel_id,
+            channel_id: channel_key.channel_id.clone(),
             sender_id: container.message.user_id,
             username: container.message.username.clone(),
             body: container.message.message.clone(),
@@ -60,10 +57,14 @@ impl PersistableChatMessage {
 
     /// Borrow as `NewChatMessage` for use with `insert_chat_message`.
     pub fn as_new(&self) -> NewChatMessage<'_> {
+        let recipient_id = ChannelKey::from_raw(self.channel_type.as_str(), self.channel_id.as_str())
+            .and_then(|channel_key| channel_key.direct_other_user_id(self.sender_id));
+
         NewChatMessage {
             channel_type: self.channel_type.as_str(),
             channel_id: self.channel_id.as_str(),
             sender_id: self.sender_id,
+            recipient_id,
             username: self.username.as_str(),
             body: self.body.as_str(),
             turn: self.turn,

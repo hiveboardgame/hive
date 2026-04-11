@@ -23,7 +23,6 @@ dotenvy = { workspace = true }
 hive = { path = "../engine/" }
 itertools = { workspace = true }
 lazy_static = { workspace = true }
-log = { workspace = true }
 nanoid = { workspace = true }
 regex = { workspace = true }
 rand = { workspace = true }

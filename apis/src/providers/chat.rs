@@ -26,8 +26,6 @@ use shared_types::{
 };
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::{closure::Closure, JsCast};
 
 const RECENT_ANNOUNCEMENTS_LIMIT: usize = 3;
 const HISTORY_TIMESTAMP_SKEW_MILLIS: i64 = 500;
@@ -339,29 +337,8 @@ impl Chat {
         }));
     }
 
-    /// Refetch conversations now and again shortly after to absorb delayed sidebar state updates.
-    fn invalidate_conversation_list_with_retry(&self) {
-        self.invalidate_conversation_list();
-        #[cfg(target_arch = "wasm32")]
-        {
-            let chat = *self;
-            if let Some(window) = web_sys::window() {
-                let callback = Closure::once_into_js(move || {
-                    chat.invalidate_conversation_list();
-                });
-                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                    callback.unchecked_ref(),
-                    900,
-                );
-            }
-        }
-    }
-
     async fn fetch_and_store_unread_counts(self) {
-        match get_chat_unread_counts().await {
-            Ok(counts) => self.apply_server_unread_counts(counts),
-            Err(_) => {}
-        }
+        if let Ok(counts) = get_chat_unread_counts().await { self.apply_server_unread_counts(counts) }
     }
 
     /// Apply a fresh server snapshot of unread counts while preserving optimistic local state.
@@ -401,7 +378,7 @@ impl Chat {
 
     pub fn clear_channel_visible(&self, key: &ChannelKey) {
         self.visible_channels.update(|visible| {
-            if let Some(count) = visible.get_mut(&key) {
+            if let Some(count) = visible.get_mut(key) {
                 if *count <= 1 {
                     visible.remove(key);
                 } else {
@@ -413,48 +390,50 @@ impl Chat {
 
     fn is_channel_visible(&self, key: &ChannelKey) -> bool {
         self.visible_channels
-            .with_untracked(|visible| visible.get(&key).copied().unwrap_or(0) > 0)
+            .with_untracked(|visible| visible.get(key).copied().unwrap_or(0) > 0)
+    }
+
+    fn flush_visible_channel_read(&self, key: &ChannelKey) {
+        self.pending_visible_channel_reads.update(|pending| {
+            pending.remove(key);
+        });
+        if self.is_channel_visible(key) {
+            self.clear_deferred_visible_unread(key);
+            self.mark_read(key);
+        } else {
+            self.restore_deferred_visible_unread(key);
+        }
+    }
+
+    fn clear_visible_channel_read_flush(&self, key: &ChannelKey) {
+        self.pending_visible_channel_reads.update(|pending| {
+            pending.remove(key);
+        });
+        self.clear_deferred_visible_unread(key);
     }
 
     fn schedule_visible_channel_read_flush(&self, key: &ChannelKey) {
         if self
             .pending_visible_channel_reads
-            .with_untracked(|pending| pending.contains(&key))
+            .with_untracked(|pending| pending.contains(key))
         {
             return;
         }
         self.pending_visible_channel_reads.update(|pending| {
             pending.insert(key.clone());
         });
-        #[cfg(target_arch = "wasm32")]
-        {
-            let chat = *self;
-            if let Some(window) = web_sys::window() {
-                let callback_key = key.clone();
-                let callback = Closure::once_into_js(move || {
-                    chat.pending_visible_channel_reads.update(|pending| {
-                        pending.remove(&callback_key);
-                    });
-                    if chat.is_channel_visible(&callback_key) {
-                        chat.clear_deferred_visible_unread(&callback_key);
-                        chat.mark_read(&callback_key);
-                    } else {
-                        chat.restore_deferred_visible_unread(&callback_key);
-                    }
-                });
-                let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                    callback.unchecked_ref(),
-                    250,
-                );
-            }
-        }
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            self.pending_visible_channel_reads.update(|pending| {
-                pending.remove(&key);
-            });
-            self.clear_deferred_visible_unread(key);
-        }
+        let scheduled_chat = *self;
+        let scheduled_key = key.clone();
+        let immediate_chat = *self;
+        let immediate_key = key.clone();
+        timers::schedule_visible_channel_read_flush(
+            move || {
+                scheduled_chat.flush_visible_channel_read(&scheduled_key);
+            },
+            move || {
+                immediate_chat.clear_visible_channel_read_flush(&immediate_key);
+            },
+        );
     }
 
     fn defer_visible_channel_unread(&self, key: &ChannelKey) {
@@ -473,11 +452,10 @@ impl Chat {
         });
     }
 
-    #[cfg(target_arch = "wasm32")]
     fn take_deferred_visible_unread(&self, key: &ChannelKey) -> i64 {
         let deferred = self
             .deferred_visible_unread_counts
-            .with_untracked(|pending| pending.get(&key).copied())
+            .with_untracked(|pending| pending.get(key).copied())
             .unwrap_or(0)
             .max(0);
         self.deferred_visible_unread_counts.update(|pending| {
@@ -486,7 +464,6 @@ impl Chat {
         deferred
     }
 
-    #[cfg(target_arch = "wasm32")]
     fn restore_deferred_visible_unread(&self, key: &ChannelKey) {
         let deferred = self.take_deferred_visible_unread(key);
         if deferred == 0 {
@@ -678,7 +655,7 @@ impl Chat {
 
     fn refresh_conversation_list_for_live_thread_activity(&self, is_live: bool) {
         if is_live {
-            self.invalidate_conversation_list_with_retry();
+            self.invalidate_conversation_list();
         }
     }
 
@@ -831,6 +808,69 @@ impl Chat {
         })
     }
 
+    /// Replaces the cached history for a channel with a fresh server snapshot.
+    /// Used when the server-side view of a thread changes and stale local messages
+    /// should not be merged back in.
+    pub fn replace_history(&self, key: &ChannelKey, mut messages: Vec<ChatMessage>) {
+        let current_user_id = self.user.get_untracked().as_ref().map(|a| a.user.uid);
+        messages.sort_by_key(|m| m.timestamp.map(|t| t.timestamp_millis()).unwrap_or(0));
+        trim_stored_messages(&mut messages);
+
+        match key.channel_type {
+            ChannelType::Direct => {
+                let Some(me) = current_user_id else { return };
+                let Some(other_id) = other_user_from_dm_channel(&key.channel_id, me) else {
+                    return;
+                };
+                self.users_messages.update(|stored| {
+                    if messages.is_empty() {
+                        stored.remove(&other_id);
+                    } else {
+                        stored.insert(other_id, messages);
+                    }
+                });
+                self.prune_dm_threads();
+            }
+            ChannelType::TournamentLobby => {
+                let tournament_id = TournamentId(key.channel_id.clone());
+                self.tournament_lobby_messages.update(|stored| {
+                    if messages.is_empty() {
+                        stored.remove(&tournament_id);
+                    } else {
+                        stored.insert(tournament_id, messages);
+                    }
+                });
+                self.prune_tournament_threads();
+            }
+            ChannelType::GamePlayers => {
+                let game_id = GameId(key.channel_id.clone());
+                self.games_private_messages.update(|stored| {
+                    if messages.is_empty() {
+                        stored.remove(&game_id);
+                    } else {
+                        stored.insert(game_id, messages);
+                    }
+                });
+                self.prune_game_threads(ChannelType::GamePlayers);
+            }
+            ChannelType::GameSpectators => {
+                let game_id = GameId(key.channel_id.clone());
+                self.games_public_messages.update(|stored| {
+                    if messages.is_empty() {
+                        stored.remove(&game_id);
+                    } else {
+                        stored.insert(game_id, messages);
+                    }
+                });
+                self.prune_game_threads(ChannelType::GameSpectators);
+            }
+            ChannelType::Global => {
+                retain_recent_announcements(&mut messages);
+                self.global_messages.set(messages);
+            }
+        }
+    }
+
     /// Injects fetched history into the correct in-memory map so the thread view can display it.
     /// Merges with existing messages and deduplicates to avoid losing WebSocket messages when REST
     /// fetch completes after live delivery.
@@ -905,7 +945,6 @@ impl Chat {
                 key.channel_type.to_string(),
                 key.channel_id.clone(),
                 Some(history_limit),
-                None,
             )
             .await
             .map_err(|error| error.to_string())
@@ -1080,11 +1119,9 @@ impl Chat {
                     });
                     self.prune_game_threads(ChannelType::GameSpectators);
                     self.refresh_conversation_list_for_live_thread_activity(is_live);
-                    if is_live && !from_self {
-                        if self.is_channel_visible(&channel_key) {
-                            self.seen_messages(id.clone());
-                            self.schedule_visible_channel_read_flush(&channel_key);
-                        }
+                    if is_live && !from_self && self.is_channel_visible(&channel_key) {
+                        self.seen_messages(id.clone());
+                        self.schedule_visible_channel_read_flush(&channel_key);
                         // Spectator chat intentionally does not contribute to unread badges/notifications.
                     }
                 }
@@ -1117,6 +1154,48 @@ impl Chat {
                 }
             }
         }
+    }
+}
+
+mod timers {
+    #[cfg(target_arch = "wasm32")]
+    pub(super) fn schedule_visible_channel_read_flush(
+        scheduled: impl FnOnce() + 'static,
+        immediate: impl FnOnce() + 'static,
+    ) {
+        use leptos::leptos_dom::helpers::set_timeout_with_handle;
+        use std::{cell::RefCell, rc::Rc, time::Duration};
+
+        const VISIBLE_CHANNEL_READ_FLUSH_DELAY: Duration = Duration::from_millis(250);
+
+        let scheduled_callback = Rc::new(RefCell::new(Some(scheduled)));
+        let schedule_result = set_timeout_with_handle(
+            {
+                let scheduled_callback = Rc::clone(&scheduled_callback);
+                move || {
+                    if let Some(scheduled) = scheduled_callback.borrow_mut().take() {
+                        scheduled();
+                    }
+                }
+            },
+            VISIBLE_CHANNEL_READ_FLUSH_DELAY,
+        );
+
+        if schedule_result.is_err() {
+            if let Some(scheduled) = scheduled_callback.borrow_mut().take() {
+                scheduled();
+            } else {
+                immediate();
+            }
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(super) fn schedule_visible_channel_read_flush(
+        _scheduled: impl FnOnce() + 'static,
+        immediate: impl FnOnce() + 'static,
+    ) {
+        immediate();
     }
 }
 

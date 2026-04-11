@@ -1,8 +1,7 @@
 //! In-memory recent-chat cache only. All durable chat state is in Postgres.
 //!
 //! This cache holds the last CHAT_RECENT_CACHE_MAX messages per (channel_type, channel_id).
-//! It is populated only from: (1) DB when loading history on join, (2) new messages on insert.
-//! Join paths try cache first, then Postgres.
+//! It is only appended to on successful message persistence.
 
 use std::{collections::HashMap, sync::RwLock};
 
@@ -25,42 +24,6 @@ impl Chats {
         Self {
             recent_cache: RwLock::new(HashMap::new()),
         }
-    }
-
-    /// Returns a clone of the cached recent messages for the channel, if any.
-    pub fn get_recent(
-        &self,
-        channel_type: &str,
-        channel_id: &str,
-    ) -> Option<Vec<ChatMessageContainer>> {
-        let cache = self
-            .recent_cache
-            .read()
-            .unwrap_or_else(|error| error.into_inner());
-        cache
-            .get(&(channel_type.to_string(), channel_id.to_string()))
-            .filter(|v| !v.is_empty())
-            .cloned()
-    }
-
-    /// Stores up to CHAT_RECENT_CACHE_MAX most recent messages for the channel (replaces existing cache entry).
-    pub fn put_recent(
-        &self,
-        channel_type: &str,
-        channel_id: &str,
-        messages: Vec<ChatMessageContainer>,
-    ) {
-        let key = (channel_type.to_string(), channel_id.to_string());
-        let trimmed = if messages.len() > CHAT_RECENT_CACHE_MAX {
-            messages[messages.len() - CHAT_RECENT_CACHE_MAX..].to_vec()
-        } else {
-            messages
-        };
-        let mut cache = self
-            .recent_cache
-            .write()
-            .unwrap_or_else(|error| error.into_inner());
-        cache.insert(key, trimmed);
     }
 
     /// Appends one message to the channel's recent cache, keeping at most CHAT_RECENT_CACHE_MAX.

@@ -10,6 +10,30 @@ use diesel::{dsl::exists, prelude::*, select};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
+async fn ensure_user_exists(conn: &mut DbConn<'_>, user_id: Uuid) -> Result<(), DbError> {
+    let exists = select(exists(users::table.filter(users::id.eq(user_id))))
+        .get_result(conn)
+        .await
+        .map_err(DbError::from)?;
+
+    if exists {
+        Ok(())
+    } else {
+        Err(DbError::NotFound {
+            reason: "User not found.".to_string(),
+        })
+    }
+}
+
+async fn get_tournament_id_by_nanoid(
+    conn: &mut DbConn<'_>,
+    tournament_nanoid: &str,
+) -> Result<Uuid, DbError> {
+    Tournament::from_nanoid(tournament_nanoid, conn)
+        .await
+        .map(|tournament| tournament.id)
+}
+
 /// Add a block: blocker_id will not receive DMs from blocked_id. Idempotent.
 pub async fn block_user(
     conn: &mut DbConn<'_>,
@@ -22,15 +46,9 @@ pub async fn block_user(
             error: "blocker_id == blocked_id".to_string(),
         });
     }
-    let blocked_user_exists: bool = select(exists(users::table.filter(users::id.eq(blocked_id))))
-        .get_result(conn)
-        .await
-        .map_err(DbError::from)?;
-    if !blocked_user_exists {
-        return Err(DbError::NotFound {
-            reason: "User not found.".to_string(),
-        });
-    }
+
+    ensure_user_exists(conn, blocked_id).await?;
+
     diesel::insert_into(user_blocks::table)
         .values(NewUserBlock {
             blocker_id,
@@ -98,11 +116,11 @@ pub async fn mute_tournament_chat(
     user_id: Uuid,
     tournament_nanoid: &str,
 ) -> Result<(), DbError> {
-    let tournament = Tournament::from_nanoid(tournament_nanoid, conn).await?;
+    let tournament_id = get_tournament_id_by_nanoid(conn, tournament_nanoid).await?;
     diesel::insert_into(user_tournament_chat_mutes::table)
         .values(NewUserTournamentChatMute {
             user_id,
-            tournament_id: tournament.id,
+            tournament_id,
         })
         .on_conflict((
             user_tournament_chat_mutes::user_id,
@@ -121,11 +139,11 @@ pub async fn unmute_tournament_chat(
     user_id: Uuid,
     tournament_nanoid: &str,
 ) -> Result<(), DbError> {
-    let tournament = Tournament::from_nanoid(tournament_nanoid, conn).await?;
+    let tournament_id = get_tournament_id_by_nanoid(conn, tournament_nanoid).await?;
     diesel::delete(
         user_tournament_chat_mutes::table
             .filter(user_tournament_chat_mutes::user_id.eq(user_id))
-            .filter(user_tournament_chat_mutes::tournament_id.eq(tournament.id)),
+            .filter(user_tournament_chat_mutes::tournament_id.eq(tournament_id)),
     )
     .execute(conn)
     .await
@@ -139,14 +157,11 @@ pub async fn is_tournament_chat_muted(
     user_id: Uuid,
     tournament_nanoid: &str,
 ) -> Result<bool, DbError> {
-    let tournament = match Tournament::from_nanoid(tournament_nanoid, conn).await {
-        Ok(t) => t,
-        Err(_) => return Ok(false),
-    };
+    let tournament_id = get_tournament_id_by_nanoid(conn, tournament_nanoid).await?;
     select(exists(
         user_tournament_chat_mutes::table
             .filter(user_tournament_chat_mutes::user_id.eq(user_id))
-            .filter(user_tournament_chat_mutes::tournament_id.eq(tournament.id)),
+            .filter(user_tournament_chat_mutes::tournament_id.eq(tournament_id)),
     ))
     .get_result(conn)
     .await

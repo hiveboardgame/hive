@@ -229,7 +229,7 @@ async fn handle_control(
                     &result_game,
                     &bot,
                     &pool,
-                    game_control.clone(),
+                    game_control,
                 )
                 .await?;
 

@@ -10,7 +10,7 @@ use super::{
     user_status::handler::UserStatusHandler,
 };
 use crate::{
-    chat::{access::{authorize_chat_send_and_resolve_channel_id, ChatSendAccessError}, ChannelKey},
+    chat::{access::{authorize_chat_send_and_resolve_channel_key, ChatSendAccessError}, ChannelKey},
     common::{ClientRequest, GameAction},
     websocket::{
         messages::{AuthError, InternalServerMessage, WsMessage},
@@ -40,6 +40,17 @@ impl std::fmt::Display for RequestHandlerError {
         }
     }
 }
+
+impl RequestHandlerError {
+    pub fn user_safe_reason(&self) -> String {
+        match self {
+            Self::InternalError(_) => "Unable to complete chat request".to_string(),
+            Self::AuthError(err) => err.to_string(),
+            Self::Forbidden(message) => message.clone(),
+        }
+    }
+}
+
 pub struct RequestHandler {
     command: ClientRequest,
     data: Arc<WebsocketData>,
@@ -110,7 +121,7 @@ impl RequestHandler {
                 let mut conn = get_conn(&self.pool)
                     .await
                     .map_err(|e| Self::db_connection_error("checking chat send permissions", e))?;
-                authorize_chat_send_and_resolve_channel_id(
+                let resolved_channel_key = authorize_chat_send_and_resolve_channel_key(
                     &mut conn,
                     self.user_id,
                     self.admin,
@@ -119,7 +130,12 @@ impl RequestHandler {
                 )
                 .await
                 .map_err(Self::map_chat_send_access_error)?;
-                ChatHandler::new(message_container, self.data.clone(), self.pool.clone())
+                ChatHandler::new(
+                    message_container,
+                    resolved_channel_key,
+                    self.data.clone(),
+                    self.pool.clone(),
+                )
                     .handle()
                     .await?
             }

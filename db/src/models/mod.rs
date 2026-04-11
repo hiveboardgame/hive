@@ -17,7 +17,7 @@ mod user_block;
 mod user_tournament_chat_mute;
 pub use challenge::{Challenge, NewChallenge};
 pub use chat_message::{ChatMessage, NewChatMessage};
-pub use chat_read_receipt::{ChatReadReceipt, NewChatReadReceipt};
+pub use chat_read_receipt::NewChatReadReceipt;
 pub use game::{Game, NewGame};
 pub use game_user::GameUser;
 pub use home_banner::HomeBanner;

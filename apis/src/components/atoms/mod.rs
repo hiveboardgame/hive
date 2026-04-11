@@ -13,6 +13,7 @@ pub mod invite_button;
 pub mod kick_button;
 pub mod last_move;
 pub mod logo;
+pub mod message_button;
 pub mod next_game_button;
 pub mod og;
 pub mod piece;

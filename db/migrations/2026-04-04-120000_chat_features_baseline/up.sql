@@ -3,6 +3,7 @@ CREATE TABLE chat_messages (
     channel_type TEXT NOT NULL,
     channel_id TEXT NOT NULL,
     sender_id UUID NOT NULL REFERENCES users(id),
+    recipient_id UUID REFERENCES users(id),
     username TEXT NOT NULL,
     body TEXT NOT NULL,
     turn INTEGER,
@@ -10,14 +11,21 @@ CREATE TABLE chat_messages (
     game_id UUID,
     CONSTRAINT chat_messages_game_id_fkey
         FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
-    CONSTRAINT chat_messages_game_id_consistency
+    CONSTRAINT chat_messages_channel_shape_check
         CHECK (
             (
+                channel_type = 'direct'
+                AND recipient_id IS NOT NULL
+                AND game_id IS NULL
+            )
+            OR (
                 channel_type IN ('game_players', 'game_spectators')
+                AND recipient_id IS NULL
                 AND game_id IS NOT NULL
             )
             OR (
-                channel_type NOT IN ('game_players', 'game_spectators')
+                channel_type NOT IN ('direct', 'game_players', 'game_spectators')
+                AND recipient_id IS NULL
                 AND game_id IS NULL
             )
         ),
@@ -27,6 +35,14 @@ CREATE TABLE chat_messages (
 
 CREATE INDEX idx_chat_messages_channel
     ON chat_messages (channel_type, channel_id, created_at DESC);
+
+CREATE INDEX idx_chat_messages_direct_sender_id
+    ON chat_messages (sender_id, created_at DESC)
+    WHERE channel_type = 'direct';
+
+CREATE INDEX idx_chat_messages_direct_recipient_id
+    ON chat_messages (recipient_id, created_at DESC)
+    WHERE channel_type = 'direct';
 
 CREATE INDEX idx_chat_messages_game_id
     ON chat_messages (game_id)

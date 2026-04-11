@@ -197,7 +197,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                 let message = ServerResult::Err(ExternalServerError {
                                     user_id,
                                     field: "foo".to_string(),
-                                    reason: format!("{err}"),
+                                    reason: err.user_safe_reason(),
                                     status_code,
                                 });
                                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {

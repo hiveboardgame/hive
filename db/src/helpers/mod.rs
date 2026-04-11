@@ -23,7 +23,6 @@ pub use chat::{
     get_tournament_lobby_channel_summaries_for_user,
     get_unread_counts_for_messages_hub_catalog,
     get_unread_counts_for_user,
-    global_channel_has_messages,
     insert_chat_message,
     is_tournament_participant,
     upsert_chat_read_receipt,

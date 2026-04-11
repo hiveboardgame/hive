@@ -1,6 +1,6 @@
 use crate::{
     db_error::DbError,
-    models::{ChatMessage, Game, NewChatMessage},
+    models::{ChatMessage, Game, NewChatMessage, NewChatReadReceipt, User},
     schema::{
         chat_messages,
         chat_read_receipts,
@@ -20,6 +20,7 @@ use diesel::{
     sql_types::Timestamptz,
 };
 use diesel_async::RunQueryDsl;
+use shared_types::ChannelKey;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -67,7 +68,6 @@ pub struct MessagesHubCatalog {
     pub dms: Vec<DmConversationSummary>,
     pub tournaments: Vec<TournamentChannelSummary>,
     pub games: Vec<GameChannelSummary>,
-    pub has_global: bool,
 }
 
 /// Insert a chat message and return the inserted row.
@@ -80,26 +80,21 @@ pub async fn insert_chat_message(
     NewChatMessage { game_id, ..new }.insert(conn).await
 }
 
-/// Load messages for a channel, newest first. `before_id` is for pagination (exclusive).
+/// Load messages for a channel, newest first.
 pub async fn get_chat_messages_for_channel(
     conn: &mut DbConn<'_>,
     channel_type: &str,
     channel_id: &str,
     limit: i64,
-    before_id: Option<i64>,
 ) -> Result<Vec<ChatMessage>, DbError> {
-    let mut query = chat_messages::table
+    chat_messages::table
         .filter(chat_messages::channel_type.eq(channel_type))
         .filter(chat_messages::channel_id.eq(channel_id))
         .order(chat_messages::created_at.desc())
         .limit(limit)
-        .into_boxed();
-
-    if let Some(bid) = before_id {
-        query = query.filter(chat_messages::id.lt(bid));
-    }
-
-    query.get_results(conn).await.map_err(DbError::from)
+        .get_results(conn)
+        .await
+        .map_err(DbError::from)
 }
 
 fn is_game_chat_channel_type(channel_type: &str) -> bool {
@@ -143,18 +138,6 @@ async fn resolve_game_id_for_channel(
     }
 }
 
-/// Returns true if the global channel has at least one message.
-pub async fn global_channel_has_messages(conn: &mut DbConn<'_>) -> Result<bool, DbError> {
-    select(exists(
-        chat_messages::table
-            .filter(chat_messages::channel_type.eq(shared_types::CHANNEL_TYPE_GLOBAL))
-            .filter(chat_messages::channel_id.eq(shared_types::CHANNEL_TYPE_GLOBAL)),
-    ))
-    .get_result(conn)
-    .await
-    .map_err(DbError::from)
-}
-
 /// Returns true if the user is allowed to read from this chat channel.
 /// Game chat: only players may ever read game_players.
 /// game_spectators is non-player-only while a game is ongoing and globally readable once finished.
@@ -165,12 +148,19 @@ pub async fn can_user_access_chat_channel(
     channel_id: &str,
 ) -> Result<bool, DbError> {
     match channel_type {
-        shared_types::CHANNEL_TYPE_DIRECT => {
-            Ok(shared_types::other_user_from_dm_channel(channel_id, user_id).is_some())
-        }
+        shared_types::CHANNEL_TYPE_DIRECT => Ok(
+            shared_types::other_user_from_dm_channel(channel_id, user_id)
+                .filter(|other_user_id| *other_user_id != user_id)
+                .is_some_and(|other_user_id| {
+                    channel_id == ChannelKey::direct(user_id, other_user_id).channel_id
+                }),
+        ),
         shared_types::CHANNEL_TYPE_GLOBAL => Ok(true),
         shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY => {
-            is_tournament_participant(conn, user_id, channel_id).await
+            Ok(
+                User::is_admin(&user_id, conn).await?
+                    || is_tournament_participant(conn, user_id, channel_id).await?,
+            )
         }
         shared_types::CHANNEL_TYPE_GAME_PLAYERS | shared_types::CHANNEL_TYPE_GAME_SPECTATORS => {
             let game =
@@ -206,15 +196,16 @@ pub async fn upsert_chat_read_receipt(
 ) -> Result<(), DbError> {
     let game_id = resolve_game_id_for_channel(conn, channel_type, channel_id).await?;
     ensure_game_channel_has_game_id(channel_type, channel_id, &game_id)?;
+    let new_receipt = NewChatReadReceipt {
+        user_id,
+        channel_type,
+        channel_id,
+        last_read_at,
+        game_id,
+    };
 
     diesel::insert_into(chat_read_receipts::table)
-        .values((
-            chat_read_receipts::user_id.eq(user_id),
-            chat_read_receipts::channel_type.eq(channel_type),
-            chat_read_receipts::channel_id.eq(channel_id),
-            chat_read_receipts::last_read_at.eq(last_read_at),
-            chat_read_receipts::game_id.eq(game_id),
-        ))
+        .values(&new_receipt)
         .on_conflict((
             chat_read_receipts::user_id,
             chat_read_receipts::channel_type,
@@ -225,7 +216,7 @@ pub async fn upsert_chat_read_receipt(
             chat_read_receipts::last_read_at.eq(sql::<Timestamptz>(
                 "GREATEST(chat_read_receipts.last_read_at, EXCLUDED.last_read_at)",
             )),
-            chat_read_receipts::game_id.eq(game_id),
+            chat_read_receipts::game_id.eq(new_receipt.game_id),
         ))
         .execute(conn)
         .await
@@ -240,33 +231,24 @@ pub async fn get_dm_conversation_summaries_for_user(
     user_id: Uuid,
     blocked_ids: &HashSet<Uuid>,
 ) -> Result<Vec<DmConversationSummary>, DbError> {
-    use crate::schema::users;
+    let mut other_id_to_activity = HashMap::<Uuid, DateTime<Utc>>::new();
 
-    let channel_activity = get_dm_channel_activity_for_user(conn, user_id).await?;
+    for (other_user_id, last_message_at) in get_sent_dm_activity_for_user(conn, user_id).await? {
+        let (Some(other_user_id), Some(last_message_at)) = (other_user_id, last_message_at) else {
+            continue;
+        };
+        update_latest_dm_activity(&mut other_id_to_activity, other_user_id, last_message_at);
+    }
 
-    let mut other_id_to_activity = HashMap::<Uuid, (String, DateTime<Utc>)>::new();
-    for (channel_id, last_message_at) in channel_activity {
+    for (other_user_id, last_message_at) in get_received_dm_activity_for_user(conn, user_id).await?
+    {
         let Some(last_message_at) = last_message_at else {
             continue;
         };
-        let Some(other_id) = shared_types::other_user_from_dm_channel(&channel_id, user_id) else {
-            continue;
-        };
-        if blocked_ids.contains(&other_id) {
-            continue;
-        }
-        match other_id_to_activity.get_mut(&other_id) {
-            Some((existing_channel_id, existing_last_message_at)) => {
-                if last_message_at > *existing_last_message_at {
-                    *existing_channel_id = channel_id;
-                    *existing_last_message_at = last_message_at;
-                }
-            }
-            None => {
-                other_id_to_activity.insert(other_id, (channel_id, last_message_at));
-            }
-        }
+        update_latest_dm_activity(&mut other_id_to_activity, other_user_id, last_message_at);
     }
+
+    other_id_to_activity.retain(|other_user_id, _| !blocked_ids.contains(other_user_id));
 
     if other_id_to_activity.is_empty() {
         return Ok(Vec::new());
@@ -283,14 +265,14 @@ pub async fn get_dm_conversation_summaries_for_user(
 
     let mut result = other_id_to_activity
         .into_iter()
-        .filter_map(|(other_user_id, (channel_id, last_message_at))| {
+        .filter_map(|(other_user_id, last_message_at)| {
             username_map
                 .get(&other_user_id)
                 .cloned()
                 .map(|username| DmConversationSummary {
                     other_user_id,
                     username,
-                    channel_id,
+                    channel_id: ChannelKey::direct(user_id, other_user_id).channel_id,
                     last_message_at,
                 })
         })
@@ -300,21 +282,44 @@ pub async fn get_dm_conversation_summaries_for_user(
     Ok(result)
 }
 
-async fn get_dm_channel_activity_for_user(
+fn update_latest_dm_activity(
+    activity_by_other_user: &mut HashMap<Uuid, DateTime<Utc>>,
+    other_user_id: Uuid,
+    last_message_at: DateTime<Utc>,
+) {
+    activity_by_other_user
+        .entry(other_user_id)
+        .and_modify(|existing| {
+            if last_message_at > *existing {
+                *existing = last_message_at;
+            }
+        })
+        .or_insert(last_message_at);
+}
+
+async fn get_sent_dm_activity_for_user(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
-) -> Result<Vec<(String, Option<DateTime<Utc>>)>, DbError> {
-    let prefix_pattern = format!("{user_id}::%");
-    let suffix_pattern = format!("%::{user_id}");
+) -> Result<Vec<(Option<Uuid>, Option<DateTime<Utc>>)>, DbError> {
     chat_messages::table
         .filter(chat_messages::channel_type.eq(shared_types::CHANNEL_TYPE_DIRECT))
-        .filter(
-            chat_messages::channel_id
-                .like(prefix_pattern)
-                .or(chat_messages::channel_id.like(suffix_pattern)),
-        )
-        .group_by(chat_messages::channel_id)
-        .select((chat_messages::channel_id, max(chat_messages::created_at)))
+        .filter(chat_messages::sender_id.eq(user_id))
+        .group_by(chat_messages::recipient_id)
+        .select((chat_messages::recipient_id, max(chat_messages::created_at)))
+        .load(conn)
+        .await
+        .map_err(DbError::from)
+}
+
+async fn get_received_dm_activity_for_user(
+    conn: &mut DbConn<'_>,
+    user_id: Uuid,
+) -> Result<Vec<(Uuid, Option<DateTime<Utc>>)>, DbError> {
+    chat_messages::table
+        .filter(chat_messages::channel_type.eq(shared_types::CHANNEL_TYPE_DIRECT))
+        .filter(chat_messages::recipient_id.eq(Some(user_id)))
+        .group_by(chat_messages::sender_id)
+        .select((chat_messages::sender_id, max(chat_messages::created_at)))
         .load(conn)
         .await
         .map_err(DbError::from)
@@ -673,7 +678,6 @@ pub async fn get_messages_hub_catalog_for_user(
         dms,
         tournaments,
         games,
-        has_global: true,
     })
 }
 
@@ -727,11 +731,7 @@ pub async fn get_unread_counts_for_messages_hub_catalog(
         ),
         (
             shared_types::CHANNEL_TYPE_GLOBAL,
-            if catalog.has_global {
-                vec![shared_types::CHANNEL_TYPE_GLOBAL.to_string()]
-            } else {
-                Vec::new()
-            },
+            vec![shared_types::CHANNEL_TYPE_GLOBAL.to_string()],
         ),
     ];
 

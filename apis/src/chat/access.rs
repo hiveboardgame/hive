@@ -6,13 +6,9 @@ use db_lib::{
 };
 use shared_types::{
     canonical_dm_channel_id,
+    ChannelKey,
     ChannelType,
     GameId,
-    CHANNEL_TYPE_DIRECT,
-    CHANNEL_TYPE_GAME_PLAYERS,
-    CHANNEL_TYPE_GAME_SPECTATORS,
-    CHANNEL_TYPE_GLOBAL,
-    CHANNEL_TYPE_TOURNAMENT_LOBBY,
 };
 use uuid::Uuid;
 
@@ -42,11 +38,6 @@ fn map_not_found(
 }
 
 fn parse_direct_other_user(channel_id: &str, sender_id: Uuid) -> Result<Uuid, ChatSendAccessError> {
-    if !channel_id.contains("::") {
-        return Uuid::parse_str(channel_id)
-            .map_err(|_| ChatSendAccessError::BadRequest("Invalid channel_id for DM"));
-    }
-
     let Some((a_raw, b_raw)) = channel_id.split_once("::") else {
         return Err(ChatSendAccessError::BadRequest("Invalid DM channel_id format"));
     };
@@ -59,15 +50,29 @@ fn parse_direct_other_user(channel_id: &str, sender_id: Uuid) -> Result<Uuid, Ch
     let b = Uuid::parse_str(b_raw)
         .map_err(|_| ChatSendAccessError::BadRequest("Invalid UUID in channel_id"))?;
 
-    if a == sender_id {
-        Ok(b)
-    } else if b == sender_id {
-        Ok(a)
-    } else {
-        Err(ChatSendAccessError::Forbidden(
-            "You are not a participant in this DM",
-        ))
+    if a == b {
+        return Err(ChatSendAccessError::BadRequest(
+            "Direct messages to yourself are not supported",
+        ));
     }
+
+    let other_id = match (a == sender_id, b == sender_id) {
+        (true, false) => b,
+        (false, true) => a,
+        _ => {
+            return Err(ChatSendAccessError::Forbidden(
+                "You are not a participant in this DM",
+            ));
+        }
+    };
+
+    if channel_id != canonical_dm_channel_id(sender_id, other_id) {
+        return Err(ChatSendAccessError::BadRequest(
+            "DM channel_id must be canonical",
+        ));
+    }
+
+    Ok(other_id)
 }
 
 async fn load_game_or_404(
@@ -79,40 +84,41 @@ async fn load_game_or_404(
         .map_err(|e| map_not_found(e, "Game not found", "loading game"))
 }
 
-pub async fn authorize_chat_send_and_resolve_channel_id(
+pub async fn authorize_chat_send_and_resolve_channel_key(
     conn: &mut DbConn<'_>,
     sender_id: Uuid,
     sender_is_admin: bool,
     channel_type: &str,
     channel_id: &str,
-) -> Result<String, ChatSendAccessError> {
-    if channel_type.parse::<ChannelType>().is_err() {
-        return Err(ChatSendAccessError::BadRequest("Invalid channel_type"));
-    }
+) -> Result<ChannelKey, ChatSendAccessError> {
+    let channel_type = channel_type
+        .parse::<ChannelType>()
+        .map_err(|_| ChatSendAccessError::BadRequest("Invalid channel_type"))?;
 
-    if channel_type == CHANNEL_TYPE_GLOBAL && !sender_is_admin {
+    if channel_type == ChannelType::Global && !sender_is_admin {
         return Err(ChatSendAccessError::Forbidden("Global chat requires admin"));
     }
 
-    if channel_type == CHANNEL_TYPE_TOURNAMENT_LOBBY {
+    if channel_type == ChannelType::TournamentLobby {
         Tournament::from_nanoid(channel_id, conn)
             .await
             .map_err(|e| map_not_found(e, "Tournament not found", "loading tournament"))?;
 
-        let is_participant = is_tournament_participant(conn, sender_id, channel_id)
-            .await
-            .map_err(|e| ChatSendAccessError::Internal {
-                context: "checking tournament membership",
-                error: e,
-            })?;
-        if !is_participant {
+        let can_chat = sender_is_admin
+            || is_tournament_participant(conn, sender_id, channel_id)
+                .await
+                .map_err(|e| ChatSendAccessError::Internal {
+                    context: "checking tournament membership",
+                    error: e,
+                })?;
+        if !can_chat {
             return Err(ChatSendAccessError::Forbidden(
                 "Only tournament participants and organizers can send messages",
             ));
         }
     }
 
-    if channel_type == CHANNEL_TYPE_GAME_PLAYERS {
+    if channel_type == ChannelType::GamePlayers {
         let game = load_game_or_404(conn, channel_id).await?;
         if sender_id != game.white_id && sender_id != game.black_id {
             return Err(ChatSendAccessError::Forbidden(
@@ -121,7 +127,7 @@ pub async fn authorize_chat_send_and_resolve_channel_id(
         }
     }
 
-    if channel_type == CHANNEL_TYPE_GAME_SPECTATORS {
+    if channel_type == ChannelType::GameSpectators {
         let game = load_game_or_404(conn, channel_id).await?;
         let is_player = sender_id == game.white_id || sender_id == game.black_id;
         if is_player && !game.finished {
@@ -131,8 +137,8 @@ pub async fn authorize_chat_send_and_resolve_channel_id(
         }
     }
 
-    if channel_type != CHANNEL_TYPE_DIRECT {
-        return Ok(channel_id.to_string());
+    if channel_type != ChannelType::Direct {
+        return Ok(ChannelKey::new(channel_type, channel_id));
     }
 
     let other_id = parse_direct_other_user(channel_id, sender_id)?;
@@ -162,5 +168,5 @@ pub async fn authorize_chat_send_and_resolve_channel_id(
         ));
     }
 
-    Ok(canonical_dm_channel_id(sender_id, other_id))
+    Ok(ChannelKey::direct(sender_id, other_id))
 }

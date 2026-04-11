@@ -6,6 +6,8 @@ use crate::functions::auth::identity::uuid;
 use crate::functions::db::pool;
 use chrono::{DateTime, Utc};
 #[cfg(feature = "ssr")]
+use log::error;
+#[cfg(feature = "ssr")]
 use db_lib::get_conn;
 #[cfg(feature = "ssr")]
 use db_lib::helpers::{
@@ -18,9 +20,9 @@ use db_lib::helpers::{
     upsert_chat_read_receipt,
 };
 use leptos::prelude::*;
+use server_fn::codec;
+#[cfg(feature = "ssr")]
 use shared_types::{
-    canonical_dm_channel_id,
-    other_user_from_dm_channel,
     ChannelType,
     ChatMessage,
     CHANNEL_TYPE_DIRECT,
@@ -28,7 +30,6 @@ use shared_types::{
 };
 #[cfg(feature = "ssr")]
 use std::collections::HashMap;
-use uuid::Uuid;
 
 #[cfg(feature = "ssr")]
 use chrono::Duration;
@@ -43,7 +44,13 @@ const MESSAGES_HUB_RECENT_DAYS: i64 = 30;
 #[cfg(feature = "ssr")]
 const MESSAGES_HUB_SECTION_LIMIT: usize = 25;
 
-#[server]
+#[cfg(feature = "ssr")]
+fn generic_chat_server_error(context: &'static str, err: impl std::fmt::Display) -> ServerFnError {
+    error!("chat server fn failed while {context}: {err}");
+    ServerFnError::new("Unable to complete chat request")
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn mark_chat_read(channel_type: String, channel_id: String) -> Result<(), ServerFnError> {
     // Trim in case client sends trailing/leading spaces; other endpoints use exact constants.
     let channel_type = channel_type.trim();
@@ -52,49 +59,54 @@ pub async fn mark_chat_read(channel_type: String, channel_id: String) -> Result<
     }
     let user_id: uuid::Uuid = uuid().await?;
     let pool = pool().await?;
-    let mut conn = get_conn(&pool).await.map_err(ServerFnError::new)?;
+    let mut conn = get_conn(&pool)
+        .await
+        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
 
     // Verify user can access this channel before creating a read receipt
     let allowed = can_user_access_chat_channel(&mut conn, user_id, channel_type, &channel_id)
         .await
-        .map_err(ServerFnError::new)?;
+        .map_err(|err| generic_chat_server_error("checking chat access", err))?;
     if !allowed {
         return Err(ServerFnError::new("Access denied"));
     }
 
     upsert_chat_read_receipt(&mut conn, user_id, channel_type, &channel_id, Utc::now())
         .await
-        .map_err(ServerFnError::new)?;
+        .map_err(|err| generic_chat_server_error("marking chat as read", err))?;
     Ok(())
 }
 
 /// Returns (channel_type, channel_id, unread_count) for channels where the user has a receipt and count > 0.
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_chat_unread_counts() -> Result<Vec<(String, String, i64)>, ServerFnError> {
     let user_id: uuid::Uuid = uuid().await?;
     let pool = pool().await?;
-    let mut conn = get_conn(&pool).await.map_err(ServerFnError::new)?;
+    let mut conn = get_conn(&pool)
+        .await
+        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
     get_unread_counts_for_user(&mut conn, user_id)
         .await
-        .map_err(ServerFnError::new)
+        .map_err(|err| generic_chat_server_error("loading unread chat counts", err))
 }
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_messages_hub_data() -> Result<MessagesHubData, ServerFnError> {
     let user_id: uuid::Uuid = uuid().await?;
     let pool = pool().await?;
-    let mut conn = get_conn(&pool).await.map_err(ServerFnError::new)?;
+    let mut conn = get_conn(&pool)
+        .await
+        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
     load_messages_hub_data_for_user(&mut conn, user_id)
         .await
-        .map_err(ServerFnError::new)
+        .map_err(|err| generic_chat_server_error("loading messages hub data", err))
 }
 
-#[server]
+#[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_chat_history(
     channel_type: String,
     channel_id: String,
     limit: Option<i64>,
-    before_id: Option<i64>,
 ) -> Result<Vec<shared_types::ChatMessage>, ServerFnError> {
     let channel_type = channel_type.trim();
     if channel_type.parse::<ChannelType>().is_err() {
@@ -103,53 +115,34 @@ pub async fn get_chat_history(
 
     let user_id: uuid::Uuid = uuid().await?;
     let pool = pool().await?;
-    let mut conn = get_conn(&pool).await.map_err(ServerFnError::new)?;
+    let mut conn = get_conn(&pool)
+        .await
+        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
 
     let requested_limit = limit.unwrap_or(DEFAULT_HISTORY_LIMIT);
     let capped_limit = requested_limit.clamp(1, MAX_HISTORY_LIMIT);
-    let (effective_limit, effective_before_id) =
-        if channel_type == CHANNEL_TYPE_GLOBAL {
-            (capped_limit.min(GLOBAL_ANNOUNCEMENTS_LIMIT), None)
-        } else {
-            (capped_limit, before_id)
-        };
-
-    let channel_id = if channel_type == CHANNEL_TYPE_DIRECT {
-        if channel_id.contains("::") {
-            other_user_from_dm_channel(&channel_id, user_id)
-                .map(|other_user_id| canonical_dm_channel_id(user_id, other_user_id))
-                .unwrap_or(channel_id)
-        } else {
-            channel_id
-                .parse::<Uuid>()
-                .map(|other_user_id| canonical_dm_channel_id(user_id, other_user_id))
-                .unwrap_or(channel_id)
-        }
+    let effective_limit = if channel_type == CHANNEL_TYPE_GLOBAL {
+        capped_limit.min(GLOBAL_ANNOUNCEMENTS_LIMIT)
     } else {
-        channel_id
+        capped_limit
     };
 
     let allowed = can_user_access_chat_channel(&mut conn, user_id, channel_type, &channel_id)
         .await
-        .map_err(ServerFnError::new)?;
+        .map_err(|err| generic_chat_server_error("checking chat access", err))?;
     if !allowed {
         return Err(ServerFnError::new("Access denied"));
     }
 
-    let mut messages = get_chat_messages_for_channel(
-        &mut conn,
-        channel_type,
-        &channel_id,
-        effective_limit,
-        effective_before_id,
-    )
-    .await
-    .map_err(ServerFnError::new)?;
+    let mut messages =
+        get_chat_messages_for_channel(&mut conn, channel_type, &channel_id, effective_limit)
+            .await
+            .map_err(|err| generic_chat_server_error("loading chat history", err))?;
 
     if channel_type == CHANNEL_TYPE_DIRECT {
         let blocked_ids = get_blocked_user_ids(&mut conn, user_id)
             .await
-            .map_err(ServerFnError::new)?;
+            .map_err(|err| generic_chat_server_error("loading blocked users", err))?;
         let blocked_ids: std::collections::HashSet<_> = blocked_ids.into_iter().collect();
         messages.retain(|message| !blocked_ids.contains(&message.sender_id));
     }
@@ -172,7 +165,6 @@ pub struct MyConversations {
     pub dms: Vec<DmConversation>,
     pub tournaments: Vec<TournamentChannel>,
     pub games: Vec<GameChannel>,
-    pub has_global: bool,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -274,7 +266,6 @@ fn build_messages_hub_conversations(
         dms,
         tournaments,
         games,
-        has_global,
         ..
     } = catalog;
     let recent_cutoff = Utc::now() - Duration::days(MESSAGES_HUB_RECENT_DAYS);
@@ -365,7 +356,6 @@ fn build_messages_hub_conversations(
         dms,
         tournaments,
         games,
-        has_global,
     }
 }
 
@@ -428,7 +418,6 @@ mod tests {
                 dms: filler.into_iter().chain(std::iter::once(unread)).collect(),
                 tournaments: Vec::new(),
                 games: Vec::new(),
-                has_global: true,
             },
             &[(
                 shared_types::CHANNEL_TYPE_DIRECT.to_string(),
@@ -463,7 +452,6 @@ mod tests {
                     .map(|idx| game_summary(idx as i64, &format!("recent-game-{idx}")))
                     .chain(std::iter::once(unread_game))
                     .collect(),
-                has_global: true,
             },
             &[
                 (

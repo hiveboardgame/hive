@@ -458,7 +458,6 @@ version = "0.1.0"
 dependencies = [
  "actix",
  "actix-files",
- "actix-http",
  "actix-identity",
  "actix-rt",
  "actix-session",
@@ -1466,7 +1465,6 @@ dependencies = [
  "hive",
  "itertools",
  "lazy_static",
- "log",
  "nanoid",
  "rand 0.9.2",
  "regex",

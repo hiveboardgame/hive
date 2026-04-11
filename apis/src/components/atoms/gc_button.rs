@@ -51,7 +51,7 @@ pub fn ConfirmButton(
     #[prop(optional, into)] hidden: Signal<bool>,
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
-    let pending_slice = create_read_slice(game_state.signal, |gs| gs.game_control_pending.clone());
+    let pending_slice = create_read_slice(game_state.signal, |gs| gs.game_control_pending);
     let turn = create_read_slice(game_state.signal, |gs| gs.state.turn as i32);
     let (icon, title) = get_icon_and_title(game_control);
     let color = game_control.color();

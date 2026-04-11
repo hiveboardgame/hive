@@ -2,6 +2,7 @@ use crate::{
     components::{
         atoms::{
             block_toggle_button::BlockToggleButton,
+            message_button::MessageButton,
             profile_link::ProfileLink,
             status_indicator::StatusIndicator,
         },
@@ -20,7 +21,6 @@ use crate::{
     },
 };
 use leptos::{either::Either, html, prelude::*};
-use leptos_icons::*;
 use leptos_router::{
     components::A,
     hooks::{use_location, use_params},
@@ -72,7 +72,7 @@ fn ProfileHeaderActions(
     profile_is_bot: bool,
     viewer_id: Signal<Option<Uuid>>,
 ) -> impl IntoView {
-    let i18n = use_i18n();
+    let profile_username = StoredValue::new(profile_username);
     let can_message = Resource::new(
         move || viewer_id.get(),
         move |viewer_id| async move {
@@ -86,25 +86,14 @@ fn ProfileHeaderActions(
     let show_actions =
         Signal::derive(move || viewer_id.get().is_some_and(|vid| vid != profile_user_id));
     let show_message = Signal::derive(move || matches!(can_message.get(), Some(Ok(true))));
-    let message_href = StoredValue::new(format!(
-        "/messages?dm={}&username={}",
-        profile_user_id,
-        urlencoding::encode(&profile_username)
-    ));
 
     view! {
         <Show when=move || show_actions.get()>
             <Show when=move || show_message.get()>
-                <A
-                    href=move || message_href.get_value()
-                    attr:class="no-link-style inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg bg-pillbug-teal text-white hover:bg-pillbug-teal/90 dark:bg-pillbug-teal dark:text-white dark:hover:bg-pillbug-teal/90 transition-colors [&_svg]:text-inherit"
-                >
-                    <Icon
-                        icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg
-                        attr:class="size-5 shrink-0"
-                    />
-                    {t!(i18n, messages.page.message_button)}
-                </A>
+                <MessageButton
+                    other_user_id=profile_user_id
+                    username=profile_username.get_value()
+                />
             </Show>
             <ProfileBlockUnblock profile_user_id />
         </Show>
