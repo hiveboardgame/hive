@@ -23,6 +23,7 @@
     "login": "Anmelden",
     "user_menu": {
         "profile": "Profil",
+        "messages": "Nachrichten",
         "edit_account": "Konto bearbeiten",
         "config": "Einstellungen",
         "logout": "Abmelden",

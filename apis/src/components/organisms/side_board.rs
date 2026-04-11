@@ -1,8 +1,10 @@
 use crate::{
+    chat::SimpleDestination,
     components::{
         molecules::history_controls::HistoryControls,
         organisms::{chat::ChatWindow, history::History, reserve::ReserveContent},
     },
+    i18n::*,
     providers::{
         chat::Chat,
         game_state::{GameStateSignal, View},
@@ -16,7 +18,7 @@ use leptos_router::{
     location::State,
     NavigateOptions,
 };
-use shared_types::{GameId, SimpleDestination};
+use shared_types::GameId;
 
 #[derive(Clone, PartialEq, Copy)]
 pub enum TabView {
@@ -41,11 +43,12 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
         TabView::History => "History".to_string(),
         TabView::Chat => "Chat".to_string(),
     };
+    let unread = move || chat.unread_count_for_game(&game_id());
     let mut game_state = expect_context::<GameStateSignal>();
     view! {
         <div
             on:click=move |_| {
-                if tab() == TabView::Chat {
+                if name == TabView::Chat {
                     chat.seen_messages(game_id());
                     let is_game_view = game_state.signal.with_untracked(|gs| gs.view == View::Game);
                     if is_game_view {
@@ -68,8 +71,6 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
                     "flex place-content-center transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal {}",
                     if tab() == name {
                         "dark:bg-button-twilight bg-slate-400"
-                    } else if name == TabView::Chat && chat.has_messages(game_id()) {
-                        "bg-ladybug-red"
                     } else {
                         "bg-inherit"
                     },
@@ -77,6 +78,14 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
             }
         >
             {string.clone()}
+            <Show when=move || name == TabView::Chat && (unread() > 0)>
+                <span class="flex justify-center items-center px-1 h-5 text-xs font-bold leading-none text-white rounded-full dark:bg-red-500 min-w-5 bg-ladybug-red">
+                    {move || {
+                        let count = unread();
+                        if count > 99 { "99+".to_string() } else { count.to_string() }
+                    }}
+                </span>
+            </Show>
         </div>
     }
 }
@@ -87,6 +96,7 @@ pub fn SideboardTabs(
     tab: RwSignal<TabView>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
+    let i18n = use_i18n();
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
@@ -97,6 +107,10 @@ pub fn SideboardTabs(
             Some(user.id) == black_id || Some(user.id) == white_id
         })
     });
+    let game_finished = create_read_slice(game_state.signal, |gs| {
+        gs.game_response.as_ref().is_some_and(|gr| gr.finished)
+    });
+    let game_show_players = RwSignal::new(true);
     view! {
         <div class=format!(
             "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",
@@ -118,10 +132,59 @@ pub fn SideboardTabs(
             <TabsContent
                 tab
                 value=TabView::Chat
-                class="flex flex-col flex-grow h-full max-h-full justify-beetween"
+                class="flex overflow-hidden flex-col flex-grow h-full min-h-0"
             >
                 <HistoryControls />
-                <ChatWindow destination=SimpleDestination::Game />
+                <Show when=move || show_buttons()>
+                    <div class="flex gap-0.5 p-1 border-b shrink-0 border-black/30 bg-inherit dark:border-white/30">
+                        <button
+                            type="button"
+                            class=move || {
+                                format!(
+                                    "flex-1 px-2 py-1 text-xs font-medium rounded border border-transparent transition-colors {}",
+                                    if game_show_players.get() {
+                                        "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
+                                    } else {
+                                        "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
+                                    },
+                                )
+                            }
+                            on:click=move |_| game_show_players.set(true)
+                        >
+                            {t!(i18n, messages.chat.players)}
+                        </button>
+                        <button
+                            type="button"
+                            disabled=move || !game_finished()
+                            class=move || {
+                                format!(
+                                    "flex-1 px-2 py-1 text-xs font-medium rounded border border-transparent transition-colors {}",
+                                    if !game_show_players.get() {
+                                        "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
+                                    } else if game_finished() {
+                                        "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
+                                    } else {
+                                        "bg-transparent text-gray-500 dark:text-gray-500 cursor-not-allowed"
+                                    },
+                                )
+                            }
+                            on:click=move |_| game_show_players.set(false)
+                        >
+                            {t!(i18n, messages.chat.spectators)}
+                        </button>
+                    </div>
+                </Show>
+                <div class="flex overflow-hidden flex-col flex-1 min-h-0">
+                    <Show
+                        when=move || show_buttons()
+                        fallback=|| view! { <ChatWindow destination=SimpleDestination::Game /> }
+                    >
+                        <ChatWindow
+                            destination=SimpleDestination::Game
+                            game_channel_override=Signal::derive(move || game_show_players.get())
+                        />
+                    </Show>
+                </div>
             </TabsContent>
         </div>
     }

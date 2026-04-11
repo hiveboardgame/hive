@@ -1,0 +1,63 @@
+{
+    "chat": {
+        "players": "Игроки",
+        "spectators": "Зрители",
+        "players_chat": "Чат игроков",
+        "spectator_chat": "Чат зрителей",
+        "spectator_unlock": "Чат зрителей откроется после окончания партии.",
+        "admin_only": "Только администраторы",
+        "with_opponent": "Чат с соперником",
+        "with_spectators": "Чат со зрителями",
+        "placeholder": "Чат",
+        "loading": "Загрузка чата...",
+        "empty_title": "Пока нет сообщений",
+        "empty_body": "Отправьте сообщение, чтобы начать разговор.",
+        "new_messages": "Новые сообщения",
+        "hidden_message": "Сообщение скрыто. Нажмите, чтобы раскрыть.",
+        "tournament_title": "Чат турнира",
+        "tournament_send_restricted": "Только участники могут отправлять сообщения.",
+        "tournament_read_restricted": "Только участники могут писать здесь.",
+        "turn": " - ход {{turn}}"
+    },
+    "block_dialog": {
+        "block_user": "Заблокировать пользователя",
+        "unblock_user": "Разблокировать пользователя",
+        "title": "Заблокировать этого пользователя?",
+        "body": "Он больше не сможет отправлять вам личные сообщения. В чатах партий и турниров его сообщения будут скрыты по умолчанию (можно нажать, чтобы показать). Позже вы сможете разблокировать его из профиля или из раздела Сообщения.",
+        "cancel": "Отмена",
+        "confirm": "Заблокировать"
+    },
+    "page": {
+        "title": "Сообщения",
+        "loading": "Загрузка...",
+        "failed_conversations": "Не удалось загрузить диалоги",
+        "select_conversation": "Выберите диалог",
+        "choose_conversation": "Выберите чат на боковой панели, чтобы начать переписку.",
+        "back_to_conversations": "Назад к диалогам",
+        "conversations": "Диалоги",
+        "unknown_user": "Неизвестно",
+        "view_profile": "Открыть профиль ->",
+        "view_tournament": "Открыть турнир ->",
+        "view_game": "Открыть партию ->",
+        "mute_tournament_chat": "Отключить чат турнира",
+        "unmute_tournament_chat": "Включить чат турнира",
+        "failed_game": "Не удалось загрузить партию",
+        "game_id_tooltip": "ID партии (совпадает с URL)",
+        "result_won": "{{winner}} победил {{conclusion}}",
+        "result_draw": "Ничья {{conclusion}}",
+        "state_finished": "Завершено:",
+        "state_started": "Начато",
+        "message_button": "Сообщение"
+    },
+    "sections": {
+        "dms": "ЛС",
+        "tournaments": "Турниры",
+        "games": "Партии",
+        "global": "Общий",
+        "recent_announcements": "Недавние объявления",
+        "no_dms": "Пока нет ЛС",
+        "no_tournament_chats": "Нет чатов турниров",
+        "no_game_chats": "Нет чатов партий",
+        "muted": "Отключено"
+    }
+}

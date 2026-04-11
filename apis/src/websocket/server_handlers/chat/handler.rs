@@ -1,42 +1,57 @@
 use std::sync::Arc;
 
+use anyhow::{Context, Result};
+
 use crate::{
+    chat::ChannelKey,
     common::ServerMessage,
     websocket::{
-        chat::UserToUser,
         messages::{InternalServerMessage, MessageDestination},
+        server_handlers::chat::{metrics, persist::PersistableChatMessage},
         WebsocketData,
     },
 };
+use db_lib::{get_conn, helpers::insert_chat_message, DbPool};
 use shared_types::{ChatDestination, ChatMessageContainer};
 
 pub struct ChatHandler {
     container: ChatMessageContainer,
+    channel_key: ChannelKey,
     data: Arc<WebsocketData>,
+    pool: DbPool,
 }
 
 impl ChatHandler {
-    pub fn new(mut container: ChatMessageContainer, data: Arc<WebsocketData>) -> Self {
+    pub fn new(
+        mut container: ChatMessageContainer,
+        channel_key: ChannelKey,
+        data: Arc<WebsocketData>,
+        pool: DbPool,
+    ) -> Self {
         container.time();
-        Self { container, data }
+        let original_body = container.message.message.clone();
+        container.message.normalize();
+        if container.message.message != original_body {
+            metrics::record_message_normalization();
+        }
+        Self {
+            container,
+            channel_key,
+            data,
+            pool,
+        }
     }
 
-    pub fn handle(&self) -> Vec<InternalServerMessage> {
+    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut messages = Vec::new();
         match &self.container.destination {
             ChatDestination::TournamentLobby(tournament_id) => {
-                let mut tournament_lobby = self.data.chat_storage.tournament.write().unwrap();
-                let entry = tournament_lobby.entry(tournament_id.clone()).or_default();
-                entry.push(self.container.clone());
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::Tournament(tournament_id.clone()),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
                 })
             }
-            ChatDestination::GamePlayers(game_id, white_id, black_id) => {
-                let mut games_private = self.data.chat_storage.games_private.write().unwrap();
-                let entry = games_private.entry(game_id.clone()).or_default();
-                entry.push(self.container.clone());
+            ChatDestination::GamePlayers(_game_id, white_id, black_id) => {
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(*white_id),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
@@ -47,9 +62,6 @@ impl ChatHandler {
                 });
             }
             ChatDestination::GameSpectators(game, white_id, black_id) => {
-                let mut games_public = self.data.chat_storage.games_public.write().unwrap();
-                let entry = games_public.entry(game.clone()).or_default();
-                entry.push(self.container.clone());
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::GameSpectators(
                         game.clone(),
@@ -59,25 +71,56 @@ impl ChatHandler {
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
                 })
             }
-            ChatDestination::User((id, _username)) => {
-                let sender = self.container.message.user_id;
-                self.data
-                    .chat_storage
-                    .insert_or_update_direct_lookup(sender, *id);
-                let user_to_user = UserToUser::new(*id, sender);
-                let mut direct = self.data.chat_storage.direct.write().unwrap();
-                let entry = direct.entry(user_to_user).or_default();
-                entry.push(self.container.clone());
+            ChatDestination::User((other_id, _username)) => {
+                // Recipient
                 messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(*id),
+                    destination: MessageDestination::User(*other_id),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                })
+                });
+                // Sender (echo so their thread updates immediately)
+                messages.push(InternalServerMessage {
+                    destination: MessageDestination::User(self.container.message.user_id),
+                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                });
             }
             ChatDestination::Global => messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
                 message: ServerMessage::Chat(vec![self.container.to_owned()]),
             }),
         };
-        messages
+
+        let persistable = PersistableChatMessage::from_container(
+            &self.container,
+            &self.channel_key,
+        );
+        metrics::record_persist_attempt();
+        let mut conn = get_conn(&self.pool)
+            .await
+            .context("getting chat persistence connection")?;
+        if let Err(error) = insert_chat_message(&mut conn, persistable.as_new()).await {
+            metrics::record_persist_failure();
+            let snapshot = metrics::snapshot();
+            log::error!(
+                "chat persist failed (attempts_total={}, successes_total={}, failures_total={}, normalizations_total={}): {}",
+                snapshot.persist_attempts_total,
+                snapshot.persist_successes_total,
+                snapshot.persist_failures_total,
+                snapshot.message_normalizations_total,
+                error
+            );
+            return Err(error.into());
+        }
+        metrics::record_persist_success();
+
+        // Update the in-memory recent cache only after persistence succeeds.
+        self.data
+            .chat_storage
+            .push_recent(
+                self.channel_key.channel_type.as_str(),
+                &self.channel_key.channel_id,
+                self.container.clone(),
+            );
+
+        Ok(messages)
     }
 }

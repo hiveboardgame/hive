@@ -16,6 +16,7 @@
     "login": "Connexion",
     "user_menu": {
         "profile": "Profil",
+        "messages": "Messages",
         "logout": "Déconnexion",
         "login": "Connexion",
         "config": "Configuration",

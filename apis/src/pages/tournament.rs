@@ -1,4 +1,5 @@
 use crate::{
+    chat::SimpleDestination,
     common::{markdown_to_html, ScheduleAction, TournamentAction},
     components::{
         atoms::progress_bar::ProgressBar,
@@ -17,6 +18,7 @@ use crate::{
         update_from_event::update_from_input,
     },
     functions::tournaments::{get_complete, UpdateDescription},
+    i18n::*,
     providers::{websocket::WebsocketContext, ApiRequestsProvider, AuthContext, UpdateNotifier},
     responses::{GameResponse, TournamentResponse},
 };
@@ -85,6 +87,7 @@ pub fn Tournament() -> impl IntoView {
 fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let tournament = StoredValue::new(tournament);
     let auth_context = expect_context::<AuthContext>();
+    let i18n = use_i18n();
     let api = expect_context::<ApiRequestsProvider>().0;
     let websocket = expect_context::<WebsocketContext>();
     let account = auth_context.user;
@@ -141,6 +144,8 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
             }
         })
     });
+    let tournament_chat_read_only =
+        Signal::derive(move || !(user_is_organizer_or_admin.get() || user_joined()));
     let send_action = move |action: TournamentAction| {
         let api = api.get();
         api.tournament(action);
@@ -541,12 +546,29 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                 </details>
             </Show>
         </div>
-        <Show when=move || user_is_organizer_or_admin() || user_joined()>
-            <div class="p-3 m-2 w-full max-w-full h-60 whitespace-normal break-words sm:w-2/3 bg-even-light dark:bg-even-dark">
-                <ChatWindow destination=shared_types::SimpleDestination::Tournament(
-                    tournament_id.get_value(),
-                ) />
+        <div class="flex overflow-hidden flex-col m-2 w-full max-w-full bg-white rounded-xl border border-gray-200 shadow-inner sm:w-2/3 dark:bg-gray-900 dark:border-gray-700 h-[20rem]">
+            <div class="py-3 px-4 bg-gray-50 border-b border-gray-200 dark:border-gray-700 shrink-0 dark:bg-gray-800/50">
+                <h3 class="text-base font-semibold text-gray-800 dark:text-gray-100">
+                    {t!(i18n, messages.chat.tournament_title)}
+                </h3>
             </div>
-        </Show>
+            <div class="flex overflow-hidden flex-col flex-1 min-h-0">
+                <Show
+                    when=move || !tournament_chat_read_only.get()
+                    fallback=move || {
+                        view! {
+                            <div class="flex justify-center items-center px-4 h-full text-xs text-gray-500 dark:text-gray-400">
+                                {t!(i18n, messages.chat.tournament_read_restricted)}
+                            </div>
+                        }
+                    }
+                >
+                    <ChatWindow
+                        destination=SimpleDestination::Tournament(tournament_id.get_value())
+                        input_disabled=tournament_chat_read_only
+                    />
+                </Show>
+            </div>
+        </div>
     }
 }

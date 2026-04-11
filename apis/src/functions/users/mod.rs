@@ -1,8 +1,16 @@
 use crate::responses::UserResponse;
+#[cfg(feature = "ssr")]
+use log::error;
 use leptos::prelude::*;
 use server_fn::codec;
 use shared_types::GameSpeed;
 use uuid::Uuid;
+
+#[cfg(feature = "ssr")]
+fn generic_can_message_error(context: &'static str, err: impl std::fmt::Display) -> ServerFnError {
+    error!("can_message_user failed while {context}: {err}");
+    ServerFnError::new("Unable to check messaging availability")
+}
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_user_by_uuid(uuid: Uuid) -> Result<UserResponse, ServerFnError> {
@@ -60,6 +68,27 @@ pub async fn get_profile(username: String) -> Result<UserResponse, ServerFnError
     UserResponse::from_username(&username, &mut conn)
         .await
         .map_err(ServerFnError::new)
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn can_message_user(other_user_id: Uuid) -> Result<bool, ServerFnError> {
+    use crate::functions::{auth::identity::uuid, db::pool};
+    use db_lib::{get_conn, helpers::is_blocked};
+
+    let user_id = uuid().await?;
+    if user_id == other_user_id {
+        return Ok(false);
+    }
+
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool)
+        .await
+        .map_err(|err| generic_can_message_error("getting a database connection", err))?;
+
+    is_blocked(&mut conn, other_user_id, user_id)
+        .await
+        .map(|blocked| !blocked)
+        .map_err(|err| generic_can_message_error("checking block status", err))
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]

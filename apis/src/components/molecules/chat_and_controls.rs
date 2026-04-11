@@ -1,4 +1,5 @@
 use crate::{
+    chat::SimpleDestination,
     components::{
         atoms::toggle_controls::ToggleControls,
         layouts::base_layout::OrientationSignal,
@@ -8,7 +9,6 @@ use crate::{
 };
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
-use shared_types::SimpleDestination;
 
 #[component]
 pub fn ChatAndControls() -> impl IntoView {

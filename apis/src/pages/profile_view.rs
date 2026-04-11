@@ -1,19 +1,104 @@
 use crate::{
     components::{
-        atoms::{profile_link::ProfileLink, status_indicator::StatusIndicator},
+        atoms::{
+            block_toggle_button::BlockToggleButton,
+            message_button::MessageButton,
+            profile_link::ProfileLink,
+            status_indicator::StatusIndicator,
+        },
         organisms::{games_filter::GamesFilter, stats::Stats},
     },
-    functions::users::get_profile,
+    functions::{
+        blocks_mutes::get_blocked_user_ids,
+        users::{can_message_user, get_profile},
+    },
     i18n::*,
-    providers::{calculate_initial_batch_size, provide_games_search_context},
+    providers::{
+        calculate_initial_batch_size,
+        chat::Chat,
+        provide_games_search_context,
+        AuthContext,
+    },
 };
 use leptos::{either::Either, html, prelude::*};
 use leptos_router::{
+    components::A,
     hooks::{use_location, use_params},
     params::Params,
 };
 use leptos_use::use_element_bounding;
 use shared_types::GameProgress;
+use uuid::Uuid;
+
+#[component]
+fn ProfileBlockUnblock(profile_user_id: Uuid) -> impl IntoView {
+    let auth_context = expect_context::<AuthContext>();
+    let chat = expect_context::<Chat>();
+    let viewer_id =
+        Signal::derive(move || auth_context.user.with(|u| u.as_ref().map(|a| a.user.uid)));
+    let block_list = Resource::new(
+        move || (viewer_id.get(), chat.block_list_version.get()),
+        move |(viewer_id, _)| async move {
+            if viewer_id.is_none() {
+                Ok(Vec::new())
+            } else {
+                get_blocked_user_ids().await
+            }
+        },
+    );
+    let is_blocked = RwSignal::new(false);
+    Effect::watch(
+        move || block_list.get(),
+        move |result, _, _| {
+            if let Some(Ok(blocked)) = result.clone() {
+                is_blocked.set(blocked.contains(&profile_user_id));
+            }
+        },
+        true,
+    );
+    view! {
+        <BlockToggleButton
+            blocked_user_id=profile_user_id
+            is_blocked=Signal::derive(move || is_blocked.get())
+            on_success=Callback::new(move |is_now_blocked| is_blocked.set(is_now_blocked))
+        />
+    }
+}
+
+#[component]
+fn ProfileHeaderActions(
+    profile_user_id: Uuid,
+    profile_username: String,
+    profile_is_bot: bool,
+    viewer_id: Signal<Option<Uuid>>,
+) -> impl IntoView {
+    let profile_username = StoredValue::new(profile_username);
+    let can_message = Resource::new(
+        move || viewer_id.get(),
+        move |viewer_id| async move {
+            if profile_is_bot || viewer_id.is_none_or(|vid| vid == profile_user_id) {
+                Ok(false)
+            } else {
+                can_message_user(profile_user_id).await
+            }
+        },
+    );
+    let show_actions =
+        Signal::derive(move || viewer_id.get().is_some_and(|vid| vid != profile_user_id));
+    let show_message = Signal::derive(move || matches!(can_message.get(), Some(Ok(true))));
+
+    view! {
+        <Show when=move || show_actions.get()>
+            <Show when=move || show_message.get()>
+                <MessageButton
+                    other_user_id=profile_user_id
+                    username=profile_username.get_value()
+                />
+            </Show>
+            <ProfileBlockUnblock profile_user_id />
+        </Show>
+    }
+}
 
 pub fn tab_from_path(path: &str) -> GameProgress {
     if path.ends_with("/unstarted") {
@@ -66,6 +151,8 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let location = use_location();
     let current_tab = Signal::derive(move || tab_from_path(&location.pathname.get()));
     let i18n = use_i18n();
+    let auth_context = expect_context::<AuthContext>();
+    let viewer_id = Memo::new(move |_| auth_context.user.with(|u| u.as_ref().map(|a| a.user.uid)));
     let radio_classes = |active| {
         format!("no-link-style py-1 px-2 text-sm font-semibold rounded-lg border-2 transition-all duration-200 transform hover:scale-[1.02] cursor-pointer shadow-sm hover:shadow-md {}", 
             if active {
@@ -107,17 +194,27 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
                         .map(|user| {
                             if let Ok(user) = user {
                                 let username = StoredValue::new(user.username.clone());
+                                let msg_uid = user.uid;
+                                let msg_username = user.username.clone();
                                 Either::Left(
                                     view! {
                                         <div class="flex-shrink-0">
                                             <div class="flex flex-row flex-wrap justify-center mx-1 w-full text-lg sm:text-xl">
-                                                <div class="flex items-center">
-                                                    <StatusIndicator username=username.get_value() />
+                                                <div class="flex gap-2 items-center">
+                                                    <span class="shrink-0 [&_svg]:!size-5 [&_svg]:!min-w-5 [&_svg]:!min-h-5">
+                                                        <StatusIndicator username=username.get_value() />
+                                                    </span>
                                                     <ProfileLink
                                                         patreon=user.patreon
                                                         bot=user.bot
                                                         username=username.get_value()
                                                         extend_tw_classes="truncate max-w-[125px]"
+                                                    />
+                                                    <ProfileHeaderActions
+                                                        profile_user_id=msg_uid
+                                                        profile_username=msg_username.clone()
+                                                        profile_is_bot=user.bot
+                                                        viewer_id=Signal::derive(move || viewer_id.get())
                                                     />
                                                 </div>
                                             </div>
@@ -127,30 +224,30 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
 
                                                 <div class="grid gap-1 items-start m-1 lg:flex lg:gap-4 lg:items-center lg:mt-4 grid-cols-[1fr_auto]">
                                                     <div class="flex flex-wrap gap-1 min-w-0">
-                                                        <a
+                                                        <A
                                                             href=format!("/@/{}/unstarted", username.get_value())
-                                                            class=move || radio_classes(
+                                                            attr:class=move || radio_classes(
                                                                 current_tab() == GameProgress::Unstarted,
                                                             )
                                                         >
                                                             {t!(i18n, profile.game_buttons.pending)}
-                                                        </a>
-                                                        <a
+                                                        </A>
+                                                        <A
                                                             href=format!("/@/{}/playing", username.get_value())
-                                                            class=move || radio_classes(
+                                                            attr:class=move || radio_classes(
                                                                 current_tab() == GameProgress::Playing,
                                                             )
                                                         >
                                                             {t!(i18n, profile.game_buttons.playing)}
-                                                        </a>
-                                                        <a
+                                                        </A>
+                                                        <A
                                                             href=format!("/@/{}/finished", username.get_value())
-                                                            class=move || radio_classes(
+                                                            attr:class=move || radio_classes(
                                                                 current_tab() == GameProgress::Finished,
                                                             )
                                                         >
                                                             {t!(i18n, profile.game_buttons.finished)}
-                                                        </a>
+                                                        </A>
                                                     </div>
 
                                                     <GamesFilter
