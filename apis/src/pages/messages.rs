@@ -6,7 +6,7 @@ use crate::{
     components::{
         atoms::block_toggle_button::BlockToggleButton,
         molecules::time_row::TimeRow,
-        organisms::chat::{ChatWindow, GameChatData},
+        organisms::chat::{ChatWindow, GameChatData, GameChatThread},
     },
     functions::{
         blocks_mutes::{mute_tournament_chat, unmute_tournament_chat},
@@ -73,6 +73,12 @@ impl SelectedChannel {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MobilePane {
+    List,
+    Thread,
+}
+
 fn refresh_open_dm_thread(
     chat: Chat,
     alerts: Option<AlertsContext>,
@@ -136,55 +142,72 @@ pub fn Messages() -> impl IntoView {
     );
 
     let selected = RwSignal::new(None::<SelectedChannel>);
-    // On mobile: true = show channel list (drawer open), false = show thread full width. Desktop always shows both.
-    let mobile_drawer_open = RwSignal::new(true);
-
-    // On mobile: close drawer when a conversation is selected (thread full width); open drawer when none selected.
-    Effect::new(move |_| {
-        if selected.get().is_some() {
-            mobile_drawer_open.set(false);
-        } else {
-            mobile_drawer_open.set(true);
-        }
+    // Mobile pane state is explicit. Desktop layout ignores it because both panes stay visible at `sm+`.
+    let mobile_pane = RwSignal::new(MobilePane::List);
+    let mobile_list_visible =
+        Signal::derive(move || selected.get().is_none() || mobile_pane.get() == MobilePane::List);
+    let mobile_thread_visible = Signal::derive(move || {
+        selected.get().is_some() && mobile_pane.get() == MobilePane::Thread
     });
+    let on_select_channel = Callback::new(move |channel: SelectedChannel| {
+        selected.set(Some(channel));
+        mobile_pane.set(MobilePane::Thread);
+    });
+    let deep_link_target =
+        Memo::new(move |_| dm_param().map(|other_id| (other_id, dm_username_param())));
+    let last_applied_deep_link = RwSignal::new(None::<Uuid>);
 
     // Preselect DM from ?dm= (and optional ?username=) when present; e.g. from profile "Message" link
     Effect::new(move |_| {
-        let dm_uid = dm_param();
-        if let Some(other_id) = dm_uid {
-            let selected_channel = selected.get_untracked();
-            let manual_selection_exists = selected_channel.as_ref().is_some_and(
-                |current| {
-                    !matches!(current, SelectedChannel::Dm { other_id: id, .. } if *id == other_id)
-                },
-            );
-            if manual_selection_exists {
-                return;
-            }
-
-            let conv = hub_data
-                .get()
-                .and_then(Result::ok)
-                .map(|data| data.conversations);
-            let username_from_query = dm_username_param();
-            let username = conv
-                .as_ref()
-                .and_then(|c| {
-                    c.dms
-                        .iter()
-                        .find(|d| d.other_user_id == other_id)
-                        .map(|d| d.username.clone())
-                })
-                .or({
-                    if username_from_query.is_empty() {
-                        None
-                    } else {
-                        Some(username_from_query)
-                    }
-                })
-                .unwrap_or_else(|| t_string!(i18n, messages.page.unknown_user).to_string());
-            selected.set(Some(SelectedChannel::Dm { other_id, username }));
+        let target = deep_link_target.get();
+        if target.is_none() {
+            last_applied_deep_link.set(None);
+            return;
         }
+        let Some((other_id, username_from_query)) = target else {
+            return;
+        };
+
+        let conversations = hub_data
+            .get()
+            .and_then(Result::ok)
+            .map(|data| data.conversations);
+        let username = conversations
+            .as_ref()
+            .and_then(|data| {
+                data.dms
+                    .iter()
+                    .find(|dm| dm.other_user_id == other_id)
+                    .map(|dm| dm.username.clone())
+            })
+            .or_else(|| {
+                if username_from_query.is_empty() {
+                    None
+                } else {
+                    Some(username_from_query)
+                }
+            })
+            .unwrap_or_else(|| t_string!(i18n, messages.page.unknown_user).to_string());
+
+        let target_changed = last_applied_deep_link.get_untracked() != Some(other_id);
+        if target_changed {
+            last_applied_deep_link.set(Some(other_id));
+            on_select_channel.run(SelectedChannel::Dm { other_id, username });
+            return;
+        }
+
+        let current_selection = selected.get_untracked();
+        let Some(SelectedChannel::Dm {
+            other_id: current_id,
+            username: current_username,
+        }) = current_selection
+        else {
+            return;
+        };
+        if current_id != other_id || current_username == username {
+            return;
+        }
+        selected.set(Some(SelectedChannel::Dm { other_id, username }));
     });
     let selected_game_summary_key = Memo::new(move |_| {
         selected.get().and_then(|channel| match channel {
@@ -214,12 +237,15 @@ pub fn Messages() -> impl IntoView {
         }),
         _ => None,
     });
-    let selected_game_show_players = Signal::derive(move || {
-        matches!(
-            selected.get(),
-            Some(SelectedChannel::Game { channel_type, .. })
-                if channel_type == ChannelType::GamePlayers
-        )
+    let explicit_game_thread = Signal::derive(move || {
+        match selected.get() {
+            Some(SelectedChannel::Game { channel_type, .. }) => match channel_type {
+                ChannelType::GamePlayers => Some(GameChatThread::Players),
+                ChannelType::GameSpectators => Some(GameChatThread::Spectators),
+                _ => None,
+            },
+            _ => None,
+        }
     });
 
     view! {
@@ -227,7 +253,7 @@ pub fn Messages() -> impl IntoView {
             <aside class=move || {
                 format!(
                     "w-full sm:w-72 flex-shrink-0 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-gray-900 shadow-lg sm:rounded-r-xl border-l border-gray-200 dark:border-gray-700 {} sm:!flex",
-                    if mobile_drawer_open.get() { "" } else { "hidden " },
+                    if mobile_list_visible.get() { "" } else { "hidden " },
                 )
             }>
                 <div class="py-3 px-4 bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700">
@@ -263,6 +289,7 @@ pub fn Messages() -> impl IntoView {
                                 current_user_id=current_user_id
                                 selected=selected
                                 chat=chat
+                                on_select_channel
                             />
                         </ShowLet>
                     </ShowLet>
@@ -271,7 +298,7 @@ pub fn Messages() -> impl IntoView {
             <main class=move || {
                 format!(
                     "flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden {} sm:!flex",
-                    if mobile_drawer_open.get() { "hidden " } else { "" },
+                    if mobile_thread_visible.get() { "" } else { "hidden " },
                 )
             }>
                 <Show
@@ -296,7 +323,7 @@ pub fn Messages() -> impl IntoView {
                                 type="button"
                                 class="flex flex-shrink-0 gap-1 justify-center items-center -ml-1 text-gray-600 rounded-lg transition-colors sm:hidden dark:text-gray-400 hover:text-gray-900 hover:bg-gray-200 min-h-[2.25rem] min-w-[2.25rem] dark:hover:bg-gray-700 dark:hover:text-gray-100"
                                 aria-label=t_string!(i18n, messages.page.back_to_conversations)
-                                on:click=move |_| mobile_drawer_open.set(true)
+                                on:click=move |_| mobile_pane.set(MobilePane::List)
                             >
                                 <span class="text-lg" aria-hidden="true">
                                     "←"
@@ -348,9 +375,7 @@ pub fn Messages() -> impl IntoView {
                                         is_participant,
                                         ..
                                     } => {
-                                        let input_disabled = Signal::derive(move || {
-                                            !is_participant
-                                        });
+                                        let input_disabled = Signal::derive(move || !is_participant);
                                         view! {
                                             <ChatWindow
                                                 destination=SimpleDestination::Tournament(
@@ -366,7 +391,7 @@ pub fn Messages() -> impl IntoView {
                                             <ChatWindow
                                                 destination=SimpleDestination::Game
                                                 game_data=selected_game_data
-                                                game_channel_override=selected_game_show_players
+                                                explicit_game_thread
                                             />
                                         }
                                             .into_any()
@@ -908,6 +933,7 @@ fn ChannelLists(
     current_user_id: impl Fn() -> Option<Uuid> + 'static,
     selected: RwSignal<Option<SelectedChannel>>,
     chat: Chat,
+    on_select_channel: Callback<SelectedChannel, ()>,
 ) -> impl IntoView {
     let me = current_user_id();
     let MyConversations {
@@ -916,10 +942,26 @@ fn ChannelLists(
         games,
     } = conv;
     view! {
-        <DmChannelsSection dms=dms me=me selected=selected chat=chat />
-        <TournamentChannelsSection tournaments=tournaments selected=selected chat=chat />
-        <GameChannelsSection games=games selected=selected chat=chat />
-        <GlobalChannelSection selected=selected />
+        <DmChannelsSection
+            dms=dms
+            me=me
+            selected=selected
+            chat=chat
+            on_select_channel=on_select_channel.clone()
+        />
+        <TournamentChannelsSection
+            tournaments=tournaments
+            selected=selected
+            chat=chat
+            on_select_channel=on_select_channel.clone()
+        />
+        <GameChannelsSection
+            games=games
+            selected=selected
+            chat=chat
+            on_select_channel=on_select_channel.clone()
+        />
+        <GlobalChannelSection selected=selected on_select_channel />
     }
 }
 
@@ -941,11 +983,12 @@ fn DmChannelsSection(
     me: Option<Uuid>,
     selected: RwSignal<Option<SelectedChannel>>,
     chat: Chat,
+    on_select_channel: Callback<SelectedChannel, ()>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let open = RwSignal::new(true);
-    let dms = std::sync::Arc::new(dms);
-    let is_empty = dms.is_empty();
+    let dms = StoredValue::new(dms);
+    let is_empty = dms.with_value(|items| items.is_empty());
     view! {
         <section class="flex flex-col mb-2 min-h-0">
             <SectionHeaderButton
@@ -960,16 +1003,25 @@ fn DmChannelsSection(
                                 <p class=EMPTY_HINT_CLASS>{t!(i18n, messages.sections.no_dms)}</p>
                             }
                         })}
-                    <For
-                        each={
-                            let dms = dms.clone();
-                            move || (*dms).clone()
-                        }
-                        key=|dm| dm.other_user_id
-                        children=move |dm| {
-                            view! { <DmChannelItem dm=dm me=me selected=selected chat=chat /> }
-                        }
-                    />
+                    {move || {
+                        dms.with_value(|items| {
+                            items
+                                .iter()
+                                .cloned()
+                                .map(|dm| {
+                                    view! {
+                                        <DmChannelItem
+                                            dm=dm
+                                            me=me
+                                            selected=selected
+                                            chat=chat
+                                            on_select_channel=on_select_channel.clone()
+                                        />
+                                    }
+                                })
+                                .collect_view()
+                        })
+                    }}
                 </div>
             </Show>
         </section>
@@ -982,6 +1034,7 @@ fn DmChannelItem(
     me: Option<Uuid>,
     selected: RwSignal<Option<SelectedChannel>>,
     chat: Chat,
+    on_select_channel: Callback<SelectedChannel, ()>,
 ) -> impl IntoView {
     let DmConversation {
         other_user_id,
@@ -1006,10 +1059,10 @@ fn DmChannelItem(
             type="button"
             class=move || channel_button_class(is_selected())
             on:click=move |_| {
-                selected.set(Some(SelectedChannel::Dm {
+                on_select_channel.run(SelectedChannel::Dm {
                     other_id: other_user_id,
                     username: username_for_selection.clone(),
-                }));
+                });
             }
         >
             <span class="truncate">{username}</span>
@@ -1023,11 +1076,12 @@ fn TournamentChannelsSection(
     tournaments: Vec<TournamentChannel>,
     selected: RwSignal<Option<SelectedChannel>>,
     chat: Chat,
+    on_select_channel: Callback<SelectedChannel, ()>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let open = RwSignal::new(true);
-    let tournaments = std::sync::Arc::new(tournaments);
-    let is_empty = tournaments.is_empty();
+    let tournaments = StoredValue::new(tournaments);
+    let is_empty = tournaments.with_value(|items| items.is_empty());
     view! {
         <section class="flex flex-col mb-2 min-h-0">
             <SectionHeaderButton
@@ -1044,22 +1098,24 @@ fn TournamentChannelsSection(
                                 </p>
                             }
                         })}
-                    <For
-                        each={
-                            let tournaments = tournaments.clone();
-                            move || (*tournaments).clone()
-                        }
-                        key=|tournament| tournament.nanoid.clone()
-                        children=move |tournament| {
-                            view! {
-                                <TournamentChannelItem
-                                    tournament=tournament
-                                    selected=selected
-                                    chat=chat
-                                />
-                            }
-                        }
-                    />
+                    {move || {
+                        tournaments.with_value(|items| {
+                            items
+                                .iter()
+                                .cloned()
+                                .map(|tournament| {
+                                    view! {
+                                        <TournamentChannelItem
+                                            tournament=tournament
+                                            selected=selected
+                                            chat=chat
+                                            on_select_channel=on_select_channel.clone()
+                                        />
+                                    }
+                                })
+                                .collect_view()
+                        })
+                    }}
                 </div>
             </Show>
         </section>
@@ -1071,6 +1127,7 @@ fn TournamentChannelItem(
     tournament: TournamentChannel,
     selected: RwSignal<Option<SelectedChannel>>,
     chat: Chat,
+    on_select_channel: Callback<SelectedChannel, ()>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let TournamentChannel {
@@ -1117,12 +1174,12 @@ fn TournamentChannelItem(
             type="button"
             class=move || channel_button_class(is_selected())
             on:click=move |_| {
-                selected.set(Some(SelectedChannel::Tournament {
+                on_select_channel.run(SelectedChannel::Tournament {
                     nanoid: nanoid_for_selection.clone(),
                     name: name_for_selection.clone(),
                     is_participant,
                     muted: muted_for_display.get_untracked(),
-                }));
+                });
             }
         >
             <span class="flex gap-1 items-center truncate">
@@ -1149,11 +1206,12 @@ fn GameChannelsSection(
     games: Vec<GameChannel>,
     selected: RwSignal<Option<SelectedChannel>>,
     chat: Chat,
+    on_select_channel: Callback<SelectedChannel, ()>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let open = RwSignal::new(true);
-    let games = std::sync::Arc::new(games);
-    let is_empty = games.is_empty();
+    let games = StoredValue::new(games);
+    let is_empty = games.with_value(|items| items.is_empty());
     view! {
         <section class="flex flex-col mb-2 min-h-0">
             <SectionHeaderButton
@@ -1170,16 +1228,24 @@ fn GameChannelsSection(
                                 </p>
                             }
                         })}
-                    <For
-                        each={
-                            let games = games.clone();
-                            move || (*games).clone()
-                        }
-                        key=|game| format!("{}::{}", game.channel_type, game.channel_id)
-                        children=move |game| {
-                            view! { <GameChannelItem game=game selected=selected chat=chat /> }
-                        }
-                    />
+                    {move || {
+                        games.with_value(|items| {
+                            items
+                                .iter()
+                                .cloned()
+                                .map(|game| {
+                                    view! {
+                                        <GameChannelItem
+                                            game=game
+                                            selected=selected
+                                            chat=chat
+                                            on_select_channel=on_select_channel.clone()
+                                        />
+                                    }
+                                })
+                                .collect_view()
+                        })
+                    }}
                 </div>
             </Show>
         </section>
@@ -1191,6 +1257,7 @@ fn GameChannelItem(
     game: GameChannel,
     selected: RwSignal<Option<SelectedChannel>>,
     chat: Chat,
+    on_select_channel: Callback<SelectedChannel, ()>,
 ) -> impl IntoView {
     let GameChannel {
         channel_type,
@@ -1230,14 +1297,14 @@ fn GameChannelItem(
                 let Some(channel_type) = parsed_channel_type else {
                     return;
                 };
-                selected.set(Some(SelectedChannel::Game {
+                on_select_channel.run(SelectedChannel::Game {
                     channel_type,
                     channel_id: channel_id_for_selection.clone(),
                     label: label_for_selection.clone(),
                     white_id,
                     black_id,
                     finished,
-                }));
+                });
             }
         >
             <span class="truncate" title=display_label_with_nanoid.clone()>
@@ -1249,7 +1316,10 @@ fn GameChannelItem(
 }
 
 #[component]
-fn GlobalChannelSection(selected: RwSignal<Option<SelectedChannel>>) -> impl IntoView {
+fn GlobalChannelSection(
+    selected: RwSignal<Option<SelectedChannel>>,
+    on_select_channel: Callback<SelectedChannel, ()>,
+) -> impl IntoView {
     let i18n = use_i18n();
     let open = RwSignal::new(true);
     let is_selected = move || {
@@ -1271,7 +1341,7 @@ fn GlobalChannelSection(selected: RwSignal<Option<SelectedChannel>>) -> impl Int
                     <button
                         type="button"
                         class=move || channel_button_class(is_selected())
-                        on:click=move |_| selected.set(Some(SelectedChannel::Global))
+                        on:click=move |_| on_select_channel.run(SelectedChannel::Global)
                     >
                         {t!(i18n, messages.sections.recent_announcements)}
                     </button>

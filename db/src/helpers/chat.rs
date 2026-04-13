@@ -700,6 +700,7 @@ pub async fn get_unread_counts_for_messages_hub_catalog(
     };
 
     let mut result = Vec::new();
+    // Global announcements stay readable in /messages, but they do not participate in unread badges.
     let channel_groups = [
         (
             shared_types::CHANNEL_TYPE_DIRECT,
@@ -726,10 +727,6 @@ pub async fn get_unread_counts_for_messages_hub_catalog(
                 .filter(|row| row.channel_type == shared_types::CHANNEL_TYPE_GAME_PLAYERS)
                 .map(|row| row.channel_id.clone())
                 .collect::<Vec<_>>(),
-        ),
-        (
-            shared_types::CHANNEL_TYPE_GLOBAL,
-            vec![shared_types::CHANNEL_TYPE_GLOBAL.to_string()],
         ),
     ];
 

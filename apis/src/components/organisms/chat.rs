@@ -98,6 +98,12 @@ pub struct GameChatData {
     pub finished: bool,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum GameChatThread {
+    Players,
+    Spectators,
+}
+
 #[component]
 pub fn Message(
     message: ChatMessage,
@@ -258,6 +264,18 @@ pub fn ChatInput(
     }
 }
 
+#[component]
+pub fn ChatComposer(
+    destination: Signal<ChatDestination>,
+    disabled: impl Fn() -> bool + 'static + Send + Sync,
+) -> impl IntoView {
+    view! {
+        <div class="p-4 bg-white rounded-xl border border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-700">
+            <ChatInput destination disabled />
+        </div>
+    }
+}
+
 /// When provided for SimpleDestination::Game, overrides which channel to show: true = Players, false = Spectators.
 /// Used on the game page so players can toggle. When None, destination is derived from uid_is_player.
 #[component]
@@ -271,9 +289,9 @@ pub fn ChatWindow(
     /// Optional explicit game metadata for non-game pages that still render a game chat thread.
     #[prop(optional)]
     game_data: Option<Signal<Option<GameChatData>>>,
-    /// When Some, for Game destination use this (true = Players, false = Spectators) instead of uid_is_player.
+    /// When Some, force a specific game chat thread; when None, fall back to uid_is_player.
     #[prop(optional)]
-    game_channel_override: Option<Signal<bool>>,
+    explicit_game_thread: Option<Signal<Option<GameChatThread>>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let params = use_params_map();
@@ -376,6 +394,19 @@ pub fn ChatWindow(
             .or_else(|| route_game_data.get())
     });
     let game_state_ready = Memo::new(move |_| current_game_data.get().is_some());
+    let selected_game_thread = Memo::new(move |_| {
+        explicit_game_thread
+            .as_ref()
+            .and_then(|signal| signal.get())
+    });
+    let has_explicit_game_thread = Memo::new(move |_| selected_game_thread.get().is_some());
+    let show_players_channel = Memo::new(move |_| {
+        match selected_game_thread.get() {
+            Some(GameChatThread::Players) => true,
+            Some(GameChatThread::Spectators) => false,
+            None => uid_is_player(),
+        }
+    });
     let actual_destination = Memo::new(move |_| match destination_kind.get_value() {
         SimpleDestination::Game => match current_game_data.get() {
             Some(GameChatData {
@@ -384,11 +415,7 @@ pub fn ChatWindow(
                 black_id,
                 finished: _finished,
             }) => {
-                let use_players = game_channel_override
-                    .as_ref()
-                    .map(|s| s.get())
-                    .unwrap_or_else(uid_is_player);
-                if use_players {
+                if show_players_channel.get() {
                     Some(ChatDestination::GamePlayers(game_id, white_id, black_id))
                 } else {
                     Some(ChatDestination::GameSpectators(game_id, white_id, black_id))
@@ -495,11 +522,7 @@ pub fn ChatWindow(
                     black_id: _black_id,
                     finished: _finished,
                 }) => {
-                    let use_players = game_channel_override
-                        .as_ref()
-                        .map(|signal| signal.get())
-                        .unwrap_or_else(uid_is_player);
-                    let current_channel = if use_players {
+                    let current_channel = if show_players_channel.get() {
                         ChannelKey::game_players(&game_id)
                     } else {
                         ChannelKey::game_spectators(&game_id)
@@ -611,7 +634,7 @@ pub fn ChatWindow(
                         .map(|v| v.len())
                         .unwrap_or(0);
                     let finished = current_game_data.get().is_some_and(|game| game.finished);
-                    let single_channel = game_channel_override.is_some();
+                    let single_channel = has_explicit_game_thread.get();
                     if finished && !single_channel {
                         private_count + public_count
                     } else {
@@ -628,7 +651,7 @@ pub fn ChatWindow(
                         .map(|v| v.len())
                         .unwrap_or(0);
                     let finished = current_game_data.get().is_some_and(|game| game.finished);
-                    let single_channel = game_channel_override.is_some();
+                    let single_channel = has_explicit_game_thread.get();
                     if finished && !single_channel {
                         private_count + public_count
                     } else {
@@ -695,54 +718,50 @@ pub fn ChatWindow(
 
     let merged_messages = Memo::new(move |_| {
         let mut messages = match actual_destination.get() {
-            Some(ChatDestination::TournamentLobby(tournament)) => {
-                (chat.tournament_lobby_messages)()
-                    .get(&tournament)
-                    .cloned()
-                    .unwrap_or_default()
-            }
+            Some(ChatDestination::TournamentLobby(tournament)) => chat
+                .tournament_lobby_messages
+                .with(|threads| threads.get(&tournament).cloned().unwrap_or_default()),
             Some(ChatDestination::GamePlayers(game_id, ..)) => {
-                let private_msgs = (chat.games_private_messages)()
-                    .get(&game_id)
-                    .cloned()
-                    .unwrap_or_default();
-                let public_msgs = (chat.games_public_messages)()
-                    .get(&game_id)
-                    .cloned()
-                    .unwrap_or_default();
                 let finished = current_game_data.get().is_some_and(|game| game.finished);
-                let single_channel = game_channel_override.is_some();
+                let single_channel = has_explicit_game_thread.get();
                 if finished && !single_channel {
-                    let mut merged = private_msgs;
-                    merged.extend(public_msgs);
+                    let mut merged = chat.games_private_messages.with(|threads| {
+                        threads.get(&game_id).cloned().unwrap_or_default()
+                    });
+                    chat.games_public_messages.with(|threads| {
+                        if let Some(public_messages) = threads.get(&game_id) {
+                            merged.extend(public_messages.iter().cloned());
+                        }
+                    });
                     merged
                 } else {
-                    private_msgs
+                    chat.games_private_messages.with(|threads| {
+                        threads.get(&game_id).cloned().unwrap_or_default()
+                    })
                 }
             }
             Some(ChatDestination::GameSpectators(game_id, ..)) => {
-                let private_msgs = (chat.games_private_messages)()
-                    .get(&game_id)
-                    .cloned()
-                    .unwrap_or_default();
-                let public_msgs = (chat.games_public_messages)()
-                    .get(&game_id)
-                    .cloned()
-                    .unwrap_or_default();
                 let finished = current_game_data.get().is_some_and(|game| game.finished);
-                let single_channel = game_channel_override.is_some();
+                let single_channel = has_explicit_game_thread.get();
                 if finished && !single_channel {
-                    let mut merged = private_msgs;
-                    merged.extend(public_msgs);
+                    let mut merged = chat.games_private_messages.with(|threads| {
+                        threads.get(&game_id).cloned().unwrap_or_default()
+                    });
+                    chat.games_public_messages.with(|threads| {
+                        if let Some(public_messages) = threads.get(&game_id) {
+                            merged.extend(public_messages.iter().cloned());
+                        }
+                    });
                     merged
                 } else {
-                    public_msgs
+                    chat.games_public_messages.with(|threads| {
+                        threads.get(&game_id).cloned().unwrap_or_default()
+                    })
                 }
             }
-            Some(ChatDestination::User((correspondant_id, _username))) => (chat.users_messages)()
-                .get(&correspondant_id)
-                .cloned()
-                .unwrap_or_default(),
+            Some(ChatDestination::User((correspondant_id, _username))) => chat
+                .users_messages
+                .with(|threads| threads.get(&correspondant_id).cloned().unwrap_or_default()),
             Some(ChatDestination::Global) => chat.global_messages.get(),
             None => Vec::new(),
         };
@@ -903,6 +922,7 @@ pub fn ChatWindow(
                                                                         show_header,
                                                                         is_current_user,
                                                                         show_unread_divider_before,
+                                                                        ..
                                                                     } = row;
                                                                     let expanded_set = expanded_hidden_messages;
                                                                     let expanded_key = id.clone();
@@ -914,10 +934,9 @@ pub fn ChatWindow(
                                                                         expanded_set.with(|set| set.contains(&expanded_key))
                                                                     });
                                                                     let on_expand = Callback::new(move |()| {
-                                                                        expanded_set
-                                                                            .update(|set| {
-                                                                                set.insert(expand_callback_key.clone());
-                                                                            });
+                                                                        expanded_set.update(|set| {
+                                                                            set.insert(expand_callback_key.clone());
+                                                                        });
                                                                     });
                                                                     view! {
                                                                         <ShowLet

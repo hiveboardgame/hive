@@ -46,21 +46,29 @@ fn ProfileBlockUnblock(profile_user_id: Uuid) -> impl IntoView {
             }
         },
     );
-    let is_blocked = RwSignal::new(false);
+    let blocked_override = RwSignal::new(None::<bool>);
+    let blocked_on_server = Signal::derive(move || {
+        block_list
+            .get()
+            .and_then(Result::ok)
+            .is_some_and(|blocked| blocked.contains(&profile_user_id))
+    });
     Effect::watch(
-        move || block_list.get(),
-        move |result, _, _| {
-            if let Some(Ok(blocked)) = result.clone() {
-                is_blocked.set(blocked.contains(&profile_user_id));
+        move || (blocked_on_server.get(), blocked_override.get()),
+        move |(server_state, override_state), _, _| {
+            if override_state.is_some_and(|state| state == *server_state) {
+                blocked_override.set(None);
             }
         },
-        true,
+        false,
     );
+    let is_blocked =
+        Signal::derive(move || blocked_override.get().unwrap_or_else(|| blocked_on_server.get()));
     view! {
         <BlockToggleButton
             blocked_user_id=profile_user_id
-            is_blocked=Signal::derive(move || is_blocked.get())
-            on_success=Callback::new(move |is_now_blocked| is_blocked.set(is_now_blocked))
+            is_blocked
+            on_success=Callback::new(move |is_now_blocked| blocked_override.set(Some(is_now_blocked)))
         />
     }
 }
@@ -112,7 +120,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let params = use_params::<UsernameParams>();
     let username =
         move || params.with(|p| p.as_ref().map(|p| p.username.clone()).unwrap_or_default());
-    let user = LocalResource::new(move || get_profile(username()));
+    let user = Resource::new(move || username(), |username| async move { get_profile(username).await });
 
     let games_container_ref = NodeRef::<html::Div>::new();
     let bounding = use_element_bounding(games_container_ref);

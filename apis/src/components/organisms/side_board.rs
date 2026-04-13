@@ -2,7 +2,11 @@ use crate::{
     chat::SimpleDestination,
     components::{
         molecules::history_controls::HistoryControls,
-        organisms::{chat::ChatWindow, history::History, reserve::ReserveContent},
+        organisms::{
+            chat::{ChatWindow, GameChatThread},
+            history::History,
+            reserve::ReserveContent,
+        },
     },
     i18n::*,
     providers::{
@@ -111,6 +115,13 @@ pub fn SideboardTabs(
         gs.game_response.as_ref().is_some_and(|gr| gr.finished)
     });
     let game_show_players = RwSignal::new(true);
+    let explicit_game_thread = Signal::derive(move || {
+        show_buttons().then_some(if game_show_players.get() {
+            GameChatThread::Players
+        } else {
+            GameChatThread::Spectators
+        })
+    });
     view! {
         <div class=format!(
             "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",
@@ -175,15 +186,10 @@ pub fn SideboardTabs(
                     </div>
                 </Show>
                 <div class="flex overflow-hidden flex-col flex-1 min-h-0">
-                    <Show
-                        when=move || show_buttons()
-                        fallback=|| view! { <ChatWindow destination=SimpleDestination::Game /> }
-                    >
-                        <ChatWindow
-                            destination=SimpleDestination::Game
-                            game_channel_override=Signal::derive(move || game_show_players.get())
-                        />
-                    </Show>
+                    <ChatWindow
+                        destination=SimpleDestination::Game
+                        explicit_game_thread
+                    />
                 </div>
             </TabsContent>
         </div>

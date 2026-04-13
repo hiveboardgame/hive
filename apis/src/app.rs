@@ -163,7 +163,7 @@ pub fn App() -> impl IntoView {
                             condition=is_logged_in
                             path=path!("/messages")
                             redirect_path=|| "/login"
-                            view=|| view! { <Messages /> }
+                            view=Messages
                         />
                         <ProtectedRoute
                             condition=is_logged_in

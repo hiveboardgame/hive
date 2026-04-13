@@ -22,7 +22,6 @@ use shared_types::{
     TournamentId,
     CHANNEL_TYPE_GAME_PLAYERS,
     CHANNEL_TYPE_GAME_SPECTATORS,
-    CHANNEL_TYPE_GLOBAL,
 };
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -175,7 +174,6 @@ pub struct Chat {
     pub tournament_lobby_messages: RwSignal<HashMap<TournamentId, Vec<ChatMessage>>>, // tournament_id -> Messages
     pub tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
     pub global_messages: RwSignal<Vec<ChatMessage>>,
-    pub global_new_messages: RwSignal<bool>,
     pub typed_message: RwSignal<String>,
     /// Server-backed unread counts: (channel_type, channel_id, count). Refreshed via refresh_unread_counts().
     pub unread_counts: RwSignal<Vec<(String, String, i64)>>,
@@ -208,7 +206,6 @@ impl Chat {
             tournament_lobby_messages: RwSignal::new(HashMap::new()),
             tournament_lobby_new_messages: RwSignal::new(HashMap::new()),
             global_messages: RwSignal::new(Vec::new()),
-            global_new_messages: RwSignal::new(false),
             typed_message: RwSignal::new(String::new()),
             unread_counts: RwSignal::new(Vec::new()),
             pending_read_channels: RwSignal::new(HashSet::new()),
@@ -500,10 +497,7 @@ impl Chat {
                 });
                 self.optimistically_increment_unread_by(key, deferred);
             }
-            ChannelType::Global => {
-                self.global_new_messages.set(true);
-                self.optimistically_increment_unread_by(key, deferred);
-            }
+            ChannelType::Global => {}
             ChannelType::GameSpectators => {}
         }
     }
@@ -518,9 +512,6 @@ impl Chat {
                 *n = 0;
             }
         });
-        if key.channel_type == ChannelType::Global && key.channel_id == CHANNEL_TYPE_GLOBAL {
-            self.global_new_messages.set(false);
-        }
     }
 
     /// Optimistically increment unread count when a live message arrives so badges update immediately.
@@ -545,9 +536,6 @@ impl Chat {
                 counts.push((key.channel_type.to_string(), key.channel_id.clone(), delta));
             }
         });
-        if key.channel_type == ChannelType::Global && key.channel_id == CHANNEL_TYPE_GLOBAL {
-            self.global_new_messages.set(true);
-        }
     }
 
     /// Clear local "new" state for game chat.
@@ -642,15 +630,15 @@ impl Chat {
             ChannelType::GamePlayers | ChannelType::GameSpectators => {
                 self.seen_messages(GameId(key.channel_id.clone()));
             }
-            ChannelType::Global => {
-                self.global_new_messages.set(false);
-            }
+            ChannelType::Global => {}
         }
     }
 
     pub fn open_channel(&self, key: &ChannelKey) {
         self.clear_local_new_for_channel(key);
-        self.mark_read(key);
+        if key.channel_type != ChannelType::Global {
+            self.mark_read(key);
+        }
     }
 
     fn refresh_conversation_list_for_live_thread_activity(&self, is_live: bool) {
@@ -703,11 +691,6 @@ impl Chat {
                 }
             }
         });
-        if self.global_new_messages.get_untracked() {
-            map.entry(ChannelKey::global())
-                .and_modify(|n| *n = (*n).max(1))
-                .or_insert(1);
-        }
         let pending_keys: Vec<ChannelKey> = self
             .pending_read_channels
             .with_untracked(|pending| pending.iter().cloned().collect());
@@ -743,7 +726,7 @@ impl Chat {
         });
     }
 
-    /// Total unread count across all channels (for Messages link badge).
+    /// Total unread count across channels that participate in unread tracking.
     pub fn total_unread_count(&self) -> i64 {
         self.unread_counts
             .with(|counts| counts.iter().map(|(_, _, n)| n).sum::<i64>())
@@ -791,11 +774,6 @@ impl Chat {
         } else {
             from_list
         }
-    }
-
-    /// Unread count for global chat.
-    pub fn unread_count_for_global(&self) -> i64 {
-        self.unread_count_for_channel(&ChannelKey::global())
     }
 
     pub fn unread_count_for_channel(&self, key: &ChannelKey) -> i64 {
@@ -884,10 +862,11 @@ impl Chat {
                 let other = other_user_from_dm_channel(&key.channel_id, me);
                 if let Some(other_id) = other {
                     self.users_messages.update(|m| {
-                        let existing = m.get(&other_id).cloned().unwrap_or_default();
+                        let entry = m.entry(other_id).or_default();
+                        let existing = std::mem::take(entry);
                         let mut merged = merge_and_dedupe(existing, messages);
                         trim_stored_messages(&mut merged);
-                        m.insert(other_id, merged);
+                        *entry = merged;
                     });
                     self.prune_dm_threads();
                 }
@@ -895,30 +874,33 @@ impl Chat {
             ChannelType::TournamentLobby => {
                 let tid = TournamentId(key.channel_id.clone());
                 self.tournament_lobby_messages.update(|m| {
-                    let existing = m.get(&tid).cloned().unwrap_or_default();
+                    let entry = m.entry(tid).or_default();
+                    let existing = std::mem::take(entry);
                     let mut merged = merge_and_dedupe(existing, messages);
                     trim_stored_messages(&mut merged);
-                    m.insert(tid, merged);
+                    *entry = merged;
                 });
                 self.prune_tournament_threads();
             }
             ChannelType::GamePlayers => {
                 let gid = GameId(key.channel_id.clone());
                 self.games_private_messages.update(|m| {
-                    let existing = m.get(&gid).cloned().unwrap_or_default();
+                    let entry = m.entry(gid).or_default();
+                    let existing = std::mem::take(entry);
                     let mut merged = merge_and_dedupe(existing, messages);
                     trim_stored_messages(&mut merged);
-                    m.insert(gid, merged);
+                    *entry = merged;
                 });
                 self.prune_game_threads(ChannelType::GamePlayers);
             }
             ChannelType::GameSpectators => {
                 let gid = GameId(key.channel_id.clone());
                 self.games_public_messages.update(|m| {
-                    let existing = m.get(&gid).cloned().unwrap_or_default();
+                    let entry = m.entry(gid).or_default();
+                    let existing = std::mem::take(entry);
                     let mut merged = merge_and_dedupe(existing, messages);
                     trim_stored_messages(&mut merged);
-                    m.insert(gid, merged);
+                    *entry = merged;
                 });
                 self.prune_game_threads(ChannelType::GameSpectators);
             }
@@ -1128,7 +1110,6 @@ impl Chat {
                     }
                 }
                 ChatDestination::Global => {
-                    let channel_key = ChannelKey::global();
                     let to_add = self.global_messages.with_untracked(|msgs| {
                         filter_duplicate_live_messages(
                             msgs,
@@ -1140,14 +1121,6 @@ impl Chat {
                             m.extend(to_add);
                             retain_recent_announcements(m);
                         });
-
-                        if is_live && !from_self {
-                            if self.is_channel_visible(&channel_key) {
-                                self.defer_visible_channel_unread(&channel_key);
-                            } else {
-                                self.optimistically_increment_unread(&channel_key);
-                            }
-                        }
                     }
                     let alerts = expect_context::<AlertsContext>();
                     alerts.last_alert.update(|v| {

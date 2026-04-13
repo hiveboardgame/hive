@@ -1,6 +1,9 @@
 use crate::{
     chat::SimpleDestination,
-    components::{molecules::hamburger::Hamburger, organisms::chat::ChatWindow},
+    components::{
+        molecules::hamburger::Hamburger,
+        organisms::chat::{ChatWindow, GameChatThread},
+    },
     i18n::*,
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
@@ -59,6 +62,13 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
         gs.game_response.as_ref().is_some_and(|gr| gr.finished)
     });
     let game_show_players = RwSignal::new(true);
+    let explicit_game_thread = Signal::derive(move || {
+        show_players_spectators_toggle.get().then_some(if game_show_players.get() {
+            GameChatThread::Players
+        } else {
+            GameChatThread::Spectators
+        })
+    });
 
     view! {
         <Hamburger
@@ -84,13 +94,8 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
             }
             id="chat"
         >
-            <Show
-                when=move || show_players_spectators_toggle.get()
-                fallback=move || {
-                    view! { <ChatWindow destination=destination_for_fallback.get_value() /> }
-                }
-            >
-                <div class="flex overflow-hidden flex-col flex-1 min-h-0">
+            <div class="flex overflow-hidden flex-col flex-1 min-h-0">
+                <Show when=move || show_players_spectators_toggle.get()>
                     <div class="flex gap-0.5 p-1 mb-1 bg-gray-100 rounded-t border-b border-gray-300 dark:border-gray-600 shrink-0 dark:bg-gray-800/50">
                         <button
                             type="button"
@@ -128,14 +133,14 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
                             {t!(i18n, messages.chat.spectators)}
                         </button>
                     </div>
-                    <div class="flex overflow-hidden flex-col flex-1 min-h-0">
-                        <ChatWindow
-                            destination=SimpleDestination::Game
-                            game_channel_override=Signal::from(game_show_players)
-                        />
-                    </div>
+                </Show>
+                <div class="flex overflow-hidden flex-col flex-1 min-h-0">
+                    <ChatWindow
+                        destination=destination_for_fallback.get_value()
+                        explicit_game_thread
+                    />
                 </div>
-            </Show>
+            </div>
         </Hamburger>
     }
 }

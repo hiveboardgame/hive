@@ -15,7 +15,9 @@ pub struct AuthContext {
 
 impl AuthContext {
     pub fn refresh(&self, ws_reconnect: bool) {
-        self.ws_refresh.set_value(ws_reconnect);
+        if ws_reconnect {
+            self.ws_refresh.set_value(true);
+        }
         self.action.dispatch(());
     }
 }
@@ -38,11 +40,13 @@ pub fn provide_auth() {
     });
 
     let ctx = use_context::<AuthContext>().unwrap();
+    let action_pending = ctx.action.pending();
 
     Effect::watch(
-        ctx.action.version(),
-        move |_, _, _| {
-            if ctx.ws_refresh.get_value() {
+        move || action_pending.get(),
+        move |is_pending, _, _| {
+            if !is_pending && ctx.ws_refresh.get_value() {
+                ctx.ws_refresh.set_value(false);
                 websocket_context.close();
                 websocket_context.open();
             }
