@@ -10,7 +10,7 @@ use crate::{
     },
     functions::{
         blocks_mutes::get_blocked_user_ids,
-        users::{can_message_user, get_profile},
+        users::get_profile,
     },
     i18n::*,
     providers::{
@@ -73,19 +73,9 @@ fn ProfileHeaderActions(
     viewer_id: Signal<Option<Uuid>>,
 ) -> impl IntoView {
     let profile_username = StoredValue::new(profile_username);
-    let can_message = Resource::new(
-        move || viewer_id.get(),
-        move |viewer_id| async move {
-            if profile_is_bot || viewer_id.is_none_or(|vid| vid == profile_user_id) {
-                Ok(false)
-            } else {
-                can_message_user(profile_user_id).await
-            }
-        },
-    );
     let show_actions =
         Signal::derive(move || viewer_id.get().is_some_and(|vid| vid != profile_user_id));
-    let show_message = Signal::derive(move || matches!(can_message.get(), Some(Ok(true))));
+    let show_message = Signal::derive(move || show_actions.get() && !profile_is_bot);
 
     view! {
         <Show when=move || show_actions.get()>

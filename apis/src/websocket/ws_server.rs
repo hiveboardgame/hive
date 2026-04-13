@@ -484,6 +484,9 @@ impl Handler<ClientActorMessage> for WsServer {
                 let users_set: HashSet<Uuid> =
                     self.games_users.get(&game_id).cloned().unwrap_or_default();
                 let future = async move {
+                    // Fail closed: if finished-state lookup fails anywhere on this path, treat
+                    // the game as still ongoing so players do not accidentally receive live
+                    // spectator chat in positions where hints would matter.
                     let send_to_all = if let Ok(mut conn) = get_conn(&pool).await {
                         Game::find_by_game_id(&game_id_clone, &mut conn)
                             .await

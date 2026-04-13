@@ -39,7 +39,8 @@ use uuid::Uuid;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SelectedChannel {
     // TODO: Collapse this toward selected identity plus narrow local UI overrides.
-    // It still carries some mutable sidebar snapshot data for pragmatic optimistic updates.
+    // For now we intentionally snapshot some mutable sidebar metadata here so /messages stays
+    // snappy during local actions, even though that state can go stale until the next refresh.
     Dm {
         other_id: Uuid,
         username: String,

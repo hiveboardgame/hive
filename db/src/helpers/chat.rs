@@ -149,11 +149,9 @@ pub async fn can_user_access_chat_channel(
 ) -> Result<bool, DbError> {
     match channel_type {
         shared_types::CHANNEL_TYPE_DIRECT => Ok(
-            shared_types::other_user_from_dm_channel(channel_id, user_id)
-                .filter(|other_user_id| *other_user_id != user_id)
-                .is_some_and(|other_user_id| {
-                    channel_id == ChannelKey::direct(user_id, other_user_id).channel_id
-                }),
+            ChannelKey::from_raw(channel_type, channel_id)
+                .and_then(|channel_key| channel_key.direct_other_user_id(user_id))
+                .is_some(),
         ),
         shared_types::CHANNEL_TYPE_GLOBAL => Ok(true),
         shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY => {

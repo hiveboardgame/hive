@@ -654,6 +654,8 @@ impl Chat {
     }
 
     fn refresh_conversation_list_for_live_thread_activity(&self, is_live: bool) {
+        // Keep catalog invalidation narrow on purpose: the Messages hub favors snappy local
+        // updates over broad metadata refreshes, even if some selected-row details lag behind.
         if is_live {
             self.invalidate_conversation_list();
         }

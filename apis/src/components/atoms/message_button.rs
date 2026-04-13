@@ -17,12 +17,6 @@ pub fn MessageButton(
     username: String,
     #[prop(optional)] compact: bool,
 ) -> impl IntoView {
-    // TODO: Callers currently own "can this CTA be shown?" policy, and that policy is not
-    // consistent yet: some places use cheap local checks while profile_view also calls
-    // can_message_user(). Revisit whether that logic should be centralized here or in a
-    // shared helper, but do not blindly generalize can_message_user() to high-cardinality
-    // lists without caching or batching because it would turn large user renders into many
-    // per-user DB-backed checks.
     let i18n = use_i18n();
     let href = StoredValue::new(dm_messages_href(other_user_id, &username));
 

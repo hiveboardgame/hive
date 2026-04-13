@@ -413,15 +413,13 @@ pub fn ChatWindow(
     });
     let visible_history_error = Memo::new(move |_| {
         if destination_is_user {
-            resolved_dm_thread.get().and_then(|thread| {
-                history_errors
-                    .with(|errors| errors.get(&thread.key).cloned())
-            })
+            resolved_dm_thread
+                .get()
+                .and_then(|thread| history_errors.with(|errors| errors.get(&thread.key).cloned()))
         } else {
-            actual_channel_key.get().and_then(|key| {
-                history_errors
-                    .with(|errors| errors.get(&key).cloned())
-            })
+            actual_channel_key
+                .get()
+                .and_then(|key| history_errors.with(|errors| errors.get(&key).cloned()))
         }
     });
     let visible_thread_error = Memo::new(move |_| {
@@ -438,7 +436,10 @@ pub fn ChatWindow(
         } else {
             visible_history_error.get().map(|error| {
                 if error.contains("Access denied")
-                    && matches!(destination_kind.get_value(), SimpleDestination::Tournament(_))
+                    && matches!(
+                        destination_kind.get_value(),
+                        SimpleDestination::Tournament(_)
+                    )
                 {
                     t_string!(i18n, messages.chat.tournament_read_restricted).to_string()
                 } else {
@@ -458,11 +459,11 @@ pub fn ChatWindow(
             .get()
             .is_some_and(|key| history_loading_channels.with(|loading| loading.contains(&key)))
     });
-    let show_loading =
-        Memo::new(move |_| matches!(destination_kind.get_value(), SimpleDestination::Game) && !game_state_ready.get());
+    let show_loading = Memo::new(move |_| {
+        matches!(destination_kind.get_value(), SimpleDestination::Game) && !game_state_ready.get()
+    });
 
     // Fetch chat history when the thread changes.
-    // Finished games only preload both channels when the viewer can legitimately switch between them.
     Effect::watch(
         move || match destination_kind.get_value() {
             SimpleDestination::User => resolved_dm_thread
@@ -480,6 +481,9 @@ pub fn ChatWindow(
                     black_id: _black_id,
                     finished: true,
                 }) => {
+                    // Finished games eagerly preload both threads so players can toggle without
+                    // a second round-trip. That is intentionally broader than the minimum fetch
+                    // set for now because the UI responsiveness is worth the extra DB pressure.
                     vec![
                         ChannelKey::game_players(&game_id),
                         ChannelKey::game_spectators(&game_id),
@@ -647,7 +651,11 @@ pub fn ChatWindow(
                     let dest_changed = dest != prev_dest;
                     let count_increased = count > prev_count;
                     let is_new_message = count_increased && dest == prev_dest && *prev_count > 0;
-                    (dest_changed || count_increased, dest_changed, is_new_message)
+                    (
+                        dest_changed || count_increased,
+                        dest_changed,
+                        is_new_message,
+                    )
                 }
             };
             if !run {

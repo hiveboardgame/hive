@@ -12,7 +12,10 @@ fn is_allowed_chat_character(c: char) -> bool {
 }
 
 fn normalize_chat_message(text: &str) -> String {
-    let mut normalized: String = text.chars().filter(|c| is_allowed_chat_character(*c)).collect();
+    let mut normalized: String = text
+        .chars()
+        .filter(|c| is_allowed_chat_character(*c))
+        .collect();
     truncate_chat_message(&mut normalized);
     normalized
 }
@@ -96,8 +99,20 @@ impl ChannelKey {
         }
     }
 
-    pub fn from_raw(channel_type: &str, channel_id: impl Into<String>) -> Option<Self> {
-        Some(Self::new(channel_type.parse().ok()?, channel_id))
+    pub fn normalized(channel_type: ChannelType, channel_id: impl AsRef<str>) -> Option<Self> {
+        let channel_id = channel_id.as_ref();
+        match channel_type {
+            ChannelType::Direct => Some(Self::new(
+                channel_type,
+                canonical_direct_channel_id(channel_id)?,
+            )),
+            ChannelType::Global => Some(Self::global()),
+            _ => Some(Self::new(channel_type, channel_id)),
+        }
+    }
+
+    pub fn from_raw(channel_type: &str, channel_id: impl AsRef<str>) -> Option<Self> {
+        Self::normalized(channel_type.parse().ok()?, channel_id)
     }
 
     pub fn direct(current_user_id: Uuid, other_user_id: Uuid) -> Self {
@@ -140,10 +155,7 @@ impl ChannelKey {
         }
     }
 
-    pub fn from_destination_for_user(
-        destination: &ChatDestination,
-        current_user_id: Uuid,
-    ) -> Self {
+    pub fn from_destination_for_user(destination: &ChatDestination, current_user_id: Uuid) -> Self {
         match destination {
             ChatDestination::TournamentLobby(tournament_id) => Self::tournament(tournament_id),
             ChatDestination::User((other_user_id, _)) => {
@@ -171,12 +183,25 @@ pub fn canonical_dm_channel_id(a: Uuid, b: Uuid) -> String {
     }
 }
 
-/// Returns the other participant if `channel_id` is a canonical DM pair containing `me`.
-pub fn other_user_from_dm_channel(channel_id: &str, me: Uuid) -> Option<Uuid> {
+fn canonical_direct_channel_id(channel_id: &str) -> Option<String> {
+    let (a, b) = parse_direct_channel_users(channel_id)?;
+    Some(canonical_dm_channel_id(a, b))
+}
+
+fn parse_direct_channel_users(channel_id: &str) -> Option<(Uuid, Uuid)> {
     let mut parts = channel_id.split("::");
     let a = Uuid::parse_str(parts.next()?).ok()?;
     let b = Uuid::parse_str(parts.next()?).ok()?;
-    if parts.next().is_some() {
+    if parts.next().is_some() || a == b {
+        return None;
+    }
+    Some((a, b))
+}
+
+/// Returns the other participant if `channel_id` is a canonical DM pair containing `me`.
+pub fn other_user_from_dm_channel(channel_id: &str, me: Uuid) -> Option<Uuid> {
+    let (a, b) = parse_direct_channel_users(channel_id)?;
+    if channel_id != canonical_dm_channel_id(a, b) {
         return None;
     }
 
@@ -255,18 +280,15 @@ impl ChatMessage {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        canonical_dm_channel_id,
-        ChannelKey,
-        ChannelType,
-        MAX_CHAT_MESSAGE_LENGTH,
-        normalize_chat_message,
-    };
+    use super::{normalize_chat_message, ChannelKey, ChannelType, MAX_CHAT_MESSAGE_LENGTH};
     use uuid::Uuid;
 
     #[test]
     fn normalize_chat_message_removes_control_characters_and_truncates() {
-        let raw = format!("hello\u{0000}\u{0008}{}", "x".repeat(MAX_CHAT_MESSAGE_LENGTH + 10));
+        let raw = format!(
+            "hello\u{0000}\u{0008}{}",
+            "x".repeat(MAX_CHAT_MESSAGE_LENGTH + 10)
+        );
         let normalized = normalize_chat_message(&raw);
 
         assert!(!normalized.contains('\u{0000}'));
