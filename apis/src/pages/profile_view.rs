@@ -120,7 +120,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let params = use_params::<UsernameParams>();
     let username =
         move || params.with(|p| p.as_ref().map(|p| p.username.clone()).unwrap_or_default());
-    let user = Resource::new(move || username(), |username| async move { get_profile(username).await });
+    let user = Resource::new(username, |username| async move { get_profile(username).await });
 
     let games_container_ref = NodeRef::<html::Div>::new();
     let bounding = use_element_bounding(games_container_ref);

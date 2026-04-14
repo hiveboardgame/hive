@@ -180,7 +180,7 @@ pub fn Messages() -> impl IntoView {
                     .find(|dm| dm.other_user_id == other_id)
                     .map(|dm| dm.username.clone())
             })
-            .or_else(|| {
+            .or({
                 if username_from_query.is_empty() {
                     None
                 } else {
@@ -947,19 +947,19 @@ fn ChannelLists(
             me=me
             selected=selected
             chat=chat
-            on_select_channel=on_select_channel.clone()
+            on_select_channel=on_select_channel
         />
         <TournamentChannelsSection
             tournaments=tournaments
             selected=selected
             chat=chat
-            on_select_channel=on_select_channel.clone()
+            on_select_channel=on_select_channel
         />
         <GameChannelsSection
             games=games
             selected=selected
             chat=chat
-            on_select_channel=on_select_channel.clone()
+            on_select_channel=on_select_channel
         />
         <GlobalChannelSection selected=selected on_select_channel />
     }
@@ -1015,7 +1015,7 @@ fn DmChannelsSection(
                                             me=me
                                             selected=selected
                                             chat=chat
-                                            on_select_channel=on_select_channel.clone()
+                                            on_select_channel=on_select_channel
                                         />
                                     }
                                 })
@@ -1109,7 +1109,7 @@ fn TournamentChannelsSection(
                                             tournament=tournament
                                             selected=selected
                                             chat=chat
-                                            on_select_channel=on_select_channel.clone()
+                                            on_select_channel=on_select_channel
                                         />
                                     }
                                 })
@@ -1239,7 +1239,7 @@ fn GameChannelsSection(
                                             game=game
                                             selected=selected
                                             chat=chat
-                                            on_select_channel=on_select_channel.clone()
+                                            on_select_channel=on_select_channel
                                         />
                                     }
                                 })
