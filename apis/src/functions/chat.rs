@@ -225,7 +225,6 @@ pub struct GameChannel {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct MessagesHubData {
     pub conversations: MyConversations,
-    pub blocked_user_ids: Vec<uuid::Uuid>,
     pub unread_counts: Vec<(String, String, i64)>,
 }
 
@@ -520,11 +519,9 @@ async fn load_messages_hub_data_for_user(
 ) -> Result<MessagesHubData, db_lib::db_error::DbError> {
     let catalog = get_messages_hub_catalog_for_user(conn, user_id).await?;
     let unread_counts = get_unread_counts_for_messages_hub_catalog(conn, user_id, &catalog).await?;
-    let blocked_user_ids = catalog.blocked_user_ids.clone();
     let conversations = build_messages_hub_conversations(catalog, &unread_counts);
     Ok(MessagesHubData {
         conversations,
-        blocked_user_ids,
         unread_counts,
     })
 }

@@ -47,13 +47,14 @@ pub fn BlockToggleButton(
     Effect::watch(
         action.version(),
         move |_, _, _| {
-            let Some(result) = action.value().get() else {
+            let Some(result) = action.value().get_untracked() else {
                 return;
             };
             match result {
                 Ok(is_now_blocked) => {
                     error.set(None);
                     if let Some(chat) = chat {
+                        chat.set_blocked_user(blocked_user_id, is_now_blocked);
                         chat.invalidate_block_list();
                         chat.invalidate_conversation_list();
                         chat.refresh_unread_counts();

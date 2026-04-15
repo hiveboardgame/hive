@@ -25,7 +25,7 @@ pub fn MessageButton(
             <A
                 href=move || href.get_value()
                 attr:class="no-link-style inline-flex items-center justify-center size-8 rounded-lg text-white bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 transition-transform duration-300 [&_svg]:size-5 [&_svg]:shrink-0"
-                attr:title=t_string!(i18n, messages.page.message_button)
+                attr:title=move || t_string!(i18n, messages.page.message_button)
             >
                 <Icon
                     icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg
@@ -44,7 +44,7 @@ pub fn MessageButton(
                     icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg
                     attr:class="size-5 shrink-0"
                 />
-                {t!(i18n, messages.page.message_button)}
+                {move || t_string!(i18n, messages.page.message_button)}
             </A>
         }
         .into_any()

@@ -9,7 +9,6 @@ use crate::{
         organisms::{games_filter::GamesFilter, stats::Stats},
     },
     functions::{
-        blocks_mutes::get_blocked_user_ids,
         users::get_profile,
     },
     i18n::*,
@@ -32,44 +31,11 @@ use uuid::Uuid;
 
 #[component]
 fn ProfileBlockUnblock(profile_user_id: Uuid) -> impl IntoView {
-    let auth_context = expect_context::<AuthContext>();
-    let chat = expect_context::<Chat>();
-    let viewer_id =
-        Signal::derive(move || auth_context.user.with(|u| u.as_ref().map(|a| a.user.uid)));
-    let block_list = Resource::new(
-        move || (viewer_id.get(), chat.block_list_version.get()),
-        move |(viewer_id, _)| async move {
-            if viewer_id.is_none() {
-                Ok(Vec::new())
-            } else {
-                get_blocked_user_ids().await
-            }
-        },
-    );
-    let blocked_override = RwSignal::new(None::<bool>);
-    let blocked_on_server = Signal::derive(move || {
-        block_list
-            .get()
-            .and_then(Result::ok)
-            .is_some_and(|blocked| blocked.contains(&profile_user_id))
-    });
-    Effect::watch(
-        move || (blocked_on_server.get(), blocked_override.get()),
-        move |(server_state, override_state), _, _| {
-            if override_state.is_some_and(|state| state == *server_state) {
-                blocked_override.set(None);
-            }
-        },
-        false,
-    );
+    let blocked_user_ids = expect_context::<Chat>().blocked_user_ids;
     let is_blocked =
-        Signal::derive(move || blocked_override.get().unwrap_or_else(|| blocked_on_server.get()));
+        Signal::derive(move || blocked_user_ids.with(|blocked| blocked.contains(&profile_user_id)));
     view! {
-        <BlockToggleButton
-            blocked_user_id=profile_user_id
-            is_blocked
-            on_success=Callback::new(move |is_now_blocked| blocked_override.set(Some(is_now_blocked)))
-        />
+        <BlockToggleButton blocked_user_id=profile_user_id is_blocked />
     }
 }
 
@@ -120,7 +86,7 @@ pub fn ProfileView(children: ChildrenFn) -> impl IntoView {
     let params = use_params::<UsernameParams>();
     let username =
         move || params.with(|p| p.as_ref().map(|p| p.username.clone()).unwrap_or_default());
-    let user = Resource::new(username, |username| async move { get_profile(username).await });
+    let user = LocalResource::new(move || get_profile(username()));
 
     let games_container_ref = NodeRef::<html::Div>::new();
     let bounding = use_element_bounding(games_container_ref);

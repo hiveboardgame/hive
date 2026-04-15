@@ -1,5 +1,6 @@
 use crate::{
     chat::ChannelKey,
+    functions::blocks_mutes::get_blocked_user_ids,
     functions::chat::{get_chat_history, get_chat_unread_counts, mark_chat_read},
     responses::AccountResponse,
 };
@@ -175,6 +176,8 @@ pub struct Chat {
     pub tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
     pub global_messages: RwSignal<Vec<ChatMessage>>,
     pub typed_message: RwSignal<String>,
+    /// Stable shared block list for chat-adjacent surfaces.
+    pub blocked_user_ids: RwSignal<HashSet<Uuid>>,
     /// Server-backed unread counts: (channel_type, channel_id, count). Refreshed via refresh_unread_counts().
     pub unread_counts: RwSignal<Vec<(String, String, i64)>>,
     /// Channels currently marked read optimistically; stale refreshes should not reintroduce unread.
@@ -207,6 +210,7 @@ impl Chat {
             tournament_lobby_new_messages: RwSignal::new(HashMap::new()),
             global_messages: RwSignal::new(Vec::new()),
             typed_message: RwSignal::new(String::new()),
+            blocked_user_ids: RwSignal::new(HashSet::new()),
             unread_counts: RwSignal::new(Vec::new()),
             pending_read_channels: RwSignal::new(HashSet::new()),
             visible_channels: RwSignal::new(HashMap::new()),
@@ -336,6 +340,18 @@ impl Chat {
 
     async fn fetch_and_store_unread_counts(self) {
         if let Ok(counts) = get_chat_unread_counts().await { self.apply_server_unread_counts(counts) }
+    }
+
+    async fn fetch_and_store_blocked_user_ids(self) {
+        if self.user.get_untracked().is_none() {
+            self.blocked_user_ids.set(HashSet::new());
+            return;
+        }
+
+        if let Ok(blocked_user_ids) = get_blocked_user_ids().await {
+            self.blocked_user_ids
+                .set(blocked_user_ids.into_iter().collect());
+        }
     }
 
     /// Apply a fresh server snapshot of unread counts while preserving optimistic local state.
@@ -723,6 +739,23 @@ impl Chat {
         let chat = *self;
         spawn_local(async move {
             chat.fetch_and_store_unread_counts().await;
+        });
+    }
+
+    pub fn refresh_blocked_user_ids(&self) {
+        let chat = *self;
+        spawn_local(async move {
+            chat.fetch_and_store_blocked_user_ids().await;
+        });
+    }
+
+    pub fn set_blocked_user(&self, blocked_user_id: Uuid, is_blocked: bool) {
+        self.blocked_user_ids.update(|blocked_user_ids| {
+            if is_blocked {
+                blocked_user_ids.insert(blocked_user_id);
+            } else {
+                blocked_user_ids.remove(&blocked_user_id);
+            }
         });
     }
 
@@ -1177,7 +1210,32 @@ mod timers {
 pub fn provide_chat() {
     let user = expect_context::<AuthContext>().user;
     let api = expect_context::<ApiRequestsProvider>().0;
-    provide_context(Chat::new(user, api))
+    let chat = Chat::new(user, api);
+    provide_context(chat);
+    Effect::watch(
+        move || {
+            (
+                chat.user.with(|account| account.as_ref().map(|account| account.user.uid)),
+                chat.block_list_version.get(),
+            )
+        },
+        move |(user_id, _), previous, _| {
+            let user_id = *user_id;
+            let user_changed = match previous {
+                Some(previous) => previous.0 != user_id,
+                None => true,
+            };
+
+            if user_changed || user_id.is_none() {
+                chat.blocked_user_ids.set(HashSet::new());
+            }
+
+            if user_id.is_some() {
+                chat.refresh_blocked_user_ids();
+            }
+        },
+        true,
+    );
 }
 
 #[cfg(test)]

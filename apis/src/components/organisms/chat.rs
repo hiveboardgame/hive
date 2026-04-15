@@ -1,7 +1,6 @@
 use crate::{
     chat::{ChannelKey, SimpleDestination},
     components::update_from_event::update_from_input,
-    functions::blocks_mutes::get_blocked_user_ids,
     i18n::*,
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
@@ -366,16 +365,6 @@ pub fn ChatWindow(
     let history_errors = RwSignal::new(HashMap::<ChannelKey, String>::new());
     let show_jump_to_latest = RwSignal::new(false);
     let is_scrolled_to_bottom = RwSignal::new(true);
-    let block_list = Resource::new(
-        move || (me_uid.get(), chat.block_list_version.get()),
-        move |(viewer_id, _)| async move {
-            if viewer_id.is_none() {
-                Ok(Vec::new())
-            } else {
-                get_blocked_user_ids().await
-            }
-        },
-    );
     let expanded_hidden_messages = RwSignal::new(HashSet::<MessageId>::new());
 
     let route_game_data = Memo::new(move |_| match (white_id(), black_id()) {
@@ -877,22 +866,12 @@ pub fn ChatWindow(
                                                 }
                                             >
                                                 <ShowLet
-                                                    some=move || {
-                                                        Some(
-                                                            block_list
-                                                                .get()
-                                                                .and_then(Result::ok)
-                                                                .unwrap_or_default(),
-                                                        )
-                                                    }
-                                                    let:blocked_users
+                                                    some=move || Some(chat.blocked_user_ids.get())
+                                                    let:blocked_user_ids
                                                 >
                                                     {
-                                                        let blocked_set = std::sync::Arc::new(
-                                                            blocked_users
-                                                                .into_iter()
-                                                                .collect::<HashSet<Uuid>>(),
-                                                        );
+                                                        let blocked_set =
+                                                            std::sync::Arc::new(blocked_user_ids);
                                                         let is_shared_channel = matches!(
                                                             actual_destination.get(),
                                                             Some(ChatDestination::GamePlayers(_, _, _))

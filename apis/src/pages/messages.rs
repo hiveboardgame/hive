@@ -20,11 +20,11 @@ use crate::{
         games::get::get_game_from_nanoid,
     },
     i18n::*,
-    providers::{chat::Chat, AlertType, AlertsContext, AuthContext},
+    providers::{chat::Chat, AuthContext},
     responses::GameResponse,
 };
 use hive_lib::{Color, GameResult, GameStatus};
-use leptos::{prelude::*, task::spawn_local};
+use leptos::{logging::log, prelude::*, task::spawn_local};
 use leptos_router::{components::A, hooks::use_query_map};
 use shared_types::{
     ChannelType,
@@ -33,7 +33,6 @@ use shared_types::{
     TimeInfo,
     TournamentId,
 };
-use std::collections::HashSet;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -81,7 +80,6 @@ enum MobilePane {
 
 fn refresh_open_dm_thread(
     chat: Chat,
-    alerts: Option<AlertsContext>,
     current_user_id: Option<Uuid>,
     other_id: Uuid,
 ) {
@@ -92,13 +90,7 @@ fn refresh_open_dm_thread(
     spawn_local(async move {
         match chat.fetch_channel_history(&key).await {
             Ok(messages) => chat.replace_history(&key, messages),
-            Err(error) => {
-                if let Some(alerts) = alerts {
-                    alerts.last_alert.update(|last| {
-                        *last = Some(AlertType::Error(error));
-                    });
-                }
-            }
+            Err(error) => log!("Failed to refresh DM history for {other_id}: {error}"),
         }
     });
 }
@@ -129,12 +121,10 @@ pub fn Messages() -> impl IntoView {
         move || chat.conversation_list_version.get(),
         move |_| async move { get_messages_hub_data().await },
     );
-    let blocked_ids = RwSignal::new(HashSet::<Uuid>::new());
     Effect::watch(
         move || hub_data.get(),
         move |result, _, _| {
             if let Some(Ok(data)) = result.clone() {
-                blocked_ids.set(data.blocked_user_ids.iter().copied().collect());
                 chat.apply_server_unread_counts(data.unread_counts.clone());
             }
         },
@@ -351,7 +341,6 @@ pub fn Messages() -> impl IntoView {
                         </div>
                         <SelectedChannelActions
                             selected=selected
-                            blocked_ids=blocked_ids
                             chat=chat
                             game_summary=Signal::derive(move || {
                                 selected_game_summary.get().flatten()
@@ -424,7 +413,6 @@ fn ChannelHeaderBar(children: Children) -> impl IntoView {
 #[component]
 fn SelectedChannelActions(
     selected: RwSignal<Option<SelectedChannel>>,
-    blocked_ids: RwSignal<HashSet<Uuid>>,
     chat: Chat,
     game_summary: Signal<Option<Result<GameResponse, ServerFnError>>>,
 ) -> impl IntoView {
@@ -464,7 +452,7 @@ fn SelectedChannelActions(
 
     view! {
         <ShowLet some=move || selected_dm.get() let:dm>
-            <DmChannelActions other_id=dm.0 username=dm.1 blocked_ids />
+            <DmChannelActions other_id=dm.0 username=dm.1 />
         </ShowLet>
         <ShowLet some=move || selected_game.get() let:game>
             <GameChatHeader
@@ -491,27 +479,14 @@ fn SelectedChannelActions(
 }
 
 #[component]
-fn DmChannelActions(
-    other_id: Uuid,
-    username: String,
-    blocked_ids: RwSignal<HashSet<Uuid>>,
-) -> impl IntoView {
+fn DmChannelActions(other_id: Uuid, username: String) -> impl IntoView {
     let auth = expect_context::<AuthContext>();
     let chat = expect_context::<Chat>();
-    let alerts = use_context::<AlertsContext>();
     let i18n = use_i18n();
-    let is_blocked = Signal::derive(move || blocked_ids.with(|ids| ids.contains(&other_id)));
-    let on_block_toggle_success = Callback::new(move |is_now_blocked| {
-        blocked_ids.update(|ids| {
-            if is_now_blocked {
-                ids.insert(other_id);
-            } else {
-                ids.remove(&other_id);
-            }
-        });
+    let is_blocked = Signal::derive(move || chat.blocked_user_ids.with(|ids| ids.contains(&other_id)));
+    let on_block_toggle_success = Callback::new(move |_| {
         refresh_open_dm_thread(
             chat,
-            alerts.clone(),
             auth.user.with_untracked(|u| u.as_ref().map(|u| u.user.uid)),
             other_id,
         );
