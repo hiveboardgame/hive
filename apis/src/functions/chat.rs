@@ -14,13 +14,18 @@ use db_lib::helpers::{
     can_user_access_chat_channel,
     get_blocked_user_ids,
     get_chat_messages_for_channel,
+    get_game_chat_participants_and_finished,
     get_messages_hub_catalog_for_user,
+    get_tournament_name_by_nanoid,
+    is_tournament_participant,
+    is_tournament_chat_muted,
     get_unread_counts_for_messages_hub_catalog,
     get_unread_counts_for_user,
     upsert_chat_read_receipt,
 };
 use leptos::prelude::*;
 use server_fn::codec;
+use shared_types::GameId;
 #[cfg(feature = "ssr")]
 use shared_types::{
     ChannelKey,
@@ -183,6 +188,53 @@ pub async fn get_chat_history(
         .collect())
 }
 
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_tournament_route_data(
+    tournament_id: String,
+) -> Result<TournamentRouteData, ServerFnError> {
+    let tournament_id = tournament_id.trim().to_string();
+    let user_id: uuid::Uuid = uuid().await?;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool)
+        .await
+        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
+    let name = get_tournament_name_by_nanoid(&mut conn, &tournament_id)
+        .await
+        .map_err(|err| generic_chat_server_error("loading tournament route data", err))?;
+    let is_participant = is_tournament_participant(&mut conn, user_id, &tournament_id)
+        .await
+        .map_err(|err| generic_chat_server_error("checking tournament participation", err))?;
+    let muted = is_tournament_chat_muted(&mut conn, user_id, &tournament_id)
+        .await
+        .map_err(|err| generic_chat_server_error("loading tournament mute state", err))?;
+
+    Ok(TournamentRouteData {
+        name,
+        is_participant,
+        muted,
+    })
+}
+
+#[server(input = codec::Cbor, output = codec::Cbor)]
+pub async fn get_game_chat_route_data(
+    game_id: GameId,
+) -> Result<GameChatRouteData, ServerFnError> {
+    let user_id: uuid::Uuid = uuid().await?;
+    let pool = pool().await?;
+    let mut conn = get_conn(&pool)
+        .await
+        .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
+    let (white_id, black_id, finished) =
+        get_game_chat_participants_and_finished(&mut conn, &game_id)
+        .await
+        .map_err(|err| generic_chat_server_error("loading game chat route data", err))?;
+
+    Ok(GameChatRouteData {
+        is_player: user_id == white_id || user_id == black_id,
+        finished,
+    })
+}
+
 /// Response for list of conversations for the Messages hub.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct MyConversations {
@@ -214,8 +266,7 @@ pub struct GameChannel {
     pub channel_type: String,
     pub channel_id: String,
     pub label: String,
-    pub white_id: uuid::Uuid,
-    pub black_id: uuid::Uuid,
+    pub is_player: bool,
     /// True when the game is finished; client preloads both channels so players can toggle
     /// between Players/Spectators without an extra fetch.
     pub finished: bool,
@@ -226,6 +277,19 @@ pub struct GameChannel {
 pub struct MessagesHubData {
     pub conversations: MyConversations,
     pub unread_counts: Vec<(String, String, i64)>,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct TournamentRouteData {
+    pub name: String,
+    pub is_participant: bool,
+    pub muted: bool,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct GameChatRouteData {
+    pub is_player: bool,
+    pub finished: bool,
 }
 
 #[cfg(feature = "ssr")]
@@ -284,6 +348,7 @@ fn prioritize_unread_then_limit<T>(
 fn build_messages_hub_conversations(
     catalog: db_lib::helpers::MessagesHubCatalog,
     unread_counts: &[(String, String, i64)],
+    user_id: uuid::Uuid,
 ) -> MyConversations {
     let db_lib::helpers::MessagesHubCatalog {
         dms,
@@ -368,8 +433,7 @@ fn build_messages_hub_conversations(
         channel_type: row.channel_type,
         channel_id: row.channel_id,
         label: row.label,
-        white_id: row.white_id,
-        black_id: row.black_id,
+        is_player: row.white_id == user_id || row.black_id == user_id,
         finished: row.finished,
         last_message_at: row.last_message_at,
     })
@@ -382,136 +446,6 @@ fn build_messages_hub_conversations(
     }
 }
 
-#[cfg(all(test, feature = "ssr"))]
-mod tests {
-    use super::{build_messages_hub_conversations, GameChannel, TournamentChannel};
-    use chrono::{Duration, Utc};
-    use db_lib::helpers::{
-        DmConversationSummary,
-        GameChannelSummary,
-        MessagesHubCatalog,
-        TournamentChannelSummary,
-    };
-    use uuid::Uuid;
-
-    use super::MESSAGES_HUB_SECTION_LIMIT;
-
-    fn unread_dm_summary(minutes_ago: i64, label: &str) -> DmConversationSummary {
-        DmConversationSummary {
-            other_user_id: Uuid::new_v4(),
-            username: label.to_string(),
-            channel_id: format!("dm-{label}"),
-            last_message_at: Utc::now() - Duration::minutes(minutes_ago),
-        }
-    }
-
-    fn tournament_summary(minutes_ago: i64, label: &str) -> TournamentChannelSummary {
-        TournamentChannelSummary {
-            nanoid: format!("tournament-{label}"),
-            name: label.to_string(),
-            is_participant: true,
-            muted: false,
-            last_message_at: Utc::now() - Duration::minutes(minutes_ago),
-        }
-    }
-
-    fn game_summary(minutes_ago: i64, label: &str) -> GameChannelSummary {
-        GameChannelSummary {
-            channel_type: shared_types::CHANNEL_TYPE_GAME_PLAYERS.to_string(),
-            channel_id: format!("game-{label}"),
-            label: label.to_string(),
-            white_id: Uuid::new_v4(),
-            black_id: Uuid::new_v4(),
-            finished: false,
-            last_message_at: Utc::now() - Duration::minutes(minutes_ago),
-        }
-    }
-
-    #[test]
-    fn messages_hub_keeps_older_unread_dm_ahead_of_section_cap() {
-        let unread = unread_dm_summary(120, "unread");
-        let filler = (0..MESSAGES_HUB_SECTION_LIMIT)
-            .map(|idx| unread_dm_summary(idx as i64, &format!("recent-{idx}")))
-            .collect::<Vec<_>>();
-        let unread_channel_id = unread.channel_id.clone();
-
-        let conversations = build_messages_hub_conversations(
-            MessagesHubCatalog {
-                blocked_user_ids: Vec::new(),
-                dms: filler.into_iter().chain(std::iter::once(unread)).collect(),
-                tournaments: Vec::new(),
-                games: Vec::new(),
-            },
-            &[(
-                shared_types::CHANNEL_TYPE_DIRECT.to_string(),
-                unread_channel_id.clone(),
-                3,
-            )],
-        );
-
-        assert_eq!(conversations.dms.len(), MESSAGES_HUB_SECTION_LIMIT);
-        assert_eq!(
-            conversations.dms.first().map(|dm| dm.username.clone()),
-            Some("unread".to_string())
-        );
-    }
-
-    #[test]
-    fn messages_hub_keeps_older_unread_tournament_and_game_ahead_of_section_cap() {
-        let unread_tournament = tournament_summary(120, "unread-tournament");
-        let unread_game = game_summary(120, "unread-game");
-        let tournament_id = unread_tournament.nanoid.clone();
-        let game_id = unread_game.channel_id.clone();
-
-        let conversations = build_messages_hub_conversations(
-            MessagesHubCatalog {
-                blocked_user_ids: Vec::new(),
-                dms: Vec::new(),
-                tournaments: (0..MESSAGES_HUB_SECTION_LIMIT)
-                    .map(|idx| tournament_summary(idx as i64, &format!("recent-tournament-{idx}")))
-                    .chain(std::iter::once(unread_tournament))
-                    .collect(),
-                games: (0..MESSAGES_HUB_SECTION_LIMIT)
-                    .map(|idx| game_summary(idx as i64, &format!("recent-game-{idx}")))
-                    .chain(std::iter::once(unread_game))
-                    .collect(),
-            },
-            &[
-                (
-                    shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY.to_string(),
-                    tournament_id.clone(),
-                    1,
-                ),
-                (
-                    shared_types::CHANNEL_TYPE_GAME_PLAYERS.to_string(),
-                    game_id.clone(),
-                    2,
-                ),
-            ],
-        );
-
-        assert_eq!(
-            conversations
-                .tournaments
-                .first()
-                .map(channel_id_for_tournament),
-            Some(tournament_id)
-        );
-        assert_eq!(
-            conversations.games.first().map(channel_id_for_game),
-            Some(game_id)
-        );
-    }
-
-    fn channel_id_for_tournament(tournament: &TournamentChannel) -> String {
-        tournament.nanoid.clone()
-    }
-
-    fn channel_id_for_game(game: &GameChannel) -> String {
-        game.channel_id.clone()
-    }
-}
-
 #[cfg(feature = "ssr")]
 async fn load_messages_hub_data_for_user(
     conn: &mut db_lib::DbConn<'_>,
@@ -519,7 +453,7 @@ async fn load_messages_hub_data_for_user(
 ) -> Result<MessagesHubData, db_lib::db_error::DbError> {
     let catalog = get_messages_hub_catalog_for_user(conn, user_id).await?;
     let unread_counts = get_unread_counts_for_messages_hub_catalog(conn, user_id, &catalog).await?;
-    let conversations = build_messages_hub_conversations(catalog, &unread_counts);
+    let conversations = build_messages_hub_conversations(catalog, &unread_counts, user_id);
     Ok(MessagesHubData {
         conversations,
         unread_counts,

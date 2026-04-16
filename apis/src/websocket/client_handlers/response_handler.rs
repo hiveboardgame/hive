@@ -9,8 +9,23 @@ use super::{
     user_status::handle::handle_user_status,
 };
 use crate::common::{ServerMessage::*, ServerResult};
+use crate::providers::chat::Chat;
+use shared_types::ChannelKey;
 use leptos::logging::log;
+use leptos::prelude::use_context;
 use leptos_router::hooks::use_navigate;
+use urlencoding::decode;
+
+fn parse_chat_error_key(field: &str) -> Option<ChannelKey> {
+    let mut parts = field.splitn(3, ':');
+    match (parts.next(), parts.next(), parts.next()) {
+        (Some("chat"), Some(channel_type), Some(encoded_channel_id)) => {
+            let channel_id = decode(encoded_channel_id).ok()?;
+            ChannelKey::from_raw(channel_type, channel_id.as_ref())
+        }
+        _ => None,
+    }
+}
 
 pub fn handle_response(m: ServerResult) {
     match m {
@@ -34,6 +49,10 @@ pub fn handle_response(m: ServerResult) {
             if e.status_code == http::StatusCode::UNAUTHORIZED {
                 let navigate = use_navigate();
                 navigate("/login", Default::default());
+            } else if e.field == "chat" || e.field.starts_with("chat:") {
+                if let Some(chat) = use_context::<Chat>() {
+                    chat.handle_failed_chat_send(parse_chat_error_key(&e.field), e.reason.clone());
+                }
             }
             log!("Got error from server: {e}");
         }

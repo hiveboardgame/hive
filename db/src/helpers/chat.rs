@@ -1,6 +1,6 @@
 use crate::{
     db_error::DbError,
-    models::{ChatMessage, Game, NewChatMessage, NewChatReadReceipt, User},
+    models::{ChatMessage, NewChatMessage, NewChatReadReceipt, User},
     schema::{
         chat_messages,
         chat_read_receipts,
@@ -20,7 +20,7 @@ use diesel::{
     sql_types::Timestamptz,
 };
 use diesel_async::RunQueryDsl;
-use shared_types::ChannelKey;
+use shared_types::{ChannelKey, GameId};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -68,6 +68,30 @@ pub struct MessagesHubCatalog {
     pub dms: Vec<DmConversationSummary>,
     pub tournaments: Vec<TournamentChannelSummary>,
     pub games: Vec<GameChannelSummary>,
+}
+
+pub async fn get_tournament_name_by_nanoid(
+    conn: &mut DbConn<'_>,
+    tournament_nanoid: &str,
+) -> Result<String, DbError> {
+    tournaments::table
+        .filter(tournaments::nanoid.eq(tournament_nanoid))
+        .select(tournaments::name)
+        .first(conn)
+        .await
+        .map_err(DbError::from)
+}
+
+pub async fn get_game_chat_participants_and_finished(
+    conn: &mut DbConn<'_>,
+    game_id: &GameId,
+) -> Result<(Uuid, Uuid, bool), DbError> {
+    games::table
+        .filter(games::nanoid.eq(&game_id.0))
+        .select((games::white_id, games::black_id, games::finished))
+        .first::<(Uuid, Uuid, bool)>(conn)
+        .await
+        .map_err(DbError::from)
 }
 
 /// Insert a chat message and return the inserted row.
@@ -161,19 +185,22 @@ pub async fn can_user_access_chat_channel(
             )
         }
         shared_types::CHANNEL_TYPE_GAME_PLAYERS | shared_types::CHANNEL_TYPE_GAME_SPECTATORS => {
-            let game =
-                match Game::find_by_game_id(&shared_types::GameId(channel_id.to_string()), conn)
-                    .await
+            let (white_id, black_id, finished) =
+                match get_game_chat_participants_and_finished(
+                    conn,
+                    &GameId(channel_id.to_string()),
+                )
+                .await
                 {
-                    Ok(g) => g,
+                    Ok(values) => values,
                     Err(_) => return Ok(false),
                 };
-            let is_player = user_id == game.white_id || user_id == game.black_id;
+            let is_player = user_id == white_id || user_id == black_id;
 
             if channel_type == shared_types::CHANNEL_TYPE_GAME_PLAYERS {
                 // Spectators must never read player messages, even after the game is over.
                 Ok(is_player)
-            } else if game.finished {
+            } else if finished {
                 // game_spectators: players may not read while game is ongoing; when finished, anyone may read.
                 Ok(true)
             } else {

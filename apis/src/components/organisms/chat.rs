@@ -89,14 +89,6 @@ struct ResolvedDmThread {
     key: ChannelKey,
 }
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct GameChatData {
-    pub game_id: GameId,
-    pub white_id: Uuid,
-    pub black_id: Uuid,
-    pub finished: bool,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum GameChatThread {
     Players,
@@ -228,10 +220,10 @@ pub fn ChatInput(
             t_string!(i18n, messages.chat.admin_only)
         } else {
             match destination() {
-                ChatDestination::GamePlayers(_, _, _) => {
+                ChatDestination::GamePlayers(_) => {
                     t_string!(i18n, messages.chat.with_opponent)
                 }
-                ChatDestination::GameSpectators(_, _, _) => {
+                ChatDestination::GameSpectators(_) => {
                     t_string!(i18n, messages.chat.with_spectators)
                 }
                 _ => t_string!(i18n, messages.chat.placeholder),
@@ -285,9 +277,6 @@ pub fn ChatWindow(
     /// When Some and true, input is disabled (e.g. tournament read-only for non-participants).
     #[prop(optional)]
     input_disabled: Option<Signal<bool>>,
-    /// Optional explicit game metadata for non-game pages that still render a game chat thread.
-    #[prop(optional)]
-    game_data: Option<Signal<Option<GameChatData>>>,
     /// When Some, force a specific game chat thread; when None, fall back to uid_is_player.
     #[prop(optional)]
     explicit_game_thread: Option<Signal<Option<GameChatThread>>>,
@@ -299,7 +288,6 @@ pub fn ChatWindow(
             .get()
             .get("nanoid")
             .map(|s| GameId(s.to_owned()))
-            .unwrap_or_default()
     };
     let chat = expect_context::<Chat>();
     let auth_context = expect_context::<AuthContext>();
@@ -309,16 +297,6 @@ pub fn ChatWindow(
         .user
         .with_untracked(|a| a.as_ref().map(|user| user.user.uid));
     let destination_is_user = matches!(&destination, SimpleDestination::User);
-    let white_id = move || {
-        game_state
-            .as_ref()
-            .and_then(|gs| gs.signal.with(|state| state.white_id))
-    };
-    let black_id = move || {
-        game_state
-            .as_ref()
-            .and_then(|gs| gs.signal.with(|state| state.black_id))
-    };
     let game_finished = move || {
         game_state.as_ref().is_some_and(|gs| {
             gs.signal
@@ -367,28 +345,35 @@ pub fn ChatWindow(
     let is_scrolled_to_bottom = RwSignal::new(true);
     let expanded_hidden_messages = RwSignal::new(HashSet::<MessageId>::new());
 
-    let route_game_data = Memo::new(move |_| match (white_id(), black_id()) {
-        (Some(white_id), Some(black_id)) => Some(GameChatData {
-            game_id: route_game_id(),
-            white_id,
-            black_id,
-            finished: game_finished(),
-        }),
+    let current_game_id = Memo::new(move |_| match destination_kind.get_value() {
+        SimpleDestination::Game => route_game_id(),
         _ => None,
     });
-    let current_game_data = Memo::new(move |_| {
-        game_data
-            .as_ref()
-            .and_then(|signal| signal.get())
-            .or_else(|| route_game_data.get())
-    });
-    let game_state_ready = Memo::new(move |_| current_game_data.get().is_some());
     let selected_game_thread = Memo::new(move |_| {
         explicit_game_thread
             .as_ref()
             .and_then(|signal| signal.get())
     });
     let has_explicit_game_thread = Memo::new(move |_| selected_game_thread.get().is_some());
+    let implicit_game_thread_ready = Memo::new(move |_| {
+        if !matches!(destination_kind.get_value(), SimpleDestination::Game)
+            || has_explicit_game_thread.get()
+        {
+            return true;
+        }
+
+        let Some(route_game_id) = current_game_id.get() else {
+            return false;
+        };
+
+        game_state.as_ref().is_some_and(|gs| {
+            gs.signal.with(|state| {
+                state.game_id.as_ref() == Some(&route_game_id)
+                    && state.white_id.is_some()
+                    && state.black_id.is_some()
+            })
+        })
+    });
     let show_players_channel = Memo::new(move |_| {
         match selected_game_thread.get() {
             Some(GameChatThread::Players) => true,
@@ -397,21 +382,19 @@ pub fn ChatWindow(
         }
     });
     let actual_destination = Memo::new(move |_| match destination_kind.get_value() {
-        SimpleDestination::Game => match current_game_data.get() {
-            Some(GameChatData {
-                game_id,
-                white_id,
-                black_id,
-                finished: _finished,
-            }) => {
-                if show_players_channel.get() {
-                    Some(ChatDestination::GamePlayers(game_id, white_id, black_id))
-                } else {
-                    Some(ChatDestination::GameSpectators(game_id, white_id, black_id))
-                }
+        SimpleDestination::Game => {
+            if !implicit_game_thread_ready.get() {
+                return None;
             }
-            _ => None,
-        },
+
+            current_game_id.get().map(|game_id| {
+                if show_players_channel.get() {
+                    ChatDestination::GamePlayers(game_id)
+                } else {
+                    ChatDestination::GameSpectators(game_id)
+                }
+            })
+        }
         SimpleDestination::User => resolved_dm_thread.get().map(|thread| thread.destination),
         SimpleDestination::Global => Some(ChatDestination::Global),
         SimpleDestination::Tournament(tournament_id) => {
@@ -464,6 +447,11 @@ pub fn ChatWindow(
             })
         }
     });
+    let visible_send_error = Memo::new(move |_| {
+        actual_channel_key
+            .get()
+            .and_then(|key| chat.chat_send_error(&key))
+    });
     let chat_input_hidden = Memo::new(move |_| {
         dm_thread_error.get().is_some()
             || visible_history_error
@@ -476,7 +464,8 @@ pub fn ChatWindow(
             .is_some_and(|key| history_loading_channels.with(|loading| loading.contains(&key)))
     });
     let show_loading = Memo::new(move |_| {
-        matches!(destination_kind.get_value(), SimpleDestination::Game) && !game_state_ready.get()
+        matches!(destination_kind.get_value(), SimpleDestination::Game)
+            && (current_game_id.get().is_none() || !implicit_game_thread_ready.get())
     });
 
     // Fetch chat history when the thread changes.
@@ -490,13 +479,8 @@ pub fn ChatWindow(
             SimpleDestination::Tournament(tid) => {
                 vec![ChannelKey::tournament(&tid)]
             }
-            SimpleDestination::Game => match current_game_data.get() {
-                Some(GameChatData {
-                    game_id,
-                    white_id: _white_id,
-                    black_id: _black_id,
-                    finished: true,
-                }) => {
+            SimpleDestination::Game => match current_game_id.get() {
+                Some(game_id) if game_finished() && !has_explicit_game_thread.get() => {
                     // Finished games eagerly preload both threads so players can toggle without
                     // a second round-trip. That is intentionally broader than the minimum fetch
                     // set for now because the UI responsiveness is worth the extra DB pressure.
@@ -505,12 +489,7 @@ pub fn ChatWindow(
                         ChannelKey::game_spectators(&game_id),
                     ]
                 }
-                Some(GameChatData {
-                    game_id,
-                    white_id: _white_id,
-                    black_id: _black_id,
-                    finished: _finished,
-                }) => {
+                Some(game_id) => {
                     let current_channel = if show_players_channel.get() {
                         ChannelKey::game_players(&game_id)
                     } else {
@@ -613,7 +592,7 @@ pub fn ChatWindow(
                     .get(tid)
                     .map(|v| v.len())
                     .unwrap_or(0),
-                Some(ChatDestination::GamePlayers(gid, ..)) => {
+                Some(ChatDestination::GamePlayers(gid)) => {
                     let private_count = (chat.games_private_messages)()
                         .get(gid)
                         .map(|v| v.len())
@@ -622,7 +601,7 @@ pub fn ChatWindow(
                         .get(gid)
                         .map(|v| v.len())
                         .unwrap_or(0);
-                    let finished = current_game_data.get().is_some_and(|game| game.finished);
+                    let finished = game_finished();
                     let single_channel = has_explicit_game_thread.get();
                     if finished && !single_channel {
                         private_count + public_count
@@ -630,7 +609,7 @@ pub fn ChatWindow(
                         private_count
                     }
                 }
-                Some(ChatDestination::GameSpectators(gid, ..)) => {
+                Some(ChatDestination::GameSpectators(gid)) => {
                     let private_count = (chat.games_private_messages)()
                         .get(gid)
                         .map(|v| v.len())
@@ -639,7 +618,7 @@ pub fn ChatWindow(
                         .get(gid)
                         .map(|v| v.len())
                         .unwrap_or(0);
-                    let finished = current_game_data.get().is_some_and(|game| game.finished);
+                    let finished = game_finished();
                     let single_channel = has_explicit_game_thread.get();
                     if finished && !single_channel {
                         private_count + public_count
@@ -710,8 +689,8 @@ pub fn ChatWindow(
             Some(ChatDestination::TournamentLobby(tournament)) => chat
                 .tournament_lobby_messages
                 .with(|threads| threads.get(&tournament).cloned().unwrap_or_default()),
-            Some(ChatDestination::GamePlayers(game_id, ..)) => {
-                let finished = current_game_data.get().is_some_and(|game| game.finished);
+            Some(ChatDestination::GamePlayers(game_id)) => {
+                let finished = game_finished();
                 let single_channel = has_explicit_game_thread.get();
                 if finished && !single_channel {
                     let mut merged = chat.games_private_messages.with(|threads| {
@@ -729,8 +708,8 @@ pub fn ChatWindow(
                     })
                 }
             }
-            Some(ChatDestination::GameSpectators(game_id, ..)) => {
-                let finished = current_game_data.get().is_some_and(|game| game.finished);
+            Some(ChatDestination::GameSpectators(game_id)) => {
+                let finished = game_finished();
                 let single_channel = has_explicit_game_thread.get();
                 if finished && !single_channel {
                     let mut merged = chat.games_private_messages.with(|threads| {
@@ -874,8 +853,8 @@ pub fn ChatWindow(
                                                             std::sync::Arc::new(blocked_user_ids);
                                                         let is_shared_channel = matches!(
                                                             actual_destination.get(),
-                                                            Some(ChatDestination::GamePlayers(_, _, _))
-                                                            | Some(ChatDestination::GameSpectators(_, _, _))
+                                                            Some(ChatDestination::GamePlayers(_))
+                                                            | Some(ChatDestination::GameSpectators(_))
                                                             | Some(ChatDestination::TournamentLobby(_))
                                                             | Some(ChatDestination::Global)
                                                         );
@@ -1005,27 +984,34 @@ pub fn ChatWindow(
                         }
                     }
                 >
-                    <ChatInput
-                        destination=actual_destination_signal
-                        disabled=move || {
-                            let extra = input_disabled.as_ref().map(|s| s.get()).unwrap_or(false);
-                            if extra {
-                                true
-                            } else {
-                                match actual_destination.get() {
-                                    Some(ChatDestination::Global) => {
-                                        !auth_context
-                                            .user
-                                            .with_untracked(|u| {
-                                                u.as_ref().is_some_and(|a| a.user.admin)
-                                            })
+                    <div class="flex flex-col gap-2 p-4">
+                        <ShowLet some=move || visible_send_error.get() let:error>
+                            <div class="py-2 px-3 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200 dark:text-red-200 dark:bg-red-950/40 dark:border-red-800">
+                                {error}
+                            </div>
+                        </ShowLet>
+                        <ChatInput
+                            destination=actual_destination_signal
+                            disabled=move || {
+                                let extra = input_disabled.as_ref().map(|s| s.get()).unwrap_or(false);
+                                if extra {
+                                    true
+                                } else {
+                                    match actual_destination.get() {
+                                        Some(ChatDestination::Global) => {
+                                            !auth_context
+                                                .user
+                                                .with_untracked(|u| {
+                                                    u.as_ref().is_some_and(|a| a.user.admin)
+                                                })
+                                        }
+                                        None => true,
+                                        _ => false,
                                     }
-                                    None => true,
-                                    _ => false,
                                 }
                             }
-                        }
-                    />
+                        />
+                    </div>
                 </Show>
             </div>
         </div>

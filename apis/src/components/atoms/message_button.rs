@@ -2,23 +2,18 @@ use crate::i18n::*;
 use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::components::A;
-use uuid::Uuid;
 
-pub fn dm_messages_href(other_user_id: Uuid, username: &str) -> String {
-    format!(
-        "/messages?dm={other_user_id}&username={}",
-        urlencoding::encode(username)
-    )
+pub fn dm_messages_href(username: &str) -> String {
+    format!("/message/dm/{username}")
 }
 
 #[component]
 pub fn MessageButton(
-    other_user_id: Uuid,
     username: String,
     #[prop(optional)] compact: bool,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let href = StoredValue::new(dm_messages_href(other_user_id, &username));
+    let href = StoredValue::new(dm_messages_href(&username));
 
     if compact {
         view! {

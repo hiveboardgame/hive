@@ -134,16 +134,16 @@ pub fn SideboardTabs(
                     <TriggerButton name=TabView::Chat tab />
                 </div>
             </div>
-            <TabsContent value=TabView::Reserve class="flex flex-col h-full" tab>
+            <TabsContent value=TabView::Reserve class="flex flex-col flex-1 min-h-0" tab>
                 <ReserveContent player_color show_buttons />
             </TabsContent>
-            <TabsContent value=TabView::History class="h-full" tab>
+            <TabsContent value=TabView::History class="flex-1 min-h-0" tab>
                 <History />
             </TabsContent>
             <TabsContent
                 tab
                 value=TabView::Chat
-                class="flex overflow-hidden flex-col flex-grow h-full min-h-0"
+                class="flex overflow-hidden flex-col flex-1 min-h-0"
             >
                 <HistoryControls />
                 <Show when=move || show_buttons()>

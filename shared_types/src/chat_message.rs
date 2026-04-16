@@ -149,8 +149,8 @@ impl ChannelKey {
             ChatDestination::User((other_user_id, _)) => {
                 current_user_id.map(|user_id| Self::direct(user_id, *other_user_id))
             }
-            ChatDestination::GamePlayers(game_id, ..) => Some(Self::game_players(game_id)),
-            ChatDestination::GameSpectators(game_id, ..) => Some(Self::game_spectators(game_id)),
+            ChatDestination::GamePlayers(game_id) => Some(Self::game_players(game_id)),
+            ChatDestination::GameSpectators(game_id) => Some(Self::game_spectators(game_id)),
             ChatDestination::Global => Some(Self::global()),
         }
     }
@@ -161,8 +161,8 @@ impl ChannelKey {
             ChatDestination::User((other_user_id, _)) => {
                 Self::direct(current_user_id, *other_user_id)
             }
-            ChatDestination::GamePlayers(game_id, ..) => Self::game_players(game_id),
-            ChatDestination::GameSpectators(game_id, ..) => Self::game_spectators(game_id),
+            ChatDestination::GamePlayers(game_id) => Self::game_players(game_id),
+            ChatDestination::GameSpectators(game_id) => Self::game_spectators(game_id),
             ChatDestination::Global => Self::global(),
         }
     }
@@ -217,8 +217,8 @@ pub fn other_user_from_dm_channel(channel_id: &str, me: Uuid) -> Option<Uuid> {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ChatDestination {
     User((Uuid, String)),               // user_id, username
-    GamePlayers(GameId, Uuid, Uuid),    // to players in the game, nanoid, white uuid, black uuid
-    GameSpectators(GameId, Uuid, Uuid), // to spectators of the game, nanoid, white uuid, black uuid
+    GamePlayers(GameId),                // to players in the game, nanoid
+    GameSpectators(GameId),             // to spectators of the game, nanoid
     TournamentLobby(TournamentId),      // to tournament lobby
     Global,                             // to everyone if you have superpowers
 }

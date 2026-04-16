@@ -196,7 +196,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                 };
                                 let message = ServerResult::Err(ExternalServerError {
                                     user_id,
-                                    field: "foo".to_string(),
+                                    field: request.error_field_for_user(user_id),
                                     reason: err.user_safe_reason(),
                                     status_code,
                                 });

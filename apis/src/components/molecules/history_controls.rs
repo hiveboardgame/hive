@@ -66,7 +66,7 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
         }
     });
     view! {
-        <div>
+        <div class="shrink-0">
             <div class="flex gap-1 min-h-0 [&>*]:grow">
                 <HistoryButton action=HistoryNavigation::First post_action=focus />
                 <HistoryButton

@@ -57,7 +57,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             </A>
             <A
                 attr:class=format!("{} inline-flex items-center gap-1.5", COMMON_LINK_STYLE)
-                href="/messages"
+                href="/message"
                 on:focus=move |_| set_redirect(pathname)
                 on:click=move |_| onclick_close()
             >

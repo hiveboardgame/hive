@@ -54,10 +54,7 @@ fn ProfileHeaderActions(
     view! {
         <Show when=move || show_actions.get()>
             <Show when=move || show_message.get()>
-                <MessageButton
-                    other_user_id=profile_user_id
-                    username=profile_username.get_value()
-                />
+                <MessageButton username=profile_username.get_value() />
             </Show>
             <ProfileBlockUnblock profile_user_id />
         </Show>

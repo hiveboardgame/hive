@@ -11,7 +11,15 @@ use crate::{
         faq::Faq,
         home::Home,
         login::Login,
-        messages::Messages,
+        messages::{
+            MessagesDmThread,
+            MessagesGamePlayersThread,
+            MessagesGameSpectatorsThread,
+            MessagesGlobalThread,
+            MessagesIndex,
+            MessagesLayout,
+            MessagesTournamentThread,
+        },
         play::Play,
         profile_view::ProfileView,
         puzzles::Puzzles,
@@ -51,7 +59,15 @@ use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
 use leptos_router::{
-    components::{Outlet, ParentRoute, ProtectedRoute, Route, Router, Routes},
+    components::{
+        Outlet,
+        ParentRoute,
+        ProtectedParentRoute,
+        ProtectedRoute,
+        Route,
+        Router,
+        Routes,
+    },
     path,
 };
 use leptos_use::SameSite;
@@ -159,12 +175,28 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/register") view=|| view! { <Register /> } />
                         <Route path=path!("/top_players") view=|| view! { <TopPlayers /> } />
                         <Route path=path!("/login") view=|| view! { <Login /> } />
-                        <ProtectedRoute
+                        <ProtectedParentRoute
                             condition=is_logged_in
-                            path=path!("/messages")
+                            path=path!("/message")
                             redirect_path=|| "/login"
-                            view=Messages
-                        />
+                            view=MessagesLayout
+                        >
+                            <Route path=path!("") view=MessagesIndex />
+                            <Route path=path!("global") view=MessagesGlobalThread />
+                            <Route path=path!("dm/:username") view=MessagesDmThread />
+                            <Route
+                                path=path!("tournament/:nanoid")
+                                view=MessagesTournamentThread
+                            />
+                            <Route
+                                path=path!("game/:nanoid/players")
+                                view=MessagesGamePlayersThread
+                            />
+                            <Route
+                                path=path!("game/:nanoid/spectators")
+                                view=MessagesGameSpectatorsThread
+                            />
+                        </ProtectedParentRoute>
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/account")

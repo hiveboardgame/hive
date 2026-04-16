@@ -11,7 +11,7 @@ use crate::{
         WebsocketData,
     },
 };
-use db_lib::{get_conn, helpers::insert_chat_message, DbPool};
+use db_lib::{get_conn, helpers::insert_chat_message, models::Game, DbPool};
 use shared_types::{ChatDestination, ChatMessageContainer};
 
 pub struct ChatHandler {
@@ -51,22 +51,34 @@ impl ChatHandler {
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
                 })
             }
-            ChatDestination::GamePlayers(_game_id, white_id, black_id) => {
+            ChatDestination::GamePlayers(game_id) => {
+                let mut conn = get_conn(&self.pool)
+                    .await
+                    .context("loading DB connection for players chat fanout")?;
+                let game = Game::find_by_game_id(game_id, &mut conn)
+                    .await
+                    .context("loading game for players chat fanout")?;
                 messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(*white_id),
+                    destination: MessageDestination::User(game.white_id),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
                 });
                 messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(*black_id),
+                    destination: MessageDestination::User(game.black_id),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
                 });
             }
-            ChatDestination::GameSpectators(game, white_id, black_id) => {
+            ChatDestination::GameSpectators(game_id) => {
+                let mut conn = get_conn(&self.pool)
+                    .await
+                    .context("loading DB connection for spectators chat fanout")?;
+                let game = Game::find_by_game_id(game_id, &mut conn)
+                    .await
+                    .context("loading game for spectators chat fanout")?;
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::GameSpectators(
-                        game.clone(),
-                        *white_id,
-                        *black_id,
+                        game_id.clone(),
+                        game.white_id,
+                        game.black_id,
                     ),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
                 })

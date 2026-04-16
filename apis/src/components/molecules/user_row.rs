@@ -80,7 +80,6 @@ pub fn UserRow(
                                     .is_some_and(|me| me.user.uid != user_id_for_buttons)
                         }>
                             <MessageButton
-                                other_user_id=user_id_for_buttons
                                 username=message_username.clone()
                                 compact=true
                             />

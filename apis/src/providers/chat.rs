@@ -164,6 +164,13 @@ fn retain_recent_announcements(messages: &mut Vec<ChatMessage>) {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct PendingOutgoingChat {
+    key: ChannelKey,
+    message: String,
+    turn: Option<usize>,
+}
+
 #[derive(Copy, Clone, Debug)]
 pub struct Chat {
     pub users_messages: RwSignal<HashMap<Uuid, Vec<ChatMessage>>>, // Uuid -> Messages
@@ -176,6 +183,8 @@ pub struct Chat {
     pub tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
     pub global_messages: RwSignal<Vec<ChatMessage>>,
     pub typed_message: RwSignal<String>,
+    pending_outgoing_messages: RwSignal<Vec<PendingOutgoingChat>>,
+    chat_send_errors: RwSignal<HashMap<ChannelKey, String>>,
     /// Stable shared block list for chat-adjacent surfaces.
     pub blocked_user_ids: RwSignal<HashSet<Uuid>>,
     /// Server-backed unread counts: (channel_type, channel_id, count). Refreshed via refresh_unread_counts().
@@ -210,6 +219,8 @@ impl Chat {
             tournament_lobby_new_messages: RwSignal::new(HashMap::new()),
             global_messages: RwSignal::new(Vec::new()),
             typed_message: RwSignal::new(String::new()),
+            pending_outgoing_messages: RwSignal::new(Vec::new()),
+            chat_send_errors: RwSignal::new(HashMap::new()),
             blocked_user_ids: RwSignal::new(HashSet::new()),
             unread_counts: RwSignal::new(Vec::new()),
             pending_read_channels: RwSignal::new(HashSet::new()),
@@ -650,6 +661,77 @@ impl Chat {
         }
     }
 
+    fn queue_pending_outgoing_message(&self, key: ChannelKey, message: String, turn: Option<usize>) {
+        self.pending_outgoing_messages.update(|pending| {
+            pending.push(PendingOutgoingChat { key, message, turn });
+        });
+    }
+
+    fn take_pending_outgoing_message(&self, key: Option<&ChannelKey>) -> Option<PendingOutgoingChat> {
+        let mut removed = None;
+        self.pending_outgoing_messages.update(|pending| {
+            let index = key
+                .and_then(|key| pending.iter().position(|candidate| candidate.key == *key))
+                .or_else(|| (!pending.is_empty()).then_some(0));
+            if let Some(index) = index {
+                removed = Some(pending.remove(index));
+            }
+        });
+        removed
+    }
+
+    pub fn clear_chat_send_error(&self, key: &ChannelKey) {
+        self.chat_send_errors.update(|errors| {
+            errors.remove(key);
+        });
+    }
+
+    pub fn chat_send_error(&self, key: &ChannelKey) -> Option<String> {
+        self.chat_send_errors
+            .with(|errors| errors.get(key).cloned())
+    }
+
+    fn acknowledge_outgoing_message(&self, container: &ChatMessageContainer) {
+        let Some(current_user_id) = self.user.get_untracked().as_ref().map(|a| a.user.uid) else {
+            return;
+        };
+        if container.message.user_id != current_user_id {
+            return;
+        }
+
+        let key = ChannelKey::from_destination_for_user(&container.destination, current_user_id);
+        self.clear_chat_send_error(&key);
+        self.pending_outgoing_messages.update(|pending| {
+            if let Some(index) = pending.iter().position(|candidate| {
+                candidate.key == key
+                    && candidate.message == container.message.message
+                    && candidate.turn == container.message.turn
+            }) {
+                pending.remove(index);
+            }
+        });
+    }
+
+    pub fn handle_failed_chat_send(&self, key: Option<ChannelKey>, reason: String) {
+        let failed = self.take_pending_outgoing_message(key.as_ref());
+        let error_key = key.or_else(|| failed.as_ref().map(|pending| pending.key.clone()));
+
+        let Some(failed) = failed else {
+            if let Some(error_key) = error_key {
+                self.chat_send_errors.update(|errors| {
+                    errors.insert(error_key, reason);
+                });
+            }
+            return;
+        };
+        if self.typed_message.get_untracked().is_empty() && self.is_channel_visible(&failed.key) {
+            self.typed_message.set(failed.message.clone());
+        }
+        self.chat_send_errors.update(|errors| {
+            errors.insert(failed.key, reason);
+        });
+    }
+
     pub fn open_channel(&self, key: &ChannelKey) {
         self.clear_local_new_for_channel(key);
         if key.channel_type != ChannelType::Global {
@@ -979,12 +1061,14 @@ impl Chat {
             if let Some(account) = a {
                 let id = account.user.uid;
                 let name = account.user.username.clone();
-                let turn = match destination {
-                    ChatDestination::GamePlayers(_, _, _)
-                    | ChatDestination::GameSpectators(_, _, _) => turn,
+                let channel_key = ChannelKey::from_destination_for_user(&destination, id);
+                self.clear_chat_send_error(&channel_key);
+                let turn = match &destination {
+                    ChatDestination::GamePlayers(_) | ChatDestination::GameSpectators(_) => turn,
                     _ => None,
                 };
                 let msg = ChatMessage::new(name, id, message, None, turn);
+                self.queue_pending_outgoing_message(channel_key, msg.message.clone(), msg.turn);
                 let container = ChatMessageContainer::new(destination, &msg);
                 self.api.get_untracked().chat(&container);
             }
@@ -992,6 +1076,9 @@ impl Chat {
     }
 
     pub fn recv(&mut self, containers: &[ChatMessageContainer]) {
+        for container in containers {
+            self.acknowledge_outgoing_message(container);
+        }
         if let Some(last_message) = containers.last() {
             let is_live = containers.len() == 1;
             let from_self = self
@@ -1082,7 +1169,7 @@ impl Chat {
                         }
                     }
                 }
-                ChatDestination::GamePlayers(id, ..) => {
+                ChatDestination::GamePlayers(id) => {
                     let channel_key = ChannelKey::game_players(id);
                     let new_messages: Vec<ChatMessage> =
                         self.games_private_messages.with_untracked(|messages| {
@@ -1116,7 +1203,7 @@ impl Chat {
                         }
                     }
                 }
-                ChatDestination::GameSpectators(id, ..) => {
+                ChatDestination::GameSpectators(id) => {
                     let channel_key = ChannelKey::game_spectators(id);
                     let new_messages: Vec<ChatMessage> =
                         self.games_public_messages.with_untracked(|messages| {
@@ -1228,6 +1315,8 @@ pub fn provide_chat() {
 
             if user_changed || user_id.is_none() {
                 chat.blocked_user_ids.set(HashSet::new());
+                chat.pending_outgoing_messages.set(Vec::new());
+                chat.chat_send_errors.set(HashMap::new());
             }
 
             if user_id.is_some() {
@@ -1249,7 +1338,12 @@ mod tests {
     };
     use chrono::{TimeZone, Utc};
     use leptos::prelude::*;
-    use shared_types::{ChatMessage, TournamentId, CHANNEL_TYPE_TOURNAMENT_LOBBY};
+    use shared_types::{
+        ChannelKey,
+        ChatMessage,
+        TournamentId,
+        CHANNEL_TYPE_TOURNAMENT_LOBBY,
+    };
     use uuid::Uuid;
 
     fn message(user_id: Uuid, body: &str, timestamp_millis: Option<i64>) -> ChatMessage {
@@ -1388,4 +1482,52 @@ mod tests {
         assert_eq!(chat.unread_count_for_tournament(&evicted_tournament), 4);
         assert_eq!(chat.total_unread_count(), 4);
     }
+
+    #[test]
+    fn failed_send_restores_draft_when_failed_channel_is_still_visible() {
+        let owner = Owner::new();
+        owner.set();
+
+        let chat = Chat::new(
+            Signal::derive(|| None),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let failed_key = ChannelKey::tournament(&TournamentId("visible-thread".to_string()));
+
+        chat.queue_pending_outgoing_message(failed_key.clone(), "retry me".to_string(), None);
+        chat.set_channel_visible(&failed_key);
+
+        chat.handle_failed_chat_send(Some(failed_key.clone()), "send failed".to_string());
+
+        assert_eq!(chat.typed_message.get_untracked(), "retry me");
+        assert_eq!(
+            chat.chat_send_error(&failed_key),
+            Some("send failed".to_string())
+        );
+    }
+
+    #[test]
+    fn failed_send_does_not_restore_draft_into_different_visible_thread() {
+        let owner = Owner::new();
+        owner.set();
+
+        let chat = Chat::new(
+            Signal::derive(|| None),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let failed_key = ChannelKey::tournament(&TournamentId("failed-thread".to_string()));
+        let active_key = ChannelKey::tournament(&TournamentId("active-thread".to_string()));
+
+        chat.queue_pending_outgoing_message(failed_key.clone(), "retry me".to_string(), None);
+        chat.set_channel_visible(&active_key);
+
+        chat.handle_failed_chat_send(Some(failed_key.clone()), "send failed".to_string());
+
+        assert!(chat.typed_message.get_untracked().is_empty());
+        assert_eq!(
+            chat.chat_send_error(&failed_key),
+            Some("send failed".to_string())
+        );
+    }
+
 }
