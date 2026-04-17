@@ -11,7 +11,6 @@ use crate::{
         blocks_mutes::{mute_tournament_chat, unmute_tournament_chat},
         chat::{
             get_game_chat_route_data,
-            get_messages_hub_data,
             get_tournament_route_data,
             DmConversation,
             GameChannel,
@@ -121,10 +120,6 @@ fn parse_messages_thread_key(path: &str) -> MessagesThreadKey {
     MessagesThreadKey::Root
 }
 
-fn tournament_route_can_send(is_participant: bool, is_admin: bool) -> bool {
-    is_participant || is_admin
-}
-
 fn game_channel_matches_route(
     channel_id: &str,
     channel_type: ChannelType,
@@ -155,23 +150,189 @@ fn refresh_open_dm_thread(chat: Chat, current_user_id: Option<Uuid>, other_id: U
     });
 }
 
+fn find_dm_conversation(hub_data: &MessagesHubData, username: &str) -> Option<DmConversation> {
+    hub_data
+        .dms
+        .iter()
+        .find(|dm| dm.username == username)
+        .cloned()
+}
+
+fn find_game_channel(hub_data: &MessagesHubData, game_id: &GameId) -> Option<GameChannel> {
+    hub_data
+        .games
+        .iter()
+        .find(|channel| channel.channel_id == game_id.0)
+        .cloned()
+}
+
+fn find_tournament_channel(
+    hub_data: &MessagesHubData,
+    tournament_nanoid: &str,
+) -> Option<TournamentChannel> {
+    hub_data
+        .tournaments
+        .iter()
+        .find(|channel| channel.nanoid == tournament_nanoid)
+        .cloned()
+}
+
+fn render_resolved_dm_thread(
+    auth: AuthContext,
+    loading_message: String,
+    failed_message: String,
+    other_user_id: Uuid,
+    username: String,
+) -> AnyView {
+    let username = StoredValue::new(username);
+    let loading_message = StoredValue::new(loading_message);
+    let failed_message = StoredValue::new(failed_message);
+    let current_user_id =
+        Signal::derive(move || auth.user.with(|account| account.as_ref().map(|account| account.user.uid)));
+    let auth_pending = auth.action.pending();
+
+    view! {
+        <MessagesThreadFrame title=Signal::derive(move || username.get_value())>
+            <ShowLet
+                some=move || current_user_id.get()
+                let:current_user_id
+                fallback=move || {
+                    view! {
+                        <MessagesStatusContent message=Signal::derive(move || {
+                            if auth_pending.get() {
+                                loading_message.get_value()
+                            } else {
+                                failed_message.get_value()
+                            }
+                        }) />
+                    }
+                }
+            >
+                {move || {
+                    if current_user_id != other_user_id {
+                        let destination = ChatDestination::User((
+                            other_user_id,
+                            username.get_value(),
+                        ));
+                        view! {
+                            <DmChannelActions
+                                other_id=other_user_id
+                                username=Signal::derive(move || Some(username.get_value()))
+                            />
+                            <div class="overflow-hidden flex-1 min-h-0">
+                                <ResolvedChatWindow destination />
+                            </div>
+                        }
+                            .into_any()
+                    } else {
+                        let dm_error = StoredValue::new(
+                            "Direct messages to yourself are not supported".to_string(),
+                        );
+                        view! {
+                            <MessagesStatusContent message=Signal::derive(move || {
+                                dm_error.get_value()
+                            }) />
+                        }
+                            .into_any()
+                    }
+                }}
+            </ShowLet>
+        </MessagesThreadFrame>
+    }
+        .into_any()
+}
+
+fn render_resolved_tournament_thread(
+    restricted_message: String,
+    nanoid: String,
+    title: String,
+    muted: bool,
+    can_chat: bool,
+) -> AnyView {
+    let title = StoredValue::new(title);
+    let restricted_message = StoredValue::new(restricted_message);
+    let nanoid = StoredValue::new(nanoid);
+    let destination =
+        StoredValue::new(ChatDestination::TournamentLobby(TournamentId(nanoid.get_value())));
+
+    view! {
+        <MessagesThreadFrame title=Signal::derive(move || title.get_value())>
+            <TournamentRouteActions
+                nanoid=nanoid.get_value()
+                muted=Signal::derive(move || muted)
+            />
+            <Show
+                when=move || can_chat
+                fallback=move || {
+                    view! {
+                        <MessagesStatusContent message=Signal::derive(move || {
+                            restricted_message.get_value()
+                        }) />
+                    }
+                }
+            >
+                <div class="overflow-hidden flex-1 min-h-0">
+                    <ResolvedChatWindow destination=destination.get_value() />
+                </div>
+            </Show>
+        </MessagesThreadFrame>
+    }
+        .into_any()
+}
+
+fn render_resolved_game_thread(
+    failed_message: String,
+    game_id: GameId,
+    thread: GameChatThread,
+    title: String,
+    denied_message: Option<String>,
+    is_player: bool,
+    finished: bool,
+) -> AnyView {
+    let title = StoredValue::new(title);
+    let denied_message = StoredValue::new(denied_message);
+    let failed_message = StoredValue::new(failed_message);
+    let game_id_string = StoredValue::new(game_id.0.clone());
+    let can_view_thread = denied_message.with_value(|message| message.is_none());
+    let chat_destination = StoredValue::new(match thread {
+        GameChatThread::Players => ChatDestination::GamePlayers(game_id),
+        GameChatThread::Spectators => ChatDestination::GameSpectators(game_id),
+    });
+
+    view! {
+        <MessagesThreadFrame title=Signal::derive(move || title.get_value())>
+            <GameChatHeader
+                current_thread=thread
+                game_id=Signal::derive(move || game_id_string.get_value())
+                is_player=Signal::derive(move || is_player)
+                finished=Signal::derive(move || finished)
+            />
+            <Show
+                when=move || can_view_thread
+                fallback=move || {
+                    view! {
+                        <MessagesStatusContent message=Signal::derive(move || {
+                            denied_message
+                                .get_value()
+                                .unwrap_or_else(|| failed_message.get_value())
+                        }) />
+                    }
+                }
+            >
+                <div class="overflow-hidden flex-1 min-h-0">
+                    <ResolvedChatWindow destination=chat_destination.get_value() />
+                </div>
+            </Show>
+        </MessagesThreadFrame>
+    }
+        .into_any()
+}
+
 #[component]
 pub fn MessagesLayout() -> impl IntoView {
     let auth = expect_context::<AuthContext>();
-    let chat = expect_context::<Chat>();
     let i18n = use_i18n();
     let location = use_location();
-    let hub_data = Resource::new(
-        move || chat.conversation_list_version.get(),
-        move |_| async move { get_messages_hub_data().await },
-    );
-    Effect::new(move |_| {
-        hub_data.with(|result| {
-            if let Some(Ok(data)) = result.as_ref() {
-                chat.apply_server_unread_counts(data.unread_counts.clone());
-            }
-        });
-    });
     let current_route = Signal::derive(move || parse_messages_thread_key(&location.pathname.get()));
     let mobile_list_visible =
         Signal::derive(move || matches!(current_route.get(), MessagesThreadKey::Root));
@@ -193,7 +354,7 @@ pub fn MessagesLayout() -> impl IntoView {
                     </h1>
                 </div>
                 <div class="overflow-y-auto flex-1 p-2 pb-6 min-h-0 sm:pb-2">
-                    <MessagesSidebar hub_data current_route me=current_user_id />
+                    <MessagesSidebar current_route me=current_user_id />
                 </div>
             </aside>
             <main class=move || {
@@ -210,44 +371,38 @@ pub fn MessagesLayout() -> impl IntoView {
 
 #[component]
 fn MessagesSidebar(
-    hub_data: Resource<Result<MessagesHubData, ServerFnError>>,
     current_route: Signal<MessagesThreadKey>,
     me: Option<Uuid>,
 ) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let i18n = use_i18n();
 
-    view! {
-        <ShowLet
-            some=move || hub_data.get()
-            let:hub_result
-            fallback=move || {
-                view! {
-                    <p class="p-3 text-sm text-gray-500 animate-pulse dark:text-gray-400">
-                        {t!(i18n, messages.page.loading)}
-                    </p>
-                }
-            }
-        >
-            <ShowLet
-                some=move || hub_result.as_ref().ok().cloned()
-                let:hub_page_data
-                fallback=move || {
-                    view! {
-                        <p class="p-3 text-sm text-red-600 dark:text-red-400">
-                            {t!(i18n, messages.page.failed_conversations)}
-                        </p>
-                    }
-                }
-            >
+    move || {
+        if let Some(hub_data) = chat.messages_hub_data.get() {
+            view! {
                 <ChannelLists
-                    hub_data=hub_page_data
+                    hub_data
                     me=me
                     current_route=current_route
                     chat=chat
                 />
-            </ShowLet>
-        </ShowLet>
+            }
+                .into_any()
+        } else if chat.messages_hub_loading.get() {
+            view! {
+                <p class="p-3 text-sm text-gray-500 animate-pulse dark:text-gray-400">
+                    {t!(i18n, messages.page.loading)}
+                </p>
+            }
+                .into_any()
+        } else {
+            view! {
+                <p class="p-3 text-sm text-red-600 dark:text-red-400">
+                    {t!(i18n, messages.page.failed_conversations)}
+                </p>
+            }
+                .into_any()
+        }
     }
 }
 
@@ -293,7 +448,6 @@ pub fn MessagesGlobalThread() -> impl IntoView {
 
 #[component]
 pub fn MessagesDmThread() -> impl IntoView {
-    let auth = expect_context::<AuthContext>();
     let i18n = use_i18n();
     let params = use_params_map();
     let route_username = Signal::derive(move || {
@@ -316,85 +470,7 @@ pub fn MessagesDmThread() -> impl IntoView {
                     </MessagesThreadFrame>
                 }
             }>
-                {move || {
-                    let route_username = StoredValue::new(route_username.clone());
-                    Suspend::new(async move {
-                        match resolve_username(route_username.get_value()).await.ok() {
-                            Some(user) => {
-                                let other_user_id = user.uid;
-                                let username = StoredValue::new(user.username);
-                                let current_user_id = Signal::derive(move || {
-                                    auth.user.with(|account| account.as_ref().map(|account| account.user.uid))
-                                });
-                                let auth_pending = auth.action.pending();
-
-                                view! {
-                                    <MessagesThreadFrame title=Signal::derive(move || username.get_value())>
-                                        <ShowLet
-                                            some=move || current_user_id.get()
-                                            let:current_user_id
-                                            fallback=move || {
-                                                view! {
-                                                    <MessagesStatusContent message=Signal::derive(move || {
-                                                        if auth_pending.get() {
-                                                            t_string!(i18n, messages.page.loading).to_string()
-                                                        } else {
-                                                            t_string!(i18n, messages.page.failed_conversations)
-                                                                .to_string()
-                                                        }
-                                                    }) />
-                                                }
-                                            }
-                                        >
-                                            {move || {
-                                                if current_user_id != other_user_id {
-                                                    let destination = ChatDestination::User((
-                                                        other_user_id,
-                                                        username.get_value(),
-                                                    ));
-                                                    view! {
-                                                        <DmChannelActions
-                                                            other_id=other_user_id
-                                                            username=Signal::derive(move || Some(username.get_value()))
-                                                        />
-                                                        <div class="overflow-hidden flex-1 min-h-0">
-                                                            <ResolvedChatWindow destination />
-                                                        </div>
-                                                    }
-                                                        .into_any()
-                                                } else {
-                                                    let dm_error = StoredValue::new(
-                                                        "Direct messages to yourself are not supported"
-                                                            .to_string(),
-                                                    );
-                                                    view! {
-                                                        <MessagesStatusContent message=Signal::derive(move || {
-                                                            dm_error.get_value()
-                                                        }) />
-                                                    }
-                                                        .into_any()
-                                                }
-                                            }}
-                                        </ShowLet>
-                                    </MessagesThreadFrame>
-                                }
-                                    .into_any()
-                            }
-                            None => {
-                                view! {
-                                    <MessagesThreadFrame title=Signal::derive(move || {
-                                        t_string!(i18n, messages.page.failed_conversations).to_string()
-                                    })>
-                                        <MessagesStatusContent message=Signal::derive(move || {
-                                            t_string!(i18n, messages.page.failed_conversations).to_string()
-                                        }) />
-                                    </MessagesThreadFrame>
-                                }
-                                    .into_any()
-                            }
-                        }
-                    })
-                }}
+                <MessagesDmThreadBody route_username=route_username.clone() />
             </Transition>
         </ShowLet>
         <Show when=move || route_username.get().is_none()>
@@ -410,16 +486,89 @@ pub fn MessagesDmThread() -> impl IntoView {
 }
 
 #[component]
-pub fn MessagesTournamentThread() -> impl IntoView {
+fn MessagesDmThreadBody(route_username: String) -> impl IntoView {
     let auth = expect_context::<AuthContext>();
+    let chat = expect_context::<Chat>();
+    let i18n = use_i18n();
+    let resolved_user = StoredValue::new(
+        chat.messages_hub_data.with_untracked(|hub| {
+            hub.as_ref()
+                .and_then(|hub| find_dm_conversation(hub, &route_username))
+                .map(|dm| (dm.other_user_id, dm.username))
+        }),
+    );
+    let route_username = StoredValue::new(route_username);
+
+    move || {
+        match resolved_user.get_value() {
+            Some((other_user_id, username)) => render_resolved_dm_thread(
+                auth.clone(),
+                t_string!(i18n, messages.page.loading).to_string(),
+                t_string!(i18n, messages.page.failed_conversations).to_string(),
+                other_user_id,
+                username,
+            ),
+            None => {
+                view! {
+                    <MessagesDmThreadFallback route_username=route_username.get_value() />
+                }
+                    .into_any()
+            }
+        }
+    }
+}
+
+#[component]
+fn MessagesDmThreadFallback(route_username: String) -> impl IntoView {
+    let i18n = use_i18n();
+    let route_username = StoredValue::new(route_username);
+    let fallback_dm = LocalResource::new(move || {
+        let route_username = route_username.get_value();
+        async move {
+            resolve_username(route_username)
+                .await
+                .ok()
+                .map(|user| (user.uid, user.username))
+        }
+    });
+
+    move || match fallback_dm.get() {
+        None => view! {
+            <MessagesThreadFrame title=Signal::derive(move || {
+                t_string!(i18n, messages.page.loading).to_string()
+            })>
+                <MessagesStatusContent message=Signal::derive(move || {
+                    t_string!(i18n, messages.page.loading).to_string()
+                }) />
+            </MessagesThreadFrame>
+        }
+            .into_any(),
+        Some(Some((other_user_id, username))) => render_resolved_dm_thread(
+            expect_context::<AuthContext>(),
+            t_string!(i18n, messages.page.loading).to_string(),
+            t_string!(i18n, messages.page.failed_conversations).to_string(),
+            other_user_id,
+            username,
+        ),
+        Some(None) => view! {
+            <MessagesThreadFrame title=Signal::derive(move || {
+                t_string!(i18n, messages.page.failed_conversations).to_string()
+            })>
+                <MessagesStatusContent message=Signal::derive(move || {
+                    t_string!(i18n, messages.page.failed_conversations).to_string()
+                }) />
+            </MessagesThreadFrame>
+        }
+            .into_any(),
+    }
+}
+
+#[component]
+pub fn MessagesTournamentThread() -> impl IntoView {
     let i18n = use_i18n();
     let params = use_params_map();
     let route_nanoid =
         Signal::derive(move || params.get().get("nanoid").map(|nanoid| nanoid.to_string()));
-    let user_is_admin = Signal::derive(move || {
-        auth.user
-            .with(|user| user.as_ref().is_some_and(|account| account.user.admin))
-    });
 
     view! {
         <ShowLet some=move || route_nanoid.get() let:nanoid>
@@ -434,54 +583,7 @@ pub fn MessagesTournamentThread() -> impl IntoView {
                     </MessagesThreadFrame>
                 }
             }>
-                {move || {
-                    let nanoid = StoredValue::new(nanoid.clone());
-                    Suspend::new(async move {
-                        match get_tournament_route_data(nanoid.get_value()).await.ok() {
-                            Some(route_data) => {
-                                let title = StoredValue::new(route_data.name);
-                                let is_participant = route_data.is_participant;
-                                let muted = route_data.muted;
-                                let can_send = Signal::derive(move || {
-                                    tournament_route_can_send(is_participant, user_is_admin.get())
-                                });
-                                let destination = StoredValue::new(ChatDestination::TournamentLobby(
-                                    TournamentId(nanoid.get_value()),
-                                ));
-
-                                view! {
-                                    <MessagesThreadFrame title=Signal::derive(move || title.get_value())>
-                                        <TournamentRouteActions
-                                            nanoid=nanoid.get_value()
-                                            route_ready=Signal::derive(move || true)
-                                            can_send
-                                            muted=Signal::derive(move || muted)
-                                        />
-                                        <div class="overflow-hidden flex-1 min-h-0">
-                                            <ResolvedChatWindow
-                                                destination=destination.get_value()
-                                                input_disabled=Signal::derive(move || !can_send.get())
-                                            />
-                                        </div>
-                                    </MessagesThreadFrame>
-                                }
-                                    .into_any()
-                            }
-                            None => {
-                                view! {
-                                    <MessagesThreadFrame title=Signal::derive(move || {
-                                        t_string!(i18n, messages.page.failed_conversations).to_string()
-                                    })>
-                                        <MessagesStatusContent message=Signal::derive(move || {
-                                            t_string!(i18n, messages.page.failed_conversations).to_string()
-                                        }) />
-                                    </MessagesThreadFrame>
-                                }
-                                    .into_any()
-                            }
-                        }
-                    })
-                }}
+                <MessagesTournamentThreadBody nanoid=nanoid.clone() />
             </Transition>
         </ShowLet>
         <Show when=move || route_nanoid.get().is_none()>
@@ -493,6 +595,78 @@ pub fn MessagesTournamentThread() -> impl IntoView {
                 }) />
             </MessagesThreadFrame>
         </Show>
+    }
+}
+
+#[component]
+fn MessagesTournamentThreadBody(nanoid: String) -> impl IntoView {
+    let chat = expect_context::<Chat>();
+    let i18n = use_i18n();
+    let route_data = StoredValue::new(
+        chat.messages_hub_data.with_untracked(|hub| {
+            hub.as_ref()
+                .and_then(|hub| find_tournament_channel(hub, &nanoid))
+                .map(|channel| (channel.name, channel.muted, channel.can_chat))
+        }),
+    );
+    let nanoid = StoredValue::new(nanoid);
+
+    move || {
+        match route_data.get_value() {
+            Some((title, muted, can_chat)) => render_resolved_tournament_thread(
+                t_string!(i18n, messages.chat.tournament_read_restricted).to_string(),
+                nanoid.get_value(),
+                title,
+                muted,
+                can_chat,
+            ),
+            None => {
+                view! {
+                    <MessagesTournamentThreadFallback nanoid=nanoid.get_value() />
+                }
+                    .into_any()
+            }
+        }
+    }
+}
+
+#[component]
+fn MessagesTournamentThreadFallback(nanoid: String) -> impl IntoView {
+    let i18n = use_i18n();
+    let nanoid = StoredValue::new(nanoid);
+    let tournament_route_data = LocalResource::new(move || {
+        let route_nanoid = nanoid.get_value();
+        async move { get_tournament_route_data(route_nanoid).await.ok() }
+    });
+
+    move || match tournament_route_data.get() {
+        None => view! {
+            <MessagesThreadFrame title=Signal::derive(move || {
+                t_string!(i18n, messages.page.loading).to_string()
+            })>
+                <MessagesStatusContent message=Signal::derive(move || {
+                    t_string!(i18n, messages.page.loading).to_string()
+                }) />
+            </MessagesThreadFrame>
+        }
+            .into_any(),
+        Some(Some((title, muted, can_chat))) => render_resolved_tournament_thread(
+            t_string!(i18n, messages.chat.tournament_read_restricted).to_string(),
+            nanoid.get_value(),
+            title,
+            muted,
+            can_chat,
+        ),
+        Some(None) => view! {
+            <MessagesThreadFrame title=Signal::derive(move || {
+                t_string!(i18n, messages.page.failed_conversations).to_string()
+            })>
+                <MessagesStatusContent message=Signal::derive(move || {
+                    t_string!(i18n, messages.page.failed_conversations).to_string()
+                }) />
+            </MessagesThreadFrame>
+        }
+            .into_any(),
     }
 }
 
@@ -534,85 +708,7 @@ fn MessagesGameThread(thread: GameChatThread) -> impl IntoView {
                     </MessagesThreadFrame>
                 }
             }>
-                {move || {
-                    let game_id = StoredValue::new(game_id.clone());
-                    Suspend::new(async move {
-                        match get_game_chat_route_data(game_id.get_value()).await.ok() {
-                            Some(route_data) => {
-                                let title = StoredValue::new(if thread == GameChatThread::Players {
-                                    t_string!(i18n, messages.chat.players_chat).to_string()
-                                } else {
-                                    t_string!(i18n, messages.chat.spectator_chat).to_string()
-                                });
-                                let denied_message = StoredValue::new(match thread {
-                                    GameChatThread::Players if !route_data.is_player => {
-                                        Some("Only players can view the players chat.".to_string())
-                                    }
-                                    GameChatThread::Spectators
-                                        if route_data.is_player && !route_data.finished =>
-                                    {
-                                            Some(t_string!(i18n, messages.chat.spectator_unlock).to_string())
-                                    }
-                                    _ => None,
-                                });
-                                let game_id_string =
-                                    StoredValue::new(game_id.with_value(|game_id| game_id.0.clone()));
-                                let is_player = route_data.is_player;
-                                let finished = route_data.finished;
-                                let can_view_thread =
-                                    denied_message.with_value(|message| message.is_none());
-                                let chat_destination = StoredValue::new(match thread {
-                                    GameChatThread::Players => {
-                                        ChatDestination::GamePlayers(game_id.get_value())
-                                    }
-                                    GameChatThread::Spectators => {
-                                        ChatDestination::GameSpectators(game_id.get_value())
-                                    }
-                                });
-
-                                view! {
-                                    <MessagesThreadFrame title=Signal::derive(move || title.get_value())>
-                                        <GameChatHeader
-                                            current_thread=thread
-                                            game_id=Signal::derive(move || game_id_string.get_value())
-                                            is_player=Signal::derive(move || is_player)
-                                            finished=Signal::derive(move || finished)
-                                        />
-                                        <Show
-                                            when=move || can_view_thread
-                                            fallback=move || {
-                                                view! {
-                                                    <MessagesStatusContent message=Signal::derive(move || {
-                                                        denied_message.get_value().unwrap_or_else(|| {
-                                                            t_string!(i18n, messages.page.failed_game).to_string()
-                                                        })
-                                                    }) />
-                                                }
-                                            }
-                                        >
-                                            <div class="overflow-hidden flex-1 min-h-0">
-                                                <ResolvedChatWindow destination=chat_destination.get_value() />
-                                            </div>
-                                        </Show>
-                                    </MessagesThreadFrame>
-                                }
-                                    .into_any()
-                            }
-                            None => {
-                                view! {
-                                    <MessagesThreadFrame title=Signal::derive(move || {
-                                        t_string!(i18n, messages.page.failed_game).to_string()
-                                    })>
-                                        <MessagesStatusContent message=Signal::derive(move || {
-                                            t_string!(i18n, messages.page.failed_game).to_string()
-                                        }) />
-                                    </MessagesThreadFrame>
-                                }
-                                    .into_any()
-                            }
-                        }
-                    })
-                }}
+                <MessagesGameThreadBody game_id thread />
             </Transition>
         </ShowLet>
         <Show when=move || route_game_id.get().is_none()>
@@ -624,6 +720,110 @@ fn MessagesGameThread(thread: GameChatThread) -> impl IntoView {
                 }) />
             </MessagesThreadFrame>
         </Show>
+    }
+}
+
+#[component]
+fn MessagesGameThreadBody(game_id: GameId, thread: GameChatThread) -> impl IntoView {
+    let chat = expect_context::<Chat>();
+    let i18n = use_i18n();
+    let route_data = StoredValue::new(
+        chat.messages_hub_data.with_untracked(|hub| {
+            hub.as_ref()
+                .and_then(|hub| find_game_channel(hub, &game_id))
+                .map(|channel| (channel.is_player, channel.finished))
+        }),
+    );
+    let game_id = StoredValue::new(game_id);
+
+    move || {
+        match route_data.get_value() {
+            Some((is_player, finished)) => render_resolved_game_thread(
+                t_string!(i18n, messages.page.failed_game).to_string(),
+                game_id.get_value(),
+                thread,
+                if thread == GameChatThread::Players {
+                    t_string!(i18n, messages.chat.players_chat).to_string()
+                } else {
+                    t_string!(i18n, messages.chat.spectator_chat).to_string()
+                },
+                match thread {
+                    GameChatThread::Players if !is_player => {
+                        Some("Only players can view the players chat.".to_string())
+                    }
+                    GameChatThread::Spectators if is_player && !finished => {
+                        Some(t_string!(i18n, messages.chat.spectator_unlock).to_string())
+                    }
+                    _ => None,
+                },
+                is_player,
+                finished,
+            ),
+            None => {
+                view! {
+                    <MessagesGameThreadFallback game_id=game_id.get_value() thread />
+                }
+                    .into_any()
+            }
+        }
+    }
+}
+
+#[component]
+fn MessagesGameThreadFallback(game_id: GameId, thread: GameChatThread) -> impl IntoView {
+    let i18n = use_i18n();
+    let game_id = StoredValue::new(game_id);
+    let fallback_game = LocalResource::new(move || {
+        let route_game_id = game_id.get_value();
+        async move { get_game_chat_route_data(route_game_id).await.ok() }
+    });
+
+    move || match fallback_game.get() {
+        None => view! {
+            <MessagesThreadFrame title=Signal::derive(move || {
+                if thread == GameChatThread::Players {
+                    t_string!(i18n, messages.chat.players_chat).to_string()
+                } else {
+                    t_string!(i18n, messages.chat.spectator_chat).to_string()
+                }
+            })>
+                <MessagesStatusContent message=Signal::derive(move || {
+                    t_string!(i18n, messages.page.loading).to_string()
+                }) />
+            </MessagesThreadFrame>
+        }
+            .into_any(),
+        Some(Some((is_player, finished))) => render_resolved_game_thread(
+            t_string!(i18n, messages.page.failed_game).to_string(),
+            game_id.get_value(),
+            thread,
+            if thread == GameChatThread::Players {
+                t_string!(i18n, messages.chat.players_chat).to_string()
+            } else {
+                t_string!(i18n, messages.chat.spectator_chat).to_string()
+            },
+            match thread {
+                GameChatThread::Players if !is_player => {
+                    Some("Only players can view the players chat.".to_string())
+                }
+                GameChatThread::Spectators if is_player && !finished => {
+                    Some(t_string!(i18n, messages.chat.spectator_unlock).to_string())
+                }
+                _ => None,
+            },
+            is_player,
+            finished,
+        ),
+        Some(None) => view! {
+            <MessagesThreadFrame title=Signal::derive(move || {
+                t_string!(i18n, messages.page.failed_game).to_string()
+            })>
+                <MessagesStatusContent message=Signal::derive(move || {
+                    t_string!(i18n, messages.page.failed_game).to_string()
+                }) />
+            </MessagesThreadFrame>
+        }
+            .into_any(),
     }
 }
 
@@ -718,8 +918,6 @@ fn DmChannelActions(other_id: Uuid, username: Signal<Option<String>>) -> impl In
 #[component]
 fn TournamentRouteActions(
     nanoid: String,
-    route_ready: Signal<bool>,
-    can_send: Signal<bool>,
     muted: Signal<bool>,
 ) -> impl IntoView {
     let chat = expect_context::<Chat>();
@@ -756,7 +954,7 @@ fn TournamentRouteActions(
                 Ok(new_muted) => {
                     mute_error.set(None);
                     muted_override.set(Some(new_muted));
-                    chat.invalidate_conversation_list();
+                    chat.set_tournament_muted(&nanoid.get_value(), new_muted);
                     chat.refresh_unread_counts();
                 }
                 Err(error) => mute_error.set(Some(error)),
@@ -777,7 +975,7 @@ fn TournamentRouteActions(
                     </A>
                     <button
                         type="button"
-                        disabled=move || toggle_mute.pending().get() || !route_ready.get()
+                        disabled=move || toggle_mute.pending().get()
                         class="text-sm font-medium text-gray-600 transition-colors dark:text-gray-400 disabled:text-gray-400 dark:hover:text-pillbug-teal/90 dark:disabled:text-gray-500 hover:text-pillbug-teal"
                         on:click=move |_| {
                             mute_error.set(None);
@@ -785,7 +983,7 @@ fn TournamentRouteActions(
                         }
                     >
                         {move || {
-                            if toggle_mute.pending().get() || !route_ready.get() {
+                            if toggle_mute.pending().get() {
                                 t_string!(i18n, messages.page.loading)
                             } else if resolved_muted.get() {
                                 t_string!(i18n, messages.page.unmute_tournament_chat)
@@ -795,11 +993,6 @@ fn TournamentRouteActions(
                         }}
                     </button>
                 </div>
-                <Show when=move || route_ready.get() && !can_send.get()>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                        {t!(i18n, messages.chat.tournament_read_restricted)}
-                    </p>
-                </Show>
                 <Show when=move || mute_error.get().is_some()>
                     <p class="text-xs text-red-600 dark:text-red-400">
                         {move || mute_error.get().unwrap_or_default()}

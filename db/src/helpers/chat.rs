@@ -8,6 +8,7 @@ use crate::{
         tournaments,
         tournaments_organizers,
         tournaments_users,
+        user_tournament_chat_mutes,
         users,
     },
     DbConn,
@@ -20,7 +21,16 @@ use diesel::{
     sql_types::Timestamptz,
 };
 use diesel_async::RunQueryDsl;
-use shared_types::{ChannelKey, GameId};
+use shared_types::{
+    ChannelKey,
+    DmConversation,
+    GameChannel,
+    GameId,
+    TournamentChannel,
+    CHANNEL_TYPE_DIRECT,
+    CHANNEL_TYPE_GAME_PLAYERS,
+    CHANNEL_TYPE_TOURNAMENT_LOBBY,
+};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -32,55 +42,11 @@ diesel::allow_columns_to_appear_in_same_group_by_clause!(
     games::finished,
 );
 
-diesel::allow_columns_to_appear_in_same_group_by_clause!(tournaments::nanoid, tournaments::name,);
-
-#[derive(Clone, Debug)]
-pub struct DmConversationSummary {
-    pub other_user_id: Uuid,
-    pub username: String,
-    pub channel_id: String,
-    pub last_message_at: DateTime<Utc>,
-}
-
-#[derive(Clone, Debug)]
-pub struct TournamentChannelSummary {
-    pub nanoid: String,
-    pub name: String,
-    pub is_participant: bool,
-    pub muted: bool,
-    pub last_message_at: DateTime<Utc>,
-}
-
-#[derive(Clone, Debug)]
-pub struct GameChannelSummary {
-    pub channel_type: String,
-    pub channel_id: String,
-    pub label: String,
-    pub white_id: Uuid,
-    pub black_id: Uuid,
-    pub finished: bool,
-    pub last_message_at: DateTime<Utc>,
-}
-
-#[derive(Clone, Debug)]
-pub struct MessagesHubCatalog {
-    pub blocked_user_ids: Vec<Uuid>,
-    pub dms: Vec<DmConversationSummary>,
-    pub tournaments: Vec<TournamentChannelSummary>,
-    pub games: Vec<GameChannelSummary>,
-}
-
-pub async fn get_tournament_name_by_nanoid(
-    conn: &mut DbConn<'_>,
-    tournament_nanoid: &str,
-) -> Result<String, DbError> {
-    tournaments::table
-        .filter(tournaments::nanoid.eq(tournament_nanoid))
-        .select(tournaments::name)
-        .first(conn)
-        .await
-        .map_err(DbError::from)
-}
+diesel::allow_columns_to_appear_in_same_group_by_clause!(
+    tournaments::nanoid,
+    tournaments::name,
+    user_tournament_chat_mutes::user_id,
+);
 
 pub async fn get_game_chat_participants_and_finished(
     conn: &mut DbConn<'_>,
@@ -92,6 +58,39 @@ pub async fn get_game_chat_participants_and_finished(
         .first::<(Uuid, Uuid, bool)>(conn)
         .await
         .map_err(DbError::from)
+}
+
+pub async fn get_tournament_thread_data(
+    conn: &mut DbConn<'_>,
+    user_id: Uuid,
+    tournament_nanoid: &str,
+) -> Result<(String, bool, bool), DbError> {
+    let is_admin = User::is_admin(&user_id, conn).await?;
+    let (name, muted, is_participant) = tournaments::table
+        .filter(tournaments::nanoid.eq(tournament_nanoid))
+        .select((
+            tournaments::name,
+            exists(
+                user_tournament_chat_mutes::table
+                    .filter(user_tournament_chat_mutes::user_id.eq(user_id))
+                    .filter(user_tournament_chat_mutes::tournament_id.eq(tournaments::id)),
+            ),
+            exists(
+                tournaments_users::table
+                    .filter(tournaments_users::user_id.eq(user_id))
+                    .filter(tournaments_users::tournament_id.eq(tournaments::id)),
+            )
+            .or(exists(
+                tournaments_organizers::table
+                    .filter(tournaments_organizers::organizer_id.eq(user_id))
+                    .filter(tournaments_organizers::tournament_id.eq(tournaments::id)),
+            )),
+        ))
+        .first(conn)
+        .await
+        .map_err(DbError::from)?;
+    let can_chat = is_admin || is_participant;
+    Ok((name, muted, can_chat))
 }
 
 /// Insert a chat message and return the inserted row.
@@ -251,11 +250,11 @@ pub async fn upsert_chat_read_receipt(
 
 /// Other user id and username for each DM conversation the user has (from chat_messages).
 /// Excludes users the current user has blocked and includes the latest persisted activity timestamp.
-pub async fn get_dm_conversation_summaries_for_user(
+pub async fn get_dm_conversations_for_user(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
     blocked_ids: &HashSet<Uuid>,
-) -> Result<Vec<DmConversationSummary>, DbError> {
+) -> Result<Vec<DmConversation>, DbError> {
     let mut other_id_to_activity = HashMap::<Uuid, DateTime<Utc>>::new();
 
     for (other_user_id, last_message_at) in get_sent_dm_activity_for_user(conn, user_id).await? {
@@ -294,10 +293,9 @@ pub async fn get_dm_conversation_summaries_for_user(
             username_map
                 .get(&other_user_id)
                 .cloned()
-                .map(|username| DmConversationSummary {
+                .map(|username| DmConversation {
                     other_user_id,
                     username,
-                    channel_id: ChannelKey::direct(user_id, other_user_id).channel_id,
                     last_message_at,
                 })
         })
@@ -350,12 +348,19 @@ async fn get_received_dm_activity_for_user(
         .map_err(DbError::from)
 }
 
-async fn get_tournament_lobby_activity_for_user(
+pub async fn get_tournament_channels_for_user(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
-) -> Result<Vec<(String, String, Option<DateTime<Utc>>)>, DbError> {
-    chat_messages::table
+) -> Result<Vec<TournamentChannel>, DbError> {
+    let mut result = chat_messages::table
         .inner_join(tournaments::table.on(chat_messages::channel_id.eq(tournaments::nanoid)))
+        .left_join(
+            user_tournament_chat_mutes::table.on(
+                user_tournament_chat_mutes::tournament_id
+                    .eq(tournaments::id)
+                    .and(user_tournament_chat_mutes::user_id.eq(user_id)),
+            ),
+        )
         .filter(chat_messages::channel_type.eq(shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY))
         .filter(
             exists(
@@ -369,34 +374,27 @@ async fn get_tournament_lobby_activity_for_user(
                     .filter(tournaments_organizers::tournament_id.eq(tournaments::id)),
             )),
         )
-        .group_by((tournaments::nanoid, tournaments::name))
+        .group_by((
+            tournaments::nanoid,
+            tournaments::name,
+            user_tournament_chat_mutes::user_id,
+        ))
         .select((
             tournaments::nanoid,
             tournaments::name,
+            user_tournament_chat_mutes::user_id.nullable().is_not_null(),
             max(chat_messages::created_at),
         ))
-        .load(conn)
+        .load::<(String, String, bool, Option<DateTime<Utc>>)>(conn)
         .await
-        .map_err(DbError::from)
-}
-
-/// Tournament lobby channels the user has.
-/// Includes only participant tournaments with persisted chat activity, plus muted state
-/// and latest activity timestamp.
-pub async fn get_tournament_lobby_channel_summaries_for_user(
-    conn: &mut DbConn<'_>,
-    user_id: Uuid,
-    muted_tournament_nanoids: &HashSet<String>,
-) -> Result<Vec<TournamentChannelSummary>, DbError> {
-    let mut result = get_tournament_lobby_activity_for_user(conn, user_id)
-        .await?
+        .map_err(DbError::from)?
         .into_iter()
-        .filter_map(|(nanoid, name, last_message_at)| {
-            last_message_at.map(|last_message_at| TournamentChannelSummary {
-                muted: muted_tournament_nanoids.contains(&nanoid),
+        .filter_map(|(nanoid, name, muted, last_message_at)| {
+            last_message_at.map(|last_message_at| TournamentChannel {
+                muted,
                 nanoid,
                 name,
-                is_participant: true,
+                can_chat: true,
                 last_message_at,
             })
         })
@@ -497,15 +495,15 @@ fn extend_unread_counts(
     );
 }
 
-/// Game channels (players or spectators) the user has: (channel_type, channel_id, label, white_id, black_id, finished).
+/// Game channels (players or spectators) the user has.
 /// Intentionally includes only channels with persisted game-chat activity.
 /// This keeps the Messages hub scoped to active conversations instead of all game memberships.
 /// Visibility: players see game_players; spectators see game_spectators only if they've sent a message.
 /// For finished games, players see one sidebar entry that defaults to game_players.
-pub async fn get_game_channel_summaries_for_user(
+pub async fn get_game_channels_for_user(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
-) -> Result<Vec<GameChannelSummary>, DbError> {
+) -> Result<Vec<GameChannel>, DbError> {
     let player_activity_rows = get_game_player_activity_for_user(conn, user_id).await?;
     let spectator_activity_rows = get_game_spectator_activity_for_user(conn, user_id).await?;
 
@@ -565,12 +563,11 @@ pub async fn get_game_channel_summaries_for_user(
             .get(&black_id)
             .cloned()
             .unwrap_or_else(|| "?".to_string());
-        result.push(GameChannelSummary {
+        result.push(GameChannel {
             channel_type: shared_types::CHANNEL_TYPE_GAME_PLAYERS.to_string(),
             channel_id,
             label: format!("{white_name} vs {black_name} (players)"),
-            white_id,
-            black_id,
+            is_player: white_id == user_id || black_id == user_id,
             finished,
             last_message_at,
         });
@@ -585,12 +582,11 @@ pub async fn get_game_channel_summaries_for_user(
             .get(&black_id)
             .cloned()
             .unwrap_or_else(|| "?".to_string());
-        result.push(GameChannelSummary {
+        result.push(GameChannel {
             channel_type: shared_types::CHANNEL_TYPE_GAME_PLAYERS.to_string(),
             channel_id,
             label: format!("{white_name} vs {black_name}"),
-            white_id,
-            black_id,
+            is_player: white_id == user_id || black_id == user_id,
             finished,
             last_message_at,
         });
@@ -608,12 +604,11 @@ pub async fn get_game_channel_summaries_for_user(
             .get(&black_id)
             .cloned()
             .unwrap_or_else(|| "?".to_string());
-        result.push(GameChannelSummary {
+        result.push(GameChannel {
             channel_type: shared_types::CHANNEL_TYPE_GAME_SPECTATORS.to_string(),
             channel_id,
             label: format!("{white_name} vs {black_name} (spectators)"),
-            white_id,
-            black_id,
+            is_player: white_id == user_id || black_id == user_id,
             finished,
             last_message_at,
         });
@@ -681,35 +676,16 @@ async fn get_game_spectator_activity_for_user(
         .map_err(DbError::from)
 }
 
-pub async fn get_messages_hub_catalog_for_user(
-    conn: &mut DbConn<'_>,
-    user_id: Uuid,
-) -> Result<MessagesHubCatalog, DbError> {
-    use crate::helpers::{get_blocked_user_ids, get_muted_tournament_nanoids};
-
-    let blocked_user_ids = get_blocked_user_ids(conn, user_id).await?;
-    let blocked_user_set: HashSet<Uuid> = blocked_user_ids.iter().copied().collect();
-
-    let muted_tournament_nanoids = get_muted_tournament_nanoids(conn, user_id).await?;
-
-    let dms = get_dm_conversation_summaries_for_user(conn, user_id, &blocked_user_set).await?;
-    let tournaments =
-        get_tournament_lobby_channel_summaries_for_user(conn, user_id, &muted_tournament_nanoids)
-            .await?;
-    let games = get_game_channel_summaries_for_user(conn, user_id).await?;
-
-    Ok(MessagesHubCatalog {
-        blocked_user_ids,
-        dms,
-        tournaments,
-        games,
-    })
+fn dm_channel_id(user_id: Uuid, other_user_id: Uuid) -> String {
+    ChannelKey::direct(user_id, other_user_id).channel_id
 }
 
-pub async fn get_unread_counts_for_messages_hub_catalog(
+pub async fn get_unread_counts_for_messages_hub_channels(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
-    catalog: &MessagesHubCatalog,
+    dms: &[DmConversation],
+    tournaments: &[TournamentChannel],
+    games: &[GameChannel],
 ) -> Result<Vec<(String, String, i64)>, DbError> {
     let receipt_channels: HashSet<(String, String)> = chat_read_receipts::table
         .filter(chat_read_receipts::user_id.eq(user_id))
@@ -730,28 +706,25 @@ pub async fn get_unread_counts_for_messages_hub_catalog(
     // Global announcements stay readable in /messages, but they do not participate in unread badges.
     let channel_groups = [
         (
-            shared_types::CHANNEL_TYPE_DIRECT,
-            catalog
-                .dms
+            CHANNEL_TYPE_DIRECT,
+            dms
                 .iter()
-                .map(|row| row.channel_id.clone())
+                .map(|row| dm_channel_id(user_id, row.other_user_id))
                 .collect::<Vec<_>>(),
         ),
         (
-            shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY,
-            catalog
-                .tournaments
+            CHANNEL_TYPE_TOURNAMENT_LOBBY,
+            tournaments
                 .iter()
                 .filter(|row| !row.muted)
                 .map(|row| row.nanoid.clone())
                 .collect::<Vec<_>>(),
         ),
         (
-            shared_types::CHANNEL_TYPE_GAME_PLAYERS,
-            catalog
-                .games
+            CHANNEL_TYPE_GAME_PLAYERS,
+            games
                 .iter()
-                .filter(|row| row.channel_type == shared_types::CHANNEL_TYPE_GAME_PLAYERS)
+                .filter(|row| row.channel_type == CHANNEL_TYPE_GAME_PLAYERS)
                 .map(|row| row.channel_id.clone())
                 .collect::<Vec<_>>(),
         ),
@@ -781,14 +754,4 @@ pub async fn get_unread_counts_for_messages_hub_catalog(
         extend_unread_counts(&mut result, channel_type, missing_counts);
     }
     Ok(result)
-}
-
-/// Unread count per channel for a user: (channel_type, channel_id, count).
-/// Scoped to channels with persisted activity rather than all memberships.
-pub async fn get_unread_counts_for_user(
-    conn: &mut DbConn<'_>,
-    user_id: Uuid,
-) -> Result<Vec<(String, String, i64)>, DbError> {
-    let catalog = get_messages_hub_catalog_for_user(conn, user_id).await?;
-    get_unread_counts_for_messages_hub_catalog(conn, user_id, &catalog).await
 }

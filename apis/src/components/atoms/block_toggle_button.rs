@@ -56,7 +56,7 @@ pub fn BlockToggleButton(
                     if let Some(chat) = chat {
                         chat.set_blocked_user(blocked_user_id, is_now_blocked);
                         chat.invalidate_block_list();
-                        chat.invalidate_conversation_list();
+                        chat.refresh_messages_hub();
                         chat.refresh_unread_counts();
                     }
                     if let Some(cb) = on_success.get_value() {

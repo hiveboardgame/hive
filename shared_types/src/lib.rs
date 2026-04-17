@@ -5,6 +5,7 @@ mod conclusion;
 mod game_speed;
 mod game_start;
 mod games_query_options;
+mod messages_hub;
 mod newtypes;
 mod pretty_string;
 mod ready_user;
@@ -47,6 +48,12 @@ pub use games_query_options::{
     GamesQueryOptions,
     PlayerFilter,
     ResultType,
+};
+pub use messages_hub::{
+    DmConversation,
+    GameChannel,
+    MessagesHubData,
+    TournamentChannel,
 };
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use pretty_string::PrettyString;

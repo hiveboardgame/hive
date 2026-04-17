@@ -3,7 +3,7 @@
 use crate::{
     db_error::DbError,
     models::{NewUserBlock, NewUserTournamentChatMute, Tournament},
-    schema::{tournaments, user_blocks, user_tournament_chat_mutes, users},
+    schema::{user_blocks, user_tournament_chat_mutes, users},
     DbConn,
 };
 use diesel::{dsl::exists, prelude::*, select};
@@ -180,23 +180,6 @@ pub async fn get_muted_tournament_ids(
         .await
         .map_err(DbError::from)?;
     Ok(ids.into_iter().collect())
-}
-
-/// Tournament nanoids this user has muted. Used to filter unread counts and conversation list.
-pub async fn get_muted_tournament_nanoids(
-    conn: &mut DbConn<'_>,
-    user_id: Uuid,
-) -> Result<std::collections::HashSet<String>, DbError> {
-    let nanoids: Vec<String> = user_tournament_chat_mutes::table
-        .filter(user_tournament_chat_mutes::user_id.eq(user_id))
-        .inner_join(
-            tournaments::table.on(user_tournament_chat_mutes::tournament_id.eq(tournaments::id)),
-        )
-        .select(tournaments::nanoid)
-        .load(conn)
-        .await
-        .map_err(DbError::from)?;
-    Ok(nanoids.into_iter().collect())
 }
 
 /// User IDs who have muted this tournament (by tournament UUID). Used to exclude from live delivery.

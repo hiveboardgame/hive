@@ -26,7 +26,7 @@ pub fn handle_control(game_control: GameControl, gar: GameActionResponse) {
             games.own_games_remove(&gar.game.game_id);
             let chat = expect_context::<Chat>();
             chat.clear_game_thread(&gar.game.game_id);
-            chat.invalidate_conversation_list();
+            chat.refresh_messages_hub();
             let alerts = expect_context::<AlertsContext>();
             alerts.last_alert.update(|v| {
                 *v = Some(AlertType::Warn(format!(

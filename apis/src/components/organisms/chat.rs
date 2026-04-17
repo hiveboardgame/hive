@@ -296,6 +296,15 @@ pub fn ResolvedChatWindow(
             }
 
             for key in channel_keys.iter().cloned() {
+                if chat.has_cached_history(&key) {
+                    let _ = history_loading_channels.try_update(|loading| {
+                        loading.remove(&key);
+                    });
+                    let _ = history_errors.try_update(|errors| {
+                        errors.remove(&key);
+                    });
+                    continue;
+                }
                 let _ = history_loading_channels.try_update(|loading| {
                     loading.insert(key.clone());
                 });
@@ -343,7 +352,7 @@ pub fn ResolvedChatWindow(
             };
 
             let unread_key = channel_key.clone();
-            let unread = untrack(move || chat.unread_count_for_channel(&unread_key));
+            let unread = chat.unread_count_for_channel_untracked(&unread_key);
             if unread > 0 {
                 unread_at_open.set(Some(unread));
             }
