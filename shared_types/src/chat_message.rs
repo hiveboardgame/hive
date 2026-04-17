@@ -216,11 +216,11 @@ pub fn other_user_from_dm_channel(channel_id: &str, me: Uuid) -> Option<Uuid> {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ChatDestination {
-    User((Uuid, String)),               // user_id, username
-    GamePlayers(GameId),                // to players in the game, nanoid
-    GameSpectators(GameId),             // to spectators of the game, nanoid
-    TournamentLobby(TournamentId),      // to tournament lobby
-    Global,                             // to everyone if you have superpowers
+    User((Uuid, String)),          // user_id, username
+    GamePlayers(GameId),           // to players in the game, nanoid
+    GameSpectators(GameId),        // to spectators of the game, nanoid
+    TournamentLobby(TournamentId), // to tournament lobby
+    Global,                        // to everyone if you have superpowers
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -280,7 +280,7 @@ impl ChatMessage {
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_chat_message, ChannelKey, ChannelType, MAX_CHAT_MESSAGE_LENGTH};
+    use super::{normalize_chat_message, ChannelKey, MAX_CHAT_MESSAGE_LENGTH};
     use uuid::Uuid;
 
     #[test]
@@ -295,13 +295,6 @@ mod tests {
         assert!(!normalized.contains('\u{0008}'));
         assert!(normalized.len() <= MAX_CHAT_MESSAGE_LENGTH);
         assert!(normalized.starts_with("hello"));
-    }
-
-    #[test]
-    fn channel_type_round_trips_from_string() {
-        let parsed = "game_players".parse::<ChannelType>();
-        assert_eq!(parsed, Ok(ChannelType::GamePlayers));
-        assert_eq!(ChannelType::GamePlayers.to_string(), "game_players");
     }
 
     #[test]

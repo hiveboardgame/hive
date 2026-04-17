@@ -16,7 +16,6 @@ use crate::{
             DmConversation,
             GameChannel,
             MessagesHubData,
-            MyConversations,
             TournamentChannel,
         },
         users::resolve_username,
@@ -242,7 +241,7 @@ fn MessagesSidebar(
                 }
             >
                 <ChannelLists
-                    conv=hub_page_data.conversations
+                    hub_data=hub_page_data
                     me=me
                     current_route=current_route
                     chat=chat
@@ -941,16 +940,17 @@ fn channel_button_class(is_selected: bool) -> String {
 
 #[component]
 fn ChannelLists(
-    conv: MyConversations,
+    hub_data: MessagesHubData,
     me: Option<Uuid>,
     current_route: Signal<MessagesThreadKey>,
     chat: Chat,
 ) -> impl IntoView {
-    let MyConversations {
+    let MessagesHubData {
         dms,
         tournaments,
         games,
-    } = conv;
+        ..
+    } = hub_data;
 
     view! {
         <DmChannelsSection dms=dms me=me current_route=current_route chat=chat />

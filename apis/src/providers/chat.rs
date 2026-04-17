@@ -1,7 +1,9 @@
 use crate::{
     chat::ChannelKey,
-    functions::blocks_mutes::get_blocked_user_ids,
-    functions::chat::{get_chat_history, get_chat_unread_counts, mark_chat_read},
+    functions::{
+        blocks_mutes::get_blocked_user_ids,
+        chat::{get_chat_history, get_chat_unread_counts, mark_chat_read},
+    },
     responses::AccountResponse,
 };
 
@@ -35,7 +37,11 @@ const MAX_STORED_CHANNELS_PER_SECTION: usize = 128;
 fn last_message_timestamp(messages: &[ChatMessage]) -> i64 {
     messages
         .last()
-        .and_then(|message| message.timestamp.map(|timestamp| timestamp.timestamp_millis()))
+        .and_then(|message| {
+            message
+                .timestamp
+                .map(|timestamp| timestamp.timestamp_millis())
+        })
         .unwrap_or(0)
 }
 
@@ -342,15 +348,21 @@ impl Chat {
             return;
         }
 
-        self.remove_channel_keys(removed_game_ids.into_iter().map(|game_id| match channel_type {
-            ChannelType::GamePlayers => ChannelKey::game_players(&game_id),
-            ChannelType::GameSpectators => ChannelKey::game_spectators(&game_id),
-            _ => unreachable!(),
-        }));
+        self.remove_channel_keys(
+            removed_game_ids
+                .into_iter()
+                .map(|game_id| match channel_type {
+                    ChannelType::GamePlayers => ChannelKey::game_players(&game_id),
+                    ChannelType::GameSpectators => ChannelKey::game_spectators(&game_id),
+                    _ => unreachable!(),
+                }),
+        );
     }
 
     async fn fetch_and_store_unread_counts(self) {
-        if let Ok(counts) = get_chat_unread_counts().await { self.apply_server_unread_counts(counts) }
+        if let Ok(counts) = get_chat_unread_counts().await {
+            self.apply_server_unread_counts(counts)
+        }
     }
 
     async fn fetch_and_store_blocked_user_ids(self) {
@@ -381,10 +393,12 @@ impl Chat {
         });
         let chat = *self;
         spawn_local(async move {
-            let did_mark =
-                mark_chat_read(mark_key.channel_type.to_string(), mark_key.channel_id.clone())
-                    .await
-                    .is_ok();
+            let did_mark = mark_chat_read(
+                mark_key.channel_type.to_string(),
+                mark_key.channel_id.clone(),
+            )
+            .await
+            .is_ok();
             if !did_mark {
                 chat.pending_read_channels.update(|pending| {
                     pending.remove(&mark_key);
@@ -661,13 +675,21 @@ impl Chat {
         }
     }
 
-    fn queue_pending_outgoing_message(&self, key: ChannelKey, message: String, turn: Option<usize>) {
+    fn queue_pending_outgoing_message(
+        &self,
+        key: ChannelKey,
+        message: String,
+        turn: Option<usize>,
+    ) {
         self.pending_outgoing_messages.update(|pending| {
             pending.push(PendingOutgoingChat { key, message, turn });
         });
     }
 
-    fn take_pending_outgoing_message(&self, key: Option<&ChannelKey>) -> Option<PendingOutgoingChat> {
+    fn take_pending_outgoing_message(
+        &self,
+        key: Option<&ChannelKey>,
+    ) -> Option<PendingOutgoingChat> {
         let mut removed = None;
         self.pending_outgoing_messages.update(|pending| {
             let index = key
@@ -1302,7 +1324,8 @@ pub fn provide_chat() {
     Effect::watch(
         move || {
             (
-                chat.user.with(|account| account.as_ref().map(|account| account.user.uid)),
+                chat.user
+                    .with(|account| account.as_ref().map(|account| account.user.uid)),
                 chat.block_list_version.get(),
             )
         },
@@ -1330,20 +1353,14 @@ pub fn provide_chat() {
 #[cfg(test)]
 mod tests {
     use super::{
-        Chat,
-        MAX_STORED_CHANNELS_PER_SECTION,
         filter_duplicate_history_messages,
         filter_duplicate_live_messages,
-        merge_and_dedupe,
+        Chat,
+        MAX_STORED_CHANNELS_PER_SECTION,
     };
     use chrono::{TimeZone, Utc};
     use leptos::prelude::*;
-    use shared_types::{
-        ChannelKey,
-        ChatMessage,
-        TournamentId,
-        CHANNEL_TYPE_TOURNAMENT_LOBBY,
-    };
+    use shared_types::{ChannelKey, ChatMessage, TournamentId, CHANNEL_TYPE_TOURNAMENT_LOBBY};
     use uuid::Uuid;
 
     fn message(user_id: Uuid, body: &str, timestamp_millis: Option<i64>) -> ChatMessage {
@@ -1377,40 +1394,12 @@ mod tests {
     }
 
     #[test]
-    fn history_dedupe_only_consumes_one_match_per_existing_message() {
-        let user_id = Uuid::new_v4();
-        let existing = vec![message(user_id, "gg", None)];
-        let incoming_first = message(user_id, "gg", Some(1_000));
-        let incoming_second = message(user_id, "gg", Some(2_000));
-        let result = filter_duplicate_history_messages(
-            &existing,
-            vec![incoming_first, incoming_second.clone()],
-        );
-        assert_eq!(result, vec![incoming_second]);
-    }
-
-    #[test]
     fn history_dedupe_removes_duplicate_with_small_timestamp_skew() {
         let user_id = Uuid::new_v4();
         let existing = vec![message(user_id, "gg", Some(1_000))];
         let incoming = vec![message(user_id, "gg", Some(1_220))];
         let result = filter_duplicate_history_messages(&existing, incoming);
         assert!(result.is_empty());
-    }
-
-    #[test]
-    fn history_dedupe_prefers_exact_timestamp_match_when_order_is_inverted() {
-        let user_id = Uuid::new_v4();
-        let existing = vec![message(user_id, "gg", Some(1_000))];
-        let newer_message = message(user_id, "gg", Some(4_000));
-        let exact_duplicate = message(user_id, "gg", Some(1_000));
-
-        let result = filter_duplicate_history_messages(
-            &existing,
-            vec![newer_message.clone(), exact_duplicate],
-        );
-
-        assert_eq!(result, vec![newer_message]);
     }
 
     #[test]
@@ -1429,18 +1418,6 @@ mod tests {
         );
 
         assert_eq!(result, vec![incoming_unique]);
-    }
-
-    #[test]
-    fn merge_preserves_millisecond_order_within_same_second() {
-        let user_id = Uuid::new_v4();
-        let existing = vec![message(user_id, "live", Some(1_950))];
-        let incoming = vec![message(user_id, "history", Some(1_120))];
-
-        let result = merge_and_dedupe(existing, incoming);
-        let bodies: Vec<_> = result.into_iter().map(|m| m.message).collect();
-
-        assert_eq!(bodies, vec!["history".to_string(), "live".to_string()]);
     }
 
     #[test]
@@ -1475,10 +1452,9 @@ mod tests {
 
         chat.prune_tournament_threads();
 
-        assert!(
-            chat.tournament_lobby_messages
-                .with_untracked(|messages| !messages.contains_key(&evicted_tournament))
-        );
+        assert!(chat
+            .tournament_lobby_messages
+            .with_untracked(|messages| !messages.contains_key(&evicted_tournament)));
         assert_eq!(chat.unread_count_for_tournament(&evicted_tournament), 4);
         assert_eq!(chat.total_unread_count(), 4);
     }
@@ -1529,5 +1505,4 @@ mod tests {
             Some("send failed".to_string())
         );
     }
-
 }

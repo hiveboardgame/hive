@@ -235,14 +235,6 @@ pub async fn get_game_chat_route_data(
     })
 }
 
-/// Response for list of conversations for the Messages hub.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct MyConversations {
-    pub dms: Vec<DmConversation>,
-    pub tournaments: Vec<TournamentChannel>,
-    pub games: Vec<GameChannel>,
-}
-
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct DmConversation {
     pub other_user_id: uuid::Uuid,
@@ -275,7 +267,9 @@ pub struct GameChannel {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct MessagesHubData {
-    pub conversations: MyConversations,
+    pub dms: Vec<DmConversation>,
+    pub tournaments: Vec<TournamentChannel>,
+    pub games: Vec<GameChannel>,
     pub unread_counts: Vec<(String, String, i64)>,
 }
 
@@ -345,11 +339,11 @@ fn prioritize_unread_then_limit<T>(
 }
 
 #[cfg(feature = "ssr")]
-fn build_messages_hub_conversations(
+fn build_messages_hub_data(
     catalog: db_lib::helpers::MessagesHubCatalog,
-    unread_counts: &[(String, String, i64)],
+    unread_counts: Vec<(String, String, i64)>,
     user_id: uuid::Uuid,
-) -> MyConversations {
+) -> MessagesHubData {
     let db_lib::helpers::MessagesHubCatalog {
         dms,
         tournaments,
@@ -357,7 +351,7 @@ fn build_messages_hub_conversations(
         ..
     } = catalog;
     let recent_cutoff = Utc::now() - Duration::days(MESSAGES_HUB_RECENT_DAYS);
-    let unread_counts = unread_count_map(unread_counts);
+    let unread_count_map = unread_count_map(&unread_counts);
 
     let dms: Vec<DmConversation> = prioritize_unread_then_limit(
         dms.into_iter().filter(|row| {
@@ -365,14 +359,14 @@ fn build_messages_hub_conversations(
                 shared_types::CHANNEL_TYPE_DIRECT,
                 &row.channel_id,
                 row.last_message_at,
-                &unread_counts,
+                &unread_count_map,
                 recent_cutoff,
             )
         }),
         MESSAGES_HUB_SECTION_LIMIT,
         |row| {
             channel_unread_count(
-                &unread_counts,
+                &unread_count_map,
                 shared_types::CHANNEL_TYPE_DIRECT,
                 &row.channel_id,
             ) > 0
@@ -392,14 +386,14 @@ fn build_messages_hub_conversations(
                 shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY,
                 &row.nanoid,
                 row.last_message_at,
-                &unread_counts,
+                &unread_count_map,
                 recent_cutoff,
             )
         }),
         MESSAGES_HUB_SECTION_LIMIT,
         |row| {
             channel_unread_count(
-                &unread_counts,
+                &unread_count_map,
                 shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY,
                 &row.nanoid,
             ) > 0
@@ -421,12 +415,12 @@ fn build_messages_hub_conversations(
                 &row.channel_type,
                 &row.channel_id,
                 row.last_message_at,
-                &unread_counts,
+                &unread_count_map,
                 recent_cutoff,
             )
         }),
         MESSAGES_HUB_SECTION_LIMIT,
-        |row| channel_unread_count(&unread_counts, &row.channel_type, &row.channel_id) > 0,
+        |row| channel_unread_count(&unread_count_map, &row.channel_type, &row.channel_id) > 0,
     )
     .into_iter()
     .map(|row| GameChannel {
@@ -439,10 +433,11 @@ fn build_messages_hub_conversations(
     })
     .collect::<Vec<_>>();
 
-    MyConversations {
+    MessagesHubData {
         dms,
         tournaments,
         games,
+        unread_counts,
     }
 }
 
@@ -453,9 +448,5 @@ async fn load_messages_hub_data_for_user(
 ) -> Result<MessagesHubData, db_lib::db_error::DbError> {
     let catalog = get_messages_hub_catalog_for_user(conn, user_id).await?;
     let unread_counts = get_unread_counts_for_messages_hub_catalog(conn, user_id, &catalog).await?;
-    let conversations = build_messages_hub_conversations(catalog, &unread_counts, user_id);
-    Ok(MessagesHubData {
-        conversations,
-        unread_counts,
-    })
+    Ok(build_messages_hub_data(catalog, unread_counts, user_id))
 }
