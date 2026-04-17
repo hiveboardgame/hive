@@ -109,7 +109,7 @@ pub fn BlockToggleButton(
                 disabled=pending
                 class="p-1 mx-2 text-white rounded transition-transform duration-300 active:scale-95 disabled:opacity-50 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
             >
-                <Show when=move || is_blocked.get()>
+                <Show when=is_blocked>
                     <Icon icon=icondata_bi::BiCheckCircleRegular attr:class="size-6" />
                 </Show>
                 <Show when=move || !is_blocked.get()>

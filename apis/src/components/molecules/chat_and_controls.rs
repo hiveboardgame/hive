@@ -1,5 +1,4 @@
 use crate::{
-    chat::SimpleDestination,
     components::{
         atoms::toggle_controls::ToggleControls,
         layouts::base_layout::OrientationSignal,
@@ -25,7 +24,7 @@ pub fn ChatAndControls() -> impl IntoView {
             <Show when=move || !is_finished()>
                 <ToggleControls />
             </Show>
-            <ChatDropdown destination=SimpleDestination::Game />
+            <ChatDropdown />
         </Show>
     }
 }

@@ -1,5 +1,4 @@
 use crate::{
-    chat::SimpleDestination,
     common::{markdown_to_html, ScheduleAction, TournamentAction},
     components::{
         atoms::progress_bar::ProgressBar,
@@ -11,7 +10,7 @@ use crate::{
             user_row::UserRow,
         },
         organisms::{
-            chat::ChatWindow,
+            chat::{ResolvedChatThread, ResolvedChatWindow},
             standings::Standings,
             tournament_admin::TournamentAdminControls,
         },
@@ -122,6 +121,8 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         }
         games_hashmap
     });
+    let tournament_chat_thread =
+        StoredValue::new(ResolvedChatThread::tournament(tournament_id.get_value()));
 
     let number_of_players = tournament.with_value(|t| t.players.len() as i32);
     let user_joined = move || {
@@ -563,8 +564,8 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                         }
                     }
                 >
-                    <ChatWindow
-                        destination=SimpleDestination::Tournament(tournament_id.get_value())
+                    <ResolvedChatWindow
+                        thread=tournament_chat_thread.get_value()
                         input_disabled=tournament_chat_read_only
                     />
                 </Show>

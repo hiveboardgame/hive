@@ -1,9 +1,8 @@
 use crate::{
-    chat::SimpleDestination,
     components::{
         molecules::history_controls::HistoryControls,
         organisms::{
-            chat::{ChatWindow, GameChatThread},
+            chat::{GameChatThread, GameChatWindow},
             history::History,
             reserve::ReserveContent,
         },
@@ -186,10 +185,7 @@ pub fn SideboardTabs(
                     </div>
                 </Show>
                 <div class="flex overflow-hidden flex-col flex-1 min-h-0">
-                    <ChatWindow
-                        destination=SimpleDestination::Game
-                        explicit_game_thread
-                    />
+                    <GameChatWindow explicit_thread=explicit_game_thread />
                 </div>
             </TabsContent>
         </div>

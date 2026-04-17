@@ -2,7 +2,7 @@ use crate::{
     components::{
         atoms::simple_switch::SimpleSwitch,
         molecules::rl_banner::RlBanner,
-        organisms::chat::ChatComposer,
+        organisms::chat::ChatInput,
         update_from_event::update_from_input,
     },
     functions::home_banner,
@@ -23,7 +23,9 @@ pub fn Admin() -> impl IntoView {
                 auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
             }>
                 <div class=LINE_CLASS>Send Global Warning</div>
-                <ChatComposer destination=Signal::derive(|| ChatDestination::Global) disabled=|| false />
+                <div class="p-4 bg-white rounded-xl border border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-700">
+                    <ChatInput destination=Signal::derive(|| ChatDestination::Global) disabled=|| false />
+                </div>
                 <div class=LINE_CLASS>Edit Banner</div>
                 <EditBanner />
             </Show>

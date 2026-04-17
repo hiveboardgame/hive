@@ -1,34 +1,29 @@
 use crate::{
-    chat::SimpleDestination,
     components::{
         molecules::hamburger::Hamburger,
-        organisms::chat::{ChatWindow, GameChatThread},
+        organisms::chat::{GameChatThread, GameChatWindow},
     },
     i18n::*,
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
 use leptos::prelude::*;
 use leptos_icons::*;
-use leptos_router::hooks::use_params_map;
-use shared_types::GameId;
 
 #[component]
-pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
+pub fn ChatDropdown() -> impl IntoView {
     let chat = expect_context::<Chat>();
     let i18n = use_i18n();
     let hamburger_show = RwSignal::new(false);
     let chat_style = "absolute z-50 flex flex-col overflow-hidden w-full h-[80dvh] max-w-screen bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md left-0 p-2";
-    let destination_for_toggle = destination.clone();
-    let destination_for_fallback = StoredValue::new(destination);
-    let params = use_params_map();
-    let game_id = move || {
-        params
+    let game_state = expect_context::<GameStateSignal>();
+    let current_game_id = Signal::derive(move || game_state.signal.with(|state| state.game_id.clone()));
+    let unread = Memo::new(move |_| {
+        current_game_id
             .get()
-            .get("nanoid")
-            .map(|s| GameId(s.to_owned()))
-            .unwrap_or_default()
-    };
-    let unread = Memo::new(move |_| chat.unread_count_for_game(&game_id()));
+            .as_ref()
+            .map(|game_id| chat.unread_count_for_game(game_id))
+            .unwrap_or(0)
+    });
     let button_color = Memo::new(move |_| {
         if hamburger_show.get() {
             "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
@@ -41,22 +36,22 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
 
     Effect::new(move |_| {
         if hamburger_show() {
-            chat.seen_messages(game_id());
+            if let Some(game_id) = current_game_id.get() {
+                chat.seen_messages(game_id);
+            }
         }
     });
 
     // For game chat on mobile: show Players | Spectators toggle when user is a player (same as desktop side_board).
-    let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let show_players_spectators_toggle = Memo::new(move |_| {
-        matches!(&destination_for_toggle, SimpleDestination::Game)
-            && auth_context.user.with(|u| {
-                u.as_ref().is_some_and(|user| {
-                    game_state.signal.with(|gs| {
-                        gs.white_id == Some(user.user.uid) || gs.black_id == Some(user.user.uid)
-                    })
+        auth_context.user.with(|u| {
+            u.as_ref().is_some_and(|user| {
+                game_state.signal.with(|gs| {
+                    gs.white_id == Some(user.user.uid) || gs.black_id == Some(user.user.uid)
                 })
             })
+        })
     });
     let game_finished = create_read_slice(game_state.signal, |gs| {
         gs.game_response.as_ref().is_some_and(|gr| gr.finished)
@@ -135,10 +130,7 @@ pub fn ChatDropdown(destination: SimpleDestination) -> impl IntoView {
                     </div>
                 </Show>
                 <div class="flex overflow-hidden flex-col flex-1 min-h-0">
-                    <ChatWindow
-                        destination=destination_for_fallback.get_value()
-                        explicit_game_thread
-                    />
+                    <GameChatWindow explicit_thread=explicit_game_thread />
                 </div>
             </div>
         </Hamburger>

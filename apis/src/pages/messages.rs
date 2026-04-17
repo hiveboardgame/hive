@@ -2,10 +2,10 @@
 //! Canonical routes under /message are the source of truth for the open thread.
 
 use crate::{
-    chat::{ChannelKey, SimpleDestination},
+    chat::ChannelKey,
     components::{
         atoms::block_toggle_button::BlockToggleButton,
-        organisms::chat::{ChatWindow, GameChatThread},
+        organisms::chat::{GameChatThread, ResolvedChatThread, ResolvedChatWindow},
     },
     functions::{
         blocks_mutes::{mute_tournament_chat, unmute_tournament_chat},
@@ -273,14 +273,20 @@ pub fn MessagesIndex() -> impl IntoView {
 
 #[component]
 pub fn MessagesGlobalThread() -> impl IntoView {
+    let auth = expect_context::<AuthContext>();
     let i18n = use_i18n();
     let title =
         Signal::derive(move || t_string!(i18n, messages.sections.recent_announcements).to_string());
+    let thread = ResolvedChatThread::global();
+    let input_disabled = Signal::derive(move || {
+        auth.user
+            .with(|user| !user.as_ref().is_some_and(|account| account.user.admin))
+    });
 
     view! {
         <MessagesThreadFrame title>
             <div class="overflow-hidden flex-1 min-h-0">
-                <ChatWindow destination=SimpleDestination::Global />
+                <ResolvedChatWindow thread input_disabled />
             </div>
         </MessagesThreadFrame>
     }
@@ -288,6 +294,7 @@ pub fn MessagesGlobalThread() -> impl IntoView {
 
 #[component]
 pub fn MessagesDmThread() -> impl IntoView {
+    let auth = expect_context::<AuthContext>();
     let i18n = use_i18n();
     let params = use_params_map();
     let route_username = Signal::derive(move || {
@@ -317,20 +324,62 @@ pub fn MessagesDmThread() -> impl IntoView {
                             Some(user) => {
                                 let other_user_id = user.uid;
                                 let username = StoredValue::new(user.username);
+                                let current_user_id = Signal::derive(move || {
+                                    auth.user.with(|account| account.as_ref().map(|account| account.user.uid))
+                                });
+                                let auth_pending = auth.action.pending();
 
                                 view! {
                                     <MessagesThreadFrame title=Signal::derive(move || username.get_value())>
-                                        <DmChannelActions
-                                            other_id=other_user_id
-                                            username=Signal::derive(move || Some(username.get_value()))
-                                        />
-                                        <div class="overflow-hidden flex-1 min-h-0">
-                                            <ChatWindow
-                                                destination=SimpleDestination::User
-                                                correspondant_id=other_user_id
-                                                correspondant_username=username.get_value()
-                                            />
-                                        </div>
+                                        <ShowLet
+                                            some=move || current_user_id.get()
+                                            let:current_user_id
+                                            fallback=move || {
+                                                view! {
+                                                    <MessagesStatusContent message=Signal::derive(move || {
+                                                        if auth_pending.get() {
+                                                            t_string!(i18n, messages.page.loading).to_string()
+                                                        } else {
+                                                            t_string!(i18n, messages.page.failed_conversations)
+                                                                .to_string()
+                                                        }
+                                                    }) />
+                                                }
+                                            }
+                                        >
+                                            {move || {
+                                                match ResolvedChatThread::direct(
+                                                    current_user_id,
+                                                    other_user_id,
+                                                    username.get_value(),
+                                                ) {
+                                                    Some(thread) => {
+                                                        view! {
+                                                            <DmChannelActions
+                                                                other_id=other_user_id
+                                                                username=Signal::derive(move || Some(username.get_value()))
+                                                            />
+                                                            <div class="overflow-hidden flex-1 min-h-0">
+                                                                <ResolvedChatWindow thread />
+                                                            </div>
+                                                        }
+                                                            .into_any()
+                                                    }
+                                                    None => {
+                                                        let dm_error = StoredValue::new(
+                                                            "Direct messages to yourself are not supported"
+                                                                .to_string(),
+                                                        );
+                                                        view! {
+                                                            <MessagesStatusContent message=Signal::derive(move || {
+                                                                dm_error.get_value()
+                                                            }) />
+                                                        }
+                                                            .into_any()
+                                                    }
+                                                }
+                                            }}
+                                        </ShowLet>
                                     </MessagesThreadFrame>
                                 }
                                     .into_any()
@@ -400,6 +449,10 @@ pub fn MessagesTournamentThread() -> impl IntoView {
                                 let can_send = Signal::derive(move || {
                                     tournament_route_can_send(is_participant, user_is_admin.get())
                                 });
+                                let thread =
+                                    StoredValue::new(ResolvedChatThread::tournament(TournamentId(
+                                        nanoid.get_value(),
+                                    )));
 
                                 view! {
                                     <MessagesThreadFrame title=Signal::derive(move || title.get_value())>
@@ -410,10 +463,8 @@ pub fn MessagesTournamentThread() -> impl IntoView {
                                             muted=Signal::derive(move || muted)
                                         />
                                         <div class="overflow-hidden flex-1 min-h-0">
-                                            <ChatWindow
-                                                destination=SimpleDestination::Tournament(
-                                                    TournamentId(nanoid.get_value()),
-                                                )
+                                            <ResolvedChatWindow
+                                                thread=thread.get_value()
                                                 input_disabled=Signal::derive(move || !can_send.get())
                                             />
                                         </div>
@@ -515,6 +566,8 @@ fn MessagesGameThread(thread: GameChatThread) -> impl IntoView {
                                 let finished = route_data.finished;
                                 let can_view_thread =
                                     denied_message.with_value(|message| message.is_none());
+                                let chat_thread =
+                                    StoredValue::new(ResolvedChatThread::game(game_id.get_value(), thread));
 
                                 view! {
                                     <MessagesThreadFrame title=Signal::derive(move || title.get_value())>
@@ -537,10 +590,7 @@ fn MessagesGameThread(thread: GameChatThread) -> impl IntoView {
                                             }
                                         >
                                             <div class="overflow-hidden flex-1 min-h-0">
-                                                <ChatWindow
-                                                    destination=SimpleDestination::Game
-                                                    explicit_game_thread=Signal::derive(move || Some(thread))
-                                                />
+                                                <ResolvedChatWindow thread=chat_thread.get_value() />
                                             </div>
                                         </Show>
                                     </MessagesThreadFrame>
