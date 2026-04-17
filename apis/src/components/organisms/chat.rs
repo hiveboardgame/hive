@@ -8,7 +8,7 @@ use chrono::{Duration, Local};
 use leptos::{html, leptos_dom::helpers::request_animation_frame, prelude::*, task::spawn_local};
 use leptos_router::hooks::use_params_map;
 use leptos_use::use_interval_fn;
-use shared_types::{ChatDestination, ChatMessage, GameId, TournamentId};
+use shared_types::{ChatDestination, ChatMessage, GameId};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -90,69 +90,6 @@ fn message_id(message: &ChatMessage) -> MessageId {
 pub enum GameChatThread {
     Players,
     Spectators,
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct ResolvedChatThread {
-    pub destination: ChatDestination,
-    pub active_channel_key: ChannelKey,
-    pub preload_channel_keys: Vec<ChannelKey>,
-}
-
-impl ResolvedChatThread {
-    pub fn global() -> Self {
-        let active_channel_key = ChannelKey::global();
-        Self {
-            destination: ChatDestination::Global,
-            active_channel_key: active_channel_key.clone(),
-            preload_channel_keys: vec![active_channel_key],
-        }
-    }
-
-    pub fn tournament(tournament_id: TournamentId) -> Self {
-        let active_channel_key = ChannelKey::tournament(&tournament_id);
-        Self {
-            destination: ChatDestination::TournamentLobby(tournament_id),
-            active_channel_key: active_channel_key.clone(),
-            preload_channel_keys: vec![active_channel_key],
-        }
-    }
-
-    pub fn direct(current_user_id: Uuid, other_user_id: Uuid, username: String) -> Option<Self> {
-        if current_user_id == other_user_id {
-            return None;
-        }
-
-        let active_channel_key = ChannelKey::direct(current_user_id, other_user_id);
-        Some(Self {
-            destination: ChatDestination::User((other_user_id, username)),
-            active_channel_key: active_channel_key.clone(),
-            preload_channel_keys: vec![active_channel_key],
-        })
-    }
-
-    pub fn game(game_id: GameId, thread: GameChatThread) -> Self {
-        let (destination, active_channel_key) = match thread {
-            GameChatThread::Players => (
-                ChatDestination::GamePlayers(game_id.clone()),
-                ChannelKey::game_players(&game_id),
-            ),
-            GameChatThread::Spectators => (
-                ChatDestination::GameSpectators(game_id.clone()),
-                ChannelKey::game_spectators(&game_id),
-            ),
-        };
-
-        Self {
-            destination,
-            active_channel_key: active_channel_key.clone(),
-            preload_channel_keys: vec![active_channel_key],
-        }
-    }
-
-    fn is_shared_channel(&self) -> bool {
-        !matches!(self.destination, ChatDestination::User(_))
-    }
 }
 
 #[component]
@@ -321,7 +258,7 @@ pub fn ChatInput(
 
 #[component]
 pub fn ResolvedChatWindow(
-    #[prop(into)] thread: Signal<ResolvedChatThread>,
+    #[prop(into)] destination: Signal<ChatDestination>,
     #[prop(optional, into)] input_disabled: Signal<bool>,
     #[prop(optional)] thread_error: Option<String>,
     #[prop(optional)] hide_input: bool,
@@ -329,12 +266,18 @@ pub fn ResolvedChatWindow(
     let i18n = use_i18n();
     let chat = expect_context::<Chat>();
     let auth_context = expect_context::<AuthContext>();
-    let destination = Memo::new(move |_| thread.with(|thread| thread.destination.clone()));
-    let active_channel_key =
-        Memo::new(move |_| thread.with(|thread| thread.active_channel_key.clone()));
+    let destination = Memo::new(move |_| destination.get());
+    let current_user_id = Memo::new(move |_| {
+        auth_context
+            .user
+            .with(|account| account.as_ref().map(|account| account.user.uid))
+    });
+    let active_channel_key = Memo::new(move |_| {
+        ChannelKey::from_destination(&destination.get(), current_user_id.get())
+    });
     let preload_channel_keys =
-        Memo::new(move |_| thread.with(|thread| thread.preload_channel_keys.clone()));
-    let is_shared_channel = Memo::new(move |_| thread.with(|thread| thread.is_shared_channel()));
+        Memo::new(move |_| active_channel_key.get().into_iter().collect::<Vec<_>>());
+    let is_shared_channel = Memo::new(move |_| !matches!(destination.get(), ChatDestination::User(_)));
 
     let div = NodeRef::<html::Div>::new();
     let first_unread_ref = NodeRef::<html::Div>::new();
@@ -386,7 +329,7 @@ pub fn ResolvedChatWindow(
     Effect::watch(
         move || active_channel_key.get(),
         move |channel_key, previous, _| {
-            if let Some(previous_key) = previous.cloned() {
+            if let Some(previous_key) = previous.cloned().flatten() {
                 chat.clear_channel_visible(&previous_key);
             }
 
@@ -394,6 +337,10 @@ pub fn ResolvedChatWindow(
             show_jump_to_latest.set(false);
             is_scrolled_to_bottom.set(true);
             expanded_hidden_messages.set(HashSet::new());
+
+            let Some(channel_key) = channel_key.as_ref() else {
+                return;
+            };
 
             let unread_key = channel_key.clone();
             let unread = untrack(move || chat.unread_count_for_channel(&unread_key));
@@ -407,7 +354,7 @@ pub fn ResolvedChatWindow(
         true,
     );
     on_cleanup(move || {
-        if let Some(channel_key) = active_channel_key.try_get_untracked() {
+        if let Some(channel_key) = active_channel_key.try_get_untracked().flatten() {
             chat.clear_channel_visible(&channel_key);
         }
     });
@@ -422,16 +369,19 @@ pub fn ResolvedChatWindow(
     );
 
     let active_history_loading = Memo::new(move |_| {
-        let active_channel_key = active_channel_key.get();
-        history_loading_channels.with(|loading| loading.contains(&active_channel_key))
+        active_channel_key.get().as_ref().is_some_and(|channel_key| {
+            history_loading_channels.with(|loading| loading.contains(channel_key))
+        })
     });
     let visible_history_error = Memo::new(move |_| {
-        let active_channel_key = active_channel_key.get();
-        history_errors.with(|errors| errors.get(&active_channel_key).cloned())
+        active_channel_key.get().and_then(|channel_key| {
+            history_errors.with(|errors| errors.get(&channel_key).cloned())
+        })
     });
     let visible_send_error = Memo::new(move |_| {
-        let active_channel_key = active_channel_key.get();
-        chat.chat_send_error(&active_channel_key)
+        active_channel_key
+            .get()
+            .and_then(|channel_key| chat.chat_send_error(&channel_key))
     });
 
     let thread_error_for_display = thread_error.clone();
@@ -490,7 +440,7 @@ pub fn ResolvedChatWindow(
         }
 
         let split_idx = unread_divider_split_idx(messages.len(), unread_at_open.get());
-        let current_user_id = auth_context.user.with(|a| a.as_ref().map(|a| a.user.uid));
+        let current_user_id = current_user_id.get();
 
         messages_with_header_flags(&messages)
             .into_iter()
@@ -777,7 +727,7 @@ pub fn GameChatWindow(
             .user
             .with(|user| user.as_ref().map(|user| user.user.uid))
     });
-    let resolved_thread = Signal::derive(move || {
+    let resolved_destination = Signal::derive(move || {
         let route_game_id = route_game_id.get()?;
         let explicit_thread = explicit_thread.get();
         game_state.signal.with(|state| {
@@ -795,18 +745,23 @@ pub fn GameChatWindow(
                     GameChatThread::Spectators
                 }
             });
-            Some(ResolvedChatThread::game(route_game_id.clone(), thread))
+            Some(match thread {
+                GameChatThread::Players => ChatDestination::GamePlayers(route_game_id.clone()),
+                GameChatThread::Spectators => {
+                    ChatDestination::GameSpectators(route_game_id.clone())
+                }
+            })
         })
     });
-    let active_thread = Signal::derive(move || {
-        resolved_thread
+    let active_destination = Signal::derive(move || {
+        resolved_destination
             .get()
-            .expect("game chat thread is only read once it has resolved")
+            .expect("game chat destination is only read once it has resolved")
     });
 
     view! {
         <Show
-            when=move || resolved_thread.get().is_some()
+            when=move || resolved_destination.get().is_some()
             fallback=move || {
                 view! {
                     <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
@@ -815,7 +770,7 @@ pub fn GameChatWindow(
                 }
             }
         >
-            <ResolvedChatWindow thread=active_thread />
+            <ResolvedChatWindow destination=active_destination />
         </Show>
     }
 }

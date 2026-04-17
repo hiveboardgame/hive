@@ -10,7 +10,7 @@ use crate::{
             user_row::UserRow,
         },
         organisms::{
-            chat::{ResolvedChatThread, ResolvedChatWindow},
+            chat::ResolvedChatWindow,
             standings::Standings,
             tournament_admin::TournamentAdminControls,
         },
@@ -27,6 +27,7 @@ use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
 use leptos_use::core::ConnectionReadyState;
 use shared_types::{
+    ChatDestination,
     Conclusion,
     GameSpeed,
     PrettyString,
@@ -121,8 +122,9 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         }
         games_hashmap
     });
-    let tournament_chat_thread =
-        StoredValue::new(ResolvedChatThread::tournament(tournament_id.get_value()));
+    let tournament_chat_destination = StoredValue::new(ChatDestination::TournamentLobby(
+        tournament_id.get_value(),
+    ));
 
     let number_of_players = tournament.with_value(|t| t.players.len() as i32);
     let user_joined = move || {
@@ -565,7 +567,7 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
                     }
                 >
                     <ResolvedChatWindow
-                        thread=tournament_chat_thread.get_value()
+                        destination=tournament_chat_destination.get_value()
                         input_disabled=tournament_chat_read_only
                     />
                 </Show>

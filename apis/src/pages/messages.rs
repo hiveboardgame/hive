@@ -5,7 +5,7 @@ use crate::{
     chat::ChannelKey,
     components::{
         atoms::block_toggle_button::BlockToggleButton,
-        organisms::chat::{GameChatThread, ResolvedChatThread, ResolvedChatWindow},
+        organisms::chat::{GameChatThread, ResolvedChatWindow},
     },
     functions::{
         blocks_mutes::{mute_tournament_chat, unmute_tournament_chat},
@@ -29,7 +29,7 @@ use leptos_router::{
     components::{Outlet, A},
     hooks::{use_location, use_params_map},
 };
-use shared_types::{ChannelType, GameId, TournamentId};
+use shared_types::{ChannelType, ChatDestination, GameId, TournamentId};
 use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -277,7 +277,7 @@ pub fn MessagesGlobalThread() -> impl IntoView {
     let i18n = use_i18n();
     let title =
         Signal::derive(move || t_string!(i18n, messages.sections.recent_announcements).to_string());
-    let thread = ResolvedChatThread::global();
+    let destination = ChatDestination::Global;
     let input_disabled = Signal::derive(move || {
         auth.user
             .with(|user| !user.as_ref().is_some_and(|account| account.user.admin))
@@ -286,7 +286,7 @@ pub fn MessagesGlobalThread() -> impl IntoView {
     view! {
         <MessagesThreadFrame title>
             <div class="overflow-hidden flex-1 min-h-0">
-                <ResolvedChatWindow thread input_disabled />
+                <ResolvedChatWindow destination input_disabled />
             </div>
         </MessagesThreadFrame>
     }
@@ -348,35 +348,32 @@ pub fn MessagesDmThread() -> impl IntoView {
                                             }
                                         >
                                             {move || {
-                                                match ResolvedChatThread::direct(
-                                                    current_user_id,
-                                                    other_user_id,
-                                                    username.get_value(),
-                                                ) {
-                                                    Some(thread) => {
-                                                        view! {
-                                                            <DmChannelActions
-                                                                other_id=other_user_id
-                                                                username=Signal::derive(move || Some(username.get_value()))
-                                                            />
-                                                            <div class="overflow-hidden flex-1 min-h-0">
-                                                                <ResolvedChatWindow thread />
-                                                            </div>
-                                                        }
-                                                            .into_any()
+                                                if current_user_id != other_user_id {
+                                                    let destination = ChatDestination::User((
+                                                        other_user_id,
+                                                        username.get_value(),
+                                                    ));
+                                                    view! {
+                                                        <DmChannelActions
+                                                            other_id=other_user_id
+                                                            username=Signal::derive(move || Some(username.get_value()))
+                                                        />
+                                                        <div class="overflow-hidden flex-1 min-h-0">
+                                                            <ResolvedChatWindow destination />
+                                                        </div>
                                                     }
-                                                    None => {
-                                                        let dm_error = StoredValue::new(
-                                                            "Direct messages to yourself are not supported"
-                                                                .to_string(),
-                                                        );
-                                                        view! {
-                                                            <MessagesStatusContent message=Signal::derive(move || {
-                                                                dm_error.get_value()
-                                                            }) />
-                                                        }
-                                                            .into_any()
+                                                        .into_any()
+                                                } else {
+                                                    let dm_error = StoredValue::new(
+                                                        "Direct messages to yourself are not supported"
+                                                            .to_string(),
+                                                    );
+                                                    view! {
+                                                        <MessagesStatusContent message=Signal::derive(move || {
+                                                            dm_error.get_value()
+                                                        }) />
                                                     }
+                                                        .into_any()
                                                 }
                                             }}
                                         </ShowLet>
@@ -449,10 +446,9 @@ pub fn MessagesTournamentThread() -> impl IntoView {
                                 let can_send = Signal::derive(move || {
                                     tournament_route_can_send(is_participant, user_is_admin.get())
                                 });
-                                let thread =
-                                    StoredValue::new(ResolvedChatThread::tournament(TournamentId(
-                                        nanoid.get_value(),
-                                    )));
+                                let destination = StoredValue::new(ChatDestination::TournamentLobby(
+                                    TournamentId(nanoid.get_value()),
+                                ));
 
                                 view! {
                                     <MessagesThreadFrame title=Signal::derive(move || title.get_value())>
@@ -464,7 +460,7 @@ pub fn MessagesTournamentThread() -> impl IntoView {
                                         />
                                         <div class="overflow-hidden flex-1 min-h-0">
                                             <ResolvedChatWindow
-                                                thread=thread.get_value()
+                                                destination=destination.get_value()
                                                 input_disabled=Signal::derive(move || !can_send.get())
                                             />
                                         </div>
@@ -566,8 +562,14 @@ fn MessagesGameThread(thread: GameChatThread) -> impl IntoView {
                                 let finished = route_data.finished;
                                 let can_view_thread =
                                     denied_message.with_value(|message| message.is_none());
-                                let chat_thread =
-                                    StoredValue::new(ResolvedChatThread::game(game_id.get_value(), thread));
+                                let chat_destination = StoredValue::new(match thread {
+                                    GameChatThread::Players => {
+                                        ChatDestination::GamePlayers(game_id.get_value())
+                                    }
+                                    GameChatThread::Spectators => {
+                                        ChatDestination::GameSpectators(game_id.get_value())
+                                    }
+                                });
 
                                 view! {
                                     <MessagesThreadFrame title=Signal::derive(move || title.get_value())>
@@ -590,7 +592,7 @@ fn MessagesGameThread(thread: GameChatThread) -> impl IntoView {
                                             }
                                         >
                                             <div class="overflow-hidden flex-1 min-h-0">
-                                                <ResolvedChatWindow thread=chat_thread.get_value() />
+                                                <ResolvedChatWindow destination=chat_destination.get_value() />
                                             </div>
                                         </Show>
                                     </MessagesThreadFrame>
