@@ -2,7 +2,7 @@ use crate::{
     components::{
         molecules::history_controls::HistoryControls,
         organisms::{
-            chat::{GameChatThread, GameChatWindow},
+            chat::GameChatWindow,
             history::History,
             reserve::ReserveContent,
         },
@@ -21,7 +21,7 @@ use leptos_router::{
     location::State,
     NavigateOptions,
 };
-use shared_types::GameId;
+use shared_types::{GameId, GameThread};
 
 #[derive(Clone, PartialEq, Copy)]
 pub enum TabView {
@@ -116,9 +116,9 @@ pub fn SideboardTabs(
     let game_show_players = RwSignal::new(true);
     let explicit_game_thread = Signal::derive(move || {
         show_buttons().then_some(if game_show_players.get() {
-            GameChatThread::Players
+            GameThread::Players
         } else {
-            GameChatThread::Spectators
+            GameThread::Spectators
         })
     });
     view! {

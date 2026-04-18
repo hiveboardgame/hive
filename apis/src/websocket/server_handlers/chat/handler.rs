@@ -3,7 +3,6 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 
 use crate::{
-    chat::ChannelKey,
     common::ServerMessage,
     websocket::{
         messages::{InternalServerMessage, MessageDestination},
@@ -12,11 +11,11 @@ use crate::{
     },
 };
 use db_lib::{get_conn, helpers::insert_chat_message, models::Game, DbPool};
-use shared_types::{ChatDestination, ChatMessageContainer};
+use shared_types::{ChatDestination, ChatMessageContainer, PersistentChannelKey};
 
 pub struct ChatHandler {
     container: ChatMessageContainer,
-    channel_key: ChannelKey,
+    channel_key: PersistentChannelKey,
     data: Arc<WebsocketData>,
     pool: DbPool,
 }
@@ -24,7 +23,7 @@ pub struct ChatHandler {
 impl ChatHandler {
     pub fn new(
         mut container: ChatMessageContainer,
-        channel_key: ChannelKey,
+        channel_key: PersistentChannelKey,
         data: Arc<WebsocketData>,
         pool: DbPool,
     ) -> Self {

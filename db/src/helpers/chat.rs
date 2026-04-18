@@ -22,11 +22,14 @@ use diesel::{
 };
 use diesel_async::RunQueryDsl;
 use shared_types::{
-    ChannelKey,
+    ConversationKey,
     DmConversation,
     GameChannel,
+    GameThread,
     GameId,
+    PersistentChannelKey,
     TournamentChannel,
+    UnreadCount,
     CHANNEL_TYPE_DIRECT,
     CHANNEL_TYPE_GAME_PLAYERS,
     CHANNEL_TYPE_TOURNAMENT_LOBBY,
@@ -172,7 +175,7 @@ pub async fn can_user_access_chat_channel(
 ) -> Result<bool, DbError> {
     match channel_type {
         shared_types::CHANNEL_TYPE_DIRECT => Ok(
-            ChannelKey::from_raw(channel_type, channel_id)
+            PersistentChannelKey::from_raw(channel_type, channel_id)
                 .and_then(|channel_key| channel_key.direct_other_user_id(user_id))
                 .is_some(),
         ),
@@ -484,15 +487,32 @@ async fn unread_counts_for_receipt_channel_ids(
 }
 
 fn extend_unread_counts(
-    result: &mut Vec<(String, String, i64)>,
-    channel_type: &'static str,
+    result: &mut Vec<UnreadCount>,
+    channel_map: &HashMap<String, ConversationKey>,
     unread_counts: Vec<(String, i64)>,
 ) {
-    result.extend(
-        unread_counts
-            .into_iter()
-            .map(|(channel_id, count)| (channel_type.to_string(), channel_id, count)),
-    );
+    result.extend(unread_counts.into_iter().filter_map(|(channel_id, count)| {
+        channel_map
+            .get(&channel_id)
+            .cloned()
+            .map(|key| UnreadCount { key, count })
+    }));
+}
+
+fn game_channel_label(
+    username_map: &HashMap<Uuid, String>,
+    white_id: Uuid,
+    black_id: Uuid,
+) -> String {
+    let white_name = username_map
+        .get(&white_id)
+        .cloned()
+        .unwrap_or_else(|| "?".to_string());
+    let black_name = username_map
+        .get(&black_id)
+        .cloned()
+        .unwrap_or_else(|| "?".to_string());
+    format!("{white_name} vs {black_name}")
 }
 
 /// Game channels (players or spectators) the user has.
@@ -555,18 +575,10 @@ pub async fn get_game_channels_for_user(
             continue;
         }
 
-        let white_name = username_map
-            .get(&white_id)
-            .cloned()
-            .unwrap_or_else(|| "?".to_string());
-        let black_name = username_map
-            .get(&black_id)
-            .cloned()
-            .unwrap_or_else(|| "?".to_string());
         result.push(GameChannel {
-            channel_type: shared_types::CHANNEL_TYPE_GAME_PLAYERS.to_string(),
-            channel_id,
-            label: format!("{white_name} vs {black_name} (players)"),
+            game_id: GameId(channel_id),
+            thread: GameThread::Players,
+            label: game_channel_label(&username_map, white_id, black_id),
             is_player: white_id == user_id || black_id == user_id,
             finished,
             last_message_at,
@@ -574,18 +586,10 @@ pub async fn get_game_channels_for_user(
     }
 
     for (channel_id, (white_id, black_id, finished, last_message_at)) in finished_player_activity {
-        let white_name = username_map
-            .get(&white_id)
-            .cloned()
-            .unwrap_or_else(|| "?".to_string());
-        let black_name = username_map
-            .get(&black_id)
-            .cloned()
-            .unwrap_or_else(|| "?".to_string());
         result.push(GameChannel {
-            channel_type: shared_types::CHANNEL_TYPE_GAME_PLAYERS.to_string(),
-            channel_id,
-            label: format!("{white_name} vs {black_name}"),
+            game_id: GameId(channel_id),
+            thread: GameThread::Players,
+            label: game_channel_label(&username_map, white_id, black_id),
             is_player: white_id == user_id || black_id == user_id,
             finished,
             last_message_at,
@@ -596,18 +600,10 @@ pub async fn get_game_channels_for_user(
         let Some(last_message_at) = last_message_at else {
             continue;
         };
-        let white_name = username_map
-            .get(&white_id)
-            .cloned()
-            .unwrap_or_else(|| "?".to_string());
-        let black_name = username_map
-            .get(&black_id)
-            .cloned()
-            .unwrap_or_else(|| "?".to_string());
         result.push(GameChannel {
-            channel_type: shared_types::CHANNEL_TYPE_GAME_SPECTATORS.to_string(),
-            channel_id,
-            label: format!("{white_name} vs {black_name} (spectators)"),
+            game_id: GameId(channel_id),
+            thread: GameThread::Spectators,
+            label: game_channel_label(&username_map, white_id, black_id),
             is_player: white_id == user_id || black_id == user_id,
             finished,
             last_message_at,
@@ -676,31 +672,26 @@ async fn get_game_spectator_activity_for_user(
         .map_err(DbError::from)
 }
 
-fn dm_channel_id(user_id: Uuid, other_user_id: Uuid) -> String {
-    ChannelKey::direct(user_id, other_user_id).channel_id
-}
-
 pub async fn get_unread_counts_for_messages_hub_channels(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
     dms: &[DmConversation],
     tournaments: &[TournamentChannel],
     games: &[GameChannel],
-) -> Result<Vec<(String, String, i64)>, DbError> {
-    let receipt_channels: HashSet<(String, String)> = chat_read_receipts::table
+) -> Result<Vec<UnreadCount>, DbError> {
+    let receipt_channels: HashSet<PersistentChannelKey> = chat_read_receipts::table
         .filter(chat_read_receipts::user_id.eq(user_id))
         .select((
             chat_read_receipts::channel_type,
             chat_read_receipts::channel_id,
         ))
-        .load(conn)
+        .load::<(String, String)>(conn)
         .await
         .map_err(DbError::from)?
         .into_iter()
+        .filter_map(|(channel_type, channel_id)| PersistentChannelKey::from_raw(&channel_type, channel_id))
         .collect();
-    let has_receipt = |channel_type: &str, channel_id: &str| {
-        receipt_channels.contains(&(channel_type.to_string(), channel_id.to_string()))
-    };
+    let has_receipt = |key: &PersistentChannelKey| receipt_channels.contains(key);
 
     let mut result = Vec::new();
     // Global announcements stay readable in /messages, but they do not participate in unread badges.
@@ -709,7 +700,11 @@ pub async fn get_unread_counts_for_messages_hub_channels(
             CHANNEL_TYPE_DIRECT,
             dms
                 .iter()
-                .map(|row| dm_channel_id(user_id, row.other_user_id))
+                .map(|row| {
+                    let key = ConversationKey::direct(row.other_user_id);
+                    let persistent_key = PersistentChannelKey::direct(user_id, row.other_user_id);
+                    (key, persistent_key)
+                })
                 .collect::<Vec<_>>(),
         ),
         (
@@ -717,41 +712,55 @@ pub async fn get_unread_counts_for_messages_hub_channels(
             tournaments
                 .iter()
                 .filter(|row| !row.muted)
-                .map(|row| row.nanoid.clone())
+                .map(|row| {
+                    let tournament_id = shared_types::TournamentId(row.nanoid.clone());
+                    let key = ConversationKey::tournament(&tournament_id);
+                    let persistent_key = PersistentChannelKey::tournament(&tournament_id);
+                    (key, persistent_key)
+                })
                 .collect::<Vec<_>>(),
         ),
         (
             CHANNEL_TYPE_GAME_PLAYERS,
             games
                 .iter()
-                .filter(|row| row.channel_type == CHANNEL_TYPE_GAME_PLAYERS)
-                .map(|row| row.channel_id.clone())
+                .filter(|row| row.thread == GameThread::Players)
+                .map(|row| {
+                    let key = ConversationKey::game_players(&row.game_id);
+                    let persistent_key = PersistentChannelKey::game_players(&row.game_id);
+                    (key, persistent_key)
+                })
                 .collect::<Vec<_>>(),
         ),
     ];
 
-    for (channel_type, channel_ids) in channel_groups {
-        if channel_ids.is_empty() {
+    for (channel_type, channels) in channel_groups {
+        if channels.is_empty() {
             continue;
         }
-        let with_receipt = channel_ids
+        let channel_map: HashMap<String, ConversationKey> = channels
             .iter()
-            .filter(|channel_id| has_receipt(channel_type, channel_id))
-            .cloned()
+            .map(|(key, persistent_key)| (persistent_key.channel_id.clone(), key.clone()))
+            .collect();
+        let with_receipt = channels
+            .iter()
+            .filter(|(_, persistent_key)| has_receipt(persistent_key))
+            .map(|(_, persistent_key)| persistent_key.channel_id.clone())
             .collect::<Vec<_>>();
-        let without_receipt = channel_ids
+        let without_receipt = channels
             .into_iter()
-            .filter(|channel_id| !has_receipt(channel_type, channel_id))
+            .filter(|(_, persistent_key)| !has_receipt(persistent_key))
+            .map(|(_, persistent_key)| persistent_key.channel_id)
             .collect::<Vec<_>>();
 
         let receipt_counts =
             unread_counts_for_receipt_channel_ids(conn, channel_type, &with_receipt, user_id)
                 .await?;
-        extend_unread_counts(&mut result, channel_type, receipt_counts);
+        extend_unread_counts(&mut result, &channel_map, receipt_counts);
 
         let missing_counts =
             unread_counts_for_channel_ids(conn, channel_type, &without_receipt, user_id).await?;
-        extend_unread_counts(&mut result, channel_type, missing_counts);
+        extend_unread_counts(&mut result, &channel_map, missing_counts);
     }
     Ok(result)
 }

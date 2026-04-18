@@ -27,11 +27,14 @@ pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
 pub use chat_message::{
     canonical_dm_channel_id,
     other_user_from_dm_channel,
-    ChannelKey,
+    ChannelType,
     ChatDestination,
     ChatMessage,
     ChatMessageContainer,
-    ChannelType,
+    ConversationKey,
+    GameThread,
+    PersistentChannelKey,
+    UnreadCount,
     // Channel type constants for persistent chat
     CHANNEL_TYPE_DIRECT,
     CHANNEL_TYPE_GAME_PLAYERS,

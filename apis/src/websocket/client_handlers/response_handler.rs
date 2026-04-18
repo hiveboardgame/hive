@@ -10,21 +10,13 @@ use super::{
 };
 use crate::common::{ServerMessage::*, ServerResult};
 use crate::providers::chat::Chat;
-use shared_types::ChannelKey;
+use shared_types::ConversationKey;
 use leptos::logging::log;
 use leptos::prelude::use_context;
 use leptos_router::hooks::use_navigate;
-use urlencoding::decode;
 
-fn parse_chat_error_key(field: &str) -> Option<ChannelKey> {
-    let mut parts = field.splitn(3, ':');
-    match (parts.next(), parts.next(), parts.next()) {
-        (Some("chat"), Some(channel_type), Some(encoded_channel_id)) => {
-            let channel_id = decode(encoded_channel_id).ok()?;
-            ChannelKey::from_raw(channel_type, channel_id.as_ref())
-        }
-        _ => None,
-    }
+fn parse_chat_error_key(field: &str) -> Option<ConversationKey> {
+    ConversationKey::from_error_field(field)
 }
 
 pub fn handle_response(m: ServerResult) {

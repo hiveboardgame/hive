@@ -5,9 +5,7 @@ use super::{
     TournamentAction,
 };
 use serde::{Deserialize, Serialize};
-use shared_types::{ChannelKey, ChatMessageContainer, GameId};
-use urlencoding::encode;
-use uuid::Uuid;
+use shared_types::{ChatMessageContainer, ConversationKey, GameId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ClientRequest {
@@ -25,18 +23,10 @@ pub enum ClientRequest {
 }
 
 impl ClientRequest {
-    pub fn error_field_for_user(&self, current_user_id: Uuid) -> String {
+    pub fn error_field(&self) -> String {
         match self {
             ClientRequest::Chat(container) => {
-                let key = ChannelKey::from_destination_for_user(
-                    &container.destination,
-                    current_user_id,
-                );
-                format!(
-                    "chat:{}:{}",
-                    key.channel_type.as_str(),
-                    encode(&key.channel_id),
-                )
+                ConversationKey::from_destination(&container.destination).error_field()
             }
             ClientRequest::Challenge(_) => "challenge".to_string(),
             ClientRequest::Game { .. } => "game".to_string(),

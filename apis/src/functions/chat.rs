@@ -27,15 +27,15 @@ use db_lib::helpers::{
 use std::collections::HashMap;
 use leptos::prelude::*;
 use server_fn::codec;
-use shared_types::GameId;
-pub use shared_types::{DmConversation, GameChannel, MessagesHubData, TournamentChannel};
+use shared_types::{ConversationKey, GameId, MessagesHubData, UnreadCount};
 #[cfg(feature = "ssr")]
 use shared_types::{
-    ChannelKey,
-    ChannelType,
     ChatMessage,
-    CHANNEL_TYPE_DIRECT,
-    CHANNEL_TYPE_TOURNAMENT_LOBBY,
+    DmConversation,
+    GameChannel,
+    PersistentChannelKey,
+    TournamentChannel,
+    TournamentId,
 };
 
 #[cfg(feature = "ssr")]
@@ -53,19 +53,6 @@ const MESSAGES_HUB_SECTION_LIMIT: usize = 25;
 fn generic_chat_server_error(context: &'static str, err: impl std::fmt::Display) -> ServerFnError {
     error!("chat server fn failed while {context}: {err}");
     ServerFnError::new("Unable to complete chat request")
-}
-
-#[cfg(feature = "ssr")]
-fn normalize_requested_channel(
-    channel_type: &str,
-    channel_id: &str,
-) -> Result<ChannelKey, ServerFnError> {
-    let channel_type = channel_type
-        .trim()
-        .parse::<ChannelType>()
-        .map_err(|_| ServerFnError::new("Invalid channel_type"))?;
-    ChannelKey::normalized(channel_type, channel_id)
-        .ok_or_else(|| ServerFnError::new("Invalid channel_id"))
 }
 
 #[cfg(feature = "ssr")]
@@ -91,37 +78,30 @@ async fn load_messages_hub_channels(
 
 #[cfg(feature = "ssr")]
 fn build_messages_hub_data(
-    user_id: uuid::Uuid,
     dms: Vec<DmConversation>,
     tournaments: Vec<TournamentChannel>,
     games: Vec<GameChannel>,
-    unread_counts: Vec<(String, String, i64)>,
+    unread_counts: Vec<UnreadCount>,
     recent_cutoff: DateTime<Utc>,
     section_limit: usize,
 ) -> MessagesHubData {
     let unread_count_map = unread_count_map(&unread_counts);
     let dms = prioritize_unread_then_limit(
         dms.into_iter().filter(|row| {
-            let channel_id = dm_channel_id(user_id, row.other_user_id);
             should_keep_channel(
-                CHANNEL_TYPE_DIRECT,
-                &channel_id,
+                &ConversationKey::direct(row.other_user_id),
                 row.last_message_at,
                 &unread_count_map,
                 recent_cutoff,
             )
         }),
         section_limit,
-        |row| {
-            let channel_id = dm_channel_id(user_id, row.other_user_id);
-            channel_unread_count(&unread_count_map, CHANNEL_TYPE_DIRECT, &channel_id) > 0
-        },
+        |row| channel_unread_count(&unread_count_map, &ConversationKey::direct(row.other_user_id)) > 0,
     );
     let tournaments = prioritize_unread_then_limit(
         tournaments.into_iter().filter(|row| {
             should_keep_channel(
-                CHANNEL_TYPE_TOURNAMENT_LOBBY,
-                &row.nanoid,
+                &ConversationKey::tournament(&TournamentId(row.nanoid.clone())),
                 row.last_message_at,
                 &unread_count_map,
                 recent_cutoff,
@@ -131,67 +111,55 @@ fn build_messages_hub_data(
         |row| {
             channel_unread_count(
                 &unread_count_map,
-                CHANNEL_TYPE_TOURNAMENT_LOBBY,
-                &row.nanoid,
+                &ConversationKey::tournament(&TournamentId(row.nanoid.clone())),
             ) > 0
         },
     );
     let games = prioritize_unread_then_limit(
         games.into_iter().filter(|row| {
             should_keep_channel(
-                &row.channel_type,
-                &row.channel_id,
+                &ConversationKey::game(&row.game_id, row.thread),
                 row.last_message_at,
                 &unread_count_map,
                 recent_cutoff,
             )
         }),
         section_limit,
-        |row| channel_unread_count(&unread_count_map, &row.channel_type, &row.channel_id) > 0,
+        |row| channel_unread_count(&unread_count_map, &ConversationKey::game(&row.game_id, row.thread)) > 0,
     );
 
     MessagesHubData {
         dms,
         tournaments,
         games,
-        unread_counts,
     }
 }
 
 #[cfg(feature = "ssr")]
-fn unread_count_map(unread_counts: &[(String, String, i64)]) -> HashMap<(String, String), i64> {
+fn unread_count_map(unread_counts: &[UnreadCount]) -> HashMap<ConversationKey, i64> {
     unread_counts
         .iter()
-        .map(|(channel_type, channel_id, count)| {
-            ((channel_type.clone(), channel_id.clone()), *count)
-        })
+        .map(|unread| (unread.key.clone(), unread.count))
         .collect()
 }
 
 #[cfg(feature = "ssr")]
 fn should_keep_channel(
-    channel_type: &str,
-    channel_id: &str,
+    channel_key: &ConversationKey,
     last_message_at: DateTime<Utc>,
-    unread_counts: &HashMap<(String, String), i64>,
+    unread_counts: &HashMap<ConversationKey, i64>,
     recent_cutoff: DateTime<Utc>,
 ) -> bool {
-    last_message_at >= recent_cutoff
-        || unread_counts
-            .get(&(channel_type.to_string(), channel_id.to_string()))
-            .copied()
-            .unwrap_or(0)
-            > 0
+    last_message_at >= recent_cutoff || channel_unread_count(unread_counts, channel_key) > 0
 }
 
 #[cfg(feature = "ssr")]
 fn channel_unread_count(
-    unread_counts: &HashMap<(String, String), i64>,
-    channel_type: &str,
-    channel_id: &str,
+    unread_counts: &HashMap<ConversationKey, i64>,
+    channel_key: &ConversationKey,
 ) -> i64 {
     unread_counts
-        .get(&(channel_type.to_string(), channel_id.to_string()))
+        .get(channel_key)
         .copied()
         .unwrap_or(0)
 }
@@ -211,14 +179,18 @@ fn prioritize_unread_then_limit<T>(
 }
 
 #[cfg(feature = "ssr")]
-fn dm_channel_id(user_id: uuid::Uuid, other_user_id: uuid::Uuid) -> String {
-    ChannelKey::direct(user_id, other_user_id).channel_id
+fn persistent_channel_key(
+    key: &ConversationKey,
+    user_id: uuid::Uuid,
+) -> Result<PersistentChannelKey, ServerFnError> {
+    key.persistent_key(Some(user_id))
+        .ok_or_else(|| ServerFnError::new("Invalid channel"))
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
-pub async fn mark_chat_read(channel_type: String, channel_id: String) -> Result<(), ServerFnError> {
-    let channel_key = normalize_requested_channel(&channel_type, &channel_id)?;
+pub async fn mark_chat_read(channel_key: ConversationKey) -> Result<(), ServerFnError> {
     let user_id: uuid::Uuid = uuid().await?;
+    let persistent_key = persistent_channel_key(&channel_key, user_id)?;
     let pool = pool().await?;
     let mut conn = get_conn(&pool)
         .await
@@ -228,8 +200,8 @@ pub async fn mark_chat_read(channel_type: String, channel_id: String) -> Result<
     let allowed = can_user_access_chat_channel(
         &mut conn,
         user_id,
-        channel_key.channel_type.as_str(),
-        &channel_key.channel_id,
+        persistent_key.channel_type.as_str(),
+        &persistent_key.channel_id,
     )
     .await
     .map_err(|err| generic_chat_server_error("checking chat access", err))?;
@@ -240,8 +212,8 @@ pub async fn mark_chat_read(channel_type: String, channel_id: String) -> Result<
     upsert_chat_read_receipt(
         &mut conn,
         user_id,
-        channel_key.channel_type.as_str(),
-        &channel_key.channel_id,
+        persistent_key.channel_type.as_str(),
+        &persistent_key.channel_id,
         chrono::Utc::now(),
     )
     .await
@@ -249,9 +221,8 @@ pub async fn mark_chat_read(channel_type: String, channel_id: String) -> Result<
     Ok(())
 }
 
-/// Returns (channel_type, channel_id, unread_count) for channels where the user has a receipt and count > 0.
 #[server(input = codec::Cbor, output = codec::Cbor)]
-pub async fn get_chat_unread_counts() -> Result<Vec<(String, String, i64)>, ServerFnError> {
+pub async fn get_chat_unread_counts() -> Result<Vec<UnreadCount>, ServerFnError> {
     let user_id: uuid::Uuid = uuid().await?;
     let pool = pool().await?;
     let mut conn = get_conn(&pool)
@@ -281,7 +252,6 @@ pub async fn get_messages_hub_data() -> Result<MessagesHubData, ServerFnError> {
         .await
         .map_err(|err| generic_chat_server_error("loading messages hub unread counts", err))?;
     Ok(build_messages_hub_data(
-        user_id,
         dms,
         tournaments,
         games,
@@ -293,12 +263,11 @@ pub async fn get_messages_hub_data() -> Result<MessagesHubData, ServerFnError> {
 
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_chat_history(
-    channel_type: String,
-    channel_id: String,
+    channel_key: ConversationKey,
     limit: Option<i64>,
 ) -> Result<Vec<shared_types::ChatMessage>, ServerFnError> {
-    let channel_key = normalize_requested_channel(&channel_type, &channel_id)?;
     let user_id: uuid::Uuid = uuid().await?;
+    let persistent_key = persistent_channel_key(&channel_key, user_id)?;
     let pool = pool().await?;
     let mut conn = get_conn(&pool)
         .await
@@ -306,7 +275,7 @@ pub async fn get_chat_history(
 
     let requested_limit = limit.unwrap_or(DEFAULT_HISTORY_LIMIT);
     let capped_limit = requested_limit.clamp(1, MAX_HISTORY_LIMIT);
-    let effective_limit = if channel_key.channel_type == ChannelType::Global {
+    let effective_limit = if matches!(channel_key, ConversationKey::Global) {
         capped_limit.min(GLOBAL_ANNOUNCEMENTS_LIMIT)
     } else {
         capped_limit
@@ -315,8 +284,8 @@ pub async fn get_chat_history(
     let allowed = can_user_access_chat_channel(
         &mut conn,
         user_id,
-        channel_key.channel_type.as_str(),
-        &channel_key.channel_id,
+        persistent_key.channel_type.as_str(),
+        &persistent_key.channel_id,
     )
     .await
     .map_err(|err| generic_chat_server_error("checking chat access", err))?;
@@ -326,14 +295,14 @@ pub async fn get_chat_history(
 
     let mut messages = get_chat_messages_for_channel(
         &mut conn,
-        channel_key.channel_type.as_str(),
-        &channel_key.channel_id,
+        persistent_key.channel_type.as_str(),
+        &persistent_key.channel_id,
         effective_limit,
     )
     .await
     .map_err(|err| generic_chat_server_error("loading chat history", err))?;
 
-    if channel_key.channel_type == ChannelType::Direct {
+    if matches!(channel_key, ConversationKey::Direct(_)) {
         let blocked_ids = get_blocked_user_ids(&mut conn, user_id)
             .await
             .map_err(|err| generic_chat_server_error("loading blocked users", err))?;

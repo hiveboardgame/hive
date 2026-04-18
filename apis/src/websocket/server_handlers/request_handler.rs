@@ -10,7 +10,7 @@ use super::{
     user_status::handler::UserStatusHandler,
 };
 use crate::{
-    chat::{access::{authorize_chat_send_and_resolve_channel_key, ChatSendAccessError}, ChannelKey},
+    chat::access::{authorize_chat_send_and_resolve_channel_key, ChatSendAccessError},
     common::{ClientRequest, GameAction},
     websocket::{
         messages::{AuthError, InternalServerMessage, WsMessage},
@@ -116,8 +116,9 @@ impl RequestHandler {
                 if self.user_id != message_container.message.user_id {
                     Err(AuthError::Unauthorized)?
                 }
-                let channel_key =
-                    ChannelKey::from_destination_for_user(&message_container.destination, self.user_id);
+                let channel_key = shared_types::ConversationKey::from_destination(
+                    &message_container.destination,
+                );
                 let mut conn = get_conn(&self.pool)
                     .await
                     .map_err(|e| Self::db_connection_error("checking chat send permissions", e))?;
@@ -125,8 +126,7 @@ impl RequestHandler {
                     &mut conn,
                     self.user_id,
                     self.admin,
-                    channel_key.channel_type.as_str(),
-                    &channel_key.channel_id,
+                    &channel_key,
                 )
                 .await
                 .map_err(Self::map_chat_send_access_error)?;

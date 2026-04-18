@@ -1,5 +1,5 @@
 use crate::{
-    chat::ChannelKey,
+    chat::ConversationKey,
     components::update_from_event::update_from_input,
     i18n::*,
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
@@ -8,7 +8,7 @@ use chrono::{Duration, Local};
 use leptos::{html, leptos_dom::helpers::request_animation_frame, prelude::*, task::spawn_local};
 use leptos_router::hooks::use_params_map;
 use leptos_use::use_interval_fn;
-use shared_types::{ChatDestination, ChatMessage, GameId};
+use shared_types::{ChatDestination, ChatMessage, GameId, GameThread};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -84,12 +84,6 @@ fn message_id(message: &ChatMessage) -> MessageId {
         turn: message.turn,
         message: message.message.clone(),
     }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum GameChatThread {
-    Players,
-    Spectators,
 }
 
 #[component]
@@ -272,18 +266,16 @@ pub fn ResolvedChatWindow(
             .user
             .with(|account| account.as_ref().map(|account| account.user.uid))
     });
-    let active_channel_key = Memo::new(move |_| {
-        ChannelKey::from_destination(&destination.get(), current_user_id.get())
-    });
+    let active_channel_key = Memo::new(move |_| ConversationKey::from_destination(&destination.get()));
     let preload_channel_keys =
-        Memo::new(move |_| active_channel_key.get().into_iter().collect::<Vec<_>>());
+        Memo::new(move |_| vec![active_channel_key.get()]);
     let is_shared_channel = Memo::new(move |_| !matches!(destination.get(), ChatDestination::User(_)));
 
     let div = NodeRef::<html::Div>::new();
     let first_unread_ref = NodeRef::<html::Div>::new();
     let unread_at_open = RwSignal::new(None::<i64>);
-    let history_loading_channels = RwSignal::new(HashSet::<ChannelKey>::new());
-    let history_errors = RwSignal::new(HashMap::<ChannelKey, String>::new());
+    let history_loading_channels = RwSignal::new(HashSet::<ConversationKey>::new());
+    let history_errors = RwSignal::new(HashMap::<ConversationKey, String>::new());
     let show_jump_to_latest = RwSignal::new(false);
     let is_scrolled_to_bottom = RwSignal::new(true);
     let expanded_hidden_messages = RwSignal::new(HashSet::<MessageId>::new());
@@ -338,7 +330,7 @@ pub fn ResolvedChatWindow(
     Effect::watch(
         move || active_channel_key.get(),
         move |channel_key, previous, _| {
-            if let Some(previous_key) = previous.cloned().flatten() {
+            if let Some(previous_key) = previous.cloned() {
                 chat.clear_channel_visible(&previous_key);
             }
 
@@ -346,10 +338,6 @@ pub fn ResolvedChatWindow(
             show_jump_to_latest.set(false);
             is_scrolled_to_bottom.set(true);
             expanded_hidden_messages.set(HashSet::new());
-
-            let Some(channel_key) = channel_key.as_ref() else {
-                return;
-            };
 
             let unread_key = channel_key.clone();
             let unread = chat.unread_count_for_channel_untracked(&unread_key);
@@ -363,9 +351,7 @@ pub fn ResolvedChatWindow(
         true,
     );
     on_cleanup(move || {
-        if let Some(channel_key) = active_channel_key.try_get_untracked().flatten() {
-            chat.clear_channel_visible(&channel_key);
-        }
+        chat.clear_channel_visible(&active_channel_key.get_untracked());
     });
 
     use_interval_fn(
@@ -378,20 +364,13 @@ pub fn ResolvedChatWindow(
     );
 
     let active_history_loading = Memo::new(move |_| {
-        active_channel_key.get().as_ref().is_some_and(|channel_key| {
-            history_loading_channels.with(|loading| loading.contains(channel_key))
-        })
+        history_loading_channels.with(|loading| loading.contains(&active_channel_key.get()))
     });
     let visible_history_error = Memo::new(move |_| {
-        active_channel_key.get().and_then(|channel_key| {
-            history_errors.with(|errors| errors.get(&channel_key).cloned())
-        })
+        history_errors.with(|errors| errors.get(&active_channel_key.get()).cloned())
     });
-    let visible_send_error = Memo::new(move |_| {
-        active_channel_key
-            .get()
-            .and_then(|channel_key| chat.chat_send_error(&channel_key))
-    });
+    let visible_send_error =
+        Memo::new(move |_| chat.chat_send_error(&active_channel_key.get()));
 
     let thread_error_for_display = thread_error.clone();
     let visible_thread_error = Memo::new(move |_| {
@@ -719,7 +698,7 @@ pub fn ResolvedChatWindow(
 #[component]
 pub fn GameChatWindow(
     /// When Some, use the caller-selected thread. When None, derive Players/Spectators from game state.
-    explicit_thread: Signal<Option<GameChatThread>>,
+    explicit_thread: Signal<Option<GameThread>>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let params = use_params_map();
@@ -749,14 +728,14 @@ pub fn GameChatWindow(
 
             let thread = explicit_thread.unwrap_or_else(|| {
                 if state.uid_is_player(current_user_id.get()) {
-                    GameChatThread::Players
+                    GameThread::Players
                 } else {
-                    GameChatThread::Spectators
+                    GameThread::Spectators
                 }
             });
             Some(match thread {
-                GameChatThread::Players => ChatDestination::GamePlayers(route_game_id.clone()),
-                GameChatThread::Spectators => {
+                GameThread::Players => ChatDestination::GamePlayers(route_game_id.clone()),
+                GameThread::Spectators => {
                     ChatDestination::GameSpectators(route_game_id.clone())
                 }
             })

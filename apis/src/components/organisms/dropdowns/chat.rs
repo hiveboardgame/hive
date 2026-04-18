@@ -1,13 +1,14 @@
 use crate::{
     components::{
         molecules::hamburger::Hamburger,
-        organisms::chat::{GameChatThread, GameChatWindow},
+        organisms::chat::GameChatWindow,
     },
     i18n::*,
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
 use leptos::prelude::*;
 use leptos_icons::*;
+use shared_types::GameThread;
 
 #[component]
 pub fn ChatDropdown() -> impl IntoView {
@@ -59,9 +60,9 @@ pub fn ChatDropdown() -> impl IntoView {
     let game_show_players = RwSignal::new(true);
     let explicit_game_thread = Signal::derive(move || {
         show_players_spectators_toggle.get().then_some(if game_show_players.get() {
-            GameChatThread::Players
+            GameThread::Players
         } else {
-            GameChatThread::Spectators
+            GameThread::Spectators
         })
     });
 

@@ -85,13 +85,169 @@ impl FromStr for ChannelType {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ChannelKey {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GameThread {
+    Players,
+    Spectators,
+}
+
+impl GameThread {
+    pub const fn channel_type(self) -> ChannelType {
+        match self {
+            Self::Players => ChannelType::GamePlayers,
+            Self::Spectators => ChannelType::GameSpectators,
+        }
+    }
+
+    pub const fn slug(self) -> &'static str {
+        match self {
+            Self::Players => "players",
+            Self::Spectators => "spectators",
+        }
+    }
+
+    pub fn parse_slug(value: &str) -> Option<Self> {
+        match value {
+            "players" => Some(Self::Players),
+            "spectators" => Some(Self::Spectators),
+            _ => None,
+        }
+    }
+
+    pub const fn from_channel_type(channel_type: ChannelType) -> Option<Self> {
+        match channel_type {
+            ChannelType::GamePlayers => Some(Self::Players),
+            ChannelType::GameSpectators => Some(Self::Spectators),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ConversationKey {
+    Direct(Uuid),
+    Tournament(TournamentId),
+    Game { game_id: GameId, thread: GameThread },
+    Global,
+}
+
+impl ConversationKey {
+    pub const fn direct(other_user_id: Uuid) -> Self {
+        Self::Direct(other_user_id)
+    }
+
+    pub fn tournament(tournament_id: &TournamentId) -> Self {
+        Self::Tournament(tournament_id.clone())
+    }
+
+    pub fn game(game_id: &GameId, thread: GameThread) -> Self {
+        Self::Game {
+            game_id: game_id.clone(),
+            thread,
+        }
+    }
+
+    pub fn game_players(game_id: &GameId) -> Self {
+        Self::game(game_id, GameThread::Players)
+    }
+
+    pub fn game_spectators(game_id: &GameId) -> Self {
+        Self::game(game_id, GameThread::Spectators)
+    }
+
+    pub const fn global() -> Self {
+        Self::Global
+    }
+
+    pub fn from_destination(destination: &ChatDestination) -> Self {
+        match destination {
+            ChatDestination::TournamentLobby(tournament_id) => Self::tournament(tournament_id),
+            ChatDestination::User((other_user_id, _)) => Self::direct(*other_user_id),
+            ChatDestination::GamePlayers(game_id) => Self::game_players(game_id),
+            ChatDestination::GameSpectators(game_id) => Self::game_spectators(game_id),
+            ChatDestination::Global => Self::global(),
+        }
+    }
+
+    pub fn persistent_key(&self, current_user_id: Option<Uuid>) -> Option<PersistentChannelKey> {
+        match self {
+            Self::Direct(other_user_id) => {
+                current_user_id.map(|user_id| PersistentChannelKey::direct(user_id, *other_user_id))
+            }
+            Self::Tournament(tournament_id) => {
+                Some(PersistentChannelKey::tournament(tournament_id))
+            }
+            Self::Game { game_id, thread } => match thread {
+                GameThread::Players => Some(PersistentChannelKey::game_players(game_id)),
+                GameThread::Spectators => Some(PersistentChannelKey::game_spectators(game_id)),
+            },
+            Self::Global => Some(PersistentChannelKey::global()),
+        }
+    }
+
+    pub fn from_persistent(
+        key: &PersistentChannelKey,
+        current_user_id: Option<Uuid>,
+    ) -> Option<Self> {
+        match key.channel_type {
+            ChannelType::Direct => current_user_id
+                .and_then(|user_id| key.direct_other_user_id(user_id))
+                .map(Self::direct),
+            ChannelType::TournamentLobby => {
+                Some(Self::Tournament(TournamentId(key.channel_id.clone())))
+            }
+            ChannelType::GamePlayers => Some(Self::Game {
+                game_id: GameId(key.channel_id.clone()),
+                thread: GameThread::Players,
+            }),
+            ChannelType::GameSpectators => Some(Self::Game {
+                game_id: GameId(key.channel_id.clone()),
+                thread: GameThread::Spectators,
+            }),
+            ChannelType::Global => Some(Self::Global),
+        }
+    }
+
+    pub fn error_field(&self) -> String {
+        match self {
+            Self::Direct(other_user_id) => format!("chat:direct:{other_user_id}"),
+            Self::Tournament(tournament_id) => format!("chat:tournament:{}", tournament_id.0),
+            Self::Game { game_id, thread } => {
+                format!("chat:game:{}:{}", game_id.0, thread.slug())
+            }
+            Self::Global => "chat:global".to_string(),
+        }
+    }
+
+    pub fn from_error_field(field: &str) -> Option<Self> {
+        let mut parts = field.splitn(4, ':');
+        match (parts.next(), parts.next(), parts.next(), parts.next()) {
+            (Some("chat"), Some("direct"), Some(other_user_id), None) => {
+                Uuid::parse_str(other_user_id).ok().map(Self::direct)
+            }
+            (Some("chat"), Some("tournament"), Some(tournament_id), None) => {
+                Some(Self::Tournament(TournamentId(tournament_id.to_string())))
+            }
+            (Some("chat"), Some("game"), Some(game_id), Some(thread)) => {
+                GameThread::parse_slug(thread).map(|thread| Self::Game {
+                    game_id: GameId(game_id.to_string()),
+                    thread,
+                })
+            }
+            (Some("chat"), Some("global"), None, None) => Some(Self::Global),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PersistentChannelKey {
     pub channel_type: ChannelType,
     pub channel_id: String,
 }
 
-impl ChannelKey {
+impl PersistentChannelKey {
     pub fn new(channel_type: ChannelType, channel_id: impl Into<String>) -> Self {
         Self {
             channel_type,
@@ -138,40 +294,17 @@ impl ChannelKey {
         Self::new(ChannelType::Global, CHANNEL_TYPE_GLOBAL)
     }
 
-    pub fn from_destination(
-        destination: &ChatDestination,
-        current_user_id: Option<Uuid>,
-    ) -> Option<Self> {
-        match destination {
-            ChatDestination::TournamentLobby(tournament_id) => {
-                Some(Self::tournament(tournament_id))
-            }
-            ChatDestination::User((other_user_id, _)) => {
-                current_user_id.map(|user_id| Self::direct(user_id, *other_user_id))
-            }
-            ChatDestination::GamePlayers(game_id) => Some(Self::game_players(game_id)),
-            ChatDestination::GameSpectators(game_id) => Some(Self::game_spectators(game_id)),
-            ChatDestination::Global => Some(Self::global()),
-        }
-    }
-
-    pub fn from_destination_for_user(destination: &ChatDestination, current_user_id: Uuid) -> Self {
-        match destination {
-            ChatDestination::TournamentLobby(tournament_id) => Self::tournament(tournament_id),
-            ChatDestination::User((other_user_id, _)) => {
-                Self::direct(current_user_id, *other_user_id)
-            }
-            ChatDestination::GamePlayers(game_id) => Self::game_players(game_id),
-            ChatDestination::GameSpectators(game_id) => Self::game_spectators(game_id),
-            ChatDestination::Global => Self::global(),
-        }
-    }
-
     pub fn direct_other_user_id(&self, current_user_id: Uuid) -> Option<Uuid> {
         (self.channel_type == ChannelType::Direct)
             .then(|| other_user_from_dm_channel(&self.channel_id, current_user_id))
             .flatten()
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UnreadCount {
+    pub key: ConversationKey,
+    pub count: i64,
 }
 
 /// Canonical channel_id for a DM between two users (sorted UUIDs so both participants use the same key).
@@ -280,7 +413,7 @@ impl ChatMessage {
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_chat_message, ChannelKey, MAX_CHAT_MESSAGE_LENGTH};
+    use super::{normalize_chat_message, PersistentChannelKey, MAX_CHAT_MESSAGE_LENGTH};
     use uuid::Uuid;
 
     #[test]
@@ -301,7 +434,7 @@ mod tests {
     fn direct_channel_key_returns_the_other_user() {
         let a = Uuid::new_v4();
         let b = Uuid::new_v4();
-        let key = ChannelKey::direct(a, b);
+        let key = PersistentChannelKey::direct(a, b);
 
         assert_eq!(key.direct_other_user_id(a), Some(b));
         assert_eq!(key.direct_other_user_id(b), Some(a));

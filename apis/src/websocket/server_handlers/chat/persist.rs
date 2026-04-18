@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use db_lib::models::NewChatMessage;
-use shared_types::{ChannelKey, ChatMessageContainer};
+use shared_types::{ChatMessageContainer, PersistentChannelKey};
 use uuid::Uuid;
 
 /// Owned form of a chat message suitable for building `db_lib::NewChatMessage`.
@@ -20,7 +20,10 @@ pub struct PersistableChatMessage {
 
 impl PersistableChatMessage {
     /// Build from a container (e.g. after `container.time()` has been called).
-    pub fn from_container(container: &ChatMessageContainer, channel_key: &ChannelKey) -> Self {
+    pub fn from_container(
+        container: &ChatMessageContainer,
+        channel_key: &PersistentChannelKey,
+    ) -> Self {
         let turn = container.message.turn.map(|u| u as i32);
         // Preserve send-time ordering for unread/read logic even if DB persistence is delayed.
         let created_at = container.message.timestamp.unwrap_or_else(Utc::now);
@@ -57,8 +60,9 @@ impl PersistableChatMessage {
 
     /// Borrow as `NewChatMessage` for use with `insert_chat_message`.
     pub fn as_new(&self) -> NewChatMessage<'_> {
-        let recipient_id = ChannelKey::from_raw(self.channel_type.as_str(), self.channel_id.as_str())
-            .and_then(|channel_key| channel_key.direct_other_user_id(self.sender_id));
+        let recipient_id =
+            PersistentChannelKey::from_raw(self.channel_type.as_str(), self.channel_id.as_str())
+                .and_then(|channel_key| channel_key.direct_other_user_id(self.sender_id));
 
         NewChatMessage {
             channel_type: self.channel_type.as_str(),
