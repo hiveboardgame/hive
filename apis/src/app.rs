@@ -13,8 +13,7 @@ use crate::{
         login::Login,
         messages::{
             MessagesDmThread,
-            MessagesGamePlayersThread,
-            MessagesGameSpectatorsThread,
+            MessagesGameThread,
             MessagesGlobalThread,
             MessagesIndex,
             MessagesLayout,
@@ -71,7 +70,7 @@ use leptos_router::{
     path,
 };
 use leptos_use::SameSite;
-use shared_types::{GameProgress, TournamentStatus};
+use shared_types::{GameProgress, GameThread, TournamentStatus};
 
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
@@ -190,11 +189,15 @@ pub fn App() -> impl IntoView {
                             />
                             <Route
                                 path=path!("game/:nanoid/players")
-                                view=MessagesGamePlayersThread
+                                view=|| {
+                                    view! { <MessagesGameThread thread=GameThread::Players /> }
+                                }
                             />
                             <Route
                                 path=path!("game/:nanoid/spectators")
-                                view=MessagesGameSpectatorsThread
+                                view=|| {
+                                    view! { <MessagesGameThread thread=GameThread::Spectators /> }
+                                }
                             />
                         </ProtectedParentRoute>
                         <ProtectedRoute
