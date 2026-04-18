@@ -93,13 +93,6 @@ pub enum GameThread {
 }
 
 impl GameThread {
-    pub const fn channel_type(self) -> ChannelType {
-        match self {
-            Self::Players => ChannelType::GamePlayers,
-            Self::Spectators => ChannelType::GameSpectators,
-        }
-    }
-
     pub const fn slug(self) -> &'static str {
         match self {
             Self::Players => "players",
@@ -111,14 +104,6 @@ impl GameThread {
         match value {
             "players" => Some(Self::Players),
             "spectators" => Some(Self::Spectators),
-            _ => None,
-        }
-    }
-
-    pub const fn from_channel_type(channel_type: ChannelType) -> Option<Self> {
-        match channel_type {
-            ChannelType::GamePlayers => Some(Self::Players),
-            ChannelType::GameSpectators => Some(Self::Spectators),
             _ => None,
         }
     }
@@ -156,7 +141,7 @@ impl ConversationKey {
         Self::game(game_id, GameThread::Spectators)
     }
 
-    pub const fn global() -> Self {
+    const fn global() -> Self {
         Self::Global
     }
 
@@ -183,29 +168,6 @@ impl ConversationKey {
                 GameThread::Spectators => Some(PersistentChannelKey::game_spectators(game_id)),
             },
             Self::Global => Some(PersistentChannelKey::global()),
-        }
-    }
-
-    pub fn from_persistent(
-        key: &PersistentChannelKey,
-        current_user_id: Option<Uuid>,
-    ) -> Option<Self> {
-        match key.channel_type {
-            ChannelType::Direct => current_user_id
-                .and_then(|user_id| key.direct_other_user_id(user_id))
-                .map(Self::direct),
-            ChannelType::TournamentLobby => {
-                Some(Self::Tournament(TournamentId(key.channel_id.clone())))
-            }
-            ChannelType::GamePlayers => Some(Self::Game {
-                game_id: GameId(key.channel_id.clone()),
-                thread: GameThread::Players,
-            }),
-            ChannelType::GameSpectators => Some(Self::Game {
-                game_id: GameId(key.channel_id.clone()),
-                thread: GameThread::Spectators,
-            }),
-            ChannelType::Global => Some(Self::Global),
         }
     }
 
@@ -248,14 +210,14 @@ pub struct PersistentChannelKey {
 }
 
 impl PersistentChannelKey {
-    pub fn new(channel_type: ChannelType, channel_id: impl Into<String>) -> Self {
+    fn new(channel_type: ChannelType, channel_id: impl Into<String>) -> Self {
         Self {
             channel_type,
             channel_id: channel_id.into(),
         }
     }
 
-    pub fn normalized(channel_type: ChannelType, channel_id: impl AsRef<str>) -> Option<Self> {
+    fn normalized(channel_type: ChannelType, channel_id: impl AsRef<str>) -> Option<Self> {
         let channel_id = channel_id.as_ref();
         match channel_type {
             ChannelType::Direct => Some(Self::new(
@@ -290,7 +252,7 @@ impl PersistentChannelKey {
         Self::new(ChannelType::GameSpectators, game_id.0.clone())
     }
 
-    pub fn global() -> Self {
+    fn global() -> Self {
         Self::new(ChannelType::Global, CHANNEL_TYPE_GLOBAL)
     }
 
@@ -308,7 +270,7 @@ pub struct UnreadCount {
 }
 
 /// Canonical channel_id for a DM between two users (sorted UUIDs so both participants use the same key).
-pub fn canonical_dm_channel_id(a: Uuid, b: Uuid) -> String {
+fn canonical_dm_channel_id(a: Uuid, b: Uuid) -> String {
     if a < b {
         format!("{}::{}", a, b)
     } else {
@@ -332,7 +294,7 @@ fn parse_direct_channel_users(channel_id: &str) -> Option<(Uuid, Uuid)> {
 }
 
 /// Returns the other participant if `channel_id` is a canonical DM pair containing `me`.
-pub fn other_user_from_dm_channel(channel_id: &str, me: Uuid) -> Option<Uuid> {
+fn other_user_from_dm_channel(channel_id: &str, me: Uuid) -> Option<Uuid> {
     let (a, b) = parse_direct_channel_users(channel_id)?;
     if channel_id != canonical_dm_channel_id(a, b) {
         return None;

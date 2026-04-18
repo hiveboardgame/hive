@@ -3,7 +3,7 @@ use leptos::prelude::*;
 use leptos_icons::Icon;
 use leptos_router::components::A;
 
-pub fn dm_messages_href(username: &str) -> String {
+fn dm_messages_href(username: &str) -> String {
     format!("/message/dm/{username}")
 }
 

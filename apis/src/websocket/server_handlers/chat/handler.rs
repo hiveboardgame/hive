@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 
+use super::{metrics, persist::PersistableChatMessage};
 use crate::{
     common::ServerMessage,
     websocket::{
         messages::{InternalServerMessage, MessageDestination},
-        server_handlers::chat::{metrics, persist::PersistableChatMessage},
         WebsocketData,
     },
 };

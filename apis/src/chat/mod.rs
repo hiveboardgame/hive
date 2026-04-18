@@ -1,4 +1,4 @@
 #[cfg(feature = "ssr")]
-pub mod access;
+pub(crate) mod access;
 
-pub use shared_types::ConversationKey;
+pub(crate) use shared_types::ConversationKey;

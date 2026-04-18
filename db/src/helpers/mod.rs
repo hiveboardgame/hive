@@ -5,10 +5,8 @@ mod games_query_builder;
 pub use blocks_mutes::{
     block_user,
     get_blocked_user_ids,
-    get_muted_tournament_ids,
     get_user_ids_who_muted_tournament,
     is_blocked,
-    is_tournament_chat_muted,
     mute_tournament_chat,
     unblock_user,
     unmute_tournament_chat,

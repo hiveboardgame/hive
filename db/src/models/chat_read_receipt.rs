@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 #[derive(Insertable, Debug)]
 #[diesel(table_name = chat_read_receipts)]
-pub struct NewChatReadReceipt<'a> {
+pub(crate) struct NewChatReadReceipt<'a> {
     pub user_id: Uuid,
     pub channel_type: &'a str,
     pub channel_id: &'a str,

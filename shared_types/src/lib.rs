@@ -25,8 +25,6 @@ mod tournament_status;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
 pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
 pub use chat_message::{
-    canonical_dm_channel_id,
-    other_user_from_dm_channel,
     ChannelType,
     ChatDestination,
     ChatMessage,

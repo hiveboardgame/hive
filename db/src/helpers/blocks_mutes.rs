@@ -151,37 +151,6 @@ pub async fn unmute_tournament_chat(
     Ok(())
 }
 
-/// True if this user has muted this tournament's lobby chat.
-pub async fn is_tournament_chat_muted(
-    conn: &mut DbConn<'_>,
-    user_id: Uuid,
-    tournament_nanoid: &str,
-) -> Result<bool, DbError> {
-    let tournament_id = get_tournament_id_by_nanoid(conn, tournament_nanoid).await?;
-    select(exists(
-        user_tournament_chat_mutes::table
-            .filter(user_tournament_chat_mutes::user_id.eq(user_id))
-            .filter(user_tournament_chat_mutes::tournament_id.eq(tournament_id)),
-    ))
-    .get_result(conn)
-    .await
-    .map_err(DbError::from)
-}
-
-/// Tournament UUIDs this user has muted. Used to filter live delivery in ws_server.
-pub async fn get_muted_tournament_ids(
-    conn: &mut DbConn<'_>,
-    user_id: Uuid,
-) -> Result<std::collections::HashSet<Uuid>, DbError> {
-    let ids: Vec<Uuid> = user_tournament_chat_mutes::table
-        .filter(user_tournament_chat_mutes::user_id.eq(user_id))
-        .select(user_tournament_chat_mutes::tournament_id)
-        .load(conn)
-        .await
-        .map_err(DbError::from)?;
-    Ok(ids.into_iter().collect())
-}
-
 /// User IDs who have muted this tournament (by tournament UUID). Used to exclude from live delivery.
 pub async fn get_user_ids_who_muted_tournament(
     conn: &mut DbConn<'_>,

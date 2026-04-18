@@ -3,8 +3,6 @@
 use chrono::{DateTime, Utc};
 use db_lib::models::NewChatMessage;
 use shared_types::{ChatMessageContainer, PersistentChannelKey};
-use uuid::Uuid;
-
 /// Owned form of a chat message suitable for building `db_lib::NewChatMessage`.
 /// Call `as_new()` to get a reference type for `insert_chat_message`.
 #[derive(Debug, Clone)]
@@ -35,26 +33,6 @@ impl PersistableChatMessage {
             body: container.message.message.clone(),
             turn,
             created_at,
-        }
-    }
-
-    /// Build from raw parts (e.g. from REST API body).
-    pub fn from_parts(
-        channel_type: String,
-        channel_id: String,
-        sender_id: Uuid,
-        username: String,
-        body: String,
-        turn: Option<i32>,
-    ) -> Self {
-        Self {
-            channel_type,
-            channel_id,
-            sender_id,
-            username,
-            body,
-            turn,
-            created_at: Utc::now(),
         }
     }
 
