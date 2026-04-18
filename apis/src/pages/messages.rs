@@ -23,6 +23,7 @@ use leptos_router::{
 };
 use shared_types::{
     ChatDestination,
+    ChatHistoryResponse,
     DmConversation,
     GameChannel,
     GameChatCapabilities,
@@ -228,7 +229,10 @@ fn refresh_open_dm_thread(chat: Chat, other_id: Uuid) {
     let key = ConversationKey::direct(other_id);
     spawn_local(async move {
         match chat.fetch_channel_history(&key).await {
-            Ok(messages) => chat.replace_history(&key, messages),
+            Ok(ChatHistoryResponse::Messages(messages)) => chat.replace_history(&key, messages),
+            Ok(ChatHistoryResponse::AccessDenied) => {
+                log!("Failed to refresh DM history for {other_id}: access denied")
+            }
             Err(error) => log!("Failed to refresh DM history for {other_id}: {error}"),
         }
     });

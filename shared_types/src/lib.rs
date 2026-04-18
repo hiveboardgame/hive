@@ -29,6 +29,7 @@ pub use chat_capabilities::{GameChatCapabilities, TournamentChatCapabilities};
 pub use chat_message::{
     ChannelType,
     ChatDestination,
+    ChatHistoryResponse,
     ChatMessage,
     ChatMessageContainer,
     ConversationKey,

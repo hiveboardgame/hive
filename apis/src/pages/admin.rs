@@ -24,7 +24,10 @@ pub fn Admin() -> impl IntoView {
             }>
                 <div class=LINE_CLASS>Send Global Warning</div>
                 <div class="p-4 bg-white rounded-xl border border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-700">
-                    <ChatInput destination=Signal::derive(|| ChatDestination::Global) disabled=|| false />
+                    <ChatInput
+                        destination=Signal::derive(|| ChatDestination::Global)
+                        disabled=Signal::derive(|| false)
+                    />
                 </div>
                 <div class=LINE_CLASS>Edit Banner</div>
                 <EditBanner />

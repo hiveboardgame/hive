@@ -29,6 +29,7 @@ use leptos::prelude::*;
 use server_fn::codec;
 use shared_types::{
     ConversationKey,
+    ChatHistoryResponse,
     GameChatCapabilities,
     GameId,
     MessagesHubData,
@@ -267,7 +268,7 @@ pub async fn get_messages_hub_data() -> Result<MessagesHubData, ServerFnError> {
 pub async fn get_chat_history(
     channel_key: ConversationKey,
     limit: Option<i64>,
-) -> Result<Vec<shared_types::ChatMessage>, ServerFnError> {
+) -> Result<ChatHistoryResponse, ServerFnError> {
     let user_id: uuid::Uuid = uuid().await?;
     let persistent_key = persistent_channel_key(&channel_key, user_id)?;
     let pool = pool().await?;
@@ -287,7 +288,7 @@ pub async fn get_chat_history(
         .await
         .map_err(|err| generic_chat_server_error("checking chat access", err))?;
     if !allowed {
-        return Err(ServerFnError::new("Access denied"));
+        return Ok(ChatHistoryResponse::AccessDenied);
     }
 
     let mut messages = get_chat_messages_for_channel(
@@ -307,16 +308,18 @@ pub async fn get_chat_history(
         messages.retain(|message| !blocked_ids.contains(&message.sender_id));
     }
 
-    Ok(messages
-        .into_iter()
-        .map(|message| ChatMessage {
-            user_id: message.sender_id,
-            username: message.username,
-            timestamp: Some(message.created_at),
-            message: message.body,
-            turn: message.turn.map(|turn| turn as usize),
-        })
-        .collect())
+    Ok(ChatHistoryResponse::Messages(
+        messages
+            .into_iter()
+            .map(|message| ChatMessage {
+                user_id: message.sender_id,
+                username: message.username,
+                timestamp: Some(message.created_at),
+                message: message.body,
+                turn: message.turn.map(|turn| turn as usize),
+            })
+            .collect(),
+    ))
 }
 
 #[server(input = codec::Cbor, output = codec::Cbor)]

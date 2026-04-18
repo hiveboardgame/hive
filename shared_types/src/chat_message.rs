@@ -334,6 +334,12 @@ pub struct ChatMessageContainer {
     pub message: ChatMessage,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ChatHistoryResponse {
+    Messages(Vec<ChatMessage>),
+    AccessDenied,
+}
+
 impl ChatMessageContainer {
     pub fn new(destination: ChatDestination, message: &ChatMessage) -> Self {
         Self {

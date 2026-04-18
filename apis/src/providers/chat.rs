@@ -18,6 +18,7 @@ use super::{
 use leptos::{prelude::*, task::spawn_local};
 use shared_types::{
     ChatDestination,
+    ChatHistoryResponse,
     ChatMessage,
     ChatMessageContainer,
     DmConversation,
@@ -289,6 +290,7 @@ pub struct Chat {
     pub typed_message: RwSignal<String>,
     pending_outgoing_messages: RwSignal<Vec<PendingOutgoingChat>>,
     chat_send_errors: RwSignal<HashMap<ConversationKey, String>>,
+    loaded_history_channels: RwSignal<HashSet<ConversationKey>>,
     /// Stable shared block list for chat-adjacent surfaces.
     pub blocked_user_ids: RwSignal<HashSet<Uuid>>,
     /// Server-backed unread counts keyed by canonical conversation identity.
@@ -327,6 +329,7 @@ impl Chat {
             typed_message: RwSignal::new(String::new()),
             pending_outgoing_messages: RwSignal::new(Vec::new()),
             chat_send_errors: RwSignal::new(HashMap::new()),
+            loaded_history_channels: RwSignal::new(HashSet::new()),
             blocked_user_ids: RwSignal::new(HashSet::new()),
             unread_counts: RwSignal::new(HashMap::new()),
             pending_read_channels: RwSignal::new(HashSet::new()),
@@ -513,7 +516,46 @@ impl Chat {
         }
     }
 
+    fn with_messages_for_key<R>(
+        &self,
+        key: &ConversationKey,
+        f: impl FnOnce(&[ChatMessage]) -> R,
+    ) -> R {
+        match key {
+            ConversationKey::Direct(other_user_id) => {
+                self.users_messages.with(|messages| {
+                    f(messages.get(other_user_id).map(Vec::as_slice).unwrap_or(&[]))
+                })
+            }
+            ConversationKey::Tournament(tournament_id) => {
+                self.tournament_lobby_messages.with(|messages| {
+                    f(messages.get(tournament_id).map(Vec::as_slice).unwrap_or(&[]))
+                })
+            }
+            ConversationKey::Game {
+                game_id,
+                thread: GameThread::Players,
+            } => self.games_private_messages.with(|messages| {
+                f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))
+            }),
+            ConversationKey::Game {
+                game_id,
+                thread: GameThread::Spectators,
+            } => self.games_public_messages.with(|messages| {
+                f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))
+            }),
+            ConversationKey::Global => self.global_messages.with(|messages| f(messages)),
+        }
+    }
+
+    fn mark_history_loaded(&self, key: &ConversationKey) {
+        self.loaded_history_channels.update(|loaded| {
+            loaded.insert(key.clone());
+        });
+    }
+
     fn replace_messages_for_key(&self, key: &ConversationKey, mut messages: Vec<ChatMessage>) {
+        self.mark_history_loaded(key);
         match key {
             ConversationKey::Direct(other_id) => {
                 self.users_messages.update(|stored| {
@@ -565,6 +607,7 @@ impl Chat {
     }
 
     fn inject_messages_for_key(&self, key: &ConversationKey, messages: Vec<ChatMessage>) {
+        self.mark_history_loaded(key);
         match key {
             ConversationKey::Direct(other_id) => {
                 self.users_messages.update(|stored| {
@@ -618,6 +661,7 @@ impl Chat {
     }
 
     fn append_live_messages_for_key(&self, key: &ConversationKey, messages: Vec<ChatMessage>) {
+        self.mark_history_loaded(key);
         match key {
             ConversationKey::Direct(other_id) => {
                 self.users_messages.update(|stored| {
@@ -692,6 +736,9 @@ impl Chat {
         // contents are no longer resident locally.
         self.pending_read_channels.update(|pending| {
             pending.retain(|key| !keys.contains(key));
+        });
+        self.loaded_history_channels.update(|loaded| {
+            loaded.retain(|key| !keys.contains(key));
         });
         self.visible_channels.update(|visible| {
             visible.retain(|key, _| !keys.contains(key));
@@ -1020,6 +1067,10 @@ impl Chat {
         self.games_public_new_messages.update(|games| {
             games.remove(game_id);
         });
+        self.loaded_history_channels.update(|loaded| {
+            loaded.remove(&players_key);
+            loaded.remove(&spectators_key);
+        });
         self.unread_counts.update(|counts| {
             counts.remove(&players_key);
             counts.remove(&spectators_key);
@@ -1107,30 +1158,21 @@ impl Chat {
             .with(|errors| errors.get(key).cloned())
     }
 
+    pub fn cached_messages(&self, key: &ConversationKey) -> Vec<ChatMessage> {
+        let mut messages = self.with_messages_for_key(key, |messages| messages.to_vec());
+        messages.sort_by_key(|message| {
+            message
+                .timestamp
+                .map(|timestamp| timestamp.timestamp_millis())
+                .unwrap_or(0)
+        });
+        messages
+    }
+
     pub fn has_cached_history(&self, key: &ConversationKey) -> bool {
-        match key {
-            ConversationKey::Direct(other_user_id) => self
-                .users_messages
-                .with_untracked(|messages| messages.contains_key(other_user_id)),
-            ConversationKey::Tournament(tournament_id) => self
-                .tournament_lobby_messages
-                .with_untracked(|messages| messages.contains_key(tournament_id)),
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Players,
-            } => self
-                .games_private_messages
-                .with_untracked(|messages| messages.contains_key(game_id)),
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Spectators,
-            } => self
-                .games_public_messages
-                .with_untracked(|messages| messages.contains_key(game_id)),
-            ConversationKey::Global => !self
-                .global_messages
-                .with_untracked(|messages| messages.is_empty()),
-        }
+        self.loaded_history_channels
+            .with_untracked(|loaded| loaded.contains(key))
+            || self.with_messages_for_key_untracked(key, |messages| !messages.is_empty())
     }
 
     fn acknowledge_outgoing_message(&self, container: &ChatMessageContainer) {
@@ -1351,7 +1393,7 @@ impl Chat {
     pub fn fetch_channel_history(
         &self,
         key: &ConversationKey,
-    ) -> impl std::future::Future<Output = Result<Vec<ChatMessage>, String>> + '_ {
+    ) -> impl std::future::Future<Output = Result<ChatHistoryResponse, String>> + '_ {
         let key = key.clone();
         async move {
             let history_limit = if matches!(key, ConversationKey::Global) {
@@ -1610,6 +1652,7 @@ pub fn provide_chat() {
                 chat.blocked_user_ids.set(HashSet::new());
                 chat.pending_outgoing_messages.set(Vec::new());
                 chat.chat_send_errors.set(HashMap::new());
+                chat.loaded_history_channels.set(HashSet::new());
                 chat.messages_hub_data.set(None);
                 chat.messages_hub_error.set(None);
                 chat.messages_hub_loading.set(false);

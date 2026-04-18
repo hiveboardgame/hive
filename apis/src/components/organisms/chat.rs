@@ -5,14 +5,17 @@ use crate::{
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
 use chrono::{Duration, Local};
-use leptos::{html, leptos_dom::helpers::request_animation_frame, prelude::*, task::spawn_local};
+use leptos::{
+    either::{Either, EitherOf4},
+    html,
+    leptos_dom::helpers::request_animation_frame,
+    prelude::*,
+    task::spawn_local,
+};
 use leptos_router::hooks::use_params_map;
 use leptos_use::use_interval_fn;
-use shared_types::{ChatDestination, ChatMessage, GameId, GameThread};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use shared_types::{ChatDestination, ChatHistoryResponse, ChatMessage, GameId, GameThread};
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 /// Max time gap for grouping consecutive same-user messages. Messages further apart show the header again.
@@ -86,22 +89,193 @@ fn message_id(message: &ChatMessage) -> MessageId {
     }
 }
 
+#[derive(Copy, Clone)]
+struct ThreadHistoryState {
+    loading_channels: RwSignal<HashSet<ConversationKey>>,
+    errors: RwSignal<HashMap<ConversationKey, ThreadHistoryError>>,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+enum ThreadHistoryError {
+    AccessDenied,
+    Unexpected(String),
+}
+
+impl ThreadHistoryState {
+    fn new() -> Self {
+        Self {
+            loading_channels: RwSignal::new(HashSet::new()),
+            errors: RwSignal::new(HashMap::new()),
+        }
+    }
+
+    fn begin_loading(&self, key: &ConversationKey) {
+        self.loading_channels.update(|loading| {
+            loading.insert(key.clone());
+        });
+        self.errors.update(|errors| {
+            errors.remove(key);
+        });
+    }
+
+    fn clear(&self, key: &ConversationKey) {
+        self.loading_channels.update(|loading| {
+            loading.remove(key);
+        });
+        self.errors.update(|errors| {
+            errors.remove(key);
+        });
+    }
+
+    fn set_error(&self, key: &ConversationKey, error: ThreadHistoryError) {
+        self.loading_channels.update(|loading| {
+            loading.remove(key);
+        });
+        self.errors.update(|errors| {
+            errors.insert(key.clone(), error);
+        });
+    }
+
+    fn is_loading(&self, key: &ConversationKey) -> bool {
+        self.loading_channels.with(|loading| loading.contains(key))
+    }
+
+    fn error_for(&self, key: &ConversationKey) -> Option<ThreadHistoryError> {
+        self.errors.with(|errors| errors.get(key).cloned())
+    }
+}
+
+#[derive(Copy, Clone)]
+struct ThreadUiState {
+    unread_at_open: RwSignal<Option<i64>>,
+    show_jump_to_latest: RwSignal<bool>,
+    is_scrolled_to_bottom: RwSignal<bool>,
+    expanded_hidden_messages: RwSignal<HashSet<MessageId>>,
+}
+
+impl ThreadUiState {
+    fn new() -> Self {
+        Self {
+            unread_at_open: RwSignal::new(None::<i64>),
+            show_jump_to_latest: RwSignal::new(false),
+            is_scrolled_to_bottom: RwSignal::new(true),
+            expanded_hidden_messages: RwSignal::new(HashSet::new()),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq)]
+enum ThreadBodyState {
+    Loading,
+    ErrorOnly(String),
+    Empty,
+    Rows {
+        rows: Vec<MessageRow>,
+        banner_error: Option<String>,
+    },
+}
+
+#[derive(Clone, PartialEq)]
+enum ThreadFooterState {
+    Composer,
+    Notice(String),
+}
+
+fn use_thread_history(
+    chat: Chat,
+    active_channel_key: Signal<ConversationKey>,
+) -> ThreadHistoryState {
+    let history = ThreadHistoryState::new();
+
+    Effect::watch(
+        move || active_channel_key.get(),
+        move |channel_key, previous, _| {
+            if previous.is_some_and(|previous_key| previous_key == channel_key) {
+                return;
+            }
+
+            if chat.has_cached_history(channel_key) {
+                history.clear(channel_key);
+                return;
+            }
+
+            let key = channel_key.clone();
+            history.begin_loading(&key);
+            spawn_local(async move {
+                match chat.fetch_channel_history(&key).await {
+                    Ok(ChatHistoryResponse::Messages(messages)) => {
+                        history.clear(&key);
+                        chat.inject_history(&key, messages);
+                    }
+                    Ok(ChatHistoryResponse::AccessDenied) => {
+                        history.set_error(&key, ThreadHistoryError::AccessDenied);
+                    }
+                    Err(error) => {
+                        history.set_error(&key, ThreadHistoryError::Unexpected(error));
+                    }
+                }
+            });
+        },
+        true,
+    );
+
+    history
+}
+
+fn use_thread_ui_state(chat: Chat, active_channel_key: Signal<ConversationKey>) -> ThreadUiState {
+    let thread_ui = ThreadUiState::new();
+
+    Effect::watch(
+        move || active_channel_key.get(),
+        move |channel_key, previous, _| {
+            if let Some(previous_key) = previous.cloned() {
+                chat.clear_channel_visible(&previous_key);
+            }
+
+            thread_ui.unread_at_open.set(None);
+            thread_ui.show_jump_to_latest.set(false);
+            thread_ui.is_scrolled_to_bottom.set(true);
+            thread_ui.expanded_hidden_messages.set(HashSet::new());
+
+            let unread = chat.unread_count_for_channel_untracked(channel_key);
+            if unread > 0 {
+                thread_ui.unread_at_open.set(Some(unread));
+            }
+
+            chat.set_channel_visible(channel_key);
+            chat.open_channel(channel_key);
+        },
+        true,
+    );
+
+    on_cleanup(move || {
+        chat.clear_channel_visible(&active_channel_key.get_untracked());
+    });
+
+    use_interval_fn(
+        move || {
+            if thread_ui.unread_at_open.get_untracked().is_some() {
+                thread_ui.unread_at_open.set(None);
+            }
+        },
+        10_000,
+    );
+
+    thread_ui
+}
+
 #[component]
-pub fn Message(
+fn Message(
     message: ChatMessage,
-    #[prop(optional)] is_current_user: bool,
+    is_current_user: bool,
     /// When false, only the message bubble is shown (for consecutive messages from the same user).
-    #[prop(optional, default = true)]
     show_header: bool,
     /// When true, show "Message hidden. Click to expand." (Discord-style for blocked users in shared channels).
-    #[prop(optional)]
-    sender_blocked: bool,
-    /// When sender_blocked, parent-owned expanded state so it survives re-renders. If None, component uses internal state.
-    #[prop(optional)]
-    expanded_signal: Option<Signal<bool>>,
+    sender_blocked: Signal<bool>,
+    /// Parent-owned expanded state so it survives re-renders.
+    expanded_signal: Signal<bool>,
     /// Callback when user clicks "Click to expand". Parent should add this message to its expanded set.
-    #[prop(optional)]
-    on_click_expand: Option<Callback<(), ()>>,
+    on_click_expand: Callback<(), ()>,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let ChatMessage {
@@ -112,21 +286,8 @@ pub fn Message(
         ..
     } = message;
 
-    let expanded_inner = RwSignal::new(false);
-    let is_expanded = move || {
-        expanded_signal
-            .as_ref()
-            .map(|signal| signal.get())
-            .unwrap_or_else(|| expanded_inner.get())
-    };
-
-    let on_expand = move |_| {
-        if let Some(cb) = on_click_expand.as_ref() {
-            cb.run(());
-        } else {
-            expanded_inner.set(true);
-        }
-    };
+    let is_expanded = move || expanded_signal.get();
+    let on_expand = move |_| on_click_expand.run(());
 
     let margin = if show_header { "mb-3" } else { "mb-1" };
     let outer_class = if is_current_user {
@@ -152,7 +313,7 @@ pub fn Message(
 
     view! {
         <div class=outer_class>
-            <Show when=move || sender_blocked && !is_expanded()>
+            <Show when=move || sender_blocked.get() && !is_expanded()>
                 <button
                     type="button"
                     class="py-2 px-3 mb-1 text-sm text-left text-gray-500 bg-gray-100 rounded-lg border border-gray-200 transition-colors dark:text-gray-400 dark:bg-gray-800 dark:border-gray-600 hover:bg-gray-200 max-w-[85%] sm:max-w-[75%] dark:hover:bg-gray-700"
@@ -161,22 +322,26 @@ pub fn Message(
                     {t!(i18n, messages.chat.hidden_message)}
                 </button>
             </Show>
-            <Show when=move || !sender_blocked || is_expanded()>
-                <Show when=move || show_header>
-                    <div class="flex flex-wrap gap-y-0.5 gap-x-2 items-baseline px-1 mb-1 max-w-[85%] sm:max-w-[75%]">
-                        <span class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
-                            {username.get_value()}
-                        </span>
-                        <span class="text-xs text-gray-500 whitespace-nowrap dark:text-gray-400">
-                            {user_local_time.get_value()}
-                            {move || {
-                                turn
-                                    .map(|turn| t_string!(i18n, messages.chat.turn, turn = turn))
-                                    .unwrap_or_default()
-                            }}
-                        </span>
-                    </div>
-                </Show>
+            <Show when=move || !sender_blocked.get() || is_expanded()>
+                {if show_header {
+                    Either::Left(view! {
+                        <div class="flex flex-wrap gap-y-0.5 gap-x-2 items-baseline px-1 mb-1 max-w-[85%] sm:max-w-[75%]">
+                            <span class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
+                                {username.get_value()}
+                            </span>
+                            <span class="text-xs text-gray-500 whitespace-nowrap dark:text-gray-400">
+                                {user_local_time.get_value()}
+                                {move || {
+                                    turn
+                                        .map(|turn| t_string!(i18n, messages.chat.turn, turn = turn))
+                                        .unwrap_or_default()
+                                }}
+                            </span>
+                        </div>
+                    })
+                } else {
+                    Either::Right(())
+                }}
                 <div class=bubble_class>{body.get_value()}</div>
             </Show>
         </div>
@@ -184,35 +349,120 @@ pub fn Message(
 }
 
 #[component]
+fn MessageRowView(
+    row: MessageRow,
+    is_shared_channel: Signal<bool>,
+    expanded_hidden_messages: RwSignal<HashSet<MessageId>>,
+    unread_at_open: RwSignal<Option<i64>>,
+    first_unread_ref: NodeRef<html::Div>,
+) -> impl IntoView {
+    let chat = expect_context::<Chat>();
+    let i18n = use_i18n();
+    let MessageRow {
+        id,
+        message,
+        show_header,
+        is_current_user,
+        show_unread_divider_before,
+        ..
+    } = row;
+    let expanded_key = id.clone();
+    let expand_callback_key = id.clone();
+    let blocked_user_id = message.user_id;
+    let sender_blocked = Signal::derive(move || {
+        is_shared_channel.get()
+            && chat
+                .blocked_user_ids
+                .with(|blocked| blocked.contains(&blocked_user_id))
+    });
+    let expanded_signal =
+        Signal::derive(move || expanded_hidden_messages.with(|set| set.contains(&expanded_key)));
+    let on_expand = Callback::new(move |()| {
+        expanded_hidden_messages.update(|set| {
+            set.insert(expand_callback_key.clone());
+        });
+    });
+
+    view! {
+        <Show when=move || show_unread_divider_before && unread_at_open.get().is_some()>
+            <div
+                node_ref=first_unread_ref
+                class="flex relative justify-center items-center my-4 text-xs text-gray-500 dark:text-gray-400"
+            >
+                <div class="absolute inset-x-0 border-b border-gray-300 dark:border-gray-600"></div>
+                <span class="relative z-10 px-2 bg-white dark:bg-gray-900">
+                    {t!(i18n, messages.chat.new_messages)}
+                </span>
+            </div>
+        </Show>
+        <Message
+            message
+            is_current_user
+            show_header
+            sender_blocked
+            expanded_signal
+            on_click_expand=on_expand
+        />
+    }
+}
+
+#[component]
+fn MessageRows(
+    rows: Vec<MessageRow>,
+    banner_error: Option<String>,
+    is_shared_channel: Signal<bool>,
+    expanded_hidden_messages: RwSignal<HashSet<MessageId>>,
+    unread_at_open: RwSignal<Option<i64>>,
+    first_unread_ref: NodeRef<html::Div>,
+) -> impl IntoView {
+    let rows = StoredValue::new(rows);
+
+    view! {
+        {if let Some(error) = banner_error {
+            Either::Left(view! {
+                <div class="py-2 px-3 mb-4 text-sm text-amber-900 bg-amber-100 rounded-lg border border-amber-200 dark:text-amber-100 dark:bg-amber-950/40 dark:border-amber-800">
+                    {error}
+                </div>
+            })
+        } else {
+            Either::Right(())
+        }}
+        <For each=move || rows.get_value() key=|row| row.id.clone() let:row>
+            <MessageRowView
+                row
+                is_shared_channel
+                expanded_hidden_messages
+                unread_at_open
+                first_unread_ref
+            />
+        </For>
+    }
+}
+
+#[component]
 pub fn ChatInput(
-    destination: impl Fn() -> ChatDestination + 'static + Send + Sync,
-    disabled: impl Fn() -> bool + 'static + Send + Sync,
+    #[prop(into)] destination: Signal<ChatDestination>,
+    #[prop(into)] disabled: Signal<bool>,
 ) -> impl IntoView {
     let chat = expect_context::<Chat>();
     let i18n = use_i18n();
     let game_state = use_context::<GameStateSignal>();
     let turn = move || game_state.map(|gs| gs.signal.with(|state| state.state.turn));
-    let destination = Arc::new(destination);
-    let disabled = Arc::new(disabled);
-    let send_destination = Arc::clone(&destination);
-    let send_disabled = Arc::clone(&disabled);
     let send = move || {
-        if send_disabled() {
+        if disabled.get() {
             return;
         }
         let message = chat.typed_message.get();
         if !message.is_empty() {
-            chat.send(&message, send_destination(), turn());
+            chat.send(&message, destination.get(), turn());
             chat.typed_message.set(String::new());
         };
     };
-    let placeholder_destination = Arc::clone(&destination);
-    let placeholder_disabled = Arc::clone(&disabled);
     let placeholder = move || {
-        if placeholder_disabled() {
+        if disabled.get() {
             t_string!(i18n, messages.chat.admin_only)
         } else {
-            match placeholder_destination() {
+            match destination.get() {
                 ChatDestination::GamePlayers(_) => {
                     t_string!(i18n, messages.chat.with_opponent)
                 }
@@ -227,19 +477,18 @@ pub fn ChatInput(
     Effect::new(move |_| {
         let _ = my_input.get_untracked().map(|el| el.focus());
     });
-    let input_disabled = Arc::clone(&disabled);
-    let keydown_disabled = Arc::clone(&disabled);
+
     view! {
         <input
             node_ref=my_input
             type="text"
-            disabled=move || input_disabled()
+            prop:disabled=disabled
             class="py-3 px-4 w-full placeholder-gray-500 text-black bg-white rounded-xl border border-gray-300 shadow-inner transition-shadow dark:placeholder-gray-400 dark:text-white dark:bg-gray-800 dark:border-gray-600 focus:ring-2 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed box-border shrink-0 focus:ring-pillbug-teal/50 focus:border-pillbug-teal"
             prop:value=chat.typed_message
             prop:placeholder=placeholder
             on:input=update_from_input(chat.typed_message)
             on:keydown=move |evt| {
-                if evt.key() == "Enter" && !keydown_disabled() {
+                if evt.key() == "Enter" && !disabled.get() {
                     evt.prevent_default();
                     send();
                 }
@@ -254,180 +503,52 @@ pub fn ChatInput(
 pub fn ResolvedChatWindow(
     #[prop(into)] destination: Signal<ChatDestination>,
     #[prop(optional, into)] input_disabled: Signal<bool>,
-    #[prop(optional)] thread_error: Option<String>,
-    #[prop(optional)] hide_input: bool,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let chat = expect_context::<Chat>();
     let auth_context = expect_context::<AuthContext>();
-    let destination = Memo::new(move |_| destination.get());
-    let current_user_id = Memo::new(move |_| {
+    let current_user_id = Signal::derive(move || {
         auth_context
             .user
             .with(|account| account.as_ref().map(|account| account.user.uid))
     });
-    let active_channel_key = Memo::new(move |_| ConversationKey::from_destination(&destination.get()));
-    let preload_channel_keys =
-        Memo::new(move |_| vec![active_channel_key.get()]);
-    let is_shared_channel = Memo::new(move |_| !matches!(destination.get(), ChatDestination::User(_)));
+    let active_channel_key =
+        Signal::derive(move || ConversationKey::from_destination(&destination.get()));
+    let is_shared_channel =
+        Signal::derive(move || !matches!(destination.get(), ChatDestination::User(_)));
 
     let div = NodeRef::<html::Div>::new();
     let first_unread_ref = NodeRef::<html::Div>::new();
-    let unread_at_open = RwSignal::new(None::<i64>);
-    let history_loading_channels = RwSignal::new(HashSet::<ConversationKey>::new());
-    let history_errors = RwSignal::new(HashMap::<ConversationKey, String>::new());
-    let show_jump_to_latest = RwSignal::new(false);
-    let is_scrolled_to_bottom = RwSignal::new(true);
-    let expanded_hidden_messages = RwSignal::new(HashSet::<MessageId>::new());
-
-    Effect::watch(
-        move || preload_channel_keys.get(),
-        move |channel_keys, prev_channel_keys, _| {
-            if prev_channel_keys.is_some_and(|prev| prev == channel_keys) {
-                return;
-            }
-
-            for key in channel_keys.iter().cloned() {
-                if chat.has_cached_history(&key) {
-                    let _ = history_loading_channels.try_update(|loading| {
-                        loading.remove(&key);
-                    });
-                    let _ = history_errors.try_update(|errors| {
-                        errors.remove(&key);
-                    });
-                    continue;
+    let history = use_thread_history(chat, active_channel_key);
+    let thread_ui = use_thread_ui_state(chat, active_channel_key);
+    let visible_history_error =
+        Signal::derive(move || history.error_for(&active_channel_key.get()));
+    let visible_thread_error = Signal::derive(move || {
+        visible_history_error.get().map(|error| match error {
+            ThreadHistoryError::AccessDenied => match destination.get() {
+                ChatDestination::User(_) => {
+                    t_string!(i18n, messages.page.failed_conversations).to_string()
                 }
-                let _ = history_loading_channels.try_update(|loading| {
-                    loading.insert(key.clone());
-                });
-                let _ = history_errors.try_update(|errors| {
-                    errors.remove(&key);
-                });
-                spawn_local(async move {
-                    let result = chat.fetch_channel_history(&key).await;
-                    let _ = history_loading_channels.try_update(|loading| {
-                        loading.remove(&key);
-                    });
-                    match result {
-                        Ok(messages) => {
-                            let _ = history_errors.try_update(|errors| {
-                                errors.remove(&key);
-                            });
-                            chat.inject_history(&key, messages);
-                        }
-                        Err(error) => {
-                            let _ = history_errors.try_update(|errors| {
-                                errors.insert(key.clone(), error);
-                            });
-                        }
-                    }
-                });
-            }
-        },
-        true,
-    );
-
-    Effect::watch(
-        move || active_channel_key.get(),
-        move |channel_key, previous, _| {
-            if let Some(previous_key) = previous.cloned() {
-                chat.clear_channel_visible(&previous_key);
-            }
-
-            unread_at_open.set(None);
-            show_jump_to_latest.set(false);
-            is_scrolled_to_bottom.set(true);
-            expanded_hidden_messages.set(HashSet::new());
-
-            let unread_key = channel_key.clone();
-            let unread = chat.unread_count_for_channel_untracked(&unread_key);
-            if unread > 0 {
-                unread_at_open.set(Some(unread));
-            }
-
-            chat.set_channel_visible(channel_key);
-            chat.open_channel(channel_key);
-        },
-        true,
-    );
-    on_cleanup(move || {
-        chat.clear_channel_visible(&active_channel_key.get_untracked());
-    });
-
-    use_interval_fn(
-        move || {
-            if unread_at_open.get_untracked().is_some() {
-                unread_at_open.set(None);
-            }
-        },
-        10_000,
-    );
-
-    let active_history_loading = Memo::new(move |_| {
-        history_loading_channels.with(|loading| loading.contains(&active_channel_key.get()))
-    });
-    let visible_history_error = Memo::new(move |_| {
-        history_errors.with(|errors| errors.get(&active_channel_key.get()).cloned())
-    });
-    let visible_send_error =
-        Memo::new(move |_| chat.chat_send_error(&active_channel_key.get()));
-
-    let thread_error_for_display = thread_error.clone();
-    let visible_thread_error = Memo::new(move |_| {
-        let destination = destination.get();
-        thread_error_for_display.clone().or_else(|| {
-            visible_history_error.get().map(|error| {
-                if error.contains("Access denied") {
-                    match destination {
-                        ChatDestination::User(_) => {
-                            t_string!(i18n, messages.page.failed_conversations).to_string()
-                        }
-                        ChatDestination::TournamentLobby(_) => {
-                            t_string!(i18n, messages.chat.tournament_read_restricted).to_string()
-                        }
-                        _ => error,
-                    }
-                } else {
-                    error
+                ChatDestination::TournamentLobby(_) => {
+                    t_string!(i18n, messages.chat.tournament_read_restricted).to_string()
                 }
-            })
+                _ => "Access denied".to_string(),
+            },
+            ThreadHistoryError::Unexpected(error) => error,
         })
     });
-    let thread_has_static_error = thread_error.is_some();
-    let composer_hidden = move || {
-        hide_input
-            || thread_has_static_error
-            || visible_history_error
-                .get()
-                .is_some_and(|error| error.contains("Access denied"))
-    };
+    let visible_send_error =
+        Signal::derive(move || chat.chat_send_error(&active_channel_key.get()));
 
-    let merged_messages = Memo::new(move |_| {
-        let mut messages = match destination.get() {
-            ChatDestination::TournamentLobby(tournament_id) => chat
-                .tournament_lobby_messages
-                .with(|threads| threads.get(&tournament_id).cloned().unwrap_or_default()),
-            ChatDestination::GamePlayers(game_id) => chat
-                .games_private_messages
-                .with(|threads| threads.get(&game_id).cloned().unwrap_or_default()),
-            ChatDestination::GameSpectators(game_id) => chat
-                .games_public_messages
-                .with(|threads| threads.get(&game_id).cloned().unwrap_or_default()),
-            ChatDestination::User((other_user_id, _)) => chat
-                .users_messages
-                .with(|threads| threads.get(&other_user_id).cloned().unwrap_or_default()),
-            ChatDestination::Global => chat.global_messages.get(),
-        };
-        messages.sort_by_key(|m| m.timestamp.map(|t| t.timestamp_millis()).unwrap_or(0));
-        messages
-    });
+    let merged_messages = Memo::new(move |_| chat.cached_messages(&active_channel_key.get()));
+
     let render_rows = Memo::new(move |_| {
         let messages = merged_messages.get();
         if messages.is_empty() {
             return Vec::new();
         }
 
-        let split_idx = unread_divider_split_idx(messages.len(), unread_at_open.get());
+        let split_idx = unread_divider_split_idx(messages.len(), thread_ui.unread_at_open.get());
         let current_user_id = current_user_id.get();
 
         messages_with_header_flags(&messages)
@@ -445,6 +566,29 @@ pub fn ResolvedChatWindow(
             })
             .collect::<Vec<_>>()
     });
+    let thread_body_state = Memo::new(move |_| {
+        let channel_key = active_channel_key.get();
+        let rows = render_rows.get();
+        let display_error = visible_thread_error.get();
+
+        if history.is_loading(&channel_key) && rows.is_empty() {
+            ThreadBodyState::Loading
+        } else if rows.is_empty() {
+            display_error.map_or(ThreadBodyState::Empty, ThreadBodyState::ErrorOnly)
+        } else {
+            ThreadBodyState::Rows {
+                rows,
+                banner_error: display_error,
+            }
+        }
+    });
+    let thread_footer_state = Memo::new(move |_| {
+        if visible_history_error.get() == Some(ThreadHistoryError::AccessDenied) {
+            ThreadFooterState::Notice(visible_thread_error.get().unwrap_or_default())
+        } else {
+            ThreadFooterState::Composer
+        }
+    });
 
     Effect::watch(
         move || (active_channel_key.get(), merged_messages.get().len()),
@@ -459,10 +603,10 @@ pub fn ResolvedChatWindow(
             let is_new_message = !channel_changed && previous_count > 0 && *count > previous_count;
             let container = div.get_untracked();
             let target = first_unread_ref.get_untracked();
-            let should_auto_scroll = is_scrolled_to_bottom.get_untracked();
+            let should_auto_scroll = thread_ui.is_scrolled_to_bottom.get_untracked();
             request_animation_frame(move || {
                 if channel_changed || !is_new_message {
-                    show_jump_to_latest.set(false);
+                    thread_ui.show_jump_to_latest.set(false);
                     if let Some(t) = target {
                         t.scroll_into_view_with_bool(true);
                     } else if let Some(c) = container.as_ref() {
@@ -470,19 +614,19 @@ pub fn ResolvedChatWindow(
                     }
                     if let Some(c) = container.as_ref() {
                         let at_bottom = is_scrolled_near_bottom(c);
-                        is_scrolled_to_bottom.set(at_bottom);
+                        thread_ui.is_scrolled_to_bottom.set(at_bottom);
                         if at_bottom {
-                            show_jump_to_latest.set(false);
+                            thread_ui.show_jump_to_latest.set(false);
                         }
                     }
                 } else if should_auto_scroll {
                     if let Some(c) = container.as_ref() {
                         c.set_scroll_top(c.scroll_height());
                     }
-                    is_scrolled_to_bottom.set(true);
-                    show_jump_to_latest.set(false);
+                    thread_ui.is_scrolled_to_bottom.set(true);
+                    thread_ui.show_jump_to_latest.set(false);
                 } else {
-                    show_jump_to_latest.set(true);
+                    thread_ui.show_jump_to_latest.set(true);
                 }
             });
         },
@@ -493,8 +637,8 @@ pub fn ResolvedChatWindow(
         if let Some(container) = div.get_untracked() {
             request_animation_frame(move || {
                 container.set_scroll_top(container.scroll_height());
-                is_scrolled_to_bottom.set(true);
-                show_jump_to_latest.set(false);
+                thread_ui.is_scrolled_to_bottom.set(true);
+                thread_ui.show_jump_to_latest.set(false);
             });
         }
     };
@@ -510,149 +654,47 @@ pub fn ResolvedChatWindow(
                     on:scroll=move |_| {
                         if let Some(container) = div.get() {
                             let at_bottom = is_scrolled_near_bottom(&container);
-                            is_scrolled_to_bottom.set(at_bottom);
+                            thread_ui.is_scrolled_to_bottom.set(at_bottom);
                             if at_bottom {
-                                show_jump_to_latest.set(false);
+                                thread_ui.show_jump_to_latest.set(false);
                             }
                         }
                     }
                     class="overflow-y-auto flex-grow p-4 w-full min-w-full h-full min-h-0"
                 >
-                    <Show
-                        when=move || !(active_history_loading.get() && render_rows.get().is_empty())
-                        fallback=move || {
-                            view! {
-                                <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
-                                    {t!(i18n, messages.chat.loading)}
-                                </div>
-                            }
-                        }
-                    >
-                        <Show
-                            when=move || {
-                                let rows = render_rows.get();
-                                !rows.is_empty() || visible_thread_error.get().is_none()
-                            }
-                            fallback=move || {
-                                view! {
-                                    <div class="flex flex-col gap-2 justify-center items-center h-full text-gray-500 dark:text-gray-400 min-h-[8rem]">
-                                        <p class="text-sm font-medium">
-                                            {move || visible_thread_error.get().unwrap_or_default()}
-                                        </p>
-                                    </div>
-                                }
-                            }
-                        >
-                            <Transition fallback=move || {
-                                view! {
-                                    <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
-                                        {t!(i18n, messages.chat.loading)}
-                                    </div>
-                                }
-                            }>
-                                <ShowLet
-                                    some=move || {
-                                        let rows = render_rows.get();
-                                        if rows.is_empty() { None } else { Some(rows) }
-                                    }
-                                    let:rows
-                                    fallback=move || {
-                                        view! {
-                                            <div class="flex flex-col gap-2 justify-center items-center h-full text-gray-500 dark:text-gray-400 min-h-[8rem]">
-                                                <span class="text-3xl opacity-40">"✉️"</span>
-                                                <p class="text-sm font-medium">
-                                                    {t!(i18n, messages.chat.empty_title)}
-                                                </p>
-                                                <p class="text-xs">{t!(i18n, messages.chat.empty_body)}</p>
-                                            </div>
-                                        }
-                                    }
-                                >
-                                    <ShowLet
-                                        some=move || Some(chat.blocked_user_ids.get())
-                                        let:blocked_user_ids
-                                    >
-                                        {
-                                            let blocked_set = Arc::new(blocked_user_ids);
-                                            let rows_for_render = StoredValue::new(rows.clone());
-                                            view! {
-                                                <ShowLet
-                                                    some=move || visible_thread_error.get()
-                                                    let:error
-                                                >
-                                                    <div class="py-2 px-3 mb-4 text-sm text-amber-900 bg-amber-100 rounded-lg border border-amber-200 dark:text-amber-100 dark:bg-amber-950/40 dark:border-amber-800">
-                                                        {error}
-                                                    </div>
-                                                </ShowLet>
-                                                <For
-                                                    each=move || rows_for_render.get_value()
-                                                    key=|row| row.id.clone()
-                                                    let:row
-                                                >
-                                                    {
-                                                        let MessageRow {
-                                                            id,
-                                                            message,
-                                                            show_header,
-                                                            is_current_user,
-                                                            show_unread_divider_before,
-                                                            ..
-                                                        } = row;
-                                                        let expanded_set = expanded_hidden_messages;
-                                                        let expanded_key = id.clone();
-                                                        let expand_callback_key = id.clone();
-                                                        let blocked_for_row = blocked_set.clone();
-                                                        let sender_blocked = is_shared_channel.get()
-                                                            && blocked_for_row.contains(&message.user_id);
-                                                        let expanded_signal = Signal::derive(move || {
-                                                            expanded_set.with(|set| set.contains(&expanded_key))
-                                                        });
-                                                        let on_expand = Callback::new(move |()| {
-                                                            expanded_set.update(|set| {
-                                                                set.insert(expand_callback_key.clone());
-                                                            });
-                                                        });
-                                                        view! {
-                                                            <ShowLet
-                                                                some=move || {
-                                                                    if show_unread_divider_before {
-                                                                        unread_at_open.get()
-                                                                    } else {
-                                                                        None
-                                                                    }
-                                                                }
-                                                                let:_n
-                                                            >
-                                                                <div
-                                                                    node_ref=first_unread_ref
-                                                                    class="flex relative justify-center items-center my-4 text-xs text-gray-500 dark:text-gray-400"
-                                                                >
-                                                                    <div class="absolute inset-x-0 border-b border-gray-300 dark:border-gray-600"></div>
-                                                                    <span class="relative z-10 px-2 bg-white dark:bg-gray-900">
-                                                                        {t!(i18n, messages.chat.new_messages)}
-                                                                    </span>
-                                                                </div>
-                                                            </ShowLet>
-                                                            <Message
-                                                                message
-                                                                is_current_user
-                                                                show_header
-                                                                sender_blocked
-                                                                expanded_signal
-                                                                on_click_expand=on_expand
-                                                            />
-                                                        }
-                                                    }
-                                                </For>
-                                            }
-                                        }
-                                    </ShowLet>
-                                </ShowLet>
-                            </Transition>
-                        </Show>
-                    </Show>
+                    {move || match thread_body_state.get() {
+                        ThreadBodyState::Loading => EitherOf4::A(view! {
+                            <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
+                                {t!(i18n, messages.chat.loading)}
+                            </div>
+                        }),
+                        ThreadBodyState::ErrorOnly(error) => EitherOf4::B(view! {
+                            <div class="flex flex-col gap-2 justify-center items-center h-full text-gray-500 dark:text-gray-400 min-h-[8rem]">
+                                <p class="text-sm font-medium">{error}</p>
+                            </div>
+                        }),
+                        ThreadBodyState::Empty => EitherOf4::C(view! {
+                            <div class="flex flex-col gap-2 justify-center items-center h-full text-gray-500 dark:text-gray-400 min-h-[8rem]">
+                                <span class="text-3xl opacity-40">"✉️"</span>
+                                <p class="text-sm font-medium">
+                                    {t!(i18n, messages.chat.empty_title)}
+                                </p>
+                                <p class="text-xs">{t!(i18n, messages.chat.empty_body)}</p>
+                            </div>
+                        }),
+                        ThreadBodyState::Rows { rows, banner_error } => EitherOf4::D(view! {
+                            <MessageRows
+                                rows
+                                banner_error=banner_error
+                                is_shared_channel
+                                expanded_hidden_messages=thread_ui.expanded_hidden_messages
+                                unread_at_open=thread_ui.unread_at_open
+                                first_unread_ref
+                            />
+                        }),
+                    }}
                 </div>
-                <Show when=move || show_jump_to_latest.get()>
+                <Show when=thread_ui.show_jump_to_latest>
                     <button
                         type="button"
                         class="absolute bottom-4 left-1/2 z-10 px-3 py-2 text-sm font-medium text-white rounded-full border shadow-lg transition-colors -translate-x-1/2 bg-pillbug-teal border-pillbug-teal/80 hover:bg-pillbug-teal/90"
@@ -663,33 +705,27 @@ pub fn ResolvedChatWindow(
                 </Show>
             </div>
             <div class="border-t border-gray-200 dark:border-gray-700 shrink-0">
-                <Show
-                    when=move || !composer_hidden()
-                    fallback=move || {
-                        view! {
-                            <Show
-                                when=move || visible_thread_error.get().is_some()
-                                fallback=move || view! { <div class="py-3 px-4"></div> }
-                            >
-                                <div class="py-3 px-4 text-sm text-amber-900 dark:text-amber-100 bg-amber-100 dark:bg-amber-950/40">
-                                    {move || visible_thread_error.get().unwrap_or_default()}
-                                </div>
-                            </Show>
-                        }
-                    }
-                >
-                    <div class="flex flex-col gap-2 p-4">
-                        <ShowLet some=move || visible_send_error.get() let:error>
-                            <div class="py-2 px-3 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200 dark:text-red-200 dark:bg-red-950/40 dark:border-red-800">
-                                {error}
-                            </div>
-                        </ShowLet>
-                        <ChatInput
-                            destination=move || destination.get()
-                            disabled=move || input_disabled.get()
-                        />
-                    </div>
-                </Show>
+                {move || match thread_footer_state.get() {
+                    ThreadFooterState::Composer => Either::Left(view! {
+                        <div class="flex flex-col gap-2 p-4">
+                            {move || {
+                                visible_send_error.get().map(|error| {
+                                    view! {
+                                        <div class="py-2 px-3 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200 dark:text-red-200 dark:bg-red-950/40 dark:border-red-800">
+                                            {error}
+                                        </div>
+                                    }
+                                })
+                            }}
+                            <ChatInput destination disabled=input_disabled />
+                        </div>
+                    }),
+                    ThreadFooterState::Notice(error) => Either::Right(view! {
+                        <div class="py-3 px-4 text-sm text-amber-900 dark:text-amber-100 bg-amber-100 dark:bg-amber-950/40">
+                            {error}
+                        </div>
+                    }),
+                }}
             </div>
         </div>
     }
@@ -735,30 +771,18 @@ pub fn GameChatWindow(
             });
             Some(match thread {
                 GameThread::Players => ChatDestination::GamePlayers(route_game_id.clone()),
-                GameThread::Spectators => {
-                    ChatDestination::GameSpectators(route_game_id.clone())
-                }
+                GameThread::Spectators => ChatDestination::GameSpectators(route_game_id.clone()),
             })
         })
     });
-    let active_destination = Signal::derive(move || {
-        resolved_destination
-            .get()
-            .expect("game chat destination is only read once it has resolved")
-    });
-
     view! {
-        <Show
-            when=move || resolved_destination.get().is_some()
-            fallback=move || {
-                view! {
-                    <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
-                        {t!(i18n, messages.chat.loading)}
-                    </div>
-                }
-            }
-        >
-            <ResolvedChatWindow destination=active_destination />
-        </Show>
+        {move || match resolved_destination.get() {
+            Some(destination) => Either::Left(view! { <ResolvedChatWindow destination /> }),
+            None => Either::Right(view! {
+                <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
+                    {t!(i18n, messages.chat.loading)}
+                </div>
+            }),
+        }}
     }
 }
