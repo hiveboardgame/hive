@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{GameId, GameThread};
+use crate::{GameId, GameThread, TournamentChatCapabilities};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DmConversation {
@@ -16,7 +16,7 @@ pub struct TournamentChannel {
     pub nanoid: String,
     pub name: String,
     pub muted: bool,
-    pub can_chat: bool,
+    pub access: TournamentChatCapabilities,
     pub last_message_at: DateTime<Utc>,
 }
 

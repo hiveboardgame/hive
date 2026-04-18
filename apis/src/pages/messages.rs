@@ -5,14 +5,12 @@ use crate::{
     chat::ConversationKey,
     components::{
         atoms::block_toggle_button::BlockToggleButton,
+        atoms::unread_badge::UnreadBadge,
         organisms::chat::ResolvedChatWindow,
     },
     functions::{
         blocks_mutes::{mute_tournament_chat, unmute_tournament_chat},
-        chat::{
-            get_game_chat_route_data,
-            get_tournament_route_data,
-        },
+        chat::{get_game_chat_route_data, get_tournament_route_data},
         users::resolve_username,
     },
     i18n::*,
@@ -27,10 +25,12 @@ use shared_types::{
     ChatDestination,
     DmConversation,
     GameChannel,
+    GameChatCapabilities,
     GameId,
     GameThread,
     MessagesHubData,
     TournamentChannel,
+    TournamentChatCapabilities,
     TournamentId,
 };
 use uuid::Uuid;
@@ -544,7 +544,7 @@ pub fn MessagesTournamentThread() -> impl IntoView {
             chat.messages_hub_data.with_untracked(|hub| {
                 hub.as_ref()
                     .and_then(|hub| find_tournament_channel(hub, route_tournament_id))
-                    .map(|channel| (channel.name, channel.muted, channel.can_chat))
+                    .map(|channel| (channel.name, channel.muted, channel.access))
             })
         },
         move |route_tournament_id| async move {
@@ -560,13 +560,14 @@ pub fn MessagesTournamentThread() -> impl IntoView {
         failed_message,
         failed_message,
         move |tournament_id, resolved_tournament| {
+            let (title, muted, access) = resolved_tournament;
             view! {
                 <MessagesResolvedTournamentView
                     restricted_message
                     tournament_id
-                    title=resolved_tournament.0
-                    muted=resolved_tournament.1
-                    can_chat=resolved_tournament.2
+                    title
+                    muted
+                    access
                 />
             }
             .into_any()
@@ -580,7 +581,7 @@ fn MessagesResolvedTournamentView(
     tournament_id: TournamentId,
     title: String,
     muted: bool,
-    can_chat: bool,
+    access: TournamentChatCapabilities,
 ) -> impl IntoView {
     let title = StoredValue::new(title);
     let tournament_id = StoredValue::new(tournament_id);
@@ -591,7 +592,7 @@ fn MessagesResolvedTournamentView(
         <MessagesThreadFrame title=Signal::derive(move || title.get_value())>
             <TournamentRouteActions tournament_id=tournament_id.get_value() muted />
             <Show
-                when=move || can_chat
+                when=move || access.can_read()
                 fallback=move || {
                     view! {
                         <MessagesStatusContent message=restricted_message />
@@ -724,7 +725,7 @@ pub fn MessagesGameThread(thread: GameThread) -> impl IntoView {
             chat.messages_hub_data.with_untracked(|hub| {
                 hub.as_ref()
                     .and_then(|hub| find_game_channel(hub, route_game_id))
-                    .map(|channel| (channel.is_player, channel.finished))
+                    .map(|channel| GameChatCapabilities::new(channel.is_player, channel.finished))
             })
         },
         move |route_game_id| async move {
@@ -747,8 +748,7 @@ pub fn MessagesGameThread(thread: GameThread) -> impl IntoView {
                     thread
                     title
                     spectator_unlock_message
-                    is_player=resolved_game.0
-                    finished=resolved_game.1
+                    access=resolved_game
                 />
             }
             .into_any()
@@ -763,13 +763,14 @@ fn MessagesResolvedGameView(
     thread: GameThread,
     title: Signal<String>,
     spectator_unlock_message: Signal<String>,
-    is_player: bool,
-    finished: bool,
+    access: GameChatCapabilities,
 ) -> impl IntoView {
     let game_id = StoredValue::new(game_id);
     let denied_message = Signal::derive(move || match thread {
-        GameThread::Players if !is_player => Some(PLAYERS_CHAT_ONLY_MESSAGE.to_string()),
-        GameThread::Spectators if is_player && !finished => {
+        GameThread::Players if !access.can_read(GameThread::Players) => {
+            Some(PLAYERS_CHAT_ONLY_MESSAGE.to_string())
+        }
+        GameThread::Spectators if !access.can_read(GameThread::Spectators) => {
             Some(spectator_unlock_message.get())
         }
         _ => None,
@@ -784,7 +785,7 @@ fn MessagesResolvedGameView(
 
     view! {
         <MessagesThreadFrame title>
-            <GameChatHeader current_thread=thread game_id=game_id.get_value() is_player finished />
+            <GameChatHeader current_thread=thread game_id=game_id.get_value() access />
             <Show
                 when=move || can_view_thread.get()
                 fallback=move || {
@@ -805,8 +806,7 @@ fn MessagesResolvedGameView(
 fn GameChatHeader(
     current_thread: GameThread,
     game_id: GameId,
-    is_player: bool,
-    finished: bool,
+    access: GameChatCapabilities,
 ) -> impl IntoView {
     let i18n = use_i18n();
     let static_chat_label = Signal::derive(move || {
@@ -829,14 +829,22 @@ fn GameChatHeader(
                     </A>
                 </div>
                 <Show
-                    when=move || is_player && finished
+                    when=move || {
+                        access.can_toggle_embedded_threads()
+                            && access.can_read(GameThread::Spectators)
+                    }
                     fallback=move || {
                         view! {
                             <div class="flex flex-col gap-1">
                                 <span class="inline-flex items-center py-1 px-2.5 text-xs font-medium text-gray-700 bg-white rounded-full border border-gray-300 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-600 w-fit">
                                     {move || static_chat_label.get()}
                                 </span>
-                                <Show when=move || is_player && !finished>
+                                <Show
+                                    when=move || {
+                                        access.can_toggle_embedded_threads()
+                                            && !access.can_read(GameThread::Spectators)
+                                    }
+                                >
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
                                         {t!(i18n, messages.chat.spectator_unlock)}
                                     </p>
@@ -958,7 +966,7 @@ fn DmChannelItem(dm: DmConversation, current_route: Signal<MessageRoute>) -> imp
     view! {
         <MessagesChannelLink href=href.get() is_selected=is_selected>
             <span class="truncate">{username.get_value()}</span>
-            <ChannelUnreadBadge unread=unread />
+            <UnreadBadge count=unread />
         </MessagesChannelLink>
     }
 }
@@ -1003,7 +1011,7 @@ fn TournamentChannelItem(
                     }
                 })}
             </span>
-            <ChannelUnreadBadge unread=unread />
+            <UnreadBadge count=unread />
         </MessagesChannelLink>
     }
 }
@@ -1037,7 +1045,7 @@ fn GameChannelItem(game: GameChannel, current_route: Signal<MessageRoute>) -> im
             <span class="truncate" title=display_label_with_nanoid.get_value()>
                 {display_label_with_nanoid.get_value()}
             </span>
-            <ChannelUnreadBadge unread=unread />
+            <UnreadBadge count=unread />
         </MessagesChannelLink>
     }
 }
@@ -1218,19 +1226,5 @@ where
                 })
             }}
         </ChannelSection>
-    }
-}
-
-#[component]
-fn ChannelUnreadBadge(unread: Signal<i64>) -> impl IntoView {
-    view! {
-        <Show when=move || unread.get() != 0>
-            <span class="flex justify-center items-center px-1.5 h-5 text-xs font-medium leading-none text-white rounded-full dark:bg-red-500 shrink-0 min-w-5 bg-ladybug-red">
-                {move || {
-                    let count = unread.get();
-                    if count > 99 { "99+".to_string() } else { count.to_string() }
-                }}
-            </span>
-        </Show>
     }
 }

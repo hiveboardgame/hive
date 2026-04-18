@@ -1,6 +1,8 @@
 //! Server functions for chat read receipts and unread counts.
 
 #[cfg(feature = "ssr")]
+use crate::chat::access::{can_user_read_chat, load_game_chat_capabilities};
+#[cfg(feature = "ssr")]
 use crate::functions::auth::identity::uuid;
 #[cfg(feature = "ssr")]
 use crate::functions::db::pool;
@@ -12,11 +14,9 @@ use log::error;
 use db_lib::get_conn;
 #[cfg(feature = "ssr")]
 use db_lib::helpers::{
-    can_user_access_chat_channel,
     get_blocked_user_ids,
     get_chat_messages_for_channel,
     get_dm_conversations_for_user,
-    get_game_chat_participants_and_finished,
     get_game_channels_for_user,
     get_tournament_channels_for_user,
     get_tournament_thread_data,
@@ -27,7 +27,14 @@ use db_lib::helpers::{
 use std::collections::HashMap;
 use leptos::prelude::*;
 use server_fn::codec;
-use shared_types::{ConversationKey, GameId, MessagesHubData, UnreadCount};
+use shared_types::{
+    ConversationKey,
+    GameChatCapabilities,
+    GameId,
+    MessagesHubData,
+    TournamentChatCapabilities,
+    UnreadCount,
+};
 #[cfg(feature = "ssr")]
 use shared_types::{
     ChatMessage,
@@ -197,14 +204,9 @@ pub async fn mark_chat_read(channel_key: ConversationKey) -> Result<(), ServerFn
         .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
 
     // Verify user can access this channel before creating a read receipt
-    let allowed = can_user_access_chat_channel(
-        &mut conn,
-        user_id,
-        persistent_key.channel_type.as_str(),
-        &persistent_key.channel_id,
-    )
-    .await
-    .map_err(|err| generic_chat_server_error("checking chat access", err))?;
+    let allowed = can_user_read_chat(&mut conn, user_id, &channel_key)
+        .await
+        .map_err(|err| generic_chat_server_error("checking chat access", err))?;
     if !allowed {
         return Err(ServerFnError::new("Access denied"));
     }
@@ -281,14 +283,9 @@ pub async fn get_chat_history(
         capped_limit
     };
 
-    let allowed = can_user_access_chat_channel(
-        &mut conn,
-        user_id,
-        persistent_key.channel_type.as_str(),
-        &persistent_key.channel_id,
-    )
-    .await
-    .map_err(|err| generic_chat_server_error("checking chat access", err))?;
+    let allowed = can_user_read_chat(&mut conn, user_id, &channel_key)
+        .await
+        .map_err(|err| generic_chat_server_error("checking chat access", err))?;
     if !allowed {
         return Err(ServerFnError::new("Access denied"));
     }
@@ -325,7 +322,7 @@ pub async fn get_chat_history(
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_tournament_route_data(
     tournament_id: String,
-) -> Result<(String, bool, bool), ServerFnError> {
+) -> Result<(String, bool, TournamentChatCapabilities), ServerFnError> {
     let tournament_id = tournament_id.trim().to_string();
     let user_id: uuid::Uuid = uuid().await?;
     let pool = pool().await?;
@@ -340,16 +337,14 @@ pub async fn get_tournament_route_data(
 #[server(input = codec::Cbor, output = codec::Cbor)]
 pub async fn get_game_chat_route_data(
     game_id: GameId,
-) -> Result<(bool, bool), ServerFnError> {
+) -> Result<GameChatCapabilities, ServerFnError> {
     let user_id: uuid::Uuid = uuid().await?;
     let pool = pool().await?;
     let mut conn = get_conn(&pool)
         .await
         .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
-    let (white_id, black_id, finished) =
-        get_game_chat_participants_and_finished(&mut conn, &game_id)
+    load_game_chat_capabilities(&mut conn, user_id, &game_id)
         .await
-        .map_err(|err| generic_chat_server_error("loading game chat route data", err))?;
-
-    Ok((user_id == white_id || user_id == black_id, finished))
+        .map_err(|err| generic_chat_server_error("loading game chat route data", err))?
+        .ok_or_else(|| ServerFnError::new("Game not found"))
 }

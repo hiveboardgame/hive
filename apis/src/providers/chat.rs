@@ -400,7 +400,7 @@ impl Chat {
         });
     }
 
-    fn touch_dm_conversation(
+    fn record_dm_catalog_activity(
         &self,
         other_user_id: Uuid,
         username: String,
@@ -421,7 +421,7 @@ impl Chat {
         }
     }
 
-    fn touch_tournament_conversation(
+    fn record_tournament_catalog_activity(
         &self,
         tournament_id: &TournamentId,
         timestamp: Option<DateTime<Utc>>,
@@ -440,7 +440,7 @@ impl Chat {
         }
     }
 
-    fn touch_game_conversation(
+    fn record_game_catalog_activity(
         &self,
         game_id: &GameId,
         thread: GameThread,
@@ -458,6 +458,227 @@ impl Chat {
         if !found {
             self.refresh_messages_hub();
         }
+    }
+
+    fn record_catalog_activity_for_key(
+        &self,
+        key: &ConversationKey,
+        dm_username: Option<String>,
+        timestamp: Option<DateTime<Utc>>,
+    ) {
+        match key {
+            ConversationKey::Direct(other_user_id) => {
+                let Some(username) = dm_username else {
+                    return;
+                };
+                self.record_dm_catalog_activity(*other_user_id, username, timestamp);
+            }
+            ConversationKey::Tournament(tournament_id) => {
+                self.record_tournament_catalog_activity(tournament_id, timestamp);
+            }
+            ConversationKey::Game { game_id, thread } => {
+                self.record_game_catalog_activity(game_id, *thread, timestamp);
+            }
+            ConversationKey::Global => {}
+        }
+    }
+
+    fn with_messages_for_key_untracked<R>(
+        &self,
+        key: &ConversationKey,
+        f: impl FnOnce(&[ChatMessage]) -> R,
+    ) -> R {
+        match key {
+            ConversationKey::Direct(other_user_id) => self.users_messages.with_untracked(
+                |messages| f(messages.get(other_user_id).map(Vec::as_slice).unwrap_or(&[])),
+            ),
+            ConversationKey::Tournament(tournament_id) => {
+                self.tournament_lobby_messages.with_untracked(|messages| {
+                    f(messages.get(tournament_id).map(Vec::as_slice).unwrap_or(&[]))
+                })
+            }
+            ConversationKey::Game {
+                game_id,
+                thread: GameThread::Players,
+            } => self.games_private_messages.with_untracked(|messages| {
+                f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))
+            }),
+            ConversationKey::Game {
+                game_id,
+                thread: GameThread::Spectators,
+            } => self.games_public_messages.with_untracked(|messages| {
+                f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))
+            }),
+            ConversationKey::Global => self.global_messages.with_untracked(|messages| f(messages)),
+        }
+    }
+
+    fn replace_messages_for_key(&self, key: &ConversationKey, mut messages: Vec<ChatMessage>) {
+        match key {
+            ConversationKey::Direct(other_id) => {
+                self.users_messages.update(|stored| {
+                    if messages.is_empty() {
+                        stored.remove(other_id);
+                    } else {
+                        stored.insert(*other_id, messages);
+                    }
+                });
+            }
+            ConversationKey::Tournament(tournament_id) => {
+                self.tournament_lobby_messages.update(|stored| {
+                    if messages.is_empty() {
+                        stored.remove(tournament_id);
+                    } else {
+                        stored.insert(tournament_id.clone(), messages);
+                    }
+                });
+            }
+            ConversationKey::Game {
+                game_id,
+                thread: GameThread::Players,
+            } => {
+                self.games_private_messages.update(|stored| {
+                    if messages.is_empty() {
+                        stored.remove(game_id);
+                    } else {
+                        stored.insert(game_id.clone(), messages);
+                    }
+                });
+            }
+            ConversationKey::Game {
+                game_id,
+                thread: GameThread::Spectators,
+            } => {
+                self.games_public_messages.update(|stored| {
+                    if messages.is_empty() {
+                        stored.remove(game_id);
+                    } else {
+                        stored.insert(game_id.clone(), messages);
+                    }
+                });
+            }
+            ConversationKey::Global => {
+                retain_recent_announcements(&mut messages);
+                self.global_messages.set(messages);
+            }
+        }
+    }
+
+    fn inject_messages_for_key(&self, key: &ConversationKey, messages: Vec<ChatMessage>) {
+        match key {
+            ConversationKey::Direct(other_id) => {
+                self.users_messages.update(|stored| {
+                    let entry = stored.entry(*other_id).or_default();
+                    let existing = std::mem::take(entry);
+                    let mut merged = merge_and_dedupe(existing, messages);
+                    trim_stored_messages(&mut merged);
+                    *entry = merged;
+                });
+            }
+            ConversationKey::Tournament(tournament_id) => {
+                self.tournament_lobby_messages.update(|stored| {
+                    let entry = stored.entry(tournament_id.clone()).or_default();
+                    let existing = std::mem::take(entry);
+                    let mut merged = merge_and_dedupe(existing, messages);
+                    trim_stored_messages(&mut merged);
+                    *entry = merged;
+                });
+            }
+            ConversationKey::Game {
+                game_id,
+                thread: GameThread::Players,
+            } => {
+                self.games_private_messages.update(|stored| {
+                    let entry = stored.entry(game_id.clone()).or_default();
+                    let existing = std::mem::take(entry);
+                    let mut merged = merge_and_dedupe(existing, messages);
+                    trim_stored_messages(&mut merged);
+                    *entry = merged;
+                });
+            }
+            ConversationKey::Game {
+                game_id,
+                thread: GameThread::Spectators,
+            } => {
+                self.games_public_messages.update(|stored| {
+                    let entry = stored.entry(game_id.clone()).or_default();
+                    let existing = std::mem::take(entry);
+                    let mut merged = merge_and_dedupe(existing, messages);
+                    trim_stored_messages(&mut merged);
+                    *entry = merged;
+                });
+            }
+            ConversationKey::Global => {
+                self.global_messages.update(|existing| {
+                    *existing = merge_and_dedupe(std::mem::take(existing), messages);
+                    retain_recent_announcements(existing);
+                });
+            }
+        }
+    }
+
+    fn append_live_messages_for_key(&self, key: &ConversationKey, messages: Vec<ChatMessage>) {
+        match key {
+            ConversationKey::Direct(other_id) => {
+                self.users_messages.update(|stored| {
+                    let entry = stored.entry(*other_id).or_default();
+                    entry.extend(messages);
+                    trim_stored_messages(entry);
+                });
+            }
+            ConversationKey::Tournament(tournament_id) => {
+                self.tournament_lobby_messages.update(|stored| {
+                    let entry = stored.entry(tournament_id.clone()).or_default();
+                    entry.extend(messages);
+                    trim_stored_messages(entry);
+                });
+            }
+            ConversationKey::Game {
+                game_id,
+                thread: GameThread::Players,
+            } => {
+                self.games_private_messages.update(|stored| {
+                    let entry = stored.entry(game_id.clone()).or_default();
+                    entry.extend(messages);
+                    trim_stored_messages(entry);
+                });
+            }
+            ConversationKey::Game {
+                game_id,
+                thread: GameThread::Spectators,
+            } => {
+                self.games_public_messages.update(|stored| {
+                    let entry = stored.entry(game_id.clone()).or_default();
+                    entry.extend(messages);
+                    trim_stored_messages(entry);
+                });
+            }
+            ConversationKey::Global => {
+                self.global_messages.update(|existing| {
+                    existing.extend(messages);
+                    retain_recent_announcements(existing);
+                });
+            }
+        }
+    }
+
+    fn prune_threads_for_key(&self, key: &ConversationKey) {
+        match key {
+            ConversationKey::Direct(_) => self.prune_dm_threads(),
+            ConversationKey::Tournament(_) => self.prune_tournament_threads(),
+            ConversationKey::Game { thread, .. } => self.prune_game_threads(*thread),
+            ConversationKey::Global => {}
+        }
+    }
+
+    fn filter_duplicate_live_messages_for_key(
+        &self,
+        key: &ConversationKey,
+        incoming: impl IntoIterator<Item = ChatMessage>,
+    ) -> Vec<ChatMessage> {
+        self.with_messages_for_key_untracked(key, |existing| {
+            filter_duplicate_live_messages(existing, incoming)
+        })
     }
 
     fn remove_channel_keys(&self, keys: impl IntoIterator<Item = ConversationKey>) {
@@ -1114,119 +1335,16 @@ impl Chat {
     pub fn replace_history(&self, key: &ConversationKey, mut messages: Vec<ChatMessage>) {
         messages.sort_by_key(|m| m.timestamp.map(|t| t.timestamp_millis()).unwrap_or(0));
         trim_stored_messages(&mut messages);
-
-        match key {
-            ConversationKey::Direct(other_id) => {
-                self.users_messages.update(|stored| {
-                    if messages.is_empty() {
-                        stored.remove(other_id);
-                    } else {
-                        stored.insert(*other_id, messages);
-                    }
-                });
-                self.prune_dm_threads();
-            }
-            ConversationKey::Tournament(tournament_id) => {
-                self.tournament_lobby_messages.update(|stored| {
-                    if messages.is_empty() {
-                        stored.remove(tournament_id);
-                    } else {
-                        stored.insert(tournament_id.clone(), messages);
-                    }
-                });
-                self.prune_tournament_threads();
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Players,
-            } => {
-                self.games_private_messages.update(|stored| {
-                    if messages.is_empty() {
-                        stored.remove(game_id);
-                    } else {
-                        stored.insert(game_id.clone(), messages);
-                    }
-                });
-                self.prune_game_threads(GameThread::Players);
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Spectators,
-            } => {
-                self.games_public_messages.update(|stored| {
-                    if messages.is_empty() {
-                        stored.remove(game_id);
-                    } else {
-                        stored.insert(game_id.clone(), messages);
-                    }
-                });
-                self.prune_game_threads(GameThread::Spectators);
-            }
-            ConversationKey::Global => {
-                retain_recent_announcements(&mut messages);
-                self.global_messages.set(messages);
-            }
-        }
+        self.replace_messages_for_key(key, messages);
+        self.prune_threads_for_key(key);
     }
 
     /// Injects fetched history into the correct in-memory map so the thread view can display it.
     /// Merges with existing messages and deduplicates to avoid losing WebSocket messages when REST
     /// fetch completes after live delivery.
     pub fn inject_history(&self, key: &ConversationKey, messages: Vec<ChatMessage>) {
-        match key {
-            ConversationKey::Direct(other_id) => {
-                self.users_messages.update(|m| {
-                    let entry = m.entry(*other_id).or_default();
-                    let existing = std::mem::take(entry);
-                    let mut merged = merge_and_dedupe(existing, messages);
-                    trim_stored_messages(&mut merged);
-                    *entry = merged;
-                });
-                self.prune_dm_threads();
-            }
-            ConversationKey::Tournament(tournament_id) => {
-                self.tournament_lobby_messages.update(|m| {
-                    let entry = m.entry(tournament_id.clone()).or_default();
-                    let existing = std::mem::take(entry);
-                    let mut merged = merge_and_dedupe(existing, messages);
-                    trim_stored_messages(&mut merged);
-                    *entry = merged;
-                });
-                self.prune_tournament_threads();
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Players,
-            } => {
-                self.games_private_messages.update(|m| {
-                    let entry = m.entry(game_id.clone()).or_default();
-                    let existing = std::mem::take(entry);
-                    let mut merged = merge_and_dedupe(existing, messages);
-                    trim_stored_messages(&mut merged);
-                    *entry = merged;
-                });
-                self.prune_game_threads(GameThread::Players);
-            }
-            ConversationKey::Game {
-                game_id,
-                thread: GameThread::Spectators,
-            } => {
-                self.games_public_messages.update(|m| {
-                    let entry = m.entry(game_id.clone()).or_default();
-                    let existing = std::mem::take(entry);
-                    let mut merged = merge_and_dedupe(existing, messages);
-                    trim_stored_messages(&mut merged);
-                    *entry = merged;
-                });
-                self.prune_game_threads(GameThread::Spectators);
-            }
-            ConversationKey::Global => {
-                self.global_messages.update(|existing| {
-                    *existing = merge_and_dedupe(std::mem::take(existing), messages);
-                    retain_recent_announcements(existing);
-                });
-            }
-        }
+        self.inject_messages_for_key(key, messages);
+        self.prune_threads_for_key(key);
     }
 
     /// Loads channel history through the server-fn path and returns messages without injecting them.
@@ -1248,26 +1366,16 @@ impl Chat {
     }
 
     pub fn send(&self, message: &str, destination: ChatDestination, turn: Option<usize>) {
-        match &destination {
-            ChatDestination::User((other_user_id, username)) => {
-                self.touch_dm_conversation(*other_user_id, username.clone(), Some(Utc::now()));
-            }
-            ChatDestination::TournamentLobby(tournament_id) => {
-                self.touch_tournament_conversation(tournament_id, Some(Utc::now()));
-            }
-            ChatDestination::GamePlayers(game_id) => {
-                self.touch_game_conversation(game_id, GameThread::Players, Some(Utc::now()));
-            }
-            ChatDestination::GameSpectators(game_id) => {
-                self.touch_game_conversation(game_id, GameThread::Spectators, Some(Utc::now()));
-            }
-            ChatDestination::Global => {}
-        }
+        let channel_key = ConversationKey::from_destination(&destination);
+        let dm_username = match &destination {
+            ChatDestination::User((_, username)) => Some(username.clone()),
+            _ => None,
+        };
+        self.record_catalog_activity_for_key(&channel_key, dm_username, Some(Utc::now()));
         self.user.with_untracked(|a| {
             if let Some(account) = a {
                 let id = account.user.uid;
                 let name = account.user.username.clone();
-                let channel_key = ConversationKey::from_destination(&destination);
                 self.clear_chat_send_error(&channel_key);
                 let turn = match &destination {
                     ChatDestination::GamePlayers(_) | ChatDestination::GameSpectators(_) => turn,
@@ -1295,24 +1403,20 @@ impl Chat {
             match &last_message.destination {
                 ChatDestination::TournamentLobby(id) => {
                     let channel_key = ConversationKey::tournament(id);
-                    let new_messages: Vec<ChatMessage> =
-                        self.tournament_lobby_messages.with_untracked(|messages| {
-                            let existing = messages.get(id).map(Vec::as_slice).unwrap_or(&[]);
-                            filter_duplicate_live_messages(
-                                existing,
-                                containers.iter().map(|c| c.message.clone()),
-                            )
-                        });
+                    let new_messages = self.filter_duplicate_live_messages_for_key(
+                        &channel_key,
+                        containers.iter().map(|c| c.message.clone()),
+                    );
                     if new_messages.is_empty() {
                         return;
                     }
-                    self.tournament_lobby_messages.update(|tournament| {
-                        let entry = tournament.entry(id.clone()).or_default();
-                        entry.extend(new_messages);
-                        trim_stored_messages(entry);
-                    });
-                    self.prune_tournament_threads();
-                    self.touch_tournament_conversation(id, last_message.message.timestamp);
+                    self.append_live_messages_for_key(&channel_key, new_messages);
+                    self.prune_threads_for_key(&channel_key);
+                    self.record_catalog_activity_for_key(
+                        &channel_key,
+                        None,
+                        last_message.message.timestamp,
+                    );
                     if is_live && !from_self {
                         if self.is_channel_visible(&channel_key) {
                             self.clear_tournament_lobby_new_messages(id);
@@ -1341,29 +1445,18 @@ impl Chat {
                         _ => last_message.message.username.clone(),
                     };
                     let channel_key = ConversationKey::direct(thread_other_id);
-                    let new_messages: Vec<ChatMessage> =
-                        self.users_messages.with_untracked(|messages| {
-                            let existing = messages
-                                .get(&thread_other_id)
-                                .map(Vec::as_slice)
-                                .unwrap_or(&[]);
-                            filter_duplicate_live_messages(
-                                existing,
-                                containers.iter().map(|c| c.message.clone()),
-                            )
-                        });
+                    let new_messages = self.filter_duplicate_live_messages_for_key(
+                        &channel_key,
+                        containers.iter().map(|c| c.message.clone()),
+                    );
                     if new_messages.is_empty() {
                         return;
                     }
-                    self.users_messages.update(|users| {
-                        let entry = users.entry(thread_other_id).or_default();
-                        entry.extend(new_messages);
-                        trim_stored_messages(entry);
-                    });
-                    self.prune_dm_threads();
-                    self.touch_dm_conversation(
-                        thread_other_id,
-                        thread_username,
+                    self.append_live_messages_for_key(&channel_key, new_messages);
+                    self.prune_threads_for_key(&channel_key);
+                    self.record_catalog_activity_for_key(
+                        &channel_key,
+                        Some(thread_username),
                         last_message.message.timestamp,
                     );
                     if is_live && !from_self {
@@ -1382,26 +1475,18 @@ impl Chat {
                 }
                 ChatDestination::GamePlayers(id) => {
                     let channel_key = ConversationKey::game_players(id);
-                    let new_messages: Vec<ChatMessage> =
-                        self.games_private_messages.with_untracked(|messages| {
-                            let existing = messages.get(id).map(Vec::as_slice).unwrap_or(&[]);
-                            filter_duplicate_live_messages(
-                                existing,
-                                containers.iter().map(|c| c.message.clone()),
-                            )
-                        });
+                    let new_messages = self.filter_duplicate_live_messages_for_key(
+                        &channel_key,
+                        containers.iter().map(|c| c.message.clone()),
+                    );
                     if new_messages.is_empty() {
                         return;
                     }
-                    self.games_private_messages.update(|games| {
-                        let entry = games.entry(id.clone()).or_default();
-                        entry.extend(new_messages);
-                        trim_stored_messages(entry);
-                    });
-                    self.prune_game_threads(GameThread::Players);
-                    self.touch_game_conversation(
-                        id,
-                        GameThread::Players,
+                    self.append_live_messages_for_key(&channel_key, new_messages);
+                    self.prune_threads_for_key(&channel_key);
+                    self.record_catalog_activity_for_key(
+                        &channel_key,
+                        None,
                         last_message.message.timestamp,
                     );
                     if is_live && !from_self {
@@ -1420,26 +1505,18 @@ impl Chat {
                 }
                 ChatDestination::GameSpectators(id) => {
                     let channel_key = ConversationKey::game_spectators(id);
-                    let new_messages: Vec<ChatMessage> =
-                        self.games_public_messages.with_untracked(|messages| {
-                            let existing = messages.get(id).map(Vec::as_slice).unwrap_or(&[]);
-                            filter_duplicate_live_messages(
-                                existing,
-                                containers.iter().map(|c| c.message.clone()),
-                            )
-                        });
+                    let new_messages = self.filter_duplicate_live_messages_for_key(
+                        &channel_key,
+                        containers.iter().map(|c| c.message.clone()),
+                    );
                     if new_messages.is_empty() {
                         return;
                     }
-                    self.games_public_messages.update(|games| {
-                        let entry = games.entry(id.clone()).or_default();
-                        entry.extend(new_messages);
-                        trim_stored_messages(entry);
-                    });
-                    self.prune_game_threads(GameThread::Spectators);
-                    self.touch_game_conversation(
-                        id,
-                        GameThread::Spectators,
+                    self.append_live_messages_for_key(&channel_key, new_messages);
+                    self.prune_threads_for_key(&channel_key);
+                    self.record_catalog_activity_for_key(
+                        &channel_key,
+                        None,
                         last_message.message.timestamp,
                     );
                     if is_live && !from_self && self.is_channel_visible(&channel_key) {
@@ -1449,17 +1526,13 @@ impl Chat {
                     }
                 }
                 ChatDestination::Global => {
-                    let to_add = self.global_messages.with_untracked(|msgs| {
-                        filter_duplicate_live_messages(
-                            msgs,
-                            containers.iter().map(|c| c.message.clone()),
-                        )
-                    });
+                    let channel_key = ConversationKey::Global;
+                    let to_add = self.filter_duplicate_live_messages_for_key(
+                        &channel_key,
+                        containers.iter().map(|c| c.message.clone()),
+                    );
                     if !to_add.is_empty() {
-                        self.global_messages.update(|m| {
-                            m.extend(to_add);
-                            retain_recent_announcements(m);
-                        });
+                        self.append_live_messages_for_key(&channel_key, to_add);
                     }
                     let alerts = expect_context::<AlertsContext>();
                     alerts.last_alert.update(|v| {

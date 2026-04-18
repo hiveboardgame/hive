@@ -1,19 +1,21 @@
 use crate::{
     components::{
-        molecules::hamburger::Hamburger,
+        atoms::unread_badge::{UnreadBadge, UnreadBadgeVariant},
+        molecules::{
+            game_thread_toggle::{GameThreadToggle, GameThreadToggleSize},
+            hamburger::Hamburger,
+        },
         organisms::chat::GameChatWindow,
     },
-    i18n::*,
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
 use leptos::prelude::*;
 use leptos_icons::*;
-use shared_types::GameThread;
+use shared_types::{GameChatCapabilities, GameThread};
 
 #[component]
 pub fn ChatDropdown() -> impl IntoView {
     let chat = expect_context::<Chat>();
-    let i18n = use_i18n();
     let hamburger_show = RwSignal::new(false);
     let chat_style = "absolute z-50 flex flex-col overflow-hidden w-full h-[80dvh] max-w-screen bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md left-0 p-2";
     let game_state = expect_context::<GameStateSignal>();
@@ -43,27 +45,26 @@ pub fn ChatDropdown() -> impl IntoView {
         }
     });
 
-    // For game chat on mobile: show Players | Spectators toggle when user is a player (same as desktop side_board).
     let auth_context = expect_context::<AuthContext>();
-    let show_players_spectators_toggle = Memo::new(move |_| {
-        auth_context.user.with(|u| {
+    let game_chat_access = Signal::derive(move || {
+        let is_player = auth_context.user.with(|u| {
             u.as_ref().is_some_and(|user| {
                 game_state.signal.with(|gs| {
                     gs.white_id == Some(user.user.uid) || gs.black_id == Some(user.user.uid)
                 })
             })
-        })
+        });
+        let finished = game_state
+            .signal
+            .with(|gs| gs.game_response.as_ref().is_some_and(|gr| gr.finished));
+        GameChatCapabilities::new(is_player, finished)
     });
-    let game_finished = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().is_some_and(|gr| gr.finished)
-    });
-    let game_show_players = RwSignal::new(true);
+    let selected_game_thread = RwSignal::new(GameThread::Players);
     let explicit_game_thread = Signal::derive(move || {
-        show_players_spectators_toggle.get().then_some(if game_show_players.get() {
-            GameThread::Players
-        } else {
-            GameThread::Spectators
-        })
+        game_chat_access
+            .get()
+            .can_toggle_embedded_threads()
+            .then_some(selected_game_thread.get())
     });
 
     view! {
@@ -79,56 +80,19 @@ pub fn ChatDropdown() -> impl IntoView {
             dropdown_style=chat_style
             content=view! {
                 <Icon icon=icondata_bi::BiChatRegular attr:class="size-4" />
-                <Show when=move || unread.get().gt(&0)>
-                    <span class="flex justify-center items-center px-1 h-5 text-xs font-bold leading-none text-white rounded-full min-w-5 bg-black/30 dark:bg-white/30">
-                        {move || {
-                            let count = unread.get();
-                            if count > 99 { "99+".to_string() } else { count.to_string() }
-                        }}
-                    </span>
-                </Show>
+                <UnreadBadge count=Signal::derive(move || unread.get()) variant=UnreadBadgeVariant::Overlay />
             }
             id="chat"
         >
             <div class="flex overflow-hidden flex-col flex-1 min-h-0">
-                <Show when=move || show_players_spectators_toggle.get()>
-                    <div class="flex gap-0.5 p-1 mb-1 bg-gray-100 rounded-t border-b border-gray-300 dark:border-gray-600 shrink-0 dark:bg-gray-800/50">
-                        <button
-                            type="button"
-                            class=move || {
-                                format!(
-                                    "flex-1 px-3 py-2 text-sm font-medium rounded border border-transparent transition-colors {}",
-                                    if game_show_players.get() {
-                                        "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
-                                    } else {
-                                        "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
-                                    },
-                                )
-                            }
-                            on:click=move |_| game_show_players.set(true)
-                        >
-                            {t!(i18n, messages.chat.players)}
-                        </button>
-                        <button
-                            type="button"
-                            disabled=move || !game_finished()
-                            class=move || {
-                                format!(
-                                    "flex-1 px-3 py-2 text-sm font-medium rounded border border-transparent transition-colors {}",
-                                    if !game_show_players.get() {
-                                        "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
-                                    } else if game_finished() {
-                                        "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
-                                    } else {
-                                        "bg-transparent text-gray-500 dark:text-gray-500 cursor-not-allowed"
-                                    },
-                                )
-                            }
-                            on:click=move |_| game_show_players.set(false)
-                        >
-                            {t!(i18n, messages.chat.spectators)}
-                        </button>
-                    </div>
+                <Show when=move || game_chat_access.get().can_toggle_embedded_threads()>
+                    <GameThreadToggle
+                        selected=selected_game_thread
+                        spectators_enabled=Signal::derive(move || {
+                            game_chat_access.get().can_read(GameThread::Spectators)
+                        })
+                        size=GameThreadToggleSize::Roomy
+                    />
                 </Show>
                 <div class="flex overflow-hidden flex-col flex-1 min-h-0">
                     <GameChatWindow explicit_thread=explicit_game_thread />

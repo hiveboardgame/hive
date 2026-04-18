@@ -1,5 +1,6 @@
 use crate::{
     components::{
+        atoms::unread_badge::UnreadBadge,
         layouts::base_layout::COMMON_LINK_STYLE,
         molecules::{hamburger::Hamburger, ping::Ping},
         organisms::{darkmode_toggle::DarkModeToggle, header::set_redirect, logout::Logout},
@@ -10,24 +11,6 @@ use crate::{
 use leptos::prelude::*;
 use leptos_router::components::A;
 
-/// Unread count badge for Messages: compact pill, works in light/dark, clear contrast.
-const MESSAGES_BADGE_CLASS: &str = "shrink-0 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-[10px] font-semibold leading-none text-white bg-ladybug-red dark:bg-red-500 rounded-full border border-white/20 dark:border-white/10";
-
-#[component]
-fn UnreadMessagesBadge(chat: Chat) -> impl IntoView {
-    let unread_count = Memo::new(move |_| chat.total_unread_count());
-    view! {
-        <Show when=move || unread_count.get().gt(&0)>
-            <span class=MESSAGES_BADGE_CLASS>
-                {move || {
-                    let n = unread_count.get();
-                    if n > 99 { "99+".to_string() } else { n.to_string() }
-                }}
-            </span>
-        </Show>
-    }
-}
-
 #[component]
 pub fn UserDropdown(username: String) -> impl IntoView {
     let i18n = use_i18n();
@@ -35,6 +18,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let chat = expect_context::<Chat>();
     let hamburger_show = RwSignal::new(false);
+    let unread_count = Signal::derive(move || chat.total_unread_count());
     let onclick_close = move || hamburger_show.update(|b| *b = false);
     view! {
         <Hamburger
@@ -43,7 +27,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
             dropdown_style="mr-1 xs:mt-0 mt-1 flex flex-col items-stretch absolute w-max bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md p-2 right-0 z-50"
             content=view! {
                 <span class="flex gap-1.5 items-center">
-                    {username.clone()} <UnreadMessagesBadge chat />
+                    {username.clone()} <UnreadBadge count=unread_count />
                 </span>
             }
             id="Username"
@@ -62,7 +46,7 @@ pub fn UserDropdown(username: String) -> impl IntoView {
                 on:click=move |_| onclick_close()
             >
                 {t!(i18n, header.user_menu.messages)}
-                <UnreadMessagesBadge chat />
+                <UnreadBadge count=unread_count />
             </A>
             <A
                 attr:class=COMMON_LINK_STYLE

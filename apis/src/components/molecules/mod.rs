@@ -8,6 +8,7 @@ pub mod chat_and_controls;
 pub mod control_buttons;
 pub mod game_info;
 pub mod game_previews;
+pub mod game_thread_toggle;
 pub mod game_row;
 pub mod hamburger;
 pub mod hex_stack;

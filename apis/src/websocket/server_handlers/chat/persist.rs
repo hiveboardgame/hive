@@ -1,8 +1,8 @@
 //! Converts `ChatMessageContainer` into the form needed for DB persistence.
-
 use chrono::{DateTime, Utc};
 use db_lib::models::NewChatMessage;
 use shared_types::{ChatMessageContainer, PersistentChannelKey};
+use uuid::Uuid;
 /// Owned form of a chat message suitable for building `db_lib::NewChatMessage`.
 /// Call `as_new()` to get a reference type for `insert_chat_message`.
 #[derive(Debug, Clone)]

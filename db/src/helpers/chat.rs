@@ -17,7 +17,6 @@ use chrono::{DateTime, Utc};
 use diesel::{
     dsl::{exists, max, sql},
     prelude::*,
-    select,
     sql_types::Timestamptz,
 };
 use diesel_async::RunQueryDsl;
@@ -25,9 +24,10 @@ use shared_types::{
     ConversationKey,
     DmConversation,
     GameChannel,
-    GameThread,
     GameId,
+    GameThread,
     PersistentChannelKey,
+    TournamentChatCapabilities,
     TournamentChannel,
     UnreadCount,
     CHANNEL_TYPE_DIRECT,
@@ -67,9 +67,9 @@ pub async fn get_tournament_thread_data(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
     tournament_nanoid: &str,
-) -> Result<(String, bool, bool), DbError> {
-    let is_admin = User::is_admin(&user_id, conn).await?;
-    let (name, muted, is_participant) = tournaments::table
+) -> Result<(String, bool, TournamentChatCapabilities), DbError> {
+    let is_site_admin = User::is_admin(&user_id, conn).await?;
+    let (name, muted, is_organizer, is_participant) = tournaments::table
         .filter(tournaments::nanoid.eq(tournament_nanoid))
         .select((
             tournaments::name,
@@ -79,21 +79,54 @@ pub async fn get_tournament_thread_data(
                     .filter(user_tournament_chat_mutes::tournament_id.eq(tournaments::id)),
             ),
             exists(
-                tournaments_users::table
-                    .filter(tournaments_users::user_id.eq(user_id))
-                    .filter(tournaments_users::tournament_id.eq(tournaments::id)),
-            )
-            .or(exists(
                 tournaments_organizers::table
                     .filter(tournaments_organizers::organizer_id.eq(user_id))
                     .filter(tournaments_organizers::tournament_id.eq(tournaments::id)),
-            )),
+            ),
+            exists(
+                tournaments_users::table
+                    .filter(tournaments_users::user_id.eq(user_id))
+                    .filter(tournaments_users::tournament_id.eq(tournaments::id)),
+            ),
         ))
         .first(conn)
         .await
         .map_err(DbError::from)?;
-    let can_chat = is_admin || is_participant;
-    Ok((name, muted, can_chat))
+    Ok((
+        name,
+        muted,
+        TournamentChatCapabilities::new(is_site_admin, is_organizer, is_participant),
+    ))
+}
+
+pub async fn get_tournament_chat_capabilities(
+    conn: &mut DbConn<'_>,
+    user_id: Uuid,
+    tournament_nanoid: &str,
+) -> Result<TournamentChatCapabilities, DbError> {
+    let is_site_admin = User::is_admin(&user_id, conn).await?;
+    let (is_organizer, is_participant) = tournaments::table
+        .filter(tournaments::nanoid.eq(tournament_nanoid))
+        .select((
+            exists(
+                tournaments_organizers::table
+                    .filter(tournaments_organizers::organizer_id.eq(user_id))
+                    .filter(tournaments_organizers::tournament_id.eq(tournaments::id)),
+            ),
+            exists(
+                tournaments_users::table
+                    .filter(tournaments_users::user_id.eq(user_id))
+                    .filter(tournaments_users::tournament_id.eq(tournaments::id)),
+            ),
+        ))
+        .first(conn)
+        .await
+        .map_err(DbError::from)?;
+    Ok(TournamentChatCapabilities::new(
+        is_site_admin,
+        is_organizer,
+        is_participant,
+    ))
 }
 
 /// Insert a chat message and return the inserted row.
@@ -161,55 +194,6 @@ async fn resolve_game_id_for_channel(
         Ok(game_id) => Ok(Some(game_id)),
         Err(diesel::result::Error::NotFound) => Ok(None),
         Err(err) => Err(DbError::from(err)),
-    }
-}
-
-/// Returns true if the user is allowed to read from this chat channel.
-/// Game chat: only players may ever read game_players.
-/// game_spectators is non-player-only while a game is ongoing and globally readable once finished.
-pub async fn can_user_access_chat_channel(
-    conn: &mut DbConn<'_>,
-    user_id: Uuid,
-    channel_type: &str,
-    channel_id: &str,
-) -> Result<bool, DbError> {
-    match channel_type {
-        shared_types::CHANNEL_TYPE_DIRECT => Ok(
-            PersistentChannelKey::from_raw(channel_type, channel_id)
-                .and_then(|channel_key| channel_key.direct_other_user_id(user_id))
-                .is_some(),
-        ),
-        shared_types::CHANNEL_TYPE_GLOBAL => Ok(true),
-        shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY => {
-            Ok(
-                User::is_admin(&user_id, conn).await?
-                    || is_tournament_participant(conn, user_id, channel_id).await?,
-            )
-        }
-        shared_types::CHANNEL_TYPE_GAME_PLAYERS | shared_types::CHANNEL_TYPE_GAME_SPECTATORS => {
-            let (white_id, black_id, finished) =
-                match get_game_chat_participants_and_finished(
-                    conn,
-                    &GameId(channel_id.to_string()),
-                )
-                .await
-                {
-                    Ok(values) => values,
-                    Err(_) => return Ok(false),
-                };
-            let is_player = user_id == white_id || user_id == black_id;
-
-            if channel_type == shared_types::CHANNEL_TYPE_GAME_PLAYERS {
-                // Spectators must never read player messages, even after the game is over.
-                Ok(is_player)
-            } else if finished {
-                // game_spectators: players may not read while game is ongoing; when finished, anyone may read.
-                Ok(true)
-            } else {
-                Ok(!is_player)
-            }
-        }
-        _ => Ok(false),
     }
 }
 
@@ -355,6 +339,7 @@ pub async fn get_tournament_channels_for_user(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
 ) -> Result<Vec<TournamentChannel>, DbError> {
+    let is_site_admin = User::is_admin(&user_id, conn).await?;
     let mut result = chat_messages::table
         .inner_join(tournaments::table.on(chat_messages::channel_id.eq(tournaments::nanoid)))
         .left_join(
@@ -386,51 +371,38 @@ pub async fn get_tournament_channels_for_user(
             tournaments::nanoid,
             tournaments::name,
             user_tournament_chat_mutes::user_id.nullable().is_not_null(),
+            exists(
+                tournaments_organizers::table
+                    .filter(tournaments_organizers::organizer_id.eq(user_id))
+                    .filter(tournaments_organizers::tournament_id.eq(tournaments::id)),
+            ),
+            exists(
+                tournaments_users::table
+                    .filter(tournaments_users::user_id.eq(user_id))
+                    .filter(tournaments_users::tournament_id.eq(tournaments::id)),
+            ),
             max(chat_messages::created_at),
         ))
-        .load::<(String, String, bool, Option<DateTime<Utc>>)>(conn)
+        .load::<(String, String, bool, bool, bool, Option<DateTime<Utc>>)>(conn)
         .await
         .map_err(DbError::from)?
         .into_iter()
-        .filter_map(|(nanoid, name, muted, last_message_at)| {
+        .filter_map(|(nanoid, name, muted, is_organizer, is_participant, last_message_at)| {
             last_message_at.map(|last_message_at| TournamentChannel {
                 muted,
                 nanoid,
                 name,
-                can_chat: true,
+                access: TournamentChatCapabilities::new(
+                    is_site_admin,
+                    is_organizer,
+                    is_participant,
+                ),
                 last_message_at,
             })
         })
         .collect::<Vec<_>>();
     result.sort_by_key(|row| std::cmp::Reverse(row.last_message_at));
     Ok(result)
-}
-
-/// True if the user is a participant in the tournament (player or organizer). Used to allow send in tournament chat.
-pub async fn is_tournament_participant(
-    conn: &mut DbConn<'_>,
-    user_id: Uuid,
-    tournament_nanoid: &str,
-) -> Result<bool, DbError> {
-    select(exists(
-        tournaments::table
-            .filter(tournaments::nanoid.eq(tournament_nanoid))
-            .filter(
-                exists(
-                    tournaments_users::table
-                        .filter(tournaments_users::user_id.eq(user_id))
-                        .filter(tournaments_users::tournament_id.eq(tournaments::id)),
-                )
-                .or(exists(
-                    tournaments_organizers::table
-                        .filter(tournaments_organizers::organizer_id.eq(user_id))
-                        .filter(tournaments_organizers::tournament_id.eq(tournaments::id)),
-                )),
-            ),
-    ))
-    .get_result(conn)
-    .await
-    .map_err(DbError::from)
 }
 
 async fn unread_counts_for_channel_ids(

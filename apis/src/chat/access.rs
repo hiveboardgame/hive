@@ -1,12 +1,17 @@
 use db_lib::{
     db_error::DbError,
-    helpers::{is_blocked, is_tournament_participant},
-    models::{Game, Tournament, User},
+    helpers::{
+        get_game_chat_participants_and_finished,
+        get_tournament_chat_capabilities,
+        is_blocked,
+    },
+    models::{Game, User},
     DbConn,
 };
 use shared_types::{
     ConversationKey,
     GameId,
+    GameChatCapabilities,
     GameThread,
     PersistentChannelKey,
 };
@@ -44,6 +49,48 @@ async fn load_game_or_404(
     Game::find_by_game_id(game_id, conn)
         .await
         .map_err(|e| map_not_found(e, "Game not found", "loading game"))
+}
+
+fn game_chat_capabilities(game: &Game, user_id: Uuid) -> GameChatCapabilities {
+    GameChatCapabilities::new(user_id == game.white_id || user_id == game.black_id, game.finished)
+}
+
+pub async fn load_game_chat_capabilities(
+    conn: &mut DbConn<'_>,
+    user_id: Uuid,
+    game_id: &GameId,
+) -> Result<Option<GameChatCapabilities>, DbError> {
+    match get_game_chat_participants_and_finished(conn, game_id).await {
+        Ok((white_id, black_id, finished)) => Ok(Some(GameChatCapabilities::new(
+            user_id == white_id || user_id == black_id,
+            finished,
+        ))),
+        Err(DbError::NotFound { .. }) => Ok(None),
+        Err(error) => Err(error),
+    }
+}
+
+pub async fn can_user_read_chat(
+    conn: &mut DbConn<'_>,
+    user_id: Uuid,
+    conversation_key: &ConversationKey,
+) -> Result<bool, DbError> {
+    match conversation_key {
+        ConversationKey::Direct(other_user_id) => Ok(*other_user_id != user_id),
+        ConversationKey::Global => Ok(true),
+        ConversationKey::Tournament(tournament_id) => Ok(get_tournament_chat_capabilities(
+            conn,
+            user_id,
+            &tournament_id.0,
+        )
+        .await?
+        .can_read()),
+        ConversationKey::Game { game_id, thread } => Ok(load_game_chat_capabilities(
+            conn, user_id, game_id,
+        )
+        .await?
+        .is_some_and(|access| access.can_read(*thread))),
+    }
 }
 
 pub async fn authorize_chat_send_and_resolve_channel_key(
@@ -96,18 +143,16 @@ pub async fn authorize_chat_send_and_resolve_channel_key(
             Ok(resolved_channel_key)
         }
         ConversationKey::Tournament(tournament_id) => {
-            Tournament::from_nanoid(&tournament_id.0, conn)
+            let access = get_tournament_chat_capabilities(conn, sender_id, &tournament_id.0)
                 .await
-                .map_err(|e| map_not_found(e, "Tournament not found", "loading tournament"))?;
-
-            let can_chat = sender_is_admin
-                || is_tournament_participant(conn, sender_id, &tournament_id.0)
-                    .await
-                    .map_err(|e| ChatSendAccessError::Internal {
-                        context: "checking tournament membership",
-                        error: e,
-                    })?;
-            if !can_chat {
+                .map_err(|error| {
+                    map_not_found(
+                        error,
+                        "Tournament not found",
+                        "loading tournament chat capabilities",
+                    )
+                })?;
+            if !access.can_send() {
                 return Err(ChatSendAccessError::Forbidden(
                     "Only tournament participants and organizers can send messages",
                 ));
@@ -116,22 +161,14 @@ pub async fn authorize_chat_send_and_resolve_channel_key(
         }
         ConversationKey::Game { game_id, thread } => {
             let game = load_game_or_404(conn, game_id).await?;
-            let is_player = sender_id == game.white_id || sender_id == game.black_id;
-            match thread {
-                GameThread::Players => {
-                    if !is_player {
-                        return Err(ChatSendAccessError::Forbidden(
-                            "Only players can send to players chat",
-                        ));
-                    }
-                }
-                GameThread::Spectators => {
-                    if is_player && !game.finished {
-                        return Err(ChatSendAccessError::Forbidden(
-                            "Players cannot send to spectators chat while the game is ongoing",
-                        ));
-                    }
-                }
+            let access = game_chat_capabilities(&game, sender_id);
+            if !access.can_send(*thread) {
+                let message = if *thread == GameThread::Players {
+                    "Only players can send to players chat"
+                } else {
+                    "Players cannot send to spectators chat while the game is ongoing"
+                };
+                return Err(ChatSendAccessError::Forbidden(message));
             }
             Ok(resolved_channel_key)
         }

@@ -1,13 +1,16 @@
 use crate::{
     components::{
-        molecules::history_controls::HistoryControls,
+        atoms::unread_badge::UnreadBadge,
+        molecules::{
+            game_thread_toggle::{GameThreadToggle, GameThreadToggleSize},
+            history_controls::HistoryControls,
+        },
         organisms::{
             chat::GameChatWindow,
             history::History,
             reserve::ReserveContent,
         },
     },
-    i18n::*,
     providers::{
         chat::Chat,
         game_state::{GameStateSignal, View},
@@ -21,7 +24,7 @@ use leptos_router::{
     location::State,
     NavigateOptions,
 };
-use shared_types::{GameId, GameThread};
+use shared_types::{GameChatCapabilities, GameId, GameThread};
 
 #[derive(Clone, PartialEq, Copy)]
 pub enum TabView {
@@ -46,7 +49,7 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
         TabView::History => "History".to_string(),
         TabView::Chat => "Chat".to_string(),
     };
-    let unread = move || chat.unread_count_for_game(&game_id());
+    let unread = Signal::derive(move || chat.unread_count_for_game(&game_id()));
     let mut game_state = expect_context::<GameStateSignal>();
     view! {
         <div
@@ -81,13 +84,8 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
             }
         >
             {string.clone()}
-            <Show when=move || name == TabView::Chat && (unread() > 0)>
-                <span class="flex justify-center items-center px-1 h-5 text-xs font-bold leading-none text-white rounded-full dark:bg-red-500 min-w-5 bg-ladybug-red">
-                    {move || {
-                        let count = unread();
-                        if count > 99 { "99+".to_string() } else { count.to_string() }
-                    }}
-                </span>
+            <Show when=move || name == TabView::Chat>
+                <UnreadBadge count=unread />
             </Show>
         </div>
     }
@@ -99,27 +97,24 @@ pub fn SideboardTabs(
     tab: RwSignal<TabView>,
     #[prop(optional)] extend_tw_classes: &'static str,
 ) -> impl IntoView {
-    let i18n = use_i18n();
     let game_state = expect_context::<GameStateSignal>();
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
-    let show_buttons = Signal::derive(move || {
-        user().is_some_and(|user| {
+    let game_chat_access = Signal::derive(move || {
+        let is_player = user().is_some_and(|user| {
             let (white_id, black_id) = white_and_black();
             Some(user.id) == black_id || Some(user.id) == white_id
-        })
+        });
+        let finished = game_state
+            .signal
+            .with(|gs| gs.game_response.as_ref().is_some_and(|gr| gr.finished));
+        GameChatCapabilities::new(is_player, finished)
     });
-    let game_finished = create_read_slice(game_state.signal, |gs| {
-        gs.game_response.as_ref().is_some_and(|gr| gr.finished)
-    });
-    let game_show_players = RwSignal::new(true);
+    let show_buttons = Signal::derive(move || game_chat_access.get().can_toggle_embedded_threads());
+    let selected_game_thread = RwSignal::new(GameThread::Players);
     let explicit_game_thread = Signal::derive(move || {
-        show_buttons().then_some(if game_show_players.get() {
-            GameThread::Players
-        } else {
-            GameThread::Spectators
-        })
+        show_buttons().then_some(selected_game_thread.get())
     });
     view! {
         <div class=format!(
@@ -146,43 +141,13 @@ pub fn SideboardTabs(
             >
                 <HistoryControls />
                 <Show when=move || show_buttons()>
-                    <div class="flex gap-0.5 p-1 border-b shrink-0 border-black/30 bg-inherit dark:border-white/30">
-                        <button
-                            type="button"
-                            class=move || {
-                                format!(
-                                    "flex-1 px-2 py-1 text-xs font-medium rounded border border-transparent transition-colors {}",
-                                    if game_show_players.get() {
-                                        "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
-                                    } else {
-                                        "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
-                                    },
-                                )
-                            }
-                            on:click=move |_| game_show_players.set(true)
-                        >
-                            {t!(i18n, messages.chat.players)}
-                        </button>
-                        <button
-                            type="button"
-                            disabled=move || !game_finished()
-                            class=move || {
-                                format!(
-                                    "flex-1 px-2 py-1 text-xs font-medium rounded border border-transparent transition-colors {}",
-                                    if !game_show_players.get() {
-                                        "bg-slate-400 dark:bg-button-twilight text-gray-900 dark:text-gray-100"
-                                    } else if game_finished() {
-                                        "bg-transparent text-gray-700 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5"
-                                    } else {
-                                        "bg-transparent text-gray-500 dark:text-gray-500 cursor-not-allowed"
-                                    },
-                                )
-                            }
-                            on:click=move |_| game_show_players.set(false)
-                        >
-                            {t!(i18n, messages.chat.spectators)}
-                        </button>
-                    </div>
+                    <GameThreadToggle
+                        selected=selected_game_thread
+                        spectators_enabled=Signal::derive(move || {
+                            game_chat_access.get().can_read(GameThread::Spectators)
+                        })
+                        size=GameThreadToggleSize::Compact
+                    />
                 </Show>
                 <div class="flex overflow-hidden flex-col flex-1 min-h-0">
                     <GameChatWindow explicit_thread=explicit_game_thread />

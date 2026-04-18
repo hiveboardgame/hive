@@ -1,5 +1,6 @@
 mod certainty;
 mod challenge;
+mod chat_capabilities;
 mod chat_message;
 mod conclusion;
 mod game_speed;
@@ -24,6 +25,7 @@ mod tournament_sort_order;
 mod tournament_status;
 pub use certainty::{Certainty, RANKABLE_DEVIATION};
 pub use challenge::{ChallengeDetails, ChallengeError, ChallengeVisibility};
+pub use chat_capabilities::{GameChatCapabilities, TournamentChatCapabilities};
 pub use chat_message::{
     ChannelType,
     ChatDestination,
