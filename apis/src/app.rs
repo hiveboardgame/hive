@@ -123,7 +123,13 @@ pub fn App() -> impl IntoView {
             Some(auth.user.with(|a| a.is_some()))
         }
     });
-    let is_admin = move || Some(auth.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin)));
+    let is_admin = Signal::derive(move || {
+        if auth.action.pending().get() {
+            None
+        } else {
+            Some(auth.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin)))
+        }
+    });
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)
