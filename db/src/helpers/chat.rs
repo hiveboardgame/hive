@@ -46,6 +46,7 @@ diesel::allow_columns_to_appear_in_same_group_by_clause!(
 );
 
 diesel::allow_columns_to_appear_in_same_group_by_clause!(
+    tournaments::id,
     tournaments::nanoid,
     tournaments::name,
     user_tournament_chat_mutes::user_id,
@@ -361,6 +362,7 @@ pub async fn get_tournament_channels_for_user(
             )),
         )
         .group_by((
+            tournaments::id,
             tournaments::nanoid,
             tournaments::name,
             user_tournament_chat_mutes::user_id,
