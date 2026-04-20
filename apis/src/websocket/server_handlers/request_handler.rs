@@ -10,14 +10,16 @@ use super::{
     user_status::handler::UserStatusHandler,
 };
 use crate::{
+    chat::access::{authorize_chat_send_and_resolve_channel_key, ChatSendAccessError},
     common::{ClientRequest, GameAction},
     websocket::{
         messages::{AuthError, InternalServerMessage, WsMessage},
         WebsocketData,
     },
 };
-use db_lib::DbPool;
-use shared_types::{ChatDestination, SimpleUser};
+use anyhow::anyhow;
+use db_lib::{get_conn, DbPool};
+use shared_types::SimpleUser;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -25,6 +27,8 @@ use uuid::Uuid;
 pub enum RequestHandlerError {
     InternalError(#[from] anyhow::Error),
     AuthError(#[from] AuthError),
+    /// Operation not allowed (e.g. recipient has blocked the sender for DMs). Use 403, not 401.
+    Forbidden(String),
 }
 
 impl std::fmt::Display for RequestHandlerError {
@@ -32,9 +36,21 @@ impl std::fmt::Display for RequestHandlerError {
         match self {
             RequestHandlerError::InternalError(e) => write!(f, "{e}"),
             RequestHandlerError::AuthError(e) => write!(f, "{e}"),
+            RequestHandlerError::Forbidden(msg) => write!(f, "{msg}"),
         }
     }
 }
+
+impl RequestHandlerError {
+    pub fn user_safe_reason(&self) -> String {
+        match self {
+            Self::InternalError(_) => "Unable to complete chat request".to_string(),
+            Self::AuthError(err) => err.to_string(),
+            Self::Forbidden(message) => message.clone(),
+        }
+    }
+}
+
 pub struct RequestHandler {
     command: ClientRequest,
     data: Arc<WebsocketData>,
@@ -73,11 +89,23 @@ impl RequestHandler {
         Ok(())
     }
 
-    fn ensure_admin(&self) -> Result<()> {
-        if !self.admin {
-            Err(AuthError::Unauthorized)?
+    fn db_connection_error(context: &str, err: impl std::fmt::Display) -> RequestHandlerError {
+        RequestHandlerError::InternalError(anyhow!(
+            "Database connection failed while {context}: {err}"
+        ))
+    }
+
+    fn map_chat_send_access_error(err: ChatSendAccessError) -> RequestHandlerError {
+        match err {
+            ChatSendAccessError::BadRequest(message)
+            | ChatSendAccessError::Forbidden(message)
+            | ChatSendAccessError::NotFound(message) => {
+                RequestHandlerError::Forbidden(message.to_string())
+            }
+            ChatSendAccessError::Internal { context, error } => {
+                RequestHandlerError::InternalError(anyhow!("{context}: {error}"))
+            }
         }
-        Ok(())
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
@@ -88,10 +116,27 @@ impl RequestHandler {
                 if self.user_id != message_container.message.user_id {
                     Err(AuthError::Unauthorized)?
                 }
-                if message_container.destination == ChatDestination::Global {
-                    self.ensure_admin()?;
-                }
-                ChatHandler::new(message_container, self.data.clone()).handle()
+                let channel_key =
+                    shared_types::ConversationKey::from_destination(&message_container.destination);
+                let mut conn = get_conn(&self.pool)
+                    .await
+                    .map_err(|e| Self::db_connection_error("checking chat send permissions", e))?;
+                let resolved_channel_key = authorize_chat_send_and_resolve_channel_key(
+                    &mut conn,
+                    self.user_id,
+                    self.admin,
+                    &channel_key,
+                )
+                .await
+                .map_err(Self::map_chat_send_access_error)?;
+                ChatHandler::new(
+                    message_container,
+                    resolved_channel_key,
+                    self.data.clone(),
+                    self.pool.clone(),
+                )
+                .handle()
+                .await?
             }
             ClientRequest::Tournament(tournament_action) => {
                 TournamentHandler::new(

@@ -6,6 +6,11 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[[bin]]
+name = "apis"
+path = "src/main.rs"
+required-features = ["ssr"]
+
 [dependencies]
 actix = { workspace = true, optional = true }
 actix-files = { workspace = true, optional = true }
@@ -37,6 +42,7 @@ icondata_fa = { workspace = true }
 icondata_io = { workspace = true }
 icondata_bs = { workspace = true }
 icondata_ch = { workspace = true }
+icondata_hi = { workspace = true }
 icondata_lu = { workspace = true }
 icondata_mdi = { workspace = true }
 icondata_ri = { workspace = true }
@@ -69,6 +75,7 @@ simple_logger = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, optional = true }
 tree-ds = { workspace = true }
+urlencoding = { workspace = true }
 uuid = { workspace = true }
 walkdir = { workspace = true }
 wasm-bindgen = { workspace = true }

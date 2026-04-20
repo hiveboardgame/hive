@@ -176,11 +176,14 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                 }
                             }
                             Err(err) => {
-                                let status_code = match err {
+                                let status_code = match &err {
                                     RequestHandlerError::AuthError(_) => {
                                         http::StatusCode::UNAUTHORIZED
                                     }
-                                    _ => http::StatusCode::NOT_IMPLEMENTED,
+                                    RequestHandlerError::Forbidden(_) => {
+                                        http::StatusCode::FORBIDDEN
+                                    }
+                                    _ => http::StatusCode::INTERNAL_SERVER_ERROR,
                                 };
                                 printdoc! {r#"
                                     -----------------ERROR-----------------
@@ -193,8 +196,8 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
                                 };
                                 let message = ServerResult::Err(ExternalServerError {
                                     user_id,
-                                    field: "foo".to_string(),
-                                    reason: format!("{err}"),
+                                    field: request.error_field(),
+                                    reason: err.user_safe_reason(),
                                     status_code,
                                 });
                                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {

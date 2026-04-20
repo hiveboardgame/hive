@@ -4,14 +4,16 @@ use crate::{
         direct_challenge_button::DirectChallengeButton,
         invite_button::InviteButton,
         kick_button::KickButton,
+        message_button::MessageButton,
         profile_link::ProfileLink,
         rating::Rating,
         status_indicator::StatusIndicator,
         uninvite_button::UninviteButton,
     },
+    providers::AuthContext,
     responses::UserResponse,
 };
-use leptos::{either::EitherOf5, prelude::*};
+use leptos::prelude::*;
 use shared_types::GameSpeed;
 
 #[component]
@@ -34,34 +36,59 @@ pub fn UserRow(
     } else {
         "dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light"
     };
+    let user_id_for_buttons = user_id.get_value();
+    let auth = expect_context::<AuthContext>();
 
     let display_actions = {
-        let user_id = user_id.get_value();
+        let user_id_val = user_id_for_buttons;
+        let username_for_actions = user.username.clone();
         actions
-            .into_iter()
+            .iter()
             .filter_map(|action| match action {
-                UserAction::Challenge => Some(if user.bot {
-                    //TODO: Allow users to direct challenge the bot once it can manage it's own time
-                    EitherOf5::A(view! { <DirectChallengeButton user_id opponent=username.get_value() disabled=true /> })
-                } else {
-                    EitherOf5::B(
-                        view! { <DirectChallengeButton user_id opponent=username.get_value() /> },
+                UserAction::Challenge => Some(
+                    view! {
+                        <DirectChallengeButton
+                            user_id=user_id_val
+                            opponent=username.get_value()
+                            disabled=user.bot
+                        />
+                    }
+                    .into_any(),
+                ),
+                UserAction::Invite(tournament_id) => Some(
+                    view! { <InviteButton user_id=user_id_val tournament_id=tournament_id.clone() /> }
+                        .into_any(),
+                ),
+                UserAction::Uninvite(tournament_id) => Some(
+                    view! { <UninviteButton user_id=user_id_val tournament_id=tournament_id.clone() /> }
+                        .into_any(),
+                ),
+                UserAction::Kick(tournament) => Some(
+                    view! { <KickButton user_id=user_id_val tournament=(**tournament).clone() /> }
+                        .into_any(),
+                ),
+                UserAction::Message => {
+                    let message_username = username_for_actions.clone();
+                    Some(
+                        view! {
+                            <Show when=move || {
+                                !user.bot
+                                    && auth
+                                        .user
+                                        .get()
+                                        .as_ref()
+                                        .is_some_and(|me| me.user.uid != user_id_for_buttons)
+                            }>
+                                <MessageButton username=message_username.clone() compact=true />
+                            </Show>
+                        }
+                        .into_any(),
                     )
-                }),
-                UserAction::Invite(tournament_id) => Some(EitherOf5::C(
-                    view! { <InviteButton user_id tournament_id /> },
-                )),
-                UserAction::Uninvite(tournament_id) => Some(EitherOf5::D(
-                    view! { <UninviteButton user_id tournament_id /> },
-                )),
-                UserAction::Kick(tournament) => Some(EitherOf5::E(
-                    view! { <KickButton user_id tournament=*tournament /> },
-                )),
+                }
                 _ => None,
             })
             .collect_view()
     };
-
     view! {
         <div class=format!("flex p-1 items-center justify-between h-10 w-64 {color}")>
             <div class="flex justify-between mr-2 w-48">
@@ -80,7 +107,7 @@ pub fn UserRow(
                 </Show>
 
             </div>
-            {display_actions}
+            <div class="flex gap-1 items-center">{display_actions}</div>
         </div>
     }
 }

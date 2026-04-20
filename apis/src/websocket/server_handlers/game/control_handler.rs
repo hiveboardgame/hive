@@ -62,7 +62,7 @@ impl GameControlHandler {
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),
                 game: game_response.clone(),
-                game_action: GameReaction::Control(self.control.clone()),
+                game_action: GameReaction::Control(self.control),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
             }))),

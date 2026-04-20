@@ -112,6 +112,10 @@ pub fn Play() -> impl IntoView {
             "grid grid-cols-board xl:grid-cols-board-xl grid-rows-6 pr-2"
         }
     };
+    let play_background_style = Signal::derive(move || {
+        let bg = config.with(|c| c.tile.get_effective_background_color(c.prefers_dark));
+        format!("background-color: {bg}")
+    });
 
     let show_board = create_read_slice(game_state.signal, |gs| {
         !gs.game_response.as_ref().is_some_and(|gr| {
@@ -144,7 +148,7 @@ pub fn Play() -> impl IntoView {
                     if let Some((_turn, gc)) = game.game_control_history.last() {
                         match gc {
                             GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
-                                game_state.set_pending_gc(gc.clone())
+                                game_state.set_pending_gc(*gc)
                             }
                             _ => {}
                         }
@@ -214,7 +218,7 @@ pub fn Play() -> impl IntoView {
                             }
                         }
                         GameReaction::Control(game_control) => {
-                            game_state.set_pending_gc(game_control.clone());
+                            game_state.set_pending_gc(game_control);
 
                             match game_control {
                                 GameControl::DrawAccept(_) => {
@@ -262,12 +266,15 @@ pub fn Play() -> impl IntoView {
         false,
     );
     view! {
-        <div class=move || {
-            format!(
-                "max-h-[100dvh] min-h-[100dvh] pt-10 select-none bg-board-dawn dark:bg-board-twilight {}",
-                parent_container_style(),
-            )
-        }>
+        <div
+            class=move || {
+                format!(
+                    "max-h-[100dvh] min-h-[100dvh] pt-10 select-none {}",
+                    parent_container_style(),
+                )
+            }
+            style=play_background_style
+        >
             <Show
                 when=orientation_signal.orientation_vertical
                 fallback=move || {

@@ -1,58 +1,42 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::RwLock,
-};
+//! In-memory recent-chat cache only. All durable chat state is in Postgres.
+//!
+//! This cache holds the last CHAT_RECENT_CACHE_MAX messages per (channel_type, channel_id).
+//! It is only appended to on successful message persistence.
 
-use shared_types::{ChatMessageContainer, GameId, TournamentId};
-use uuid::Uuid;
+use std::{collections::HashMap, sync::RwLock};
 
-#[derive(Debug, Eq, Hash, PartialEq)]
-pub struct UserToUser {
-    pub id: (Uuid, Uuid),
-}
+use shared_types::ChatMessageContainer;
 
-impl UserToUser {
-    pub fn new(user_1: Uuid, user_2: Uuid) -> Self {
-        if user_1 < user_2 {
-            Self {
-                id: (user_1, user_2),
-            }
-        } else {
-            Self {
-                id: (user_2, user_1),
-            }
-        }
-    }
-}
+/// Max messages kept per channel in the recent cache.
+pub const CHAT_RECENT_CACHE_MAX: usize = 50;
 
-#[derive(Debug)]
+/// Key for the recent-messages cache: (channel_type, channel_id).
+pub type ChatChannelKey = (String, String);
+
+#[derive(Debug, Default)]
 pub struct Chats {
-    pub tournament: RwLock<HashMap<TournamentId, Vec<ChatMessageContainer>>>,
-    pub games_public: RwLock<HashMap<GameId, Vec<ChatMessageContainer>>>,
-    pub games_private: RwLock<HashMap<GameId, Vec<ChatMessageContainer>>>,
-    pub direct: RwLock<HashMap<UserToUser, Vec<ChatMessageContainer>>>,
-    pub direct_lookup: RwLock<HashMap<Uuid, HashSet<Uuid>>>,
-}
-impl Default for Chats {
-    fn default() -> Self {
-        Self::new()
-    }
+    /// Recent messages per (channel_type, channel_id), cap at CHAT_RECENT_CACHE_MAX.
+    recent_cache: RwLock<HashMap<ChatChannelKey, Vec<ChatMessageContainer>>>,
 }
 
 impl Chats {
     pub fn new() -> Self {
         Self {
-            tournament: RwLock::new(HashMap::new()),
-            games_public: RwLock::new(HashMap::new()),
-            games_private: RwLock::new(HashMap::new()),
-            direct: RwLock::new(HashMap::new()),
-            direct_lookup: RwLock::new(HashMap::new()),
+            recent_cache: RwLock::new(HashMap::new()),
         }
     }
 
-    pub fn insert_or_update_direct_lookup(&self, id1: Uuid, id2: Uuid) {
-        let mut direct_lookup = self.direct_lookup.write().unwrap();
-        direct_lookup.entry(id1).or_default().insert(id2);
-        direct_lookup.entry(id2).or_default().insert(id1);
+    /// Appends one message to the channel's recent cache, keeping at most CHAT_RECENT_CACHE_MAX.
+    pub fn push_recent(&self, channel_type: &str, channel_id: &str, msg: ChatMessageContainer) {
+        let key = (channel_type.to_string(), channel_id.to_string());
+        let mut cache = self
+            .recent_cache
+            .write()
+            .unwrap_or_else(|error| error.into_inner());
+        let entry = cache.entry(key).or_default();
+        entry.push(msg);
+        if entry.len() > CHAT_RECENT_CACHE_MAX {
+            entry.drain(0..entry.len() - CHAT_RECENT_CACHE_MAX);
+        }
     }
 }
