@@ -278,15 +278,15 @@ struct PendingOutgoingChat {
 
 #[derive(Copy, Clone, Debug)]
 pub struct Chat {
-    pub users_messages: RwSignal<HashMap<Uuid, Vec<ChatMessage>>>, // Uuid -> Messages
-    pub users_new_messages: RwSignal<HashMap<Uuid, bool>>,
-    pub games_private_messages: RwSignal<HashMap<GameId, Vec<ChatMessage>>>, // game_id -> Messages
-    pub games_private_new_messages: RwSignal<HashMap<GameId, bool>>,
-    pub games_public_messages: RwSignal<HashMap<GameId, Vec<ChatMessage>>>, // game_id -> Messages
-    pub games_public_new_messages: RwSignal<HashMap<GameId, bool>>,
-    pub tournament_lobby_messages: RwSignal<HashMap<TournamentId, Vec<ChatMessage>>>, // tournament_id -> Messages
-    pub tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
-    pub global_messages: RwSignal<Vec<ChatMessage>>,
+    users_messages: RwSignal<HashMap<Uuid, Vec<ChatMessage>>>, // Uuid -> Messages
+    users_new_messages: RwSignal<HashMap<Uuid, bool>>,
+    games_private_messages: RwSignal<HashMap<GameId, Vec<ChatMessage>>>, // game_id -> Messages
+    games_private_new_messages: RwSignal<HashMap<GameId, bool>>,
+    games_public_messages: RwSignal<HashMap<GameId, Vec<ChatMessage>>>, // game_id -> Messages
+    games_public_new_messages: RwSignal<HashMap<GameId, bool>>,
+    tournament_lobby_messages: RwSignal<HashMap<TournamentId, Vec<ChatMessage>>>, // tournament_id -> Messages
+    tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
+    global_messages: RwSignal<Vec<ChatMessage>>,
     pub typed_message: RwSignal<String>,
     pending_outgoing_messages: RwSignal<Vec<PendingOutgoingChat>>,
     chat_send_errors: RwSignal<HashMap<ConversationKey, String>>,
@@ -294,7 +294,7 @@ pub struct Chat {
     /// Stable shared block list for chat-adjacent surfaces.
     pub blocked_user_ids: RwSignal<HashSet<Uuid>>,
     /// Server-backed unread counts keyed by canonical conversation identity.
-    pub unread_counts: RwSignal<HashMap<ConversationKey, i64>>,
+    unread_counts: RwSignal<HashMap<ConversationKey, i64>>,
     /// Channels currently marked read optimistically; stale refreshes should not reintroduce unread.
     pending_read_channels: RwSignal<HashSet<ConversationKey>>,
     /// Channels currently visible in the UI. Used to suppress unread bumps for live messages in open threads.
@@ -307,9 +307,8 @@ pub struct Chat {
     /// Provider-owned Messages hub catalog for sidebar rendering.
     pub messages_hub_data: RwSignal<Option<MessagesHubData>>,
     pub messages_hub_loading: RwSignal<bool>,
-    pub messages_hub_error: RwSignal<Option<String>>,
     /// Bump to invalidate any cached block list snapshots used by chat UIs.
-    pub block_list_version: RwSignal<u32>,
+    block_list_version: RwSignal<u32>,
     user: Signal<Option<AccountResponse>>,
     api: Signal<ApiRequests>,
 }
@@ -338,7 +337,6 @@ impl Chat {
             deferred_visible_unread_counts: RwSignal::new(HashMap::new()),
             messages_hub_data: RwSignal::new(None),
             messages_hub_loading: RwSignal::new(false),
-            messages_hub_error: RwSignal::new(None),
             block_list_version: RwSignal::new(0),
             user,
             api,
@@ -346,7 +344,6 @@ impl Chat {
     }
 
     fn apply_messages_hub_data(&self, data: MessagesHubData) {
-        self.messages_hub_error.set(None);
         self.messages_hub_loading.set(false);
         self.messages_hub_data.set(Some(data));
     }
@@ -354,16 +351,14 @@ impl Chat {
     async fn fetch_and_store_messages_hub(self) {
         if self.user.get_untracked().is_none() {
             self.messages_hub_loading.set(false);
-            self.messages_hub_error.set(None);
             self.messages_hub_data.set(Some(empty_messages_hub_data()));
             return;
         }
 
         match get_messages_hub_data().await {
             Ok(data) => self.apply_messages_hub_data(data),
-            Err(error) => {
+            Err(_) => {
                 self.messages_hub_loading.set(false);
-                self.messages_hub_error.set(Some(error.to_string()));
             }
         }
     }
@@ -371,13 +366,11 @@ impl Chat {
     pub fn refresh_messages_hub(&self) {
         if self.user.get_untracked().is_none() {
             self.messages_hub_loading.set(false);
-            self.messages_hub_error.set(None);
             self.messages_hub_data.set(Some(empty_messages_hub_data()));
             return;
         }
 
         self.messages_hub_loading.set(true);
-        self.messages_hub_error.set(None);
         let chat = *self;
         spawn_local(async move {
             chat.fetch_and_store_messages_hub().await;
@@ -492,12 +485,20 @@ impl Chat {
         f: impl FnOnce(&[ChatMessage]) -> R,
     ) -> R {
         match key {
-            ConversationKey::Direct(other_user_id) => self.users_messages.with_untracked(
-                |messages| f(messages.get(other_user_id).map(Vec::as_slice).unwrap_or(&[])),
-            ),
+            ConversationKey::Direct(other_user_id) => {
+                self.users_messages.with_untracked(|messages| {
+                    f(messages
+                        .get(other_user_id)
+                        .map(Vec::as_slice)
+                        .unwrap_or(&[]))
+                })
+            }
             ConversationKey::Tournament(tournament_id) => {
                 self.tournament_lobby_messages.with_untracked(|messages| {
-                    f(messages.get(tournament_id).map(Vec::as_slice).unwrap_or(&[]))
+                    f(messages
+                        .get(tournament_id)
+                        .map(Vec::as_slice)
+                        .unwrap_or(&[]))
                 })
             }
             ConversationKey::Game {
@@ -522,28 +523,32 @@ impl Chat {
         f: impl FnOnce(&[ChatMessage]) -> R,
     ) -> R {
         match key {
-            ConversationKey::Direct(other_user_id) => {
-                self.users_messages.with(|messages| {
-                    f(messages.get(other_user_id).map(Vec::as_slice).unwrap_or(&[]))
-                })
-            }
+            ConversationKey::Direct(other_user_id) => self.users_messages.with(|messages| {
+                f(messages
+                    .get(other_user_id)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]))
+            }),
             ConversationKey::Tournament(tournament_id) => {
                 self.tournament_lobby_messages.with(|messages| {
-                    f(messages.get(tournament_id).map(Vec::as_slice).unwrap_or(&[]))
+                    f(messages
+                        .get(tournament_id)
+                        .map(Vec::as_slice)
+                        .unwrap_or(&[]))
                 })
             }
             ConversationKey::Game {
                 game_id,
                 thread: GameThread::Players,
-            } => self.games_private_messages.with(|messages| {
-                f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))
-            }),
+            } => self
+                .games_private_messages
+                .with(|messages| f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))),
             ConversationKey::Game {
                 game_id,
                 thread: GameThread::Spectators,
-            } => self.games_public_messages.with(|messages| {
-                f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))
-            }),
+            } => self
+                .games_public_messages
+                .with(|messages| f(messages.get(game_id).map(Vec::as_slice).unwrap_or(&[]))),
             ConversationKey::Global => self.global_messages.with(|messages| f(messages)),
         }
     }
@@ -1654,7 +1659,6 @@ pub fn provide_chat() {
                 chat.chat_send_errors.set(HashMap::new());
                 chat.loaded_history_channels.set(HashSet::new());
                 chat.messages_hub_data.set(None);
-                chat.messages_hub_error.set(None);
                 chat.messages_hub_loading.set(false);
                 if user_id.is_none() {
                     chat.unread_counts.set(HashMap::new());
@@ -1783,5 +1787,4 @@ mod tests {
             Some("send failed".to_string())
         );
     }
-
 }

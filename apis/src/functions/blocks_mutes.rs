@@ -1,16 +1,13 @@
 //! Server functions for block list and tournament chat mutes. All use session user (only self can act).
 
+use leptos::prelude::*;
 #[cfg(feature = "ssr")]
 use log::error;
-use leptos::prelude::*;
 use server_fn::codec;
 use uuid::Uuid;
 
 #[cfg(feature = "ssr")]
-fn generic_blocks_mutes_error(
-    context: &'static str,
-    err: impl std::fmt::Display,
-) -> ServerFnError {
+fn generic_blocks_mutes_error(context: &'static str, err: impl std::fmt::Display) -> ServerFnError {
     error!("blocks/mutes server fn failed while {context}: {err}");
     ServerFnError::new("Unable to update block or mute settings")
 }

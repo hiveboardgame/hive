@@ -8,12 +8,13 @@ use super::{
     tournament::handler::handle_tournament,
     user_status::handle::handle_user_status,
 };
-use crate::common::{ServerMessage::*, ServerResult};
-use crate::providers::chat::Chat;
-use shared_types::ConversationKey;
-use leptos::logging::log;
-use leptos::prelude::use_context;
+use crate::{
+    common::{ServerMessage::*, ServerResult},
+    providers::chat::Chat,
+};
+use leptos::{logging::log, prelude::use_context};
 use leptos_router::hooks::use_navigate;
+use shared_types::ConversationKey;
 
 fn parse_chat_error_key(field: &str) -> Option<ConversationKey> {
     ConversationKey::from_error_field(field)

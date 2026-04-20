@@ -47,12 +47,12 @@ pub fn UserRow(
             .filter_map(|action| match action {
                 UserAction::Challenge => Some(
                     view! {
-                    <DirectChallengeButton
-                        user_id=user_id_val
-                        opponent=username.get_value()
-                        disabled=user.bot
-                    />
-                }
+                        <DirectChallengeButton
+                            user_id=user_id_val
+                            opponent=username.get_value()
+                            disabled=user.bot
+                        />
+                    }
                     .into_any(),
                 ),
                 UserAction::Invite(tournament_id) => Some(
@@ -71,20 +71,17 @@ pub fn UserRow(
                     let message_username = username_for_actions.clone();
                     Some(
                         view! {
-                        <Show when=move || {
-                            !user.bot
-                                && auth
-                                    .user
-                                    .get()
-                                    .as_ref()
-                                    .is_some_and(|me| me.user.uid != user_id_for_buttons)
-                        }>
-                            <MessageButton
-                                username=message_username.clone()
-                                compact=true
-                            />
-                        </Show>
-                    }
+                            <Show when=move || {
+                                !user.bot
+                                    && auth
+                                        .user
+                                        .get()
+                                        .as_ref()
+                                        .is_some_and(|me| me.user.uid != user_id_for_buttons)
+                            }>
+                                <MessageButton username=message_username.clone() compact=true />
+                            </Show>
+                        }
                         .into_any(),
                     )
                 }

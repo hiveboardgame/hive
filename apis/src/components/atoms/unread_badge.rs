@@ -35,9 +35,9 @@ pub fn UnreadBadge(
 ) -> impl IntoView {
     view! {
         <Show when=move || count.get().gt(&0)>
-            <span class=move || format!("{UNREAD_BADGE_BASE_CLASS} {}", variant.tone_class())>
-                {move || format_unread_count(count.get())}
-            </span>
+            <span class=move || {
+                format!("{UNREAD_BADGE_BASE_CLASS} {}", variant.tone_class())
+            }>{move || format_unread_count(count.get())}</span>
         </Show>
     }
 }

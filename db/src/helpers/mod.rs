@@ -14,10 +14,10 @@ pub use blocks_mutes::{
 pub use chat::{
     get_chat_messages_for_channel,
     get_dm_conversations_for_user,
-    get_tournament_chat_capabilities,
-    get_game_chat_participants_and_finished,
     get_game_channels_for_user,
+    get_game_chat_participants_and_finished,
     get_tournament_channels_for_user,
+    get_tournament_chat_capabilities,
     get_tournament_thread_data,
     get_unread_counts_for_messages_hub_channels,
     insert_chat_message,

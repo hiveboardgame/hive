@@ -322,27 +322,31 @@ fn Message(
                     {t!(i18n, messages.chat.hidden_message)}
                 </button>
             </Show>
-            <Show when=move || !sender_blocked.get() || is_expanded()>
+            <Show when=move || {
+                !sender_blocked.get() || is_expanded()
+            }>
                 {if show_header {
-                    Either::Left(view! {
-                        <div class="flex flex-wrap gap-y-0.5 gap-x-2 items-baseline px-1 mb-1 max-w-[85%] sm:max-w-[75%]">
-                            <span class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
-                                {username.get_value()}
-                            </span>
-                            <span class="text-xs text-gray-500 whitespace-nowrap dark:text-gray-400">
-                                {user_local_time.get_value()}
-                                {move || {
-                                    turn
-                                        .map(|turn| t_string!(i18n, messages.chat.turn, turn = turn))
-                                        .unwrap_or_default()
-                                }}
-                            </span>
-                        </div>
-                    })
+                    Either::Left(
+                        view! {
+                            <div class="flex flex-wrap gap-y-0.5 gap-x-2 items-baseline px-1 mb-1 max-w-[85%] sm:max-w-[75%]">
+                                <span class="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">
+                                    {username.get_value()}
+                                </span>
+                                <span class="text-xs text-gray-500 whitespace-nowrap dark:text-gray-400">
+                                    {user_local_time.get_value()}
+                                    {move || {
+                                        turn.map(|turn| {
+                                                t_string!(i18n, messages.chat.turn, turn = turn)
+                                            })
+                                            .unwrap_or_default()
+                                    }}
+                                </span>
+                            </div>
+                        },
+                    )
                 } else {
                     Either::Right(())
-                }}
-                <div class=bubble_class>{body.get_value()}</div>
+                }} <div class=bubble_class>{body.get_value()}</div>
             </Show>
         </div>
     }
@@ -419,11 +423,13 @@ fn MessageRows(
 
     view! {
         {if let Some(error) = banner_error {
-            Either::Left(view! {
-                <div class="py-2 px-3 mb-4 text-sm text-amber-900 bg-amber-100 rounded-lg border border-amber-200 dark:text-amber-100 dark:bg-amber-950/40 dark:border-amber-800">
-                    {error}
-                </div>
-            })
+            Either::Left(
+                view! {
+                    <div class="py-2 px-3 mb-4 text-sm text-amber-900 bg-amber-100 rounded-lg border border-amber-200 dark:text-amber-100 dark:border-amber-800 dark:bg-amber-950/40">
+                        {error}
+                    </div>
+                },
+            )
         } else {
             Either::Right(())
         }}
@@ -663,68 +669,94 @@ pub fn ResolvedChatWindow(
                     class="overflow-y-auto flex-grow p-4 w-full min-w-full h-full min-h-0"
                 >
                     {move || match thread_body_state.get() {
-                        ThreadBodyState::Loading => EitherOf4::A(view! {
-                            <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
-                                {t!(i18n, messages.chat.loading)}
-                            </div>
-                        }),
-                        ThreadBodyState::ErrorOnly(error) => EitherOf4::B(view! {
-                            <div class="flex flex-col gap-2 justify-center items-center h-full text-gray-500 dark:text-gray-400 min-h-[8rem]">
-                                <p class="text-sm font-medium">{error}</p>
-                            </div>
-                        }),
-                        ThreadBodyState::Empty => EitherOf4::C(view! {
-                            <div class="flex flex-col gap-2 justify-center items-center h-full text-gray-500 dark:text-gray-400 min-h-[8rem]">
-                                <span class="text-3xl opacity-40">"✉️"</span>
-                                <p class="text-sm font-medium">
-                                    {t!(i18n, messages.chat.empty_title)}
-                                </p>
-                                <p class="text-xs">{t!(i18n, messages.chat.empty_body)}</p>
-                            </div>
-                        }),
-                        ThreadBodyState::Rows { rows, banner_error } => EitherOf4::D(view! {
-                            <MessageRows
-                                rows
-                                banner_error=banner_error
-                                is_shared_channel
-                                expanded_hidden_messages=thread_ui.expanded_hidden_messages
-                                unread_at_open=thread_ui.unread_at_open
-                                first_unread_ref
-                            />
-                        }),
+                        ThreadBodyState::Loading => {
+                            EitherOf4::A(
+                                view! {
+                                    <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
+                                        {t!(i18n, messages.chat.loading)}
+                                    </div>
+                                },
+                            )
+                        }
+                        ThreadBodyState::ErrorOnly(error) => {
+                            EitherOf4::B(
+                                view! {
+                                    <div class="flex flex-col gap-2 justify-center items-center h-full text-gray-500 dark:text-gray-400 min-h-[8rem]">
+                                        <p class="text-sm font-medium">{error}</p>
+                                    </div>
+                                },
+                            )
+                        }
+                        ThreadBodyState::Empty => {
+                            EitherOf4::C(
+                                view! {
+                                    <div class="flex flex-col gap-2 justify-center items-center h-full text-gray-500 dark:text-gray-400 min-h-[8rem]">
+                                        <span class="text-3xl opacity-40">"✉️"</span>
+                                        <p class="text-sm font-medium">
+                                            {t!(i18n, messages.chat.empty_title)}
+                                        </p>
+                                        <p class="text-xs">{t!(i18n, messages.chat.empty_body)}</p>
+                                    </div>
+                                },
+                            )
+                        }
+                        ThreadBodyState::Rows { rows, banner_error } => {
+                            EitherOf4::D(
+                                view! {
+                                    <MessageRows
+                                        rows
+                                        banner_error=banner_error
+                                        is_shared_channel
+                                        expanded_hidden_messages=thread_ui.expanded_hidden_messages
+                                        unread_at_open=thread_ui.unread_at_open
+                                        first_unread_ref
+                                    />
+                                },
+                            )
+                        }
                     }}
                 </div>
                 <Show when=thread_ui.show_jump_to_latest>
                     <button
                         type="button"
-                        class="absolute bottom-4 left-1/2 z-10 px-3 py-2 text-sm font-medium text-white rounded-full border shadow-lg transition-colors -translate-x-1/2 bg-pillbug-teal border-pillbug-teal/80 hover:bg-pillbug-teal/90"
+                        class="absolute bottom-4 left-1/2 z-10 py-2 px-3 text-sm font-medium text-white rounded-full border shadow-lg transition-colors -translate-x-1/2 bg-pillbug-teal border-pillbug-teal/80 hover:bg-pillbug-teal/90"
                         on:click=scroll_to_latest
                     >
-                        {t!(i18n, messages.chat.new_messages)} " ↓"
+                        {t!(i18n, messages.chat.new_messages)}
+                        " ↓"
                     </button>
                 </Show>
             </div>
             <div class="border-t border-gray-200 dark:border-gray-700 shrink-0">
                 {move || match thread_footer_state.get() {
-                    ThreadFooterState::Composer => Either::Left(view! {
-                        <div class="flex flex-col gap-2 p-4">
-                            {move || {
-                                visible_send_error.get().map(|error| {
-                                    view! {
-                                        <div class="py-2 px-3 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200 dark:text-red-200 dark:bg-red-950/40 dark:border-red-800">
-                                            {error}
-                                        </div>
-                                    }
-                                })
-                            }}
-                            <ChatInput destination disabled=input_disabled />
-                        </div>
-                    }),
-                    ThreadFooterState::Notice(error) => Either::Right(view! {
-                        <div class="py-3 px-4 text-sm text-amber-900 dark:text-amber-100 bg-amber-100 dark:bg-amber-950/40">
-                            {error}
-                        </div>
-                    }),
+                    ThreadFooterState::Composer => {
+                        Either::Left(
+                            view! {
+                                <div class="flex flex-col gap-2 p-4">
+                                    {move || {
+                                        visible_send_error
+                                            .get()
+                                            .map(|error| {
+                                                view! {
+                                                    <div class="py-2 px-3 text-sm text-red-700 bg-red-50 rounded-lg border border-red-200 dark:text-red-200 dark:border-red-800 dark:bg-red-950/40">
+                                                        {error}
+                                                    </div>
+                                                }
+                                            })
+                                    }} <ChatInput destination disabled=input_disabled />
+                                </div>
+                            },
+                        )
+                    }
+                    ThreadFooterState::Notice(error) => {
+                        Either::Right(
+                            view! {
+                                <div class="py-3 px-4 text-sm text-amber-900 bg-amber-100 dark:text-amber-100 dark:bg-amber-950/40">
+                                    {error}
+                                </div>
+                            },
+                        )
+                    }
                 }}
             </div>
         </div>
@@ -778,11 +810,15 @@ pub fn GameChatWindow(
     view! {
         {move || match resolved_destination.get() {
             Some(destination) => Either::Left(view! { <ResolvedChatWindow destination /> }),
-            None => Either::Right(view! {
-                <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
-                    {t!(i18n, messages.chat.loading)}
-                </div>
-            }),
+            None => {
+                Either::Right(
+                    view! {
+                        <div class="flex justify-center items-center h-full text-sm text-gray-500 dark:text-gray-400">
+                            {t!(i18n, messages.chat.loading)}
+                        </div>
+                    },
+                )
+            }
         }}
     }
 }

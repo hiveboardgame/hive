@@ -10,8 +10,8 @@ use db_lib::{
 };
 use shared_types::{
     ConversationKey,
-    GameId,
     GameChatCapabilities,
+    GameId,
     GameThread,
     PersistentChannelKey,
 };
@@ -52,7 +52,10 @@ async fn load_game_or_404(
 }
 
 fn game_chat_capabilities(game: &Game, user_id: Uuid) -> GameChatCapabilities {
-    GameChatCapabilities::new(user_id == game.white_id || user_id == game.black_id, game.finished)
+    GameChatCapabilities::new(
+        user_id == game.white_id || user_id == game.black_id,
+        game.finished,
+    )
 }
 
 pub async fn load_game_chat_capabilities(
@@ -78,18 +81,18 @@ pub async fn can_user_read_chat(
     match conversation_key {
         ConversationKey::Direct(other_user_id) => Ok(*other_user_id != user_id),
         ConversationKey::Global => Ok(true),
-        ConversationKey::Tournament(tournament_id) => Ok(get_tournament_chat_capabilities(
-            conn,
-            user_id,
-            &tournament_id.0,
-        )
-        .await?
-        .can_read()),
-        ConversationKey::Game { game_id, thread } => Ok(load_game_chat_capabilities(
-            conn, user_id, game_id,
-        )
-        .await?
-        .is_some_and(|access| access.can_read(*thread))),
+        ConversationKey::Tournament(tournament_id) => {
+            Ok(
+                get_tournament_chat_capabilities(conn, user_id, &tournament_id.0)
+                    .await?
+                    .can_read(),
+            )
+        }
+        ConversationKey::Game { game_id, thread } => {
+            Ok(load_game_chat_capabilities(conn, user_id, game_id)
+                .await?
+                .is_some_and(|access| access.can_read(*thread)))
+        }
     }
 }
 
@@ -122,12 +125,12 @@ pub async fn authorize_chat_send_and_resolve_channel_key(
                 })?;
 
             let recipient_blocked_sender =
-                is_blocked(conn, *other_id, sender_id)
-                    .await
-                    .map_err(|e| ChatSendAccessError::Internal {
+                is_blocked(conn, *other_id, sender_id).await.map_err(|e| {
+                    ChatSendAccessError::Internal {
                         context: "checking direct-message block status",
                         error: e,
-                    })?;
+                    }
+                })?;
             if recipient_blocked_sender {
                 return Err(ChatSendAccessError::Forbidden(
                     "You cannot send messages to this user",

@@ -27,8 +27,8 @@ use shared_types::{
     GameId,
     GameThread,
     PersistentChannelKey,
-    TournamentChatCapabilities,
     TournamentChannel,
+    TournamentChatCapabilities,
     UnreadCount,
     CHANNEL_TYPE_DIRECT,
     CHANNEL_TYPE_GAME_PLAYERS,
@@ -343,11 +343,9 @@ pub async fn get_tournament_channels_for_user(
     let mut result = chat_messages::table
         .inner_join(tournaments::table.on(chat_messages::channel_id.eq(tournaments::nanoid)))
         .left_join(
-            user_tournament_chat_mutes::table.on(
-                user_tournament_chat_mutes::tournament_id
-                    .eq(tournaments::id)
-                    .and(user_tournament_chat_mutes::user_id.eq(user_id)),
-            ),
+            user_tournament_chat_mutes::table.on(user_tournament_chat_mutes::tournament_id
+                .eq(tournaments::id)
+                .and(user_tournament_chat_mutes::user_id.eq(user_id))),
         )
         .filter(chat_messages::channel_type.eq(shared_types::CHANNEL_TYPE_TOURNAMENT_LOBBY))
         .filter(
@@ -387,19 +385,21 @@ pub async fn get_tournament_channels_for_user(
         .await
         .map_err(DbError::from)?
         .into_iter()
-        .filter_map(|(nanoid, name, muted, is_organizer, is_participant, last_message_at)| {
-            last_message_at.map(|last_message_at| TournamentChannel {
-                muted,
-                nanoid,
-                name,
-                access: TournamentChatCapabilities::new(
-                    is_site_admin,
-                    is_organizer,
-                    is_participant,
-                ),
-                last_message_at,
-            })
-        })
+        .filter_map(
+            |(nanoid, name, muted, is_organizer, is_participant, last_message_at)| {
+                last_message_at.map(|last_message_at| TournamentChannel {
+                    muted,
+                    nanoid,
+                    name,
+                    access: TournamentChatCapabilities::new(
+                        is_site_admin,
+                        is_organizer,
+                        is_participant,
+                    ),
+                    last_message_at,
+                })
+            },
+        )
         .collect::<Vec<_>>();
     result.sort_by_key(|row| std::cmp::Reverse(row.last_message_at));
     Ok(result)
@@ -661,7 +661,9 @@ pub async fn get_unread_counts_for_messages_hub_channels(
         .await
         .map_err(DbError::from)?
         .into_iter()
-        .filter_map(|(channel_type, channel_id)| PersistentChannelKey::from_raw(&channel_type, channel_id))
+        .filter_map(|(channel_type, channel_id)| {
+            PersistentChannelKey::from_raw(&channel_type, channel_id)
+        })
         .collect();
     let has_receipt = |key: &PersistentChannelKey| receipt_channels.contains(key);
 
@@ -670,8 +672,7 @@ pub async fn get_unread_counts_for_messages_hub_channels(
     let channel_groups = [
         (
             CHANNEL_TYPE_DIRECT,
-            dms
-                .iter()
+            dms.iter()
                 .map(|row| {
                     let key = ConversationKey::direct(row.other_user_id);
                     let persistent_key = PersistentChannelKey::direct(user_id, row.other_user_id);

@@ -9,8 +9,6 @@ use crate::functions::db::pool;
 #[cfg(feature = "ssr")]
 use chrono::{DateTime, Utc};
 #[cfg(feature = "ssr")]
-use log::error;
-#[cfg(feature = "ssr")]
 use db_lib::get_conn;
 #[cfg(feature = "ssr")]
 use db_lib::helpers::{
@@ -23,13 +21,13 @@ use db_lib::helpers::{
     get_unread_counts_for_messages_hub_channels,
     upsert_chat_read_receipt,
 };
-#[cfg(feature = "ssr")]
-use std::collections::HashMap;
 use leptos::prelude::*;
+#[cfg(feature = "ssr")]
+use log::error;
 use server_fn::codec;
 use shared_types::{
-    ConversationKey,
     ChatHistoryResponse,
+    ConversationKey,
     GameChatCapabilities,
     GameId,
     MessagesHubData,
@@ -45,6 +43,8 @@ use shared_types::{
     TournamentChannel,
     TournamentId,
 };
+#[cfg(feature = "ssr")]
+use std::collections::HashMap;
 
 #[cfg(feature = "ssr")]
 const DEFAULT_HISTORY_LIMIT: i64 = 50;
@@ -67,7 +67,14 @@ fn generic_chat_server_error(context: &'static str, err: impl std::fmt::Display)
 async fn load_messages_hub_channels(
     conn: &mut db_lib::DbConn<'_>,
     user_id: uuid::Uuid,
-) -> Result<(Vec<DmConversation>, Vec<TournamentChannel>, Vec<GameChannel>), ServerFnError> {
+) -> Result<
+    (
+        Vec<DmConversation>,
+        Vec<TournamentChannel>,
+        Vec<GameChannel>,
+    ),
+    ServerFnError,
+> {
     let blocked_user_ids = get_blocked_user_ids(conn, user_id)
         .await
         .map_err(|err| generic_chat_server_error("loading blocked users", err))?;
@@ -104,7 +111,12 @@ fn build_messages_hub_data(
             )
         }),
         section_limit,
-        |row| channel_unread_count(&unread_count_map, &ConversationKey::direct(row.other_user_id)) > 0,
+        |row| {
+            channel_unread_count(
+                &unread_count_map,
+                &ConversationKey::direct(row.other_user_id),
+            ) > 0
+        },
     );
     let tournaments = prioritize_unread_then_limit(
         tournaments.into_iter().filter(|row| {
@@ -133,7 +145,12 @@ fn build_messages_hub_data(
             )
         }),
         section_limit,
-        |row| channel_unread_count(&unread_count_map, &ConversationKey::game(&row.game_id, row.thread)) > 0,
+        |row| {
+            channel_unread_count(
+                &unread_count_map,
+                &ConversationKey::game(&row.game_id, row.thread),
+            ) > 0
+        },
     );
 
     MessagesHubData {
@@ -166,10 +183,7 @@ fn channel_unread_count(
     unread_counts: &HashMap<ConversationKey, i64>,
     channel_key: &ConversationKey,
 ) -> i64 {
-    unread_counts
-        .get(channel_key)
-        .copied()
-        .unwrap_or(0)
+    unread_counts.get(channel_key).copied().unwrap_or(0)
 }
 
 #[cfg(feature = "ssr")]
@@ -245,15 +259,10 @@ pub async fn get_messages_hub_data() -> Result<MessagesHubData, ServerFnError> {
         .await
         .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
     let (dms, tournaments, games) = load_messages_hub_channels(&mut conn, user_id).await?;
-    let unread_counts = get_unread_counts_for_messages_hub_channels(
-        &mut conn,
-        user_id,
-        &dms,
-        &tournaments,
-        &games,
-    )
-        .await
-        .map_err(|err| generic_chat_server_error("loading messages hub unread counts", err))?;
+    let unread_counts =
+        get_unread_counts_for_messages_hub_channels(&mut conn, user_id, &dms, &tournaments, &games)
+            .await
+            .map_err(|err| generic_chat_server_error("loading messages hub unread counts", err))?;
     Ok(build_messages_hub_data(
         dms,
         tournaments,

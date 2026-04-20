@@ -10,7 +10,10 @@ pub struct GameChatCapabilities {
 
 impl GameChatCapabilities {
     pub const fn new(is_player: bool, finished: bool) -> Self {
-        Self { is_player, finished }
+        Self {
+            is_player,
+            finished,
+        }
     }
 
     pub const fn can_read(self, thread: GameThread) -> bool {

@@ -19,7 +19,8 @@ pub fn ChatDropdown() -> impl IntoView {
     let hamburger_show = RwSignal::new(false);
     let chat_style = "absolute z-50 flex flex-col overflow-hidden w-full h-[80dvh] max-w-screen bg-even-light dark:bg-gray-950 border border-gray-300 rounded-md left-0 p-2";
     let game_state = expect_context::<GameStateSignal>();
-    let current_game_id = Signal::derive(move || game_state.signal.with(|state| state.game_id.clone()));
+    let current_game_id =
+        Signal::derive(move || game_state.signal.with(|state| state.game_id.clone()));
     let unread = Memo::new(move |_| {
         current_game_id
             .get()
@@ -80,7 +81,10 @@ pub fn ChatDropdown() -> impl IntoView {
             dropdown_style=chat_style
             content=view! {
                 <Icon icon=icondata_bi::BiChatRegular attr:class="size-4" />
-                <UnreadBadge count=Signal::derive(move || unread.get()) variant=UnreadBadgeVariant::Overlay />
+                <UnreadBadge
+                    count=Signal::derive(move || unread.get())
+                    variant=UnreadBadgeVariant::Overlay
+                />
             }
             id="chat"
         >

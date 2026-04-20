@@ -100,10 +100,8 @@ impl ChatHandler {
             }),
         };
 
-        let persistable = PersistableChatMessage::from_container(
-            &self.container,
-            &self.channel_key,
-        );
+        let persistable =
+            PersistableChatMessage::from_container(&self.container, &self.channel_key);
         metrics::record_persist_attempt();
         let mut conn = get_conn(&self.pool)
             .await
@@ -124,13 +122,11 @@ impl ChatHandler {
         metrics::record_persist_success();
 
         // Update the in-memory recent cache only after persistence succeeds.
-        self.data
-            .chat_storage
-            .push_recent(
-                self.channel_key.channel_type.as_str(),
-                &self.channel_key.channel_id,
-                self.container.clone(),
-            );
+        self.data.chat_storage.push_recent(
+            self.channel_key.channel_type.as_str(),
+            &self.channel_key.channel_id,
+            self.container.clone(),
+        );
 
         Ok(messages)
     }

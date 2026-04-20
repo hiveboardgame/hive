@@ -224,14 +224,8 @@ async fn handle_control(
                     _ => unreachable!(),
                 };
 
-                send_control_messages(
-                    ws_server.clone(),
-                    &result_game,
-                    &bot,
-                    &pool,
-                    game_control,
-                )
-                .await?;
+                send_control_messages(ws_server.clone(), &result_game, &bot, &pool, game_control)
+                    .await?;
 
                 Ok(result_game)
             }

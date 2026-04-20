@@ -53,12 +53,7 @@ pub use games_query_options::{
     PlayerFilter,
     ResultType,
 };
-pub use messages_hub::{
-    DmConversation,
-    GameChannel,
-    MessagesHubData,
-    TournamentChannel,
-};
+pub use messages_hub::{DmConversation, GameChannel, MessagesHubData, TournamentChannel};
 pub use newtypes::{ApisId, ChallengeId, GameId, Password, TournamentId};
 pub use pretty_string::PrettyString;
 pub use ready_user::ReadyUser;

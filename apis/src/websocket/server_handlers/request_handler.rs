@@ -116,9 +116,8 @@ impl RequestHandler {
                 if self.user_id != message_container.message.user_id {
                     Err(AuthError::Unauthorized)?
                 }
-                let channel_key = shared_types::ConversationKey::from_destination(
-                    &message_container.destination,
-                );
+                let channel_key =
+                    shared_types::ConversationKey::from_destination(&message_container.destination);
                 let mut conn = get_conn(&self.pool)
                     .await
                     .map_err(|e| Self::db_connection_error("checking chat send permissions", e))?;
@@ -136,8 +135,8 @@ impl RequestHandler {
                     self.data.clone(),
                     self.pool.clone(),
                 )
-                    .handle()
-                    .await?
+                .handle()
+                .await?
             }
             ClientRequest::Tournament(tournament_action) => {
                 TournamentHandler::new(

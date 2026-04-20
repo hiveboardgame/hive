@@ -51,9 +51,7 @@ fn handle_reaction(gar: GameActionResponse) {
             // TODO: Do we want anything here?
         }
 
-        GameReaction::Control(ref game_control) => {
-            handle_control(*game_control, gar.clone())
-        }
+        GameReaction::Control(ref game_control) => handle_control(*game_control, gar.clone()),
         GameReaction::Started => {
             update_notifier.game_response.set(Some(gar.clone()));
         }

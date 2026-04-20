@@ -8,10 +8,7 @@ fn dm_messages_href(username: &str) -> String {
 }
 
 #[component]
-pub fn MessageButton(
-    username: String,
-    #[prop(optional)] compact: bool,
-) -> impl IntoView {
+pub fn MessageButton(username: String, #[prop(optional)] compact: bool) -> impl IntoView {
     let i18n = use_i18n();
     let href = StoredValue::new(dm_messages_href(&username));
 
@@ -22,10 +19,7 @@ pub fn MessageButton(
                 attr:class="no-link-style inline-flex items-center justify-center size-8 rounded-lg text-white bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 transition-transform duration-300 [&_svg]:size-5 [&_svg]:shrink-0"
                 attr:title=move || t_string!(i18n, messages.page.message_button)
             >
-                <Icon
-                    icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg
-                    attr:class="size-5"
-                />
+                <Icon icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg attr:class="size-5" />
             </A>
         }
         .into_any()

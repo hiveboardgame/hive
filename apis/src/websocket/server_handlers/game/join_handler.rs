@@ -1,9 +1,7 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
-    websocket::{
-        messages::{InternalServerMessage, MessageDestination, WsMessage},
-    },
+    websocket::messages::{InternalServerMessage, MessageDestination, WsMessage},
 };
 use anyhow::Result;
 use db_lib::{get_conn, models::Game, DbPool};

@@ -5,11 +5,7 @@ use crate::{
             game_thread_toggle::{GameThreadToggle, GameThreadToggleSize},
             history_controls::HistoryControls,
         },
-        organisms::{
-            chat::GameChatWindow,
-            history::History,
-            reserve::ReserveContent,
-        },
+        organisms::{chat::GameChatWindow, history::History, reserve::ReserveContent},
     },
     providers::{
         chat::Chat,
@@ -113,9 +109,8 @@ pub fn SideboardTabs(
     });
     let show_buttons = Signal::derive(move || game_chat_access.get().can_toggle_embedded_threads());
     let selected_game_thread = RwSignal::new(GameThread::Players);
-    let explicit_game_thread = Signal::derive(move || {
-        show_buttons().then_some(selected_game_thread.get())
-    });
+    let explicit_game_thread =
+        Signal::derive(move || show_buttons().then_some(selected_game_thread.get()));
     view! {
         <div class=format!(
             "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",

@@ -8,9 +8,7 @@ use crate::{
         },
         organisms::{games_filter::GamesFilter, stats::Stats},
     },
-    functions::{
-        users::get_profile,
-    },
+    functions::users::get_profile,
     i18n::*,
     providers::{
         calculate_initial_batch_size,
@@ -34,9 +32,7 @@ fn ProfileBlockUnblock(profile_user_id: Uuid) -> impl IntoView {
     let blocked_user_ids = expect_context::<Chat>().blocked_user_ids;
     let is_blocked =
         Signal::derive(move || blocked_user_ids.with(|blocked| blocked.contains(&profile_user_id)));
-    view! {
-        <BlockToggleButton blocked_user_id=profile_user_id is_blocked />
-    }
+    view! { <BlockToggleButton blocked_user_id=profile_user_id is_blocked /> }
 }
 
 #[component]

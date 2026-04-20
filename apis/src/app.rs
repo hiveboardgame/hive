@@ -183,10 +183,7 @@ pub fn App() -> impl IntoView {
                             <Route path=path!("") view=MessagesIndex />
                             <Route path=path!("global") view=MessagesGlobalThread />
                             <Route path=path!("dm/:username") view=MessagesDmThread />
-                            <Route
-                                path=path!("tournament/:nanoid")
-                                view=MessagesTournamentThread
-                            />
+                            <Route path=path!("tournament/:nanoid") view=MessagesTournamentThread />
                             <Route
                                 path=path!("game/:nanoid/players")
                                 view=|| {

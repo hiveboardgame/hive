@@ -122,9 +122,8 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
         }
         games_hashmap
     });
-    let tournament_chat_destination = StoredValue::new(ChatDestination::TournamentLobby(
-        tournament_id.get_value(),
-    ));
+    let tournament_chat_destination =
+        StoredValue::new(ChatDestination::TournamentLobby(tournament_id.get_value()));
 
     let number_of_players = tournament.with_value(|t| t.players.len() as i32);
     let user_joined = move || {
