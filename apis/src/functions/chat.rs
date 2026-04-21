@@ -12,7 +12,6 @@ use chrono::{DateTime, Utc};
 use db_lib::get_conn;
 #[cfg(feature = "ssr")]
 use db_lib::helpers::{
-    get_blocked_user_ids,
     get_chat_messages_for_channel,
     get_dm_conversations_for_user,
     get_game_channels_for_user,
@@ -75,11 +74,7 @@ async fn load_messages_hub_channels(
     ),
     ServerFnError,
 > {
-    let blocked_user_ids = get_blocked_user_ids(conn, user_id)
-        .await
-        .map_err(|err| generic_chat_server_error("loading blocked users", err))?;
-    let blocked_user_set = blocked_user_ids.into_iter().collect();
-    let dms = get_dm_conversations_for_user(conn, user_id, &blocked_user_set)
+    let dms = get_dm_conversations_for_user(conn, user_id)
         .await
         .map_err(|err| generic_chat_server_error("loading direct message conversations", err))?;
     let tournaments = get_tournament_channels_for_user(conn, user_id)
@@ -300,7 +295,7 @@ pub async fn get_chat_history(
         return Ok(ChatHistoryResponse::AccessDenied);
     }
 
-    let mut messages = get_chat_messages_for_channel(
+    let messages = get_chat_messages_for_channel(
         &mut conn,
         persistent_key.channel_type.as_str(),
         &persistent_key.channel_id,
@@ -308,14 +303,6 @@ pub async fn get_chat_history(
     )
     .await
     .map_err(|err| generic_chat_server_error("loading chat history", err))?;
-
-    if matches!(channel_key, ConversationKey::Direct(_)) {
-        let blocked_ids = get_blocked_user_ids(&mut conn, user_id)
-            .await
-            .map_err(|err| generic_chat_server_error("loading blocked users", err))?;
-        let blocked_ids: std::collections::HashSet<_> = blocked_ids.into_iter().collect();
-        messages.retain(|message| !blocked_ids.contains(&message.sender_id));
-    }
 
     Ok(ChatHistoryResponse::Messages(
         messages

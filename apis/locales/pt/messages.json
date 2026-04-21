@@ -22,6 +22,7 @@
     "block_dialog": {
         "block_user": "Bloquear utilizador",
         "unblock_user": "Desbloquear utilizador",
+        "unblock": "Desbloquear",
         "title": "Bloquear este utilizador?",
         "body": "Ele deixara de te poder enviar mensagens diretas. Nos chats de jogo e torneio, as mensagens dele ficarao ocultas por defeito (podes clicar para mostrar). Podes desbloquea-lo mais tarde no perfil dele ou em Mensagens.",
         "cancel": "Cancelar",
@@ -39,8 +40,8 @@
         "view_profile": "Ver perfil ->",
         "view_tournament": "Ver torneio ->",
         "view_game": "Ver jogo ->",
-        "mute_tournament_chat": "Silenciar chat do torneio",
-        "unmute_tournament_chat": "Ativar chat do torneio",
+        "mute_tournament_chat": "Silenciar",
+        "unmute_tournament_chat": "Ativar",
         "failed_game": "Falha ao carregar jogo",
         "game_id_tooltip": "ID do jogo (corresponde ao URL)",
         "result_won": "{{winner}} venceu {{conclusion}}",

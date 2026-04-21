@@ -237,11 +237,10 @@ pub async fn upsert_chat_read_receipt(
 }
 
 /// Other user id and username for each DM conversation the user has (from chat_messages).
-/// Excludes users the current user has blocked and includes the latest persisted activity timestamp.
+/// Includes the latest persisted activity timestamp.
 pub async fn get_dm_conversations_for_user(
     conn: &mut DbConn<'_>,
     user_id: Uuid,
-    blocked_ids: &HashSet<Uuid>,
 ) -> Result<Vec<DmConversation>, DbError> {
     let mut other_id_to_activity = HashMap::<Uuid, DateTime<Utc>>::new();
 
@@ -259,8 +258,6 @@ pub async fn get_dm_conversations_for_user(
         };
         update_latest_dm_activity(&mut other_id_to_activity, other_user_id, last_message_at);
     }
-
-    other_id_to_activity.retain(|other_user_id, _| !blocked_ids.contains(other_user_id));
 
     if other_id_to_activity.is_empty() {
         return Ok(Vec::new());

@@ -16,10 +16,10 @@ pub fn MessageButton(username: String, #[prop(optional)] compact: bool) -> impl 
         view! {
             <A
                 href=move || href.get_value()
-                attr:class="no-link-style inline-flex items-center justify-center size-8 rounded-lg text-white bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 transition-transform duration-300 [&_svg]:size-5 [&_svg]:shrink-0"
+                attr:class="no-link-style inline-flex items-center justify-center p-1 mx-2 rounded text-white bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95 transition-transform duration-300 [&_svg]:size-6 [&_svg]:shrink-0"
                 attr:title=move || t_string!(i18n, messages.page.message_button)
             >
-                <Icon icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg attr:class="size-5" />
+                <Icon icon=icondata_bi::BiChatRegular attr:class="size-6 stroke-white" />
             </A>
         }
         .into_any()
@@ -30,8 +30,8 @@ pub fn MessageButton(username: String, #[prop(optional)] compact: bool) -> impl 
                 attr:class="no-link-style inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg bg-pillbug-teal text-white hover:bg-pillbug-teal/90 dark:bg-pillbug-teal dark:text-white dark:hover:bg-pillbug-teal/90 transition-colors [&_svg]:text-inherit"
             >
                 <Icon
-                    icon=icondata_hi::HiChatBubbleBottomCenterTextOutlineLg
-                    attr:class="size-5 shrink-0"
+                    icon=icondata_bi::BiChatRegular
+                    attr:class="size-5 shrink-0 stroke-white"
                 />
                 {move || t_string!(i18n, messages.page.message_button)}
             </A>

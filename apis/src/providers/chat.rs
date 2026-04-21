@@ -287,7 +287,7 @@ pub struct Chat {
     tournament_lobby_messages: RwSignal<HashMap<TournamentId, Vec<ChatMessage>>>, // tournament_id -> Messages
     tournament_lobby_new_messages: RwSignal<HashMap<TournamentId, bool>>,
     global_messages: RwSignal<Vec<ChatMessage>>,
-    pub typed_message: RwSignal<String>,
+    draft_messages: RwSignal<HashMap<ConversationKey, String>>,
     pending_outgoing_messages: RwSignal<Vec<PendingOutgoingChat>>,
     chat_send_errors: RwSignal<HashMap<ConversationKey, String>>,
     loaded_history_channels: RwSignal<HashSet<ConversationKey>>,
@@ -325,7 +325,7 @@ impl Chat {
             tournament_lobby_messages: RwSignal::new(HashMap::new()),
             tournament_lobby_new_messages: RwSignal::new(HashMap::new()),
             global_messages: RwSignal::new(Vec::new()),
-            typed_message: RwSignal::new(String::new()),
+            draft_messages: RwSignal::new(HashMap::new()),
             pending_outgoing_messages: RwSignal::new(Vec::new()),
             chat_send_errors: RwSignal::new(HashMap::new()),
             loaded_history_channels: RwSignal::new(HashSet::new()),
@@ -1152,6 +1152,32 @@ impl Chat {
         removed
     }
 
+    fn draft_message_untracked(&self, key: &ConversationKey) -> String {
+        self.draft_messages
+            .with_untracked(|drafts| drafts.get(key).cloned().unwrap_or_default())
+    }
+
+    pub fn draft_message(&self, key: &ConversationKey) -> String {
+        self.draft_messages
+            .with(|drafts| drafts.get(key).cloned().unwrap_or_default())
+    }
+
+    pub fn set_draft_message(&self, key: &ConversationKey, message: String) {
+        self.draft_messages.update(|drafts| {
+            if message.is_empty() {
+                drafts.remove(key);
+            } else {
+                drafts.insert(key.clone(), message);
+            }
+        });
+    }
+
+    pub fn clear_draft_message(&self, key: &ConversationKey) {
+        self.draft_messages.update(|drafts| {
+            drafts.remove(key);
+        });
+    }
+
     pub fn clear_chat_send_error(&self, key: &ConversationKey) {
         self.chat_send_errors.update(|errors| {
             errors.remove(key);
@@ -1213,8 +1239,8 @@ impl Chat {
             }
             return;
         };
-        if self.typed_message.get_untracked().is_empty() && self.is_channel_visible(&failed.key) {
-            self.typed_message.set(failed.message.clone());
+        if self.draft_message_untracked(&failed.key).is_empty() {
+            self.set_draft_message(&failed.key, failed.message.clone());
         }
         self.chat_send_errors.update(|errors| {
             errors.insert(failed.key, reason);
@@ -1321,6 +1347,30 @@ impl Chat {
     pub fn total_unread_count(&self) -> i64 {
         self.unread_counts
             .with(|counts| counts.values().sum::<i64>())
+    }
+
+    /// Total unread count excluding the players chat for the active game route.
+    /// This suppresses global notifications while the user is already inside that game,
+    /// without marking those messages as read.
+    pub fn total_unread_count_excluding_game(&self, suppressed_game_id: Option<&GameId>) -> i64 {
+        self.unread_counts.with(|counts| {
+            counts
+                .iter()
+                .filter(|(key, _)| {
+                    !matches!(
+                        (suppressed_game_id, key),
+                        (
+                            Some(game_id),
+                            ConversationKey::Game {
+                                game_id: key_game_id,
+                                thread: GameThread::Players,
+                            },
+                        ) if key_game_id == game_id
+                    )
+                })
+                .map(|(_, count)| *count)
+                .sum::<i64>()
+        })
     }
 
     /// Unread count for a game (players channel only). Use for game list badges.
@@ -1655,6 +1705,7 @@ pub fn provide_chat() {
 
             if user_changed || user_id.is_none() {
                 chat.blocked_user_ids.set(HashSet::new());
+                chat.draft_messages.set(HashMap::new());
                 chat.pending_outgoing_messages.set(Vec::new());
                 chat.chat_send_errors.set(HashMap::new());
                 chat.loaded_history_channels.set(HashSet::new());
@@ -1742,6 +1793,30 @@ mod tests {
     }
 
     #[test]
+    fn drafts_are_stored_per_channel_key() {
+        let owner = Owner::new();
+        owner.set();
+
+        let chat = Chat::new(
+            Signal::derive(|| None),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let first_key = ConversationKey::tournament(&TournamentId("first-thread".to_string()));
+        let second_key = ConversationKey::tournament(&TournamentId("second-thread".to_string()));
+
+        chat.set_draft_message(&first_key, "first draft".to_string());
+        chat.set_draft_message(&second_key, "second draft".to_string());
+
+        assert_eq!(chat.draft_message(&first_key), "first draft");
+        assert_eq!(chat.draft_message(&second_key), "second draft");
+
+        chat.clear_draft_message(&first_key);
+
+        assert!(chat.draft_message(&first_key).is_empty());
+        assert_eq!(chat.draft_message(&second_key), "second draft");
+    }
+
+    #[test]
     fn failed_send_restores_draft_when_failed_channel_is_still_visible() {
         let owner = Owner::new();
         owner.set();
@@ -1757,7 +1832,7 @@ mod tests {
 
         chat.handle_failed_chat_send(Some(failed_key.clone()), "send failed".to_string());
 
-        assert_eq!(chat.typed_message.get_untracked(), "retry me");
+        assert_eq!(chat.draft_message(&failed_key), "retry me");
         assert_eq!(
             chat.chat_send_error(&failed_key),
             Some("send failed".to_string())
@@ -1765,7 +1840,7 @@ mod tests {
     }
 
     #[test]
-    fn failed_send_does_not_restore_draft_into_different_visible_thread() {
+    fn failed_send_restores_draft_only_for_failed_thread() {
         let owner = Owner::new();
         owner.set();
 
@@ -1777,11 +1852,13 @@ mod tests {
         let active_key = ConversationKey::tournament(&TournamentId("active-thread".to_string()));
 
         chat.queue_pending_outgoing_message(failed_key.clone(), "retry me".to_string(), None);
+        chat.set_draft_message(&active_key, "still typing".to_string());
         chat.set_channel_visible(&active_key);
 
         chat.handle_failed_chat_send(Some(failed_key.clone()), "send failed".to_string());
 
-        assert!(chat.typed_message.get_untracked().is_empty());
+        assert_eq!(chat.draft_message(&failed_key), "retry me");
+        assert_eq!(chat.draft_message(&active_key), "still typing");
         assert_eq!(
             chat.chat_send_error(&failed_key),
             Some("send failed".to_string())

@@ -25,7 +25,7 @@ pub fn UserRow(
 ) -> impl IntoView {
     let username = StoredValue::new(user.username.clone());
     let user_is_hoverable = if on_profile { None } else { Some(user.clone()) };
-    let user_id = StoredValue::new(user.uid);
+    let user_id = user.uid;
     let rating = StoredValue::new(if let Some(speed) = game_speed {
         user.ratings.get(&speed.get_value()).cloned()
     } else {
@@ -36,19 +36,16 @@ pub fn UserRow(
     } else {
         "dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light"
     };
-    let user_id_for_buttons = user_id.get_value();
     let auth = expect_context::<AuthContext>();
 
     let display_actions = {
-        let user_id_val = user_id_for_buttons;
-        let username_for_actions = user.username.clone();
         actions
             .iter()
             .filter_map(|action| match action {
                 UserAction::Challenge => Some(
                     view! {
                         <DirectChallengeButton
-                            user_id=user_id_val
+                            user_id
                             opponent=username.get_value()
                             disabled=user.bot
                         />
@@ -56,35 +53,31 @@ pub fn UserRow(
                     .into_any(),
                 ),
                 UserAction::Invite(tournament_id) => Some(
-                    view! { <InviteButton user_id=user_id_val tournament_id=tournament_id.clone() /> }
+                    view! { <InviteButton user_id tournament_id=tournament_id.clone() /> }
                         .into_any(),
                 ),
                 UserAction::Uninvite(tournament_id) => Some(
-                    view! { <UninviteButton user_id=user_id_val tournament_id=tournament_id.clone() /> }
+                    view! { <UninviteButton user_id tournament_id=tournament_id.clone() /> }
                         .into_any(),
                 ),
                 UserAction::Kick(tournament) => Some(
-                    view! { <KickButton user_id=user_id_val tournament=(**tournament).clone() /> }
-                        .into_any(),
+                    view! { <KickButton user_id tournament=(**tournament).clone() /> }.into_any(),
                 ),
-                UserAction::Message => {
-                    let message_username = username_for_actions.clone();
-                    Some(
-                        view! {
-                            <Show when=move || {
-                                !user.bot
-                                    && auth
-                                        .user
-                                        .get()
-                                        .as_ref()
-                                        .is_some_and(|me| me.user.uid != user_id_for_buttons)
-                            }>
-                                <MessageButton username=message_username.clone() compact=true />
-                            </Show>
-                        }
-                        .into_any(),
-                    )
-                }
+                UserAction::Message => Some(
+                    view! {
+                        <Show when=move || {
+                            !user.bot
+                                && auth
+                                    .user
+                                    .get()
+                                    .as_ref()
+                                    .is_some_and(|me| me.user.uid != user_id)
+                        }>
+                            <MessageButton username=username.get_value() compact=true />
+                        </Show>
+                    }
+                    .into_any(),
+                ),
                 _ => None,
             })
             .collect_view()

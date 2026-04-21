@@ -22,6 +22,7 @@
     "block_dialog": {
         "block_user": "Blocheaza utilizatorul",
         "unblock_user": "Deblocheaza utilizatorul",
+        "unblock": "Deblocheaza",
         "title": "Blochezi acest utilizator?",
         "body": "Nu iti va mai putea trimite mesaje directe. In chaturile de joc si turneu, mesajele lui vor fi ascunse implicit (poti apasa pentru a le afisa). Il poti debloca mai tarziu din profilul lui sau din Mesaje.",
         "cancel": "Anuleaza",
@@ -39,8 +40,8 @@
         "view_profile": "Vezi profil ->",
         "view_tournament": "Vezi turneu ->",
         "view_game": "Vezi joc ->",
-        "mute_tournament_chat": "Dezactiveaza chatul turneului",
-        "unmute_tournament_chat": "Activeaza chatul turneului",
+        "mute_tournament_chat": "Dezactiveaza",
+        "unmute_tournament_chat": "Activeaza",
         "failed_game": "Nu s-a putut incarca jocul",
         "game_id_tooltip": "ID joc (se potriveste cu URL-ul)",
         "result_won": "{{winner}} a castigat {{conclusion}}",

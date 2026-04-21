@@ -22,6 +22,7 @@
     "block_dialog": {
         "block_user": "Benutzer blockieren",
         "unblock_user": "Benutzer entsperren",
+        "unblock": "Entsperren",
         "title": "Diesen Benutzer blockieren?",
         "body": "Diese Person kann dir keine Direktnachrichten mehr senden. In Spiel- und Turnier-Chats werden ihre Nachrichten standardmassig ausgeblendet (du kannst klicken, um sie anzuzeigen). Du kannst die Blockierung spater im Profil oder in Nachrichten aufheben.",
         "cancel": "Abbrechen",
@@ -39,8 +40,8 @@
         "view_profile": "Profil anzeigen ->",
         "view_tournament": "Turnier anzeigen ->",
         "view_game": "Spiel anzeigen ->",
-        "mute_tournament_chat": "Turnier-Chat stummschalten",
-        "unmute_tournament_chat": "Turnier-Chat laut schalten",
+        "mute_tournament_chat": "Stummschalten",
+        "unmute_tournament_chat": "Laut schalten",
         "failed_game": "Spiel konnte nicht geladen werden",
         "game_id_tooltip": "Spiel-ID (stimmt mit der URL uberein)",
         "result_won": "{{winner}} gewann {{conclusion}}",

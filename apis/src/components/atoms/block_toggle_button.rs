@@ -4,7 +4,6 @@ use crate::{
     providers::{chat::Chat, AuthContext},
 };
 use leptos::prelude::*;
-use leptos_icons::*;
 use uuid::Uuid;
 
 #[derive(Clone, Copy)]
@@ -93,28 +92,35 @@ pub fn BlockToggleButton(
     let on_cancel_click = move |_| {
         show_confirm.set(false);
     };
+    let button_label = Signal::derive(move || {
+        if pending.get() {
+            t_string!(i18n, messages.page.loading)
+        } else if is_blocked.get() {
+            t_string!(i18n, messages.block_dialog.unblock)
+        } else {
+            t_string!(i18n, messages.block_dialog.confirm)
+        }
+    });
 
     view! {
         <Show when=logged_in_and_not_self>
             <button
                 type="button"
-                title=move || {
-                    if is_blocked.get() {
-                        t_string!(i18n, messages.block_dialog.unblock_user)
-                    } else {
-                        t_string!(i18n, messages.block_dialog.block_user)
-                    }
-                }
+                title=move || button_label.get()
                 on:click=on_toggle_click
                 disabled=pending
-                class="p-1 mx-2 text-white rounded transition-transform duration-300 active:scale-95 disabled:opacity-50 bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                class=move || {
+                    format!(
+                        "inline-flex items-center justify-center px-3 py-1.5 text-sm font-semibold rounded-lg text-white whitespace-nowrap transition-colors duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed {}",
+                        if is_blocked.get() {
+                            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
+                        } else {
+                            "bg-ladybug-red dark:bg-ladybug-red hover:bg-red-500 dark:hover:bg-red-500"
+                        }
+                    )
+                }
             >
-                <Show when=is_blocked>
-                    <Icon icon=icondata_bi::BiCheckCircleRegular attr:class="size-6" />
-                </Show>
-                <Show when=move || !is_blocked.get()>
-                    <Icon icon=icondata_bi::BiBlockRegular attr:class="size-6" />
-                </Show>
+                {move || button_label.get()}
             </button>
             <Show when=move || error.get().is_some()>
                 <span class="text-xs text-red-500">{move || error.get().unwrap_or_default()}</span>

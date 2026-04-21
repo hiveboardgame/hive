@@ -22,6 +22,7 @@
     "block_dialog": {
         "block_user": "Bloquer l'utilisateur",
         "unblock_user": "Debloquer l'utilisateur",
+        "unblock": "Debloquer",
         "title": "Bloquer cet utilisateur ?",
         "body": "Il ne pourra plus vous envoyer de messages directs. Dans les chats de partie et de tournoi, ses messages seront masques par defaut (vous pouvez cliquer pour les afficher). Vous pourrez le debloquer plus tard depuis son profil ou depuis Messages.",
         "cancel": "Annuler",
@@ -39,8 +40,8 @@
         "view_profile": "Voir le profil ->",
         "view_tournament": "Voir le tournoi ->",
         "view_game": "Voir la partie ->",
-        "mute_tournament_chat": "Couper le chat du tournoi",
-        "unmute_tournament_chat": "Reactiver le chat du tournoi",
+        "mute_tournament_chat": "Couper",
+        "unmute_tournament_chat": "Reactiver",
         "failed_game": "Impossible de charger la partie",
         "game_id_tooltip": "ID de partie (correspond a l'URL)",
         "result_won": "{{winner}} a gagne {{conclusion}}",

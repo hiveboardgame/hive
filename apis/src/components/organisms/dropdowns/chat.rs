@@ -1,6 +1,5 @@
 use crate::{
     components::{
-        atoms::unread_badge::{UnreadBadge, UnreadBadgeVariant},
         molecules::{
             game_thread_toggle::{GameThreadToggle, GameThreadToggleSize},
             hamburger::Hamburger,
@@ -81,10 +80,6 @@ pub fn ChatDropdown() -> impl IntoView {
             dropdown_style=chat_style
             content=view! {
                 <Icon icon=icondata_bi::BiChatRegular attr:class="size-4" />
-                <UnreadBadge
-                    count=Signal::derive(move || unread.get())
-                    variant=UnreadBadgeVariant::Overlay
-                />
             }
             id="chat"
         >

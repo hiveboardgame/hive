@@ -22,6 +22,7 @@
     "block_dialog": {
         "block_user": "Bloqueja l'usuari",
         "unblock_user": "Desbloqueja l'usuari",
+        "unblock": "Desbloqueja",
         "title": "Vols bloquejar aquest usuari?",
         "body": "Ja no et podra enviar missatges directes. Als xats de partida i torneig, els seus missatges quedaran ocults per defecte (pots fer clic per mostrar-los). El podras desbloquejar mes tard des del seu perfil o des de Missatges.",
         "cancel": "Cancel·la",
@@ -39,8 +40,8 @@
         "view_profile": "Veure perfil ->",
         "view_tournament": "Veure torneig ->",
         "view_game": "Veure partida ->",
-        "mute_tournament_chat": "Silencia el xat del torneig",
-        "unmute_tournament_chat": "Activa el xat del torneig",
+        "mute_tournament_chat": "Silencia",
+        "unmute_tournament_chat": "Activa",
         "failed_game": "No s'ha pogut carregar la partida",
         "game_id_tooltip": "ID de partida (coincideix amb l'URL)",
         "result_won": "{{winner}} ha guanyat {{conclusion}}",

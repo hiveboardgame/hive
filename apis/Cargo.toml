@@ -42,7 +42,6 @@ icondata_fa = { workspace = true }
 icondata_io = { workspace = true }
 icondata_bs = { workspace = true }
 icondata_ch = { workspace = true }
-icondata_hi = { workspace = true }
 icondata_lu = { workspace = true }
 icondata_mdi = { workspace = true }
 icondata_ri = { workspace = true }

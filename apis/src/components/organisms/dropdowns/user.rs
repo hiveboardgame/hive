@@ -9,27 +9,48 @@ use crate::{
     providers::{chat::Chat, AuthContext, RefererContext},
 };
 use leptos::prelude::*;
-use leptos_router::components::A;
+use leptos_router::{components::A, hooks::use_location};
+use shared_types::GameId;
+
+fn current_game_id_from_path(pathname: &str) -> Option<GameId> {
+    let mut segments = pathname.trim_matches('/').split('/');
+    match (segments.next(), segments.next()) {
+        (Some("game"), Some(game_id)) if !game_id.is_empty() => Some(GameId(game_id.to_string())),
+        _ => None,
+    }
+}
 
 #[component]
 pub fn UserDropdown(username: String) -> impl IntoView {
     let i18n = use_i18n();
+    let location = use_location();
     let pathname = expect_context::<RefererContext>().pathname;
     let auth_context = expect_context::<AuthContext>();
     let chat = expect_context::<Chat>();
     let hamburger_show = RwSignal::new(false);
-    let unread_count = Signal::derive(move || chat.total_unread_count());
+    let current_game_id =
+        Signal::derive(move || current_game_id_from_path(&location.pathname.get()));
+    let unread_count = Signal::derive(move || {
+        let suppressed_game_id = current_game_id.get();
+        chat.total_unread_count_excluding_game(suppressed_game_id.as_ref())
+    });
+    let button_style = Signal::derive(move || {
+        let color = if unread_count.get() > 0 {
+            "bg-ladybug-red hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500"
+        } else {
+            "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
+        };
+        format!(
+            "{color} text-white rounded-md px-2 py-1 m-1 transform transition-transform duration-300 active:scale-95 whitespace-nowrap"
+        )
+    });
     let onclick_close = move || hamburger_show.update(|b| *b = false);
     view! {
         <Hamburger
             hamburger_show=hamburger_show
-            button_style="bg-button-dawn dark:bg-button-twilight text-white rounded-md px-2 py-1 m-1 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal transform transition-transform duration-300 active:scale-95 whitespace-nowrap"
+            button_style
             dropdown_style="mr-1 xs:mt-0 mt-1 flex flex-col items-stretch absolute w-max bg-even-light dark:bg-gray-950 text-black border border-gray-300 rounded-md p-2 right-0 z-50"
-            content=view! {
-                <span class="flex gap-1.5 items-center">
-                    {username.clone()} <UnreadBadge count=unread_count />
-                </span>
-            }
+            content=view! { <span>{ username.clone()}</span> }
             id="Username"
         >
             <A

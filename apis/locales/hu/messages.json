@@ -22,6 +22,7 @@
     "block_dialog": {
         "block_user": "Felhasznalo tiltasa",
         "unblock_user": "Felhasznalo tiltasanak feloldasa",
+        "unblock": "Feloldas",
         "title": "Tiltod ezt a felhasznalot?",
         "body": "Tobbe nem tud neked kozvetlen uzenetet kuldeni. A jatek- es torna-csevegesekben az uzenetei alapertelmezetten rejtve lesznek (kattintassal felfedheted oket). Kesobb feloldhatod a tiltast a profiljarol vagy az Uzenetek oldalon.",
         "cancel": "Megse",
@@ -39,8 +40,8 @@
         "view_profile": "Profil megtekintese ->",
         "view_tournament": "Torna megtekintese ->",
         "view_game": "Jatek megtekintese ->",
-        "mute_tournament_chat": "Torna cseveges nemitasa",
-        "unmute_tournament_chat": "Torna cseveges visszakapcsolasa",
+        "mute_tournament_chat": "Nemitas",
+        "unmute_tournament_chat": "Visszakapcsolas",
         "failed_game": "Nem sikerult betolteni a jatekot",
         "game_id_tooltip": "Jatek azonosito (egyezik az URL-lel)",
         "result_won": "{{winner}} nyert {{conclusion}}",

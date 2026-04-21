@@ -97,7 +97,7 @@ pub async fn is_blocked(
     .map_err(DbError::from)
 }
 
-/// All user IDs that this user has blocked. Used to filter DM list and history.
+/// All user IDs that this user has blocked. Used by chat surfaces to hide messages by default.
 pub async fn get_blocked_user_ids(
     conn: &mut DbConn<'_>,
     blocker_id: Uuid,

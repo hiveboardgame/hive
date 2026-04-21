@@ -1,6 +1,5 @@
 use crate::{
     chat::ConversationKey,
-    components::update_from_event::update_from_input,
     i18n::*,
     providers::{chat::Chat, game_state::GameStateSignal, AuthContext},
 };
@@ -270,7 +269,7 @@ fn Message(
     is_current_user: bool,
     /// When false, only the message bubble is shown (for consecutive messages from the same user).
     show_header: bool,
-    /// When true, show "Message hidden. Click to expand." (Discord-style for blocked users in shared channels).
+    /// When true, show "Message hidden. Click to expand." for blocked senders.
     sender_blocked: Signal<bool>,
     /// Parent-owned expanded state so it survives re-renders.
     expanded_signal: Signal<bool>,
@@ -355,7 +354,6 @@ fn Message(
 #[component]
 fn MessageRowView(
     row: MessageRow,
-    is_shared_channel: Signal<bool>,
     expanded_hidden_messages: RwSignal<HashSet<MessageId>>,
     unread_at_open: RwSignal<Option<i64>>,
     first_unread_ref: NodeRef<html::Div>,
@@ -373,12 +371,8 @@ fn MessageRowView(
     let expanded_key = id.clone();
     let expand_callback_key = id.clone();
     let blocked_user_id = message.user_id;
-    let sender_blocked = Signal::derive(move || {
-        is_shared_channel.get()
-            && chat
-                .blocked_user_ids
-                .with(|blocked| blocked.contains(&blocked_user_id))
-    });
+    let sender_blocked =
+        Signal::derive(move || chat.blocked_user_ids.with(|blocked| blocked.contains(&blocked_user_id)));
     let expanded_signal =
         Signal::derive(move || expanded_hidden_messages.with(|set| set.contains(&expanded_key)));
     let on_expand = Callback::new(move |()| {
@@ -414,7 +408,6 @@ fn MessageRowView(
 fn MessageRows(
     rows: Vec<MessageRow>,
     banner_error: Option<String>,
-    is_shared_channel: Signal<bool>,
     expanded_hidden_messages: RwSignal<HashSet<MessageId>>,
     unread_at_open: RwSignal<Option<i64>>,
     first_unread_ref: NodeRef<html::Div>,
@@ -436,7 +429,6 @@ fn MessageRows(
         <For each=move || rows.get_value() key=|row| row.id.clone() let:row>
             <MessageRowView
                 row
-                is_shared_channel
                 expanded_hidden_messages
                 unread_at_open
                 first_unread_ref
@@ -453,15 +445,18 @@ pub fn ChatInput(
     let chat = expect_context::<Chat>();
     let i18n = use_i18n();
     let game_state = use_context::<GameStateSignal>();
+    let active_channel_key =
+        Signal::derive(move || ConversationKey::from_destination(&destination.get()));
     let turn = move || game_state.map(|gs| gs.signal.with(|state| state.state.turn));
     let send = move || {
         if disabled.get() {
             return;
         }
-        let message = chat.typed_message.get();
+        let channel_key = active_channel_key.get();
+        let message = chat.draft_message(&channel_key);
         if !message.is_empty() {
             chat.send(&message, destination.get(), turn());
-            chat.typed_message.set(String::new());
+            chat.clear_draft_message(&channel_key);
         };
     };
     let placeholder = move || {
@@ -490,9 +485,11 @@ pub fn ChatInput(
             type="text"
             prop:disabled=disabled
             class="py-3 px-4 w-full placeholder-gray-500 text-black bg-white rounded-xl border border-gray-300 shadow-inner transition-shadow dark:placeholder-gray-400 dark:text-white dark:bg-gray-800 dark:border-gray-600 focus:ring-2 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed box-border shrink-0 focus:ring-pillbug-teal/50 focus:border-pillbug-teal"
-            prop:value=chat.typed_message
+            prop:value=move || chat.draft_message(&active_channel_key.get())
             prop:placeholder=placeholder
-            on:input=update_from_input(chat.typed_message)
+            on:input=move |evt| {
+                chat.set_draft_message(&active_channel_key.get_untracked(), event_target_value(&evt));
+            }
             on:keydown=move |evt| {
                 if evt.key() == "Enter" && !disabled.get() {
                     evt.prevent_default();
@@ -520,8 +517,6 @@ pub fn ResolvedChatWindow(
     });
     let active_channel_key =
         Signal::derive(move || ConversationKey::from_destination(&destination.get()));
-    let is_shared_channel =
-        Signal::derive(move || !matches!(destination.get(), ChatDestination::User(_)));
 
     let div = NodeRef::<html::Div>::new();
     let first_unread_ref = NodeRef::<html::Div>::new();
@@ -706,7 +701,6 @@ pub fn ResolvedChatWindow(
                                     <MessageRows
                                         rows
                                         banner_error=banner_error
-                                        is_shared_channel
                                         expanded_hidden_messages=thread_ui.expanded_hidden_messages
                                         unread_at_open=thread_ui.unread_at_open
                                         first_unread_ref

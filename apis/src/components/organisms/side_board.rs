@@ -1,6 +1,5 @@
 use crate::{
     components::{
-        atoms::unread_badge::UnreadBadge,
         molecules::{
             game_thread_toggle::{GameThreadToggle, GameThreadToggleSize},
             history_controls::HistoryControls,
@@ -69,20 +68,20 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
             }
 
             class=move || {
+                let has_unread = name == TabView::Chat && unread.get() > 0;
                 format!(
-                    "flex place-content-center transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal {}",
+                    "flex place-content-center transform transition-transform duration-300 active:scale-95 {}",
                     if tab() == name {
                         "dark:bg-button-twilight bg-slate-400"
+                    } else if has_unread {
+                        "bg-ladybug-red text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500"
                     } else {
-                        "bg-inherit"
+                        "bg-inherit hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
                     },
                 )
             }
         >
             {string.clone()}
-            <Show when=move || name == TabView::Chat>
-                <UnreadBadge count=unread />
-            </Show>
         </div>
     }
 }

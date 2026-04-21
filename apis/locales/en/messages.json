@@ -22,6 +22,7 @@
     "block_dialog": {
         "block_user": "Block user",
         "unblock_user": "Unblock user",
+        "unblock": "Unblock",
         "title": "Block this user?",
         "body": "They will no longer be able to send you direct messages. In game and tournament chats, their messages will be hidden by default (you can click to reveal). You can unblock them later from their profile or from Messages.",
         "cancel": "Cancel",
@@ -39,8 +40,8 @@
         "view_profile": "View profile ->",
         "view_tournament": "View tournament ->",
         "view_game": "View game ->",
-        "mute_tournament_chat": "Mute tournament chat",
-        "unmute_tournament_chat": "Unmute tournament chat",
+        "mute_tournament_chat": "Mute",
+        "unmute_tournament_chat": "Unmute",
         "failed_game": "Failed to load game",
         "game_id_tooltip": "Game ID (match to URL)",
         "result_won": "{{winner}} won {{conclusion}}",

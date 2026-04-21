@@ -22,8 +22,9 @@ use leptos::{
     task::spawn_local,
 };
 use leptos_router::{
-    components::{Outlet, A},
+    components::{A, Outlet, Redirect},
     hooks::{use_location, use_params_map},
+    NavigateOptions,
 };
 use shared_types::{
     ChatDestination,
@@ -59,6 +60,28 @@ enum ResolveState<K, V> {
 
 const SELF_DM_UNSUPPORTED_MESSAGE: &str = "Direct messages to yourself are not supported";
 const PLAYERS_CHAT_ONLY_MESSAGE: &str = "Only players can view the players chat.";
+const HEADER_ACTION_BUTTON_PRIMARY: &str =
+    "no-link-style inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium \
+    text-pillbug-teal rounded-lg border border-pillbug-teal/30 bg-pillbug-teal/10 shadow-sm \
+    transition-colors hover:bg-pillbug-teal/15 dark:border-pillbug-teal/40 dark:bg-pillbug-teal/20 \
+    dark:text-pillbug-teal dark:hover:bg-pillbug-teal/25";
+const GAME_CHAT_TOGGLE_CONTAINER_CLASS: &str =
+    "flex p-0.5 bg-gray-100 rounded-lg border border-gray-300 dark:bg-gray-800 dark:border-gray-600";
+
+fn game_chat_toggle_segment_class(selected: bool, disabled: bool) -> String {
+    let state_classes = if selected {
+        "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
+    } else if disabled {
+        "text-gray-400 dark:text-gray-500 cursor-not-allowed"
+    } else {
+        "text-gray-600 dark:text-gray-400 hover:text-gray-900 hover:bg-white/70 dark:hover:text-gray-100 dark:hover:bg-gray-700/70"
+    };
+
+    format!(
+        "no-link-style flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-center {}",
+        state_classes,
+    )
+}
 
 impl MessageRoute {
     fn parse(path: &str) -> Self {
@@ -506,7 +529,7 @@ fn DmChannelActions(other_id: Uuid, username: StoredValue<String>) -> impl IntoV
             <div class="flex flex-wrap gap-2 items-center">
                 <A
                     href=move || format!("/@/{}", username.get_value())
-                    attr:class="inline-flex items-center text-sm font-medium text-pillbug-teal hover:text-pillbug-teal/80 dark:text-pillbug-teal dark:hover:text-pillbug-teal/90 transition-colors"
+                    attr:class=HEADER_ACTION_BUTTON_PRIMARY
                 >
                     {t!(i18n, messages.page.view_profile)}
                 </A>
@@ -617,6 +640,15 @@ fn TournamentRouteActions(tournament_id: TournamentId, muted: bool) -> impl Into
             }
         }
     });
+    let mute_button_label = Signal::derive(move || {
+        if toggle_mute.pending().get() {
+            t_string!(i18n, messages.page.loading)
+        } else if resolved_muted.get() {
+            t_string!(i18n, messages.page.unmute_tournament_chat)
+        } else {
+            t_string!(i18n, messages.page.mute_tournament_chat)
+        }
+    });
     Effect::watch(
         toggle_mute.version(),
         move |_, _, _| {
@@ -642,28 +674,30 @@ fn TournamentRouteActions(tournament_id: TournamentId, muted: bool) -> impl Into
                 <div class="flex flex-wrap gap-2 items-center">
                     <A
                         href=tournament_href.get_value()
-                        attr:class="inline-flex items-center text-sm font-medium text-pillbug-teal hover:text-pillbug-teal/80 dark:text-pillbug-teal dark:hover:text-pillbug-teal/90 transition-colors"
+                        attr:class=HEADER_ACTION_BUTTON_PRIMARY
                     >
                         {t!(i18n, messages.page.view_tournament)}
                     </A>
                     <button
                         type="button"
                         disabled=toggle_mute.pending()
-                        class="text-sm font-medium text-gray-600 transition-colors dark:text-gray-400 disabled:text-gray-400 dark:hover:text-pillbug-teal/90 dark:disabled:text-gray-500 hover:text-pillbug-teal"
+                        title=move || mute_button_label.get()
+                        class=move || {
+                            format!(
+                                "inline-flex items-center justify-center px-3 py-1.5 text-sm font-semibold rounded-lg text-white whitespace-nowrap transition-colors duration-300 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed {}",
+                                if resolved_muted.get() {
+                                    "bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
+                                } else {
+                                    "bg-ladybug-red dark:bg-ladybug-red hover:bg-red-500 dark:hover:bg-red-500"
+                                }
+                            )
+                        }
                         on:click=move |_| {
                             mute_error.set(None);
                             toggle_mute.dispatch(resolved_muted.get_untracked());
                         }
                     >
-                        {move || {
-                            if toggle_mute.pending().get() {
-                                t_string!(i18n, messages.page.loading)
-                            } else if resolved_muted.get() {
-                                t_string!(i18n, messages.page.unmute_tournament_chat)
-                            } else {
-                                t_string!(i18n, messages.page.mute_tournament_chat)
-                            }
-                        }}
+                        {move || mute_button_label.get()}
                     </button>
                 </div>
                 {move || {
@@ -726,15 +760,36 @@ pub fn MessagesGameThread(thread: GameThread) -> impl IntoView {
         failed_message,
         failed_message,
         move |game_id, resolved_game| {
-            view! {
-                <MessagesResolvedGameView
-                    failed_message
-                    game_id
-                    thread
-                    title
-                    spectator_unlock_message
-                    access=resolved_game
-                />
+            if thread == GameThread::Players
+                && !resolved_game.can_read(GameThread::Players)
+                && resolved_game.can_read(GameThread::Spectators)
+            {
+                let spectators_href = MessageRoute::Game {
+                    id: game_id.clone(),
+                    thread: GameThread::Spectators,
+                }
+                .href();
+
+                Either::Left(view! {
+                    <Redirect
+                        path=spectators_href
+                        options=NavigateOptions {
+                            replace: true,
+                            ..Default::default()
+                        }
+                    />
+                })
+            } else {
+                Either::Right(view! {
+                    <MessagesResolvedGameView
+                        failed_message
+                        game_id
+                        thread
+                        title
+                        spectator_unlock_message
+                        access=resolved_game
+                    />
+                })
             }
         },
     )
@@ -791,15 +846,8 @@ fn GameChatHeader(
     access: GameChatCapabilities,
 ) -> impl IntoView {
     let i18n = use_i18n();
-    let can_toggle_threads = access.can_toggle_embedded_threads();
-    let can_read_spectators = access.can_read(GameThread::Spectators);
-    let static_chat_label = Signal::derive(move || {
-        if current_thread == GameThread::Players {
-            t_string!(i18n, messages.chat.players_chat)
-        } else {
-            t_string!(i18n, messages.chat.spectator_chat)
-        }
-    });
+    let spectator_unlock_needed =
+        access.can_toggle_embedded_threads() && !access.can_read(GameThread::Spectators);
 
     view! {
         <ChannelHeaderBar>
@@ -807,41 +855,33 @@ fn GameChatHeader(
                 <div class="flex flex-wrap gap-2 items-center">
                     <A
                         href=format!("/game/{game_id}")
-                        attr:class="inline-flex items-center text-sm font-medium text-pillbug-teal hover:text-pillbug-teal/80 dark:text-pillbug-teal dark:hover:text-pillbug-teal/90 transition-colors"
+                        attr:class=HEADER_ACTION_BUTTON_PRIMARY
                     >
                         {t!(i18n, messages.page.view_game)}
                     </A>
                 </div>
-                {if can_toggle_threads && can_read_spectators {
-                    Either::Left(
-                        view! { <GameChatToggle game_id=game_id.clone() current_thread /> },
-                    )
-                } else {
-                    Either::Right(
-                        view! {
-                            <div class="flex flex-col gap-1">
-                                <span class="inline-flex items-center py-1 px-2.5 text-xs font-medium text-gray-700 bg-white rounded-full border border-gray-300 dark:text-gray-200 dark:bg-gray-800 dark:border-gray-600 w-fit">
-                                    {move || static_chat_label.get()}
-                                </span>
-                                {(can_toggle_threads && !can_read_spectators)
-                                    .then(|| {
-                                        view! {
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                {t!(i18n, messages.chat.spectator_unlock)}
-                                            </p>
-                                        }
-                                    })}
-                            </div>
-                        },
-                    )
-                }}
+                <div class="flex flex-col gap-1.5">
+                    <GameChatToggle game_id=game_id.clone() current_thread access />
+                    {spectator_unlock_needed
+                        .then(|| {
+                            view! {
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    {t!(i18n, messages.chat.spectator_unlock)}
+                                </p>
+                            }
+                        })}
+                </div>
             </div>
         </ChannelHeaderBar>
     }
 }
 
 #[component]
-fn GameChatToggle(game_id: GameId, current_thread: GameThread) -> impl IntoView {
+fn GameChatToggle(
+    game_id: GameId,
+    current_thread: GameThread,
+    access: GameChatCapabilities,
+) -> impl IntoView {
     let i18n = use_i18n();
     let players_href = MessageRoute::Game {
         id: game_id.clone(),
@@ -853,44 +893,57 @@ fn GameChatToggle(game_id: GameId, current_thread: GameThread) -> impl IntoView 
         thread: GameThread::Spectators,
     }
     .href();
+    let can_read_players = access.can_read(GameThread::Players);
+    let can_read_spectators = access.can_read(GameThread::Spectators);
     let viewing_players = current_thread == GameThread::Players;
+    let viewing_spectators = current_thread == GameThread::Spectators;
 
     view! {
-        <div class="flex p-0.5 bg-gray-100 rounded-lg border border-gray-300 dark:bg-gray-800 dark:border-gray-600">
-            <A
-                href=players_href
-                prop:replace=true
-                scroll=false
-                attr:class=move || {
-                    format!(
-                        "no-link-style flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-center {}",
-                        if viewing_players {
-                            "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                        } else {
-                            "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                        },
-                    )
-                }
-            >
-                {t!(i18n, messages.chat.players)}
-            </A>
-            <A
-                href=spectators_href
-                prop:replace=true
-                scroll=false
-                attr:class=move || {
-                    format!(
-                        "no-link-style flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors text-center {}",
-                        if !viewing_players {
-                            "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                        } else {
-                            "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                        },
-                    )
-                }
-            >
-                {t!(i18n, messages.chat.spectators)}
-            </A>
+        <div class=GAME_CHAT_TOGGLE_CONTAINER_CLASS>
+            {if can_read_players {
+                Either::Left(
+                    view! {
+                        <A
+                            href=players_href
+                            prop:replace=true
+                            scroll=false
+                            attr:class=game_chat_toggle_segment_class(viewing_players, false)
+                        >
+                            {t!(i18n, messages.chat.players)}
+                        </A>
+                    },
+                )
+            } else {
+                Either::Right(
+                    view! {
+                        <span class=game_chat_toggle_segment_class(viewing_players, true)>
+                            {t!(i18n, messages.chat.players)}
+                        </span>
+                    },
+                )
+            }}
+            {if can_read_spectators {
+                Either::Left(
+                    view! {
+                        <A
+                            href=spectators_href
+                            prop:replace=true
+                            scroll=false
+                            attr:class=game_chat_toggle_segment_class(viewing_spectators, false)
+                        >
+                            {t!(i18n, messages.chat.spectators)}
+                        </A>
+                    },
+                )
+            } else {
+                Either::Right(
+                    view! {
+                        <span class=game_chat_toggle_segment_class(viewing_spectators, true)>
+                            {t!(i18n, messages.chat.spectators)}
+                        </span>
+                    },
+                )
+            }}
         </div>
     }
 }
@@ -1065,13 +1118,13 @@ fn MessagesThreadFrame(title: Signal<String>, children: Children) -> impl IntoVi
                     href=MessageRoute::Root.href()
                     prop:replace=true
                     scroll=false
-                    attr:class="no-link-style flex flex-shrink-0 gap-1 justify-center items-center -ml-1 text-gray-600 rounded-lg transition-colors sm:hidden dark:text-gray-400 hover:text-gray-900 hover:bg-gray-200 min-h-[2.25rem] min-w-[2.25rem] dark:hover:bg-gray-700 dark:hover:text-gray-100"
+                    attr:class="no-link-style inline-flex flex-shrink-0 gap-1.5 justify-center items-center px-3 py-1.5 text-sm font-medium text-gray-700 rounded-lg border border-gray-300 bg-white shadow-sm transition-colors sm:hidden dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-gray-100"
                     attr:aria-label=move || { t_string!(i18n, messages.page.back_to_conversations) }
                 >
-                    <span class="text-lg" aria-hidden="true">
+                    <span class="text-base" aria-hidden="true">
                         "←"
                     </span>
-                    <span class="text-sm font-medium">{t!(i18n, messages.page.conversations)}</span>
+                    <span>{t!(i18n, messages.page.conversations)}</span>
                 </A>
                 <h2 class="flex-1 min-w-0 text-lg font-semibold text-gray-800 dark:text-gray-100 truncate">
                     {move || title.get()}

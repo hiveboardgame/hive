@@ -22,6 +22,7 @@
     "block_dialog": {
         "block_user": "Blocca utente",
         "unblock_user": "Sblocca utente",
+        "unblock": "Sblocca",
         "title": "Bloccare questo utente?",
         "body": "Non potra piu inviarti messaggi diretti. Nelle chat di gioco e torneo, i suoi messaggi saranno nascosti per impostazione predefinita (puoi cliccare per mostrarli). Potrai sbloccarlo piu tardi dal suo profilo o da Messaggi.",
         "cancel": "Annulla",
@@ -39,8 +40,8 @@
         "view_profile": "Vedi profilo ->",
         "view_tournament": "Vedi torneo ->",
         "view_game": "Vedi partita ->",
-        "mute_tournament_chat": "Silenzia chat torneo",
-        "unmute_tournament_chat": "Riattiva chat torneo",
+        "mute_tournament_chat": "Silenzia",
+        "unmute_tournament_chat": "Riattiva",
         "failed_game": "Impossibile caricare la partita",
         "game_id_tooltip": "ID partita (corrisponde all'URL)",
         "result_won": "{{winner}} ha vinto {{conclusion}}",
