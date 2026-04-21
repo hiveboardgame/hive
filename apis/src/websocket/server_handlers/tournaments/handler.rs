@@ -119,11 +119,16 @@ impl TournamentHandler {
                     .into()
             }
             TournamentAction::Start(tournament_id) => {
-                StartHandler::new(tournament_id, self.user_id, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-                    .into()
+                StartHandler::new(
+                    tournament_id,
+                    self.user_id,
+                    &self.pool,
+                    Arc::clone(&self.data.realtime_games_enabled),
+                )
+                .await?
+                .handle()
+                .await?
+                .into()
             }
             TournamentAction::AdjudicateResult(game_id, new_result) => {
                 AdjudicateResultHandler::new(game_id, new_result, self.user_id, &self.pool)

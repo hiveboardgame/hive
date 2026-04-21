@@ -1,14 +1,15 @@
 use crate::{
     components::{
-        atoms::simple_switch::SimpleSwitch,
+        atoms::simple_switch::{SimpleSwitch, SimpleSwitchWithCallback},
         molecules::rl_banner::RlBanner,
         organisms::chat::ChatWindow,
         update_from_event::update_from_input,
     },
-    functions::home_banner,
+    functions::{home_banner, site_config},
     providers::AuthContext,
 };
 use leptos::prelude::*;
+use leptos_use::use_interval_fn;
 use shared_types::SimpleDestination;
 
 const LINE_CLASS: &str = "flex items-center py-3 text-sm before:flex-1 before:border-t before:border-black before:me-6 after:flex-1 after:border-t after:border-black after:ms-6 dark:text-white dark:before:border-neutral-600 dark:after:border-neutral-600";
@@ -33,6 +34,8 @@ pub fn Admin() -> impl IntoView {
                 >
                     "Open WS telemetry dashboard"
                 </a>
+                <div class=LINE_CLASS>Realtime Games</div>
+                <RealtimeToggle />
             </Show>
         </div>
     }
@@ -120,6 +123,83 @@ fn EditBanner() -> impl IntoView {
                                     />
                                 </div>
                             </ActionForm>
+                        }
+                    })
+            }}
+        </Transition>
+    }
+}
+
+#[component]
+fn RealtimeToggle() -> impl IntoView {
+    let enabled_resource =
+        OnceResource::new(async move { site_config::get_realtime_enabled().await.unwrap_or(true) });
+    // Tick every 5s so the admin can watch realtime games drain before a
+    // restart. Driving the resource off a counting RwSignal lets Leptos
+    // re-fetch on every tick.
+    let refresh_tick = RwSignal::new(0u32);
+    use_interval_fn(move || refresh_tick.update(|n| *n = n.wrapping_add(1)), 5_000);
+    let count_resource = Resource::new(
+        move || refresh_tick.get(),
+        |_| async move {
+            site_config::count_ongoing_realtime_games()
+                .await
+                .unwrap_or(0)
+        },
+    );
+    let set_action = ServerAction::<site_config::SetRealtimeEnabled>::new();
+    view! {
+        <Transition>
+            {move || {
+                enabled_resource
+                    .get()
+                    .map(|initial| {
+                        let enabled = RwSignal::new(initial);
+                        // Remembers the value to revert to if the in-flight
+                        // dispatch returns Err. `None` when no dispatch is
+                        // pending (so the watcher below ignores the initial
+                        // `None` action value).
+                        let pending_revert = StoredValue::new(None::<bool>);
+                        let toggle = Callback::new(move |_: ()| {
+                            let new_val = !enabled.get_untracked();
+                            pending_revert.set_value(Some(!new_val));
+                            enabled.set(new_val);
+                            set_action
+                                .dispatch(site_config::SetRealtimeEnabled { enabled: new_val });
+                        });
+                        Effect::watch(
+                            move || set_action.value().get(),
+                            move |val, _, _| {
+                                let Some(result) = val else { return };
+                                let Some(revert_to) = pending_revert.get_value() else {
+                                    return;
+                                };
+                                pending_revert.set_value(None);
+                                if result.is_err() {
+                                    enabled.set(revert_to);
+                                }
+                            },
+                            false,
+                        );
+                        view! {
+                            <div class="flex flex-row gap-3 items-center p-4">
+                                <span class="text-sm">
+                                    {move || {
+                                        if enabled() {
+                                            "Realtime games: Enabled"
+                                        } else {
+                                            "Realtime games: Disabled"
+                                        }
+                                    }}
+                                </span>
+                                <SimpleSwitchWithCallback checked=enabled.into() action=toggle />
+                                <span class="text-sm text-gray-500 dark:text-gray-400">
+                                    {move || {
+                                        let count = count_resource.get().unwrap_or(0);
+                                        format!("({count} ongoing)")
+                                    }}
+                                </span>
+                            </div>
                         }
                     })
             }}

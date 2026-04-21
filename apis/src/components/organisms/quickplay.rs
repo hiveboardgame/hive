@@ -24,9 +24,13 @@ pub enum QuickPlayTimeControl {
 }
 use QuickPlayTimeControl::*;
 const BUTTON_STYLE: &str = "flex w-full gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
+const BUTTON_STYLE_DISABLED: &str = "flex w-full gap-1 justify-center items-center px-4 py-2 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight opacity-40 cursor-not-allowed";
 
 #[component]
-pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
+pub fn GridButton(
+    time_control: QuickPlayTimeControl,
+    #[prop(optional)] disabled: Signal<bool>,
+) -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let api = expect_context::<ApiRequestsProvider>().0;
     let (display_text, icon_data, base, increment, speed_name) = match time_control {
@@ -53,9 +57,12 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
     let hover_text = format!("{speed_name}\n{base} min base time\n+{increment} sec per move");
     view! {
         <button
-            class=BUTTON_STYLE
+            class=move || if disabled() { BUTTON_STYLE_DISABLED } else { BUTTON_STYLE }
             title=hover_text
             on:click=move |_| {
+                if disabled() {
+                    return;
+                }
                 if auth_context.user.with(|a| a.is_some()) {
                     let api = api.get();
                     let details = ChallengeDetails {
@@ -85,7 +92,7 @@ pub fn GridButton(time_control: QuickPlayTimeControl) -> impl IntoView {
     }
 }
 #[component]
-pub fn QuickPlay() -> impl IntoView {
+pub fn QuickPlay(#[prop(optional)] realtime_enabled: Signal<bool>) -> impl IntoView {
     let i18n = use_i18n();
     let dialog_el = NodeRef::<Dialog>::new();
     let bot_dialog_el = NodeRef::<Dialog>::new();
@@ -95,10 +102,11 @@ pub fn QuickPlay() -> impl IntoView {
     let _ = use_event_listener(dialog_el, ev::close, move |_| {
         set_cookie.set(Some(params.get()));
     });
+    let buttons_disabled = Signal::derive(move || !realtime_enabled());
     view! {
         <div class="flex flex-col items-center m-2 grow">
             <Modal dialog_el>
-                <ChallengeCreate />
+                <ChallengeCreate realtime_disabled=buttons_disabled />
             </Modal>
             <Modal dialog_el=bot_dialog_el>
                 <ChallengeBot />
@@ -106,12 +114,17 @@ pub fn QuickPlay() -> impl IntoView {
             <span class="flex justify-center mb-4 text-xl font-bold">
                 {t!(i18n, home.create_game)}
             </span>
+            <Show when=move || !realtime_enabled()>
+                <p class="mb-3 text-sm font-medium text-center text-orange-twilight">
+                    {t!(i18n, home.realtime_disabled)}
+                </p>
+            </Show>
             <div class="grid grid-cols-3 gap-2 w-full sm:gap-4">
-                <GridButton time_control=Bullet1p2 />
-                <GridButton time_control=Blitz3p3 />
-                <GridButton time_control=Blitz5p4 />
-                <GridButton time_control=Rapid10p10 />
-                <GridButton time_control=Classic20p20 />
+                <GridButton time_control=Bullet1p2 disabled=buttons_disabled />
+                <GridButton time_control=Blitz3p3 disabled=buttons_disabled />
+                <GridButton time_control=Blitz5p4 disabled=buttons_disabled />
+                <GridButton time_control=Rapid10p10 disabled=buttons_disabled />
+                <GridButton time_control=Classic20p20 disabled=buttons_disabled />
                 <button
                     class=BUTTON_STYLE
                     on:click=move |_| {

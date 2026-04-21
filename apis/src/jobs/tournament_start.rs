@@ -25,10 +25,13 @@ pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
             interval.tick().await;
             if let Ok(mut conn) = get_conn(&pool).await {
                 let hub = hub.get_ref().clone();
+                let realtime_enabled = hub.realtime_games_enabled();
                 let _ = conn
                     .transaction::<_, anyhow::Error, _>(move |tc| {
                         async move {
-                            if let Ok(tournament_infos) = Tournament::automatic_start(tc).await {
+                            if let Ok(tournament_infos) =
+                                Tournament::automatic_start(realtime_enabled, tc).await
+                            {
                                 let mut messages = Vec::new();
                                 for (tournament, games, deleted_invitations) in tournament_infos {
                                     let tournament_response =

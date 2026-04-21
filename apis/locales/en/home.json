@@ -1,6 +1,7 @@
 {
     "learn_to_play": "Learn to play",
     "create_game": "Create a game",
+    "realtime_disabled": "Realtime games are temporarily disabled for maintenance.",
     "search_players": "Search players",
     "found_players": "Found:",
     "online_players_one": "{{count}} Online player",

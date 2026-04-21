@@ -274,6 +274,14 @@ impl WsHub {
         GameId(LOBBY_GAME_ID.to_string())
     }
 
+    /// Snapshot of the realtime-games operational flag. Read by the periodic
+    /// tournament-start job and any other caller that needs to gate realtime
+    /// creation without reaching into `WebsocketData` directly.
+    pub fn realtime_games_enabled(&self) -> bool {
+        use std::sync::atomic::Ordering;
+        self.data.realtime_games_enabled.load(Ordering::Relaxed)
+    }
+
     // ─── connect / disconnect ─────────────────────────────────────────────────
 
     /// Synchronously register a new socket and trigger the async user-state load.
