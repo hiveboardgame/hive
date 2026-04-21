@@ -4,7 +4,7 @@ use crate::{
         messages::send::{send_challenge_creation_message, send_challenge_messages},
     },
     responses::{ChallengeResponse, GameResponse},
-    websocket::{busybee::Busybee, WsServer},
+    websocket::{busybee::Busybee, WebsocketData, WsServer},
 };
 use actix::Addr;
 use actix_web::{
@@ -13,6 +13,7 @@ use actix_web::{
     web::{Data, Json, Path},
     HttpResponse,
 };
+use std::sync::atomic::Ordering;
 use anyhow::Result;
 use db_lib::{
     get_conn,
@@ -161,9 +162,10 @@ pub async fn api_accept_challenge(
     Auth(bot): Auth,
     pool: Data<DbPool>,
     ws_server: Data<Addr<WsServer>>,
+    ws_data: Data<WebsocketData>,
 ) -> HttpResponse {
     let nanoid = nanoid.into_inner();
-    match accept_challenge(nanoid, bot.clone(), pool, ws_server).await {
+    match accept_challenge(nanoid, bot.clone(), pool, ws_server, ws_data).await {
         Ok(game) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
@@ -187,6 +189,7 @@ pub async fn api_create_challenge(
     Auth(bot): Auth,
     pool: Data<DbPool>,
     ws_server: Data<Addr<WsServer>>,
+    ws_data: Data<WebsocketData>,
 ) -> HttpResponse {
     let challenge_details = match req.validate_and_convert() {
         Ok(details) => details,
@@ -200,7 +203,7 @@ pub async fn api_create_challenge(
         }
     };
 
-    match create_challenge(challenge_details, bot.id, pool, ws_server).await {
+    match create_challenge(challenge_details, bot.id, pool, ws_server, ws_data).await {
         Ok(challenge) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
@@ -223,7 +226,15 @@ async fn create_challenge(
     bot_id: Uuid,
     pool: Data<DbPool>,
     ws_server: Data<Addr<WsServer>>,
+    ws_data: Data<WebsocketData>,
 ) -> Result<ChallengeResponse> {
+    if req.time_mode == TimeMode::RealTime
+        && !ws_data.realtime_games_enabled.load(Ordering::Relaxed)
+    {
+        return Err(anyhow::anyhow!(
+            "Realtime games are currently disabled for maintenance."
+        ));
+    }
     let mut conn = get_conn(&pool).await?;
 
     let opponent_id = match (&req.visibility, &req.opponent) {
@@ -248,9 +259,17 @@ async fn accept_challenge(
     bot: User,
     pool: Data<DbPool>,
     ws_server: Data<Addr<WsServer>>,
+    ws_data: Data<WebsocketData>,
 ) -> Result<GameResponse> {
     let mut conn = get_conn(&pool).await?;
     let challenge = Challenge::find_by_challenge_id(&id, &mut conn).await?;
+    if challenge.time_mode == TimeMode::RealTime.to_string()
+        && !ws_data.realtime_games_enabled.load(Ordering::Relaxed)
+    {
+        return Err(anyhow::anyhow!(
+            "Realtime games are currently disabled for maintenance."
+        ));
+    }
     let (white_id, black_id) = match challenge.color_choice.to_lowercase().as_str() {
         "black" => (bot.id, challenge.challenger_id),
         "white" => (challenge.challenger_id, bot.id),

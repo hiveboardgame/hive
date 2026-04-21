@@ -3,32 +3,47 @@ use crate::{
     responses::ChallengeResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
-use anyhow::Result;
+use anyhow::{bail, Result};
 use db_lib::{
     get_conn,
     models::{Challenge, NewChallenge, User},
     DbPool,
 };
-use shared_types::{ChallengeDetails, ChallengeVisibility};
-use std::str::FromStr;
+use shared_types::{ChallengeDetails, ChallengeVisibility, TimeMode};
+use std::{
+    str::FromStr,
+    sync::{atomic::{AtomicBool, Ordering}, Arc},
+};
 use uuid::Uuid;
 
 pub struct CreateHandler {
     details: ChallengeDetails,
     user_id: Uuid,
     pool: DbPool,
+    realtime_games_enabled: Arc<AtomicBool>,
 }
 
 impl CreateHandler {
-    pub async fn new(details: ChallengeDetails, user_id: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(
+        details: ChallengeDetails,
+        user_id: Uuid,
+        pool: &DbPool,
+        realtime_games_enabled: Arc<AtomicBool>,
+    ) -> Result<Self> {
         Ok(Self {
             details,
             user_id,
             pool: pool.clone(),
+            realtime_games_enabled,
         })
     }
 
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+        if self.details.time_mode == TimeMode::RealTime
+            && !self.realtime_games_enabled.load(Ordering::Relaxed)
+        {
+            bail!("Realtime games are currently disabled for maintenance.");
+        }
         let mut conn = get_conn(&self.pool).await?;
         let opponent = match &self.details.opponent {
             Some(username) => Some((User::find_by_username(username, &mut conn).await?).id),

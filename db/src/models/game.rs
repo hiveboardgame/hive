@@ -1076,6 +1076,19 @@ impl Game {
         Ok(())
     }
 
+    pub async fn count_ongoing_realtime(conn: &mut DbConn<'_>) -> Result<i64, DbError> {
+        use diesel::dsl::count_star;
+        Ok(games::table
+            .filter(
+                games::game_status
+                    .eq(GameStatus::InProgress.to_string())
+                    .and(games::time_mode.eq(shared_types::TimeMode::RealTime.to_string())),
+            )
+            .select(count_star())
+            .first(conn)
+            .await?)
+    }
+
     pub async fn delete_old_and_unstarted(conn: &mut DbConn<'_>) -> Result<(), DbError> {
         let cutoff = Utc::now() - Duration::from_secs(60 * 60 * 12);
         diesel::delete(

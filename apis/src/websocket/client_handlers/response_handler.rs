@@ -8,8 +8,12 @@ use super::{
     tournament::handler::handle_tournament,
     user_status::handle::handle_user_status,
 };
-use crate::common::{ServerMessage::*, ServerResult};
+use crate::{
+    common::{ServerMessage::*, ServerResult},
+    providers::RealtimeEnabledContext,
+};
 use leptos::logging::log;
+use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
 
 pub fn handle_response(m: ServerResult) {
@@ -26,6 +30,11 @@ pub fn handle_response(m: ServerResult) {
             RedirectLink(link) => handle_oauth(link),
             Tournament(tournament_update) => handle_tournament(tournament_update),
             Schedule(schedule_update) => handle_schedule(schedule_update),
+            RealtimeEnabled(enabled) => {
+                if let Some(ctx) = use_context::<RealtimeEnabledContext>() {
+                    ctx.0.set(enabled);
+                }
+            }
             todo => {
                 log!("Got {todo:?} which is currently still unimplemented");
             }
