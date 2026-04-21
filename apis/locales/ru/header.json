@@ -23,6 +23,7 @@
     "support": "Поддержка",
     "user_menu": {
         "profile": "Профиль",
+        "messages": "Сообщения",
         "edit_account": "Редактировать аккаунт",
         "config": "Настройки",
         "logout": "Выйти",

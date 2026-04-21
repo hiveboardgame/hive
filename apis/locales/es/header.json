@@ -23,6 +23,7 @@
     "support": "Soporte",
     "user_menu": {
         "profile": "Perfil",
+        "messages": "Mensajes",
         "edit_account": "Editar cuenta",
         "config": "Configuración",
         "logout": "Cerrar sesión",

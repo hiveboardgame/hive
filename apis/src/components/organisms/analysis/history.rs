@@ -15,7 +15,6 @@ use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
 use std::{cmp::Ordering, collections::HashMap};
 use tree_ds::prelude::*;
-
 const BTN_CLASS: &str = "flex z-20 justify-center items-center m-1 w-44 h-10 text-white rounded-sm transition-transform duration-300 aspect-square bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal dark:hover:bg-pillbug-teal active:scale-95";
 
 #[derive(Clone, Debug, PartialEq)]

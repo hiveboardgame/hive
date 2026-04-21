@@ -11,6 +11,14 @@ use crate::{
         faq::Faq,
         home::Home,
         login::Login,
+        messages::{
+            MessagesDmThread,
+            MessagesGameThread,
+            MessagesGlobalThread,
+            MessagesIndex,
+            MessagesLayout,
+            MessagesTournamentThread,
+        },
         play::Play,
         profile_view::ProfileView,
         puzzles::Puzzles,
@@ -27,7 +35,7 @@ use crate::{
     },
     providers::{
         challenges::provide_challenges,
-        chat::provide_chat,
+        chat::{provide_chat, Chat},
         games::provide_games,
         online_users::provide_users,
         provide_alerts,
@@ -50,11 +58,19 @@ use leptos::prelude::*;
 use leptos_i18n::context::CookieOptions;
 use leptos_meta::*;
 use leptos_router::{
-    components::{Outlet, ParentRoute, ProtectedRoute, Route, Router, Routes},
+    components::{
+        Outlet,
+        ParentRoute,
+        ProtectedParentRoute,
+        ProtectedRoute,
+        Route,
+        Router,
+        Routes,
+    },
     path,
 };
 use leptos_use::SameSite;
-use shared_types::{GameProgress, TournamentStatus};
+use shared_types::{GameProgress, GameThread, TournamentStatus};
 
 // 1 year in milliseconds
 const LOCALE_MAX_AGE: i64 = 1000 * 60 * 60 * 24 * 365;
@@ -91,8 +107,29 @@ pub fn App() -> impl IntoView {
     //expects auth, api_requests, gameStateSignal
     provide_chat();
     let auth = expect_context::<AuthContext>();
-    let is_logged_in = move || auth.user.with(|a| a.is_some()).into();
-    let is_admin = move || Some(auth.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin)));
+    let chat = expect_context::<Chat>();
+    // Refresh server-backed unread counts when user is logged in (for badges)
+    Effect::new(move |_| {
+        if auth.user.with(|u| u.is_some()) {
+            chat.refresh_unread_counts();
+        }
+    });
+    // Allow access while auth is still loading (e.g. on refresh) so we don't redirect to login before get_account() resolves.
+    // ProtectedRoute condition: Option<bool> — None = loading (don't redirect), Some(true) = allow, Some(false) = redirect.
+    let is_logged_in = Signal::derive(move || {
+        if auth.action.pending().get() {
+            None
+        } else {
+            Some(auth.user.with(|a| a.is_some()))
+        }
+    });
+    let is_admin = Signal::derive(move || {
+        if auth.action.pending().get() {
+            None
+        } else {
+            Some(auth.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin)))
+        }
+    });
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)
@@ -143,6 +180,29 @@ pub fn App() -> impl IntoView {
                         <Route path=path!("/register") view=|| view! { <Register /> } />
                         <Route path=path!("/top_players") view=|| view! { <TopPlayers /> } />
                         <Route path=path!("/login") view=|| view! { <Login /> } />
+                        <ProtectedParentRoute
+                            condition=is_logged_in
+                            path=path!("/message")
+                            redirect_path=|| "/login"
+                            view=MessagesLayout
+                        >
+                            <Route path=path!("") view=MessagesIndex />
+                            <Route path=path!("global") view=MessagesGlobalThread />
+                            <Route path=path!("dm/:username") view=MessagesDmThread />
+                            <Route path=path!("tournament/:nanoid") view=MessagesTournamentThread />
+                            <Route
+                                path=path!("game/:nanoid/players")
+                                view=|| {
+                                    view! { <MessagesGameThread thread=GameThread::Players /> }
+                                }
+                            />
+                            <Route
+                                path=path!("game/:nanoid/spectators")
+                                view=|| {
+                                    view! { <MessagesGameThread thread=GameThread::Spectators /> }
+                                }
+                            />
+                        </ProtectedParentRoute>
                         <ProtectedRoute
                             condition=is_logged_in
                             path=path!("/account")

@@ -1,5 +1,6 @@
 #![recursion_limit = "256"]
 pub mod api;
+pub mod chat;
 pub mod common;
 pub mod functions;
 pub mod jobs;
@@ -54,11 +55,8 @@ async fn main() -> std::io::Result<()> {
     conn.run_pending_migrations(MIGRATIONS)
         .expect("Ran migrations");
 
-    let hash: [u8; 64] = Sha512::digest(&config.session_secret)
-        .as_slice()
-        .try_into()
-        .expect("Wrong size");
-    let cookie_key = Key::from(&hash);
+    let hash = Sha512::digest(&config.session_secret);
+    let cookie_key = Key::from(hash.as_ref());
     let pool = get_pool(&config.database_url)
         .await
         .expect("Failed to get pool");

@@ -8,6 +8,8 @@ use crate::{
 use hive_lib::Color;
 use leptos::{ev::keydown, html, prelude::*};
 use leptos_use::{use_event_listener, use_window};
+use wasm_bindgen::JsCast;
+use web_sys::{HtmlInputElement, HtmlTextAreaElement};
 
 #[component]
 pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) -> impl IntoView {
@@ -29,6 +31,14 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
     let prev_button = NodeRef::<html::Button>::new();
     let next_button = NodeRef::<html::Button>::new();
     _ = use_event_listener(document().body(), keydown, move |evt| {
+        // Don't capture arrow keys when focus is in an input or textarea (e.g. chat box)
+        if let Some(target) = evt.target() {
+            if target.dyn_ref::<HtmlInputElement>().is_some()
+                || target.dyn_ref::<HtmlTextAreaElement>().is_some()
+            {
+                return;
+            }
+        }
         if evt.key() == "ArrowLeft" {
             evt.prevent_default();
             if let Some(prev) = prev_button.get_untracked() {
@@ -56,7 +66,7 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
         }
     });
     view! {
-        <div>
+        <div class="shrink-0">
             <div class="flex gap-1 min-h-0 [&>*]:grow">
                 <HistoryButton action=HistoryNavigation::First post_action=focus />
                 <HistoryButton

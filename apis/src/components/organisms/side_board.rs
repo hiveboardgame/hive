@@ -1,7 +1,10 @@
 use crate::{
     components::{
-        molecules::history_controls::HistoryControls,
-        organisms::{chat::ChatWindow, history::History, reserve::ReserveContent},
+        molecules::{
+            game_thread_toggle::{GameThreadToggle, GameThreadToggleSize},
+            history_controls::HistoryControls,
+        },
+        organisms::{chat::GameChatWindow, history::History, reserve::ReserveContent},
     },
     providers::{
         chat::Chat,
@@ -16,7 +19,7 @@ use leptos_router::{
     location::State,
     NavigateOptions,
 };
-use shared_types::{GameId, SimpleDestination};
+use shared_types::{GameChatCapabilities, GameId, GameThread};
 
 #[derive(Clone, PartialEq, Copy)]
 pub enum TabView {
@@ -41,11 +44,12 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
         TabView::History => "History".to_string(),
         TabView::Chat => "Chat".to_string(),
     };
+    let unread = Signal::derive(move || chat.unread_count_for_game(&game_id()));
     let mut game_state = expect_context::<GameStateSignal>();
     view! {
         <div
             on:click=move |_| {
-                if tab() == TabView::Chat {
+                if name == TabView::Chat {
                     chat.seen_messages(game_id());
                     let is_game_view = game_state.signal.with_untracked(|gs| gs.view == View::Game);
                     if is_game_view {
@@ -64,14 +68,15 @@ fn TriggerButton(name: TabView, tab: RwSignal<TabView>) -> impl IntoView {
             }
 
             class=move || {
+                let has_unread = name == TabView::Chat && unread.get() > 0;
                 format!(
-                    "flex place-content-center transform transition-transform duration-300 active:scale-95 hover:bg-pillbug-teal dark:hover:bg-pillbug-teal {}",
+                    "flex place-content-center transform transition-transform duration-300 active:scale-95 {}",
                     if tab() == name {
                         "dark:bg-button-twilight bg-slate-400"
-                    } else if name == TabView::Chat && chat.has_messages(game_id()) {
-                        "bg-ladybug-red"
+                    } else if has_unread {
+                        "bg-ladybug-red text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-500"
                     } else {
-                        "bg-inherit"
+                        "bg-inherit hover:bg-pillbug-teal dark:hover:bg-pillbug-teal"
                     },
                 )
             }
@@ -91,12 +96,20 @@ pub fn SideboardTabs(
     let auth_context = expect_context::<AuthContext>();
     let user = auth_context.user;
     let white_and_black = create_read_slice(game_state.signal, |gs| (gs.white_id, gs.black_id));
-    let show_buttons = Signal::derive(move || {
-        user().is_some_and(|user| {
+    let game_chat_access = Signal::derive(move || {
+        let is_player = user().is_some_and(|user| {
             let (white_id, black_id) = white_and_black();
             Some(user.id) == black_id || Some(user.id) == white_id
-        })
+        });
+        let finished = game_state
+            .signal
+            .with(|gs| gs.game_response.as_ref().is_some_and(|gr| gr.finished));
+        GameChatCapabilities::new(is_player, finished)
     });
+    let show_buttons = Signal::derive(move || game_chat_access.get().can_toggle_embedded_threads());
+    let selected_game_thread = RwSignal::new(GameThread::Players);
+    let explicit_game_thread =
+        Signal::derive(move || show_buttons().then_some(selected_game_thread.get()));
     view! {
         <div class=format!(
             "bg-reserve-dawn dark:bg-reserve-twilight h-full flex flex-col select-none col-span-2 border-x-2 border-black dark:border-white row-span-4 row-start-2 relative {extend_tw_classes}",
@@ -109,19 +122,30 @@ pub fn SideboardTabs(
                     <TriggerButton name=TabView::Chat tab />
                 </div>
             </div>
-            <TabsContent value=TabView::Reserve class="flex flex-col h-full" tab>
+            <TabsContent value=TabView::Reserve class="flex flex-col flex-1 min-h-0" tab>
                 <ReserveContent player_color show_buttons />
             </TabsContent>
-            <TabsContent value=TabView::History class="h-full" tab>
+            <TabsContent value=TabView::History class="flex-1 min-h-0" tab>
                 <History />
             </TabsContent>
             <TabsContent
                 tab
                 value=TabView::Chat
-                class="flex flex-col flex-grow h-full max-h-full justify-beetween"
+                class="flex overflow-hidden flex-col flex-1 min-h-0"
             >
                 <HistoryControls />
-                <ChatWindow destination=SimpleDestination::Game />
+                <Show when=move || show_buttons()>
+                    <GameThreadToggle
+                        selected=selected_game_thread
+                        spectators_enabled=Signal::derive(move || {
+                            game_chat_access.get().can_read(GameThread::Spectators)
+                        })
+                        size=GameThreadToggleSize::Compact
+                    />
+                </Show>
+                <div class="flex overflow-hidden flex-col flex-1 min-h-0">
+                    <GameChatWindow explicit_thread=explicit_game_thread />
+                </div>
             </TabsContent>
         </div>
     }

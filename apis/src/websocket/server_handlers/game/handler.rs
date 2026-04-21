@@ -99,7 +99,6 @@ impl GameActionHandler {
                     &self.username,
                     self.user_id,
                     self.received_from.clone(),
-                    self.data.clone(),
                     &self.pool,
                 )
                 .handle()

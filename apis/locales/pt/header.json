@@ -15,6 +15,7 @@
     "user_menu": {
         "login": "Login",
         "profile": "Perfil",
+        "messages": "Mensagens",
         "edit_account": "Editar Conta",
         "logout": "Sair",
         "config": "Configurar"

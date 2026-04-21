@@ -2,14 +2,14 @@ use crate::{
     components::{
         atoms::simple_switch::SimpleSwitch,
         molecules::rl_banner::RlBanner,
-        organisms::chat::ChatWindow,
+        organisms::chat::ChatInput,
         update_from_event::update_from_input,
     },
     functions::home_banner,
     providers::AuthContext,
 };
 use leptos::prelude::*;
-use shared_types::SimpleDestination;
+use shared_types::ChatDestination;
 
 const LINE_CLASS: &str = "flex items-center py-3 text-sm before:flex-1 before:border-t before:border-black before:me-6 after:flex-1 after:border-t after:border-black after:ms-6 dark:text-white dark:before:border-neutral-600 dark:after:border-neutral-600";
 
@@ -23,7 +23,12 @@ pub fn Admin() -> impl IntoView {
                 auth_context.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin))
             }>
                 <div class=LINE_CLASS>Send Global Warning</div>
-                <ChatWindow destination=SimpleDestination::Global />
+                <div class="p-4 bg-white rounded-xl border border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-700">
+                    <ChatInput
+                        destination=Signal::derive(|| ChatDestination::Global)
+                        disabled=Signal::derive(|| false)
+                    />
+                </div>
                 <div class=LINE_CLASS>Edit Banner</div>
                 <EditBanner />
             </Show>
