@@ -2,7 +2,10 @@ use crate::{
     components::{
         atoms::logo::Logo,
         molecules::{online_users::OnlineUsers, rl_banner::RlBanner},
-        organisms::{calendar::Calendar, challenges::Challenges, quickplay::QuickPlay, tv::Tv},
+        organisms::{
+            calendar::Calendar, challenges::Challenges, featured_video::FeaturedVideo,
+            quickplay::QuickPlay, tv::Tv,
+        },
     },
     functions::home_banner,
 };
@@ -37,6 +40,7 @@ pub fn Home() -> impl IntoView {
                     </div>
                 </div>
                 <div class="flex flex-col order-2 items-center space-y-6 min-w-0 lg:order-none lg:col-start-2 lg:row-start-1">
+                    <FeaturedVideo />
                     <QuickPlay />
                     <Challenges />
                     <div class="w-full lg:flex lg:justify-end 2xl:justify-center">
