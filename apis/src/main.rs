@@ -50,7 +50,7 @@ async fn main() -> std::io::Result<()> {
     pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../db/migrations");
     let database_url = &config.database_url;
     let mut conn = PgConnection::establish(database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {database_url}"));
+        .unwrap_or_else(|e| panic!("Error connecting to {database_url}: {e}"));
     conn.run_pending_migrations(MIGRATIONS)
         .expect("Ran migrations");
 
