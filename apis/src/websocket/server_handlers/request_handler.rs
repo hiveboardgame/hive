@@ -12,7 +12,7 @@ use super::{
 use crate::{
     common::{ClientRequest, GameAction},
     websocket::{
-        messages::{AuthError, InternalServerMessage, WsMessage},
+        messages::{AuthError, InternalServerMessage, SocketTx},
         WebsocketData,
     },
 };
@@ -38,7 +38,7 @@ impl std::fmt::Display for RequestHandlerError {
 pub struct RequestHandler {
     command: ClientRequest,
     data: Arc<WebsocketData>,
-    received_from: actix::Recipient<WsMessage>, // This is the socket the message was received over
+    received_from: SocketTx,
     pool: DbPool,
     user_id: Uuid,
     username: String,
@@ -50,7 +50,7 @@ impl RequestHandler {
     pub fn new(
         command: ClientRequest,
         data: Arc<WebsocketData>,
-        sender_addr: actix::Recipient<WsMessage>,
+        sender_addr: SocketTx,
         user: SimpleUser,
         pool: DbPool,
     ) -> Self {

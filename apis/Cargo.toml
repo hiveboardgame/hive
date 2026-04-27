@@ -13,11 +13,12 @@ actix-identity = { workspace = true, optional = true }
 actix-rt = { workspace = true, optional = true }
 actix-session = { workspace = true, optional = true }
 actix-web = { workspace = true, optional = true, features = ["macros"] }
-actix-web-actors = { workspace = true, optional = true }
+actix-ws = { workspace = true, optional = true }
 anyhow = { workspace = true }
 argon2 = { workspace = true, optional = true }
 bimap = { workspace = true }
 cfg-if = { workspace = true }
+futures-util = { workspace = true, optional = true }
 chrono.workspace = true
 codee = { workspace = true }
 console_error_panic_hook = { workspace = true }
@@ -88,8 +89,10 @@ ssr = [
   "dep:actix-identity",
   "dep:actix-session",
   "dep:actix-web",
-  "dep:actix-web-actors",
+  "dep:actix-ws",
   "dep:argon2",
+  "dep:futures-util",
+  "dep:tokio",
   "dep:db",
   "dep:diesel",
   "dep:diesel_migrations",
