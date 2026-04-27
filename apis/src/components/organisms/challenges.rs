@@ -229,7 +229,7 @@ fn build_tab_state(
 }
 
 #[component]
-pub fn Challenges() -> impl IntoView {
+pub fn Challenges(#[prop(optional)] realtime_disabled: Signal<bool>) -> impl IntoView {
     let i18n = use_i18n();
     let th_class =
         "py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase max-h-[80vh] max-w-screen";
@@ -366,6 +366,7 @@ pub fn Challenges() -> impl IntoView {
                                     single=false
                                     count=grouped.count
                                     challenge_ids=grouped.challenge_ids
+                                    realtime_disabled
                                 />
                             </For>
                         </tbody>

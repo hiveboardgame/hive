@@ -3,7 +3,10 @@ use hive_lib::ColorChoice;
 use leptos::prelude::*;
 
 #[component]
-pub fn ChallengeButtonsTrio(create_challenge: Callback<ColorChoice>) -> impl IntoView {
+pub fn ChallengeButtonsTrio(
+    create_challenge: Callback<ColorChoice>,
+    #[prop(optional)] disabled: Signal<bool>,
+) -> impl IntoView {
     view! {
         <div class="flex flex-col gap-2 justify-center items-center">
 
@@ -14,14 +17,17 @@ pub fn ChallengeButtonsTrio(create_challenge: Callback<ColorChoice>) -> impl Int
                 <CreateChallengeButton
                     color_choice=StoredValue::new(ColorChoice::White)
                     create_challenge
+                    disabled
                 />
                 <CreateChallengeButton
                     color_choice=StoredValue::new(ColorChoice::Random)
                     create_challenge
+                    disabled
                 />
                 <CreateChallengeButton
                     color_choice=StoredValue::new(ColorChoice::Black)
                     create_challenge
+                    disabled
                 />
             </form>
         </div>

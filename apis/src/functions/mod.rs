@@ -10,5 +10,6 @@ pub mod oauth;
 #[cfg(feature = "ssr")]
 pub mod pwa;
 pub mod schedules;
+pub mod site_config;
 pub mod tournaments;
 pub mod users;

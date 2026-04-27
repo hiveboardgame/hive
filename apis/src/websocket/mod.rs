@@ -18,12 +18,25 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
     pub use ws_server::WsServer;
     pub use messages::{GameHB, Ping, InternalServerMessage, MessageDestination, ClientActorMessage};
 
-    #[derive(Default, Debug)]
+    #[derive(Debug)]
     pub struct WebsocketData {
         pub chat_storage: Chats,
         pub game_start: TournamentGameStart,
         pub pings: Pings,
         pub lags: Lags,
+        pub realtime_games_enabled: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    }
+
+    impl Default for WebsocketData {
+        fn default() -> Self {
+            Self {
+                chat_storage: Chats::default(),
+                game_start: TournamentGameStart::default(),
+                pings: Pings::default(),
+                lags: Lags::default(),
+                realtime_games_enabled: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true)),
+            }
+        }
     }
 
 }}

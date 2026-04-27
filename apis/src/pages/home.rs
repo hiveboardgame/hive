@@ -5,12 +5,14 @@ use crate::{
         organisms::{calendar::Calendar, challenges::Challenges, quickplay::QuickPlay, tv::Tv},
     },
     functions::home_banner,
+    providers::RealtimeEnabledContext,
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn Home() -> impl IntoView {
     let banner = OnceResource::new(async move { home_banner::get().await.ok().flatten() });
+    let realtime_ctx = expect_context::<RealtimeEnabledContext>();
     view! {
         <div class="flex overflow-x-hidden flex-col justify-start items-center pt-20 w-full md:justify-center">
             <Transition>
@@ -37,8 +39,8 @@ pub fn Home() -> impl IntoView {
                     </div>
                 </div>
                 <div class="flex flex-col order-2 items-center space-y-6 min-w-0 lg:order-none lg:col-start-2 lg:row-start-1">
-                    <QuickPlay />
-                    <Challenges />
+                    <QuickPlay realtime_enabled=Signal::derive(move || realtime_ctx.0.get()) />
+                    <Challenges realtime_disabled=Signal::derive(move || !realtime_ctx.0.get()) />
                     <div class="w-full lg:flex lg:justify-end 2xl:justify-center">
                         <div class="w-full lg:max-w-screen-md">
                             <div class="w-full lg:flow-root">

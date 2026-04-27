@@ -25,6 +25,7 @@ use crate::{
         tournaments::{HostingTournaments, JoinedTournaments, Tournaments, TournamentsByStatus},
         tutorial::Tutorial,
     },
+    functions::site_config,
     providers::{
         challenges::provide_challenges,
         chat::provide_chat,
@@ -37,9 +38,11 @@ use crate::{
         provide_config,
         provide_notifications,
         provide_ping,
+        provide_realtime_enabled,
         provide_referer,
         provide_server_updates,
         provide_sounds,
+        realtime::RealtimeEnabledContext,
         refocus::provide_refocus,
         schedules::provide_schedules,
         websocket::provide_websocket,
@@ -65,6 +68,20 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     //These dont expect any other context, can be provided in any order
+    provide_realtime_enabled();
+    let realtime_ctx = expect_context::<RealtimeEnabledContext>();
+    let realtime_action =
+        Action::new(|_: &()| async { site_config::get_realtime_enabled().await.unwrap_or(true) });
+    realtime_action.dispatch(());
+    Effect::watch(
+        realtime_action.version(),
+        move |_, _, _| {
+            if let Some(val) = realtime_action.value().get() {
+                realtime_ctx.0.set(val);
+            }
+        },
+        false,
+    );
     provide_ping();
     provide_referer();
     provide_server_updates();
@@ -92,7 +109,7 @@ pub fn App() -> impl IntoView {
     provide_chat();
     let auth = expect_context::<AuthContext>();
     let is_logged_in = move || auth.user.with(|a| a.is_some()).into();
-    let is_admin = move || Some(auth.user.with(|a| a.as_ref().is_some_and(|v| v.user.admin)));
+    let is_admin = move || auth.user.with(|a| a.as_ref().map(|u| u.user.admin));
     view! {
         <I18nContextProvider cookie_options=CookieOptions::default()
             .max_age(LOCALE_MAX_AGE)

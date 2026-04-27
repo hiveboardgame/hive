@@ -1,11 +1,11 @@
 use crate::{
     components::{
-        atoms::simple_switch::SimpleSwitch,
+        atoms::simple_switch::{SimpleSwitch, SimpleSwitchWithCallback},
         molecules::rl_banner::RlBanner,
         organisms::chat::ChatWindow,
         update_from_event::update_from_input,
     },
-    functions::home_banner,
+    functions::{home_banner, site_config},
     providers::AuthContext,
 };
 use leptos::prelude::*;
@@ -26,6 +26,8 @@ pub fn Admin() -> impl IntoView {
                 <ChatWindow destination=SimpleDestination::Global />
                 <div class=LINE_CLASS>Edit Banner</div>
                 <EditBanner />
+                <div class=LINE_CLASS>Realtime Games</div>
+                <RealtimeToggle />
             </Show>
         </div>
     }
@@ -113,6 +115,58 @@ fn EditBanner() -> impl IntoView {
                                     />
                                 </div>
                             </ActionForm>
+                        }
+                    })
+            }}
+        </Transition>
+    }
+}
+
+#[component]
+fn RealtimeToggle() -> impl IntoView {
+    let enabled_resource =
+        OnceResource::new(async move { site_config::get_realtime_enabled().await.unwrap_or(true) });
+    let count_resource = Resource::new(
+        || (),
+        |_| async move {
+            site_config::count_ongoing_realtime_games()
+                .await
+                .unwrap_or(0)
+        },
+    );
+    let set_action = ServerAction::<site_config::SetRealtimeEnabled>::new();
+    view! {
+        <Transition>
+            {move || {
+                enabled_resource
+                    .get()
+                    .map(|initial| {
+                        let enabled = RwSignal::new(initial);
+                        let toggle = Callback::new(move |_: ()| {
+                            let new_val = !enabled.get_untracked();
+                            enabled.set(new_val);
+                            set_action
+                                .dispatch(site_config::SetRealtimeEnabled { enabled: new_val });
+                        });
+                        view! {
+                            <div class="flex flex-row gap-3 items-center p-4">
+                                <span class="text-sm">
+                                    {move || {
+                                        if enabled() {
+                                            "Realtime games: Enabled"
+                                        } else {
+                                            "Realtime games: Disabled"
+                                        }
+                                    }}
+                                </span>
+                                <SimpleSwitchWithCallback checked=enabled.into() action=toggle />
+                                <span class="text-sm text-gray-500 dark:text-gray-400">
+                                    {move || {
+                                        let count = count_resource.get().unwrap_or(0);
+                                        format!("({count} ongoing)")
+                                    }}
+                                </span>
+                            </div>
                         }
                     })
             }}

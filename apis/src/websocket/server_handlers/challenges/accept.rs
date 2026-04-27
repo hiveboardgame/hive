@@ -6,14 +6,18 @@ use crate::{
         messages::{InternalServerMessage, MessageDestination},
     },
 };
-use anyhow::Result;
+use anyhow::{bail, Result};
 use db_lib::{
     get_conn,
     models::{Challenge, Game, NewGame, Rating, User},
     DbPool,
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
-use shared_types::{ChallengeId, GameSpeed};
+use shared_types::{ChallengeId, GameSpeed, TimeMode};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use uuid::Uuid;
 
 pub struct AcceptHandler {
@@ -21,6 +25,7 @@ pub struct AcceptHandler {
     user_id: Uuid,
     username: String,
     pool: DbPool,
+    realtime_games_enabled: Arc<AtomicBool>,
 }
 
 impl AcceptHandler {
@@ -29,12 +34,14 @@ impl AcceptHandler {
         username: &str,
         user_id: Uuid,
         pool: &DbPool,
+        realtime_games_enabled: Arc<AtomicBool>,
     ) -> Result<Self> {
         Ok(Self {
             challenge_id,
             user_id,
             username: username.to_owned(),
             pool: pool.clone(),
+            realtime_games_enabled,
         })
     }
 
@@ -42,6 +49,11 @@ impl AcceptHandler {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         let challenge = Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await?;
+        if challenge.time_mode == TimeMode::RealTime.to_string()
+            && !self.realtime_games_enabled.load(Ordering::Relaxed)
+        {
+            bail!("Realtime games are currently disabled for maintenance.");
+        }
         let speed = GameSpeed::from_base_increment(challenge.time_base, challenge.time_increment);
         let rating = Rating::for_uuid(&self.user_id, &speed, &mut conn)
             .await?

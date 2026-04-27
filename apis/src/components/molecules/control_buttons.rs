@@ -6,12 +6,13 @@ use crate::{
         game_state::GameStateSignal,
         ApiRequestsProvider,
         AuthContext,
+        RealtimeEnabledContext,
     },
 };
 use hive_lib::{ColorChoice, GameControl};
 use leptos::{either::EitherOf3, prelude::*};
 use leptos_router::hooks::use_navigate;
-use shared_types::{ChallengeDetails, ChallengeVisibility};
+use shared_types::{ChallengeDetails, ChallengeVisibility, TimeMode};
 
 #[component]
 pub fn ControlButtons() -> impl IntoView {
@@ -25,6 +26,15 @@ pub fn ControlButtons() -> impl IntoView {
                 .expect("Control buttons show only for logged in players")
         })
     };
+    let realtime_ctx = expect_context::<RealtimeEnabledContext>();
+    let rt_disabled = Signal::derive(move || {
+        !realtime_ctx.0.get()
+            && game_state.signal.with(|gs| {
+                gs.game_response
+                    .as_ref()
+                    .map_or(false, |gr| gr.time_mode == TimeMode::RealTime)
+            })
+    });
     let is_finished = game_state.is_finished();
     let color = Signal::derive(move || {
         game_state
@@ -192,14 +202,14 @@ pub fn ControlButtons() -> impl IntoView {
                                 rematch_button_color(),
                             )
                         }
-
-                        prop:disabled=sent_challenge
+                        prop:disabled=move || sent_challenge() || rt_disabled()
                         on:click=rematch
                     >
                         {rematch_text}
                     </button>
                     <button
-                        class="flex-shrink-0 py-1 px-2 m-1 h-7 font-bold text-white rounded transition-transform duration-300 active:scale-95 grow bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal"
+                        class="flex-shrink-0 py-1 px-2 m-1 h-7 font-bold text-white rounded transition-transform duration-300 active:scale-95 grow bg-button-dawn dark:bg-button-twilight dark:hover:bg-pillbug-teal hover:bg-pillbug-teal disabled:opacity-25 disabled:cursor-not-allowed"
+                        prop:disabled=rt_disabled
                         on:click=new_opponent
                     >
                         New Game
