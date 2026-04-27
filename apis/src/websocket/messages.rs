@@ -1,6 +1,7 @@
 use actix::prelude::*;
 use serde::{Deserialize, Serialize};
 use shared_types::{GameId, TournamentId};
+use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::common::ServerMessage;
@@ -17,24 +18,34 @@ pub struct InternalServerMessage {
     pub message: ServerMessage,
 }
 
+#[derive(Clone, Debug)]
+pub struct SocketTx {
+    pub socket_id: Uuid,
+    pub tx: mpsc::Sender<Vec<u8>>,
+}
+
+impl SocketTx {
+    /// Enqueue bytes for delivery. Returns false if the buffer is full or the
+    /// receiver is gone — caller should drop this socket from its sessions map.
+    pub fn try_send(&self, bytes: Vec<u8>) -> bool {
+        self.tx.try_send(bytes).is_ok()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum MessageDestination {
-    Direct(actix::Recipient<WsMessage>), // to non logged in user
-    User(Uuid),                          // to a user
-    Game(GameId),                        // to everyone in the game
-    GameSpectators(GameId, Uuid, Uuid), // to everyone in game excluding players, nanoid, white_id, black_id
-    Global,                             // to everyone online
-    Tournament(TournamentId),           // to everyone that joined the tournament
+    Direct(SocketTx),
+    User(Uuid),
+    Game(GameId),
+    GameSpectators(GameId, Uuid, Uuid),
+    Global,
+    Tournament(TournamentId),
 }
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
-pub struct WsMessage(pub Vec<u8>);
-
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
 pub struct Connect {
-    pub addr: Recipient<WsMessage>,
+    pub socket: SocketTx,
     pub game_id: String,
     pub user_id: Uuid,
     pub username: String,
@@ -43,7 +54,7 @@ pub struct Connect {
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct Disconnect {
-    pub addr: Recipient<WsMessage>,
+    pub socket_id: Uuid,
     pub game_id: String,
     pub user_id: Uuid,
     pub username: String,
@@ -62,7 +73,7 @@ pub struct Ping {}
 pub struct ClientActorMessage {
     pub destination: MessageDestination,
     pub from: Option<Uuid>,
-    pub serialized: Vec<u8>, // the serialized message
+    pub serialized: Vec<u8>,
 }
 
 impl ClientActorMessage {

@@ -256,24 +256,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-web-actors"
-version = "4.3.1+deprecated"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f98c5300b38fd004fe7d2a964f9a90813fdbe8a81fed500587e78b1b71c6f980"
-dependencies = [
- "actix",
- "actix-codec",
- "actix-http",
- "actix-web",
- "bytes",
- "bytestring",
- "futures-core",
- "pin-project-lite",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
 name = "actix-web-codegen"
 version = "4.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -297,6 +279,22 @@ dependencies = [
  "bytestring",
  "futures-core",
  "tokio",
+]
+
+[[package]]
+name = "actix-ws"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "decf53c3cdd63dd6f289980b430238f9a2f6d19f8bce8e418272e08d3da43f0f"
+dependencies = [
+ "actix-codec",
+ "actix-http",
+ "actix-web",
+ "bytestring",
+ "futures-core",
+ "futures-sink",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -462,7 +460,7 @@ dependencies = [
  "actix-rt",
  "actix-session",
  "actix-web",
- "actix-web-actors",
+ "actix-ws 0.4.0",
  "anyhow",
  "argon2",
  "bimap",
@@ -475,6 +473,7 @@ dependencies = [
  "diesel",
  "diesel-async",
  "diesel_migrations",
+ "futures-util",
  "hive",
  "http 1.4.0",
  "http-serde",
@@ -5656,7 +5655,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "353d02fa2886cd8dae0b8da0965289fa8f2ecc7df633d1ce965f62fdf9644d29"
 dependencies = [
  "actix-web",
- "actix-ws",
+ "actix-ws 0.3.1",
  "base64 0.22.1",
  "bytes",
  "ciborium",
@@ -6306,6 +6305,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]
