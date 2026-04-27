@@ -5,6 +5,7 @@ use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::common::ServerMessage;
+use super::telemetry::SendOutcome;
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AuthError {
@@ -29,6 +30,18 @@ impl SocketTx {
     /// receiver is gone — caller should drop this socket from its sessions map.
     pub fn try_send(&self, bytes: Vec<u8>) -> bool {
         self.tx.try_send(bytes).is_ok()
+    }
+
+    pub fn try_send_classified(&self, bytes: Vec<u8>) -> SendOutcome {
+        match self.tx.try_send(bytes) {
+            Ok(_) => SendOutcome::Ok,
+            Err(mpsc::error::TrySendError::Full(_)) => SendOutcome::Full,
+            Err(mpsc::error::TrySendError::Closed(_)) => SendOutcome::Closed,
+        }
+    }
+
+    pub fn capacity_used(&self) -> usize {
+        128usize.saturating_sub(self.tx.capacity())
     }
 }
 

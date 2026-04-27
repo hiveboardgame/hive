@@ -1,6 +1,7 @@
 use super::{
     messages::{ClientActorMessage, Connect, Disconnect, MessageDestination, SocketTx},
     server_handlers::request_handler::{RequestHandler, RequestHandlerError},
+    telemetry::DisconnectReason,
     WebsocketData,
 };
 use crate::common::{ClientRequest, ExternalServerError, ServerResult};
@@ -44,20 +45,24 @@ pub async fn reader_task(
         .await
         .is_err()
     {
+        data.telemetry.record_handshake_fail();
         let _ = session.close(None).await;
         return;
     }
 
     let mut last_hb = Instant::now();
     let mut hb_interval = tokio::time::interval(HEARTBEAT_INTERVAL);
+    let mut reason = DisconnectReason::Close;
 
     loop {
         tokio::select! {
             _ = hb_interval.tick() => {
                 if last_hb.elapsed() > CLIENT_TIMEOUT {
+                    reason = DisconnectReason::Timeout;
                     break;
                 }
                 if session.ping(b"hi").await.is_err() {
+                    reason = DisconnectReason::PingFail;
                     break;
                 }
             }
@@ -65,6 +70,7 @@ pub async fn reader_task(
                 Some(Ok(Message::Ping(bytes))) => {
                     last_hb = Instant::now();
                     if session.pong(&bytes).await.is_err() {
+                        reason = DisconnectReason::PingFail;
                         break;
                     }
                 }
@@ -86,13 +92,20 @@ pub async fn reader_task(
                     .await;
                 }
                 Some(Ok(Message::Close(_))) | None => break,
-                Some(Ok(Message::Continuation(_))) => break,
+                Some(Ok(Message::Continuation(_))) => {
+                    reason = DisconnectReason::Continuation;
+                    break;
+                }
                 Some(Ok(Message::Text(_))) | Some(Ok(Message::Nop)) => {}
-                Some(Err(_)) => break,
+                Some(Err(_)) => {
+                    reason = DisconnectReason::StreamErr;
+                    break;
+                }
             }
         }
     }
 
+    data.telemetry.record_disconnect(reason);
     srv.do_send(Disconnect {
         socket_id: socket.socket_id,
         game_id: String::from("lobby"),
@@ -113,6 +126,8 @@ async fn handle_binary(
     admin: bool,
     authed: bool,
 ) {
+    data.telemetry.record_message_received(bytes.len());
+
     let request: Result<ClientRequest, _> = MsgpackSerdeCodec::decode(bytes);
     let Ok(request) = request else {
         return;

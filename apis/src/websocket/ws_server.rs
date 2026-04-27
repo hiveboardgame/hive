@@ -1,5 +1,6 @@
 use super::{
     messages::{GameHB, MessageDestination, Ping, SocketTx},
+    telemetry::{DestKind, SendOutcome, WsTelemetry},
     WebsocketData,
 };
 use crate::{
@@ -53,6 +54,7 @@ pub struct WsServer {
     users_games: HashMap<Uuid, HashSet<String>>,
     data: Arc<WebsocketData>,
     pool: DbPool,
+    telemetry: Arc<WsTelemetry>,
 }
 
 impl WsServer {
@@ -62,6 +64,7 @@ impl WsServer {
             sessions: HashMap::new(),
             games_users: HashMap::new(),
             users_games: HashMap::new(),
+            telemetry: data.telemetry.clone(),
             data,
             pool,
         }
@@ -69,11 +72,29 @@ impl WsServer {
 }
 
 impl WsServer {
-    fn send_message(&mut self, message: &Vec<u8>, id_to: &Uuid) {
+    fn send_message(&mut self, message: &Vec<u8>, id_to: &Uuid, dest: DestKind) {
         let Some(sockets) = self.sessions.get_mut(id_to) else {
             return;
         };
-        sockets.retain(|_, socket| socket.try_send(message.clone()));
+        let telemetry = self.telemetry.clone();
+        let bytes_len = message.len();
+        sockets.retain(|_, socket| {
+            let used = socket.capacity_used();
+            match socket.try_send_classified(message.clone()) {
+                SendOutcome::Ok => {
+                    telemetry.record_send(dest, SendOutcome::Ok, used, bytes_len);
+                    true
+                }
+                SendOutcome::Full => {
+                    telemetry.record_send(dest, SendOutcome::Full, used, bytes_len);
+                    false
+                }
+                SendOutcome::Closed => {
+                    telemetry.record_send(dest, SendOutcome::Closed, used, 0);
+                    false
+                }
+            }
+        });
         if sockets.is_empty() {
             self.sessions.remove(id_to);
         }
@@ -98,7 +119,7 @@ impl Handler<Ping> for WsServer {
                 value: self.data.pings.value(user_id),
             }));
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_message(&serialized, &user_id);
+                self.send_message(&serialized, &user_id, DestKind::User);
             };
         }
     }
@@ -114,6 +135,7 @@ impl Handler<GameHB> for WsServer {
             }
             let pool = self.pool.clone();
             let sessions = self.sessions.clone();
+            let telemetry = self.telemetry.clone();
             let future = async move {
                 if let Ok(mut conn) = get_conn(&pool).await {
                     if let Ok(game) = Game::find_by_game_id(&game_id, &mut conn).await {
@@ -130,10 +152,19 @@ impl Handler<GameHB> for WsServer {
                                     Box::new(GameUpdate::Heartbeat(hb)),
                                 )));
                                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
+                                    let bytes_len = serialized.len();
                                     for user_id in user_ids {
                                         if let Some(sockets) = sessions.get(&user_id) {
                                             for socket in sockets.values() {
-                                                socket.try_send(serialized.clone());
+                                                let used = socket.capacity_used();
+                                                let outcome = socket
+                                                    .try_send_classified(serialized.clone());
+                                                telemetry.record_send(
+                                                    DestKind::Game,
+                                                    outcome,
+                                                    used,
+                                                    bytes_len,
+                                                );
                                             }
                                         }
                                     }
@@ -155,8 +186,10 @@ impl Handler<Disconnect> for WsServer {
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
         if let Some(user_sessions) = self.sessions.get_mut(&msg.user_id) {
             user_sessions.remove(&msg.socket_id);
+            self.telemetry.dec_active_socket();
             if user_sessions.is_empty() {
                 self.sessions.remove(&msg.user_id);
+                self.telemetry.dec_active_user();
             }
         }
         if !self.sessions.contains_key(&msg.user_id) {
@@ -187,8 +220,12 @@ impl Handler<Disconnect> for WsServer {
                     .get(&game_id)
                     .map(|s| s.iter().copied().collect())
                     .unwrap_or_default();
+                self.telemetry
+                    .set_active_games(self.games_users.len().saturating_sub(1) as u64);
+                self.telemetry
+                    .set_lobby_subscribers(lobby_users.len() as u64);
                 for user_id in lobby_users {
-                    self.send_message(&serialized, &user_id);
+                    self.send_message(&serialized, &user_id, DestKind::Global);
                 }
             };
         }
@@ -200,6 +237,7 @@ impl Handler<Connect> for WsServer {
 
     fn handle(&mut self, msg: Connect, ctx: &mut Context<Self>) -> Self::Result {
         let user_id = msg.user_id;
+        let is_first_socket = !self.sessions.contains_key(&user_id);
         self.games_users
             .entry(GameId(msg.game_id.clone()))
             .or_default()
@@ -212,10 +250,22 @@ impl Handler<Connect> for WsServer {
             .entry(msg.user_id)
             .or_default()
             .insert(msg.socket.socket_id, msg.socket.clone());
+        self.telemetry.inc_active_socket();
+        if is_first_socket {
+            self.telemetry.inc_active_user();
+        }
+        self.telemetry
+            .set_active_games(self.games_users.len().saturating_sub(1) as u64);
+        self.telemetry.set_lobby_subscribers(
+            self.games_users
+                .get(&GameId(self.id.clone()))
+                .map_or(0, |s| s.len()) as u64,
+        );
         let pool = self.pool.clone();
         let address = ctx.address().clone();
         let games_users = self.games_users.clone();
         let sessions = self.sessions.clone();
+        let telemetry = self.telemetry.clone();
         let future = async move {
             if let Ok(mut conn) = get_conn(&pool).await {
                 for uuid in sessions.keys() {
@@ -247,10 +297,19 @@ impl Handler<Connect> for WsServer {
                             })));
                         if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                             if let Some(user_ids) = games_users.get(&GameId(msg.game_id)) {
+                                let bytes_len = serialized.len();
                                 for id in user_ids {
                                     if let Some(sockets) = sessions.get(id) {
                                         for socket in sockets.values() {
-                                            socket.try_send(serialized.clone());
+                                            let used = socket.capacity_used();
+                                            let outcome = socket
+                                                .try_send_classified(serialized.clone());
+                                            telemetry.record_send(
+                                                DestKind::Global,
+                                                outcome,
+                                                used,
+                                                bytes_len,
+                                            );
                                         }
                                     }
                                 }
@@ -421,9 +480,14 @@ impl Handler<ClientActorMessage> for WsServer {
     type Result = ();
 
     fn handle(&mut self, cam: ClientActorMessage, ctx: &mut Context<Self>) -> Self::Result {
+        let dest = DestKind::from(&cam.destination);
+        self.telemetry.record_dispatch(dest);
         match cam.destination {
             MessageDestination::Direct(socket) => {
-                socket.try_send(cam.serialized);
+                let bytes_len = cam.serialized.len();
+                let used = socket.capacity_used();
+                let outcome = socket.try_send_classified(cam.serialized);
+                self.telemetry.record_send(DestKind::Direct, outcome, used, bytes_len);
             }
             MessageDestination::Global => {
                 if let Some(from) = cam.from {
@@ -435,7 +499,7 @@ impl Handler<ClientActorMessage> for WsServer {
                 if let Some(users) = self.games_users.get(&GameId(self.id.clone())) {
                     let user_ids: Vec<Uuid> = users.iter().copied().collect();
                     for client in user_ids {
-                        self.send_message(&cam.serialized, &client);
+                        self.send_message(&cam.serialized, &client, dest);
                     }
                 } else {
                     warn!(
@@ -454,7 +518,7 @@ impl Handler<ClientActorMessage> for WsServer {
                 if let Some(users) = self.games_users.get(game_id) {
                     let user_ids: Vec<Uuid> = users.iter().copied().collect();
                     for client in user_ids {
-                        self.send_message(&cam.serialized, &client);
+                        self.send_message(&cam.serialized, &client, dest);
                     }
                 } else {
                     warn!("Game '{game_id}' not found in games_users when sending game message");
@@ -474,18 +538,19 @@ impl Handler<ClientActorMessage> for WsServer {
                         .copied()
                         .collect();
                     for user in user_ids {
-                        self.send_message(&cam.serialized, &user);
+                        self.send_message(&cam.serialized, &user, dest);
                     }
                 } else {
                     warn!("Game '{game_id}' not found in games_users when sending game spectators message");
                 }
             }
             MessageDestination::User(user_id) => {
-                self.send_message(&cam.serialized, &user_id);
+                self.send_message(&cam.serialized, &user_id, dest);
             }
             MessageDestination::Tournament(tournament) => {
                 let pool = self.pool.clone();
                 let sessions = self.sessions.clone();
+                let telemetry = self.telemetry.clone();
                 let future = async move {
                     if let Ok(mut conn) = get_conn(&pool).await {
                         if let Ok(tournament) =
@@ -502,10 +567,19 @@ impl Handler<ClientActorMessage> for WsServer {
                                     user_ids.insert(org.id);
                                 }
                             }
+                            let bytes_len = cam.serialized.len();
                             for user_id in user_ids {
                                 if let Some(sockets) = sessions.get(&user_id) {
                                     for socket in sockets.values() {
-                                        socket.try_send(cam.serialized.clone());
+                                        let used = socket.capacity_used();
+                                        let outcome = socket
+                                            .try_send_classified(cam.serialized.clone());
+                                        telemetry.record_send(
+                                            DestKind::Tournament,
+                                            outcome,
+                                            used,
+                                            bytes_len,
+                                        );
                                     }
                                 } else {
                                     println!("Couldn't find socket for {user_id}");

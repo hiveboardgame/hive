@@ -31,6 +31,7 @@ pub async fn start_connection(
     let (user_uid, username, admin, authed) = resolve_identity(identity, &pool).await;
 
     let (response, session, msg_stream) = actix_ws::handle(&req, body)?;
+    data.telemetry.record_connect();
 
     let socket_id = Uuid::new_v4();
     let (tx, mut out_rx) = mpsc::channel::<Vec<u8>>(128);

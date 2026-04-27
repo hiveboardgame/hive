@@ -65,6 +65,14 @@ async fn main() -> std::io::Result<()> {
     let jwt_secret = JwtSecret::new(config.jwt_secret);
     let jwt_key = Data::new(jwt_secret);
 
+    if let Some(secs) = std::env::var("WS_TELEMETRY_INTERVAL_SECS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .filter(|&n| n > 0)
+    {
+        jobs::ws_telemetry(Data::clone(&data), secs);
+    }
+
     jobs::tournament_start(pool.clone(), Data::clone(&websocket_server));
     jobs::heartbeat(Data::clone(&websocket_server));
     jobs::ping(Data::clone(&websocket_server));
