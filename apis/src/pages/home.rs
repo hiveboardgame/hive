@@ -3,8 +3,11 @@ use crate::{
         atoms::logo::Logo,
         molecules::{online_users::OnlineUsers, rl_banner::RlBanner},
         organisms::{
-            calendar::Calendar, challenges::Challenges, featured_video::FeaturedVideo,
-            quickplay::QuickPlay, tv::Tv,
+            calendar::Calendar,
+            challenges::Challenges,
+            featured_video::FeaturedVideo,
+            quickplay::QuickPlay,
+            tv::Tv,
         },
     },
     functions::home_banner,
@@ -39,11 +42,17 @@ pub fn Home() -> impl IntoView {
                         <Calendar />
                     </div>
                 </div>
-                <div class="flex flex-col order-2 items-center space-y-6 min-w-0 lg:order-none lg:col-start-2 lg:row-start-1">
-                    <FeaturedVideo />
-                    <QuickPlay />
-                    <Challenges />
-                    <div class="w-full lg:flex lg:justify-end 2xl:justify-center">
+                <div class="flex flex-col order-2 gap-6 items-center min-w-0 lg:order-none lg:col-start-2 lg:row-start-1">
+                    <div class="order-2 w-full lg:order-1">
+                        <FeaturedVideo />
+                    </div>
+                    <div class="order-1 w-full lg:order-2">
+                        <QuickPlay />
+                    </div>
+                    <div class="order-3 w-full">
+                        <Challenges />
+                    </div>
+                    <div class="order-4 w-full lg:flex lg:justify-end 2xl:justify-center">
                         <div class="w-full lg:max-w-screen-md">
                             <div class="w-full lg:flow-root">
                                 <div class="hidden float-right lg:block lg:ml-6 2xl:hidden">
