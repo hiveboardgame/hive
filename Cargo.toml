@@ -9,7 +9,6 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-actix = "0.13.5"
 actix-files = { version = "0.6" }
 actix-identity = { version = "0.9" }
 actix-rt = "2.10.0"
@@ -20,12 +19,14 @@ anyhow = "1"
 argon2 = "0.5"
 bb8 = { version = "0.9" }
 bimap = { version = "0.6.3", features = ["serde"] }
+bytes = "1"
 cfg-if = "1.0.1"
 chrono = { version = "0.4.43", features = ["serde"] }
 codee = { version = "0.3", features = ["msgpack_serde", "base64"] }
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 cookie = "0.18"
+dashmap = "6"
 diesel = { version = "2.3", features = [
     "postgres",
     "chrono",

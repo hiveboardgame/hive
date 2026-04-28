@@ -4,9 +4,9 @@ use crate::{
         messages::send::{send_challenge_creation_message, send_challenge_messages},
     },
     responses::{ChallengeResponse, GameResponse},
-    websocket::{busybee::Busybee, WsServer},
+    websocket::{busybee::Busybee, WsHub},
 };
-use actix::Addr;
+use std::sync::Arc;
 use actix_web::{
     get,
     post,
@@ -160,10 +160,10 @@ pub async fn api_accept_challenge(
     nanoid: Path<ChallengeId>,
     Auth(bot): Auth,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> HttpResponse {
     let nanoid = nanoid.into_inner();
-    match accept_challenge(nanoid, bot.clone(), pool, ws_server).await {
+    match accept_challenge(nanoid, bot.clone(), pool, hub).await {
         Ok(game) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
@@ -186,7 +186,7 @@ pub async fn api_create_challenge(
     Json(req): Json<BotChallengeRequest>,
     Auth(bot): Auth,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> HttpResponse {
     let challenge_details = match req.validate_and_convert() {
         Ok(details) => details,
@@ -200,7 +200,7 @@ pub async fn api_create_challenge(
         }
     };
 
-    match create_challenge(challenge_details, bot.id, pool, ws_server).await {
+    match create_challenge(challenge_details, bot.id, pool, hub).await {
         Ok(challenge) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
@@ -222,7 +222,7 @@ async fn create_challenge(
     req: ChallengeDetails,
     bot_id: Uuid,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> Result<ChallengeResponse> {
     let mut conn = get_conn(&pool).await?;
 
@@ -237,7 +237,7 @@ async fn create_challenge(
     let challenge = Challenge::create(&new_challenge, &mut conn).await?;
     let challenge_response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
 
-    send_challenge_creation_message(ws_server, &challenge_response, &req.visibility, opponent_id)
+    send_challenge_creation_message(hub, &challenge_response, &req.visibility, opponent_id)
         .await?;
 
     Ok(challenge_response)
@@ -247,7 +247,7 @@ async fn accept_challenge(
     id: ChallengeId,
     bot: User,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> Result<GameResponse> {
     let mut conn = get_conn(&pool).await?;
     let challenge = Challenge::find_by_challenge_id(&id, &mut conn).await?;
@@ -266,7 +266,7 @@ async fn accept_challenge(
     let (game, deleted_challenges) =
         Game::create_and_delete_challenges(new_game, &mut conn).await?;
 
-    send_challenge_messages(ws_server, deleted_challenges, &game, &bot, &pool).await?;
+    send_challenge_messages(hub, deleted_challenges, &game, &bot, &pool).await?;
 
     match TimeMode::from_str(&game.time_mode) {
         Ok(TimeMode::RealTime) | Err(_) => {}

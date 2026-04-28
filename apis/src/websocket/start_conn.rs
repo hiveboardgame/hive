@@ -3,10 +3,9 @@ use std::sync::Arc;
 use crate::websocket::{
     messages::SocketTx,
     ws_connection::reader_task,
-    ws_server::WsServer,
+    ws_hub::WsHub,
     WebsocketData,
 };
-use actix::Addr;
 use actix_identity::Identity;
 use actix_web::{
     get,
@@ -15,6 +14,7 @@ use actix_web::{
     HttpRequest,
     HttpResponse,
 };
+use bytes::Bytes;
 use db_lib::{get_conn, models::User, DbPool};
 use tokio::sync::mpsc;
 use uuid::Uuid;
@@ -23,7 +23,7 @@ use uuid::Uuid;
 pub async fn start_connection(
     req: HttpRequest,
     body: Payload,
-    srv: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
     pool: Data<DbPool>,
     identity: Option<Identity>,
     data: Data<WebsocketData>,
@@ -34,7 +34,7 @@ pub async fn start_connection(
     data.telemetry.record_connect();
 
     let socket_id = Uuid::new_v4();
-    let (tx, mut out_rx) = mpsc::channel::<Vec<u8>>(128);
+    let (tx, mut out_rx) = mpsc::channel::<Bytes>(128);
     let socket = SocketTx { socket_id, tx };
 
     let mut write_session = session.clone();
@@ -46,11 +46,11 @@ pub async fn start_connection(
         }
     });
 
-    let srv = srv.get_ref().clone();
+    let hub = hub.get_ref().clone();
     let data = Arc::clone(&data);
     let pool = pool.get_ref().clone();
     actix_web::rt::spawn(reader_task(
-        session, msg_stream, socket, srv, data, pool, user_uid, username, admin, authed,
+        session, msg_stream, socket, hub, data, pool, user_uid, username, admin, authed,
     ));
 
     Ok(response)

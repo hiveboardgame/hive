@@ -1,12 +1,13 @@
 use super::{
-    messages::{ClientActorMessage, Connect, Disconnect, MessageDestination, SocketTx},
+    messages::{MessageDestination, SocketTx},
     server_handlers::request_handler::{RequestHandler, RequestHandlerError},
     telemetry::DisconnectReason,
+    ws_hub::WsHub,
     WebsocketData,
 };
 use crate::common::{ClientRequest, ExternalServerError, ServerResult};
-use actix::Addr;
 use actix_ws::{Message, MessageStream, Session};
+use bytes::Bytes;
 use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 use db_lib::DbPool;
 use futures_util::StreamExt;
@@ -18,8 +19,6 @@ use std::{
 };
 use uuid::Uuid;
 
-use crate::websocket::ws_server::WsServer;
-
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -27,7 +26,7 @@ pub async fn reader_task(
     mut session: Session,
     mut msg_stream: MessageStream,
     socket: SocketTx,
-    srv: Addr<WsServer>,
+    hub: Arc<WsHub>,
     data: Arc<WebsocketData>,
     pool: DbPool,
     user_uid: Uuid,
@@ -35,20 +34,12 @@ pub async fn reader_task(
     admin: bool,
     authed: bool,
 ) {
-    if srv
-        .send(Connect {
-            socket: socket.clone(),
-            game_id: String::from("lobby"),
-            user_id: user_uid,
-            username: username.clone(),
-        })
-        .await
-        .is_err()
-    {
-        data.telemetry.record_handshake_fail();
-        let _ = session.close(None).await;
-        return;
-    }
+    Arc::clone(&hub).on_connect(
+        socket.socket_id,
+        user_uid,
+        username.clone(),
+        socket.tx.clone(),
+    );
 
     let mut last_hb = Instant::now();
     let mut hb_interval = tokio::time::interval(HEARTBEAT_INTERVAL);
@@ -80,7 +71,7 @@ pub async fn reader_task(
                 Some(Ok(Message::Binary(bytes))) => {
                     handle_binary(
                         &bytes,
-                        &srv,
+                        &hub,
                         &socket,
                         &data,
                         &pool,
@@ -106,18 +97,13 @@ pub async fn reader_task(
     }
 
     data.telemetry.record_disconnect(reason);
-    srv.do_send(Disconnect {
-        socket_id: socket.socket_id,
-        game_id: String::from("lobby"),
-        user_id: user_uid,
-        username,
-    });
+    hub.on_disconnect(socket.socket_id, user_uid, username);
     let _ = session.close(None).await;
 }
 
 async fn handle_binary(
     bytes: &[u8],
-    srv: &Addr<WsServer>,
+    hub: &Arc<WsHub>,
     socket: &SocketTx,
     data: &Arc<WebsocketData>,
     pool: &DbPool,
@@ -152,11 +138,8 @@ async fn handle_binary(
             for message in messages {
                 let serialized = ServerResult::Ok(Box::new(message.message));
                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-                    srv.do_send(ClientActorMessage {
-                        destination: message.destination,
-                        serialized,
-                        from: Some(user_id),
-                    });
+                    hub.dispatch(&message.destination, Bytes::from(serialized), Some(user_id))
+                        .await;
                 }
             }
         }
@@ -181,11 +164,12 @@ async fn handle_binary(
                 status_code,
             });
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                srv.do_send(ClientActorMessage {
-                    destination: MessageDestination::User(user_id),
-                    serialized,
-                    from: Some(user_id),
-                });
+                hub.dispatch(
+                    &MessageDestination::User(user_id),
+                    Bytes::from(serialized),
+                    Some(user_id),
+                )
+                .await;
             }
         }
     }
