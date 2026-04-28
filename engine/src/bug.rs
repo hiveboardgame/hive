@@ -231,7 +231,7 @@ impl Bug {
     ) -> impl Iterator<Item = Position> + 'a {
         position.positions_around().filter(move |pos| {
             let (pos1, pos2) = position.common_adjacent_positions(*pos);
-            (!board.get(pos1).is_empty() || !board.get(pos2).is_empty())
+            (board.occupied(pos1) || board.occupied(pos2))
                 && board.is_negative_space(*pos)
                 && !board.gated(1, position, *pos)
         })
