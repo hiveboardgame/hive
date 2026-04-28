@@ -179,7 +179,18 @@ impl WsHub {
 
         self.refresh_membership_gauges();
 
-        // Step 4: announce offline to the lobby.
+        // Step 4: announce offline to the lobby — but only if the user has not
+        // come back in the brief window between our drop(m) and getting here.
+        // A queued on_connect would have been blocked on the membership lock;
+        // when we drop, it can run to completion AND its spawned
+        // load_user_state can broadcast Online before our fanout_lobby below.
+        // If our Offline arrives at lobby receivers second, clients end up
+        // marking a connected user as offline. Re-checking here lets the
+        // reconnect's Online be the final word — at the cost of skipping the
+        // intermediate Offline blip, which is the desired behaviour anyway.
+        if self.sessions.contains_key(&user_id) {
+            return;
+        }
         let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
             status: UserStatus::Offline,
             user: None,
