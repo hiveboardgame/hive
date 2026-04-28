@@ -239,15 +239,13 @@ impl Bug {
 
     fn crawl(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
         board.positions_taken_around(position).flat_map(move |pos| {
-            let mut positions = vec![];
             let (pos1, pos2) = position.common_adjacent_positions(pos);
-            if !board.gated(1, position, pos1) && !board.occupied(pos1) {
-                positions.push(pos1);
-            }
-            if !board.gated(1, position, pos2) && !board.occupied(pos2) {
-                positions.push(pos2);
-            }
-            positions
+            [
+                (!board.gated(1, position, pos1) && !board.occupied(pos1)).then_some(pos1),
+                (!board.gated(1, position, pos2) && !board.occupied(pos2)).then_some(pos2),
+            ]
+            .into_iter()
+            .flatten()
         })
     }
 

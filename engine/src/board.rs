@@ -284,7 +284,8 @@ impl Board {
     ) -> u64 {
         if self.played == 1 {
             let bs = self.board.get_mut(Position::initial_spawn_position());
-            bs.index = [Some(0), Some(0)];
+            bs.set_index(Rotation::C, 0);
+            bs.set_index(Rotation::CC, 0);
             self.smallest = Some((piece, to));
             self.hasher.update(bs, Some(0), Rotation::C);
             self.hasher.update(bs, Some(0), Rotation::CC);
@@ -310,7 +311,7 @@ impl Board {
             }
 
             let mut stack = self.board.get(to).clone();
-            if stack.index != [None, None] {
+            if stack.has_index() {
                 let top_piece = stack.pop_piece();
                 debug_assert_eq!(piece, top_piece);
                 self.hasher.update(&stack, None, Rotation::C);
@@ -326,8 +327,8 @@ impl Board {
                 counter_clockwise.take_while(|pos| *pos != to).count(),
             );
             let stack = self.board.get_mut(to);
-            stack.index[Rotation::C as usize] = Some(c_index);
-            stack.index[Rotation::CC as usize] = Some(cc_index);
+            stack.set_index(Rotation::C, c_index);
+            stack.set_index(Rotation::CC, cc_index);
             self.hasher.update(stack, Some(c_index as u32), Rotation::C);
             self.hasher
                 .update(stack, Some(cc_index as u32), Rotation::CC);
@@ -339,7 +340,7 @@ impl Board {
             let mut hashed = 0_usize;
             for (index, position) in clockwise.enumerate() {
                 let bs = self.board.get_mut(position);
-                bs.index[Rotation::C as usize] = Some(index);
+                bs.set_index(Rotation::C, index);
                 if !bs.is_empty() {
                     self.hasher.update(bs, Some(index as u32), Rotation::C);
                     hashed += bs.size as usize;
@@ -353,7 +354,7 @@ impl Board {
             hashed = 0_usize;
             for (index, position) in counter_clockwise.enumerate() {
                 let bs = self.board.get_mut(position);
-                bs.index[Rotation::CC as usize] = Some(index);
+                bs.set_index(Rotation::CC, index);
                 if !bs.is_empty() {
                     self.hasher.update(bs, Some(index as u32), Rotation::CC);
                     hashed += bs.size as usize;
@@ -734,10 +735,61 @@ impl Board {
         current_position: Position,
         target_position: Position,
     ) -> bool {
-        match self.moves(color).get(&(piece, current_position)) {
-            None => false,
-            Some(positions) => positions.contains(&target_position),
+        match self.game_result() {
+            GameResult::Unknown => {}
+            _ => return false,
         }
+        if !self.queen_played(color) {
+            return false;
+        }
+        if self.top_piece(current_position) != Some(piece) {
+            return false;
+        }
+        if self.last_moved == Some((piece, current_position)) {
+            return false;
+        }
+
+        if piece.is_color(color) {
+            if let Some(positions) =
+                Bug::available_moves(current_position, self).get(&current_position)
+            {
+                if positions.contains(&target_position) {
+                    return true;
+                }
+            }
+        }
+
+        for (_, ability_position) in self.ability_pieces_around(color, current_position) {
+            if let Some(positions) =
+                Bug::available_abilities(ability_position, self).get(&current_position)
+            {
+                if positions.contains(&target_position) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    fn ability_pieces_around(
+        &self,
+        color: Color,
+        position: Position,
+    ) -> impl Iterator<Item = (Piece, Position)> + '_ {
+        position.positions_around().filter_map(move |pos| {
+            let piece = self.top_piece(pos)?;
+            if !piece.is_color(color) || self.last_moved == Some((piece, pos)) {
+                return None;
+            }
+            match piece.bug() {
+                Bug::Pillbug => Some((piece, pos)),
+                Bug::Mosquito if self.level(pos) == 1 && self.neighbor_is_a(pos, Bug::Pillbug) => {
+                    Some((piece, pos))
+                }
+                _ => None,
+            }
+        })
     }
 
     pub fn moves(&self, color: Color) -> HashMap<(Piece, Position), Vec<Position>> {

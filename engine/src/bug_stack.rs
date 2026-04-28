@@ -1,12 +1,14 @@
 use itertools::Itertools;
 
-use crate::{color::Color, piece::Piece};
+use crate::{color::Color, piece::Piece, position::Rotation};
 use std::fmt;
+
+const MISSING_INDEX: u16 = u16::MAX;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BugStack {
     pub pieces: [Piece; 7],
-    pub index: [Option<usize>; 2],
+    index: [u16; 2],
     pub size: u8,
 }
 
@@ -32,7 +34,7 @@ impl BugStack {
     pub fn new() -> Self {
         Self {
             pieces: [Piece::new().with_invalid(true); 7],
-            index: [None, None],
+            index: [MISSING_INDEX, MISSING_INDEX],
             size: 0,
         }
     }
@@ -81,6 +83,23 @@ impl BugStack {
 
     pub fn is_empty(&self) -> bool {
         self.size == 0
+    }
+
+    pub fn has_index(&self) -> bool {
+        self.index.iter().any(|index| *index != MISSING_INDEX)
+    }
+
+    pub fn index(&self, rotation: Rotation) -> Option<usize> {
+        let index = self.index[rotation as usize];
+        if index == MISSING_INDEX {
+            None
+        } else {
+            Some(index as usize)
+        }
+    }
+
+    pub fn set_index(&mut self, rotation: Rotation, index: usize) {
+        self.index[rotation as usize] = u16::try_from(index).expect("BugStack index fits in u16");
     }
 
     pub fn top_bug_color(&self) -> Option<Color> {
