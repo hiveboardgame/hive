@@ -92,18 +92,28 @@ impl WsHub {
         tx: mpsc::Sender<Bytes>,
     ) {
         let lobby = Self::lobby();
+        // Lock order: membership write → outer DashMap shard. on_disconnect uses
+        // the same order so the two operations can't deadlock and a fast
+        // reconnect can't race a tail-end disconnect into a stale Offline.
         let is_first_socket = {
-            let user_entry = self.sessions.entry(user_id).or_insert_with(DashMap::new);
-            let was_empty = user_entry.is_empty();
-            user_entry.insert(socket_id, tx);
+            let mut m = self.membership.write().expect("membership poisoned");
+            let was_empty = {
+                let user_entry =
+                    self.sessions.entry(user_id).or_insert_with(DashMap::new);
+                let empty = user_entry.is_empty();
+                user_entry.insert(socket_id, tx);
+                empty
+            };
+            m.games_users
+                .entry(lobby.clone())
+                .or_default()
+                .insert(user_id);
+            m.users_games
+                .entry(user_id)
+                .or_default()
+                .insert(lobby.clone());
             was_empty
         };
-
-        {
-            let mut m = self.membership.write().expect("membership poisoned");
-            m.games_users.entry(lobby.clone()).or_default().insert(user_id);
-            m.users_games.entry(user_id).or_default().insert(lobby.clone());
-        }
 
         self.data.telemetry.inc_active_socket();
         if is_first_socket {
@@ -116,7 +126,7 @@ impl WsHub {
         // `ctx.wait` (blocked the actor but not the reader). Here we spawn
         // independently — readers and other dispatches proceed immediately.
         actix_rt::spawn(async move {
-            self.load_user_state(user_id, username).await;
+            self.load_user_state(socket_id, user_id, username).await;
         });
     }
 
@@ -137,28 +147,36 @@ impl WsHub {
             return;
         }
 
-        // Step 2: atomically remove the user iff still empty.
-        // (Closes the race with a concurrent on_connect for the same user.)
+        // Step 2: take the membership write lock FIRST, then atomically check-
+        // and-remove the user from sessions. Holding the membership lock across
+        // both the predicate-and-remove AND the membership cleanup prevents a
+        // fast on_connect (which takes membership write before its sessions
+        // insert) from sliding in between and ending up with the cleanup path
+        // stripping the freshly-reconnected user from the lobby and broadcasting
+        // a stale Offline. Lock order matches on_connect: membership → shard.
+        let mut m = self.membership.write().expect("membership poisoned");
         let removed = self.sessions.remove_if(&user_id, |_, s| s.is_empty());
         if removed.is_none() {
+            // User reconnected between our is_empty check and getting here, OR
+            // a concurrent on_connect is queued behind our membership lock. Either
+            // way, the user is or will be alive — skip cleanup.
             return;
         }
         self.data.telemetry.dec_active_user();
 
-        // Step 3: drop user from every game's membership.
-        {
-            let mut m = self.membership.write().expect("membership poisoned");
-            if let Some(games) = m.users_games.remove(&user_id) {
-                for game_id in games {
-                    if let Some(users) = m.games_users.get_mut(&game_id) {
-                        users.remove(&user_id);
-                        if users.is_empty() {
-                            m.games_users.remove(&game_id);
-                        }
+        // Step 3: drop user from every game's membership (still under the lock).
+        if let Some(games) = m.users_games.remove(&user_id) {
+            for game_id in games {
+                if let Some(users) = m.games_users.get_mut(&game_id) {
+                    users.remove(&user_id);
+                    if users.is_empty() {
+                        m.games_users.remove(&game_id);
                     }
                 }
             }
         }
+        drop(m); // release before refresh_membership_gauges takes a read lock
+
         self.refresh_membership_gauges();
 
         // Step 4: announce offline to the lobby.
@@ -174,12 +192,17 @@ impl WsHub {
 
     fn refresh_membership_gauges(&self) {
         let m = self.membership.read().expect("membership poisoned");
-        let total_games = m.games_users.len() as u64;
-        let lobby_count = m
+        let lobby = Self::lobby();
+        // Count game keys that aren't the lobby. Don't compute as `len() - 1`:
+        // the lobby key may be absent (e.g. when no users are connected) and
+        // saturating_sub would undercount real game memberships in that state.
+        let active_games = m
             .games_users
-            .get(&Self::lobby())
-            .map_or(0, |s| s.len()) as u64;
-        self.data.telemetry.set_active_games(total_games.saturating_sub(1));
+            .keys()
+            .filter(|gid| *gid != &lobby)
+            .count() as u64;
+        let lobby_count = m.games_users.get(&lobby).map_or(0, |s| s.len()) as u64;
+        self.data.telemetry.set_active_games(active_games);
         self.data.telemetry.set_lobby_subscribers(lobby_count);
     }
 
@@ -336,50 +359,50 @@ impl WsHub {
     // ─── private helpers ──────────────────────────────────────────────────────
 
     fn send_to_user(&self, user_id: &Uuid, dest: DestKind, bytes: &Bytes) {
-        let dead: Vec<Uuid> = {
-            let Some(sockets) = self.sessions.get(user_id) else {
-                return;
-            };
-            let mut dead = Vec::new();
-            for entry in sockets.iter() {
-                let used = SOCKET_BUFFER_CAPACITY.saturating_sub(entry.value().capacity());
-                match entry.value().try_send(bytes.clone()) {
-                    Ok(_) => self.data.telemetry.record_send(
+        let Some(sockets) = self.sessions.get(user_id) else {
+            return;
+        };
+        // Don't reap on Full or Closed.
+        //
+        // - Full means the socket's outbound queue is at capacity. The reader
+        //   is still alive and heartbeating (heartbeat ping bypasses the mpsc),
+        //   so removing the socket from sessions would orphan it: it would keep
+        //   running, receive no application messages, and on_disconnect would
+        //   later short-circuit because sessions[user_id] was already gone —
+        //   leaking gauge state, membership, and the offline broadcast.
+        // - Closed means the receiver was dropped (writer task exited because
+        //   session.binary errored). The reader will detect the broken transport
+        //   on its next ping/poll and call on_disconnect, which is the single
+        //   source of cleanup.
+        //
+        // The bounded queue still prevents OOM (the message itself is dropped).
+        // TODO: if we want a real "force-close slow client" mechanism, plumb a
+        // Session handle (or a kill-channel) into the hub so we can actually
+        // close the WebSocket on Full and let the reader clean up normally.
+        for entry in sockets.iter() {
+            let used = SOCKET_BUFFER_CAPACITY.saturating_sub(entry.value().capacity());
+            match entry.value().try_send(bytes.clone()) {
+                Ok(_) => self.data.telemetry.record_send(
+                    dest,
+                    SendOutcome::Ok,
+                    used,
+                    bytes.len(),
+                ),
+                Err(mpsc::error::TrySendError::Full(_)) => {
+                    self.data.telemetry.record_send(
                         dest,
-                        SendOutcome::Ok,
+                        SendOutcome::Full,
                         used,
                         bytes.len(),
-                    ),
-                    Err(mpsc::error::TrySendError::Full(_)) => {
-                        dead.push(*entry.key());
-                        self.data.telemetry.record_send(
-                            dest,
-                            SendOutcome::Full,
-                            used,
-                            bytes.len(),
-                        );
-                    }
-                    Err(mpsc::error::TrySendError::Closed(_)) => {
-                        dead.push(*entry.key());
-                        self.data
-                            .telemetry
-                            .record_send(dest, SendOutcome::Closed, used, 0);
-                    }
+                    );
                 }
-            }
-            dead
-        };
-
-        if !dead.is_empty() {
-            if let Some(sockets) = self.sessions.get(user_id) {
-                for id in &dead {
-                    sockets.remove(id);
+                Err(mpsc::error::TrySendError::Closed(_)) => {
+                    self.data
+                        .telemetry
+                        .record_send(dest, SendOutcome::Closed, used, 0);
                 }
             }
         }
-        // Atomic: removes the outer entry only if still empty under shard write lock.
-        // Closes the race with a concurrent `on_connect` inserting a new socket.
-        self.sessions.remove_if(user_id, |_, s| s.is_empty());
     }
 
     fn fanout_lobby(&self, bytes: &Bytes, dest: DestKind) {
@@ -407,23 +430,48 @@ impl WsHub {
         if already_member {
             return;
         }
-        let mut m = self.membership.write().expect("membership poisoned");
-        m.games_users
-            .entry(game_id.clone())
-            .or_default()
-            .insert(user_id);
-        m.users_games
-            .entry(user_id)
-            .or_default()
-            .insert(game_id.clone());
+        {
+            let mut m = self.membership.write().expect("membership poisoned");
+            m.games_users
+                .entry(game_id.clone())
+                .or_default()
+                .insert(user_id);
+            m.users_games
+                .entry(user_id)
+                .or_default()
+                .insert(game_id.clone());
+        }
+        // First dispatch into a game adds the user to its membership; the
+        // gauges (`active_games`, `lobby_subscribers`) need to reflect that.
+        // Without this, `active_games` would only be refreshed on connect /
+        // disconnect, leaving the metric stale during a session.
+        self.refresh_membership_gauges();
+    }
+
+    /// Returns true iff the specific socket we were spawned for is still in
+    /// `sessions`. Used by `load_user_state` to bail when a fast disconnect
+    /// (or disconnect+reconnect with a different socket_id) raced our DB load.
+    fn is_socket_connected(&self, user_id: Uuid, socket_id: Uuid) -> bool {
+        self.sessions
+            .get(&user_id)
+            .map_or(false, |sockets| sockets.contains_key(&socket_id))
     }
 
     // ─── user-state load (the long async block from Handler<Connect>) ─────────
 
-    async fn load_user_state(&self, user_id: Uuid, username: String) {
+    async fn load_user_state(&self, socket_id: Uuid, user_id: Uuid, username: String) {
         let Ok(mut conn) = get_conn(&self.pool).await else {
             return;
         };
+
+        // Bail if the connection already went away — no point loading state
+        // for a socket that's gone, and the lobby Online broadcast below would
+        // otherwise advertise a user that on_disconnect already announced
+        // Offline. Re-checked before each user-visible broadcast since each
+        // await is a chance for the disconnect to race in.
+        if !self.is_socket_connected(user_id, socket_id) {
+            return;
+        }
 
         // Send Online status of every currently-connected user to the new connector.
         let existing_user_ids: Vec<Uuid> = self.sessions.iter().map(|e| *e.key()).collect();
@@ -442,6 +490,13 @@ impl WsHub {
 
         // Branch: authed user with a DB row, vs anonymous.
         if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
+            // Re-check before the Online broadcast: the slow DB lookup gives
+            // plenty of time for a disconnect to race in. If it has, our Online
+            // would override the Offline that on_disconnect already sent and
+            // leave the lobby ghosting a user that's actually gone.
+            if !self.is_socket_connected(user_id, socket_id) {
+                return;
+            }
             // Announce the new user's Online status to lobby.
             if let Ok(user_response) = UserResponse::from_model(&user, &mut conn).await {
                 let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
