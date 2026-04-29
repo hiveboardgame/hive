@@ -543,7 +543,45 @@ impl WsHub {
             .map_or(false, |sockets| sockets.contains_key(&socket_id))
     }
 
-    // ─── user-state load (the long async block from Handler<Connect>) ─────────
+    // ─── test helpers ─────────────────────────────────────────────────────────
+
+    /// Register a socket directly without triggering the async state load.
+    /// Returns the receiver for the socket's outbound channel.
+    #[cfg(test)]
+    fn register_socket(&self, user_id: Uuid, socket_id: Uuid) -> mpsc::Receiver<Bytes> {
+        let (tx, rx) = mpsc::channel(SOCKET_BUFFER_CAPACITY);
+        let lobby = Self::lobby();
+        let mut m = self.membership.write().expect("membership poisoned");
+        self.sessions
+            .entry(user_id)
+            .or_insert_with(DashMap::new)
+            .insert(socket_id, tx);
+        m.games_sockets
+            .entry(lobby.clone())
+            .or_default()
+            .insert((user_id, socket_id));
+        m.sockets_games
+            .entry((user_id, socket_id))
+            .or_default()
+            .insert(lobby);
+        rx
+    }
+
+    /// Subscribe an already-registered socket to a game channel.
+    #[cfg(test)]
+    fn join_game(&self, user_id: Uuid, socket_id: Uuid, game_id: &GameId) {
+        let mut m = self.membership.write().expect("membership poisoned");
+        m.games_sockets
+            .entry(game_id.clone())
+            .or_default()
+            .insert((user_id, socket_id));
+        m.sockets_games
+            .entry((user_id, socket_id))
+            .or_default()
+            .insert(game_id.clone());
+    }
+
+    // ─── user-state load (the long async block from Handler<Connect>) ──────────
 
     async fn load_user_state(
         &self,
@@ -737,3 +775,202 @@ impl WsHub {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::messages::SocketTx;
+
+    async fn make_hub() -> Arc<WsHub> {
+        // bb8 builds the pool struct without making DB connections (min_idle = 0 by default).
+        // Non-Tournament dispatch arms never call get_conn, so the unreachable host is fine.
+        let pool = db_lib::get_pool("postgresql://test:test@127.0.0.1:9/test")
+            .await
+            .expect("bb8 pool builds without connecting");
+        WsHub::new(Arc::new(WebsocketData::default()), pool)
+    }
+
+    #[tokio::test]
+    async fn dispatch_user_routes_to_all_sockets() {
+        let hub = make_hub().await;
+        let uid = Uuid::new_v4();
+        let sid_a = Uuid::new_v4();
+        let sid_b = Uuid::new_v4();
+        let mut rx_a = hub.register_socket(uid, sid_a);
+        let mut rx_b = hub.register_socket(uid, sid_b);
+
+        hub.dispatch(&MessageDestination::User(uid), Bytes::from_static(b"hi"), None)
+            .await;
+
+        assert_eq!(rx_a.recv().await.unwrap(), Bytes::from_static(b"hi"));
+        assert_eq!(rx_b.recv().await.unwrap(), Bytes::from_static(b"hi"));
+    }
+
+    #[tokio::test]
+    async fn dispatch_user_unknown_is_noop() {
+        let hub = make_hub().await;
+        hub.dispatch(
+            &MessageDestination::User(Uuid::new_v4()),
+            Bytes::from_static(b"x"),
+            None,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn dispatch_direct_routes_only_to_target_socket() {
+        let hub = make_hub().await;
+        let uid = Uuid::new_v4();
+        let sid = Uuid::new_v4();
+        let mut bystander_rx = hub.register_socket(uid, sid);
+
+        let (target_tx, mut target_rx) = mpsc::channel(8);
+        let socket_tx = SocketTx {
+            socket_id: Uuid::new_v4(),
+            tx: target_tx,
+        };
+
+        hub.dispatch(
+            &MessageDestination::Direct(socket_tx),
+            Bytes::from_static(b"dm"),
+            None,
+        )
+        .await;
+
+        assert_eq!(target_rx.try_recv().unwrap(), Bytes::from_static(b"dm"));
+        assert!(bystander_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn dispatch_game_routes_to_subscribed_sockets_only() {
+        let hub = make_hub().await;
+        let uid_a = Uuid::new_v4();
+        let sid_a = Uuid::new_v4();
+        let uid_b = Uuid::new_v4();
+        let sid_b = Uuid::new_v4();
+        let uid_c = Uuid::new_v4();
+        let sid_c = Uuid::new_v4();
+
+        let game_id = GameId("test-game".to_string());
+
+        let mut rx_a = hub.register_socket(uid_a, sid_a);
+        let mut rx_b = hub.register_socket(uid_b, sid_b);
+        let mut rx_c = hub.register_socket(uid_c, sid_c); // lobby only, not in game
+
+        hub.join_game(uid_a, sid_a, &game_id);
+        hub.join_game(uid_b, sid_b, &game_id);
+
+        hub.dispatch(
+            &MessageDestination::Game(game_id),
+            Bytes::from_static(b"move"),
+            None,
+        )
+        .await;
+
+        assert_eq!(rx_a.try_recv().unwrap(), Bytes::from_static(b"move"));
+        assert_eq!(rx_b.try_recv().unwrap(), Bytes::from_static(b"move"));
+        assert!(rx_c.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn dispatch_game_from_implicitly_subscribes_sender() {
+        let hub = make_hub().await;
+        let uid = Uuid::new_v4();
+        let sid = Uuid::new_v4();
+        let game_id = GameId("implicit-game".to_string());
+
+        let mut rx = hub.register_socket(uid, sid);
+
+        // First dispatch with from= subscribes (uid, sid) to the game.
+        hub.dispatch(
+            &MessageDestination::Game(game_id.clone()),
+            Bytes::from_static(b"a"),
+            Some((uid, sid)),
+        )
+        .await;
+        // Sender is now a member, so it receives subsequent dispatches too.
+        hub.dispatch(
+            &MessageDestination::Game(game_id),
+            Bytes::from_static(b"b"),
+            None,
+        )
+        .await;
+
+        assert_eq!(rx.try_recv().unwrap(), Bytes::from_static(b"a"));
+        assert_eq!(rx.try_recv().unwrap(), Bytes::from_static(b"b"));
+    }
+
+    #[tokio::test]
+    async fn dispatch_global_reaches_all_lobby_sockets() {
+        let hub = make_hub().await;
+        let uid_a = Uuid::new_v4();
+        let sid_a = Uuid::new_v4();
+        let uid_b = Uuid::new_v4();
+        let sid_b = Uuid::new_v4();
+
+        let mut rx_a = hub.register_socket(uid_a, sid_a);
+        let mut rx_b = hub.register_socket(uid_b, sid_b);
+
+        hub.dispatch(
+            &MessageDestination::Global,
+            Bytes::from_static(b"broadcast"),
+            None,
+        )
+        .await;
+
+        assert_eq!(rx_a.try_recv().unwrap(), Bytes::from_static(b"broadcast"));
+        assert_eq!(rx_b.try_recv().unwrap(), Bytes::from_static(b"broadcast"));
+    }
+
+    #[tokio::test]
+    async fn dispatch_game_spectators_excludes_players() {
+        let hub = make_hub().await;
+        let white_id = Uuid::new_v4();
+        let white_sid = Uuid::new_v4();
+        let black_id = Uuid::new_v4();
+        let black_sid = Uuid::new_v4();
+        let spec_id = Uuid::new_v4();
+        let spec_sid = Uuid::new_v4();
+
+        let game_id = GameId("spectator-game".to_string());
+
+        let mut rx_white = hub.register_socket(white_id, white_sid);
+        let mut rx_black = hub.register_socket(black_id, black_sid);
+        let mut rx_spec = hub.register_socket(spec_id, spec_sid);
+
+        hub.join_game(white_id, white_sid, &game_id);
+        hub.join_game(black_id, black_sid, &game_id);
+        hub.join_game(spec_id, spec_sid, &game_id);
+
+        hub.dispatch(
+            &MessageDestination::GameSpectators(game_id, white_id, black_id),
+            Bytes::from_static(b"spec-msg"),
+            None,
+        )
+        .await;
+
+        assert!(rx_white.try_recv().is_err());
+        assert!(rx_black.try_recv().is_err());
+        assert_eq!(rx_spec.try_recv().unwrap(), Bytes::from_static(b"spec-msg"));
+    }
+
+    #[tokio::test]
+    async fn leave_membership_unsubscribes_socket_from_game() {
+        let hub = make_hub().await;
+        let uid = Uuid::new_v4();
+        let sid = Uuid::new_v4();
+        let game_id = GameId("leave-game".to_string());
+
+        let mut rx = hub.register_socket(uid, sid);
+        hub.join_game(uid, sid, &game_id);
+        hub.leave_membership(uid, sid, &game_id);
+
+        hub.dispatch(
+            &MessageDestination::Game(game_id),
+            Bytes::from_static(b"after-leave"),
+            None,
+        )
+        .await;
+
+        assert!(rx.try_recv().is_err());
+    }
+}
