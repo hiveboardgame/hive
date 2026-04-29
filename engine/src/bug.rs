@@ -137,43 +137,24 @@ impl Bug {
         .to_string()
     }
 
-    pub fn bugs_count(game_type: GameType) -> HashMap<Bug, i8> {
-        let mut bugs = HashMap::new();
-        bugs.insert(Bug::Ant, 3);
-        bugs.insert(Bug::Beetle, 2);
-        bugs.insert(Bug::Grasshopper, 3);
-        bugs.insert(Bug::Queen, 1);
-        bugs.insert(Bug::Spider, 2);
-        match game_type {
-            GameType::Base => {}
-            GameType::M => {
-                bugs.insert(Bug::Mosquito, 1);
-            }
-            GameType::L => {
-                bugs.insert(Bug::Ladybug, 1);
-            }
-            GameType::P => {
-                bugs.insert(Bug::Pillbug, 1);
-            }
-            GameType::ML => {
-                bugs.insert(Bug::Mosquito, 1);
-                bugs.insert(Bug::Ladybug, 1);
-            }
-            GameType::MP => {
-                bugs.insert(Bug::Mosquito, 1);
-                bugs.insert(Bug::Pillbug, 1);
-            }
-            GameType::LP => {
-                bugs.insert(Bug::Ladybug, 1);
-                bugs.insert(Bug::Pillbug, 1);
-            }
-            GameType::MLP => {
-                bugs.insert(Bug::Mosquito, 1);
-                bugs.insert(Bug::Ladybug, 1);
-                bugs.insert(Bug::Pillbug, 1);
-            }
+    pub(crate) fn count(self, game_type: GameType) -> usize {
+        match self {
+            Bug::Ant | Bug::Grasshopper => 3,
+            Bug::Beetle | Bug::Spider => 2,
+            Bug::Queen => 1,
+            Bug::Ladybug => usize::from(matches!(
+                game_type,
+                GameType::L | GameType::ML | GameType::LP | GameType::MLP
+            )),
+            Bug::Mosquito => usize::from(matches!(
+                game_type,
+                GameType::M | GameType::ML | GameType::MP | GameType::MLP
+            )),
+            Bug::Pillbug => usize::from(matches!(
+                game_type,
+                GameType::P | GameType::LP | GameType::MP | GameType::MLP
+            )),
         }
-        bugs
     }
 
     pub fn has_order(&self) -> bool {
@@ -213,6 +194,20 @@ impl Bug {
         }
     }
 
+    pub(crate) fn has_move(position: Position, board: &Board) -> bool {
+        match board.top_bug(position) {
+            Some(Bug::Ant) => Bug::has_ant_move(position, board),
+            Some(Bug::Beetle) => Bug::has_beetle_move(position, board),
+            Some(Bug::Grasshopper) => Bug::has_grasshopper_move(position, board),
+            Some(Bug::Ladybug) => Bug::has_ladybug_move(position, board),
+            Some(Bug::Mosquito) => Bug::has_mosquito_move(position, board),
+            Some(Bug::Pillbug) => Bug::has_pillbug_move(position, board),
+            Some(Bug::Queen) => Bug::has_queen_move(position, board),
+            Some(Bug::Spider) => Bug::has_spider_move(position, board),
+            None => false,
+        }
+    }
+
     pub fn available_abilities(
         position: Position,
         board: &Board,
@@ -221,6 +216,21 @@ impl Bug {
             return Bug::pillbug_throw(position, board);
         }
         HashMap::default()
+    }
+
+    pub(crate) fn has_available_ability(position: Position, board: &Board) -> bool {
+        if !Bug::has_pillbug_throw(position, board) {
+            return false;
+        }
+        if Bug::pillbug_throw_targets(position, board).next().is_none() {
+            return false;
+        }
+        Bug::pillbug_throw_sources(position, board).any(|pos| {
+            let Some(piece) = board.top_piece(pos) else {
+                return false;
+            };
+            board.last_moved != Some((piece, pos))
+        })
     }
 
     pub fn can_throw(
@@ -321,6 +331,12 @@ impl Bug {
         }
     }
 
+    fn has_ant_move(position: Position, board: &Board) -> bool {
+        let board = MidMoveBoard::new(board, position);
+        let has_move = Bug::crawl_negative_space(position, &board).next().is_some();
+        has_move
+    }
+
     pub fn beetle_moves(position: Position, board: &Board) -> Vec<Position> {
         let mut positions = Vec::new();
         for pos in Bug::climb(position, board) {
@@ -342,6 +358,17 @@ impl Bug {
         positions
     }
 
+    fn has_beetle_move(position: Position, board: &Board) -> bool {
+        if Bug::climb(position, board).next().is_some() {
+            return true;
+        }
+        if board.level(position) == 1 {
+            Bug::crawl(position, board).next().is_some()
+        } else {
+            Bug::descend(position, board).next().is_some()
+        }
+    }
+
     pub fn grasshopper_moves(position: Position, board: &Board) -> Vec<Position> {
         // get the directions of the grasshopper's neighbors
         let mut positions = vec![];
@@ -359,6 +386,10 @@ impl Bug {
             positions.push(cur_pos.to(dir));
         }
         positions
+    }
+
+    fn has_grasshopper_move(position: Position, board: &Board) -> bool {
+        board.positions_taken_around(position).next().is_some()
     }
 
     fn ladybug_moves(position: Position, board: &Board) -> Vec<Position> {
@@ -387,6 +418,23 @@ impl Bug {
         third.iter().cloned().collect()
     }
 
+    fn has_ladybug_move(position: Position, board: &Board) -> bool {
+        for first_pos in Bug::climb(position, board) {
+            let current_height = board.level(first_pos) + 1;
+            for second_pos in board.positions_taken_around(first_pos).filter(|pos| {
+                *pos != position
+                    && !board.gated(current_height.max(board.level(*pos) + 1), first_pos, *pos)
+            }) {
+                if board.positions_available_around(second_pos).any(|third_pos| {
+                    !board.gated(board.level(second_pos) + 1, second_pos, third_pos)
+                }) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     fn mosquito_moves(position: Position, board: &Board) -> Vec<Position> {
         if board.level(position) == 1 {
             board
@@ -409,8 +457,31 @@ impl Bug {
         }
     }
 
+    fn has_mosquito_move(position: Position, board: &Board) -> bool {
+        if board.level(position) == 1 {
+            board
+                .neighbors(position)
+                .any(|pieces| match pieces.top_piece().expect("Could not get last piece").bug() {
+                    Bug::Ant => Bug::has_ant_move(position, board),
+                    Bug::Beetle => Bug::has_beetle_move(position, board),
+                    Bug::Grasshopper => Bug::has_grasshopper_move(position, board),
+                    Bug::Ladybug => Bug::has_ladybug_move(position, board),
+                    Bug::Mosquito => false,
+                    Bug::Pillbug => Bug::has_pillbug_move(position, board),
+                    Bug::Queen => Bug::has_queen_move(position, board),
+                    Bug::Spider => Bug::has_spider_move(position, board),
+                })
+        } else {
+            Bug::has_beetle_move(position, board)
+        }
+    }
+
     fn pillbug_moves(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
         Bug::crawl(position, board)
+    }
+
+    fn has_pillbug_move(position: Position, board: &Board) -> bool {
+        Bug::crawl(position, board).next().is_some()
     }
 
     fn pillbug_throw_targets(
@@ -448,6 +519,10 @@ impl Bug {
         Bug::crawl(position, board)
     }
 
+    fn has_queen_move(position: Position, board: &Board) -> bool {
+        Bug::crawl(position, board).next().is_some()
+    }
+
     fn spider_moves(position: Position, board: &Board) -> Vec<Position> {
         let board = MidMoveBoard::new(board, position);
         let mut res = Vec::new();
@@ -465,6 +540,20 @@ impl Bug {
         res.sort();
         res.dedup();
         res
+    }
+
+    fn has_spider_move(position: Position, board: &Board) -> bool {
+        let board = MidMoveBoard::new(board, position);
+        for pos1 in Bug::crawl_negative_space(position, &board) {
+            for pos2 in Bug::crawl_negative_space(pos1, &board).filter(|pos| *pos != position) {
+                if Bug::crawl_negative_space(pos2, &board)
+                    .any(|pos3| pos3 != position && pos3 != pos1)
+                {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }
 

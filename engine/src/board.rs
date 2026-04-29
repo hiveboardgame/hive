@@ -492,11 +492,74 @@ impl Board {
     }
 
     pub fn is_shutout(&self, color: Color, game_type: GameType) -> bool {
-        if let GameResult::Unknown = self.game_result() {
-            return self.moves(color).is_empty()
-                && (self.spawnable_positions(color).next().is_none()
-                    || self.reserve(color, game_type).is_empty());
-        };
+        if !matches!(self.game_result(), GameResult::Unknown) {
+            return false;
+        }
+        if self.played < 3 || !self.queen_played(color) {
+            return false;
+        }
+        if self.can_spawn_from_reserve(color, game_type) {
+            return false;
+        }
+        !self.has_board_action(color)
+    }
+
+    fn can_spawn_from_reserve(&self, color: Color, game_type: GameType) -> bool {
+        if self.played == game_type.max_played() {
+            return false;
+        }
+        self.has_reserve_piece(color, game_type) && self.has_spawnable_position(color)
+    }
+
+    fn has_reserve_piece(&self, color: Color, game_type: GameType) -> bool {
+        let start = 24 * color as usize;
+        let end = 24 + start;
+        self.positions[start..end]
+            .iter()
+            .enumerate()
+            .any(|(i, maybe_pos)| {
+                let offset = i + start;
+                maybe_pos.is_none() && self.slot_represents_piece(offset, game_type)
+            })
+    }
+
+    fn has_spawnable_position(&self, color: Color) -> bool {
+        if self.played < 2 {
+            return true;
+        }
+        // Spawn candidates must border one of our top pieces, so avoid scanning the full board.
+        self.positions.iter().flatten().any(|pos| {
+            if !self
+                .top_piece(*pos)
+                .map(|piece| piece.is_color(color))
+                .unwrap_or(false)
+            {
+                return false;
+            }
+            pos.positions_around().any(|target| {
+                !self.occupied(target)
+                    && !self
+                        .top_layer_neighbors(target)
+                        .any(|piece| color == piece.color().opposite_color())
+            })
+        })
+    }
+
+    fn has_board_action(&self, color: Color) -> bool {
+        for pos in self.positions.iter().flatten() {
+            let Some(piece) = self.top_piece(*pos) else {
+                continue;
+            };
+            if !piece.is_color(color) || self.last_moved == Some((piece, *pos)) {
+                continue;
+            }
+            if !self.is_pinned(piece) && Bug::has_move(*pos, self) {
+                return true;
+            }
+            if Bug::has_available_ability(*pos, self) {
+                return true;
+            }
+        }
         false
     }
 
@@ -620,6 +683,10 @@ impl Board {
         let bug = (offset as u8 - color * 24) / 3;
         let order = (offset as u8 + 1 - bug * 3 - color * 24) as usize;
         Piece::new_from(Bug::from(bug), Color::from(color), order)
+    }
+
+    fn slot_represents_piece(&self, offset: usize, game_type: GameType) -> bool {
+        self.offset_to_piece(offset).bug().count(game_type) > offset % 3
     }
 
     pub fn is_pinned(&self, piece: Piece) -> bool {
@@ -919,14 +986,12 @@ impl Board {
         let mut res = HashMap::<Bug, Vec<String>>::new();
         let start = 24 * color as usize;
         let end = 24 + start;
-        let bugs_for_game_type = Bug::bugs_count(game_type);
         for (i, maybe_pos) in self.positions[start..end].iter().enumerate() {
             if maybe_pos.is_none() {
-                let piece = self.offset_to_piece(i + 24 * color as usize);
-                if let Some(number_of_bugs) = bugs_for_game_type.get(&piece.bug()) {
-                    if (*number_of_bugs as usize) > (i % 3) {
-                        res.entry(piece.bug()).or_default().push(piece.to_string());
-                    }
+                let offset = i + start;
+                if self.slot_represents_piece(offset, game_type) {
+                    let piece = self.offset_to_piece(offset);
+                    res.entry(piece.bug()).or_default().push(piece.to_string());
                 }
             }
         }
@@ -971,12 +1036,10 @@ impl Board {
         if self.occupied(position) {
             return false;
         }
-        // TODO maybe hand in state.turn and get rid of this
-        let number_of_positions = self.positions.into_iter().flatten().count();
-        if number_of_positions == 0 {
+        if self.played == 0 {
             return position == Position::initial_spawn_position();
         }
-        if number_of_positions == 1 {
+        if self.played == 1 {
             return self.is_negative_space(position);
         }
         // connected to the hive
@@ -1141,7 +1204,50 @@ impl fmt::Display for Board {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{history::History, state::State};
     use std::collections::HashSet;
+
+    #[test]
+    fn tests_action_existence_matches_full_generation_for_pass_games() {
+        for file in [
+            "./test_pgns/valid/base_with_pass.pgn",
+            "./test_pgns/valid/m_with_pass.pgn",
+            "./test_pgns/valid/pass.pgn",
+            "./test_pgns/valid/pass2.pgn",
+        ] {
+            let history = History::from_filepath(file.into()).expect("valid history");
+            let tournament = !history.moves.iter().take(2).any(|(piece, _)| {
+                piece
+                    .parse::<Piece>()
+                    .map(|piece| piece.bug() == Bug::Queen)
+                    .unwrap_or(false)
+            });
+            let mut state = State::new(history.game_type, tournament);
+            for (piece, position) in history.moves.iter() {
+                let full_generation_has_legal_action =
+                    matches!(state.board.game_result(), GameResult::Unknown)
+                        && (!state.board.moves(state.turn_color).is_empty()
+                            || (state
+                                .board
+                                .spawnable_positions(state.turn_color)
+                                .next()
+                                .is_some()
+                                && !state
+                                    .board
+                                    .reserve(state.turn_color, state.game_type)
+                                    .is_empty()));
+                assert_eq!(
+                    state.board.is_shutout(state.turn_color, state.game_type),
+                    !full_generation_has_legal_action,
+                    "{file} turn {}",
+                    state.turn
+                );
+                state
+                    .play_turn_from_history(piece, position)
+                    .unwrap_or_else(|err| panic!("{file} turn {}: {err}", state.turn));
+            }
+        }
+    }
 
     #[test]
     fn tests_positions_around() {
