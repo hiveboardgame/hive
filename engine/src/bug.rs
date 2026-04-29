@@ -193,35 +193,60 @@ impl Bug {
                 .top_piece(position)
                 .expect("There must be something at this position"),
         ) {
-            let positions = match board.top_bug(position) {
-                Some(Bug::Ant) => Bug::ant_moves(position, board),
-                Some(Bug::Beetle) => Bug::beetle_moves(position, board),
-                Some(Bug::Grasshopper) => Bug::grasshopper_moves(position, board),
-                Some(Bug::Ladybug) => Bug::ladybug_moves(position, board),
-                Some(Bug::Mosquito) => Bug::mosquito_moves(position, board),
-                Some(Bug::Pillbug) => Bug::pillbug_moves(position, board).collect(),
-                Some(Bug::Queen) => Bug::queen_moves(position, board).collect(),
-                Some(Bug::Spider) => Bug::spider_moves(position, board),
-                None => Vec::new(),
-            };
-            moves.insert(position, positions);
+            moves.insert(position, Bug::normal_moves(position, board));
         }
         moves.extend(Bug::available_abilities(position, board));
         moves
+    }
+
+    pub fn normal_moves(position: Position, board: &Board) -> Vec<Position> {
+        match board.top_bug(position) {
+            Some(Bug::Ant) => Bug::ant_moves(position, board),
+            Some(Bug::Beetle) => Bug::beetle_moves(position, board),
+            Some(Bug::Grasshopper) => Bug::grasshopper_moves(position, board),
+            Some(Bug::Ladybug) => Bug::ladybug_moves(position, board),
+            Some(Bug::Mosquito) => Bug::mosquito_moves(position, board),
+            Some(Bug::Pillbug) => Bug::pillbug_moves(position, board).collect(),
+            Some(Bug::Queen) => Bug::queen_moves(position, board).collect(),
+            Some(Bug::Spider) => Bug::spider_moves(position, board),
+            None => Vec::new(),
+        }
     }
 
     pub fn available_abilities(
         position: Position,
         board: &Board,
     ) -> HashMap<Position, Vec<Position>> {
+        if Bug::has_pillbug_throw(position, board) {
+            return Bug::pillbug_throw(position, board);
+        }
+        HashMap::default()
+    }
+
+    pub fn can_throw(
+        ability_position: Position,
+        thrown_position: Position,
+        target_position: Position,
+        board: &Board,
+    ) -> bool {
+        if !Bug::has_pillbug_throw(ability_position, board) {
+            return false;
+        }
+        if !Bug::pillbug_throw_targets(ability_position, board).any(|pos| pos == target_position) {
+            return false;
+        }
+        Bug::pillbug_throw_sources(ability_position, board).any(|pos| pos == thrown_position)
+    }
+
+    fn has_pillbug_throw(position: Position, board: &Board) -> bool {
         match board.top_bug(position) {
-            Some(Bug::Pillbug) => Bug::pillbug_throw(position, board),
+            Some(Bug::Pillbug) => true,
             Some(Bug::Mosquito)
                 if board.level(position) == 1 && board.neighbor_is_a(position, Bug::Pillbug) =>
             {
-                Bug::pillbug_throw(position, board)
+                true
             }
-            _ => HashMap::default(),
+            _ => false,
         }
     }
 
@@ -388,19 +413,32 @@ impl Bug {
         Bug::crawl(position, board)
     }
 
+    fn pillbug_throw_targets(
+        position: Position,
+        board: &Board,
+    ) -> impl Iterator<Item = Position> + '_ {
+        board
+            .positions_available_around(position)
+            .filter(move |pos| !board.gated(2, position, *pos))
+    }
+
+    fn pillbug_throw_sources(
+        position: Position,
+        board: &Board,
+    ) -> impl Iterator<Item = Position> + '_ {
+        board.positions_taken_around(position).filter_map(move |p| {
+            let piece = board.top_piece(p)?;
+            (!board.is_pinned(piece) && !board.gated(2, p, position) && board.level(p) <= 1)
+                .then_some(p)
+        })
+    }
+
     fn pillbug_throw(position: Position, board: &Board) -> HashMap<Position, Vec<Position>> {
         let mut moves = HashMap::default();
         // get all the positions the pillbug can throw a bug to
-        let to = board
-            .positions_available_around(position)
-            .filter(|pos| !board.gated(2, position, *pos))
-            .collect::<Vec<Position>>();
+        let to = Bug::pillbug_throw_targets(position, board).collect::<Vec<Position>>();
         // get bugs around the pillbug that aren't pinned
-        for pos in board.positions_taken_around(position).filter(|p| {
-            !board.is_pinned(board.top_piece(*p).unwrap())
-                && !board.gated(2, *p, position)
-                && board.level(*p) <= 1
-        }) {
+        for pos in Bug::pillbug_throw_sources(position, board) {
             moves.insert(pos, to.clone());
         }
         moves
@@ -454,8 +492,16 @@ mod tests {
             true,
         );
         let moves = Bug::available_moves(Position::new(0, 0), &board);
+        assert_eq!(
+            moves.get(&Position::new(0, 0)).unwrap(),
+            &Bug::normal_moves(Position::new(0, 0), &board)
+        );
         assert_eq!(moves.get(&Position::new(0, 0)).unwrap().len(), 2);
         let moves = Bug::available_moves(Position::new(1, 0), &board);
+        assert_eq!(
+            moves.get(&Position::new(1, 0)).unwrap(),
+            &Bug::normal_moves(Position::new(1, 0), &board)
+        );
         assert_eq!(moves.get(&Position::new(1, 0)).unwrap().len(), 6);
     }
 
@@ -473,9 +519,39 @@ mod tests {
             true,
         );
         let positions = Bug::available_abilities(Position::new(0, 0), &board);
-        assert_eq!(positions.get(&Position::new(1, 0)).unwrap().len(), 5);
+        let targets = positions.get(&Position::new(1, 0)).unwrap();
+        assert_eq!(targets.len(), 5);
+        for target in targets {
+            assert!(Bug::can_throw(
+                Position::new(0, 0),
+                Position::new(1, 0),
+                *target,
+                &board
+            ));
+        }
+        assert!(!Bug::can_throw(
+            Position::new(0, 0),
+            Position::new(1, 0),
+            Position::new(0, 0),
+            &board
+        ));
         let positions = Bug::available_abilities(Position::new(1, 0), &board);
-        assert_eq!(positions.get(&Position::new(0, 0)).unwrap().len(), 5);
+        let targets = positions.get(&Position::new(0, 0)).unwrap();
+        assert_eq!(targets.len(), 5);
+        for target in targets {
+            assert!(Bug::can_throw(
+                Position::new(1, 0),
+                Position::new(0, 0),
+                *target,
+                &board
+            ));
+        }
+        assert!(!Bug::can_throw(
+            Position::new(1, 0),
+            Position::new(0, 0),
+            Position::new(1, 0),
+            &board
+        ));
     }
 
     #[test]

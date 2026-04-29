@@ -749,23 +749,16 @@ impl Board {
             return false;
         }
 
-        if piece.is_color(color) {
-            if let Some(positions) =
-                Bug::available_moves(current_position, self).get(&current_position)
-            {
-                if positions.contains(&target_position) {
-                    return true;
-                }
-            }
+        if piece.is_color(color)
+            && !self.is_pinned(piece)
+            && Bug::normal_moves(current_position, self).contains(&target_position)
+        {
+            return true;
         }
 
         for (_, ability_position) in self.ability_pieces_around(color, current_position) {
-            if let Some(positions) =
-                Bug::available_abilities(ability_position, self).get(&current_position)
-            {
-                if positions.contains(&target_position) {
-                    return true;
-                }
+            if Bug::can_throw(ability_position, current_position, target_position, self) {
+                return true;
             }
         }
 
