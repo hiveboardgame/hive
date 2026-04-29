@@ -31,15 +31,12 @@ fn get_opponent_id(game: &Game, bot: &User) -> uuid::Uuid {
     }
 }
 
-async fn send_messages_batch(
-    hub: &Arc<WsHub>,
-    messages: Vec<InternalServerMessage>,
-    from_user_id: Option<uuid::Uuid>,
-) {
+async fn send_messages_batch(hub: &Arc<WsHub>, messages: Vec<InternalServerMessage>) {
     for message in messages {
         let serialized = ServerResult::Ok(Box::new(message.message));
         if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-            hub.dispatch(&message.destination, Bytes::from(serialized), from_user_id)
+            // Bot API has no socket, so no from-socket to pass.
+            hub.dispatch(&message.destination, Bytes::from(serialized), None)
                 .await;
         }
     }
@@ -80,8 +77,6 @@ pub async fn send_turn_messages(
     let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
     let games = next_to_move.get_games_with_notifications(&mut conn).await?;
     let game_responses = GameResponse::from_games_batch(games, &mut conn).await?;
-    let user_id = get_opponent_id(game, bot);
-
     messages.push(InternalServerMessage {
         destination: MessageDestination::User(game.current_player_id),
         message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
@@ -99,7 +94,7 @@ pub async fn send_turn_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
 
-    send_messages_batch(hub.as_ref(), messages, Some(user_id)).await;
+    send_messages_batch(hub.as_ref(), messages).await;
     Ok(())
 }
 
@@ -131,7 +126,7 @@ pub async fn send_challenge_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
 
-    send_messages_batch(hub.as_ref(), messages, Some(user_id)).await;
+    send_messages_batch(hub.as_ref(), messages).await;
     Ok(())
 }
 
@@ -164,12 +159,7 @@ pub async fn send_challenge_creation_message(
         }
     }
 
-    send_messages_batch(
-        hub.as_ref(),
-        messages,
-        Some(challenge_response.challenger.uid),
-    )
-    .await;
+    send_messages_batch(hub.as_ref(), messages).await;
     Ok(())
 }
 
@@ -183,7 +173,6 @@ pub async fn send_control_messages(
     let mut messages = Vec::new();
     let mut conn = get_conn(pool).await?;
 
-    let opponent_id = get_opponent_id(game, bot);
     let game_response = GameResponse::from_model(game, &mut conn).await?;
     let action_response =
         create_game_action_response(game_response, GameReaction::Control(game_control), bot);
@@ -196,6 +185,6 @@ pub async fn send_control_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
 
-    send_messages_batch(hub.as_ref(), messages, Some(opponent_id)).await;
+    send_messages_batch(hub.as_ref(), messages).await;
     Ok(())
 }

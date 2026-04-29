@@ -38,6 +38,7 @@ use rand::Rng;
 use shared_types::{GameId, TimeMode};
 use std::{
     collections::{HashMap, HashSet},
+    str::FromStr,
     sync::{Arc, RwLock},
 };
 use tokio::sync::mpsc;
@@ -345,12 +346,18 @@ impl WsHub {
             let Ok(game) = Game::find_by_game_id(&game_id, &mut conn).await else {
                 continue;
             };
-            if game.game_status != GameStatus::InProgress.to_string()
-                || game.time_mode == TimeMode::Untimed.to_string()
-            {
-                // Game is finished or untimed — evict it so the heartbeat no
-                // longer queries the DB for it on every tick.
+            if matches!(
+                GameStatus::from_str(&game.game_status),
+                Ok(GameStatus::Finished(_)) | Ok(GameStatus::Adjudicated)
+            ) {
+                // Game is over — evict from membership so the heartbeat
+                // stops querying the DB for it on every tick.
                 self.evict_game_from_membership(&game_id);
+                continue;
+            }
+            if game.time_mode == TimeMode::Untimed.to_string() {
+                // No timer to report — skip heartbeat but keep membership so
+                // players still receive real-time move notifications.
                 continue;
             }
             let Ok((id, white, black)) = game.get_heartbeat() else {
