@@ -34,7 +34,7 @@ COPY --from=builder /app/Cargo.toml /app/
 WORKDIR /app
 # Install dependencies pinned to a certain version and delete lists
 RUN apt-get update && \
-    apt-get install --no-install-recommends libpq5 -y && \
+    apt-get install --no-install-recommends libpq5 ca-certificates -y && \
     rm -rf /var/lib/apt/lists/*
 
 # Set any required env variables

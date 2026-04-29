@@ -13,13 +13,14 @@ struct OAuthParams {
 #[get("/oauth/callback")]
 pub async fn callback(params: web::Query<OAuthParams>) -> impl Responder {
     let url = format!("http://localhost:8080/oauth/callback?code={}&state={}", params.code, params.state);
-    let client = reqwest::Client::new();
-    if let Err(e) = client
-        .post(url)
-        .send()
-        .await {
-            println!("Error in oauth callback: {e}");
-        };
+    match reqwest::Client::builder().build() {
+        Ok(client) => {
+            if let Err(e) = client.post(url).send().await {
+                println!("Error in oauth callback: {e}");
+            };
+        }
+        Err(e) => println!("Error creating oauth callback client: {e}"),
+    }
 
     Redirect::to("/account").temporary()
 }
@@ -33,10 +34,34 @@ pub async fn get_discord_handle() -> Result<String, ServerFnError> {
 
     if let Ok(uuid) = uuid().await {
         let url = format!("http://localhost:8080/discord/{uuid}");
-        let client = reqwest::Client::new();
-        let response = client.get(url).send().await?;
-        let body = response.text().await?;
-        let data: Value = serde_json::from_str(&body)?;
+        let client = match reqwest::Client::builder().build() {
+            Ok(client) => client,
+            Err(e) => {
+                println!("Error creating discord handle client: {e}");
+                return Ok("Not logged in".to_string());
+            }
+        };
+        let response = match client.get(url).send().await {
+            Ok(response) => response,
+            Err(e) => {
+                println!("Error loading discord handle: {e}");
+                return Ok("Not logged in".to_string());
+            }
+        };
+        let body = match response.text().await {
+            Ok(body) => body,
+            Err(e) => {
+                println!("Error reading discord handle response: {e}");
+                return Ok("Not logged in".to_string());
+            }
+        };
+        let data: Value = match serde_json::from_str(&body) {
+            Ok(data) => data,
+            Err(e) => {
+                println!("Error parsing discord handle response: {e}");
+                return Ok("Not logged in".to_string());
+            }
+        };
         if let Some(username) = data.get("username") {
             let username = username.to_string().replace("\"", "");
             return Ok(username);
