@@ -30,7 +30,11 @@ pub async fn start_connection(
 ) -> Result<HttpResponse, Error> {
     let (user_uid, username, admin, authed) = resolve_identity(identity, &pool).await;
 
-    let (response, session, msg_stream) = actix_ws::handle(&req, body)?;
+    let ws_result = actix_ws::handle(&req, body);
+    if ws_result.is_err() {
+        data.telemetry.record_handshake_fail();
+    }
+    let (response, session, msg_stream) = ws_result?;
     data.telemetry.record_connect();
 
     let socket_id = Uuid::new_v4();

@@ -118,6 +118,9 @@ impl GameActionHandler {
                 .handle()
                 .await?
             }
+            GameAction::Unwatch => {
+                unreachable!("Unwatch is intercepted in handle_binary before GameActionHandler")
+            }
         };
         Ok(messages)
     }

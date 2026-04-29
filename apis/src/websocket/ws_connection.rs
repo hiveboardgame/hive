@@ -5,7 +5,7 @@ use super::{
     ws_hub::WsHub,
     WebsocketData,
 };
-use crate::common::{ClientRequest, ExternalServerError, ServerResult};
+use crate::common::{ClientRequest, ExternalServerError, GameAction, ServerResult};
 use actix_ws::{Message, MessageStream, Session};
 use bytes::Bytes;
 use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
@@ -52,7 +52,8 @@ pub async fn reader_task(
                     reason = DisconnectReason::Timeout;
                     break;
                 }
-                if session.ping(b"hi").await.is_err() {
+                let ping = tokio::time::timeout(HEARTBEAT_INTERVAL, session.ping(b"hi")).await;
+                if matches!(ping, Err(_) | Ok(Err(_))) {
                     reason = DisconnectReason::PingFail;
                     break;
                 }
@@ -119,6 +120,12 @@ async fn handle_binary(
         return;
     };
 
+    // Unwatch needs hub access and no DB — handle it here before RequestHandler.
+    if let ClientRequest::Game { ref game_id, action: GameAction::Unwatch } = request {
+        hub.leave_membership(user_id, socket.socket_id, game_id);
+        return;
+    }
+
     let user = SimpleUser {
         user_id,
         username: username.to_owned(),
@@ -138,8 +145,12 @@ async fn handle_binary(
             for message in messages {
                 let serialized = ServerResult::Ok(Box::new(message.message));
                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-                    hub.dispatch(&message.destination, Bytes::from(serialized), Some(user_id))
-                        .await;
+                    hub.dispatch(
+                        &message.destination,
+                        Bytes::from(serialized),
+                        Some((user_id, socket.socket_id)),
+                    )
+                    .await;
                 }
             }
         }
@@ -167,7 +178,7 @@ async fn handle_binary(
                 hub.dispatch(
                     &MessageDestination::User(user_id),
                     Bytes::from(serialized),
-                    Some(user_id),
+                    Some((user_id, socket.socket_id)),
                 )
                 .await;
             }

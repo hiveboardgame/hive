@@ -62,8 +62,10 @@ pub struct WsHub {
 
 #[derive(Default)]
 struct Membership {
-    games_users: HashMap<GameId, HashSet<Uuid>>,
-    users_games: HashMap<Uuid, HashSet<GameId>>,
+    /// game → set of (user_id, socket_id) pairs subscribed to it.
+    games_sockets: HashMap<GameId, HashSet<(Uuid, Uuid)>>,
+    /// (user_id, socket_id) → set of games that socket is subscribed to.
+    sockets_games: HashMap<(Uuid, Uuid), HashSet<GameId>>,
 }
 
 impl WsHub {
@@ -92,6 +94,7 @@ impl WsHub {
         tx: mpsc::Sender<Bytes>,
     ) {
         let lobby = Self::lobby();
+        let tx_for_load = tx.clone();
         // Lock order: membership write → outer DashMap shard. on_disconnect uses
         // the same order so the two operations can't deadlock and a fast
         // reconnect can't race a tail-end disconnect into a stale Offline.
@@ -104,12 +107,12 @@ impl WsHub {
                 user_entry.insert(socket_id, tx);
                 empty
             };
-            m.games_users
+            m.games_sockets
                 .entry(lobby.clone())
                 .or_default()
-                .insert(user_id);
-            m.users_games
-                .entry(user_id)
+                .insert((user_id, socket_id));
+            m.sockets_games
+                .entry((user_id, socket_id))
                 .or_default()
                 .insert(lobby.clone());
             was_empty
@@ -126,14 +129,15 @@ impl WsHub {
         // `ctx.wait` (blocked the actor but not the reader). Here we spawn
         // independently — readers and other dispatches proceed immediately.
         actix_rt::spawn(async move {
-            self.load_user_state(socket_id, user_id, username).await;
+            self.load_user_state(socket_id, user_id, username, tx_for_load).await;
         });
     }
 
-    /// Drops a socket. If it was the user's last, cleans membership and
-    /// broadcasts an offline status to the lobby.
+    /// Drops a socket, cleaning up its per-socket game subscriptions immediately.
+    /// If it was the user's last socket, also cleans up user-level state and
+    /// broadcasts Offline to the lobby.
     pub fn on_disconnect(&self, socket_id: Uuid, user_id: Uuid, username: String) {
-        // Step 1: remove the socket from the user's inner map.
+        // Step 1: remove this socket from the user's inner map.
         let inner_now_empty = {
             let Some(sockets) = self.sessions.get(&user_id) else {
                 return;
@@ -143,61 +147,61 @@ impl WsHub {
         };
         self.data.telemetry.dec_active_socket();
 
-        if !inner_now_empty {
-            return;
-        }
+        // Step 2: take the membership write lock and clean up this socket's
+        // subscriptions. We do this for every disconnect — not just the last
+        // socket — so closing tab A removes its game subscriptions immediately
+        // even while tab B is still connected.
+        //
+        // If this is the last socket, we also atomically remove the user from
+        // sessions (lock order: membership → outer DashMap shard, same as
+        // on_connect, preventing the fast-reconnect race).
+        let removed_user = {
+            let mut m = self.membership.write().expect("membership poisoned");
 
-        // Step 2: take the membership write lock FIRST, then atomically check-
-        // and-remove the user from sessions. Holding the membership lock across
-        // both the predicate-and-remove AND the membership cleanup prevents a
-        // fast on_connect (which takes membership write before its sessions
-        // insert) from sliding in between and ending up with the cleanup path
-        // stripping the freshly-reconnected user from the lobby and broadcasting
-        // a stale Offline. Lock order matches on_connect: membership → shard.
-        let mut m = self.membership.write().expect("membership poisoned");
-        let removed = self.sessions.remove_if(&user_id, |_, s| s.is_empty());
-        if removed.is_none() {
-            // User reconnected between our is_empty check and getting here, OR
-            // a concurrent on_connect is queued behind our membership lock. Either
-            // way, the user is or will be alive — skip cleanup.
-            return;
-        }
-        self.data.telemetry.dec_active_user();
-
-        // Step 3: drop user from every game's membership (still under the lock).
-        if let Some(games) = m.users_games.remove(&user_id) {
-            for game_id in games {
-                if let Some(users) = m.games_users.get_mut(&game_id) {
-                    users.remove(&user_id);
-                    if users.is_empty() {
-                        m.games_users.remove(&game_id);
+            // Remove this socket from every game it subscribed to.
+            if let Some(games) = m.sockets_games.remove(&(user_id, socket_id)) {
+                for game_id in games {
+                    if let Some(sockets) = m.games_sockets.get_mut(&game_id) {
+                        sockets.remove(&(user_id, socket_id));
+                        if sockets.is_empty() {
+                            m.games_sockets.remove(&game_id);
+                        }
                     }
                 }
             }
-        }
-        drop(m); // release before refresh_membership_gauges takes a read lock
+
+            if inner_now_empty {
+                let removed = self.sessions.remove_if(&user_id, |_, s| s.is_empty());
+                if removed.is_some() {
+                    self.data.telemetry.dec_active_user();
+                    self.data.pings.remove(user_id);
+                    true
+                } else {
+                    // A concurrent on_connect landed between our is_empty check
+                    // and acquiring the membership lock — user is alive again.
+                    false
+                }
+            } else {
+                false
+            }
+        };
 
         self.refresh_membership_gauges();
 
-        // Step 4: announce offline to the lobby — but only if the user has not
-        // come back in the brief window between our drop(m) and getting here.
-        // A queued on_connect would have been blocked on the membership lock;
-        // when we drop, it can run to completion AND its spawned
-        // load_user_state can broadcast Online before our fanout_lobby below.
-        // If our Offline arrives at lobby receivers second, clients end up
-        // marking a connected user as offline. Re-checking here lets the
-        // reconnect's Online be the final word — at the cost of skipping the
-        // intermediate Offline blip, which is the desired behaviour anyway.
-        if self.sessions.contains_key(&user_id) {
-            return;
-        }
-        let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
-            status: UserStatus::Offline,
-            user: None,
-            username,
-        })));
-        if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-            self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
+        // Step 3: if this was the last socket and the user hasn't reconnected,
+        // broadcast Offline. Re-check sessions after dropping the lock for the
+        // same fast-reconnect reason: on_connect was queued behind our lock,
+        // may now have run and broadcast Online — we suppress our Offline so the
+        // reconnect's Online is the final word.
+        if removed_user && !self.sessions.contains_key(&user_id) {
+            let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
+                status: UserStatus::Offline,
+                user: None,
+                username,
+            })));
+            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
+                self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
+            }
         }
     }
 
@@ -208,11 +212,11 @@ impl WsHub {
         // the lobby key may be absent (e.g. when no users are connected) and
         // saturating_sub would undercount real game memberships in that state.
         let active_games = m
-            .games_users
+            .games_sockets
             .keys()
             .filter(|gid| *gid != &lobby)
             .count() as u64;
-        let lobby_count = m.games_users.get(&lobby).map_or(0, |s| s.len()) as u64;
+        let lobby_count = m.games_sockets.get(&lobby).map_or(0, |s| s.len()) as u64;
         self.data.telemetry.set_active_games(active_games);
         self.data.telemetry.set_lobby_subscribers(lobby_count);
     }
@@ -223,7 +227,7 @@ impl WsHub {
         &self,
         dest: &MessageDestination,
         bytes: Bytes,
-        from: Option<Uuid>,
+        from: Option<(Uuid, Uuid)>, // (user_id, socket_id) of the sender
     ) {
         let dest_kind = DestKind::from(dest);
         self.data.telemetry.record_dispatch(dest_kind);
@@ -245,38 +249,38 @@ impl WsHub {
                 self.send_to_user(user_id, DestKind::User, &bytes);
             }
             MessageDestination::Global => {
-                if let Some(uid) = from {
-                    self.ensure_membership(uid, &Self::lobby());
+                if let Some((uid, sid)) = from {
+                    self.ensure_membership(uid, sid, &Self::lobby());
                 }
                 self.fanout_lobby(&bytes, DestKind::Global);
             }
             MessageDestination::Game(game_id) => {
-                if let Some(uid) = from {
-                    self.ensure_membership(uid, game_id);
+                if let Some((uid, sid)) = from {
+                    self.ensure_membership(uid, sid, game_id);
                 }
-                let user_ids = self.users_in_game(game_id);
-                for uid in user_ids {
-                    self.send_to_user(&uid, DestKind::Game, &bytes);
+                let socket_pairs = self.sockets_in_game(game_id);
+                for (uid, sid) in socket_pairs {
+                    self.send_to_socket(&uid, &sid, DestKind::Game, &bytes);
                 }
             }
             MessageDestination::GameSpectators(game_id, white_id, black_id) => {
-                if let Some(uid) = from {
-                    self.ensure_membership(uid, game_id);
+                if let Some((uid, sid)) = from {
+                    self.ensure_membership(uid, sid, game_id);
                 }
-                let user_ids: Vec<Uuid> = {
+                let socket_pairs: Vec<(Uuid, Uuid)> = {
                     let m = self.membership.read().expect("membership poisoned");
-                    m.games_users
+                    m.games_sockets
                         .get(game_id)
                         .map(|s| {
                             s.iter()
-                                .filter(|u| *u != white_id && *u != black_id)
+                                .filter(|(uid, _)| uid != white_id && uid != black_id)
                                 .copied()
                                 .collect()
                         })
                         .unwrap_or_default()
                 };
-                for uid in user_ids {
-                    self.send_to_user(&uid, DestKind::GameSpectators, &bytes);
+                for (uid, sid) in socket_pairs {
+                    self.send_to_socket(&uid, &sid, DestKind::GameSpectators, &bytes);
                 }
             }
             MessageDestination::Tournament(tournament_id) => {
@@ -325,16 +329,16 @@ impl WsHub {
     }
 
     pub async fn game_heartbeat(&self) {
-        let games: Vec<(GameId, HashSet<Uuid>)> = {
+        let games: Vec<(GameId, HashSet<(Uuid, Uuid)>)> = {
             let m = self.membership.read().expect("membership poisoned");
-            m.games_users
+            m.games_sockets
                 .iter()
                 .filter(|(gid, _)| gid.0.as_str() != LOBBY_GAME_ID)
-                .map(|(gid, users)| (gid.clone(), users.clone()))
+                .map(|(gid, sockets)| (gid.clone(), sockets.clone()))
                 .collect()
         };
 
-        for (game_id, user_ids) in games {
+        for (game_id, socket_pairs) in games {
             let Ok(mut conn) = get_conn(&self.pool).await else {
                 continue;
             };
@@ -344,6 +348,9 @@ impl WsHub {
             if game.game_status != GameStatus::InProgress.to_string()
                 || game.time_mode == TimeMode::Untimed.to_string()
             {
+                // Game is finished or untimed — evict it so the heartbeat no
+                // longer queries the DB for it on every tick.
+                self.evict_game_from_membership(&game_id);
                 continue;
             }
             let Ok((id, white, black)) = game.get_heartbeat() else {
@@ -361,8 +368,8 @@ impl WsHub {
                 continue;
             };
             let bytes = Bytes::from(serialized);
-            for user_id in user_ids {
-                self.send_to_user(&user_id, DestKind::Game, &bytes);
+            for (user_id, socket_id) in socket_pairs {
+                self.send_to_socket(&user_id, &socket_id, DestKind::Game, &bytes);
             }
         }
     }
@@ -416,46 +423,107 @@ impl WsHub {
         }
     }
 
-    fn fanout_lobby(&self, bytes: &Bytes, dest: DestKind) {
-        let user_ids = self.users_in_game(&Self::lobby());
-        for uid in user_ids {
-            self.send_to_user(&uid, dest, bytes);
+    /// Send to one specific socket. Used for game-scoped dispatch where only the
+    /// subscribed socket (not all of the user's tabs) should receive the message.
+    fn send_to_socket(&self, user_id: &Uuid, socket_id: &Uuid, dest: DestKind, bytes: &Bytes) {
+        let Some(sockets) = self.sessions.get(user_id) else {
+            return;
+        };
+        let Some(tx) = sockets.get(socket_id) else {
+            return;
+        };
+        let used = SOCKET_BUFFER_CAPACITY.saturating_sub(tx.capacity());
+        match tx.try_send(bytes.clone()) {
+            Ok(_) => self.data.telemetry.record_send(dest, SendOutcome::Ok, used, bytes.len()),
+            Err(mpsc::error::TrySendError::Full(_)) => {
+                self.data.telemetry.record_send(dest, SendOutcome::Full, used, bytes.len());
+            }
+            Err(mpsc::error::TrySendError::Closed(_)) => {
+                self.data.telemetry.record_send(dest, SendOutcome::Closed, used, 0);
+            }
         }
     }
 
-    fn users_in_game(&self, game_id: &GameId) -> Vec<Uuid> {
+    fn fanout_lobby(&self, bytes: &Bytes, dest: DestKind) {
+        let socket_pairs = self.sockets_in_game(&Self::lobby());
+        for (uid, sid) in socket_pairs {
+            self.send_to_socket(&uid, &sid, dest, bytes);
+        }
+    }
+
+    fn sockets_in_game(&self, game_id: &GameId) -> Vec<(Uuid, Uuid)> {
         let m = self.membership.read().expect("membership poisoned");
-        m.games_users
+        m.games_sockets
             .get(game_id)
             .map(|s| s.iter().copied().collect())
             .unwrap_or_default()
     }
 
-    fn ensure_membership(&self, user_id: Uuid, game_id: &GameId) {
+    fn ensure_membership(&self, user_id: Uuid, socket_id: Uuid, game_id: &GameId) {
         let already_member = {
             let m = self.membership.read().expect("membership poisoned");
-            m.games_users
+            m.games_sockets
                 .get(game_id)
-                .map_or(false, |s| s.contains(&user_id))
+                .map_or(false, |s| s.contains(&(user_id, socket_id)))
         };
         if already_member {
             return;
         }
         {
             let mut m = self.membership.write().expect("membership poisoned");
-            m.games_users
+            m.games_sockets
                 .entry(game_id.clone())
                 .or_default()
-                .insert(user_id);
-            m.users_games
-                .entry(user_id)
+                .insert((user_id, socket_id));
+            m.sockets_games
+                .entry((user_id, socket_id))
                 .or_default()
                 .insert(game_id.clone());
         }
-        // First dispatch into a game adds the user to its membership; the
-        // gauges (`active_games`, `lobby_subscribers`) need to reflect that.
-        // Without this, `active_games` would only be refreshed on connect /
-        // disconnect, leaving the metric stale during a session.
+        self.refresh_membership_gauges();
+    }
+
+    /// Symmetric counterpart to `ensure_membership`. Removes the specific socket
+    /// from `game_id`'s subscriber set and prunes both maps if they become empty.
+    pub fn leave_membership(&self, user_id: Uuid, socket_id: Uuid, game_id: &GameId) {
+        if game_id.0.as_str() == LOBBY_GAME_ID {
+            return;
+        }
+        {
+            let mut m = self.membership.write().expect("membership poisoned");
+            if let Some(sockets) = m.games_sockets.get_mut(game_id) {
+                sockets.remove(&(user_id, socket_id));
+                if sockets.is_empty() {
+                    m.games_sockets.remove(game_id);
+                }
+            }
+            if let Some(games) = m.sockets_games.get_mut(&(user_id, socket_id)) {
+                games.remove(game_id);
+                if games.is_empty() {
+                    m.sockets_games.remove(&(user_id, socket_id));
+                }
+            }
+        }
+        self.refresh_membership_gauges();
+    }
+
+    /// Remove a game from membership entirely — all sockets that were subscribed
+    /// to it are unsubscribed in one write. Used by `game_heartbeat` to evict
+    /// finished or untimed games so they stop generating DB queries each tick.
+    fn evict_game_from_membership(&self, game_id: &GameId) {
+        {
+            let mut m = self.membership.write().expect("membership poisoned");
+            if let Some(sockets) = m.games_sockets.remove(game_id) {
+                for socket_pair in sockets {
+                    if let Some(games) = m.sockets_games.get_mut(&socket_pair) {
+                        games.remove(game_id);
+                        if games.is_empty() {
+                            m.sockets_games.remove(&socket_pair);
+                        }
+                    }
+                }
+            }
+        }
         self.refresh_membership_gauges();
     }
 
@@ -470,7 +538,13 @@ impl WsHub {
 
     // ─── user-state load (the long async block from Handler<Connect>) ─────────
 
-    async fn load_user_state(&self, socket_id: Uuid, user_id: Uuid, username: String) {
+    async fn load_user_state(
+        &self,
+        socket_id: Uuid,
+        user_id: Uuid,
+        username: String,
+        tx: mpsc::Sender<Bytes>,
+    ) {
         let Ok(mut conn) = get_conn(&self.pool).await else {
             return;
         };
@@ -494,7 +568,7 @@ impl WsHub {
                     username: user_response.username,
                 })));
                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                    self.send_to_user(&user_id, DestKind::User, &Bytes::from(serialized));
+                    let _ = tx.try_send(Bytes::from(serialized));
                 }
             }
         }
@@ -552,7 +626,7 @@ impl WsHub {
                         GameUpdate::Urgent(games),
                     ))));
                     if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                        self.send_to_user(&user_id, DestKind::User, &Bytes::from(serialized));
+                        let _ = tx.try_send(Bytes::from(serialized));
                     }
                 }
             }
@@ -569,7 +643,7 @@ impl WsHub {
                             TournamentUpdate::Invited(response.tournament_id.clone()),
                         )));
                         if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                            self.send_to_user(&user_id, DestKind::User, &Bytes::from(serialized));
+                            let _ = tx.try_send(Bytes::from(serialized));
                         }
                     }
                 }
@@ -591,7 +665,7 @@ impl WsHub {
                             schedule_update,
                         )));
                         if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                            self.send_to_user(&user_id, DestKind::User, &Bytes::from(serialized));
+                            let _ = tx.try_send(Bytes::from(serialized));
                         }
                     }
                 }
@@ -632,7 +706,7 @@ impl WsHub {
                 ChallengeUpdate::Challenges(responses),
             )));
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_to_user(&user_id, DestKind::User, &Bytes::from(serialized));
+                let _ = tx.try_send(Bytes::from(serialized));
             }
         } else {
             // Anonymous: only public challenges.
@@ -650,7 +724,7 @@ impl WsHub {
                 ChallengeUpdate::Challenges(responses),
             )));
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_to_user(&user_id, DestKind::User, &Bytes::from(serialized));
+                let _ = tx.try_send(Bytes::from(serialized));
             }
         }
     }

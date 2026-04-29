@@ -66,7 +66,7 @@ impl JoinHandler {
         };
         if let Some(messages_to_push) = chat.get(&GameId(self.game.nanoid.clone())) {
             messages.push(InternalServerMessage {
-                destination: MessageDestination::User(self.user_id),
+                destination: MessageDestination::Direct(self.received_from.clone()),
                 message: ServerMessage::Chat(messages_to_push.clone()),
             });
         };
