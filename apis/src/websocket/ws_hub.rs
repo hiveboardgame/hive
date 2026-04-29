@@ -138,26 +138,29 @@ impl WsHub {
     /// If it was the user's last socket, also cleans up user-level state and
     /// broadcasts Offline to the lobby.
     pub fn on_disconnect(&self, socket_id: Uuid, user_id: Uuid, username: String) {
-        // Step 1: remove this socket from the user's inner map.
-        let inner_now_empty = {
-            let Some(sockets) = self.sessions.get(&user_id) else {
-                return;
-            };
-            sockets.remove(&socket_id);
-            sockets.is_empty()
-        };
-        self.data.telemetry.dec_active_socket();
-
-        // Step 2: take the membership write lock and clean up this socket's
-        // subscriptions. We do this for every disconnect — not just the last
-        // socket — so closing tab A removes its game subscriptions immediately
-        // even while tab B is still connected.
-        //
-        // If this is the last socket, we also atomically remove the user from
-        // sessions (lock order: membership → outer DashMap shard, same as
-        // on_connect, preventing the fast-reconnect race).
+        // Socket removal and membership cleanup are combined under a single
+        // membership write lock, matching on_connect's lock order
+        // (membership → sessions). Previously, the socket was removed from the
+        // inner map *before* taking this lock, which let a racing on_connect
+        // observe the inner map as empty, set was_empty=true, and increment
+        // active_users — then our remove_if would find the map non-empty and
+        // skip dec_active_user, leaving the gauge overcounted.
         let removed_user = {
             let mut m = self.membership.write().expect("membership poisoned");
+
+            // Remove socket inside the lock so on_connect's was_empty check
+            // (also inside the membership lock) sees a consistent view.
+            // The inner-map shard lock is released at the end of this block,
+            // before remove_if below acquires the shard write lock.
+            let inner_now_empty = {
+                let Some(sockets) = self.sessions.get(&user_id) else {
+                    return;
+                };
+                sockets.remove(&socket_id);
+                sockets.is_empty()
+            };
+
+            self.data.telemetry.dec_active_socket();
 
             // Remove this socket from every game it subscribed to.
             if let Some(games) = m.sockets_games.remove(&(user_id, socket_id)) {
@@ -178,8 +181,9 @@ impl WsHub {
                     self.data.pings.remove(user_id);
                     true
                 } else {
-                    // A concurrent on_connect landed between our is_empty check
-                    // and acquiring the membership lock — user is alive again.
+                    // A concurrent on_connect inserted a new socket between our
+                    // sockets.remove and here — the inner map is non-empty again.
+                    // User is alive; leave everything as-is.
                     false
                 }
             } else {
@@ -358,6 +362,11 @@ impl WsHub {
             if game.time_mode == TimeMode::Untimed.to_string() {
                 // No timer to report — skip heartbeat but keep membership so
                 // players still receive real-time move notifications.
+                continue;
+            }
+            if game.game_status == GameStatus::NotStarted.to_string() {
+                // Timer hasn't started yet (real-time: waiting for black's first
+                // move). Skip heartbeat but keep membership for move notifications.
                 continue;
             }
             let Ok((id, white, black)) = game.get_heartbeat() else {
@@ -603,22 +612,9 @@ impl WsHub {
             return;
         }
 
-        // Send Online status of every currently-connected user to the new connector.
-        let existing_user_ids: Vec<Uuid> = self.sessions.iter().map(|e| *e.key()).collect();
-        for uid in existing_user_ids {
-            if let Ok(user_response) = UserResponse::from_uuid(&uid, &mut conn).await {
-                let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
-                    status: UserStatus::Online,
-                    user: Some(user_response.clone()),
-                    username: user_response.username,
-                })));
-                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                    let _ = tx.try_send(Bytes::from(serialized));
-                }
-            }
-        }
-
-        // Branch: authed user with a DB row, vs anonymous.
+        // Own-state messages are sent before the online roster so they always
+        // arrive even when the 128-message queue would otherwise fill with
+        // roster entries in a large lobby.
         if let Ok(user) = User::find_by_uuid(&user_id, &mut conn).await {
             // Re-check before the Online broadcast: the slow DB lookup gives
             // plenty of time for a disconnect to race in. If it has, our Online
@@ -629,6 +625,13 @@ impl WsHub {
             }
             // Announce the new user's Online status to lobby.
             if let Ok(user_response) = UserResponse::from_model(&user, &mut conn).await {
+                // Re-check after the await: from_model is a DB round-trip during
+                // which on_disconnect may have run and broadcast Offline. Without
+                // this guard, fanout_lobby would overwrite that Offline with a
+                // stale Online.
+                if !self.is_socket_connected(user_id, socket_id) {
+                    return;
+                }
                 let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
                     status: UserStatus::Online,
                     user: Some(user_response),
@@ -770,6 +773,22 @@ impl WsHub {
             )));
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                 let _ = tx.try_send(Bytes::from(serialized));
+            }
+        }
+
+        // Online roster: send last so own-state messages above are never
+        // crowded out in a large lobby.
+        let existing_user_ids: Vec<Uuid> = self.sessions.iter().map(|e| *e.key()).collect();
+        for uid in existing_user_ids {
+            if let Ok(user_response) = UserResponse::from_uuid(&uid, &mut conn).await {
+                let message = ServerResult::Ok(Box::new(ServerMessage::UserStatus(UserUpdate {
+                    status: UserStatus::Online,
+                    user: Some(user_response.clone()),
+                    username: user_response.username,
+                })));
+                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
+                    let _ = tx.try_send(Bytes::from(serialized));
+                }
             }
         }
     }

@@ -318,6 +318,9 @@ impl Game {
     pub fn get_time_left(&self) -> Result<(Duration, Duration), DbError> {
         let white = self.white_time_left_duration()?;
         let black = self.black_time_left_duration()?;
+        if self.game_status == GameStatus::NotStarted.to_string() {
+            return Ok((white, black));
+        }
         if let Some(last) = self.last_interaction {
             if let Ok(time_passed) = Utc::now().signed_duration_since(last).to_std() {
                 if self.turn % 2 == 0 {
