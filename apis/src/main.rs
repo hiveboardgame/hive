@@ -19,13 +19,12 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websocket::{start_connection, WsServer};
+    use crate::websocket::{start_connection, WsHub};
     use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::{api_control, api_play}, challenges::{api_accept_challenge, api_create_challenge, api_get_challenges}};
     use api::v1::auth::get_token_handler::get_token;
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
-    use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -61,13 +60,21 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Failed to get pool");
     let data = Data::new(WebsocketData::default());
-    let websocket_server = Data::new(WsServer::new(Arc::clone(&data), pool.clone()).start());
+    let hub = Data::new(WsHub::new(Arc::clone(&data), pool.clone()));
     let jwt_secret = JwtSecret::new(config.jwt_secret);
     let jwt_key = Data::new(jwt_secret);
 
-    jobs::tournament_start(pool.clone(), Data::clone(&websocket_server));
-    jobs::heartbeat(Data::clone(&websocket_server));
-    jobs::ping(Data::clone(&websocket_server));
+    if let Some(secs) = std::env::var("WS_TELEMETRY_INTERVAL_SECS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .filter(|&n| n > 0)
+    {
+        jobs::ws_telemetry(Data::clone(&data), secs);
+    }
+
+    jobs::tournament_start(pool.clone(), Data::clone(&hub));
+    jobs::heartbeat(Data::clone(&hub));
+    jobs::ping(Data::clone(&hub));
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
     let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);
@@ -82,7 +89,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .app_data(Data::new(pool.clone()))
-            .app_data(Data::clone(&websocket_server))
+            .app_data(Data::clone(&hub))
             .app_data(Data::clone(&data))
             .app_data(Data::clone(&jwt_key))
             .app_data(Data::new(pwa_manifest.clone()))

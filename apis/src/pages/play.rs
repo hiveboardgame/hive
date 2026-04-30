@@ -128,6 +128,16 @@ pub fn Play() -> impl IntoView {
         false,
     );
 
+    // Unsubscribe this socket from the game when the component unmounts
+    // (route change away from the game page). Without this, the socket stays
+    // in games_sockets for the lifetime of the WebSocket session.
+    on_cleanup(move || {
+        let current_game_id = game_id.get_untracked();
+        if !current_game_id.0.is_empty() {
+            api.0.get().unwatch(current_game_id);
+        }
+    });
+
     Effect::watch(
         move || {
             ws_ready();

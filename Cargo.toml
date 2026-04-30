@@ -9,23 +9,24 @@ lto = true
 opt-level = 'z'
 
 [workspace.dependencies]
-actix = "0.13.5"
 actix-files = { version = "0.6" }
 actix-identity = { version = "0.9" }
 actix-rt = "2.10.0"
 actix-session = { version = "0.11", features = ["cookie-session"] }
 actix-web = { version = "4", features = ["macros"] }
-actix-web-actors = { version = "4.3.1" }
+actix-ws = "0.4"
 anyhow = "1"
 argon2 = "0.5"
 bb8 = { version = "0.9" }
 bimap = { version = "0.6.3", features = ["serde"] }
+bytes = "1"
 cfg-if = "1.0.1"
 chrono = { version = "0.4.43", features = ["serde"] }
 codee = { version = "0.3", features = ["msgpack_serde", "base64"] }
 console_error_panic_hook = "0.1.7"
 console_log = "1.0.0"
 cookie = "0.18"
+dashmap = "6"
 diesel = { version = "2.3", features = [
     "postgres",
     "chrono",
@@ -35,6 +36,7 @@ diesel = { version = "2.3", features = [
 diesel-async = { version = "0.7", features = ["postgres", "bb8"] }
 diesel_migrations = { version = "2.3", features = ["postgres"] }
 dotenvy = "0.15"
+futures-util = "0.3"
 http = "1.4.0"
 http-serde = { version = "2" }
 icondata_core = "0.1"

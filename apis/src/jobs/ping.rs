@@ -1,14 +1,14 @@
-use crate::websocket::{Ping, WsServer};
-use actix::Addr;
+use crate::websocket::WsHub;
 use actix_web::web::Data;
+use std::sync::Arc;
 use std::time::Duration;
 
-pub fn run(ws_server: Data<Addr<WsServer>>) {
+pub fn run(hub: Data<Arc<WsHub>>) {
     actix_rt::spawn(async move {
         let mut interval = actix_rt::time::interval(Duration::from_secs(1));
         loop {
             interval.tick().await;
-            ws_server.do_send(Ping {});
+            hub.ping_all();
         }
     });
 }

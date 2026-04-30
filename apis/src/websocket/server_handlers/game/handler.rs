@@ -8,7 +8,7 @@ use super::{
 use crate::{
     common::GameAction,
     websocket::{
-        messages::{InternalServerMessage, WsMessage},
+        messages::{InternalServerMessage, SocketTx},
         WebsocketData,
     },
 };
@@ -24,7 +24,7 @@ pub struct GameActionHandler {
     game: Game,
     pool: DbPool,
     user_id: Uuid,
-    received_from: actix::Recipient<WsMessage>,
+    received_from: SocketTx,
     data: Arc<WebsocketData>,
     username: String,
 }
@@ -33,7 +33,7 @@ impl GameActionHandler {
     pub async fn new(
         game_id: &GameId,
         game_action: GameAction,
-        received_from: actix::Recipient<WsMessage>,
+        received_from: SocketTx,
         user_details: (&str, Uuid),
         data: Arc<WebsocketData>,
         pool: &DbPool,
@@ -117,6 +117,9 @@ impl GameActionHandler {
                 )
                 .handle()
                 .await?
+            }
+            GameAction::Unwatch => {
+                unreachable!("Unwatch is intercepted in handle_binary before GameActionHandler")
             }
         };
         Ok(messages)

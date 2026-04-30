@@ -8,12 +8,13 @@ use crate::{
         ServerResult,
     },
     responses::{ChallengeResponse, GameResponse},
-    websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer},
+    websocket::{InternalServerMessage, MessageDestination, WsHub},
 };
-use actix::Addr;
 use actix_web::web::Data;
 use anyhow::Result;
+use bytes::Bytes;
 use codee::{binary::MsgpackSerdeCodec, Encoder};
+use std::sync::Arc;
 use db_lib::{
     get_conn,
     models::{Game, User},
@@ -30,20 +31,13 @@ fn get_opponent_id(game: &Game, bot: &User) -> uuid::Uuid {
     }
 }
 
-fn send_messages_batch(
-    ws_server: &Addr<WsServer>,
-    messages: Vec<InternalServerMessage>,
-    from_user_id: Option<uuid::Uuid>,
-) {
+async fn send_messages_batch(hub: &Arc<WsHub>, messages: Vec<InternalServerMessage>) {
     for message in messages {
         let serialized = ServerResult::Ok(Box::new(message.message));
         if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-            let cam = ClientActorMessage {
-                destination: message.destination,
-                serialized,
-                from: from_user_id,
-            };
-            ws_server.do_send(cam);
+            // Bot API has no socket, so no from-socket to pass.
+            hub.dispatch(&message.destination, Bytes::from(serialized), None)
+                .await;
         }
     }
 }
@@ -72,7 +66,7 @@ fn maybe_add_tv_update(messages: &mut Vec<InternalServerMessage>, game_response:
 }
 
 pub async fn send_turn_messages(
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
     game: &Game,
     bot: &User,
     pool: &Data<DbPool>,
@@ -83,8 +77,6 @@ pub async fn send_turn_messages(
     let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
     let games = next_to_move.get_games_with_notifications(&mut conn).await?;
     let game_responses = GameResponse::from_games_batch(games, &mut conn).await?;
-    let user_id = get_opponent_id(game, bot);
-
     messages.push(InternalServerMessage {
         destination: MessageDestination::User(game.current_player_id),
         message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
@@ -102,12 +94,12 @@ pub async fn send_turn_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
 
-    send_messages_batch(&ws_server, messages, Some(user_id));
+    send_messages_batch(hub.as_ref(), messages).await;
     Ok(())
 }
 
 pub async fn send_challenge_messages(
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
     deleted_challenges: Vec<ChallengeId>,
     game: &Game,
     bot: &User,
@@ -134,12 +126,12 @@ pub async fn send_challenge_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
 
-    send_messages_batch(&ws_server, messages, Some(user_id));
+    send_messages_batch(hub.as_ref(), messages).await;
     Ok(())
 }
 
 pub async fn send_challenge_creation_message(
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
     challenge_response: &ChallengeResponse,
     visibility: &ChallengeVisibility,
     opponent_id: Option<uuid::Uuid>,
@@ -167,16 +159,12 @@ pub async fn send_challenge_creation_message(
         }
     }
 
-    send_messages_batch(
-        &ws_server,
-        messages,
-        Some(challenge_response.challenger.uid),
-    );
+    send_messages_batch(hub.as_ref(), messages).await;
     Ok(())
 }
 
 pub async fn send_control_messages(
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
     game: &Game,
     bot: &User,
     pool: &Data<DbPool>,
@@ -185,7 +173,6 @@ pub async fn send_control_messages(
     let mut messages = Vec::new();
     let mut conn = get_conn(pool).await?;
 
-    let opponent_id = get_opponent_id(game, bot);
     let game_response = GameResponse::from_model(game, &mut conn).await?;
     let action_response =
         create_game_action_response(game_response, GameReaction::Control(game_control), bot);
@@ -198,6 +185,6 @@ pub async fn send_control_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
 
-    send_messages_batch(&ws_server, messages, Some(opponent_id));
+    send_messages_batch(hub.as_ref(), messages).await;
     Ok(())
 }

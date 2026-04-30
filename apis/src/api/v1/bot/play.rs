@@ -3,9 +3,9 @@ use crate::{
         auth::Auth,
         messages::send::{send_control_messages, send_turn_messages},
     },
-    websocket::WsServer,
+    websocket::WsHub,
 };
-use actix::Addr;
+use std::sync::Arc;
 use actix_web::{
     post,
     web::{Data, Json},
@@ -41,9 +41,9 @@ pub async fn api_play(
     Json(req): Json<PlayRequest>,
     Auth(bot): Auth,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> HttpResponse {
-    match play_move(req, bot.clone(), pool, ws_server).await {
+    match play_move(req, bot.clone(), pool, hub).await {
         Ok((game, _turn)) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
@@ -65,7 +65,7 @@ async fn play_move(
     play: PlayRequest,
     bot: User,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> Result<(Game, Turn)> {
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
@@ -101,7 +101,7 @@ async fn play_move(
                 state.play_turn_from_position(piece, position)?;
                 let updated_game = game.update_gamestate(&state, 0_f64, tc).await?;
                 send_turn_messages(
-                    ws_server.clone(),
+                    hub.clone(),
                     &updated_game,
                     &bot,
                     &pool,
@@ -142,9 +142,9 @@ pub async fn api_control(
     Json(req): Json<ControlRequest>,
     Auth(bot): Auth,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> HttpResponse {
-    match handle_control(req, bot.clone(), pool, ws_server).await {
+    match handle_control(req, bot.clone(), pool, hub).await {
         Ok(game) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
@@ -167,7 +167,7 @@ async fn handle_control(
     req: ControlRequest,
     bot: User,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> Result<Game> {
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
@@ -224,7 +224,7 @@ async fn handle_control(
                     _ => unreachable!(),
                 };
 
-                send_control_messages(ws_server.clone(), &result_game, &bot, &pool, game_control)
+                send_control_messages(hub.clone(), &result_game, &bot, &pool, game_control)
                     .await?;
 
                 Ok(result_game)

@@ -8,23 +8,24 @@ use crate::{
         TournamentUpdate,
     },
     responses::GameResponse,
-    websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer},
+    websocket::{InternalServerMessage, MessageDestination, WsHub},
 };
-use actix::Addr;
 use actix_web::web::Data;
+use bytes::Bytes;
 use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{get_conn, models::Tournament, DbPool};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use shared_types::TournamentId;
+use std::sync::Arc;
 use std::time::Duration;
 
-pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
+pub fn run(pool: DbPool, hub: Data<Arc<WsHub>>) {
     actix_rt::spawn(async move {
         let mut interval = actix_rt::time::interval(Duration::from_secs(60));
         loop {
             interval.tick().await;
             if let Ok(mut conn) = get_conn(&pool).await {
-                let ws_server = ws_server.clone();
+                let hub = hub.get_ref().clone();
                 let _ = conn
                     .transaction::<_, anyhow::Error, _>(move |tc| {
                         async move {
@@ -94,12 +95,12 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                                 for message in messages {
                                     let serialized = ServerResult::Ok(Box::new(message.message));
                                     if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-                                        let cam = ClientActorMessage {
-                                            destination: message.destination,
-                                            serialized,
-                                            from: None,
-                                        };
-                                        ws_server.do_send(cam);
+                                        hub.dispatch(
+                                            &message.destination,
+                                            Bytes::from(serialized),
+                                            None,
+                                        )
+                                        .await;
                                     };
                                 }
                             }

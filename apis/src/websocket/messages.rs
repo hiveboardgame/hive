@@ -1,9 +1,11 @@
-use actix::prelude::*;
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use shared_types::{GameId, TournamentId};
+use tokio::sync::mpsc;
 use uuid::Uuid;
 
 use crate::common::ServerMessage;
+use super::telemetry::SendOutcome;
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AuthError {
@@ -17,60 +19,32 @@ pub struct InternalServerMessage {
     pub message: ServerMessage,
 }
 
-#[derive(Debug, Clone)]
-pub enum MessageDestination {
-    Direct(actix::Recipient<WsMessage>), // to non logged in user
-    User(Uuid),                          // to a user
-    Game(GameId),                        // to everyone in the game
-    GameSpectators(GameId, Uuid, Uuid), // to everyone in game excluding players, nanoid, white_id, black_id
-    Global,                             // to everyone online
-    Tournament(TournamentId),           // to everyone that joined the tournament
+#[derive(Clone, Debug)]
+pub struct SocketTx {
+    pub socket_id: Uuid,
+    pub tx: mpsc::Sender<Bytes>,
 }
 
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
-pub struct WsMessage(pub Vec<u8>);
-
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
-pub struct Connect {
-    pub addr: Recipient<WsMessage>,
-    pub game_id: String,
-    pub user_id: Uuid,
-    pub username: String,
-}
-
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
-pub struct Disconnect {
-    pub addr: Recipient<WsMessage>,
-    pub game_id: String,
-    pub user_id: Uuid,
-    pub username: String,
-}
-
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
-pub struct GameHB {}
-
-#[derive(Message, Debug)]
-#[rtype(result = "()")]
-pub struct Ping {}
-
-#[derive(Message, Debug, Clone)]
-#[rtype(result = "()")]
-pub struct ClientActorMessage {
-    pub destination: MessageDestination,
-    pub from: Option<Uuid>,
-    pub serialized: Vec<u8>, // the serialized message
-}
-
-impl ClientActorMessage {
-    pub fn new(from: Option<Uuid>, destination: MessageDestination, serialized: &Vec<u8>) -> Self {
-        Self {
-            from,
-            destination,
-            serialized: serialized.to_owned(),
+impl SocketTx {
+    pub fn try_send_classified(&self, bytes: Bytes) -> SendOutcome {
+        match self.tx.try_send(bytes) {
+            Ok(_) => SendOutcome::Ok,
+            Err(mpsc::error::TrySendError::Full(_)) => SendOutcome::Full,
+            Err(mpsc::error::TrySendError::Closed(_)) => SendOutcome::Closed,
         }
     }
+
+    pub fn capacity_used(&self) -> usize {
+        128usize.saturating_sub(self.tx.capacity())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum MessageDestination {
+    Direct(SocketTx),
+    User(Uuid),
+    Game(GameId),
+    GameSpectators(GameId, Uuid, Uuid),
+    Global,
+    Tournament(TournamentId),
 }
