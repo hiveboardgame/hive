@@ -9,6 +9,7 @@ pub mod darkmode_toggle;
 pub mod display_games;
 pub mod display_timer;
 pub mod dropdowns;
+pub mod featured_video;
 pub mod games_filter;
 pub mod header;
 pub mod history;

@@ -64,6 +64,8 @@ pub struct ConfigOpts {
     pub prefers_sound: bool,
     pub prefers_dark: bool,
     pub allow_preselect: bool,
+    #[serde(default)]
+    pub video_dismissed: bool,
 }
 
 impl Default for ConfigOpts {
@@ -81,6 +83,7 @@ impl Default for ConfigOpts {
             prefers_sound: false,
             prefers_dark: false,
             allow_preselect: false,
+            video_dismissed: false,
         }
     }
 }
