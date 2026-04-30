@@ -4,7 +4,7 @@ use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
     websocket::{
-        messages::{InternalServerMessage, MessageDestination, WsMessage},
+        messages::{InternalServerMessage, MessageDestination, SocketTx},
         WebsocketData,
     },
 };
@@ -16,7 +16,7 @@ use uuid::Uuid;
 #[derive(Debug)]
 pub struct JoinHandler {
     pool: DbPool,
-    received_from: actix::Recipient<WsMessage>,
+    received_from: SocketTx,
     data: Arc<WebsocketData>,
     user_id: Uuid,
     username: String,
@@ -28,7 +28,7 @@ impl JoinHandler {
         game: &Game,
         username: &str,
         user_id: Uuid,
-        received_from: actix::Recipient<WsMessage>,
+        received_from: SocketTx,
         data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Self {

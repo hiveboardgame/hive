@@ -1,5 +1,5 @@
 use super::{
-    messages::{GameHB, MessageDestination, Ping},
+    messages::{GameHB, MessageDestination, Ping, SocketTx},
     WebsocketData,
 };
 use crate::{
@@ -21,10 +21,10 @@ use crate::{
         TournamentResponse,
         UserResponse,
     },
-    websocket::messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
+    websocket::messages::{ClientActorMessage, Connect, Disconnect},
 };
 use actix::{
-    prelude::{Actor, Context, Handler, Recipient},
+    prelude::{Actor, Context, Handler},
     AsyncContext,
     WrapFuture,
 };
@@ -48,9 +48,9 @@ use uuid::Uuid;
 #[derive(Debug)]
 pub struct WsServer {
     id: String,
-    sessions: HashMap<Uuid, Vec<Recipient<WsMessage>>>, // user_id to (socket_)id
-    games_users: HashMap<GameId, HashSet<Uuid>>,        // game_id to set of users
-    users_games: HashMap<Uuid, HashSet<String>>,        // user_id to set of games
+    sessions: HashMap<Uuid, HashMap<Uuid, SocketTx>>, // user_id → (socket_id → SocketTx)
+    games_users: HashMap<GameId, HashSet<Uuid>>,
+    users_games: HashMap<Uuid, HashSet<String>>,
     data: Arc<WebsocketData>,
     pool: DbPool,
 }
@@ -58,7 +58,6 @@ pub struct WsServer {
 impl WsServer {
     pub fn new(data: Arc<WebsocketData>, pool: DbPool) -> WsServer {
         WsServer {
-            // TODO: work on replacing the id here...
             id: String::from("lobby"),
             sessions: HashMap::new(),
             games_users: HashMap::new(),
@@ -70,11 +69,13 @@ impl WsServer {
 }
 
 impl WsServer {
-    fn send_message(&self, message: &Vec<u8>, id_to: &Uuid) {
-        if let Some(sockets) = self.sessions.get(id_to) {
-            for socket in sockets {
-                socket.do_send(WsMessage(message.to_owned()));
-            }
+    fn send_message(&mut self, message: &Vec<u8>, id_to: &Uuid) {
+        let Some(sockets) = self.sessions.get_mut(id_to) else {
+            return;
+        };
+        sockets.retain(|_, socket| socket.try_send(message.clone()));
+        if sockets.is_empty() {
+            self.sessions.remove(id_to);
         }
     }
 }
@@ -88,15 +89,16 @@ impl Handler<Ping> for WsServer {
 
     fn handle(&mut self, _msg: Ping, _ctx: &mut Context<Self>) {
         let mut rng = rand::rng();
-        for user_id in self.sessions.keys() {
+        let user_ids: Vec<Uuid> = self.sessions.keys().copied().collect();
+        for user_id in user_ids {
             let nonce = rng.random::<u64>();
-            self.data.pings.set_nonce(*user_id, nonce);
+            self.data.pings.set_nonce(user_id, nonce);
             let message = ServerResult::Ok(Box::new(ServerMessage::Ping {
                 nonce,
-                value: self.data.pings.value(*user_id),
+                value: self.data.pings.value(user_id),
             }));
             if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                self.send_message(&serialized, user_id);
+                self.send_message(&serialized, &user_id);
             };
         }
     }
@@ -130,8 +132,8 @@ impl Handler<GameHB> for WsServer {
                                 if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
                                     for user_id in user_ids {
                                         if let Some(sockets) = sessions.get(&user_id) {
-                                            for socket in sockets {
-                                                socket.do_send(WsMessage(serialized.clone()));
+                                            for socket in sockets.values() {
+                                                socket.try_send(serialized.clone());
                                             }
                                         }
                                     }
@@ -151,14 +153,12 @@ impl Handler<Disconnect> for WsServer {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
-        // Remove the WS connection from the user sessions
         if let Some(user_sessions) = self.sessions.get_mut(&msg.user_id) {
-            user_sessions.retain(|session| *session != msg.addr);
+            user_sessions.remove(&msg.socket_id);
             if user_sessions.is_empty() {
                 self.sessions.remove(&msg.user_id);
             }
         }
-        // If that was the last WS connection for that user
         if !self.sessions.contains_key(&msg.user_id) {
             if let Some(games) = self.users_games.remove(&msg.user_id) {
                 for game in games.iter() {
@@ -167,7 +167,6 @@ impl Handler<Disconnect> for WsServer {
                         if game_users.len() > 1 {
                             game_users.remove(&msg.user_id);
                         } else {
-                            //only one in the game, remove it entirely
                             self.games_users.remove(&game_id);
                         }
                     }
@@ -183,10 +182,13 @@ impl Handler<Disconnect> for WsServer {
                 if let Some(ws_server) = self.games_users.get_mut(&game_id) {
                     ws_server.remove(&msg.user_id);
                 }
-                if let Some(ws_server) = self.games_users.get(&game_id) {
-                    ws_server
-                        .iter()
-                        .for_each(|user_id| self.send_message(&serialized, user_id));
+                let lobby_users: Vec<Uuid> = self
+                    .games_users
+                    .get(&game_id)
+                    .map(|s| s.iter().copied().collect())
+                    .unwrap_or_default();
+                for user_id in lobby_users {
+                    self.send_message(&serialized, &user_id);
                 }
             };
         }
@@ -209,14 +211,13 @@ impl Handler<Connect> for WsServer {
         self.sessions
             .entry(msg.user_id)
             .or_default()
-            .push(msg.addr.clone());
+            .insert(msg.socket.socket_id, msg.socket.clone());
         let pool = self.pool.clone();
         let address = ctx.address().clone();
         let games_users = self.games_users.clone();
         let sessions = self.sessions.clone();
         let future = async move {
             if let Ok(mut conn) = get_conn(&pool).await {
-                //Get currently online users
                 for uuid in sessions.keys() {
                     if let Ok(user_response) = UserResponse::from_uuid(uuid, &mut conn).await {
                         let message =
@@ -245,13 +246,11 @@ impl Handler<Connect> for WsServer {
                                 username: msg.username,
                             })));
                         if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                            // TODO: one needs to be a game::join to everyone in the game, the other one just to the
-                            // ws_server that the user came online
                             if let Some(user_ids) = games_users.get(&GameId(msg.game_id)) {
                                 for id in user_ids {
                                     if let Some(sockets) = sessions.get(id) {
-                                        for socket in sockets {
-                                            socket.do_send(WsMessage(serialized.clone()));
+                                        for socket in sockets.values() {
+                                            socket.try_send(serialized.clone());
                                         }
                                     }
                                 }
@@ -259,7 +258,6 @@ impl Handler<Connect> for WsServer {
                         };
                     }
 
-                    // Send games which require input from the user
                     let game_ids_result = user.get_urgent_nanoids(&mut conn).await;
                     let game_ids = match game_ids_result {
                         Ok(ids) => ids,
@@ -301,7 +299,6 @@ impl Handler<Connect> for WsServer {
                             };
                         }
                     }
-                    // send tournament invitations
                     if let Ok(invitations) =
                         TournamentInvitation::find_by_user(&user.id, &mut conn).await
                     {
@@ -326,7 +323,6 @@ impl Handler<Connect> for WsServer {
                         }
                     }
 
-                    // send schedule notifications
                     if let Ok(schedules) =
                         Schedule::find_user_notifications(user.id, &mut conn).await
                     {
@@ -356,7 +352,6 @@ impl Handler<Connect> for WsServer {
                         }
                     }
 
-                    // Send challenges on join
                     let mut responses = Vec::new();
                     if let Ok(challenges) =
                         Challenge::get_public_exclude_user(user.id, &mut conn).await
@@ -428,21 +423,20 @@ impl Handler<ClientActorMessage> for WsServer {
     fn handle(&mut self, cam: ClientActorMessage, ctx: &mut Context<Self>) -> Self::Result {
         match cam.destination {
             MessageDestination::Direct(socket) => {
-                socket.do_send(WsMessage(cam.serialized));
+                socket.try_send(cam.serialized);
             }
             MessageDestination::Global => {
-                // Make sure the user is in the game:
                 if let Some(from) = cam.from {
                     self.games_users
                         .entry(GameId(self.id.clone()))
                         .or_default()
                         .insert(from);
                 }
-                // Send the message to everyone
                 if let Some(users) = self.games_users.get(&GameId(self.id.clone())) {
-                    users
-                        .iter()
-                        .for_each(|client| self.send_message(&cam.serialized, client));
+                    let user_ids: Vec<Uuid> = users.iter().copied().collect();
+                    for client in user_ids {
+                        self.send_message(&cam.serialized, &client);
+                    }
                 } else {
                     warn!(
                         "Game '{}' not found in games_users when sending global message",
@@ -451,37 +445,37 @@ impl Handler<ClientActorMessage> for WsServer {
                 }
             }
             MessageDestination::Game(ref game_id) => {
-                // Make sure the user is in the game:
                 if let Some(from) = cam.from {
                     self.games_users
                         .entry(game_id.clone())
                         .or_default()
                         .insert(from);
                 }
-                // Send the message to everyone
                 if let Some(users) = self.games_users.get(game_id) {
-                    users
-                        .iter()
-                        .for_each(|client| self.send_message(&cam.serialized, client));
+                    let user_ids: Vec<Uuid> = users.iter().copied().collect();
+                    for client in user_ids {
+                        self.send_message(&cam.serialized, &client);
+                    }
                 } else {
                     warn!("Game '{game_id}' not found in games_users when sending game message");
                 }
             }
             MessageDestination::GameSpectators(game_id, white_id, black_id) => {
-                // Make sure the user is in the game:
                 if let Some(from) = cam.from {
                     self.games_users
                         .entry(game_id.clone())
                         .or_default()
                         .insert(from);
                 }
-                // Send the message to everyone except white_id and black_id
                 if let Some(users) = self.games_users.get(&game_id) {
-                    users.iter().for_each(|user| {
-                        if *user != white_id && *user != black_id {
-                            self.send_message(&cam.serialized, user);
-                        }
-                    });
+                    let user_ids: Vec<Uuid> = users
+                        .iter()
+                        .filter(|&&u| u != white_id && u != black_id)
+                        .copied()
+                        .collect();
+                    for user in user_ids {
+                        self.send_message(&cam.serialized, &user);
+                    }
                 } else {
                     warn!("Game '{game_id}' not found in games_users when sending game spectators message");
                 }
@@ -508,10 +502,10 @@ impl Handler<ClientActorMessage> for WsServer {
                                     user_ids.insert(org.id);
                                 }
                             }
-                            for user_id in user_ids.clone() {
+                            for user_id in user_ids {
                                 if let Some(sockets) = sessions.get(&user_id) {
-                                    for socket in sockets {
-                                        socket.do_send(WsMessage(cam.serialized.clone()));
+                                    for socket in sockets.values() {
+                                        socket.try_send(cam.serialized.clone());
                                     }
                                 } else {
                                     println!("Couldn't find socket for {user_id}");
