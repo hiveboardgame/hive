@@ -69,7 +69,7 @@ async fn main() -> std::io::Result<()> {
         .and_then(|s| s.parse::<u64>().ok())
         .filter(|&n| n > 0)
     {
-        jobs::ws_telemetry(Data::clone(&data), secs);
+        jobs::ws_telemetry(Data::clone(&data), Data::clone(&hub), secs);
     }
 
     jobs::tournament_start(pool.clone(), Data::clone(&hub));

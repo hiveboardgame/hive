@@ -1,6 +1,6 @@
 use super::{
     messages::MessageDestination,
-    telemetry::{DestKind, SendOutcome},
+    telemetry::{read_proc_vm_bytes, DestKind, InFlightGuard, SendOutcome, TelemetrySnapshot},
     WebsocketData,
 };
 use crate::{
@@ -40,12 +40,19 @@ use std::{
     collections::{HashMap, HashSet},
     str::FromStr,
     sync::{Arc, RwLock},
+    time::{Duration, Instant},
 };
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Semaphore};
 use uuid::Uuid;
 
 const SOCKET_BUFFER_CAPACITY: usize = 128;
 const LOBBY_GAME_ID: &str = "lobby";
+/// Cap on concurrent `load_user_state` tasks. Sized so loaders cannot starve
+/// the rest of the app of pool connections — keep ≤ pool_max_size / 2.
+const LOAD_USER_STATE_CONCURRENCY: usize = 32;
+/// Minimum gap between consecutive `GameUpdate::Tv` broadcasts for the same
+/// game. The TV view in the lobby is a UX feature, not a per-move feed.
+const TV_THROTTLE: Duration = Duration::from_secs(1);
 
 /// WsHub — concurrent, non-actor replacement for `WsServer`.
 ///
@@ -59,6 +66,12 @@ pub struct WsHub {
     membership: RwLock<Membership>,
     pub data: Arc<WebsocketData>,
     pool: DbPool,
+    /// Bounds the number of concurrent `load_user_state` tasks so connect-burst
+    /// can't blow up pool-connection usage or transient loader retention.
+    loader_permits: Arc<Semaphore>,
+    /// Last TV broadcast timestamp per game. Used by `should_send_tv` to
+    /// coalesce per-move global fanout. Evicted on game finalization.
+    last_tv_broadcast: DashMap<GameId, Instant>,
 }
 
 #[derive(Default)]
@@ -76,6 +89,8 @@ impl WsHub {
             membership: RwLock::new(Membership::default()),
             data,
             pool,
+            loader_permits: Arc::new(Semaphore::new(LOAD_USER_STATE_CONCURRENCY)),
+            last_tv_broadcast: DashMap::new(),
         })
     }
 
@@ -129,8 +144,28 @@ impl WsHub {
         // matches the previous `Handler<Connect>` async block, which used
         // `ctx.wait` (blocked the actor but not the reader). Here we spawn
         // independently — readers and other dispatches proceed immediately.
+        //
+        // `loader_permits` caps in-flight loaders. If we'd block, take the
+        // permit asynchronously and re-check that the socket is still
+        // connected before doing the work.
+        let permits = self.loader_permits.clone();
         actix_rt::spawn(async move {
+            let permit = match permits.clone().try_acquire_owned() {
+                Ok(p) => p,
+                Err(_) => match permits.acquire_owned().await {
+                    Ok(p) => p,
+                    // Semaphore::close is never called, so this shouldn't happen.
+                    Err(_) => return,
+                },
+            };
+            // Drop the loader if the socket disconnected while we waited.
+            if !self.is_socket_connected(user_id, socket_id) {
+                drop(permit);
+                return;
+            }
+            let _guard = InFlightGuard::new(self.data.telemetry.clone());
             self.load_user_state(socket_id, user_id, username, tx_for_load).await;
+            drop(permit);
         });
     }
 
@@ -152,12 +187,17 @@ impl WsHub {
             // (also inside the membership lock) sees a consistent view.
             // The inner-map shard lock is released at the end of this block,
             // before remove_if below acquires the shard write lock.
-            let inner_now_empty = {
-                let Some(sockets) = self.sessions.get(&user_id) else {
-                    return;
-                };
-                sockets.remove(&socket_id);
-                sockets.is_empty()
+            //
+            // If the user's session entry is already gone (out-of-order
+            // cleanup, double-disconnect), we still need to scrub membership
+            // and decrement gauges — bailing early would orphan the
+            // (uid, sid) pair in `sockets_games` / `games_sockets` forever.
+            let inner_now_empty = match self.sessions.get(&user_id) {
+                Some(sockets) => {
+                    sockets.remove(&socket_id);
+                    sockets.is_empty()
+                }
+                None => true,
             };
 
             self.data.telemetry.dec_active_socket();
@@ -208,6 +248,72 @@ impl WsHub {
                 self.fanout_lobby(&Bytes::from(serialized), DestKind::Global);
             }
         }
+    }
+
+    /// Build a `TelemetrySnapshot` enriched with sizes computed from
+    /// `Membership`, `WebsocketData`, and `/proc/self/status`. Called once
+    /// per `ws_telemetry` interval — locks are read-only and the iterations
+    /// are O(N) over already-bounded structures.
+    pub fn snapshot_with_state(&self) -> TelemetrySnapshot {
+        let mut snap = self.data.telemetry.snapshot();
+
+        // sessions
+        let sessions_outer_len = self.sessions.len() as u64;
+        let mut sessions_inner_total: u64 = 0;
+        for entry in self.sessions.iter() {
+            sessions_inner_total = sessions_inner_total.saturating_add(entry.value().len() as u64);
+        }
+        snap.sessions_outer_len = sessions_outer_len;
+        snap.sessions_inner_total = sessions_inner_total;
+
+        // membership
+        {
+            let m = self.membership.read().expect("membership poisoned");
+            snap.membership_games_sockets_len = m.games_sockets.len() as u64;
+            snap.membership_sockets_games_len = m.sockets_games.len() as u64;
+        }
+
+        // lags
+        if let Ok(trackers) = self.data.lags.snapshot_len() {
+            snap.lags_trackers_len = trackers as u64;
+        }
+
+        // tournament_game_start
+        if let Ok(games_date) = self.data.game_start.games_date.read() {
+            snap.game_start_games_date_len = games_date.len() as u64;
+        }
+
+        // chat
+        if let Ok(t) = self.data.chat_storage.tournament.read() {
+            snap.chat_tournament_channels = t.len() as u64;
+            snap.chat_tournament_msgs = t.values().map(|v| v.len() as u64).sum();
+        }
+        if let Ok(t) = self.data.chat_storage.games_public.read() {
+            snap.chat_games_public_channels = t.len() as u64;
+            snap.chat_games_public_msgs = t.values().map(|v| v.len() as u64).sum();
+        }
+        if let Ok(t) = self.data.chat_storage.games_private.read() {
+            snap.chat_games_private_channels = t.len() as u64;
+            snap.chat_games_private_msgs = t.values().map(|v| v.len() as u64).sum();
+        }
+        if let Ok(t) = self.data.chat_storage.direct.read() {
+            snap.chat_direct_pairs = t.len() as u64;
+            snap.chat_direct_msgs = t.values().map(|v| v.len() as u64).sum();
+        }
+        if let Ok(t) = self.data.chat_storage.direct_lookup.read() {
+            snap.chat_direct_lookup_users = t.len() as u64;
+        }
+
+        // caches
+        snap.game_response_cache_len = self.data.game_response_cache.len() as u64;
+        snap.last_tv_broadcast_len = self.last_tv_broadcast.len() as u64;
+
+        // process VM
+        let (rss, hwm) = read_proc_vm_bytes();
+        snap.process_vm_rss_bytes = rss;
+        snap.process_vm_hwm_bytes = hwm;
+
+        snap
     }
 
     fn refresh_membership_gauges(&self) {
@@ -354,9 +460,11 @@ impl WsHub {
                 GameStatus::from_str(&game.game_status),
                 Ok(GameStatus::Finished(_)) | Ok(GameStatus::Adjudicated)
             ) {
-                // Game is over — evict from membership so the heartbeat
-                // stops querying the DB for it on every tick.
-                self.evict_game_from_membership(&game_id);
+                // Game is over — run the full finalization hook so per-game
+                // bookkeeping (Lags, chat, game_start, caches, membership)
+                // is dropped together. Idempotent: if a handler already ran
+                // it, the maps are already empty.
+                self.on_game_finished(&game_id, game.white_id, game.black_id);
                 continue;
             }
             if game.time_mode == TimeMode::Untimed.to_string() {
@@ -524,13 +632,16 @@ impl WsHub {
     }
 
     /// Remove a game from membership entirely — all sockets that were subscribed
-    /// to it are unsubscribed in one write. Used by `game_heartbeat` to evict
-    /// finished or untimed games so they stop generating DB queries each tick.
-    fn evict_game_from_membership(&self, game_id: &GameId) {
+    /// to it are unsubscribed in one write. Returns the set of `user_id`s that
+    /// were subscribed so callers can scrub per-user/per-game bookkeeping
+    /// (e.g. `Lags`).
+    fn evict_game_from_membership(&self, game_id: &GameId) -> HashSet<Uuid> {
+        let mut user_ids = HashSet::new();
         {
             let mut m = self.membership.write().expect("membership poisoned");
             if let Some(sockets) = m.games_sockets.remove(game_id) {
                 for socket_pair in sockets {
+                    user_ids.insert(socket_pair.0);
                     if let Some(games) = m.sockets_games.get_mut(&socket_pair) {
                         games.remove(game_id);
                         if games.is_empty() {
@@ -541,6 +652,70 @@ impl WsHub {
             }
         }
         self.refresh_membership_gauges();
+        user_ids
+    }
+
+    /// Single point of cleanup for everything keyed on `GameId`. Idempotent.
+    /// Call once per game finalization (Finished/Adjudicated transition)
+    /// from every code path that drives the transition.
+    ///
+    /// `white_id` and `black_id` are taken from the game so per-(player, game)
+    /// state (`Lags`) can be scrubbed even when no socket is currently
+    /// subscribed (correspondence games may finalize days after the last
+    /// connection).
+    pub fn on_game_finished(&self, game_id: &GameId, white_id: Uuid, black_id: Uuid) {
+        // Scrub per-(player, game) lag tracking for both players.
+        self.data.lags.remove(white_id, game_id.clone());
+        self.data.lags.remove(black_id, game_id.clone());
+
+        // Drop the chat history for the finished game. Tournament/global/direct
+        // chat is not keyed on GameId, so it is unaffected here.
+        if let Ok(mut games_public) = self.data.chat_storage.games_public.write() {
+            games_public.remove(game_id);
+        }
+        if let Ok(mut games_private) = self.data.chat_storage.games_private.write() {
+            games_private.remove(game_id);
+        }
+
+        // Drop the start-coordination entry, if any.
+        if let Ok(mut games_date) = self.data.game_start.games_date.write() {
+            games_date.remove(game_id);
+        }
+
+        // Drop the cached GameResponse and last-TV timestamp.
+        self.data.game_response_cache.remove(game_id);
+        self.last_tv_broadcast.remove(game_id);
+
+        // Evict any remaining socket subscriptions and scrub per-user lag for
+        // any subscriber we hadn't already covered above (e.g. spectators).
+        let evicted_users = self.evict_game_from_membership(game_id);
+        for uid in evicted_users {
+            if uid != white_id && uid != black_id {
+                self.data.lags.remove(uid, game_id.clone());
+            }
+        }
+
+        self.data.telemetry.inc_games_finalized();
+    }
+
+    /// Returns true and stamps the game iff TV may be broadcast right now.
+    /// Coalesces global lobby fanout to at most once per `TV_THROTTLE`.
+    pub fn should_send_tv(&self, game_id: &GameId) -> bool {
+        let now = Instant::now();
+        match self.last_tv_broadcast.entry(game_id.clone()) {
+            dashmap::mapref::entry::Entry::Occupied(mut e) => {
+                if now.duration_since(*e.get()) >= TV_THROTTLE {
+                    *e.get_mut() = now;
+                    true
+                } else {
+                    false
+                }
+            }
+            dashmap::mapref::entry::Entry::Vacant(e) => {
+                e.insert(now);
+                true
+            }
+        }
     }
 
     /// Returns true iff the specific socket we were spawned for is still in

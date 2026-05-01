@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
-    responses::GameResponse,
     websocket::{
         messages::{InternalServerMessage, MessageDestination, SocketTx},
         WebsocketData,
@@ -49,11 +48,12 @@ impl JoinHandler {
             destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
             message: ServerMessage::Join(self.user_id),
         });
+        let game_response = self.data.get_or_build_response(&self.game, &mut conn).await?;
         messages.push(InternalServerMessage {
             destination: MessageDestination::Direct(self.received_from.clone()),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),
-                game: GameResponse::from_model(&self.game, &mut conn).await?,
+                game: (*game_response).clone(),
                 game_action: GameReaction::Join,
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),

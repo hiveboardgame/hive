@@ -14,6 +14,7 @@ use crate::{
     websocket::{
         messages::{AuthError, InternalServerMessage, SocketTx},
         WebsocketData,
+        WsHub,
     },
 };
 use db_lib::DbPool;
@@ -38,6 +39,7 @@ impl std::fmt::Display for RequestHandlerError {
 pub struct RequestHandler {
     command: ClientRequest,
     data: Arc<WebsocketData>,
+    hub: Arc<WsHub>,
     received_from: SocketTx,
     pool: DbPool,
     user_id: Uuid,
@@ -50,6 +52,7 @@ impl RequestHandler {
     pub fn new(
         command: ClientRequest,
         data: Arc<WebsocketData>,
+        hub: Arc<WsHub>,
         sender_addr: SocketTx,
         user: SimpleUser,
         pool: DbPool,
@@ -58,6 +61,7 @@ impl RequestHandler {
             received_from: sender_addr,
             command,
             data,
+            hub,
             pool,
             user_id: user.user_id,
             username: user.username,
@@ -123,6 +127,7 @@ impl RequestHandler {
                     self.received_from.clone(),
                     (&self.username, self.user_id),
                     self.data.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .await?

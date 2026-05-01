@@ -15,6 +15,13 @@ pub struct WsTelemetry {
     pub recipient_drops_full: [AtomicU64; 6],
     pub recipient_drops_closed: [AtomicU64; 6],
     pub disconnects_by_reason: [AtomicU64; 5],
+    // Per-game allocation/encoding counters
+    pub from_model_calls_total: AtomicU64,
+    pub state_replays_total: AtomicU64,
+    pub tv_broadcasts_total: AtomicU64,
+    pub games_finalized_total: AtomicU64,
+    // Loader-task gauge (incremented at task entry, decremented in Drop)
+    pub load_user_state_in_flight: AtomicU64,
     // Gauges
     pub active_sockets: AtomicU64,
     pub active_users: AtomicU64,
@@ -75,11 +82,36 @@ pub struct TelemetrySnapshot {
     pub recipient_drops_full: [u64; 6],
     pub recipient_drops_closed: [u64; 6],
     pub disconnects_by_reason: [u64; 5],
+    pub from_model_calls_total: u64,
+    pub state_replays_total: u64,
+    pub tv_broadcasts_total: u64,
+    pub games_finalized_total: u64,
+    pub load_user_state_in_flight: u64,
     pub active_sockets: u64,
     pub active_users: u64,
     pub active_games: u64,
     pub lobby_subscribers: u64,
     pub max_queue_depth_seen: u64,
+    // Computed from external state at snapshot time.
+    pub lags_trackers_len: u64,
+    pub game_start_games_date_len: u64,
+    pub chat_tournament_channels: u64,
+    pub chat_tournament_msgs: u64,
+    pub chat_games_public_channels: u64,
+    pub chat_games_public_msgs: u64,
+    pub chat_games_private_channels: u64,
+    pub chat_games_private_msgs: u64,
+    pub chat_direct_pairs: u64,
+    pub chat_direct_msgs: u64,
+    pub chat_direct_lookup_users: u64,
+    pub sessions_outer_len: u64,
+    pub sessions_inner_total: u64,
+    pub membership_games_sockets_len: u64,
+    pub membership_sockets_games_len: u64,
+    pub game_response_cache_len: u64,
+    pub last_tv_broadcast_len: u64,
+    pub process_vm_rss_bytes: u64,
+    pub process_vm_hwm_bytes: u64,
 }
 
 impl WsTelemetry {
@@ -153,6 +185,22 @@ impl WsTelemetry {
         self.lobby_subscribers.store(n, Ordering::Relaxed);
     }
 
+    pub fn inc_from_model(&self) {
+        self.from_model_calls_total.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn inc_state_replay(&self) {
+        self.state_replays_total.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn inc_tv_broadcast(&self) {
+        self.tv_broadcasts_total.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn inc_games_finalized(&self) {
+        self.games_finalized_total.fetch_add(1, Ordering::Relaxed);
+    }
+
     pub fn snapshot(&self) -> TelemetrySnapshot {
         let load = |a: &AtomicU64| a.load(Ordering::Relaxed);
         let load6 = |arr: &[AtomicU64; 6]| {
@@ -172,13 +220,62 @@ impl WsTelemetry {
             recipient_drops_full: load6(&self.recipient_drops_full),
             recipient_drops_closed: load6(&self.recipient_drops_closed),
             disconnects_by_reason: load5(&self.disconnects_by_reason),
+            from_model_calls_total: load(&self.from_model_calls_total),
+            state_replays_total: load(&self.state_replays_total),
+            tv_broadcasts_total: load(&self.tv_broadcasts_total),
+            games_finalized_total: load(&self.games_finalized_total),
+            load_user_state_in_flight: load(&self.load_user_state_in_flight),
             active_sockets: load(&self.active_sockets),
             active_users: load(&self.active_users),
             active_games: load(&self.active_games),
             lobby_subscribers: load(&self.lobby_subscribers),
             max_queue_depth_seen: self.max_queue_depth_seen.swap(0, Ordering::Relaxed),
+            // Filled in by snapshot_with_state at the call site.
+            ..TelemetrySnapshot::default()
         }
     }
+}
+
+/// RAII guard for `load_user_state_in_flight`. Increments on construction,
+/// decrements on drop — covers all early-return paths in `load_user_state`.
+pub struct InFlightGuard(std::sync::Arc<WsTelemetry>);
+
+impl InFlightGuard {
+    pub fn new(telemetry: std::sync::Arc<WsTelemetry>) -> Self {
+        telemetry.load_user_state_in_flight.fetch_add(1, Ordering::Relaxed);
+        Self(telemetry)
+    }
+}
+
+impl Drop for InFlightGuard {
+    fn drop(&mut self) {
+        self.0.load_user_state_in_flight.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+/// Parse `VmRSS` and `VmHWM` from `/proc/self/status`. Returns `(rss_bytes, hwm_bytes)`.
+/// On non-Linux platforms or read failure, returns `(0, 0)`.
+pub fn read_proc_vm_bytes() -> (u64, u64) {
+    let Ok(contents) = std::fs::read_to_string("/proc/self/status") else {
+        return (0, 0);
+    };
+    let mut rss_kb = 0u64;
+    let mut hwm_kb = 0u64;
+    for line in contents.lines() {
+        if let Some(rest) = line.strip_prefix("VmRSS:") {
+            rss_kb = parse_kb(rest);
+        } else if let Some(rest) = line.strip_prefix("VmHWM:") {
+            hwm_kb = parse_kb(rest);
+        }
+    }
+    (rss_kb * 1024, hwm_kb * 1024)
+}
+
+fn parse_kb(s: &str) -> u64 {
+    s.split_whitespace()
+        .next()
+        .and_then(|t| t.parse::<u64>().ok())
+        .unwrap_or(0)
 }
 
 fn fmt_bytes(b: u64) -> String {
@@ -225,7 +322,16 @@ pub fn diff_and_format(
          recipient_sends:  User={} Game={} GameSpec={} Global={} Tour={} Direct={}\n  \
          drops_full:       User={} Game={} GameSpec={} Global={} Tour={} Direct={}\n  \
          drops_closed:     User={} Game={} GameSpec={} Global={} Tour={} Direct={}\n  \
-         max_queue_depth:  {}/128",
+         max_queue_depth:  {}/128\n  \
+         per_game_calls:   from_model={} state_replays={} tv_broadcasts={} finalized={}\n  \
+         loader_in_flight: {}\n  \
+         lags_trackers:    {}\n  \
+         game_start_dates: {}\n  \
+         chat:             tour=({} ch, {} msg) gpub=({} ch, {} msg) gpriv=({} ch, {} msg) direct=({} pairs, {} msg) lookup_users={}\n  \
+         sessions:         outer={} inner_total={}\n  \
+         membership:       games_sockets={} sockets_games={}\n  \
+         caches:           game_response={} last_tv={}\n  \
+         process_vm:       rss={} hwm={}",
         curr.active_sockets,
         curr.active_users,
         curr.active_games,
@@ -266,5 +372,29 @@ pub fn diff_and_format(
         d(closed[4], prev_closed[4]),
         d(closed[5], prev_closed[5]),
         curr.max_queue_depth_seen,
+        d(curr.from_model_calls_total, prev.from_model_calls_total),
+        d(curr.state_replays_total, prev.state_replays_total),
+        d(curr.tv_broadcasts_total, prev.tv_broadcasts_total),
+        d(curr.games_finalized_total, prev.games_finalized_total),
+        curr.load_user_state_in_flight,
+        curr.lags_trackers_len,
+        curr.game_start_games_date_len,
+        curr.chat_tournament_channels,
+        curr.chat_tournament_msgs,
+        curr.chat_games_public_channels,
+        curr.chat_games_public_msgs,
+        curr.chat_games_private_channels,
+        curr.chat_games_private_msgs,
+        curr.chat_direct_pairs,
+        curr.chat_direct_msgs,
+        curr.chat_direct_lookup_users,
+        curr.sessions_outer_len,
+        curr.sessions_inner_total,
+        curr.membership_games_sockets_len,
+        curr.membership_sockets_games_len,
+        curr.game_response_cache_len,
+        curr.last_tv_broadcast_len,
+        fmt_bytes(curr.process_vm_rss_bytes),
+        fmt_bytes(curr.process_vm_hwm_bytes),
     )
 }

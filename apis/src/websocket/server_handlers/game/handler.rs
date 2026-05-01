@@ -10,6 +10,7 @@ use crate::{
     websocket::{
         messages::{InternalServerMessage, SocketTx},
         WebsocketData,
+        WsHub,
     },
 };
 use anyhow::Result;
@@ -26,6 +27,7 @@ pub struct GameActionHandler {
     user_id: Uuid,
     received_from: SocketTx,
     data: Arc<WebsocketData>,
+    hub: Arc<WsHub>,
     username: String,
 }
 
@@ -36,6 +38,7 @@ impl GameActionHandler {
         received_from: SocketTx,
         user_details: (&str, Uuid),
         data: Arc<WebsocketData>,
+        hub: Arc<WsHub>,
         pool: &DbPool,
     ) -> Result<Self> {
         let (username, user_id) = user_details;
@@ -51,6 +54,7 @@ impl GameActionHandler {
         Ok(Self {
             pool: pool.clone(),
             data,
+            hub,
             game,
             received_from,
             username: username.to_owned(),
@@ -62,9 +66,16 @@ impl GameActionHandler {
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let messages = match self.game_action.clone() {
             GameAction::CheckTime => {
-                TimeoutHandler::new(&self.game, &self.username, self.user_id, &self.pool)
-                    .handle()
-                    .await?
+                TimeoutHandler::new(
+                    &self.game,
+                    &self.username,
+                    self.user_id,
+                    self.data.clone(),
+                    self.hub.clone(),
+                    &self.pool,
+                )
+                .handle()
+                .await?
             }
             GameAction::Turn(turn) => {
                 self.ensure_not_finished()?;
@@ -75,6 +86,7 @@ impl GameActionHandler {
                     &self.username,
                     self.user_id,
                     self.data.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .handle()
@@ -88,6 +100,8 @@ impl GameActionHandler {
                     &self.game,
                     &self.username,
                     self.user_id,
+                    self.data.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .handle()

@@ -1,8 +1,7 @@
-use crate::websocket::{busybee::Busybee, WebsocketData};
+use crate::websocket::{busybee::Busybee, WebsocketData, WsHub};
 
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
-    responses::GameResponse,
     websocket::messages::{InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
@@ -24,6 +23,7 @@ pub struct TurnHandler {
     username: String,
     game: Game,
     data: Arc<WebsocketData>,
+    hub: Arc<WsHub>,
 }
 
 impl TurnHandler {
@@ -33,6 +33,7 @@ impl TurnHandler {
         username: &str,
         user_id: Uuid,
         data: Arc<WebsocketData>,
+        hub: Arc<WsHub>,
         pool: &DbPool,
     ) -> Self {
         Self {
@@ -42,6 +43,7 @@ impl TurnHandler {
             pool: pool.clone(),
             turn,
             data,
+            hub,
         }
     }
 
@@ -111,32 +113,47 @@ impl TurnHandler {
         let mut messages = Vec::new();
         let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
         let games = next_to_move.get_games_with_notifications(&mut conn).await?;
-        let mut game_responses = Vec::new();
-        for game in games {
-            game_responses.push(GameResponse::from_model(&game, &mut conn).await?);
+        // Batch-construct responses for the urgent list — each call is a
+        // full state replay, so use the cache to share the per-game
+        // allocation across this fanout and any others on the same tick.
+        let mut game_responses = Vec::with_capacity(games.len());
+        for g in &games {
+            let resp = self.data.get_or_build_response(g, &mut conn).await?;
+            game_responses.push((*resp).clone());
         }
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.current_player_id),
             message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
         });
-        let response = GameResponse::from_model(&game, &mut conn).await?;
+        let response = self.data.get_or_build_response(&game, &mut conn).await?;
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: GameId(game.nanoid.to_owned()),
-                game: response.clone(),
+                game: (*response).clone(),
                 game_action: GameReaction::Turn(self.turn.clone()),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
             }))),
         });
         // TODO: Just add the few top games and keep them rated
-        if response.time_mode == TimeMode::RealTime {
+        if response.time_mode == TimeMode::RealTime
+            && self.hub.should_send_tv(&GameId(self.game.nanoid.clone()))
+        {
+            self.data.telemetry.inc_tv_broadcast();
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Game(Box::new(GameUpdate::Tv(response))),
+                message: ServerMessage::Game(Box::new(GameUpdate::Tv((*response).clone()))),
             });
         };
+        // If this turn finalized the game, run the cleanup hook.
+        if game.finished {
+            self.hub.on_game_finished(
+                &GameId(self.game.nanoid.clone()),
+                game.white_id,
+                game.black_id,
+            );
+        }
         Ok(messages)
     }
 

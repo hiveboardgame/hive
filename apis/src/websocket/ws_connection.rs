@@ -135,6 +135,7 @@ async fn handle_binary(
     let handler = RequestHandler::new(
         request.clone(),
         data.clone(),
+        hub.clone(),
         socket.clone(),
         user,
         pool.clone(),

@@ -39,6 +39,12 @@ impl Lags {
             trackers.remove(&(uuid, game));
         }
     }
+
+    /// Best-effort length used by telemetry snapshots. Returns `Err` if the
+    /// lock is poisoned so the caller can skip the gauge cleanly.
+    pub fn snapshot_len(&self) -> Result<usize, ()> {
+        self.trackers.read().map(|t| t.len()).map_err(|_| ())
+    }
 }
 
 impl Default for Lags {

@@ -1,7 +1,11 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        messages::{InternalServerMessage, MessageDestination},
+        WebsocketData,
+        WsHub,
+    },
 };
 use anyhow::Result;
 use db_lib::{
@@ -13,6 +17,7 @@ use db_lib::{
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::{GameControl, GameError};
 use shared_types::{GameId, TimeMode};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct GameControlHandler {
@@ -21,6 +26,8 @@ pub struct GameControlHandler {
     user_id: Uuid,
     username: String,
     game: Game,
+    data: Arc<WebsocketData>,
+    hub: Arc<WsHub>,
 }
 
 impl GameControlHandler {
@@ -29,6 +36,8 @@ impl GameControlHandler {
         game: &Game,
         username: &str,
         user_id: Uuid,
+        data: Arc<WebsocketData>,
+        hub: Arc<WsHub>,
         pool: &DbPool,
     ) -> Self {
         Self {
@@ -37,6 +46,8 @@ impl GameControlHandler {
             username: username.to_owned(),
             pool: pool.clone(),
             control: control.to_owned(),
+            data,
+            hub,
         }
     }
 
@@ -55,13 +66,13 @@ impl GameControlHandler {
                 async move { self.match_control(tc).await }.scope_boxed()
             })
             .await?;
-        let game_response = GameResponse::from_model(&game, &mut conn).await?;
+        let game_response = self.data.get_or_build_response(&game, &mut conn).await?;
 
         messages.push(InternalServerMessage {
             destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),
-                game: game_response.clone(),
+                game: (*game_response).clone(),
                 game_action: GameReaction::Control(self.control),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
@@ -79,12 +90,22 @@ impl GameControlHandler {
             }
             _ => {}
         }
-        if game_response.time_mode == TimeMode::RealTime {
+        if game_response.time_mode == TimeMode::RealTime
+            && self.hub.should_send_tv(&GameId(self.game.nanoid.clone()))
+        {
+            self.data.telemetry.inc_tv_broadcast();
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Game(Box::new(GameUpdate::Tv(game_response))),
+                message: ServerMessage::Game(Box::new(GameUpdate::Tv((*game_response).clone()))),
             });
         };
+        if game.finished {
+            self.hub.on_game_finished(
+                &GameId(self.game.nanoid.clone()),
+                self.game.white_id,
+                self.game.black_id,
+            );
+        }
         Ok(messages)
     }
 
