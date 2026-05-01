@@ -818,7 +818,7 @@ impl Board {
 
         if piece.is_color(color)
             && !self.is_pinned(piece)
-            && Bug::normal_moves(current_position, self).contains(&target_position)
+            && Bug::has_target_move(current_position, target_position, self)
         {
             return true;
         }
