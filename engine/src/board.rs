@@ -824,7 +824,7 @@ impl Board {
         }
 
         for (_, ability_position) in self.ability_pieces_around(color, current_position) {
-            if Bug::can_throw(ability_position, current_position, target_position, self) {
+            if Bug::can_throw_piece_to(ability_position, current_position, target_position, self) {
                 return true;
             }
         }
