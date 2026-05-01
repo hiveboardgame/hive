@@ -138,7 +138,7 @@ impl TurnHandler {
         });
         // TODO: Just add the few top games and keep them rated
         if response.time_mode == TimeMode::RealTime
-            && self.hub.should_send_tv(&GameId(self.game.nanoid.clone()))
+            && self.hub.should_send_tv(&GameId(self.game.nanoid.clone()), game.finished)
         {
             self.data.telemetry.inc_tv_broadcast();
             messages.push(InternalServerMessage {

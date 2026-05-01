@@ -11,7 +11,7 @@ const CSV_HEADER: &str = "timestamp,interval_secs,\
     max_queue_depth,active_sockets,active_users,active_games,\
     drops_full_user,drops_full_game,drops_full_gamespec,drops_full_global,drops_full_tour,drops_full_direct,\
     drops_closed_user,drops_closed_game,drops_closed_gamespec,drops_closed_global,drops_closed_tour,drops_closed_direct,\
-    from_model_calls,state_replays,tv_broadcasts,games_finalized,load_user_state_in_flight,\
+    from_model_calls,state_replays,tv_broadcasts,games_finalized,load_user_state_queued,load_user_state_in_flight,\
     lags_trackers,game_start_games_date,\
     chat_tournament_channels,chat_tournament_msgs,\
     chat_games_public_channels,chat_games_public_msgs,\
@@ -60,7 +60,7 @@ pub fn run(data: Data<WebsocketData>, hub: Data<Arc<WsHub>>, interval_secs: u64)
                          {},{},{},{},\
                          {},{},{},{},{},{},\
                          {},{},{},{},{},{},\
-                         {},{},{},{},{},\
+                         {},{},{},{},{},{},\
                          {},{},\
                          {},{},\
                          {},{},\
@@ -80,6 +80,7 @@ pub fn run(data: Data<WebsocketData>, hub: Data<Arc<WsHub>>, interval_secs: u64)
                         d(curr.state_replays_total, prev.state_replays_total),
                         d(curr.tv_broadcasts_total, prev.tv_broadcasts_total),
                         d(curr.games_finalized_total, prev.games_finalized_total),
+                        curr.load_user_state_queued,
                         curr.load_user_state_in_flight,
                         curr.lags_trackers_len,
                         curr.game_start_games_date_len,

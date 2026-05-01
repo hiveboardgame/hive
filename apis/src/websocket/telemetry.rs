@@ -20,7 +20,8 @@ pub struct WsTelemetry {
     pub state_replays_total: AtomicU64,
     pub tv_broadcasts_total: AtomicU64,
     pub games_finalized_total: AtomicU64,
-    // Loader-task gauge (incremented at task entry, decremented in Drop)
+    // Loader-task gauges: queued = waiting for semaphore, in_flight = running
+    pub load_user_state_queued: AtomicU64,
     pub load_user_state_in_flight: AtomicU64,
     // Gauges
     pub active_sockets: AtomicU64,
@@ -86,6 +87,7 @@ pub struct TelemetrySnapshot {
     pub state_replays_total: u64,
     pub tv_broadcasts_total: u64,
     pub games_finalized_total: u64,
+    pub load_user_state_queued: u64,
     pub load_user_state_in_flight: u64,
     pub active_sockets: u64,
     pub active_users: u64,
@@ -201,6 +203,14 @@ impl WsTelemetry {
         self.games_finalized_total.fetch_add(1, Ordering::Relaxed);
     }
 
+    pub fn inc_load_queued(&self) {
+        self.load_user_state_queued.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn dec_load_queued(&self) {
+        self.load_user_state_queued.fetch_sub(1, Ordering::Relaxed);
+    }
+
     pub fn snapshot(&self) -> TelemetrySnapshot {
         let load = |a: &AtomicU64| a.load(Ordering::Relaxed);
         let load6 = |arr: &[AtomicU64; 6]| {
@@ -224,6 +234,7 @@ impl WsTelemetry {
             state_replays_total: load(&self.state_replays_total),
             tv_broadcasts_total: load(&self.tv_broadcasts_total),
             games_finalized_total: load(&self.games_finalized_total),
+            load_user_state_queued: load(&self.load_user_state_queued),
             load_user_state_in_flight: load(&self.load_user_state_in_flight),
             active_sockets: load(&self.active_sockets),
             active_users: load(&self.active_users),
@@ -250,6 +261,24 @@ impl InFlightGuard {
 impl Drop for InFlightGuard {
     fn drop(&mut self) {
         self.0.load_user_state_in_flight.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+/// RAII guard for `load_user_state_queued`. Tracks tasks that have been
+/// spawned but are still waiting for a semaphore permit (i.e. not yet running).
+/// Drop it as soon as the permit is acquired; `InFlightGuard` takes over then.
+pub struct QueuedGuard(std::sync::Arc<WsTelemetry>);
+
+impl QueuedGuard {
+    pub fn new(telemetry: std::sync::Arc<WsTelemetry>) -> Self {
+        telemetry.inc_load_queued();
+        Self(telemetry)
+    }
+}
+
+impl Drop for QueuedGuard {
+    fn drop(&mut self) {
+        self.0.dec_load_queued();
     }
 }
 
@@ -324,7 +353,7 @@ pub fn diff_and_format(
          drops_closed:     User={} Game={} GameSpec={} Global={} Tour={} Direct={}\n  \
          max_queue_depth:  {}/128\n  \
          per_game_calls:   from_model={} state_replays={} tv_broadcasts={} finalized={}\n  \
-         loader_in_flight: {}\n  \
+         loader_queued:    {} loader_in_flight: {}\n  \
          lags_trackers:    {}\n  \
          game_start_dates: {}\n  \
          chat:             tour=({} ch, {} msg) gpub=({} ch, {} msg) gpriv=({} ch, {} msg) direct=({} pairs, {} msg) lookup_users={}\n  \
@@ -376,6 +405,7 @@ pub fn diff_and_format(
         d(curr.state_replays_total, prev.state_replays_total),
         d(curr.tv_broadcasts_total, prev.tv_broadcasts_total),
         d(curr.games_finalized_total, prev.games_finalized_total),
+        curr.load_user_state_queued,
         curr.load_user_state_in_flight,
         curr.lags_trackers_len,
         curr.game_start_games_date_len,

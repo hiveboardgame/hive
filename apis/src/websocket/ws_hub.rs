@@ -1,6 +1,6 @@
 use super::{
     messages::MessageDestination,
-    telemetry::{read_proc_vm_bytes, DestKind, InFlightGuard, SendOutcome, TelemetrySnapshot},
+    telemetry::{read_proc_vm_bytes, DestKind, InFlightGuard, QueuedGuard, SendOutcome, TelemetrySnapshot},
     WebsocketData,
 };
 use crate::{
@@ -110,7 +110,6 @@ impl WsHub {
         tx: mpsc::Sender<Bytes>,
     ) {
         let lobby = Self::lobby();
-        let tx_for_load = tx.clone();
         // Lock order: membership write → outer DashMap shard. on_disconnect uses
         // the same order so the two operations can't deadlock and a fast
         // reconnect can't race a tail-end disconnect into a stale Offline.
@@ -140,31 +139,36 @@ impl WsHub {
         }
         self.refresh_membership_gauges();
 
-        // Async state load (urgent games, invitations, schedules, challenges, etc.)
-        // matches the previous `Handler<Connect>` async block, which used
-        // `ctx.wait` (blocked the actor but not the reader). Here we spawn
-        // independently — readers and other dispatches proceed immediately.
+        // Async state load spawned independently so readers and dispatches
+        // proceed immediately while state loads in the background.
         //
-        // `loader_permits` caps in-flight loaders. If we'd block, take the
-        // permit asynchronously and re-check that the socket is still
-        // connected before doing the work.
+        // `loader_permits` caps concurrency. Tasks that can't get a permit
+        // immediately are counted in `load_user_state_queued` until they do.
+        // The sender is looked up from `sessions` after the permit is acquired
+        // so disconnected sockets don't hold a channel open while tasks wait.
         let permits = self.loader_permits.clone();
         actix_rt::spawn(async move {
+            let _queued = QueuedGuard::new(self.data.telemetry.clone());
             let permit = match permits.clone().try_acquire_owned() {
                 Ok(p) => p,
                 Err(_) => match permits.acquire_owned().await {
                     Ok(p) => p,
-                    // Semaphore::close is never called, so this shouldn't happen.
                     Err(_) => return,
                 },
             };
-            // Drop the loader if the socket disconnected while we waited.
+            drop(_queued);
             if !self.is_socket_connected(user_id, socket_id) {
-                drop(permit);
                 return;
             }
+            let Some(tx) = self
+                .sessions
+                .get(&user_id)
+                .and_then(|socks| socks.get(&socket_id).map(|t| t.clone()))
+            else {
+                return;
+            };
             let _guard = InFlightGuard::new(self.data.telemetry.clone());
-            self.load_user_state(socket_id, user_id, username, tx_for_load).await;
+            self.load_user_state(socket_id, user_id, username, tx).await;
             drop(permit);
         });
     }
@@ -460,11 +464,14 @@ impl WsHub {
                 GameStatus::from_str(&game.game_status),
                 Ok(GameStatus::Finished(_)) | Ok(GameStatus::Adjudicated)
             ) {
-                // Game is over — run the full finalization hook so per-game
-                // bookkeeping (Lags, chat, game_start, caches, membership)
-                // is dropped together. Idempotent: if a handler already ran
-                // it, the maps are already empty.
+                // Game is over — clean up per-game state then evict membership.
+                // on_game_finished intentionally skips membership eviction so
+                // that dispatch in ws_connection can still reach subscribers for
+                // the final handler message. The heartbeat is safe to evict here
+                // because no dispatch is pending for a heartbeat tick.
                 self.on_game_finished(&game_id, game.white_id, game.black_id);
+                self.evict_game_from_membership(&game_id);
+                self.data.telemetry.inc_games_finalized();
                 continue;
             }
             if game.time_mode == TimeMode::Untimed.to_string() {
@@ -655,52 +662,44 @@ impl WsHub {
         user_ids
     }
 
-    /// Single point of cleanup for everything keyed on `GameId`. Idempotent.
-    /// Call once per game finalization (Finished/Adjudicated transition)
-    /// from every code path that drives the transition.
+    /// Clean up all per-game state keyed on `GameId` except membership.
     ///
-    /// `white_id` and `black_id` are taken from the game so per-(player, game)
-    /// state (`Lags`) can be scrubbed even when no socket is currently
-    /// subscribed (correspondence games may finalize days after the last
-    /// connection).
+    /// Handlers call this on finalization *before* returning their message list;
+    /// dispatch runs afterward in ws_connection. Membership eviction must NOT
+    /// happen here because dispatch(Game) reads membership to find subscribers —
+    /// evicting before dispatch would drop the opponent from the fanout.
+    /// The heartbeat calls evict_game_from_membership explicitly after this.
     pub fn on_game_finished(&self, game_id: &GameId, white_id: Uuid, black_id: Uuid) {
-        // Scrub per-(player, game) lag tracking for both players.
         self.data.lags.remove(white_id, game_id.clone());
         self.data.lags.remove(black_id, game_id.clone());
 
-        // Drop the chat history for the finished game. Tournament/global/direct
-        // chat is not keyed on GameId, so it is unaffected here.
-        if let Ok(mut games_public) = self.data.chat_storage.games_public.write() {
-            games_public.remove(game_id);
-        }
-        if let Ok(mut games_private) = self.data.chat_storage.games_private.write() {
-            games_private.remove(game_id);
-        }
+        // Game chat is preserved intentionally: post-game chat history must
+        // remain accessible after finalization (e.g. post-mortem discussion).
+        // Memory is bounded by MAX_PER_CHANNEL in the chat handler.
 
-        // Drop the start-coordination entry, if any.
         if let Ok(mut games_date) = self.data.game_start.games_date.write() {
             games_date.remove(game_id);
         }
 
-        // Drop the cached GameResponse and last-TV timestamp.
         self.data.game_response_cache.remove(game_id);
         self.last_tv_broadcast.remove(game_id);
 
-        // Evict any remaining socket subscriptions and scrub per-user lag for
-        // any subscriber we hadn't already covered above (e.g. spectators).
-        let evicted_users = self.evict_game_from_membership(game_id);
-        for uid in evicted_users {
-            if uid != white_id && uid != black_id {
-                self.data.lags.remove(uid, game_id.clone());
-            }
-        }
-
-        self.data.telemetry.inc_games_finalized();
+        // games_finalized_total is incremented by the heartbeat after
+        // evict_game_from_membership, which is the single authoritative
+        // finalization point. Incrementing here would double-count since the
+        // heartbeat calls on_game_finished for the same game.
     }
 
-    /// Returns true and stamps the game iff TV may be broadcast right now.
-    /// Coalesces global lobby fanout to at most once per `TV_THROTTLE`.
-    pub fn should_send_tv(&self, game_id: &GameId) -> bool {
+    /// Returns true and stamps the game iff a TV broadcast should go out now.
+    /// When `is_final` is true (game just finished), always returns true and
+    /// clears the throttle entry — the final lobby update must never be dropped.
+    /// Otherwise coalesces to at most once per `TV_THROTTLE`.
+    pub fn should_send_tv(&self, game_id: &GameId, is_final: bool) -> bool {
+        if is_final {
+            // Clear the throttle entry so any post-finish call starts fresh.
+            self.last_tv_broadcast.remove(game_id);
+            return true;
+        }
         let now = Instant::now();
         match self.last_tv_broadcast.entry(game_id.clone()) {
             dashmap::mapref::entry::Entry::Occupied(mut e) => {
@@ -1166,5 +1165,136 @@ mod tests {
         .await;
 
         assert!(rx.try_recv().is_err());
+    }
+
+    // Regression: on_game_finished must not evict membership before dispatch.
+    // Handlers call on_game_finished before returning their message list;
+    // ws_connection dispatches afterward. If membership was evicted first, the
+    // opponent would never receive the final move/control update.
+    #[tokio::test]
+    async fn game_update_reaches_opponent_after_on_game_finished() {
+        let hub = make_hub().await;
+        let white_id = Uuid::new_v4();
+        let white_sid = Uuid::new_v4();
+        let black_id = Uuid::new_v4();
+        let black_sid = Uuid::new_v4();
+        let game_id = GameId("finish-game".to_string());
+
+        let mut rx_white = hub.register_socket(white_id, white_sid);
+        let mut rx_black = hub.register_socket(black_id, black_sid);
+        hub.join_game(white_id, white_sid, &game_id);
+        hub.join_game(black_id, black_sid, &game_id);
+
+        // Simulate what a handler does: on_game_finished runs before the message
+        // list is returned, then ws_connection dispatches.
+        hub.on_game_finished(&game_id, white_id, black_id);
+        hub.dispatch(
+            &MessageDestination::Game(game_id),
+            Bytes::from_static(b"final-move"),
+            Some((white_id, white_sid)),
+        )
+        .await;
+
+        assert_eq!(rx_white.try_recv().unwrap(), Bytes::from_static(b"final-move"));
+        assert_eq!(
+            rx_black.try_recv().unwrap(),
+            Bytes::from_static(b"final-move"),
+            "opponent must receive the final game update",
+        );
+    }
+
+    // Regression: the final TV update for a finished realtime game must not be
+    // suppressed by the throttle. Clients use it to remove the game from the
+    // live-games lobby list; dropping it leaves stale entries in the UI.
+    #[tokio::test]
+    async fn final_tv_update_bypasses_throttle() {
+        let hub = make_hub().await;
+        let game_id = GameId("tv-final-game".to_string());
+
+        // Prime the throttle.
+        assert!(hub.should_send_tv(&game_id, false));
+        // Within the throttle window a non-final update is suppressed.
+        assert!(!hub.should_send_tv(&game_id, false));
+        // The final update must always go through.
+        assert!(
+            hub.should_send_tv(&game_id, true),
+            "final TV update must not be suppressed by the throttle",
+        );
+    }
+
+    #[tokio::test]
+    async fn non_final_tv_updates_are_throttled() {
+        let hub = make_hub().await;
+        let game_id = GameId("tv-throttle-game".to_string());
+
+        assert!(hub.should_send_tv(&game_id, false));
+        assert!(!hub.should_send_tv(&game_id, false));
+        assert!(!hub.should_send_tv(&game_id, false));
+    }
+
+    // Regression (#1): cache keyed only on updated_at would serve stale
+    // user-derived fields (ratings, profile) after a player completes another
+    // game without the current game row changing. TTL bounds that window.
+    // Tests live in websocket::cache_tests (pure-logic, no DB needed).
+
+    // Regression (#2): on_game_finished must NOT delete game chat — post-game
+    // chat history must survive finalization.
+    #[tokio::test]
+    async fn game_chat_preserved_after_on_game_finished() {
+        let hub = make_hub().await;
+        let white_id = Uuid::new_v4();
+        let black_id = Uuid::new_v4();
+        let game_id = GameId("chat-preserve".to_string());
+
+        hub.data.chat_storage.games_public.write().unwrap()
+            .insert(game_id.clone(), vec![]);
+        hub.data.chat_storage.games_private.write().unwrap()
+            .insert(game_id.clone(), vec![]);
+
+        hub.on_game_finished(&game_id, white_id, black_id);
+
+        assert!(
+            hub.data.chat_storage.games_public.read().unwrap().contains_key(&game_id),
+            "public game chat must be preserved after finalization",
+        );
+        assert!(
+            hub.data.chat_storage.games_private.read().unwrap().contains_key(&game_id),
+            "private game chat must be preserved after finalization",
+        );
+    }
+
+    // Regression (#3): QueuedGuard tracks loader tasks waiting for a semaphore
+    // permit, giving telemetry visibility into the queued-vs-active split.
+    #[test]
+    fn queued_guard_increments_and_decrements() {
+        use std::sync::atomic::Ordering;
+        let telemetry = Arc::new(WsTelemetry::default());
+        assert_eq!(telemetry.load_user_state_queued.load(Ordering::Relaxed), 0);
+        let guard = QueuedGuard::new(telemetry.clone());
+        assert_eq!(telemetry.load_user_state_queued.load(Ordering::Relaxed), 1);
+        drop(guard);
+        assert_eq!(telemetry.load_user_state_queued.load(Ordering::Relaxed), 0);
+    }
+
+    // Regression (#4): on_game_finished must NOT increment games_finalized_total.
+    // The heartbeat increments it after evict_game_from_membership, which is the
+    // single authoritative finalization point, preventing double-counting.
+    #[tokio::test]
+    async fn games_finalized_not_incremented_by_on_game_finished() {
+        use std::sync::atomic::Ordering;
+        let hub = make_hub().await;
+        let white_id = Uuid::new_v4();
+        let black_id = Uuid::new_v4();
+        let game_id = GameId("finalize-count".to_string());
+
+        hub.on_game_finished(&game_id, white_id, black_id);
+        // Calling twice to confirm idempotence on the counter too.
+        hub.on_game_finished(&game_id, white_id, black_id);
+
+        assert_eq!(
+            hub.data.telemetry.games_finalized_total.load(Ordering::Relaxed),
+            0,
+            "on_game_finished must not increment games_finalized_total",
+        );
     }
 }
