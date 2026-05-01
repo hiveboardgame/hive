@@ -1,5 +1,5 @@
 use crate::{
-    board::Board,
+    board::{Board, BOARD_SIZE},
     game_error::GameError,
     game_type::GameType,
     mid_move_board::MidMoveBoard,
@@ -274,10 +274,36 @@ impl Bug {
         if !Bug::has_pillbug_throw(ability_position, board) {
             return false;
         }
-        if !Bug::pillbug_throw_targets(ability_position, board).any(|pos| pos == target_position) {
+        Bug::can_throw_piece_to(ability_position, thrown_position, target_position, board)
+    }
+
+    pub(crate) fn can_throw_piece_to(
+        ability_position: Position,
+        piece_position: Position,
+        destination: Position,
+        board: &Board,
+    ) -> bool {
+        if !Bug::is_canonical_position(piece_position) || !Bug::is_canonical_position(destination) {
             return false;
         }
-        Bug::pillbug_throw_sources(ability_position, board).any(|pos| pos == thrown_position)
+
+        let destination_is_available = ability_position.is_neighbor(destination)
+            && !board.occupied(destination)
+            && !board.gated(2, ability_position, destination);
+        if !destination_is_available {
+            return false;
+        }
+        if !ability_position.is_neighbor(piece_position) || board.level(piece_position) > 1 {
+            return false;
+        }
+        let Some(piece) = board.top_piece(piece_position) else {
+            return false;
+        };
+        !board.is_pinned(piece) && !board.gated(2, piece_position, ability_position)
+    }
+
+    fn is_canonical_position(position: Position) -> bool {
+        (0..BOARD_SIZE).contains(&position.q) && (0..BOARD_SIZE).contains(&position.r)
     }
 
     fn has_pillbug_throw(position: Position, board: &Board) -> bool {
@@ -611,7 +637,7 @@ impl Bug {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{board::BOARD_SIZE, color::Color, piece::Piece};
+    use crate::{color::Color, piece::Piece};
 
     fn assert_lazy_predicates_match_collected(board: &Board) {
         let mut checked_positions = Vec::new();
@@ -804,6 +830,79 @@ mod tests {
             Position::new(1, 0),
             Position::new(0, 0),
             Position::new(1, 0),
+            &board
+        ));
+        assert!(!Bug::can_throw(
+            Position::new(0, 0),
+            Position::new(1, 0),
+            Position::new(2, 0),
+            &board
+        ));
+
+        assert!(!Bug::can_throw(
+            Position::new(0, 0),
+            Position::new(2, 0),
+            Position::new(0, 1),
+            &board
+        ));
+    }
+
+    #[test]
+    fn tests_can_throw_rejects_non_canonical_positions() {
+        let mut board = Board::new();
+        board.insert(
+            Position::new(0, 0),
+            Piece::new_from(Bug::Pillbug, Color::White, 0),
+            true,
+        );
+        board.insert(
+            Position::new(1, 0),
+            Piece::new_from(Bug::Mosquito, Color::Black, 0),
+            true,
+        );
+        assert!(!Bug::can_throw(
+            Position::new(0, 0),
+            Position::new(1, 0),
+            Position { q: -1, r: 0 },
+            &board
+        ));
+
+        let mut board = Board::new();
+        board.insert(
+            Position::new(0, 0),
+            Piece::new_from(Bug::Pillbug, Color::White, 0),
+            true,
+        );
+        board.insert(
+            Position::new(-1, 0),
+            Piece::new_from(Bug::Mosquito, Color::Black, 0),
+            true,
+        );
+        assert!(!Bug::can_throw(
+            Position::new(0, 0),
+            Position { q: -1, r: 0 },
+            Position::new(0, 1),
+            &board
+        ));
+
+        let mut board = Board::new();
+        board.insert(
+            Position::new(-1, 0),
+            Piece::new_from(Bug::Pillbug, Color::White, 0),
+            true,
+        );
+        board.insert(
+            Position::new(0, 0),
+            Piece::new_from(Bug::Mosquito, Color::Black, 0),
+            true,
+        );
+        assert!(!Bug::can_throw(
+            Position::new(-1, 0),
+            Position::new(0, 0),
+            Position {
+                q: BOARD_SIZE,
+                r: 0
+            },
             &board
         ));
     }
