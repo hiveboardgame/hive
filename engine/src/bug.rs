@@ -7,11 +7,7 @@ use crate::{
     torus_array::TorusArray,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-    str::FromStr,
-};
+use std::{collections::HashMap, fmt, str::FromStr};
 
 #[derive(Hash, Eq, PartialEq, Clone, Copy, Serialize, Deserialize, Debug)]
 #[repr(u8)]
@@ -195,16 +191,52 @@ impl Bug {
     }
 
     pub(crate) fn has_move(position: Position, board: &Board) -> bool {
+        Bug::has_normal_move_matching(position, board, |_| true)
+    }
+
+    pub(crate) fn has_target_move(position: Position, target: Position, board: &Board) -> bool {
+        Bug::has_normal_move_matching(position, board, |pos| pos == target)
+    }
+
+    fn has_normal_move_matching(
+        position: Position,
+        board: &Board,
+        mut predicate: impl FnMut(Position) -> bool,
+    ) -> bool {
+        !Bug::scan_normal_moves_while(position, board, &mut |target| !predicate(target))
+    }
+
+    /// Scans legal normal-move targets for the top bug at `position` while
+    /// `keep_scanning` returns true.
+    ///
+    /// Returns true only when all targets were scanned. Returns false when
+    /// `keep_scanning` stopped generation early.
+    fn scan_normal_moves_while(
+        position: Position,
+        board: &Board,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
         match board.top_bug(position) {
-            Some(Bug::Ant) => Bug::has_ant_move(position, board),
-            Some(Bug::Beetle) => Bug::has_beetle_move(position, board),
-            Some(Bug::Grasshopper) => Bug::has_grasshopper_move(position, board),
-            Some(Bug::Ladybug) => Bug::has_ladybug_move(position, board),
-            Some(Bug::Mosquito) => Bug::has_mosquito_move(position, board),
-            Some(Bug::Pillbug) => Bug::has_pillbug_move(position, board),
-            Some(Bug::Queen) => Bug::has_queen_move(position, board),
-            Some(Bug::Spider) => Bug::has_spider_move(position, board),
-            None => false,
+            Some(bug) => Bug::scan_moves_as_bug_while(bug, position, board, keep_scanning),
+            None => true,
+        }
+    }
+
+    fn scan_moves_as_bug_while(
+        bug: Bug,
+        position: Position,
+        board: &Board,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
+        match bug {
+            Bug::Ant => Bug::scan_ant_moves_while(position, board, keep_scanning),
+            Bug::Beetle => Bug::scan_beetle_moves_while(position, board, keep_scanning),
+            Bug::Grasshopper => Bug::scan_grasshopper_moves_while(position, board, keep_scanning),
+            Bug::Ladybug => Bug::scan_ladybug_moves_while(position, board, keep_scanning),
+            Bug::Mosquito => Bug::scan_mosquito_moves_while(position, board, keep_scanning),
+            Bug::Pillbug => Bug::scan_crawl_moves_while(position, board, keep_scanning),
+            Bug::Queen => Bug::scan_crawl_moves_while(position, board, keep_scanning),
+            Bug::Spider => Bug::scan_spider_moves_while(position, board, keep_scanning),
         }
     }
 
@@ -284,10 +316,6 @@ impl Bug {
         })
     }
 
-    fn has_crawl_move(position: Position, board: &Board) -> bool {
-        Bug::crawl(position, board).next().is_some()
-    }
-
     fn climb(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
         board
             .positions_taken_around(position)
@@ -302,191 +330,186 @@ impl Bug {
     }
 
     fn ant_moves(position: Position, board: &Board) -> Vec<Position> {
-        //                               found  explored
-        let mut state = TorusArray::new((false, false));
-        state.set(position, (true, true));
-        let board = MidMoveBoard::new(board, position);
         let mut found_pos = Vec::with_capacity(24);
-        let mut unexplored = Vec::with_capacity(24);
-        unexplored.push(position);
-        Bug::ant_rec(&mut state, &mut found_pos, &mut unexplored, &board);
+        Bug::scan_ant_moves_while(position, board, &mut |pos| {
+            found_pos.push(pos);
+            true
+        });
         found_pos
     }
 
-    fn ant_rec(
-        state: &mut TorusArray<(bool, bool)>,
-        found_pos: &mut Vec<Position>,
-        unexplored: &mut Vec<Position>,
-        board: &MidMoveBoard,
-    ) {
-        while let Some(position) = unexplored.pop() {
-            let (found, explored) = state.get(position);
-            if !found {
-                state.set(position, (true, *explored));
-                found_pos.push(position);
+    fn scan_ant_moves_while(
+        position: Position,
+        board: &Board,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
+        let board = MidMoveBoard::new(board, position);
+        let mut unexplored = None;
+        for pos in Bug::crawl_negative_space(position, &board) {
+            if !keep_scanning(pos) {
+                return false;
             }
-            for pos in Bug::crawl_negative_space(position, board) {
+            unexplored
+                .get_or_insert_with(|| Vec::with_capacity(24))
+                .push(pos);
+        }
+        let Some(mut unexplored) = unexplored else {
+            return true;
+        };
+
+        let mut state = TorusArray::new((false, false));
+        state.set(position, (true, true));
+        for pos in &unexplored {
+            state.set(*pos, (true, true));
+        }
+
+        while let Some(position) = unexplored.pop() {
+            for pos in Bug::crawl_negative_space(position, &board) {
                 let (found, explored) = state.get(pos);
                 if !explored && !found && board.is_negative_space(pos) {
-                    state.set(pos, (*found, true));
+                    if !keep_scanning(pos) {
+                        return false;
+                    }
+                    state.set(pos, (true, true));
                     unexplored.push(pos);
                 }
             }
         }
-    }
-
-    fn has_ant_move(position: Position, board: &Board) -> bool {
-        Bug::has_crawl_move(position, board)
+        true
     }
 
     pub fn beetle_moves(position: Position, board: &Board) -> Vec<Position> {
         let mut positions = Vec::new();
-        for pos in Bug::climb(position, board) {
+        Bug::scan_beetle_moves_while(position, board, &mut |pos| {
             positions.push(pos);
+            true
+        });
+        positions
+    }
+
+    fn scan_beetle_moves_while(
+        position: Position,
+        board: &Board,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
+        let mut positions = Vec::new();
+        for pos in Bug::climb(position, board) {
+            if !Bug::scan_unique_target_while(&mut positions, pos, keep_scanning) {
+                return false;
+            }
         }
         if board.level(position) == 1 {
             for pos in Bug::crawl(position, board) {
-                if !positions.contains(&pos) {
-                    positions.push(pos);
+                if !Bug::scan_unique_target_while(&mut positions, pos, keep_scanning) {
+                    return false;
                 }
             }
         } else {
             for pos in Bug::descend(position, board) {
-                if !positions.contains(&pos) {
-                    positions.push(pos);
+                if !Bug::scan_unique_target_while(&mut positions, pos, keep_scanning) {
+                    return false;
                 }
             }
         }
-        positions
-    }
-
-    fn has_beetle_move(position: Position, board: &Board) -> bool {
-        if Bug::climb(position, board).next().is_some() {
-            return true;
-        }
-        if board.level(position) == 1 {
-            Bug::has_crawl_move(position, board)
-        } else {
-            Bug::descend(position, board).next().is_some()
-        }
+        true
     }
 
     pub fn grasshopper_moves(position: Position, board: &Board) -> Vec<Position> {
-        // get the directions of the grasshopper's neighbors
-        let mut positions = vec![];
-        // move in the given direction
+        let mut positions = Vec::new();
+        Bug::scan_grasshopper_moves_while(position, board, &mut |pos| {
+            positions.push(pos);
+            true
+        });
+        positions
+    }
+
+    fn scan_grasshopper_moves_while(
+        position: Position,
+        board: &Board,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
         for dir in board
             .positions_taken_around(position)
             .map(|pos| position.direction(pos))
         {
             let mut cur_pos = position;
-            // until there is a free position
             while board.occupied(cur_pos.to(dir)) {
                 cur_pos = cur_pos.to(dir);
             }
-            // then add the free position
-            positions.push(cur_pos.to(dir));
+            if !keep_scanning(cur_pos.to(dir)) {
+                return false;
+            }
         }
-        positions
-    }
-
-    fn has_grasshopper_move(position: Position, board: &Board) -> bool {
-        board.positions_taken_around(position).next().is_some()
+        true
     }
 
     fn ladybug_moves(position: Position, board: &Board) -> Vec<Position> {
-        // find all adjacent bugs to climb on
-        let first = Bug::climb(position, board);
-        // stay on top of the hive by moving on to an adjacent occupied hex
-        let second: HashSet<Position> = first
-            .flat_map(|first_pos| {
-                let current_height = board.level(first_pos) + 1;
-                board.positions_taken_around(first_pos).filter(move |pos| {
-                    *pos != position
-                        && !board.gated(current_height.max(board.level(*pos) + 1), first_pos, *pos)
-                })
-            })
-            .collect::<HashSet<Position>>();
-        // then find available and ungated positions
-        let third: HashSet<Position> = second
-            .iter()
-            .flat_map(|pos| {
-                board
-                    .positions_available_around(*pos)
-                    .filter(|p| !board.gated(board.level(*pos) + 1, *pos, *p))
-                    .collect::<HashSet<Position>>()
-            })
-            .collect::<HashSet<Position>>();
-        third.iter().cloned().collect()
+        let mut positions = Vec::new();
+        Bug::scan_ladybug_moves_while(position, board, &mut |pos| {
+            positions.push(pos);
+            true
+        });
+        positions
     }
 
-    fn has_ladybug_move(position: Position, board: &Board) -> bool {
+    fn scan_ladybug_moves_while(
+        position: Position,
+        board: &Board,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
+        let mut positions = Vec::new();
         for first_pos in Bug::climb(position, board) {
             let current_height = board.level(first_pos) + 1;
             for second_pos in board.positions_taken_around(first_pos).filter(|pos| {
                 *pos != position
                     && !board.gated(current_height.max(board.level(*pos) + 1), first_pos, *pos)
             }) {
-                if board
+                for third_pos in board
                     .positions_available_around(second_pos)
-                    .any(|third_pos| {
-                        !board.gated(board.level(second_pos) + 1, second_pos, third_pos)
+                    .filter(|third_pos| {
+                        !board.gated(board.level(second_pos) + 1, second_pos, *third_pos)
                     })
                 {
-                    return true;
+                    if !Bug::scan_unique_target_while(&mut positions, third_pos, keep_scanning) {
+                        return false;
+                    }
                 }
             }
         }
-        false
+        true
     }
 
     fn mosquito_moves(position: Position, board: &Board) -> Vec<Position> {
-        if board.level(position) == 1 {
-            board
-                .neighbors(position)
-                .flat_map(|pieces| {
-                    match pieces.top_piece().expect("Could not get last piece").bug() {
-                        Bug::Ant => Bug::ant_moves(position, board),
-                        Bug::Beetle => Bug::beetle_moves(position, board),
-                        Bug::Grasshopper => Bug::grasshopper_moves(position, board),
-                        Bug::Ladybug => Bug::ladybug_moves(position, board),
-                        Bug::Mosquito => vec![],
-                        Bug::Pillbug => Bug::pillbug_moves(position, board).collect(),
-                        Bug::Queen => Bug::queen_moves(position, board).collect(),
-                        Bug::Spider => Bug::spider_moves(position, board),
-                    }
-                })
-                .collect()
-        } else {
-            Bug::beetle_moves(position, board)
-        }
+        let mut positions = Vec::new();
+        Bug::scan_mosquito_moves_while(position, board, &mut |pos| {
+            positions.push(pos);
+            true
+        });
+        positions
     }
 
-    fn has_mosquito_move(position: Position, board: &Board) -> bool {
+    fn scan_mosquito_moves_while(
+        position: Position,
+        board: &Board,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
         if board.level(position) == 1 {
-            board.neighbors(position).any(|pieces| {
-                match pieces.top_piece().expect("Could not get last piece").bug() {
-                    Bug::Ant => Bug::has_ant_move(position, board),
-                    Bug::Beetle => Bug::has_beetle_move(position, board),
-                    Bug::Grasshopper => Bug::has_grasshopper_move(position, board),
-                    Bug::Ladybug => Bug::has_ladybug_move(position, board),
-                    Bug::Mosquito => false,
-                    Bug::Pillbug => Bug::has_pillbug_move(position, board),
-                    Bug::Queen => Bug::has_queen_move(position, board),
-                    Bug::Spider => Bug::has_spider_move(position, board),
+            for pieces in board.neighbors(position) {
+                let bug = pieces.top_piece().expect("Could not get last piece").bug();
+                if bug != Bug::Mosquito
+                    && !Bug::scan_moves_as_bug_while(bug, position, board, keep_scanning)
+                {
+                    return false;
                 }
-            })
+            }
+            true
         } else {
-            Bug::has_beetle_move(position, board)
+            Bug::scan_beetle_moves_while(position, board, keep_scanning)
         }
     }
 
     fn pillbug_moves(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
         Bug::crawl(position, board)
-    }
-
-    fn has_pillbug_move(position: Position, board: &Board) -> bool {
-        Bug::has_crawl_move(position, board)
     }
 
     fn pillbug_throw_targets(
@@ -524,48 +547,185 @@ impl Bug {
         Bug::crawl(position, board)
     }
 
-    fn has_queen_move(position: Position, board: &Board) -> bool {
-        Bug::has_crawl_move(position, board)
+    fn scan_crawl_moves_while(
+        position: Position,
+        board: &Board,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
+        for pos in Bug::crawl(position, board) {
+            if !keep_scanning(pos) {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn scan_unique_target_while(
+        visited_targets: &mut Vec<Position>,
+        target: Position,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
+        if visited_targets.contains(&target) {
+            return true;
+        }
+        if !keep_scanning(target) {
+            return false;
+        }
+        visited_targets.push(target);
+        true
     }
 
     fn spider_moves(position: Position, board: &Board) -> Vec<Position> {
-        let board = MidMoveBoard::new(board, position);
         let mut res = Vec::new();
-        for pos1 in Bug::crawl_negative_space(position, &board) {
-            for pos2 in Bug::crawl_negative_space(pos1, &board).filter(move |pos| *pos != position)
-            {
-                for pos3 in Bug::crawl_negative_space(pos2, &board).filter(move |pos| *pos != pos1)
-                {
-                    if pos3 != position {
-                        res.push(pos3);
-                    }
-                }
-            }
-        }
+        Bug::scan_spider_moves_while(position, board, &mut |pos| {
+            res.push(pos);
+            true
+        });
         res.sort();
         res.dedup();
         res
     }
 
-    fn has_spider_move(position: Position, board: &Board) -> bool {
+    fn scan_spider_moves_while(
+        position: Position,
+        board: &Board,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
         let board = MidMoveBoard::new(board, position);
+        let mut positions = Vec::new();
         for pos1 in Bug::crawl_negative_space(position, &board) {
             for pos2 in Bug::crawl_negative_space(pos1, &board).filter(|pos| *pos != position) {
-                if Bug::crawl_negative_space(pos2, &board)
-                    .any(|pos3| pos3 != position && pos3 != pos1)
+                for pos3 in Bug::crawl_negative_space(pos2, &board)
+                    .filter(|pos3| *pos3 != position && *pos3 != pos1)
                 {
-                    return true;
+                    if !Bug::scan_unique_target_while(&mut positions, pos3, keep_scanning) {
+                        return false;
+                    }
                 }
             }
         }
-        false
+        true
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{color::Color, piece::Piece};
+    use crate::{board::BOARD_SIZE, color::Color, piece::Piece};
+
+    fn assert_lazy_predicates_match_collected(board: &Board) {
+        let mut checked_positions = Vec::new();
+        for position in board.positions.iter().flatten() {
+            if checked_positions.contains(position) {
+                continue;
+            }
+            checked_positions.push(*position);
+
+            let collected = Bug::normal_moves(*position, board);
+            assert_eq!(
+                Bug::has_move(*position, board),
+                !collected.is_empty(),
+                "has_move disagrees with normal_moves at {position}"
+            );
+
+            for target in &collected {
+                assert!(
+                    Bug::has_target_move(*position, *target, board),
+                    "has_target_move missed collected move from {position} to {target}"
+                );
+            }
+
+            for q in 0..BOARD_SIZE {
+                for r in 0..BOARD_SIZE {
+                    let target = Position::new(q, r);
+                    assert_eq!(
+                        Bug::has_target_move(*position, target, board),
+                        collected.contains(&target),
+                        "has_target_move disagrees with normal_moves from {position} to {target}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn tests_lazy_predicates_match_collected_moves() {
+        let mut board = Board::new();
+        board.insert(
+            Position::new(0, 0),
+            Piece::new_from(Bug::Pillbug, Color::White, 0),
+            true,
+        );
+        board.insert(
+            Position::new(1, 0),
+            Piece::new_from(Bug::Mosquito, Color::Black, 0),
+            true,
+        );
+        assert_lazy_predicates_match_collected(&board);
+
+        let mut board = Board::new();
+        board.insert(
+            Position::new(0, 0),
+            Piece::new_from(Bug::Spider, Color::White, 1),
+            true,
+        );
+        board.insert(
+            Position::new(1, 0),
+            Piece::new_from(Bug::Ant, Color::Black, 1),
+            true,
+        );
+        assert_lazy_predicates_match_collected(&board);
+
+        let mut board = Board::new();
+        board.insert(
+            Position::new(0, 0),
+            Piece::new_from(Bug::Ladybug, Color::White, 0),
+            true,
+        );
+        for (i, pos) in Position::new(0, 0).positions_around().enumerate() {
+            board.insert(
+                pos,
+                Piece::new_from(Bug::Grasshopper, Color::from((i % 2) as u8), i / 2 + 1),
+                true,
+            );
+        }
+        board.insert(
+            Position::new(-2, 0),
+            Piece::new_from(Bug::Ant, Color::Black, 1),
+            true,
+        );
+        board.remove(Position::new(1, 0));
+        assert_lazy_predicates_match_collected(&board);
+
+        let mut board = Board::new();
+        board.insert(
+            Position::new(0, 0),
+            Piece::new_from(Bug::Beetle, Color::White, 1),
+            true,
+        );
+        for (i, pos) in Position::new(0, 0).positions_around().enumerate() {
+            board.insert(
+                pos,
+                Piece::new_from(Bug::Grasshopper, Color::from((i % 2) as u8), i / 2 + 1),
+                true,
+            );
+        }
+        board.remove(Position::new(1, 0));
+        assert_lazy_predicates_match_collected(&board);
+
+        let mut board = Board::new();
+        board.insert(
+            Position::new(0, 0),
+            Piece::new_from(Bug::Mosquito, Color::White, 0),
+            true,
+        );
+        board.insert(
+            Position::new(1, 0),
+            Piece::new_from(Bug::Ant, Color::Black, 1),
+            true,
+        );
+        assert_lazy_predicates_match_collected(&board);
+    }
 
     #[test]
     fn tests_available_moves() {
