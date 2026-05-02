@@ -611,9 +611,10 @@ impl Board {
             });
         }
 
+        let ground_graph_changes = self.level(current) == 1 || !self.occupied(target);
         let removed_piece = self.remove(current);
         debug_assert_eq!(removed_piece, piece);
-        self.insert(target, piece, false);
+        self.insert_with_pinned_update(target, piece, false, ground_graph_changes);
         Ok(())
     }
 
@@ -1112,6 +1113,16 @@ impl Board {
 
     /// @neal - add piece
     pub fn insert(&mut self, position: Position, piece: Piece, spawn: bool) {
+        self.insert_with_pinned_update(position, piece, spawn, true);
+    }
+
+    fn insert_with_pinned_update(
+        &mut self,
+        position: Position,
+        piece: Piece,
+        spawn: bool,
+        update_pinned: bool,
+    ) {
         self.last_moved = Some((piece, position));
         let stack = self.board.get_mut(position);
         stack.push_piece(piece);
@@ -1119,7 +1130,9 @@ impl Board {
         if self.board.get(position).size == 1 {
             self.neighbor_count_add(position)
         }
-        self.update_pinned();
+        if update_pinned {
+            self.update_pinned();
+        }
         if spawn {
             self.played += 1;
         }
