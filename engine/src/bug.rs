@@ -343,9 +343,11 @@ impl Bug {
     }
 
     fn climb(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
-        board
-            .positions_taken_around(position)
-            .filter(move |pos| !board.gated(board.level(*pos) + 1, position, *pos))
+        let source_level = board.level(position);
+        board.positions_taken_around(position).filter(move |pos| {
+            let target_level = board.level(*pos);
+            target_level >= source_level && !board.gated(target_level + 1, position, *pos)
+        })
     }
 
     fn descend(position: Position, board: &Board) -> impl Iterator<Item = Position> + '_ {
@@ -418,26 +420,15 @@ impl Bug {
         board: &Board,
         keep_scanning: &mut impl FnMut(Position) -> bool,
     ) -> bool {
-        let mut positions = Vec::new();
-        for pos in Bug::climb(position, board) {
-            if !Bug::scan_unique_target_while(&mut positions, pos, keep_scanning) {
-                return false;
-            }
+        if !Bug::scan_targets_while(Bug::climb(position, board), keep_scanning) {
+            return false;
         }
+
         if board.level(position) == 1 {
-            for pos in Bug::crawl(position, board) {
-                if !Bug::scan_unique_target_while(&mut positions, pos, keep_scanning) {
-                    return false;
-                }
-            }
+            Bug::scan_targets_while(Bug::crawl(position, board), keep_scanning)
         } else {
-            for pos in Bug::descend(position, board) {
-                if !Bug::scan_unique_target_while(&mut positions, pos, keep_scanning) {
-                    return false;
-                }
-            }
+            Bug::scan_targets_while(Bug::descend(position, board), keep_scanning)
         }
-        true
     }
 
     pub fn grasshopper_moves(position: Position, board: &Board) -> Vec<Position> {
@@ -578,12 +569,14 @@ impl Bug {
         board: &Board,
         keep_scanning: &mut impl FnMut(Position) -> bool,
     ) -> bool {
-        for pos in Bug::crawl(position, board) {
-            if !keep_scanning(pos) {
-                return false;
-            }
-        }
-        true
+        Bug::scan_targets_while(Bug::crawl(position, board), keep_scanning)
+    }
+
+    fn scan_targets_while(
+        targets: impl IntoIterator<Item = Position>,
+        keep_scanning: &mut impl FnMut(Position) -> bool,
+    ) -> bool {
+        targets.into_iter().all(keep_scanning)
     }
 
     fn scan_unique_target_while(
@@ -607,8 +600,6 @@ impl Bug {
             res.push(pos);
             true
         });
-        res.sort();
-        res.dedup();
         res
     }
 
@@ -1494,6 +1485,41 @@ mod tests {
         }
         board.remove(Position::new(1, 0));
         assert_eq!(Bug::beetle_moves(Position::new(0, 0), &board).len(), 5);
+    }
+
+    #[test]
+    fn beetle_moves_partition_stack_targets_without_duplicates() {
+        let source = Position::new(0, 0);
+        let lower_stack = Position::new(0, -1);
+        let equal_stack = Position::new(1, -1);
+
+        let mut board = Board::new();
+        board.insert(source, Piece::new_from(Bug::Ant, Color::White, 1), true);
+        board.insert(source, Piece::new_from(Bug::Beetle, Color::White, 1), true);
+        board.insert(
+            lower_stack,
+            Piece::new_from(Bug::Queen, Color::Black, 0),
+            true,
+        );
+        board.insert(
+            equal_stack,
+            Piece::new_from(Bug::Ant, Color::Black, 1),
+            true,
+        );
+        board.insert(
+            equal_stack,
+            Piece::new_from(Bug::Beetle, Color::Black, 1),
+            true,
+        );
+
+        let moves = Bug::beetle_moves(source, &board);
+        let mut unique_moves = moves.clone();
+        unique_moves.sort();
+        unique_moves.dedup();
+
+        assert_eq!(moves.len(), unique_moves.len());
+        assert!(moves.contains(&lower_stack));
+        assert!(moves.contains(&equal_stack));
     }
 
     #[test]
