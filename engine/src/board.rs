@@ -529,12 +529,8 @@ impl Board {
             return true;
         }
         // Spawn candidates must border one of our top pieces, so avoid scanning the full board.
-        self.positions.iter().flatten().any(|pos| {
-            if !self
-                .top_piece(*pos)
-                .map(|piece| piece.is_color(color))
-                .unwrap_or(false)
-            {
+        self.top_pieces().any(|(piece, pos)| {
+            if !piece.is_color(color) {
                 return false;
             }
             pos.positions_around().any(|target| {
@@ -547,17 +543,14 @@ impl Board {
     }
 
     fn has_board_action(&self, color: Color) -> bool {
-        for pos in self.positions.iter().flatten() {
-            let Some(piece) = self.top_piece(*pos) else {
-                continue;
-            };
-            if !piece.is_color(color) || self.last_moved == Some((piece, *pos)) {
+        for (piece, pos) in self.top_pieces() {
+            if !piece.is_color(color) || self.last_moved == Some((piece, pos)) {
                 continue;
             }
-            if !self.is_pinned(piece) && Bug::has_move(*pos, self) {
+            if !self.is_pinned(piece) && Bug::has_move(pos, self) {
                 return true;
             }
-            if Bug::has_available_ability(*pos, self) {
+            if Bug::has_available_ability(pos, self) {
                 return true;
             }
         }
@@ -863,25 +856,17 @@ impl Board {
         if !self.queen_played(color) {
             return moves;
         }
-        for pos in self.positions.iter().flatten() {
-            if let Some(piece) = self.top_piece(*pos) {
-                if piece.is_color(color) {
-                    // let's make sure pieces that were just moved cannot be moved again
-                    if let Some(last_moved) = self.last_moved {
-                        if last_moved == (piece, *pos) {
-                            // now we skip it
-                            continue;
-                        }
-                    }
-                    for (start_pos, mut target_positions) in Bug::available_moves(*pos, self) {
-                        if let Some(piece) = self.top_piece(start_pos) {
-                            if !target_positions.is_empty() {
-                                moves
-                                    .entry((piece, start_pos))
-                                    .or_default()
-                                    .append(&mut target_positions);
-                            }
-                        }
+        for (piece, pos) in self.top_pieces() {
+            if !piece.is_color(color) || self.last_moved == Some((piece, pos)) {
+                continue;
+            }
+            for (start_pos, mut target_positions) in Bug::available_moves(pos, self) {
+                if let Some(piece) = self.top_piece(start_pos) {
+                    if !target_positions.is_empty() {
+                        moves
+                            .entry((piece, start_pos))
+                            .or_default()
+                            .append(&mut target_positions);
                     }
                 }
             }
@@ -1024,21 +1009,27 @@ impl Board {
         res
     }
 
-    pub fn all_taken_positions(&self) -> impl Iterator<Item = Position> {
-        // TODO this does not uniq!
-        self.positions.into_iter().flatten()
+    pub fn all_taken_positions(&self) -> impl Iterator<Item = Position> + '_ {
+        self.top_pieces().map(|(_, position)| position)
+    }
+
+    fn top_pieces(&self) -> impl Iterator<Item = (Piece, Position)> + '_ {
+        self.positions
+            .iter()
+            .enumerate()
+            .filter_map(|(offset, maybe_position)| {
+                let position = (*maybe_position)?;
+                let piece = self.offset_to_piece(offset);
+                (self.top_piece(position) == Some(piece)).then_some((piece, position))
+            })
     }
 
     pub fn center_coordinates(&self) -> Position {
-        let positions = self.all_taken_positions().collect::<Vec<_>>();
-        //center won't shift much if any in the first few moves
-        if positions.len() < 8 {
-            return Position::initial_spawn_position();
-        }
-
-        let (q_min, q_max, r_min, r_max) = positions.iter().fold(
+        let mut positions = 0;
+        let (q_min, q_max, r_min, r_max) = self.all_taken_positions().fold(
             (i32::MAX, i32::MIN, i32::MAX, i32::MIN),
             |(q_min, q_max, r_min, r_max), pos| {
+                positions += 1;
                 (
                     q_min.min(pos.q),
                     q_max.max(pos.q),
@@ -1047,6 +1038,11 @@ impl Board {
                 )
             },
         );
+        //center won't shift much if any in the first few moves
+        if positions < 8 {
+            return Position::initial_spawn_position();
+        }
+
         //TODO: Some look centered with q + 1 some without it, figure out something
         Position {
             q: q_min + ((q_max - q_min) / 2),
@@ -1182,19 +1178,21 @@ impl Board {
             return None;
         }
 
-        let top_left =
-            self.all_taken_positions()
-                .fold(Position::new(BOARD_SIZE, BOARD_SIZE), |acc, pos| Position {
-                    q: acc.q.min(pos.q),
-                    r: acc.r.min(pos.r),
-                });
-
-        let bottom_right = self
-            .all_taken_positions()
-            .fold(Position::new(0, 0), |acc, pos| Position {
-                q: acc.q.max(pos.q),
-                r: acc.r.max(pos.r),
-            });
+        let (top_left, bottom_right) = self.all_taken_positions().fold(
+            (Position::new(BOARD_SIZE, BOARD_SIZE), Position::new(0, 0)),
+            |(top_left, bottom_right), pos| {
+                (
+                    Position {
+                        q: top_left.q.min(pos.q),
+                        r: top_left.r.min(pos.r),
+                    },
+                    Position {
+                        q: bottom_right.q.max(pos.q),
+                        r: bottom_right.r.max(pos.r),
+                    },
+                )
+            },
+        );
 
         Some(Bounds {
             top_left,
