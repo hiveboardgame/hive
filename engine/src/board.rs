@@ -26,6 +26,7 @@ use std::{
 };
 
 pub const BOARD_SIZE: i32 = 32;
+const MISSING_DFS_INDEX: u8 = u8::MAX;
 lazy_static! {
     static ref BLACK_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::Black, 0);
     static ref WHITE_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::White, 0);
@@ -913,68 +914,91 @@ impl Board {
     }
 
     pub fn update_pinned(&mut self) {
-        for pinned_info in self.calculate_pinned().iter() {
-            self.pinned[self.piece_to_offset(pinned_info.piece)] = pinned_info.pinned
-        }
+        self.calculate_pinned().into_iter().for_each(|pinned_info| {
+            let offset = self.piece_to_offset(pinned_info.piece);
+            self.pinned[offset] = pinned_info.pinned;
+        });
     }
 
     pub fn calculate_pinned(&self) -> Vec<DfsInfo> {
-        // make sure to get only top pieces in this
-        let mut dfs_info = self
-            .positions
-            .iter()
-            .enumerate()
-            .filter_map(|(i, maybe_pos)| {
-                if let Some(pos) = maybe_pos {
-                    if self.is_bottom_piece(self.offset_to_piece(i), *pos) {
-                        Some(DfsInfo {
-                            position: *pos,
-                            piece: self.bottom_piece(*pos).unwrap(),
-                            visited: false,
-                            depth: 0,
-                            low: 0,
-                            pinned: false,
-                            parent: None,
-                        })
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
+        // Connectivity is position-based, so stacked positions contribute only their bottom piece.
+        let mut dfs_info = Vec::with_capacity(self.played);
+        let mut dfs_indexes = TorusArray::new(MISSING_DFS_INDEX);
+
+        for (i, maybe_pos) in self.positions.iter().enumerate() {
+            let Some(pos) = maybe_pos else {
+                continue;
+            };
+            let piece = self.offset_to_piece(i);
+
+            if self.is_bottom_piece(piece, *pos) {
+                let dfs_index = dfs_info.len();
+                debug_assert!(dfs_index < usize::from(MISSING_DFS_INDEX));
+
+                dfs_indexes.set(*pos, dfs_index as u8);
+                dfs_info.push(DfsInfo {
+                    position: *pos,
+                    piece,
+                    visited: false,
+                    depth: 0,
+                    low: 0,
+                    pinned: false,
+                    parent: None,
+                });
+            }
+        }
+
         if dfs_info.is_empty() {
             return dfs_info;
         }
-        self.bcc(0, 0, &mut dfs_info);
+        self.mark_articulation_points(0, 0, &mut dfs_info, &dfs_indexes);
         dfs_info
     }
 
-    pub fn bcc(&self, i: usize, d: usize, dfs_info: &mut Vec<DfsInfo>) {
-        dfs_info[i].visited = true;
-        dfs_info[i].depth = d;
-        dfs_info[i].low = d;
+    fn mark_articulation_points(
+        &self,
+        index: usize,
+        depth: usize,
+        dfs_info: &mut [DfsInfo],
+        dfs_indexes: &TorusArray<u8>,
+    ) {
+        dfs_info[index].visited = true;
+        dfs_info[index].depth = depth;
+        dfs_info[index].low = depth;
         let mut child_count = 0;
-        let mut ap = false;
+        let mut is_articulation_point = false;
 
-        for pos in self.positions_taken_around(dfs_info[i].position) {
-            let ni = dfs_info.iter().position(|e| e.position == pos).unwrap();
-            if !dfs_info[ni].visited {
+        for pos in self.positions_taken_around(dfs_info[index].position) {
+            let neighbor_dfs_index = usize::from(*dfs_indexes.get(pos));
+            debug_assert!(
+                neighbor_dfs_index < dfs_info.len(),
+                "Occupied position should have a DFS index"
+            );
+
+            if !dfs_info[neighbor_dfs_index].visited {
                 child_count += 1;
-                dfs_info[ni].parent = Some(i);
-                self.bcc(ni, d + 1, dfs_info);
-                if dfs_info[ni].low >= dfs_info[i].depth {
-                    ap = true;
+                dfs_info[neighbor_dfs_index].parent = Some(index);
+                self.mark_articulation_points(neighbor_dfs_index, depth + 1, dfs_info, dfs_indexes);
+                if dfs_info[neighbor_dfs_index].low >= dfs_info[index].depth {
+                    is_articulation_point = true;
                 }
-                dfs_info[i].low = std::cmp::min(dfs_info[i].low, dfs_info[ni].low);
-            } else if dfs_info[i].parent.is_some() && ni != dfs_info[i].parent.unwrap() {
-                dfs_info[i].low = std::cmp::min(dfs_info[i].low, dfs_info[ni].depth);
+                dfs_info[index].low =
+                    std::cmp::min(dfs_info[index].low, dfs_info[neighbor_dfs_index].low);
+            } else {
+                let is_alternate_connection = dfs_info[index]
+                    .parent
+                    .is_some_and(|parent_dfs_index| neighbor_dfs_index != parent_dfs_index);
+                if is_alternate_connection {
+                    dfs_info[index].low =
+                        std::cmp::min(dfs_info[index].low, dfs_info[neighbor_dfs_index].depth);
+                }
             }
         }
-        if dfs_info[i].parent.is_some() && ap || (dfs_info[i].parent.is_none() && child_count > 1) {
-            dfs_info[i].pinned = true;
+
+        if dfs_info[index].parent.is_none() {
+            is_articulation_point = child_count > 1;
         }
+        dfs_info[index].pinned = is_articulation_point;
     }
 
     pub fn top_layer_neighbors(&self, position: Position) -> impl Iterator<Item = Piece> + '_ {
