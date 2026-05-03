@@ -567,10 +567,10 @@ impl Board {
     pub fn game_result(&self) -> GameResult {
         let black_won = self
             .position_of_piece(*WHITE_QUEEN)
-            .map(|pos| self.neighbors(pos).count() == 6);
+            .map(|pos| *self.neighbor_count.get(pos) == 6);
         let white_won = self
             .position_of_piece(*BLACK_QUEEN)
-            .map(|pos| self.neighbors(pos).count() == 6);
+            .map(|pos| *self.neighbor_count.get(pos) == 6);
         match (black_won, white_won) {
             (Some(true), Some(true)) => GameResult::Draw,
             (Some(true), Some(false)) => GameResult::Winner(Color::Black),
@@ -873,13 +873,13 @@ impl Board {
                             continue;
                         }
                     }
-                    for (start_pos, target_positions) in Bug::available_moves(*pos, self) {
+                    for (start_pos, mut target_positions) in Bug::available_moves(*pos, self) {
                         if let Some(piece) = self.top_piece(start_pos) {
                             if !target_positions.is_empty() {
                                 moves
                                     .entry((piece, start_pos))
                                     .or_default()
-                                    .append(&mut target_positions.clone());
+                                    .append(&mut target_positions);
                             }
                         }
                     }
@@ -894,9 +894,10 @@ impl Board {
     }
 
     pub fn spawnable_positions(&self, color: Color) -> impl Iterator<Item = Position> + '_ {
+        let game_result = self.game_result();
         std::iter::once(Position::initial_spawn_position())
             .chain(self.negative_space())
-            .filter(move |pos| self.spawnable(color, *pos))
+            .filter(move |pos| self.spawnable_with_game_result(color, *pos, &game_result))
     }
 
     pub fn queen_played(&self, color: Color) -> bool {
@@ -1054,9 +1055,17 @@ impl Board {
     }
 
     pub fn spawnable(&self, color: Color, position: Position) -> bool {
-        match self.game_result() {
-            GameResult::Unknown => {}
-            _ => return false,
+        self.spawnable_with_game_result(color, position, &self.game_result())
+    }
+
+    fn spawnable_with_game_result(
+        &self,
+        color: Color,
+        position: Position,
+        game_result: &GameResult,
+    ) -> bool {
+        if !matches!(game_result, GameResult::Unknown) {
+            return false;
         }
         if self.occupied(position) {
             return false;
@@ -1067,13 +1076,12 @@ impl Board {
         if self.played == 1 {
             return self.is_negative_space(position);
         }
-        // connected to the hive
-        if self.top_layer_neighbors(position).next().is_none() {
+
+        let mut neighbors = self.top_layer_neighbors(position).peekable();
+        if neighbors.peek().is_none() {
             return false;
         }
-        !self
-            .top_layer_neighbors(position)
-            .any(|piece| color == piece.color().opposite_color())
+        !neighbors.any(|piece| color == piece.color().opposite_color())
     }
 
     pub fn negative_space(&self) -> impl Iterator<Item = Position> + '_ {
