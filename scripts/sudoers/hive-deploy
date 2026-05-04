@@ -1,0 +1,5 @@
+# Allow `drone` to manage the hive systemd slots and swap the nginx upstream
+# without a password. Install with:
+#   sudo install -m 440 scripts/sudoers/hive-deploy /etc/sudoers.d/hive-deploy
+# (visudo will reject it if the syntax is wrong.)
+drone ALL=(root) NOPASSWD: /bin/systemctl start hive@*, /bin/systemctl stop hive@*, /bin/systemctl restart hive@*, /bin/systemctl is-active hive@*, /usr/bin/tee /etc/nginx/conf.d/hive-upstream-server.conf, /usr/sbin/nginx -s reload
