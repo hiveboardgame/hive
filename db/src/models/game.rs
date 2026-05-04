@@ -952,22 +952,32 @@ impl Game {
             )
             .await
         } else {
-            let game = diesel::update(games::table.find(self.id))
-                .set((
-                    history.eq(new_history),
-                    current_player_id.eq(next_player),
-                    turn.eq(state.turn as i32),
-                    game_status.eq(time_info.new_game_status.to_string()),
-                    game_control_history.eq(game_control_history.concat(game_control_string)),
-                    updated_at.eq(Utc::now()),
-                    white_time_left.eq(time_info.white_time_left),
-                    black_time_left.eq(time_info.black_time_left),
-                    move_times.eq(new_move_times),
-                    last_interaction.eq(Some(Utc::now())),
-                ))
-                .get_result(conn)
-                .await?;
-            Ok(game)
+            let update = diesel::update(
+                games::table
+                    .find(self.id)
+                    .filter(games::finished.eq(false))
+                    .filter(games::turn.eq(self.turn))
+                    .filter(games::history.eq(self.history.clone())),
+            )
+            .set((
+                history.eq(new_history),
+                current_player_id.eq(next_player),
+                turn.eq(state.turn as i32),
+                game_status.eq(time_info.new_game_status.to_string()),
+                game_control_history.eq(game_control_history.concat(game_control_string)),
+                updated_at.eq(Utc::now()),
+                white_time_left.eq(time_info.white_time_left),
+                black_time_left.eq(time_info.black_time_left),
+                move_times.eq(new_move_times),
+                last_interaction.eq(Some(Utc::now())),
+            ))
+            .get_result(conn)
+            .await;
+            match update {
+                Ok(game) => Ok(game),
+                Err(diesel::result::Error::NotFound) => Err(Self::stale_game_action_error()),
+                Err(err) => Err(err.into()),
+            }
         }
     }
 
@@ -1012,13 +1022,25 @@ impl Game {
         conn: &mut DbConn<'_>,
     ) -> Result<Game, DbError> {
         let game_control_string = format!("{}. {game_control};", self.turn);
-        Ok(diesel::update(games::table.find(self.id))
-            .set((
-                game_control_history.eq(game_control_history.concat(game_control_string)),
-                updated_at.eq(Utc::now()),
-            ))
-            .get_result(conn)
-            .await?)
+        let update = diesel::update(
+            games::table
+                .find(self.id)
+                .filter(games::finished.eq(false))
+                .filter(games::turn.eq(self.turn))
+                .filter(games::history.eq(self.history.clone()))
+                .filter(games::game_control_history.eq(self.game_control_history.clone())),
+        )
+        .set((
+            game_control_history.eq(game_control_history.concat(game_control_string)),
+            updated_at.eq(Utc::now()),
+        ))
+        .get_result(conn)
+        .await;
+        match update {
+            Ok(game) => Ok(game),
+            Err(diesel::result::Error::NotFound) => Err(Self::stale_game_action_error()),
+            Err(err) => Err(err.into()),
+        }
     }
 
     fn get_takeback_time_correspondence(&self, popped: i32) -> (Option<i64>, Option<i64>) {
@@ -1162,21 +1184,33 @@ impl Game {
             self.black_id
         };
 
-        Ok(diesel::update(games::table.find(self.id))
-            .set((
-                current_player_id.eq(next_player),
-                history.eq(new_history),
-                turn.eq(turn - popped),
-                game_status.eq(new_game_status),
-                game_control_history.eq(game_control_history.concat(game_control_string)),
-                updated_at.eq(Utc::now()),
-                last_interaction.eq(Utc::now()),
-                move_times.eq(new_move_times),
-                white_time_left.eq(white_time),
-                black_time_left.eq(black_time),
-            ))
-            .get_result(conn)
-            .await?)
+        let update = diesel::update(
+            games::table
+                .find(self.id)
+                .filter(games::finished.eq(false))
+                .filter(games::turn.eq(self.turn))
+                .filter(games::history.eq(self.history.clone()))
+                .filter(games::game_control_history.eq(self.game_control_history.clone())),
+        )
+        .set((
+            current_player_id.eq(next_player),
+            history.eq(new_history),
+            turn.eq(turn - popped),
+            game_status.eq(new_game_status),
+            game_control_history.eq(game_control_history.concat(game_control_string)),
+            updated_at.eq(Utc::now()),
+            last_interaction.eq(Utc::now()),
+            move_times.eq(new_move_times),
+            white_time_left.eq(white_time),
+            black_time_left.eq(black_time),
+        ))
+        .get_result(conn)
+        .await;
+        match update {
+            Ok(game) => Ok(game),
+            Err(diesel::result::Error::NotFound) => Err(Self::stale_game_action_error()),
+            Err(err) => Err(err.into()),
+        }
     }
 
     pub async fn resign(
