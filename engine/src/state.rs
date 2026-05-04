@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fmt::Display, path::PathBuf, str::FromStr};
 
 use crate::{
     board::Board,
@@ -133,6 +133,22 @@ impl State {
         self.turn > 1 || !self.tournament
     }
 
+    fn invalid_move_error(
+        piece: Piece,
+        from: impl Display,
+        target_position: Position,
+        turn: usize,
+        reason: impl Into<String>,
+    ) -> GameError {
+        GameError::InvalidMove {
+            piece: piece.to_string(),
+            from: from.to_string(),
+            to: target_position.to_string(),
+            turn,
+            reason: reason.into(),
+        }
+    }
+
     // TODO: Think about renaming this to play_turn_from_str(ings)
     pub fn play_turn_from_history(&mut self, piece: &str, position: &str) -> Result<(), GameError> {
         match piece {
@@ -234,21 +250,23 @@ impl State {
     }
 
     fn turn_move(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {
-        let mut err = GameError::InvalidMove {
-            piece: piece.to_string(),
-            from: "NA".to_string(),
-            to: target_position.to_string(),
-            turn: self.turn,
-            reason: "NA".to_string(),
-        };
-        let current_position = self.board.position_of_piece(piece).ok_or({
-            err.update_reason("This piece is not on the board.");
-            err.clone()
+        let current_position = self.board.position_of_piece(piece).ok_or_else(|| {
+            Self::invalid_move_error(
+                piece,
+                "NA",
+                target_position,
+                self.turn,
+                "This piece is not on the board.",
+            )
         })?;
-        err.update_from(current_position.to_string());
         if self.board.is_pinned(piece) {
-            err.update_reason("Piece is pinned.");
-            return Err(err);
+            return Err(Self::invalid_move_error(
+                piece,
+                current_position,
+                target_position,
+                self.turn,
+                "Piece is pinned.",
+            ));
         }
         // remove the piece from its current location
         if !self
@@ -256,8 +274,13 @@ impl State {
             .is_valid_move(self.turn_color, piece, current_position, target_position)
         {
             println!("Board state is: {}", self.board);
-            err.update_reason("This move isn't valid.");
-            return Err(err);
+            return Err(Self::invalid_move_error(
+                piece,
+                current_position,
+                target_position,
+                self.turn,
+                "This move isn't valid.",
+            ));
         }
         self.board
             .move_piece(piece, current_position, target_position, self.turn)?;
@@ -274,35 +297,49 @@ impl State {
     }
 
     pub fn turn_spawn(&mut self, piece: Piece, target_position: Position) -> Result<(), GameError> {
-        let mut err = GameError::InvalidMove {
-            piece: piece.to_string(),
-            from: "Reserve".to_string(),
-            to: target_position.to_string(),
-            turn: self.turn,
-            reason: "NA".to_string(),
-        };
         if !piece.is_color(self.turn_color) {
-            err.update_reason(format!(
+            let reason = format!(
                 "It is {}'s turn, but {} tried to spawn a piece.",
                 self.turn_color,
                 piece.color()
+            );
+            return Err(Self::invalid_move_error(
+                piece,
+                "Reserve",
+                target_position,
+                self.turn,
+                reason,
             ));
-            return Err(err);
         }
         if self.turn < 2 && piece.bug() == Bug::Queen && self.tournament {
-            err.update_reason("Can't spawn Queen. Game uses tournament rules");
-            return Err(err);
+            return Err(Self::invalid_move_error(
+                piece,
+                "Reserve",
+                target_position,
+                self.turn,
+                "Can't spawn Queen. Game uses tournament rules",
+            ));
         }
         if piece.bug() != Bug::Queen && self.board.queen_required(self.turn, piece.color()) {
-            err.update_reason("Can't spawn another piece. Queen is required.");
-            return Err(err);
+            return Err(Self::invalid_move_error(
+                piece,
+                "Reserve",
+                target_position,
+                self.turn,
+                "Can't spawn another piece. Queen is required.",
+            ));
         }
         if self.board.spawnable(piece.color(), target_position) {
             self.board.insert(target_position, piece, true);
             self.board.last_move = (None, Some(target_position));
         } else {
-            err.update_reason(format!("{} is not allowed to spawn here.", self.turn_color));
-            return Err(err);
+            return Err(Self::invalid_move_error(
+                piece,
+                "Reserve",
+                target_position,
+                self.turn,
+                format!("{} is not allowed to spawn here.", self.turn_color),
+            ));
         }
         Ok(())
     }

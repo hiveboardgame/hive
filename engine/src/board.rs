@@ -26,6 +26,7 @@ use std::{
 };
 
 pub const BOARD_SIZE: i32 = 32;
+const MISSING_DFS_INDEX: u8 = u8::MAX;
 lazy_static! {
     static ref BLACK_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::Black, 0);
     static ref WHITE_QUEEN: Piece = Piece::new_from(Bug::Queen, Color::White, 0);
@@ -284,7 +285,8 @@ impl Board {
     ) -> u64 {
         if self.played == 1 {
             let bs = self.board.get_mut(Position::initial_spawn_position());
-            bs.index = [Some(0), Some(0)];
+            bs.set_index(Rotation::C, 0);
+            bs.set_index(Rotation::CC, 0);
             self.smallest = Some((piece, to));
             self.hasher.update(bs, Some(0), Rotation::C);
             self.hasher.update(bs, Some(0), Rotation::CC);
@@ -310,7 +312,7 @@ impl Board {
             }
 
             let mut stack = self.board.get(to).clone();
-            if stack.index != [None, None] {
+            if stack.has_index() {
                 let top_piece = stack.pop_piece();
                 debug_assert_eq!(piece, top_piece);
                 self.hasher.update(&stack, None, Rotation::C);
@@ -326,8 +328,8 @@ impl Board {
                 counter_clockwise.take_while(|pos| *pos != to).count(),
             );
             let stack = self.board.get_mut(to);
-            stack.index[Rotation::C as usize] = Some(c_index);
-            stack.index[Rotation::CC as usize] = Some(cc_index);
+            stack.set_index(Rotation::C, c_index);
+            stack.set_index(Rotation::CC, cc_index);
             self.hasher.update(stack, Some(c_index as u32), Rotation::C);
             self.hasher
                 .update(stack, Some(cc_index as u32), Rotation::CC);
@@ -339,7 +341,7 @@ impl Board {
             let mut hashed = 0_usize;
             for (index, position) in clockwise.enumerate() {
                 let bs = self.board.get_mut(position);
-                bs.index[Rotation::C as usize] = Some(index);
+                bs.set_index(Rotation::C, index);
                 if !bs.is_empty() {
                     self.hasher.update(bs, Some(index as u32), Rotation::C);
                     hashed += bs.size as usize;
@@ -353,7 +355,7 @@ impl Board {
             hashed = 0_usize;
             for (index, position) in counter_clockwise.enumerate() {
                 let bs = self.board.get_mut(position);
-                bs.index[Rotation::CC as usize] = Some(index);
+                bs.set_index(Rotation::CC, index);
                 if !bs.is_empty() {
                     self.hasher.update(bs, Some(index as u32), Rotation::CC);
                     hashed += bs.size as usize;
@@ -491,21 +493,77 @@ impl Board {
     }
 
     pub fn is_shutout(&self, color: Color, game_type: GameType) -> bool {
-        if let GameResult::Unknown = self.game_result() {
-            return self.moves(color).is_empty()
-                && (self.spawnable_positions(color).next().is_none()
-                    || self.reserve(color, game_type).is_empty());
-        };
+        if !matches!(self.game_result(), GameResult::Unknown) {
+            return false;
+        }
+        if self.played < 3 || !self.queen_played(color) {
+            return false;
+        }
+        if self.can_spawn_from_reserve(color, game_type) {
+            return false;
+        }
+        !self.has_board_action(color)
+    }
+
+    fn can_spawn_from_reserve(&self, color: Color, game_type: GameType) -> bool {
+        if self.played == game_type.max_played() {
+            return false;
+        }
+        self.has_reserve_piece(color, game_type) && self.has_spawnable_position(color)
+    }
+
+    fn has_reserve_piece(&self, color: Color, game_type: GameType) -> bool {
+        let start = 24 * color as usize;
+        let end = 24 + start;
+        self.positions[start..end]
+            .iter()
+            .enumerate()
+            .any(|(i, maybe_pos)| {
+                let offset = i + start;
+                maybe_pos.is_none() && self.offset_represents_piece(offset, game_type)
+            })
+    }
+
+    fn has_spawnable_position(&self, color: Color) -> bool {
+        if self.played < 2 {
+            return true;
+        }
+        // Spawn candidates must border one of our top pieces, so avoid scanning the full board.
+        self.top_pieces().any(|(piece, pos)| {
+            if !piece.is_color(color) {
+                return false;
+            }
+            pos.positions_around().any(|target| {
+                !self.occupied(target)
+                    && !self
+                        .top_layer_neighbors(target)
+                        .any(|piece| color == piece.color().opposite_color())
+            })
+        })
+    }
+
+    fn has_board_action(&self, color: Color) -> bool {
+        for (piece, pos) in self.top_pieces() {
+            if !piece.is_color(color) || self.last_moved == Some((piece, pos)) {
+                continue;
+            }
+            if !self.is_pinned(piece) && Bug::has_move(pos, self) {
+                return true;
+            }
+            if Bug::has_available_ability(pos, self) {
+                return true;
+            }
+        }
         false
     }
 
     pub fn game_result(&self) -> GameResult {
         let black_won = self
             .position_of_piece(*WHITE_QUEEN)
-            .map(|pos| self.neighbors(pos).count() == 6);
+            .map(|pos| *self.neighbor_count.get(pos) == 6);
         let white_won = self
             .position_of_piece(*BLACK_QUEEN)
-            .map(|pos| self.neighbors(pos).count() == 6);
+            .map(|pos| *self.neighbor_count.get(pos) == 6);
         match (black_won, white_won) {
             (Some(true), Some(true)) => GameResult::Draw,
             (Some(true), Some(false)) => GameResult::Winner(Color::Black),
@@ -547,9 +605,10 @@ impl Board {
             });
         }
 
+        let ground_graph_changes = self.level(current) == 1 || !self.occupied(target);
         let removed_piece = self.remove(current);
         debug_assert_eq!(removed_piece, piece);
-        self.insert(target, piece, false);
+        self.insert_with_pinned_update(target, piece, false, ground_graph_changes);
         Ok(())
     }
 
@@ -619,6 +678,10 @@ impl Board {
         let bug = (offset as u8 - color * 24) / 3;
         let order = (offset as u8 + 1 - bug * 3 - color * 24) as usize;
         Piece::new_from(Bug::from(bug), Color::from(color), order)
+    }
+
+    fn offset_represents_piece(&self, offset: usize, game_type: GameType) -> bool {
+        self.offset_to_piece(offset).bug().count(game_type) > offset % 3
     }
 
     pub fn is_pinned(&self, piece: Piece) -> bool {
@@ -734,10 +797,54 @@ impl Board {
         current_position: Position,
         target_position: Position,
     ) -> bool {
-        match self.moves(color).get(&(piece, current_position)) {
-            None => false,
-            Some(positions) => positions.contains(&target_position),
+        match self.game_result() {
+            GameResult::Unknown => {}
+            _ => return false,
         }
+        if !self.queen_played(color) {
+            return false;
+        }
+        if self.top_piece(current_position) != Some(piece) {
+            return false;
+        }
+        if self.last_moved == Some((piece, current_position)) {
+            return false;
+        }
+
+        if piece.is_color(color)
+            && !self.is_pinned(piece)
+            && Bug::has_target_move(current_position, target_position, self)
+        {
+            return true;
+        }
+
+        for (_, ability_position) in self.ability_pieces_around(color, current_position) {
+            if Bug::can_throw_piece_to(ability_position, current_position, target_position, self) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn ability_pieces_around(
+        &self,
+        color: Color,
+        position: Position,
+    ) -> impl Iterator<Item = (Piece, Position)> + '_ {
+        position.positions_around().filter_map(move |pos| {
+            let piece = self.top_piece(pos)?;
+            if !piece.is_color(color) || self.last_moved == Some((piece, pos)) {
+                return None;
+            }
+            match piece.bug() {
+                Bug::Pillbug => Some((piece, pos)),
+                Bug::Mosquito if self.level(pos) == 1 && self.neighbor_is_a(pos, Bug::Pillbug) => {
+                    Some((piece, pos))
+                }
+                _ => None,
+            }
+        })
     }
 
     pub fn moves(&self, color: Color) -> HashMap<(Piece, Position), Vec<Position>> {
@@ -749,25 +856,17 @@ impl Board {
         if !self.queen_played(color) {
             return moves;
         }
-        for pos in self.positions.iter().flatten() {
-            if let Some(piece) = self.top_piece(*pos) {
-                if piece.is_color(color) {
-                    // let's make sure pieces that were just moved cannot be moved again
-                    if let Some(last_moved) = self.last_moved {
-                        if last_moved == (piece, *pos) {
-                            // now we skip it
-                            continue;
-                        }
-                    }
-                    for (start_pos, target_positions) in Bug::available_moves(*pos, self) {
-                        if let Some(piece) = self.top_piece(start_pos) {
-                            if !target_positions.is_empty() {
-                                moves
-                                    .entry((piece, start_pos))
-                                    .or_default()
-                                    .append(&mut target_positions.clone());
-                            }
-                        }
+        for (piece, pos) in self.top_pieces() {
+            if !piece.is_color(color) || self.last_moved == Some((piece, pos)) {
+                continue;
+            }
+            for (start_pos, mut target_positions) in Bug::available_moves(pos, self) {
+                if let Some(piece) = self.top_piece(start_pos) {
+                    if !target_positions.is_empty() {
+                        moves
+                            .entry((piece, start_pos))
+                            .or_default()
+                            .append(&mut target_positions);
                     }
                 }
             }
@@ -780,9 +879,10 @@ impl Board {
     }
 
     pub fn spawnable_positions(&self, color: Color) -> impl Iterator<Item = Position> + '_ {
+        let game_result = self.game_result();
         std::iter::once(Position::initial_spawn_position())
             .chain(self.negative_space())
-            .filter(move |pos| self.spawnable(color, *pos))
+            .filter(move |pos| self.spawnable_with_game_result(color, *pos, &game_result))
     }
 
     pub fn queen_played(&self, color: Color) -> bool {
@@ -800,68 +900,91 @@ impl Board {
     }
 
     pub fn update_pinned(&mut self) {
-        for pinned_info in self.calculate_pinned().iter() {
-            self.pinned[self.piece_to_offset(pinned_info.piece)] = pinned_info.pinned
-        }
+        self.calculate_pinned().into_iter().for_each(|pinned_info| {
+            let offset = self.piece_to_offset(pinned_info.piece);
+            self.pinned[offset] = pinned_info.pinned;
+        });
     }
 
     pub fn calculate_pinned(&self) -> Vec<DfsInfo> {
-        // make sure to get only top pieces in this
-        let mut dfs_info = self
-            .positions
-            .iter()
-            .enumerate()
-            .filter_map(|(i, maybe_pos)| {
-                if let Some(pos) = maybe_pos {
-                    if self.is_bottom_piece(self.offset_to_piece(i), *pos) {
-                        Some(DfsInfo {
-                            position: *pos,
-                            piece: self.bottom_piece(*pos).unwrap(),
-                            visited: false,
-                            depth: 0,
-                            low: 0,
-                            pinned: false,
-                            parent: None,
-                        })
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
+        // Connectivity is position-based, so stacked positions contribute only their bottom piece.
+        let mut dfs_info = Vec::with_capacity(self.played);
+        let mut dfs_indexes = TorusArray::new(MISSING_DFS_INDEX);
+
+        for (i, maybe_pos) in self.positions.iter().enumerate() {
+            let Some(pos) = maybe_pos else {
+                continue;
+            };
+            let piece = self.offset_to_piece(i);
+
+            if self.is_bottom_piece(piece, *pos) {
+                let dfs_index = dfs_info.len();
+                debug_assert!(dfs_index < usize::from(MISSING_DFS_INDEX));
+
+                dfs_indexes.set(*pos, dfs_index as u8);
+                dfs_info.push(DfsInfo {
+                    position: *pos,
+                    piece,
+                    visited: false,
+                    depth: 0,
+                    low: 0,
+                    pinned: false,
+                    parent: None,
+                });
+            }
+        }
+
         if dfs_info.is_empty() {
             return dfs_info;
         }
-        self.bcc(0, 0, &mut dfs_info);
+        self.mark_articulation_points(0, 0, &mut dfs_info, &dfs_indexes);
         dfs_info
     }
 
-    pub fn bcc(&self, i: usize, d: usize, dfs_info: &mut Vec<DfsInfo>) {
-        dfs_info[i].visited = true;
-        dfs_info[i].depth = d;
-        dfs_info[i].low = d;
+    fn mark_articulation_points(
+        &self,
+        index: usize,
+        depth: usize,
+        dfs_info: &mut [DfsInfo],
+        dfs_indexes: &TorusArray<u8>,
+    ) {
+        dfs_info[index].visited = true;
+        dfs_info[index].depth = depth;
+        dfs_info[index].low = depth;
         let mut child_count = 0;
-        let mut ap = false;
+        let mut is_articulation_point = false;
 
-        for pos in self.positions_taken_around(dfs_info[i].position) {
-            let ni = dfs_info.iter().position(|e| e.position == pos).unwrap();
-            if !dfs_info[ni].visited {
+        for pos in self.positions_taken_around(dfs_info[index].position) {
+            let neighbor_dfs_index = usize::from(*dfs_indexes.get(pos));
+            debug_assert!(
+                neighbor_dfs_index < dfs_info.len(),
+                "Occupied position should have a DFS index"
+            );
+
+            if !dfs_info[neighbor_dfs_index].visited {
                 child_count += 1;
-                dfs_info[ni].parent = Some(i);
-                self.bcc(ni, d + 1, dfs_info);
-                if dfs_info[ni].low >= dfs_info[i].depth {
-                    ap = true;
+                dfs_info[neighbor_dfs_index].parent = Some(index);
+                self.mark_articulation_points(neighbor_dfs_index, depth + 1, dfs_info, dfs_indexes);
+                if dfs_info[neighbor_dfs_index].low >= dfs_info[index].depth {
+                    is_articulation_point = true;
                 }
-                dfs_info[i].low = std::cmp::min(dfs_info[i].low, dfs_info[ni].low);
-            } else if dfs_info[i].parent.is_some() && ni != dfs_info[i].parent.unwrap() {
-                dfs_info[i].low = std::cmp::min(dfs_info[i].low, dfs_info[ni].depth);
+                dfs_info[index].low =
+                    std::cmp::min(dfs_info[index].low, dfs_info[neighbor_dfs_index].low);
+            } else {
+                let is_alternate_connection = dfs_info[index]
+                    .parent
+                    .is_some_and(|parent_dfs_index| neighbor_dfs_index != parent_dfs_index);
+                if is_alternate_connection {
+                    dfs_info[index].low =
+                        std::cmp::min(dfs_info[index].low, dfs_info[neighbor_dfs_index].depth);
+                }
             }
         }
-        if dfs_info[i].parent.is_some() && ap || (dfs_info[i].parent.is_none() && child_count > 1) {
-            dfs_info[i].pinned = true;
+
+        if dfs_info[index].parent.is_none() {
+            is_articulation_point = child_count > 1;
         }
+        dfs_info[index].pinned = is_articulation_point;
     }
 
     pub fn top_layer_neighbors(&self, position: Position) -> impl Iterator<Item = Piece> + '_ {
@@ -874,35 +997,39 @@ impl Board {
         let mut res = HashMap::<Bug, Vec<String>>::new();
         let start = 24 * color as usize;
         let end = 24 + start;
-        let bugs_for_game_type = Bug::bugs_count(game_type);
         for (i, maybe_pos) in self.positions[start..end].iter().enumerate() {
             if maybe_pos.is_none() {
-                let piece = self.offset_to_piece(i + 24 * color as usize);
-                if let Some(number_of_bugs) = bugs_for_game_type.get(&piece.bug()) {
-                    if (*number_of_bugs as usize) > (i % 3) {
-                        res.entry(piece.bug()).or_default().push(piece.to_string());
-                    }
+                let offset = i + start;
+                if self.offset_represents_piece(offset, game_type) {
+                    let piece = self.offset_to_piece(offset);
+                    res.entry(piece.bug()).or_default().push(piece.to_string());
                 }
             }
         }
         res
     }
 
-    pub fn all_taken_positions(&self) -> impl Iterator<Item = Position> {
-        // TODO this does not uniq!
-        self.positions.into_iter().flatten()
+    pub fn all_taken_positions(&self) -> impl Iterator<Item = Position> + '_ {
+        self.top_pieces().map(|(_, position)| position)
+    }
+
+    fn top_pieces(&self) -> impl Iterator<Item = (Piece, Position)> + '_ {
+        self.positions
+            .iter()
+            .enumerate()
+            .filter_map(|(offset, maybe_position)| {
+                let position = (*maybe_position)?;
+                let piece = self.offset_to_piece(offset);
+                (self.top_piece(position) == Some(piece)).then_some((piece, position))
+            })
     }
 
     pub fn center_coordinates(&self) -> Position {
-        let positions = self.all_taken_positions().collect::<Vec<_>>();
-        //center won't shift much if any in the first few moves
-        if positions.len() < 8 {
-            return Position::initial_spawn_position();
-        }
-
-        let (q_min, q_max, r_min, r_max) = positions.iter().fold(
+        let mut positions = 0;
+        let (q_min, q_max, r_min, r_max) = self.all_taken_positions().fold(
             (i32::MAX, i32::MIN, i32::MAX, i32::MIN),
             |(q_min, q_max, r_min, r_max), pos| {
+                positions += 1;
                 (
                     q_min.min(pos.q),
                     q_max.max(pos.q),
@@ -911,6 +1038,11 @@ impl Board {
                 )
             },
         );
+        //center won't shift much if any in the first few moves
+        if positions < 8 {
+            return Position::initial_spawn_position();
+        }
+
         //TODO: Some look centered with q + 1 some without it, figure out something
         Position {
             q: q_min + ((q_max - q_min) / 2),
@@ -919,28 +1051,33 @@ impl Board {
     }
 
     pub fn spawnable(&self, color: Color, position: Position) -> bool {
-        match self.game_result() {
-            GameResult::Unknown => {}
-            _ => return false,
+        self.spawnable_with_game_result(color, position, &self.game_result())
+    }
+
+    fn spawnable_with_game_result(
+        &self,
+        color: Color,
+        position: Position,
+        game_result: &GameResult,
+    ) -> bool {
+        if !matches!(game_result, GameResult::Unknown) {
+            return false;
         }
         if self.occupied(position) {
             return false;
         }
-        // TODO maybe hand in state.turn and get rid of this
-        let number_of_positions = self.positions.into_iter().flatten().count();
-        if number_of_positions == 0 {
+        if self.played == 0 {
             return position == Position::initial_spawn_position();
         }
-        if number_of_positions == 1 {
+        if self.played == 1 {
             return self.is_negative_space(position);
         }
-        // connected to the hive
-        if self.top_layer_neighbors(position).next().is_none() {
+
+        let mut neighbors = self.top_layer_neighbors(position).peekable();
+        if neighbors.peek().is_none() {
             return false;
         }
-        !self
-            .top_layer_neighbors(position)
-            .any(|piece| color == piece.color().opposite_color())
+        !neighbors.any(|piece| color == piece.color().opposite_color())
     }
 
     pub fn negative_space(&self) -> impl Iterator<Item = Position> + '_ {
@@ -1004,6 +1141,16 @@ impl Board {
 
     /// @neal - add piece
     pub fn insert(&mut self, position: Position, piece: Piece, spawn: bool) {
+        self.insert_with_pinned_update(position, piece, spawn, true);
+    }
+
+    fn insert_with_pinned_update(
+        &mut self,
+        position: Position,
+        piece: Piece,
+        spawn: bool,
+        update_pinned: bool,
+    ) {
         self.last_moved = Some((piece, position));
         let stack = self.board.get_mut(position);
         stack.push_piece(piece);
@@ -1011,7 +1158,9 @@ impl Board {
         if self.board.get(position).size == 1 {
             self.neighbor_count_add(position)
         }
-        self.update_pinned();
+        if update_pinned {
+            self.update_pinned();
+        }
         if spawn {
             self.played += 1;
         }
@@ -1029,19 +1178,21 @@ impl Board {
             return None;
         }
 
-        let top_left =
-            self.all_taken_positions()
-                .fold(Position::new(BOARD_SIZE, BOARD_SIZE), |acc, pos| Position {
-                    q: acc.q.min(pos.q),
-                    r: acc.r.min(pos.r),
-                });
-
-        let bottom_right = self
-            .all_taken_positions()
-            .fold(Position::new(0, 0), |acc, pos| Position {
-                q: acc.q.max(pos.q),
-                r: acc.r.max(pos.r),
-            });
+        let (top_left, bottom_right) = self.all_taken_positions().fold(
+            (Position::new(BOARD_SIZE, BOARD_SIZE), Position::new(0, 0)),
+            |(top_left, bottom_right), pos| {
+                (
+                    Position {
+                        q: top_left.q.min(pos.q),
+                        r: top_left.r.min(pos.r),
+                    },
+                    Position {
+                        q: bottom_right.q.max(pos.q),
+                        r: bottom_right.r.max(pos.r),
+                    },
+                )
+            },
+        );
 
         Some(Bounds {
             top_left,
@@ -1096,7 +1247,50 @@ impl fmt::Display for Board {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{history::History, state::State};
     use std::collections::HashSet;
+
+    #[test]
+    fn tests_action_existence_matches_full_generation_for_pass_games() {
+        for file in [
+            "./test_pgns/valid/base_with_pass.pgn",
+            "./test_pgns/valid/m_with_pass.pgn",
+            "./test_pgns/valid/pass.pgn",
+            "./test_pgns/valid/pass2.pgn",
+        ] {
+            let history = History::from_filepath(file.into()).expect("valid history");
+            let tournament = !history.moves.iter().take(2).any(|(piece, _)| {
+                piece
+                    .parse::<Piece>()
+                    .map(|piece| piece.bug() == Bug::Queen)
+                    .unwrap_or(false)
+            });
+            let mut state = State::new(history.game_type, tournament);
+            for (piece, position) in history.moves.iter() {
+                let full_generation_has_legal_action =
+                    matches!(state.board.game_result(), GameResult::Unknown)
+                        && (!state.board.moves(state.turn_color).is_empty()
+                            || (state
+                                .board
+                                .spawnable_positions(state.turn_color)
+                                .next()
+                                .is_some()
+                                && !state
+                                    .board
+                                    .reserve(state.turn_color, state.game_type)
+                                    .is_empty()));
+                assert_eq!(
+                    state.board.is_shutout(state.turn_color, state.game_type),
+                    !full_generation_has_legal_action,
+                    "{file} turn {}",
+                    state.turn
+                );
+                state
+                    .play_turn_from_history(piece, position)
+                    .unwrap_or_else(|err| panic!("{file} turn {}: {err}", state.turn));
+            }
+        }
+    }
 
     #[test]
     fn tests_positions_around() {
