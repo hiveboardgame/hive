@@ -12,7 +12,7 @@ use crate::{
 use ::nanoid::nanoid;
 use chrono::{DateTime, Datelike, TimeZone, Utc};
 use diesel::{prelude::*, ExpressionMethods, Insertable};
-use diesel_async::RunQueryDsl;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use hive_lib::{Color, GameControl, GameResult, GameStatus, GameType, History, State};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -46,6 +46,75 @@ impl TimeInfo {
             black_time_left: None,
             timed_out: false,
             new_game_status: status,
+        }
+    }
+}
+
+enum FinishedGameBehavior {
+    ReturnExisting,
+    Error,
+}
+
+struct BoardFinalization {
+    expected_turn: i32,
+    expected_history: String,
+    result: GameResult,
+    conclusion: Conclusion,
+    history: String,
+    current_player_id: Uuid,
+    turn: i32,
+    game_control_string: String,
+    white_time_left: Option<i64>,
+    black_time_left: Option<i64>,
+    move_times: Vec<Option<i64>>,
+}
+
+enum FinalizationRequest {
+    Timeout,
+    Board(BoardFinalization),
+    Resign(GameControl),
+    DrawAccept(GameControl),
+}
+
+enum GameFinalization {
+    Timeout {
+        result: GameResult,
+        white_time_left: Option<i64>,
+        black_time_left: Option<i64>,
+    },
+    Board(BoardFinalization),
+    Resign {
+        result: GameResult,
+        game_control_string: String,
+        white_time_left: Option<i64>,
+        black_time_left: Option<i64>,
+    },
+    DrawAccept {
+        game_control_string: String,
+        white_time_left: Option<i64>,
+        black_time_left: Option<i64>,
+    },
+}
+
+impl GameFinalization {
+    fn result(&self) -> GameResult {
+        match self {
+            GameFinalization::Timeout { result, .. }
+            | GameFinalization::Board(BoardFinalization { result, .. })
+            | GameFinalization::Resign { result, .. } => result.clone(),
+            GameFinalization::DrawAccept { .. } => GameResult::Draw,
+        }
+    }
+
+    fn conclusion(&self) -> Conclusion {
+        match self {
+            GameFinalization::Timeout { .. } => Conclusion::Timeout,
+            GameFinalization::Board(BoardFinalization {
+                conclusion: final_conclusion,
+                ..
+            }) => final_conclusion.clone(),
+            GameFinalization::Resign { .. } => Conclusion::Resigned,
+            GameFinalization::DrawAccept { .. } => Conclusion::Draw,
         }
     }
 }
@@ -337,8 +406,86 @@ impl Game {
     }
 
     pub async fn check_time(&self, conn: &mut DbConn<'_>) -> Result<Game, DbError> {
-        if self.time_mode == "Unlimited" || self.finished {
-            return Ok(self.clone());
+        Game::finalize_game_by_id(
+            self.id,
+            FinalizationRequest::Timeout,
+            FinishedGameBehavior::ReturnExisting,
+            conn,
+        )
+        .await
+    }
+
+    async fn finalize_game_by_id(
+        game_id: Uuid,
+        request: FinalizationRequest,
+        finished_behavior: FinishedGameBehavior,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Game, DbError> {
+        conn.transaction::<_, DbError, _>(move |tc| {
+            async move {
+                // Stale Game values can race here; only the post-lock row may apply ratings.
+                let game: Game = games::table.find(game_id).for_update().first(tc).await?;
+                game.finalize_locked(request, finished_behavior, tc).await
+            }
+            .scope_boxed()
+        })
+        .await
+    }
+
+    async fn finalize_locked(
+        &self,
+        request: FinalizationRequest,
+        finished_behavior: FinishedGameBehavior,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Game, DbError> {
+        if self.finished {
+            return match finished_behavior {
+                FinishedGameBehavior::ReturnExisting => Ok(self.clone()),
+                FinishedGameBehavior::Error => Err(DbError::GameIsOver),
+            };
+        }
+
+        if !matches!(&request, FinalizationRequest::Board(_)) {
+            if let Some(timeout) = self.timeout_finalization()? {
+                return self.apply_finalization(timeout, conn).await;
+            }
+        }
+
+        let finalization = match request {
+            FinalizationRequest::Timeout => return Ok(self.clone()),
+            FinalizationRequest::Board(board) => {
+                self.ensure_current_for_finalization(board.expected_turn, &board.expected_history)?;
+                GameFinalization::Board(board)
+            }
+            FinalizationRequest::Resign(game_control) => self.resign_finalization(&game_control)?,
+            FinalizationRequest::DrawAccept(game_control) => {
+                self.draw_accept_finalization(&game_control)?
+            }
+        };
+
+        self.apply_finalization(finalization, conn).await
+    }
+
+    fn stale_game_action_error() -> DbError {
+        DbError::InvalidAction {
+            info: String::from("Game changed before the action could be applied"),
+        }
+    }
+
+    fn ensure_current_for_finalization(
+        &self,
+        expected_turn: i32,
+        expected_history: &str,
+    ) -> Result<(), DbError> {
+        if self.turn != expected_turn || self.history != expected_history {
+            return Err(Self::stale_game_action_error());
+        }
+        Ok(())
+    }
+
+    fn timeout_finalization(&self) -> Result<Option<GameFinalization>, DbError> {
+        if self.finished || TimeMode::from_str(&self.time_mode)? == TimeMode::Untimed {
+            return Ok(None);
         }
         let time_left = if self.turn % 2 == 0 {
             self.white_time_left_duration()?
@@ -346,15 +493,15 @@ impl Game {
             self.black_time_left_duration()?
         };
         if GameStatus::NotStarted.to_string() == self.game_status {
-            return Ok(self.clone());
+            return Ok(None);
         }
         if let Some(last) = self.last_interaction {
             if let Ok(time_passed) = Utc::now().signed_duration_since(last).to_std() {
                 if time_left > time_passed {
-                    return Ok(self.clone());
+                    return Ok(None);
                 }
             }
-            let (white_time, black_time, game_result) = if self.turn % 2 == 0 {
+            let (new_white_time_left, new_black_time_left, result) = if self.turn % 2 == 0 {
                 (
                     Some(0_i64),
                     self.black_time_left,
@@ -367,37 +514,169 @@ impl Game {
                     GameResult::Winner(Color::White),
                 )
             };
-            let tgr = TournamentGameResult::new(&game_result);
-            let new_game_status = GameStatus::Finished(game_result.clone());
-            let (w_rating, b_rating, w_change, b_change) = Rating::update(
-                self.rated,
-                self.speed.clone(),
-                self.white_id,
-                self.black_id,
-                game_result,
-                conn,
-            )
-            .await?;
-            let game = diesel::update(games::table.find(self.id))
-                .set((
-                    finished.eq(true),
-                    tournament_game_result.eq(tgr.to_string()),
-                    game_status.eq(new_game_status.to_string()),
-                    white_rating.eq(w_rating),
-                    black_rating.eq(b_rating),
-                    white_rating_change.eq(w_change),
-                    black_rating_change.eq(b_change),
-                    updated_at.eq(Utc::now()),
-                    white_time_left.eq(white_time),
-                    black_time_left.eq(black_time),
-                    conclusion.eq(Conclusion::Timeout.to_string()),
-                ))
-                .get_result(conn)
-                .await?;
-            Ok(game)
+            Ok(Some(GameFinalization::Timeout {
+                result,
+                white_time_left: new_white_time_left,
+                black_time_left: new_black_time_left,
+            }))
         } else {
             todo!("Well this is not good and needs a better error message");
         }
+    }
+
+    fn resign_finalization(&self, game_control: &GameControl) -> Result<GameFinalization, DbError> {
+        let game_control_string = format!("{}. {game_control};", self.turn);
+        let result = GameResult::Winner(game_control.color().opposite_color());
+        let (new_white_time_left, new_black_time_left) = match TimeMode::from_str(&self.time_mode)?
+        {
+            TimeMode::Untimed => (None, None),
+            _ => self.calculate_time_left()?,
+        };
+
+        Ok(GameFinalization::Resign {
+            result,
+            game_control_string,
+            white_time_left: new_white_time_left,
+            black_time_left: new_black_time_left,
+        })
+    }
+
+    fn draw_accept_finalization(
+        &self,
+        game_control: &GameControl,
+    ) -> Result<GameFinalization, DbError> {
+        let expected_offer = GameControl::DrawOffer(game_control.color().opposite_color());
+        if self.last_game_control() != Some(expected_offer) {
+            return Err(Self::stale_game_action_error());
+        }
+
+        let game_control_string = format!("{}. {game_control};", self.turn);
+        let (new_white_time_left, new_black_time_left) = match TimeMode::from_str(&self.time_mode)?
+        {
+            TimeMode::Untimed => (None, None),
+            _ => self.calculate_time_left()?,
+        };
+
+        Ok(GameFinalization::DrawAccept {
+            game_control_string,
+            white_time_left: new_white_time_left,
+            black_time_left: new_black_time_left,
+        })
+    }
+
+    async fn apply_finalization(
+        &self,
+        finalization: GameFinalization,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Game, DbError> {
+        let result = finalization.result();
+        if let GameResult::Unknown = result {
+            return Err(DbError::InvalidAction {
+                info: String::from("Cannot finalize a game with an unknown result"),
+            });
+        }
+        let final_conclusion = finalization.conclusion();
+        let tgr = TournamentGameResult::new(&result);
+        let new_game_status = GameStatus::Finished(result.clone());
+        let (w_rating, b_rating, w_change, b_change) = Rating::update(
+            self.rated,
+            self.speed.clone(),
+            self.white_id,
+            self.black_id,
+            result,
+            conn,
+        )
+        .await?;
+
+        let game = match finalization {
+            GameFinalization::Timeout {
+                white_time_left: new_white_time_left,
+                black_time_left: new_black_time_left,
+                ..
+            } => {
+                diesel::update(games::table.find(self.id))
+                    .set((
+                        games::finished.eq(true),
+                        games::tournament_game_result.eq(tgr.to_string()),
+                        games::game_status.eq(new_game_status.to_string()),
+                        games::white_rating.eq(w_rating),
+                        games::black_rating.eq(b_rating),
+                        games::white_rating_change.eq(w_change),
+                        games::black_rating_change.eq(b_change),
+                        games::updated_at.eq(Utc::now()),
+                        games::white_time_left.eq(new_white_time_left),
+                        games::black_time_left.eq(new_black_time_left),
+                        games::conclusion.eq(final_conclusion.to_string()),
+                    ))
+                    .get_result(conn)
+                    .await?
+            }
+            GameFinalization::Board(BoardFinalization {
+                history: new_history,
+                current_player_id: next_player,
+                turn: new_turn,
+                game_control_string,
+                white_time_left: new_white_time_left,
+                black_time_left: new_black_time_left,
+                move_times: new_move_times,
+                ..
+            }) => {
+                diesel::update(games::table.find(self.id))
+                    .set((
+                        games::history.eq(new_history),
+                        games::current_player_id.eq(next_player),
+                        games::turn.eq(new_turn),
+                        games::finished.eq(true),
+                        games::tournament_game_result.eq(tgr.to_string()),
+                        games::game_status.eq(new_game_status.to_string()),
+                        games::game_control_history
+                            .eq(games::game_control_history.concat(game_control_string)),
+                        games::white_rating.eq(w_rating),
+                        games::black_rating.eq(b_rating),
+                        games::white_rating_change.eq(w_change),
+                        games::black_rating_change.eq(b_change),
+                        games::updated_at.eq(Utc::now()),
+                        games::white_time_left.eq(new_white_time_left),
+                        games::black_time_left.eq(new_black_time_left),
+                        games::last_interaction.eq(Some(Utc::now())),
+                        games::move_times.eq(new_move_times),
+                        games::conclusion.eq(final_conclusion.to_string()),
+                    ))
+                    .get_result(conn)
+                    .await?
+            }
+            GameFinalization::Resign {
+                game_control_string,
+                white_time_left: new_white_time_left,
+                black_time_left: new_black_time_left,
+                ..
+            }
+            | GameFinalization::DrawAccept {
+                game_control_string,
+                white_time_left: new_white_time_left,
+                black_time_left: new_black_time_left,
+            } => {
+                diesel::update(games::table.find(self.id))
+                    .set((
+                        games::finished.eq(true),
+                        games::tournament_game_result.eq(tgr.to_string()),
+                        games::game_status.eq(new_game_status.to_string()),
+                        games::game_control_history
+                            .eq(games::game_control_history.concat(game_control_string)),
+                        games::white_rating.eq(w_rating),
+                        games::black_rating.eq(b_rating),
+                        games::white_rating_change.eq(w_change),
+                        games::black_rating_change.eq(b_change),
+                        games::updated_at.eq(Utc::now()),
+                        games::white_time_left.eq(new_white_time_left),
+                        games::black_time_left.eq(new_black_time_left),
+                        games::conclusion.eq(final_conclusion.to_string()),
+                    ))
+                    .get_result(conn)
+                    .await?
+            }
+        };
+        Ok(game)
     }
 
     fn white_time_left_duration(&self) -> Result<Duration, DbError> {
@@ -605,7 +884,7 @@ impl Game {
         conn: &mut DbConn<'_>,
     ) -> Result<Game, DbError> {
         let time_info = self.get_time_info(state, comp)?;
-        let mut new_history = state
+        let new_history = state
             .history
             .moves
             .iter()
@@ -628,7 +907,7 @@ impl Game {
         }
 
         let mut new_conclusion = Conclusion::Unknown;
-        match time_info.new_game_status {
+        match time_info.new_game_status.clone() {
             GameStatus::Finished(GameResult::Draw) => new_conclusion = Conclusion::Board,
             GameStatus::Finished(GameResult::Winner(_)) => new_conclusion = Conclusion::Board,
             _ => {}
@@ -645,55 +924,33 @@ impl Game {
 
         let new_move_times = self.get_move_times(&time_info, state);
 
+        if time_info.timed_out {
+            return self.check_time(conn).await;
+        }
+
         if let GameStatus::Finished(game_result) = time_info.new_game_status.clone() {
             if let GameResult::Unknown = game_result {
                 panic!("GameResult is unknown but the game is over");
             };
-            let tgr = TournamentGameResult::new(&game_result);
-            let (w_rating, b_rating, w_change, b_change) = Rating::update(
-                self.rated,
-                self.speed.clone(),
-                self.white_id,
-                self.black_id,
-                game_result,
+            Game::finalize_game_by_id(
+                self.id,
+                FinalizationRequest::Board(BoardFinalization {
+                    expected_turn: self.turn,
+                    expected_history: self.history.clone(),
+                    result: game_result,
+                    conclusion: new_conclusion,
+                    history: new_history,
+                    current_player_id: next_player,
+                    turn: state.turn as i32,
+                    game_control_string,
+                    white_time_left: time_info.white_time_left,
+                    black_time_left: time_info.black_time_left,
+                    move_times: new_move_times,
+                }),
+                FinishedGameBehavior::Error,
                 conn,
             )
-            .await?;
-
-            let new_turn = if time_info.timed_out {
-                self.turn
-            } else {
-                state.turn as i32
-            };
-
-            if time_info.timed_out {
-                new_conclusion = Conclusion::Timeout;
-                new_history.clone_from(&self.history);
-            }
-
-            let game = diesel::update(games::table.find(self.id))
-                .set((
-                    history.eq(new_history),
-                    current_player_id.eq(next_player),
-                    turn.eq(new_turn),
-                    finished.eq(true),
-                    tournament_game_result.eq(tgr.to_string()),
-                    game_status.eq(time_info.new_game_status.to_string()),
-                    game_control_history.eq(game_control_history.concat(game_control_string)),
-                    white_rating.eq(w_rating),
-                    black_rating.eq(b_rating),
-                    white_rating_change.eq(w_change),
-                    black_rating_change.eq(b_change),
-                    updated_at.eq(Utc::now()),
-                    white_time_left.eq(time_info.white_time_left),
-                    black_time_left.eq(time_info.black_time_left),
-                    last_interaction.eq(Some(Utc::now())),
-                    move_times.eq(new_move_times),
-                    conclusion.eq(new_conclusion.to_string()),
-                ))
-                .get_result(conn)
-                .await?;
-            Ok(game)
+            .await
         } else {
             let game = diesel::update(games::table.find(self.id))
                 .set((
@@ -927,51 +1184,13 @@ impl Game {
         game_control: &GameControl,
         conn: &mut DbConn<'_>,
     ) -> Result<Game, DbError> {
-        let game_control_string = format!("{}. {game_control};", self.turn);
-
-        let winner_color = game_control.color().opposite_color();
-        let new_game_status = GameStatus::Finished(GameResult::Winner(winner_color));
-
-        let (white_time, black_time) = match TimeMode::from_str(&self.time_mode)? {
-            TimeMode::Untimed => (None, None),
-            _ => self.calculate_time_left()?,
-        };
-        if white_time == Some(0) || black_time == Some(0) {
-            return self.check_time(conn).await;
-        }
-        let ((w_rating, b_rating, w_change, b_change), tgr) = match new_game_status.clone() {
-            GameStatus::Finished(game_result) => (
-                Rating::update(
-                    self.rated,
-                    self.speed.clone(),
-                    self.white_id,
-                    self.black_id,
-                    game_result.clone(),
-                    conn,
-                )
-                .await?,
-                TournamentGameResult::new(&game_result),
-            ),
-            _ => unreachable!(),
-        };
-        let game = diesel::update(games::table.find(self.id))
-            .set((
-                finished.eq(true),
-                tournament_game_result.eq(tgr.to_string()),
-                game_status.eq(new_game_status.to_string()),
-                game_control_history.eq(game_control_history.concat(game_control_string)),
-                white_rating.eq(w_rating),
-                black_rating.eq(b_rating),
-                white_rating_change.eq(w_change),
-                black_rating_change.eq(b_change),
-                updated_at.eq(Utc::now()),
-                white_time_left.eq(white_time),
-                black_time_left.eq(black_time),
-                conclusion.eq(Conclusion::Resigned.to_string()),
-            ))
-            .get_result(conn)
-            .await?;
-        Ok(game)
+        Game::finalize_game_by_id(
+            self.id,
+            FinalizationRequest::Resign(*game_control),
+            FinishedGameBehavior::Error,
+            conn,
+        )
+        .await
     }
 
     pub async fn accept_draw(
@@ -979,42 +1198,13 @@ impl Game {
         game_control: &GameControl,
         conn: &mut DbConn<'_>,
     ) -> Result<Game, DbError> {
-        let game_control_string = format!("{}. {game_control};", self.turn);
-        let (white_time, black_time) = match TimeMode::from_str(&self.time_mode)? {
-            TimeMode::Untimed => (None, None),
-            _ => self.calculate_time_left()?,
-        };
-        if white_time == Some(0) || black_time == Some(0) {
-            return self.check_time(conn).await;
-        }
-        let tgr = TournamentGameResult::Draw;
-        let (w_rating, b_rating, w_change, b_change) = Rating::update(
-            self.rated,
-            self.speed.clone(),
-            self.white_id,
-            self.black_id,
-            GameResult::Draw,
+        Game::finalize_game_by_id(
+            self.id,
+            FinalizationRequest::DrawAccept(*game_control),
+            FinishedGameBehavior::Error,
             conn,
         )
-        .await?;
-        let game = diesel::update(games::table.find(self.id))
-            .set((
-                finished.eq(true),
-                tournament_game_result.eq(tgr.to_string()),
-                game_control_history.eq(game_control_history.concat(game_control_string)),
-                game_status.eq(GameStatus::Finished(GameResult::Draw).to_string()),
-                white_rating.eq(w_rating),
-                black_rating.eq(b_rating),
-                white_rating_change.eq(w_change),
-                black_rating_change.eq(b_change),
-                updated_at.eq(Utc::now()),
-                white_time_left.eq(white_time),
-                black_time_left.eq(black_time),
-                conclusion.eq(Conclusion::Draw.to_string()),
-            ))
-            .get_result(conn)
-            .await?;
-        Ok(game)
+        .await
     }
 
     pub async fn set_status(
