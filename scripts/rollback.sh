@@ -19,13 +19,23 @@ FORCE=
 
 cd "$PROJECT_ROOT"
 
-# Detect active color and rollback target
-if sudo systemctl is-active --quiet hive@blue; then
-    ACTIVE=blue;  TARGET=green; TARGET_PORT=3001
-elif sudo systemctl is-active --quiet hive@green; then
-    ACTIVE=green; TARGET=blue;  TARGET_PORT=3000
-else
-    echo "ERROR: neither hive@blue nor hive@green is active. Nothing to roll back from." >&2
+# Detect active color from nginx (single source of truth — same as deploy.sh).
+if [ ! -f "$UPSTREAM_FILE" ]; then
+    echo "ERROR: $UPSTREAM_FILE missing. Nothing to roll back from." >&2
+    exit 1
+fi
+UPSTREAM_PORT=$(grep -oE '127\.0\.0\.1:(3000|3001)' "$UPSTREAM_FILE" | head -1 | grep -oE '[0-9]+$' || true)
+case "$UPSTREAM_PORT" in
+    3000) ACTIVE=blue;  TARGET=green; TARGET_PORT=3001 ;;
+    3001) ACTIVE=green; TARGET=blue;  TARGET_PORT=3000 ;;
+    *)
+        echo "ERROR: cannot parse upstream port from $UPSTREAM_FILE" >&2
+        cat "$UPSTREAM_FILE" >&2
+        exit 1
+        ;;
+esac
+if ! sudo systemctl is-active --quiet "hive@$ACTIVE"; then
+    echo "ERROR: nginx points to $ACTIVE but hive@$ACTIVE is not active — manual cleanup required." >&2
     exit 1
 fi
 
@@ -74,17 +84,25 @@ sudo systemctl start "hive@$TARGET"
 echo "→ Waiting for /health on :$TARGET_PORT (up to ${HEALTH_TIMEOUT}s)..."
 for i in $(seq 1 "$HEALTH_TIMEOUT"); do
     if curl -sf "http://127.0.0.1:$TARGET_PORT/health" > /dev/null 2>&1; then
-        echo "  healthy after ${i}s"
+        echo "  liveness OK after ${i}s"
         break
     fi
     if [ "$i" -eq "$HEALTH_TIMEOUT" ]; then
-        echo "ERROR: $TARGET failed to become healthy. Recent logs:" >&2
+        echo "ERROR: $TARGET failed liveness. Recent logs:" >&2
         sudo journalctl -u "hive@$TARGET" -n 50 --no-pager >&2 || true
         sudo systemctl stop "hive@$TARGET"
         exit 1
     fi
     sleep 1
 done
+
+READY_BODY=$(curl -sf "http://127.0.0.1:$TARGET_PORT/health/ready" 2>&1) || {
+    echo "ERROR: $TARGET not ready: $READY_BODY" >&2
+    sudo journalctl -u "hive@$TARGET" -n 50 --no-pager >&2 || true
+    sudo systemctl stop "hive@$TARGET"
+    exit 1
+}
+echo "  readiness OK ($READY_BODY)"
 
 echo "server 127.0.0.1:$TARGET_PORT;" | sudo tee "$UPSTREAM_FILE" > /dev/null
 sudo nginx -s reload

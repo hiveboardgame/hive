@@ -25,7 +25,7 @@ async fn main() -> std::io::Result<()> {
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
-    use api::v1::health::health;
+    use api::v1::health::{health, health_ready};
     use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
@@ -95,6 +95,7 @@ async fn main() -> std::io::Result<()> {
             // serve the favicon from /favicon.ico
             .service(favicon)
             .service(health)
+            .service(health_ready)
             .service(start_connection)
             .service(functions::pwa::cache)
             .service(functions::oauth::callback)
