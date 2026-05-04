@@ -1596,6 +1596,7 @@ checksum = "13096fb8dae53f2d411c4b523bec85f45552ed3044a2ab4d85fb2092d9cb4f34"
 dependencies = [
  "bb8",
  "diesel",
+ "diesel_migrations",
  "futures-core",
  "futures-util",
  "scoped-futures",

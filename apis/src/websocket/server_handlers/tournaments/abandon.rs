@@ -45,8 +45,15 @@ impl AbandonHandler {
                     let tournament =
                         Tournament::find_by_tournament_id(&self.tournament_id, tc).await?;
                     for game in tournament.games(tc).await?.iter() {
+                        if game.finished {
+                            continue;
+                        }
                         if let Some(color) = game.user_color(self.user_id) {
-                            abandoned.push(game.resign(&GameControl::Resign(color), tc).await?);
+                            match game.resign(&GameControl::Resign(color), tc).await {
+                                Ok(game) => abandoned.push(game),
+                                Err(DbError::GameIsOver) => continue,
+                                Err(err) => return Err(err),
+                            }
                         }
                     }
                     Ok(abandoned)
