@@ -1,0 +1,32 @@
+# Reference snippet — edit /etc/nginx/sites-enabled/default per the steps below.
+# Do NOT just append this whole file to nginx config; it's pieces to splice in.
+#
+# 1) Add this `upstream` block at the top of the file (above any `server` block).
+upstream hive_active {
+    include /etc/nginx/conf.d/hive-upstream-server.conf;
+    keepalive 32;
+}
+
+# 2) In the `hivegame.com` server block, replace the body of `location / { ... }`
+#    with the block below. Leave SSL/Certbot lines and `/download/rules.pdf` alone.
+#
+# 3) In the `hive.leex.dev` server block, replace the body of `location / { ... }`
+#    (currently `try_files $uri $uri/ =404;`) with the same block below so it also
+#    follows the active upstream.
+location / {
+    proxy_pass http://hive_active;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+}
+
+# 4) Initial upstream-include file at /etc/nginx/conf.d/hive-upstream-server.conf
+#    (the deploy script rewrites this file on each deploy):
+#       server 127.0.0.1:3000;

@@ -28,6 +28,14 @@ pub fn run(pool: DbPool, ws_server: Data<Addr<WsServer>>) {
                 let _ = conn
                     .transaction::<_, anyhow::Error, _>(move |tc| {
                         async move {
+                            if !crate::jobs::try_advisory_xact_lock(
+                                tc,
+                                crate::jobs::TOURNAMENT_START_LOCK,
+                            )
+                            .await?
+                            {
+                                return Ok(());
+                            }
                             if let Ok(tournament_infos) = Tournament::automatic_start(tc).await {
                                 let mut messages = Vec::new();
                                 for (tournament, games, deleted_invitations) in tournament_infos {
