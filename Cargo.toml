@@ -32,7 +32,7 @@ diesel = { version = "2.3", features = [
     "uuid",
     "serde_json",
 ] }
-diesel-async = { version = "0.7", features = ["postgres", "bb8"] }
+diesel-async = { version = "0.7", features = ["postgres", "bb8", "migrations"] }
 diesel_migrations = { version = "2.3", features = ["postgres"] }
 dotenvy = "0.15"
 http = "1.4.0"
