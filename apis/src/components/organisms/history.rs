@@ -1,21 +1,16 @@
 use crate::{
     components::{
-        atoms::history_button::set_timer_from_response,
         molecules::history_controls::HistoryControls,
         organisms::side_board::move_query_signal,
     },
-    providers::{
-        game_state::{self, GameStateSignal},
-        timer::TimerSignal,
-    },
+    providers::game_state::{self, GameStateSignal},
 };
 use hive_lib::GameStatus;
 use leptos::{html, prelude::*};
 use leptos_icons::*;
 use leptos_router::hooks::{use_params_map, use_query_map};
 use shared_types::{PrettyString, TimeMode};
-
-static NANOS_IN_SECOND: u64 = 1000000000_u64;
+use std::time::Duration;
 
 #[component]
 pub fn HistoryMove(
@@ -27,7 +22,6 @@ pub fn HistoryMove(
 ) -> impl IntoView {
     let game_state = expect_context::<GameStateSignal>();
     let div_ref = NodeRef::<html::Div>::new();
-    let timer = expect_context::<TimerSignal>();
     let (_move, set_move) = move_query_signal();
     let onclick = move |_| {
         game_state.show_history_turn(turn);
@@ -36,7 +30,6 @@ pub fn HistoryMove(
                 .signal
                 .with_untracked(|gs| gs.history_turn.map(|v| v + 1)),
         );
-        set_timer_from_response(game_state, timer);
     };
     let history_turn = create_read_slice(game_state.signal, |gs| gs.history_turn);
     let is_realtime = create_read_slice(game_state.signal, |gs| {
@@ -71,10 +64,10 @@ pub fn HistoryMove(
             return None;
         }
         let response = game_state.signal.with(|gs| gs.game_response.clone())?;
-        let increment = response.time_increment? as i64 * NANOS_IN_SECOND as i64;
-        let time_left = (*response.move_times.get(turn)?)?;
-        let prev_time = (*response.move_times.get(turn - 2)?)?;
-        let seconds = ((prev_time + increment - time_left) as f64) / (NANOS_IN_SECOND as f64);
+        let increment = Duration::from_secs(u64::try_from(response.time_increment?).ok()?);
+        let time_left = response.recorded_time_left(turn)?;
+        let prev_time = response.recorded_time_left(turn - 2)?;
+        let seconds = prev_time.checked_add(increment)?.as_secs_f64() - time_left.as_secs_f64();
         if seconds > 60.0 {
             Some(format!(" ({:.1} m)", seconds / 60.0))
         } else {
