@@ -90,6 +90,15 @@ impl PartialOrd for GameResponse {
 impl Eq for GameResponse {}
 
 impl GameResponse {
+    pub fn recorded_time_left(&self, turn: usize) -> Option<Duration> {
+        self.move_times
+            .get(turn)
+            .copied()
+            .flatten()
+            .and_then(|nanos| u64::try_from(nanos).ok())
+            .map(Duration::from_nanos)
+    }
+
     pub fn white_rating(&self) -> u64 {
         self.white_player.rating_for_speed(&self.speed)
     }

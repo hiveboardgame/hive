@@ -128,6 +128,41 @@ pub fn Play() -> impl IntoView {
         false,
     );
 
+    let timer_display_key = create_read_slice(game_state.signal, |gs| {
+        let history_turn = gs.history_turn;
+        let gs_view = gs.view.clone();
+        let response = gs.game_response.as_ref().map(|response| {
+            (
+                response.game_id.clone(),
+                response.updated_at,
+                response.conclusion.clone(),
+                response.game_status.clone(),
+                response.time_mode,
+            )
+        });
+        (gs_view, history_turn, response)
+    });
+
+    Effect::watch(
+        timer_display_key,
+        move |_, _, _| {
+            game_state.signal.with_untracked(|gs| {
+                if !matches!(
+                    gs.state.game_status,
+                    GameStatus::Finished(_) | GameStatus::Adjudicated
+                ) {
+                    return;
+                }
+                if let Some(response) = gs.game_response.as_ref() {
+                    timer.signal.update(|timer| {
+                        timer.update_for_view(response, &gs.view, gs.history_turn);
+                    });
+                }
+            });
+        },
+        true,
+    );
+
     Effect::watch(
         move || {
             ws_ready();
