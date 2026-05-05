@@ -13,7 +13,7 @@ use crate::{
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
-use leptos::{either::Either, prelude::*};
+use leptos::prelude::*;
 use leptos_icons::*;
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
 use shared_types::{ChallengeId, ChallengeVisibility, TimeInfo};
@@ -152,46 +152,101 @@ pub fn ChallengeRow(
             challenger_rating,
         )
     });
-    let viewer_is_challenger =
-        move || user.with(|a| a.as_ref().map(|user| user.id)) == Some(challenger_id);
-
     let time_info = TimeInfo {
         mode: time_mode,
         base: time_base,
         increment: time_increment,
     };
+    let actions = move || {
+        view! {
+            <Show
+                when=move || user.with(|a| a.as_ref().map(|user| user.id)) != Some(challenger_id)
+                fallback=move || {
+                    view! {
+                        {(visibility.with_value(|v| *v == ChallengeVisibility::Private) && !single)
+                            .then(|| {
+                                view! {
+                                    <button on:click=copy class=copy_button_class>
+                                        <Icon
+                                            icon=icondata_ai::AiCopyOutlined
+                                            attr:class="size-6"
+                                        />
+                                    </button>
+                                }
+                            })}
+                        <button
+                            on:click=move |_| {
+                                let ids = all_challenge_ids.get_value();
+                                let ids_to_cancel =
+                                    if ids.is_empty() { vec![challenge_id.get_value()] } else { ids };
+                                api.get().challenges_cancel(ids_to_cancel);
+                            }
+                            class=cancel_button_classes.get_value()
+                        >
+                            <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
+                        </button>
+                    }
+                }
+            >
+                <button
+                    on:click=move |_| {
+                        api.get().challenge_accept(challenge_id.get_value());
+                    }
+                    class=accept_button_classes.get_value()
+                >
+                    <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
+                </button>
+                {has_opponent.then(|| {
+                    view! {
+                        <button
+                            on:click=move |_| {
+                                let ids = all_challenge_ids.get_value();
+                                let ids_to_cancel =
+                                    if ids.is_empty() { vec![challenge_id.get_value()] } else { ids };
+                                api.get().challenges_cancel(ids_to_cancel);
+                            }
+                            class=cancel_button_classes.get_value()
+                        >
+                            <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
+                        </button>
+                    }
+                })}
+            </Show>
+        }
+    };
     view! {
         <tr class="items-center text-center cursor-pointer max-w-fit dark:odd:bg-header-twilight dark:even:bg-reserve-twilight odd:bg-odd-light even:bg-even-light">
             <td class=td_class>
-                <div>
+                <div class="flex items-center justify-center gap-1">
+                    {(group_count > 1).then(|| {
+                        view! {
+                            <span class="px-1.5 py-0.5 text-[10px] xs:text-xs font-bold bg-pillbug-teal text-white rounded-full leading-tight shrink-0">
+                                {format!("x{}", group_count)}
+                            </span>
+                        }
+                    })}
                     <Icon icon=Signal::derive(icon) attr:class=Signal::derive(icon_class) />
+                    <div class="flex flex-col items-center justify-center sm:hidden">
+                        {actions()}
+                    </div>
                 </div>
             </td>
-            <td class=format!("w-10 sm:w-24 {td_class}")>
+            <td class=td_class>
                 <div class="flex justify-center items-center">
                     {move || {
                         displayed_user
                             .with(|(username, patreon, bot, _)| {
                                 view! {
-                                    <div class="flex items-center">
+                                    <div class="flex items-center justify-start gap-x-1 whitespace-nowrap">
                                         <StatusIndicator username=username.clone() />
-                                        <ProfileLink
-                                            username=username.clone()
-                                            patreon=*patreon
-                                            bot=*bot
-                                            extend_tw_classes="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[140px] lg:max-w-[160px]"
-                                        />
-                                        {if group_count > 1 {
-                                            Either::Left(
-                                                view! {
-                                                    <span class="py-0.5 px-1.5 ml-1 text-xs font-bold text-white rounded-full bg-pillbug-teal">
-                                                        {format!("x{}", group_count)}
-                                                    </span>
-                                                },
-                                            )
-                                        } else {
-                                            Either::Right(view! { "" })
-                                        }}
+                                        <div>
+                                            <ProfileLink
+                                                username=username.clone()
+                                                patreon=*patreon
+                                                bot=*bot
+                                                extend_tw_classes="whitespace-nowrap leading-tight"
+                                            />
+                                        </div>
                                     </div>
                                 }
                             })
@@ -230,77 +285,8 @@ pub fn ChallengeRow(
                     </span>
                 </div>
             </td>
-            <td class=td_class>
-                <div class="flex justify-center items-center">
-                    <Show
-                        when=move || { !viewer_is_challenger() }
-
-                        fallback=move || {
-                            view! {
-                                <Show when=move || {
-                                    visibility.with_value(|v| *v == ChallengeVisibility::Private)
-                                        && !single
-                                }>
-                                    <button on:click=copy class=copy_button_class>
-                                        <Icon
-                                            icon=icondata_ai::AiCopyOutlined
-                                            attr:class="size-6"
-                                        />
-                                    </button>
-                                </Show>
-                                <button
-                                    on:click=move |_| {
-                                        let ids = all_challenge_ids.get_value();
-                                        let ids_to_cancel = if ids.is_empty() {
-                                            vec![challenge_id.get_value()]
-                                        } else {
-                                            ids
-                                        };
-                                        api.get().challenges_cancel(ids_to_cancel);
-                                    }
-                                    class=cancel_button_classes.get_value()
-                                >
-                                    <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
-                                </button>
-                            }
-                        }
-                    >
-
-                        <button
-                            on:click=move |_| {
-                                api.get().challenge_accept(challenge_id.get_value());
-                            }
-                            class=accept_button_classes.get_value()
-                        >
-                            <Icon icon=icondata_ai::AiCheckOutlined attr:class="size-6" />
-
-                        </button>
-                        {if has_opponent {
-                            Either::Left(
-                                view! {
-                                    <button
-                                        on:click=move |_| {
-                                            let ids = all_challenge_ids.get_value();
-                                            let ids_to_cancel = if ids.is_empty() {
-                                                vec![challenge_id.get_value()]
-                                            } else {
-                                                ids
-                                            };
-                                            api.get().challenges_cancel(ids_to_cancel);
-                                        }
-                                        class=cancel_button_classes.get_value()
-                                    >
-                                        <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
-
-                                    </button>
-                                },
-                            )
-                        } else {
-                            Either::Right(view! { "" })
-                        }}
-
-                    </Show>
-                </div>
+            <td class="xs:py-1 xs:px-1 sm:py-2 sm:px-2 hidden sm:table-cell">
+                <div class="flex justify-center items-center">{actions()}</div>
             </td>
         </tr>
     }

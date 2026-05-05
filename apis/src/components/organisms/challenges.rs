@@ -304,15 +304,14 @@ pub fn Challenges() -> impl IntoView {
                         }>{move || bots.with(|tab| tab.rows.len().to_string())}</span>
                     </button>
                 </div>
-                <div class="overflow-y-auto max-h-96">
-                    <table class="w-full min-w-0 table-fixed">
+                <div class="overflow-x-auto overflow-y-auto max-h-96">
+                    <table class="w-full min-w-max table-auto">
                         <thead class="sticky top-0 z-10 bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                             <tr>
                                 <th class=format!("{} w-6 min-w-0", th_class)></th>
-                                <th class=format!(
-                                    "{} w-16 xs:w-20 sm:w-24 md:w-32 lg:w-40 min-w-0 text-xs sm:text-sm",
-                                    th_class,
-                                )>{t!(i18n, home.challenge_details.player)}</th>
+                                <th class=format!("{} min-w-0 text-xs sm:text-sm", th_class)>
+                                    {t!(i18n, home.challenge_details.player)}
+                                </th>
                                 <th class=format!(
                                     "{} w-12 xs:w-14 sm:w-16 md:w-16 lg:w-20 min-w-0 text-xs sm:text-sm",
                                     th_class,
@@ -329,10 +328,7 @@ pub fn Challenges() -> impl IntoView {
                                     "{} w-8 xs:w-10 sm:w-12 md:w-14 lg:w-16 min-w-0 text-xs sm:text-sm",
                                     th_class,
                                 )>{t!(i18n, home.challenge_details.rated.title)}</th>
-                                <th class=format!(
-                                    "{} w-12 xs:w-14 sm:w-16 md:w-18 lg:w-20 min-w-0",
-                                    th_class,
-                                )></th>
+                                <th class="py-1 px-1 md:py-2 md:px-2 lg:px-3 font-bold uppercase max-h-[80vh] max-w-screen w-12 xs:w-14 sm:w-16 md:w-18 lg:w-20 min-w-0 hidden sm:table-cell"></th>
                             </tr>
                         </thead>
                         <tbody>
