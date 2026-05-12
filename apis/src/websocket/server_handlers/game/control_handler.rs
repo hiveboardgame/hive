@@ -1,7 +1,17 @@
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
     responses::GameResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::{
+        messages::{
+            GameFinalize,
+            HandlerOutput,
+            InternalServerMessage,
+            MessageDestination,
+            Reaction,
+        },
+        WebsocketData,
+        WsHub,
+    },
 };
 use anyhow::Result;
 use db_lib::{
@@ -13,6 +23,7 @@ use db_lib::{
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection};
 use hive_lib::{GameControl, GameError};
 use shared_types::{GameId, TimeMode};
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct GameControlHandler {
@@ -21,6 +32,8 @@ pub struct GameControlHandler {
     user_id: Uuid,
     username: String,
     game: Game,
+    data: Arc<WebsocketData>,
+    hub: Arc<WsHub>,
 }
 
 impl GameControlHandler {
@@ -29,6 +42,8 @@ impl GameControlHandler {
         game: &Game,
         username: &str,
         user_id: Uuid,
+        data: Arc<WebsocketData>,
+        hub: Arc<WsHub>,
         pool: &DbPool,
     ) -> Self {
         Self {
@@ -37,10 +52,12 @@ impl GameControlHandler {
             username: username.to_owned(),
             pool: pool.clone(),
             control: control.to_owned(),
+            data,
+            hub,
         }
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self) -> Result<HandlerOutput> {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
         // the GC can be played this turn
@@ -55,18 +72,20 @@ impl GameControlHandler {
                 async move { self.match_control(tc).await }.scope_boxed()
             })
             .await?;
-        let game_response = GameResponse::from_model(&game, &mut conn).await?;
+        let game_response = self.game_response_for_control(&game, &mut conn).await?;
 
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
-            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
+        let reactions = vec![Reaction {
+            game_id: GameId(self.game.nanoid.clone()),
+            white_id: self.game.white_id,
+            black_id: self.game.black_id,
+            gar: GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),
-                game: game_response.clone(),
+                game: (*game_response).clone(),
                 game_action: GameReaction::Control(self.control),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
-            }))),
-        });
+            },
+        }];
         match self.control {
             GameControl::DrawOffer(_) | GameControl::TakebackRequest(_) => {
                 let current_user = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
@@ -79,13 +98,36 @@ impl GameControlHandler {
             }
             _ => {}
         }
-        if game_response.time_mode == TimeMode::RealTime {
+        if game_response.time_mode == TimeMode::RealTime
+            && self
+                .hub
+                .should_send_tv(&GameId(self.game.nanoid.clone()), game.finished)
+        {
+            self.data.telemetry.inc_tv_broadcast();
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Game(Box::new(GameUpdate::Tv(game_response))),
+                message: ServerMessage::Game(Box::new(GameUpdate::Tv((*game_response).clone()))),
             });
         };
-        Ok(messages)
+        // Signal the dispatcher to run finalization after dispatch — see the
+        // matching comment in turn_handler.rs for the race we're avoiding.
+        let finalize_games = if game.finished {
+            let finalize = GameFinalize {
+                game_id: GameId(self.game.nanoid.clone()),
+                white_id: self.game.white_id,
+                black_id: self.game.black_id,
+            };
+            messages.extend(finalize.own_game_removed_messages());
+            vec![finalize]
+        } else {
+            Vec::new()
+        };
+        Ok(HandlerOutput {
+            messages,
+            reactions,
+            finalize_games,
+            subscriptions: Vec::new(),
+        })
     }
 
     fn ensure_fresh_game_control(&self) -> Result<()> {
@@ -127,6 +169,21 @@ impl GameControlHandler {
         Ok(game)
     }
 
+    async fn game_response_for_control(
+        &self,
+        game: &Game,
+        conn: &mut DbConn<'_>,
+    ) -> Result<Arc<GameResponse>> {
+        if matches!(self.control, GameControl::Abort(_)) {
+            let game_id = GameId(game.nanoid.clone());
+            self.data.game_response_cache.remove(&game_id);
+            self.data.telemetry.inc_from_model();
+            return Ok(Arc::new(GameResponse::from_model(game, conn).await?));
+        }
+
+        self.data.get_or_build_response(game, conn).await
+    }
+
     async fn handle_takeback_accept(&self, conn: &mut DbConn<'_>) -> Result<Game> {
         self.ensure_previous_gc_present()?;
         let game = self.game.accept_takeback(&self.control, conn).await?;
@@ -142,7 +199,16 @@ impl GameControlHandler {
         if self.game.tournament_id.is_some() {
             Err(GameError::TournamentAbort)?
         }
-        Ok(self.game.delete(conn).await?)
+        let game_id = GameId(self.game.nanoid.clone());
+        // Guard pattern: a panic between marking-pending and delete-committing
+        // would otherwise leak the marker until the heartbeat sweep. Drop
+        // clears on the unwind path; `disarm()` only runs after the commit.
+        let guard = self
+            .hub
+            .arm_pending_delete(game_id, self.game.white_id, self.game.black_id);
+        self.game.delete(conn).await?;
+        guard.disarm();
+        Ok(())
     }
 
     async fn handle_draw_reject(&self, conn: &mut DbConn<'_>) -> Result<Game> {

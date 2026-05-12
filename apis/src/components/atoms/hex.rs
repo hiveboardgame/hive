@@ -15,14 +15,8 @@ pub fn Hex(
     let game_state = expect_context::<GameStateSignal>();
     let straight = tile_opts.clone().is_three_d();
     let level_multiplier = move || match target_stack() {
-        Some(pos) => {
-            if hex.position == pos {
-                13
-            } else {
-                1
-            }
-        }
-        None => 1,
+        Some(pos) if hex.position == pos => 13,
+        _ => 1,
     };
     let expanded_sublevel =
         Signal::derive(move || hex.level.saturating_sub(1) * level_multiplier() + 1);

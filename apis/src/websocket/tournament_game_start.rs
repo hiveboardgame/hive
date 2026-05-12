@@ -22,6 +22,13 @@ impl TournamentGameStart {
             return Err(anyhow!("Not your game to start"));
         }
         if let Ok(mut games_date) = self.games_date.try_write() {
+            // The 35-second window above means anything older is dead state.
+            // Sweep on insert (cheap O(N) since N is concurrent active starts,
+            // not lifetime tournament games). Without this, every tournament
+            // game ever started leaked one entry forever.
+            let cutoff = Utc::now() - chrono::Duration::seconds(60);
+            games_date.retain(|_, (_, ts)| *ts > cutoff);
+
             if let Some((uuid, then)) = games_date.get_mut(&GameId(game.nanoid.clone())) {
                 let since = Utc::now().signed_duration_since(then).abs().num_seconds();
                 if *uuid == user_id {

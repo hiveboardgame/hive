@@ -8,11 +8,17 @@ use crate::{
         ServerResult,
     },
     responses::{ChallengeResponse, GameResponse},
-    websocket::{ClientActorMessage, InternalServerMessage, MessageDestination, WsServer},
+    websocket::{
+        reaction_messages,
+        GameFinalize,
+        InternalServerMessage,
+        MessageDestination,
+        WsHub,
+    },
 };
-use actix::Addr;
 use actix_web::web::Data;
 use anyhow::Result;
+use bytes::Bytes;
 use codee::{binary::MsgpackSerdeCodec, Encoder};
 use db_lib::{
     get_conn,
@@ -20,7 +26,8 @@ use db_lib::{
     DbPool,
 };
 use hive_lib::{GameControl, Turn};
-use shared_types::{ChallengeId, ChallengeVisibility, TimeMode};
+use shared_types::{ChallengeId, ChallengeVisibility, GameId, TimeMode};
+use std::sync::Arc;
 
 fn get_opponent_id(game: &Game, bot: &User) -> uuid::Uuid {
     if game.white_id == bot.id {
@@ -30,20 +37,17 @@ fn get_opponent_id(game: &Game, bot: &User) -> uuid::Uuid {
     }
 }
 
-fn send_messages_batch(
-    ws_server: &Addr<WsServer>,
-    messages: Vec<InternalServerMessage>,
-    from_user_id: Option<uuid::Uuid>,
-) {
+async fn send_messages_batch(hub: &Arc<WsHub>, messages: Vec<InternalServerMessage>) {
     for message in messages {
         let serialized = ServerResult::Ok(Box::new(message.message));
         if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-            let cam = ClientActorMessage {
-                destination: message.destination,
-                serialized,
-                from: from_user_id,
-            };
-            ws_server.do_send(cam);
+            // `from=None`: bot requests arrive over HTTP, not WebSocket — the
+            // bot has no entry in `sessions`/`membership`, so there's no
+            // socket to echo back to. `from` is only used for implicit
+            // fanout subscription and spectator filtering, both of which are
+            // moot here.
+            hub.dispatch(&message.destination, Bytes::from(serialized), None)
+                .await;
         }
     }
 }
@@ -62,8 +66,15 @@ fn create_game_action_response(
     }
 }
 
-fn maybe_add_tv_update(messages: &mut Vec<InternalServerMessage>, game_response: &GameResponse) {
-    if game_response.time_mode == TimeMode::RealTime {
+fn maybe_add_tv_update(
+    messages: &mut Vec<InternalServerMessage>,
+    hub: &Arc<WsHub>,
+    game_response: &GameResponse,
+    is_final: bool,
+) {
+    if game_response.time_mode == TimeMode::RealTime
+        && hub.should_send_tv(&game_response.game_id, is_final)
+    {
         messages.push(InternalServerMessage {
             destination: MessageDestination::Global,
             message: ServerMessage::Game(Box::new(GameUpdate::Tv(game_response.clone()))),
@@ -72,7 +83,7 @@ fn maybe_add_tv_update(messages: &mut Vec<InternalServerMessage>, game_response:
 }
 
 pub async fn send_turn_messages(
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
     game: &Game,
     bot: &User,
     pool: &Data<DbPool>,
@@ -83,8 +94,6 @@ pub async fn send_turn_messages(
     let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
     let games = next_to_move.get_games_with_notifications(&mut conn).await?;
     let game_responses = GameResponse::from_games_batch(games, &mut conn).await?;
-    let user_id = get_opponent_id(game, bot);
-
     messages.push(InternalServerMessage {
         destination: MessageDestination::User(game.current_player_id),
         message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
@@ -93,21 +102,44 @@ pub async fn send_turn_messages(
     let response = GameResponse::from_model(game, &mut conn).await?;
     let action_response =
         create_game_action_response(response, GameReaction::Turn(played_turn), bot);
-    let game_id = action_response.game_id.clone();
 
-    maybe_add_tv_update(&mut messages, &action_response.game);
+    maybe_add_tv_update(
+        &mut messages,
+        hub.as_ref(),
+        &action_response.game,
+        game.finished,
+    );
 
-    messages.push(InternalServerMessage {
-        destination: MessageDestination::Game(game_id),
-        message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
-    });
+    messages.extend(reaction_messages(
+        action_response.game_id.clone(),
+        game.white_id,
+        game.black_id,
+        action_response,
+    ));
 
-    send_messages_batch(&ws_server, messages, Some(user_id));
+    if game.finished {
+        messages.extend(
+            GameFinalize {
+                game_id: GameId(game.nanoid.clone()),
+                white_id: game.white_id,
+                black_id: game.black_id,
+            }
+            .own_game_removed_messages(),
+        );
+    }
+
+    send_messages_batch(hub.as_ref(), messages).await;
+
+    // Bot path is its own dispatcher — finalize after sending so the human
+    // opponent's fanout still reached them.
+    if game.finished {
+        hub.finalize_game(&GameId(game.nanoid.clone()), game.white_id, game.black_id);
+    }
     Ok(())
 }
 
 pub async fn send_challenge_messages(
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
     deleted_challenges: Vec<ChallengeId>,
     game: &Game,
     bot: &User,
@@ -134,12 +166,12 @@ pub async fn send_challenge_messages(
         message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
     });
 
-    send_messages_batch(&ws_server, messages, Some(user_id));
+    send_messages_batch(hub.as_ref(), messages).await;
     Ok(())
 }
 
 pub async fn send_challenge_creation_message(
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
     challenge_response: &ChallengeResponse,
     visibility: &ChallengeVisibility,
     opponent_id: Option<uuid::Uuid>,
@@ -167,16 +199,12 @@ pub async fn send_challenge_creation_message(
         }
     }
 
-    send_messages_batch(
-        &ws_server,
-        messages,
-        Some(challenge_response.challenger.uid),
-    );
+    send_messages_batch(hub.as_ref(), messages).await;
     Ok(())
 }
 
 pub async fn send_control_messages(
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
     game: &Game,
     bot: &User,
     pool: &Data<DbPool>,
@@ -185,19 +213,51 @@ pub async fn send_control_messages(
     let mut messages = Vec::new();
     let mut conn = get_conn(pool).await?;
 
-    let opponent_id = get_opponent_id(game, bot);
     let game_response = GameResponse::from_model(game, &mut conn).await?;
     let action_response =
         create_game_action_response(game_response, GameReaction::Control(game_control), bot);
-    let game_id = action_response.game_id.clone();
 
-    maybe_add_tv_update(&mut messages, &action_response.game);
+    maybe_add_tv_update(
+        &mut messages,
+        hub.as_ref(),
+        &action_response.game,
+        game.finished,
+    );
 
+    // Urgent fanout to the opponent: MessageDestination::Game only reaches
+    // already-subscribed sockets, so a human off the game page (e.g. in the
+    // lobby) wouldn't otherwise see a bot resign/abort.
+    let opponent_id = get_opponent_id(game, bot);
+    let opponent = User::find_by_uuid(&opponent_id, &mut conn).await?;
+    let opponent_games = opponent.get_games_with_notifications(&mut conn).await?;
+    let opponent_responses = GameResponse::from_games_batch(opponent_games, &mut conn).await?;
     messages.push(InternalServerMessage {
-        destination: MessageDestination::Game(game_id),
-        message: ServerMessage::Game(Box::new(GameUpdate::Reaction(action_response))),
+        destination: MessageDestination::User(opponent_id),
+        message: ServerMessage::Game(Box::new(GameUpdate::Urgent(opponent_responses))),
     });
 
-    send_messages_batch(&ws_server, messages, Some(opponent_id));
+    messages.extend(reaction_messages(
+        action_response.game_id.clone(),
+        game.white_id,
+        game.black_id,
+        action_response,
+    ));
+
+    if game.finished {
+        messages.extend(
+            GameFinalize {
+                game_id: GameId(game.nanoid.clone()),
+                white_id: game.white_id,
+                black_id: game.black_id,
+            }
+            .own_game_removed_messages(),
+        );
+    }
+
+    send_messages_batch(hub.as_ref(), messages).await;
+
+    if game.finished {
+        hub.finalize_game(&GameId(game.nanoid.clone()), game.white_id, game.black_id);
+    }
     Ok(())
 }

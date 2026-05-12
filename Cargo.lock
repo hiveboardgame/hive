@@ -3,31 +3,6 @@
 version = 4
 
 [[package]]
-name = "actix"
-version = "0.13.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de7fa236829ba0841304542f7614c42b80fca007455315c45c785ccfa873a85b"
-dependencies = [
- "actix-macros",
- "actix-rt",
- "actix_derive",
- "bitflags 2.10.0",
- "bytes",
- "crossbeam-channel",
- "futures-core",
- "futures-sink",
- "futures-task",
- "futures-util",
- "log",
- "once_cell",
- "parking_lot",
- "pin-project-lite",
- "smallvec",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
 name = "actix-codec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -256,24 +231,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix-web-actors"
-version = "4.3.1+deprecated"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f98c5300b38fd004fe7d2a964f9a90813fdbe8a81fed500587e78b1b71c6f980"
-dependencies = [
- "actix",
- "actix-codec",
- "actix-http",
- "actix-web",
- "bytes",
- "bytestring",
- "futures-core",
- "pin-project-lite",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
 name = "actix-web-codegen"
 version = "4.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -300,14 +257,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "actix_derive"
-version = "0.6.2"
+name = "actix-ws"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6ac1e58cded18cb28ddc17143c4dea5345b3ad575e14f32f66e4054a56eb271"
+checksum = "decf53c3cdd63dd6f289980b430238f9a2f6d19f8bce8e418272e08d3da43f0f"
 dependencies = [
- "proc-macro2",
- "quote",
- "syn",
+ "actix-codec",
+ "actix-http",
+ "actix-web",
+ "bytestring",
+ "futures-core",
+ "futures-sink",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -456,25 +418,27 @@ checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 name = "apis"
 version = "0.1.0"
 dependencies = [
- "actix",
  "actix-files",
  "actix-identity",
  "actix-rt",
  "actix-session",
  "actix-web",
- "actix-web-actors",
+ "actix-ws 0.4.0",
  "anyhow",
  "argon2",
  "bimap",
+ "bytes",
  "cfg-if",
  "chrono",
  "codee",
  "console_error_panic_hook",
  "cookie 0.18.1",
+ "dashmap",
  "db",
  "diesel",
  "diesel-async",
  "diesel_migrations",
+ "futures-util",
  "hive",
  "http 1.4.0",
  "http-serde",
@@ -5656,7 +5620,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "353d02fa2886cd8dae0b8da0965289fa8f2ecc7df633d1ce965f62fdf9644d29"
 dependencies = [
  "actix-web",
- "actix-ws",
+ "actix-ws 0.3.1",
  "base64 0.22.1",
  "bytes",
  "ciborium",
@@ -6306,6 +6270,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]

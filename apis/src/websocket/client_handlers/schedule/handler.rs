@@ -18,7 +18,7 @@ pub fn handle_schedule(schedule_update: ScheduleUpdate) {
             signal.update(|h: &mut HashMap<GameId, HashMap<Uuid, ScheduleResponse>>| {
                 let schedules = h.entry(response.game_id.clone()).or_default();
                 if reset_agreed {
-                    for (_, schedule) in schedules.iter_mut() {
+                    for schedule in schedules.values_mut() {
                         schedule.agreed = false;
                     }
                 }

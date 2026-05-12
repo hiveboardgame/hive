@@ -19,13 +19,12 @@ cfg_if::cfg_if! { if #[cfg(feature = "ssr")] {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    use crate::websocket::{start_connection, WsServer};
+    use crate::websocket::{start_connection, WsHub};
     use api::v1::bot::{games::{api_get_game, api_get_ongoing_games, api_get_pending_games}, play::{api_control, api_play}, challenges::{api_accept_challenge, api_create_challenge, api_get_challenges}};
     use api::v1::auth::get_token_handler::get_token;
     use api::v1::auth::get_identity_handler::get_identity;
     use api::v1::auth::jwt_secret::JwtSecret;
     use api::v1::bot::users::api_get_user;
-    use actix::Actor;
     use actix_files::Files;
     use actix_identity::IdentityMiddleware;
     use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -61,18 +60,43 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Failed to get pool");
     let data = Data::new(WebsocketData::default());
-    let websocket_server = Data::new(WsServer::new(Arc::clone(&data), pool.clone()).start());
+    let hub = Data::new(WsHub::new(Arc::clone(&data), pool.clone()));
     let jwt_secret = JwtSecret::new(config.jwt_secret);
     let jwt_key = Data::new(jwt_secret);
 
-    jobs::tournament_start(pool.clone(), Data::clone(&websocket_server));
-    jobs::heartbeat(Data::clone(&websocket_server));
-    jobs::ping(Data::clone(&websocket_server));
+    // Telemetry: enabled by default in release with a 30s interval and a
+    // default CSV path. Debug builds are opt-in. Both env vars override:
+    //   WS_TELEMETRY_INTERVAL_SECS=0  -> disable entirely
+    //   WS_TELEMETRY_INTERVAL_SECS=N  -> set interval (warns below 10s)
+    //   WS_METRICS_LOG_FILE=          -> empty disables CSV writing
+    //   WS_METRICS_LOG_FILE=/path     -> override default path
+    let in_release = !cfg!(debug_assertions);
+    let interval_override = std::env::var("WS_TELEMETRY_INTERVAL_SECS").ok();
+    let interval_secs: Option<u64> = match interval_override.as_deref() {
+        Some(s) => s.parse::<u64>().ok().filter(|&n| n > 0),
+        None if in_release => Some(30),
+        None => None,
+    };
+    let csv_path = apis::functions::telemetry::resolve_csv_path();
+    if let Some(secs) = interval_secs {
+        if secs < 10 {
+            log::warn!(
+                "WS_TELEMETRY_INTERVAL_SECS={secs} is below the recommended 30s minimum; \
+                 the snapshot walks every chat channel and contends with WS traffic for \
+                 the chat locks at sub-10s intervals"
+            );
+        }
+        jobs::ws_telemetry(Data::clone(&hub), secs, csv_path);
+    }
+
+    jobs::tournament_start(pool.clone(), Data::clone(&hub));
+    jobs::heartbeat(Data::clone(&hub));
+    jobs::ping(Data::clone(&hub));
     jobs::game_cleanup(pool.clone());
     jobs::challenge_cleanup(pool.clone());
     let pwa_manifest = PwaManifest::from_site_root(&conf.leptos_options.site_root);
 
-    println!("listening on http://{}", &addr);
+    println!("listening on http://{}", addr);
 
     HttpServer::new(move || {
         let leptos_options = &conf.leptos_options;
@@ -82,7 +106,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .app_data(Data::new(pool.clone()))
-            .app_data(Data::clone(&websocket_server))
+            .app_data(Data::clone(&hub))
             .app_data(Data::clone(&data))
             .app_data(Data::clone(&jwt_key))
             .app_data(Data::new(pwa_manifest.clone()))

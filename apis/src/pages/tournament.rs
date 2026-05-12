@@ -17,14 +17,18 @@ use crate::{
         update_from_event::update_from_input,
     },
     functions::tournaments::{get_complete, UpdateDescription},
-    providers::{websocket::WebsocketContext, ApiRequestsProvider, AuthContext, UpdateNotifier},
+    providers::{
+        websocket::{ConnectionReadyState, WebsocketContext},
+        ApiRequestsProvider,
+        AuthContext,
+        UpdateNotifier,
+    },
     responses::{GameResponse, TournamentResponse},
 };
 use chrono::Local;
 use hive_lib::GameStatus;
 use leptos::prelude::*;
 use leptos_router::hooks::{use_navigate, use_params_map};
-use leptos_use::core::ConnectionReadyState;
 use shared_types::{
     GameSpeed,
     PrettyString,
@@ -236,8 +240,8 @@ fn LoadedTournament(tournament: TournamentResponse) -> impl IntoView {
     let game_previews = Callback::new(move |()| {
         games_hashmap.with_value(|hashmap| {
             hashmap
-                .iter()
-                .filter_map(|(_, g)| match g.game_status {
+                .values()
+                .filter_map(|g| match g.game_status {
                     GameStatus::NotStarted => None,
                     _ => Some(g.clone()),
                 })

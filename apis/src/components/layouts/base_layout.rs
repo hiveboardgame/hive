@@ -7,11 +7,12 @@ use crate::{
     providers::{
         game_state::GameStateSignal,
         refocus::RefocusSignal,
-        websocket::WebsocketContext,
+        websocket::{ConnectionReadyState, WebsocketContext},
         AuthContext,
         Config,
         PingContext,
         UpdateNotifier,
+        FRESH_WINDOW_SECS,
     },
 };
 use cfg_if::cfg_if;
@@ -19,13 +20,7 @@ use chrono::Utc;
 use hive_lib::GameControl;
 use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_use::{
-    core::ConnectionReadyState,
-    use_interval_fn,
-    use_media_query,
-    use_window_focus,
-    utils::Pausable,
-};
+use leptos_use::{use_interval_fn, use_media_query, use_window_focus, utils::Pausable};
 
 cfg_if! { if #[cfg(not(feature = "ssr"))] {
     use leptos_use::utils::IS_IOS;
@@ -127,37 +122,65 @@ pub fn BaseLayout(children: ChildrenFn) -> impl IntoView {
         false,
     );
 
-    let counter = RwSignal::new(0_u64);
-    let retry_at = RwSignal::new(2_u64);
-
+    // Zombie-socket detector: socket says Open but we haven't seen a
+    // server ping in a while. Force a fresh connection — but only with a
+    // backoff between attempts and a grace window after each reopen, so a
+    // server-wide ping hiccup doesn't cause every visible client to
+    // reconnect every tick in lockstep.
+    const REOPEN_MIN_GAP_MS: i64 = 500;
+    const REOPEN_MAX_GAP_MS: i64 = 30_000;
+    const REOPEN_JITTER_MAX_MS: i64 = 500;
+    let last_reopen_at = StoredValue::new(None::<chrono::DateTime<Utc>>);
+    let next_reopen_gap_ms = StoredValue::new(REOPEN_MIN_GAP_MS);
     let Pausable { .. } = use_interval_fn(
         move || {
             let ws = ws.clone();
-            counter.update(|c| *c += 1);
-            match ws_ready() {
-                ConnectionReadyState::Closed => {
-                    if retry_at.get() == counter.get() {
-                        ws.open();
-                        counter.update(|c| *c = 0);
-                        retry_at.update(|r| *r *= 2);
-                    }
-                }
-                ConnectionReadyState::Open => {
-                    counter.update(|c| *c = 0);
-                    retry_at.update(|r| *r = 2);
-                }
-                _ => {}
+            // Untracked: this closure runs on a 1Hz timer, not as a reactive
+            // effect. Subscribing to ws_ready/last_updated would re-fire the
+            // body on every state transition, double-triggering the detector.
+            if ws_ready.get_untracked() != ConnectionReadyState::Open {
+                // Connecting/Closing/Closed: let the WS provider's own
+                // backoff handle it. Don't reset our own state — if we're
+                // mid-reopen we want the cooldown to keep growing on
+                // sustained failure.
+                return;
             }
-            if Utc::now()
-                .signed_duration_since(ping.last_updated.get_untracked())
-                .num_seconds()
-                >= 5
-                && retry_at.get() == counter.get()
-            {
-                ws.open();
-                counter.update(|c| *c = 0);
-                retry_at.update(|r| *r *= 2);
-            };
+            let now = Utc::now();
+            let last_ping = ping.last_updated.get_untracked();
+            let stale = now.signed_duration_since(last_ping).num_seconds() >= FRESH_WINDOW_SECS;
+            if !stale {
+                // Re-arm the backoff only when freshness comes from a *real*
+                // server ping. After a reopen we synthetically advance
+                // last_updated to grant a grace window, and that artificial
+                // freshness must not reset the backoff — otherwise sustained
+                // failures keep retrying at MIN_GAP because every other tick
+                // looks fresh.
+                let real_ping_seen = match last_reopen_at.get_value() {
+                    Some(t_reopen) => last_ping > t_reopen,
+                    None => true,
+                };
+                if real_ping_seen {
+                    next_reopen_gap_ms.set_value(REOPEN_MIN_GAP_MS);
+                }
+                return;
+            }
+            // Jitter spreads simultaneous reopens across clients during a
+            // server-wide hiccup so we don't thunder-herd the reconnect.
+            let jitter = (web_sys::js_sys::Math::random() * REOPEN_JITTER_MAX_MS as f64) as i64;
+            let required_gap = next_reopen_gap_ms.get_value() + jitter;
+            if let Some(prev) = last_reopen_at.get_value() {
+                if now.signed_duration_since(prev).num_milliseconds() < required_gap {
+                    return;
+                }
+            }
+            ws.open();
+            last_reopen_at.set_value(Some(now));
+            // Grace window: the just-reopened socket needs FRESH_WINDOW_SECS
+            // to receive its first server ping; without this bump, the next
+            // staleness check fires immediately on stale `last_updated`.
+            ping.mark_active();
+            let new_gap = (next_reopen_gap_ms.get_value() * 2).min(REOPEN_MAX_GAP_MS);
+            next_reopen_gap_ms.set_value(new_gap);
         },
         1000,
     );

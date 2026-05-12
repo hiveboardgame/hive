@@ -48,7 +48,7 @@ pub async fn get_upcoming_tournament_games(
         }
     }
 
-    result.sort_by(|a, b| a.0.cmp(&b.0));
+    result.sort_by_key(|a| a.0);
 
     Ok(result)
 }

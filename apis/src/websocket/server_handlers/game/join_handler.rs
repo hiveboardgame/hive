@@ -2,9 +2,14 @@ use std::sync::Arc;
 
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
-    responses::GameResponse,
     websocket::{
-        messages::{InternalServerMessage, MessageDestination, WsMessage},
+        messages::{
+            GameSubscription,
+            HandlerOutput,
+            InternalServerMessage,
+            MessageDestination,
+            SocketTx,
+        },
         WebsocketData,
     },
 };
@@ -16,7 +21,7 @@ use uuid::Uuid;
 #[derive(Debug)]
 pub struct JoinHandler {
     pool: DbPool,
-    received_from: actix::Recipient<WsMessage>,
+    received_from: SocketTx,
     data: Arc<WebsocketData>,
     user_id: Uuid,
     username: String,
@@ -28,7 +33,7 @@ impl JoinHandler {
         game: &Game,
         username: &str,
         user_id: Uuid,
-        received_from: actix::Recipient<WsMessage>,
+        received_from: SocketTx,
         data: Arc<WebsocketData>,
         pool: &DbPool,
     ) -> Self {
@@ -42,18 +47,27 @@ impl JoinHandler {
         }
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self) -> Result<HandlerOutput> {
         let mut conn = get_conn(&self.pool).await?;
         let mut messages = Vec::new();
+        let game_id = GameId(self.game.nanoid.clone());
+        let mut subscriptions = vec![GameSubscription::Fanout(game_id.clone())];
+        if !self.game.finished {
+            subscriptions.push(GameSubscription::Heartbeat(game_id.clone()));
+        }
         messages.push(InternalServerMessage {
-            destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
+            destination: MessageDestination::Game(game_id.clone()),
             message: ServerMessage::Join(self.user_id),
         });
+        let game_response = self
+            .data
+            .get_or_build_response(&self.game, &mut conn)
+            .await?;
         messages.push(InternalServerMessage {
             destination: MessageDestination::Direct(self.received_from.clone()),
             message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
                 game_id: GameId(self.game.nanoid.to_owned()),
-                game: GameResponse::from_model(&self.game, &mut conn).await?,
+                game: (*game_response).clone(),
                 game_action: GameReaction::Join,
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
@@ -66,10 +80,15 @@ impl JoinHandler {
         };
         if let Some(messages_to_push) = chat.get(&GameId(self.game.nanoid.clone())) {
             messages.push(InternalServerMessage {
-                destination: MessageDestination::User(self.user_id),
+                destination: MessageDestination::Direct(self.received_from.clone()),
                 message: ServerMessage::Chat(messages_to_push.clone()),
             });
         };
-        Ok(messages)
+        Ok(HandlerOutput {
+            messages,
+            subscriptions,
+            reactions: Vec::new(),
+            finalize_games: Vec::new(),
+        })
     }
 }

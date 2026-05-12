@@ -25,6 +25,11 @@ impl PingStats {
     }
 
     pub fn set_nonce(&mut self, nonce: u64) {
+        // Evict nonces older than 10 s — they will never return a useful RTT,
+        // and unponged nonces (dropped messages, mid-flight disconnects) would
+        // otherwise accumulate indefinitely.
+        let cutoff = Utc::now() - chrono::Duration::seconds(10);
+        self.nonces_timestamps.retain(|_, ts| *ts > cutoff);
         self.nonces_timestamps.insert(nonce, Utc::now());
     }
 
