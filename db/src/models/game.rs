@@ -318,6 +318,9 @@ impl Game {
     pub fn get_time_left(&self) -> Result<(Duration, Duration), DbError> {
         let white = self.white_time_left_duration()?;
         let black = self.black_time_left_duration()?;
+        if self.game_status == GameStatus::NotStarted.to_string() {
+            return Ok((white, black));
+        }
         if let Some(last) = self.last_interaction {
             if let Ok(time_passed) = Utc::now().signed_duration_since(last).to_std() {
                 if self.turn % 2 == 0 {
@@ -1064,6 +1067,41 @@ impl Game {
                 checked_games.push(game.check_time(conn).await?);
             } else {
                 checked_games.push(game);
+            }
+        }
+        Ok(checked_games)
+    }
+
+    /// Best-effort batched lookup used by the websocket heartbeat. Rows whose
+    /// `time_mode` fails to parse or whose `check_time` returns an error are
+    /// silently dropped from the result rather than aborting the whole batch
+    /// — one bad row must not stall heartbeats for every other active game.
+    /// The outer DB load is still strict; only per-row processing is tolerant.
+    pub async fn find_by_nanoids(
+        game_ids: &[GameId],
+        conn: &mut DbConn<'_>,
+    ) -> Result<Vec<Game>, DbError> {
+        let nanoids: Vec<String> = game_ids.iter().map(|g| g.0.clone()).collect();
+        let found_games: Vec<Game> = games::table
+            .filter(nanoid.eq_any(&nanoids))
+            .load(conn)
+            .await?;
+
+        let mut checked_games = Vec::new();
+        for game in found_games {
+            if game.finished {
+                checked_games.push(game);
+                continue;
+            }
+            let Ok(mode) = TimeMode::from_str(&game.time_mode) else {
+                continue;
+            };
+            if mode == TimeMode::Untimed {
+                checked_games.push(game);
+                continue;
+            }
+            if let Ok(checked) = game.check_time(conn).await {
+                checked_games.push(checked);
             }
         }
         Ok(checked_games)

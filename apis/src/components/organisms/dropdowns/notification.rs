@@ -21,7 +21,7 @@ fn get_schedule_details(
     schedule_id: Uuid,
 ) -> Option<ScheduleResponse> {
     schedules.with(|schedules| {
-        for (_, game_schedules) in schedules.iter() {
+        for game_schedules in schedules.values() {
             if let Some(schedule) = game_schedules.get(&schedule_id) {
                 return Some(schedule.clone());
             }

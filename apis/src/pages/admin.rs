@@ -26,6 +26,13 @@ pub fn Admin() -> impl IntoView {
                 <ChatWindow destination=SimpleDestination::Global />
                 <div class=LINE_CLASS>Edit Banner</div>
                 <EditBanner />
+                <div class=LINE_CLASS>Telemetry</div>
+                <a
+                    class="py-2 px-4 mx-4 font-bold text-white rounded bg-button-dawn dark:bg-button-twilight hover:bg-pillbug-teal"
+                    href="/admin/telemetry"
+                >
+                    "Open WS telemetry dashboard"
+                </a>
             </Show>
         </div>
     }

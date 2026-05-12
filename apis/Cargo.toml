@@ -7,17 +7,19 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-actix = { workspace = true, optional = true }
 actix-files = { workspace = true, optional = true }
 actix-identity = { workspace = true, optional = true }
 actix-rt = { workspace = true, optional = true }
 actix-session = { workspace = true, optional = true }
 actix-web = { workspace = true, optional = true, features = ["macros"] }
-actix-web-actors = { workspace = true, optional = true }
+actix-ws = { workspace = true, optional = true }
 anyhow = { workspace = true }
 argon2 = { workspace = true, optional = true }
 bimap = { workspace = true }
+bytes = { workspace = true, optional = true }
 cfg-if = { workspace = true }
+dashmap = { workspace = true, optional = true }
+futures-util = { workspace = true, optional = true }
 chrono.workspace = true
 codee = { workspace = true }
 console_error_panic_hook = { workspace = true }
@@ -82,14 +84,17 @@ leptos_i18n_build = { workspace = true }
 hydrate = ["leptos/hydrate", "leptos_i18n/hydrate", "leptos_i18n_build/hydrate"]
 csr = ["leptos/csr", "leptos_i18n/csr", "leptos_i18n_build/csr"]
 ssr = [
-  "dep:actix",
   "dep:actix-files",
   "dep:actix-rt",
   "dep:actix-identity",
   "dep:actix-session",
   "dep:actix-web",
-  "dep:actix-web-actors",
+  "dep:actix-ws",
   "dep:argon2",
+  "dep:bytes",
+  "dep:dashmap",
+  "dep:futures-util",
+  "dep:tokio",
   "dep:db",
   "dep:diesel",
   "dep:diesel_migrations",

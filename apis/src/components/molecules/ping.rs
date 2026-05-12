@@ -1,8 +1,9 @@
-use crate::providers::{websocket::WebsocketContext, PingContext};
-use chrono::Utc;
+use crate::providers::{
+    websocket::{ConnectionReadyState, WebsocketContext},
+    PingContext,
+};
 use leptos::{either::Either, prelude::*};
 use leptos_icons::*;
-use leptos_use::core::ConnectionReadyState;
 
 #[component]
 pub fn Ping() -> impl IntoView {
@@ -10,11 +11,7 @@ pub fn Ping() -> impl IntoView {
     let ping = expect_context::<PingContext>();
 
     let signal = move || {
-        if Utc::now()
-            .signed_duration_since(ping.last_updated.get_untracked())
-            .num_seconds()
-            >= 5
-        {
+        if !ping.is_fresh.get() {
             Either::Left(
                 view! { <Icon attr:class="fill-ladybug-red" icon=icondata_bi::BiNoSignalRegular /> },
             )

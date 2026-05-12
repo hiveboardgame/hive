@@ -103,7 +103,6 @@
               cargo
               trunk
               dart-sass
-              rustfmt
               leptosfmt
               postgresql
               flyctl

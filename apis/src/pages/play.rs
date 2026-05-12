@@ -163,12 +163,30 @@ pub fn Play() -> impl IntoView {
         true,
     );
 
+    // Unsubscribe this socket from the game when the component unmounts
+    // (route change away from the game page). Without this, the socket stays
+    // in games_sockets for the lifetime of the WebSocket session.
+    on_cleanup(move || {
+        let current_game_id = game_id.get_untracked();
+        if !current_game_id.0.is_empty() {
+            api.0.get().unwatch(current_game_id);
+        }
+    });
+
     Effect::watch(
         move || {
             ws_ready();
             game_id()
         },
-        move |game_id, _, _| {
+        move |game_id, prev_game_id, _| {
+            // Route param can change in place (e.g. /game/A → /game/B reuses
+            // the same component), so on_cleanup won't fire. Drop the prior
+            // subscription before joining the new game.
+            if let Some(prev) = prev_game_id {
+                if !prev.0.is_empty() && prev != game_id {
+                    api.0.get().unwatch(prev.clone());
+                }
+            }
             let game_id = game_id.clone();
             api.0.get().join(game_id.clone());
             spawn_local(async move {

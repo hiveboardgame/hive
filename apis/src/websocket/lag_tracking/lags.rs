@@ -39,6 +39,19 @@ impl Lags {
             trackers.remove(&(uuid, game));
         }
     }
+
+    pub fn remove_pair(&self, uuid_a: Uuid, uuid_b: Uuid, game: GameId) {
+        if let Ok(mut trackers) = self.trackers.write() {
+            trackers.remove(&(uuid_a, game.clone()));
+            trackers.remove(&(uuid_b, game));
+        }
+    }
+
+    /// Best-effort length used by telemetry snapshots. Returns `None` if the
+    /// lock is poisoned so the caller can skip the gauge cleanly.
+    pub fn snapshot_len(&self) -> Option<usize> {
+        self.trackers.read().ok().map(|t| t.len())
+    }
 }
 
 impl Default for Lags {

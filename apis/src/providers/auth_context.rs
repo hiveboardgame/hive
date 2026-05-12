@@ -8,6 +8,8 @@ use leptos::prelude::*;
 pub struct AuthContext {
     pub logout: ServerAction<Logout>,
     pub user: Signal<Option<AccountResponse>>,
+    pub logged_in: Signal<Option<bool>>,
+    pub admin: Signal<Option<bool>>,
     ws_refresh: StoredValue<bool>,
     action: Action<(), Result<AccountResponse, ServerFnError>>,
 }
@@ -26,11 +28,26 @@ pub fn provide_auth() {
     // Get the current user and place it in Context
     action.dispatch(());
 
-    let user = Signal::derive(move || action.value().get().and_then(|v| v.ok()));
+    let account = action.value();
+    let user = Signal::derive(move || account.get().and_then(|v| v.ok()));
+    let account = action.value();
+    let logged_in = Signal::derive(move || match account.get() {
+        Some(Ok(_)) => Some(true),
+        Some(Err(_)) => Some(false),
+        None => None,
+    });
+    let account = action.value();
+    let admin = Signal::derive(move || match account.get() {
+        Some(Ok(account)) => Some(account.user.admin),
+        Some(Err(_)) => Some(false),
+        None => None,
+    });
     let ws_refresh = StoredValue::new(false);
 
     provide_context(AuthContext {
         user,
+        logged_in,
+        admin,
         logout,
         action,
         ws_refresh,

@@ -3,9 +3,8 @@ use crate::{
         auth::Auth,
         messages::send::{send_control_messages, send_turn_messages},
     },
-    websocket::WsServer,
+    websocket::WsHub,
 };
-use actix::Addr;
 use actix_web::{
     post,
     web::{Data, Json},
@@ -22,7 +21,7 @@ use hive_lib::{Color, GameControl, Piece, Position, State, Turn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use shared_types::GameId;
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 #[derive(Serialize, Deserialize)]
 struct PlayRequest {
@@ -41,9 +40,9 @@ pub async fn api_play(
     Json(req): Json<PlayRequest>,
     Auth(bot): Auth,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> HttpResponse {
-    match play_move(req, bot.clone(), pool, ws_server).await {
+    match play_move(req, bot.clone(), pool, hub).await {
         Ok((game, _turn)) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
@@ -65,7 +64,7 @@ async fn play_move(
     play: PlayRequest,
     bot: User,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> Result<(Game, Turn)> {
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
@@ -100,14 +99,8 @@ async fn play_move(
             async move {
                 state.play_turn_from_position(piece, position)?;
                 let updated_game = game.update_gamestate(&state, 0_f64, tc).await?;
-                send_turn_messages(
-                    ws_server.clone(),
-                    &updated_game,
-                    &bot,
-                    &pool,
-                    played_turn.clone(),
-                )
-                .await?;
+                send_turn_messages(hub.clone(), &updated_game, &bot, &pool, played_turn.clone())
+                    .await?;
 
                 // Disabled because it spams too much
                 //
@@ -142,9 +135,9 @@ pub async fn api_control(
     Json(req): Json<ControlRequest>,
     Auth(bot): Auth,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> HttpResponse {
-    match handle_control(req, bot.clone(), pool, ws_server).await {
+    match handle_control(req, bot.clone(), pool, hub).await {
         Ok(game) => HttpResponse::Ok().json(json!({
           "success": true,
           "data": {
@@ -167,7 +160,7 @@ async fn handle_control(
     req: ControlRequest,
     bot: User,
     pool: Data<DbPool>,
-    ws_server: Data<Addr<WsServer>>,
+    hub: Data<Arc<WsHub>>,
 ) -> Result<Game> {
     let cloned_pool = pool.clone();
     let mut conn = get_conn(&cloned_pool).await?;
@@ -213,6 +206,15 @@ async fn handle_control(
     let updated_game = conn
         .transaction::<_, anyhow::Error, _>(move |tc| {
             async move {
+                let pending_delete = if matches!(game_control, GameControl::Abort(_)) {
+                    Some(hub.as_ref().arm_pending_delete(
+                        GameId(game.nanoid.clone()),
+                        game.white_id,
+                        game.black_id,
+                    ))
+                } else {
+                    None
+                };
                 let result_game = match game_control {
                     GameControl::Resign(_) => game.resign(&game_control, tc).await?,
                     GameControl::Abort(_) => {
@@ -224,8 +226,10 @@ async fn handle_control(
                     _ => unreachable!(),
                 };
 
-                send_control_messages(ws_server.clone(), &result_game, &bot, &pool, game_control)
-                    .await?;
+                send_control_messages(hub.clone(), &result_game, &bot, &pool, game_control).await?;
+                if let Some(guard) = pending_delete {
+                    guard.disarm();
+                }
 
                 Ok(result_game)
             }

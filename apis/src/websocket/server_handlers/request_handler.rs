@@ -12,8 +12,9 @@ use super::{
 use crate::{
     common::{ClientRequest, GameAction},
     websocket::{
-        messages::{AuthError, InternalServerMessage, WsMessage},
+        messages::{AuthError, HandlerOutput, SocketTx},
         WebsocketData,
+        WsHub,
     },
 };
 use db_lib::DbPool;
@@ -38,7 +39,8 @@ impl std::fmt::Display for RequestHandlerError {
 pub struct RequestHandler {
     command: ClientRequest,
     data: Arc<WebsocketData>,
-    received_from: actix::Recipient<WsMessage>, // This is the socket the message was received over
+    hub: Arc<WsHub>,
+    received_from: SocketTx,
     pool: DbPool,
     user_id: Uuid,
     username: String,
@@ -50,7 +52,8 @@ impl RequestHandler {
     pub fn new(
         command: ClientRequest,
         data: Arc<WebsocketData>,
-        sender_addr: actix::Recipient<WsMessage>,
+        hub: Arc<WsHub>,
+        sender_addr: SocketTx,
         user: SimpleUser,
         pool: DbPool,
     ) -> Self {
@@ -58,6 +61,7 @@ impl RequestHandler {
             received_from: sender_addr,
             command,
             data,
+            hub,
             pool,
             user_id: user.user_id,
             username: user.username,
@@ -80,9 +84,9 @@ impl RequestHandler {
         Ok(())
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        let messages = match self.command.clone() {
-            ClientRequest::LinkDiscord => OauthHandler::new(self.user_id).handle().await?,
+    pub async fn handle(&self) -> Result<HandlerOutput> {
+        let output: HandlerOutput = match self.command.clone() {
+            ClientRequest::LinkDiscord => OauthHandler::new(self.user_id).handle().await?.into(),
             ClientRequest::Chat(message_container) => {
                 self.ensure_auth()?;
                 if self.user_id != message_container.message.user_id {
@@ -91,7 +95,9 @@ impl RequestHandler {
                 if message_container.destination == ChatDestination::Global {
                     self.ensure_admin()?;
                 }
-                ChatHandler::new(message_container, self.data.clone()).handle()
+                ChatHandler::new(message_container, self.data.clone())
+                    .handle()
+                    .into()
             }
             ClientRequest::Tournament(tournament_action) => {
                 TournamentHandler::new(
@@ -99,6 +105,7 @@ impl RequestHandler {
                     &self.username,
                     self.user_id,
                     self.data.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .await?
@@ -107,7 +114,7 @@ impl RequestHandler {
             }
             ClientRequest::Pong(nonce) => {
                 self.data.pings.update(self.user_id, nonce);
-                vec![]
+                HandlerOutput::empty()
             }
             ClientRequest::Game {
                 action: game_action,
@@ -123,6 +130,7 @@ impl RequestHandler {
                     self.received_from.clone(),
                     (&self.username, self.user_id),
                     self.data.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .await?
@@ -135,8 +143,9 @@ impl RequestHandler {
                     .await?
                     .handle()
                     .await?
+                    .into()
             }
-            ClientRequest::Away => UserStatusHandler::new().await?.handle().await?,
+            ClientRequest::Away => UserStatusHandler::new().await?.handle().await?.into(),
             ClientRequest::Schedule(action) => {
                 match action {
                     crate::common::ScheduleAction::TournamentPublic(_) => {}
@@ -146,8 +155,9 @@ impl RequestHandler {
                     .await?
                     .handle()
                     .await?
+                    .into()
             }
         };
-        Ok(messages)
+        Ok(output)
     }
 }

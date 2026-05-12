@@ -10,6 +10,19 @@ use crate::{
 };
 use shared_types::{ChatDestination, ChatMessageContainer};
 
+/// Per-channel chat history cap. The chat panel paginates client-side from
+/// what the server sends on join, so older messages aren't user-visible —
+/// but the server retains every message ever sent until a process restart.
+const MAX_PER_CHANNEL: usize = 200;
+
+fn push_capped(v: &mut Vec<ChatMessageContainer>, msg: ChatMessageContainer) {
+    v.push(msg);
+    if v.len() > MAX_PER_CHANNEL {
+        let drop = v.len() - MAX_PER_CHANNEL;
+        v.drain(..drop);
+    }
+}
+
 pub struct ChatHandler {
     container: ChatMessageContainer,
     data: Arc<WebsocketData>,
@@ -27,7 +40,7 @@ impl ChatHandler {
             ChatDestination::TournamentLobby(tournament_id) => {
                 let mut tournament_lobby = self.data.chat_storage.tournament.write().unwrap();
                 let entry = tournament_lobby.entry(tournament_id.clone()).or_default();
-                entry.push(self.container.clone());
+                push_capped(entry, self.container.clone());
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::Tournament(tournament_id.clone()),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
@@ -36,7 +49,7 @@ impl ChatHandler {
             ChatDestination::GamePlayers(game_id, white_id, black_id) => {
                 let mut games_private = self.data.chat_storage.games_private.write().unwrap();
                 let entry = games_private.entry(game_id.clone()).or_default();
-                entry.push(self.container.clone());
+                push_capped(entry, self.container.clone());
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(*white_id),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),
@@ -49,7 +62,7 @@ impl ChatHandler {
             ChatDestination::GameSpectators(game, white_id, black_id) => {
                 let mut games_public = self.data.chat_storage.games_public.write().unwrap();
                 let entry = games_public.entry(game.clone()).or_default();
-                entry.push(self.container.clone());
+                push_capped(entry, self.container.clone());
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::GameSpectators(
                         game.clone(),
@@ -67,7 +80,7 @@ impl ChatHandler {
                 let user_to_user = UserToUser::new(*id, sender);
                 let mut direct = self.data.chat_storage.direct.write().unwrap();
                 let entry = direct.entry(user_to_user).or_default();
-                entry.push(self.container.clone());
+                push_capped(entry, self.container.clone());
                 messages.push(InternalServerMessage {
                     destination: MessageDestination::User(*id),
                     message: ServerMessage::Chat(vec![self.container.to_owned()]),

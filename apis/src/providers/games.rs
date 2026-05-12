@@ -114,10 +114,10 @@ impl GamesSignal {
         });
         if let Some(last) = game.game_control_history.last() {
             match &last.1 {
-                GameControl::DrawOffer(color) | GameControl::TakebackRequest(color) => {
-                    if color != &player_color {
-                        next_required = true;
-                    }
+                GameControl::DrawOffer(color) | GameControl::TakebackRequest(color)
+                    if color != &player_color =>
+                {
+                    next_required = true;
                 }
                 _ => {}
             }
