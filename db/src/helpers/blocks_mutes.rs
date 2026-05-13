@@ -3,11 +3,12 @@
 use crate::{
     db_error::DbError,
     models::{NewUserBlock, NewUserTournamentChatMute, Tournament},
-    schema::{user_blocks, user_tournament_chat_mutes, users},
+    schema::{tournaments, user_blocks, user_tournament_chat_mutes, users},
     DbConn,
 };
 use diesel::{dsl::exists, prelude::*, select};
 use diesel_async::RunQueryDsl;
+use shared_types::TournamentId;
 use uuid::Uuid;
 
 async fn ensure_user_exists(conn: &mut DbConn<'_>, user_id: Uuid) -> Result<(), DbError> {
@@ -110,6 +111,20 @@ pub async fn get_blocked_user_ids(
         .map_err(DbError::from)
 }
 
+pub async fn get_muted_tournament_ids_for_user(
+    conn: &mut DbConn<'_>,
+    user_id: Uuid,
+) -> Result<Vec<TournamentId>, DbError> {
+    let nanoids: Vec<String> = user_tournament_chat_mutes::table
+        .inner_join(tournaments::table)
+        .filter(user_tournament_chat_mutes::user_id.eq(user_id))
+        .select(tournaments::nanoid)
+        .load(conn)
+        .await
+        .map_err(DbError::from)?;
+    Ok(nanoids.into_iter().map(TournamentId).collect())
+}
+
 /// Mute tournament lobby chat for this user. Idempotent. tournament_nanoid is the tournament's nanoid.
 pub async fn mute_tournament_chat(
     conn: &mut DbConn<'_>,
@@ -151,7 +166,9 @@ pub async fn unmute_tournament_chat(
     Ok(())
 }
 
-/// User IDs who have muted this tournament (by tournament UUID). Used to exclude from live delivery.
+/// User IDs who have muted this tournament (by tournament UUID).
+/// Live tournament chat delivery intentionally does not use this list; mute is a client
+/// unread-badge and notification preference, not websocket access control.
 pub async fn get_user_ids_who_muted_tournament(
     conn: &mut DbConn<'_>,
     tournament_id: Uuid,

@@ -15,6 +15,7 @@ use db_lib::helpers::{
     get_chat_messages_for_channel,
     get_dm_conversations_for_user,
     get_game_channels_for_user,
+    get_muted_tournament_ids_for_user,
     get_tournament_channels_for_user,
     get_tournament_thread_data,
     get_unread_counts_for_messages_hub_channels,
@@ -91,6 +92,7 @@ fn build_messages_hub_data(
     dms: Vec<DmConversation>,
     tournaments: Vec<TournamentChannel>,
     games: Vec<GameChannel>,
+    muted_tournament_ids: Vec<TournamentId>,
     unread_counts: Vec<UnreadCount>,
     recent_cutoff: DateTime<Utc>,
     section_limit: usize,
@@ -152,6 +154,7 @@ fn build_messages_hub_data(
         dms,
         tournaments,
         games,
+        muted_tournament_ids,
     }
 }
 
@@ -254,6 +257,9 @@ pub async fn get_messages_hub_data() -> Result<MessagesHubData, ServerFnError> {
         .await
         .map_err(|err| generic_chat_server_error("getting a database connection", err))?;
     let (dms, tournaments, games) = load_messages_hub_channels(&mut conn, user_id).await?;
+    let muted_tournament_ids = get_muted_tournament_ids_for_user(&mut conn, user_id)
+        .await
+        .map_err(|err| generic_chat_server_error("loading muted tournament chat ids", err))?;
     let unread_counts =
         get_unread_counts_for_messages_hub_channels(&mut conn, user_id, &dms, &tournaments, &games)
             .await
@@ -262,6 +268,7 @@ pub async fn get_messages_hub_data() -> Result<MessagesHubData, ServerFnError> {
         dms,
         tournaments,
         games,
+        muted_tournament_ids,
         unread_counts,
         chrono::Utc::now() - chrono::Duration::days(MESSAGES_HUB_RECENT_DAYS),
         MESSAGES_HUB_SECTION_LIMIT,

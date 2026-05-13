@@ -542,11 +542,17 @@ impl WsHub {
                     self.send_to_socket(&uid, &sid, DestKind::GameSpectators, &bytes);
                 }
             }
-            MessageDestination::Tournament(tournament_id) => {
-                let user_ids = match self.tournament_members_cached(tournament_id).await {
+            MessageDestination::Tournament(tournament_id, echo_user_id) => {
+                let mut user_ids = match self.tournament_members_cached(tournament_id).await {
                     Some(ids) => ids,
+                    None if echo_user_id.is_some() => Vec::new(),
                     None => return,
                 };
+                if let Some(echo_user_id) = echo_user_id {
+                    user_ids.push(*echo_user_id);
+                    user_ids.sort_unstable();
+                    user_ids.dedup();
+                }
                 for uid in user_ids {
                     self.send_to_user(&uid, DestKind::Tournament, &bytes);
                 }
@@ -1440,6 +1446,49 @@ mod tests {
 
         assert_eq!(rx_a.try_recv().unwrap(), Bytes::from_static(b"broadcast"));
         assert_eq!(rx_b.try_recv().unwrap(), Bytes::from_static(b"broadcast"));
+    }
+
+    #[tokio::test]
+    async fn dispatch_tournament_echo_reaches_non_member_sender() {
+        let hub = make_hub().await;
+        let sender_id = Uuid::new_v4();
+        let sender_sid = Uuid::new_v4();
+        let tournament_id = TournamentId("admin-echo".to_string());
+        let mut sender_rx = hub.register_socket(sender_id, sender_sid);
+
+        hub.tournament_members
+            .insert(tournament_id.clone(), (Instant::now(), Vec::new()));
+
+        hub.dispatch(
+            &MessageDestination::Tournament(tournament_id, Some(sender_id)),
+            Bytes::from_static(b"chat"),
+            None,
+        )
+        .await;
+
+        assert_eq!(sender_rx.try_recv().unwrap(), Bytes::from_static(b"chat"));
+    }
+
+    #[tokio::test]
+    async fn dispatch_tournament_echo_dedupes_member_sender() {
+        let hub = make_hub().await;
+        let sender_id = Uuid::new_v4();
+        let sender_sid = Uuid::new_v4();
+        let tournament_id = TournamentId("member-echo".to_string());
+        let mut sender_rx = hub.register_socket(sender_id, sender_sid);
+
+        hub.tournament_members
+            .insert(tournament_id.clone(), (Instant::now(), vec![sender_id]));
+
+        hub.dispatch(
+            &MessageDestination::Tournament(tournament_id, Some(sender_id)),
+            Bytes::from_static(b"chat"),
+            None,
+        )
+        .await;
+
+        assert_eq!(sender_rx.try_recv().unwrap(), Bytes::from_static(b"chat"));
+        assert!(sender_rx.try_recv().is_err());
     }
 
     #[tokio::test]

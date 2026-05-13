@@ -44,6 +44,7 @@ fn empty_messages_hub_data() -> MessagesHubData {
         dms: Vec::new(),
         tournaments: Vec::new(),
         games: Vec::new(),
+        muted_tournament_ids: Vec::new(),
     }
 }
 
@@ -307,6 +308,7 @@ pub struct Chat {
     /// Provider-owned Messages hub catalog for sidebar rendering.
     pub messages_hub_data: RwSignal<Option<MessagesHubData>>,
     pub messages_hub_loading: RwSignal<bool>,
+    muted_tournament_ids: RwSignal<HashSet<TournamentId>>,
     /// Bump to invalidate any cached block list snapshots used by chat UIs.
     block_list_version: RwSignal<u32>,
     user: Signal<Option<AccountResponse>>,
@@ -337,6 +339,7 @@ impl Chat {
             deferred_visible_unread_counts: RwSignal::new(HashMap::new()),
             messages_hub_data: RwSignal::new(None),
             messages_hub_loading: RwSignal::new(false),
+            muted_tournament_ids: RwSignal::new(HashSet::new()),
             block_list_version: RwSignal::new(0),
             user,
             api,
@@ -344,14 +347,19 @@ impl Chat {
     }
 
     fn apply_messages_hub_data(&self, data: MessagesHubData) {
+        let muted_tournament_ids: HashSet<TournamentId> =
+            data.muted_tournament_ids.iter().cloned().collect();
+        for tournament_id in &muted_tournament_ids {
+            self.clear_tournament_unread_state(tournament_id);
+        }
+        self.muted_tournament_ids.set(muted_tournament_ids);
         self.messages_hub_loading.set(false);
         self.messages_hub_data.set(Some(data));
     }
 
     async fn fetch_and_store_messages_hub(self) {
         if self.user.get_untracked().is_none() {
-            self.messages_hub_loading.set(false);
-            self.messages_hub_data.set(Some(empty_messages_hub_data()));
+            self.apply_messages_hub_data(empty_messages_hub_data());
             return;
         }
 
@@ -365,8 +373,7 @@ impl Chat {
 
     pub fn refresh_messages_hub(&self) {
         if self.user.get_untracked().is_none() {
-            self.messages_hub_loading.set(false);
-            self.messages_hub_data.set(Some(empty_messages_hub_data()));
+            self.apply_messages_hub_data(empty_messages_hub_data());
             return;
         }
 
@@ -382,10 +389,25 @@ impl Chat {
     }
 
     pub fn set_tournament_muted(&self, tournament_nanoid: &str, muted: bool) {
+        let tournament_id = TournamentId(tournament_nanoid.to_string());
+        self.muted_tournament_ids.update(|ids| {
+            if muted {
+                ids.insert(tournament_id.clone());
+            } else {
+                ids.remove(&tournament_id);
+            }
+        });
         self.messages_hub_data.update(|hub| {
             let Some(hub) = hub.as_mut() else {
                 return;
             };
+            if muted {
+                if !hub.muted_tournament_ids.contains(&tournament_id) {
+                    hub.muted_tournament_ids.push(tournament_id.clone());
+                }
+            } else {
+                hub.muted_tournament_ids.retain(|id| id != &tournament_id);
+            }
             if let Some(channel) = hub
                 .tournaments
                 .iter_mut()
@@ -393,6 +415,30 @@ impl Chat {
             {
                 channel.muted = muted;
             }
+        });
+        if muted {
+            self.clear_tournament_unread_state(&tournament_id);
+        }
+    }
+
+    fn is_tournament_muted(&self, tournament_id: &TournamentId) -> bool {
+        self.muted_tournament_ids
+            .with_untracked(|ids| ids.contains(tournament_id))
+    }
+
+    fn clear_tournament_unread_state(&self, tournament_id: &TournamentId) {
+        let channel_key = ConversationKey::tournament(tournament_id);
+        self.tournament_lobby_new_messages.update(|messages| {
+            messages.remove(tournament_id);
+        });
+        self.unread_counts.update(|counts| {
+            counts.remove(&channel_key);
+        });
+        self.pending_read_channels.update(|pending| {
+            pending.remove(&channel_key);
+        });
+        self.deferred_visible_unread_counts.update(|counts| {
+            counts.remove(&channel_key);
         });
     }
 
@@ -984,6 +1030,9 @@ impl Chat {
                 self.optimistically_increment_unread_by(key, deferred);
             }
             ConversationKey::Tournament(tournament_id) => {
+                if self.is_tournament_muted(tournament_id) {
+                    return;
+                }
                 self.tournament_lobby_new_messages.update(|messages| {
                     messages
                         .entry(tournament_id.clone())
@@ -1277,7 +1326,7 @@ impl Chat {
         });
         self.tournament_lobby_new_messages.with_untracked(|m| {
             for (tid, &has_new) in m.iter() {
-                if has_new {
+                if has_new && !self.is_tournament_muted(tid) {
                     map.entry(ConversationKey::tournament(tid))
                         .and_modify(|n| *n = (*n).max(1))
                         .or_insert(1);
@@ -1391,6 +1440,9 @@ impl Chat {
     /// Unread count for a tournament lobby. Use for tournament page badge.
     /// If local "new" flag is set, returns at least 1 so badge is not lost before server state is updated.
     pub fn unread_count_for_tournament(&self, tournament_id: &TournamentId) -> i64 {
+        if self.is_tournament_muted(tournament_id) {
+            return 0;
+        }
         let from_list = self.unread_count_for_channel(&ConversationKey::tournament(tournament_id));
         let has_local_new = self
             .tournament_lobby_new_messages
@@ -1500,6 +1552,7 @@ impl Chat {
             match &last_message.destination {
                 ChatDestination::TournamentLobby(id) => {
                     let channel_key = ConversationKey::tournament(id);
+                    let muted = self.is_tournament_muted(id);
                     let new_messages = self.filter_duplicate_live_messages_for_key(
                         &channel_key,
                         containers.iter().map(|c| c.message.clone()),
@@ -1518,7 +1571,7 @@ impl Chat {
                         if self.is_channel_visible(&channel_key) {
                             self.clear_tournament_lobby_new_messages(id);
                             self.defer_visible_channel_unread(&channel_key);
-                        } else {
+                        } else if !muted {
                             self.tournament_lobby_new_messages.update(|m| {
                                 m.entry(id.clone())
                                     .and_modify(|value| *value = true)
@@ -1711,6 +1764,7 @@ pub fn provide_chat() {
                 chat.loaded_history_channels.set(HashSet::new());
                 chat.messages_hub_data.set(None);
                 chat.messages_hub_loading.set(false);
+                chat.muted_tournament_ids.set(HashSet::new());
                 if user_id.is_none() {
                     chat.unread_counts.set(HashMap::new());
                 }
@@ -1729,11 +1783,69 @@ pub fn provide_chat() {
 
 #[cfg(test)]
 mod tests {
+    use crate::responses::{AccountResponse, UserResponse};
+
     use super::{filter_duplicate_history_messages, filter_duplicate_live_messages, Chat};
     use chrono::{TimeZone, Utc};
     use leptos::prelude::*;
-    use shared_types::{ChatMessage, ConversationKey, TournamentId};
+    use shared_types::{
+        ChatDestination,
+        ChatMessage,
+        ChatMessageContainer,
+        ConversationKey,
+        MessagesHubData,
+        Takeback,
+        TournamentChannel,
+        TournamentChatCapabilities,
+        TournamentId,
+    };
+    use std::collections::HashMap;
     use uuid::Uuid;
+
+    fn account(user_id: Uuid) -> AccountResponse {
+        AccountResponse {
+            username: "current".to_string(),
+            email: "current@example.test".to_string(),
+            id: user_id,
+            user: UserResponse {
+                username: "current".to_string(),
+                uid: user_id,
+                patreon: false,
+                bot: false,
+                admin: false,
+                ratings: HashMap::new(),
+                takeback: Takeback::default(),
+            },
+        }
+    }
+
+    fn hub_with_tournament(tournament_id: &TournamentId, muted: bool) -> MessagesHubData {
+        MessagesHubData {
+            dms: Vec::new(),
+            tournaments: vec![TournamentChannel {
+                nanoid: tournament_id.0.clone(),
+                name: "Test Tournament".to_string(),
+                muted,
+                access: TournamentChatCapabilities::default(),
+                last_message_at: Utc.timestamp_millis_opt(0).single().unwrap(),
+            }],
+            games: Vec::new(),
+            muted_tournament_ids: if muted {
+                vec![tournament_id.clone()]
+            } else {
+                Vec::new()
+            },
+        }
+    }
+
+    fn hub_with_muted_tournament_absent(tournament_id: &TournamentId) -> MessagesHubData {
+        MessagesHubData {
+            dms: Vec::new(),
+            tournaments: Vec::new(),
+            games: Vec::new(),
+            muted_tournament_ids: vec![tournament_id.clone()],
+        }
+    }
 
     fn message(user_id: Uuid, body: &str, timestamp_millis: Option<i64>) -> ChatMessage {
         ChatMessage {
@@ -1863,5 +1975,155 @@ mod tests {
             chat.chat_send_error(&failed_key),
             Some("send failed".to_string())
         );
+    }
+
+    #[test]
+    fn muted_tournament_live_message_is_cached_without_unread() {
+        let owner = Owner::new();
+        owner.set();
+
+        let current_user_id = Uuid::new_v4();
+        let sender_id = Uuid::new_v4();
+        let account = account(current_user_id);
+        let mut chat = Chat::new(
+            Signal::derive(move || Some(account.clone())),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let tournament_id = TournamentId("muted-thread".to_string());
+        chat.apply_messages_hub_data(hub_with_tournament(&tournament_id, true));
+
+        let container = ChatMessageContainer::new(
+            ChatDestination::TournamentLobby(tournament_id.clone()),
+            &message(sender_id, "muted but delivered", Some(2_000)),
+        );
+        chat.recv(&[container]);
+
+        let key = ConversationKey::tournament(&tournament_id);
+        let cached = chat.cached_messages(&key);
+        assert_eq!(cached.len(), 1);
+        assert_eq!(cached[0].message, "muted but delivered");
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
+        assert_eq!(chat.total_unread_count(), 0);
+        assert!(!chat
+            .tournament_lobby_new_messages
+            .with_untracked(|m| { m.get(&tournament_id).copied().unwrap_or(false) }));
+    }
+
+    #[test]
+    fn unmuted_tournament_live_message_marks_unread() {
+        let owner = Owner::new();
+        owner.set();
+
+        let current_user_id = Uuid::new_v4();
+        let sender_id = Uuid::new_v4();
+        let account = account(current_user_id);
+        let mut chat = Chat::new(
+            Signal::derive(move || Some(account.clone())),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let tournament_id = TournamentId("unmuted-thread".to_string());
+        chat.apply_messages_hub_data(hub_with_tournament(&tournament_id, false));
+
+        let container = ChatMessageContainer::new(
+            ChatDestination::TournamentLobby(tournament_id.clone()),
+            &message(sender_id, "badge me", Some(2_000)),
+        );
+        chat.recv(&[container]);
+
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 1);
+        assert_eq!(chat.total_unread_count(), 1);
+        assert!(chat
+            .tournament_lobby_new_messages
+            .with_untracked(|m| { m.get(&tournament_id).copied().unwrap_or(false) }));
+    }
+
+    #[test]
+    fn muting_tournament_clears_existing_unread_state() {
+        let owner = Owner::new();
+        owner.set();
+
+        let current_user_id = Uuid::new_v4();
+        let sender_id = Uuid::new_v4();
+        let account = account(current_user_id);
+        let mut chat = Chat::new(
+            Signal::derive(move || Some(account.clone())),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let tournament_id = TournamentId("newly-muted-thread".to_string());
+        chat.apply_messages_hub_data(hub_with_tournament(&tournament_id, false));
+
+        let container = ChatMessageContainer::new(
+            ChatDestination::TournamentLobby(tournament_id.clone()),
+            &message(sender_id, "badge first", Some(2_000)),
+        );
+        chat.recv(&[container]);
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 1);
+
+        chat.set_tournament_muted(&tournament_id.0, true);
+
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
+        assert_eq!(chat.total_unread_count(), 0);
+        assert!(!chat
+            .tournament_lobby_new_messages
+            .with_untracked(|m| { m.get(&tournament_id).copied().unwrap_or(false) }));
+    }
+
+    #[test]
+    fn muted_tournament_absent_from_hub_list_suppresses_unread() {
+        let owner = Owner::new();
+        owner.set();
+
+        let sender_id = Uuid::new_v4();
+        let mut chat = Chat::new(
+            Signal::derive(|| None),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let tournament_id = TournamentId("muted-absent-thread".to_string());
+        chat.apply_messages_hub_data(hub_with_muted_tournament_absent(&tournament_id));
+
+        let container = ChatMessageContainer::new(
+            ChatDestination::TournamentLobby(tournament_id.clone()),
+            &message(sender_id, "muted but not cataloged", Some(2_000)),
+        );
+        chat.recv(&[container]);
+
+        let key = ConversationKey::tournament(&tournament_id);
+        assert_eq!(chat.cached_messages(&key).len(), 1);
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
+        assert_eq!(chat.total_unread_count(), 0);
+        assert!(!chat
+            .tournament_lobby_new_messages
+            .with_untracked(|m| { m.get(&tournament_id).copied().unwrap_or(false) }));
+    }
+
+    #[test]
+    fn hub_refresh_clears_existing_unread_for_muted_tournament() {
+        let owner = Owner::new();
+        owner.set();
+
+        let current_user_id = Uuid::new_v4();
+        let sender_id = Uuid::new_v4();
+        let account = account(current_user_id);
+        let mut chat = Chat::new(
+            Signal::derive(move || Some(account.clone())),
+            Signal::derive(|| panic!("api is not used in this test")),
+        );
+        let tournament_id = TournamentId("muted-after-refresh".to_string());
+        chat.apply_messages_hub_data(hub_with_tournament(&tournament_id, false));
+
+        let container = ChatMessageContainer::new(
+            ChatDestination::TournamentLobby(tournament_id.clone()),
+            &message(sender_id, "badge before refresh", Some(2_000)),
+        );
+        chat.recv(&[container]);
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 1);
+
+        chat.apply_messages_hub_data(hub_with_muted_tournament_absent(&tournament_id));
+
+        assert_eq!(chat.unread_count_for_tournament(&tournament_id), 0);
+        assert_eq!(chat.total_unread_count(), 0);
+        assert!(!chat
+            .tournament_lobby_new_messages
+            .with_untracked(|m| { m.get(&tournament_id).copied().unwrap_or(false) }));
     }
 }

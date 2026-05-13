@@ -65,7 +65,7 @@ impl From<&MessageDestination> for DestKind {
             MessageDestination::Game(_) => DestKind::Game,
             MessageDestination::GameSpectators(_, _, _) => DestKind::GameSpectators,
             MessageDestination::Global => DestKind::Global,
-            MessageDestination::Tournament(_) => DestKind::Tournament,
+            MessageDestination::Tournament(_, _) => DestKind::Tournament,
             MessageDestination::Direct(_) => DestKind::Direct,
         }
     }
