@@ -32,6 +32,10 @@ impl Pings {
         ping_stats.update(nonce)
     }
 
+    pub fn remove(&self, user_id: Uuid) {
+        self.pings.write().unwrap().remove(&user_id);
+    }
+
     pub fn value(&self, user_id: Uuid) -> f64 {
         let binding = self.pings.read().unwrap();
         if let Some(ping_stats) = binding.get(&user_id) {

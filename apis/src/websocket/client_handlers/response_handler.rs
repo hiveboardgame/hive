@@ -6,7 +6,7 @@ use super::{
     ping::handle::handle_ping,
     schedule::handler::handle_schedule,
     tournament::handler::handle_tournament,
-    user_status::handle::handle_user_status,
+    user_status::handle::{handle_user_status, handle_user_status_batch},
 };
 use crate::{
     common::{ServerMessage::*, ServerResult},
@@ -25,6 +25,7 @@ pub fn handle_response(m: ServerResult) {
         ServerResult::Ok(message) => match *message {
             Ping { value, nonce } => handle_ping(nonce, value),
             UserStatus(user_update) => handle_user_status(user_update),
+            UserStatusBatch(users) => handle_user_status_batch(users),
             Game(game_update) => handle_game(*game_update),
             Join(_uuid) => {
                 //TODO: Do we do want here

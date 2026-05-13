@@ -1,36 +1,20 @@
 use super::{
-    messages::MessageDestination,
-    server_handlers::request_handler::RequestHandler,
+    messages::{GameSubscription, MessageDestination, SocketTx},
+    server_handlers::request_handler::{RequestHandler, RequestHandlerError},
+    telemetry::{DisconnectReason, WsTelemetry},
+    ws_hub::WsHub,
     WebsocketData,
 };
-use crate::{
-    common::{ClientRequest, ExternalServerError, ServerResult},
-    websocket::{
-        messages::{ClientActorMessage, Connect, Disconnect, WsMessage},
-        server_handlers::request_handler::RequestHandlerError,
-        ws_server::WsServer,
-    },
-};
-use actix::{
-    fut,
-    Actor,
-    ActorContext,
-    ActorFutureExt,
-    Addr,
-    AsyncContext,
-    ContextFutureSpawner,
-    Handler,
-    Running,
-    StreamHandler,
-    WrapFuture,
-};
-use actix_web_actors::ws::{self};
-use anyhow::Result;
+use crate::common::{ClientRequest, ExternalServerError, GameAction, ServerResult};
+use actix_ws::{AggregatedMessage, AggregatedMessageStream, Session};
+use bytes::Bytes;
 use codee::{binary::MsgpackSerdeCodec, Decoder, Encoder};
 use db_lib::DbPool;
+use futures_util::StreamExt;
 use indoc::printdoc;
 use shared_types::SimpleUser;
 use std::{
+    cell::Cell,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -39,195 +23,229 @@ use uuid::Uuid;
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
-pub struct WsConnection {
+/// RAII cleanup so the WS subsystem stays consistent even if the reader loop
+/// unwinds — without this, a panic anywhere inside `handle_binary` (a poisoned
+/// lock, a handler `.unwrap()`) skips `on_disconnect` and leaks the user in
+/// `sessions`/membership, leaving `active_sockets`/`active_users` overcounted
+/// for the lifetime of the process.
+struct DisconnectGuard {
+    hub: Arc<WsHub>,
+    telemetry: Arc<WsTelemetry>,
+    socket_id: Uuid,
     user_uid: Uuid,
     username: String,
-    authed: bool,
-    admin: bool,
+    reason: Cell<DisconnectReason>,
+}
+
+impl DisconnectGuard {
+    fn set_reason(&self, reason: DisconnectReason) {
+        self.reason.set(reason);
+    }
+}
+
+impl Drop for DisconnectGuard {
+    fn drop(&mut self) {
+        self.telemetry.record_disconnect(self.reason.get());
+        self.hub.on_disconnect(
+            self.socket_id,
+            self.user_uid,
+            std::mem::take(&mut self.username),
+        );
+    }
+}
+
+pub async fn reader_task(
+    mut session: Session,
+    mut msg_stream: AggregatedMessageStream,
+    socket: SocketTx,
+    hub: Arc<WsHub>,
     data: Arc<WebsocketData>,
-    wss_addr: Addr<WsServer>,
-    hb: Instant,
     pool: DbPool,
-}
+    user_uid: Uuid,
+    username: String,
+    admin: bool,
+    authed: bool,
+) {
+    Arc::clone(&hub).on_connect(
+        socket.socket_id,
+        user_uid,
+        username.clone(),
+        socket.tx.clone(),
+    );
 
-impl Actor for WsConnection {
-    type Context = ws::WebsocketContext<Self>;
+    let guard = DisconnectGuard {
+        hub: Arc::clone(&hub),
+        telemetry: data.telemetry.clone(),
+        socket_id: socket.socket_id,
+        user_uid,
+        username: username.clone(),
+        reason: Cell::new(DisconnectReason::Close),
+    };
 
-    fn started(&mut self, ctx: &mut Self::Context) {
-        self.hb(ctx);
-        let addr = ctx.address();
-        self.wss_addr
-            .send(Connect {
-                addr: addr.recipient(),
-                game_id: String::from("lobby"), // self.game_id
-                user_id: self.user_uid,
-                username: self.username.clone(),
-            })
-            .into_actor(self)
-            .then(|res, _, ctx| {
-                match res {
-                    Ok(_res) => (),
-                    _ => ctx.stop(),
+    let mut last_hb = Instant::now();
+    let mut hb_interval = tokio::time::interval(HEARTBEAT_INTERVAL);
+
+    loop {
+        tokio::select! {
+            _ = hb_interval.tick() => {
+                if last_hb.elapsed() > CLIENT_TIMEOUT {
+                    guard.set_reason(DisconnectReason::Timeout);
+                    break;
                 }
-                fut::ready(())
-            })
-            .wait(ctx);
-    }
-
-    fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
-        self.wss_addr.do_send(Disconnect {
-            user_id: self.user_uid,
-            game_id: String::from("lobby"),
-            addr: ctx.address().recipient(),
-            username: self.username.clone(),
-        });
-        Running::Stop
-    }
-}
-
-impl WsConnection {
-    pub fn new(
-        user_uid: Option<Uuid>,
-        username: Option<String>,
-        admin: Option<bool>,
-        lobby: Addr<WsServer>,
-        data: Arc<WebsocketData>,
-        pool: DbPool,
-    ) -> WsConnection {
-        let id = user_uid.unwrap_or(Uuid::new_v4());
-        let name = username.unwrap_or(id.to_string());
-        let admin = admin.unwrap_or_default();
-        WsConnection {
-            user_uid: id,
-            username: name,
-            admin,
-            data: data.clone(),
-            authed: user_uid.is_some(),
-            hb: Instant::now(),
-            wss_addr: lobby,
-            pool,
+                let ping = tokio::time::timeout(HEARTBEAT_INTERVAL, session.ping(b"hi")).await;
+                if matches!(ping, Err(_) | Ok(Err(_))) {
+                    guard.set_reason(DisconnectReason::PingFail);
+                    break;
+                }
+            }
+            item = msg_stream.next() => match item {
+                Some(Ok(AggregatedMessage::Ping(bytes))) => {
+                    last_hb = Instant::now();
+                    if session.pong(&bytes).await.is_err() {
+                        guard.set_reason(DisconnectReason::PingFail);
+                        break;
+                    }
+                }
+                Some(Ok(AggregatedMessage::Pong(_))) => {
+                    last_hb = Instant::now();
+                }
+                Some(Ok(AggregatedMessage::Binary(bytes))) => {
+                    last_hb = Instant::now();
+                    handle_binary(
+                        &bytes,
+                        &hub,
+                        &socket,
+                        &data,
+                        &pool,
+                        user_uid,
+                        &username,
+                        admin,
+                        authed,
+                    )
+                    .await;
+                }
+                Some(Ok(AggregatedMessage::Close(_))) => break,
+                None => {
+                    guard.set_reason(DisconnectReason::StreamErr);
+                    break;
+                }
+                Some(Ok(AggregatedMessage::Text(_))) => {}
+                Some(Err(_)) => {
+                    guard.set_reason(DisconnectReason::StreamErr);
+                    break;
+                }
+            }
         }
     }
 
-    fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
-        ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
-            if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                ctx.stop();
-                return;
-            }
-            ctx.ping(b"hi");
-        });
-    }
+    drop(guard);
+    let _ = session.close(None).await;
 }
 
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConnection {
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        // let game_id = self.game.clone();
-        match msg {
-            Ok(ws::Message::Ping(msg)) => {
-                self.hb = Instant::now();
-                ctx.pong(&msg);
-            }
-            Ok(ws::Message::Pong(_)) => {
-                self.hb = Instant::now();
-            }
-            Ok(ws::Message::Text(bin)) => {
-                println!("Got text message, we don't do these here...");
-                ctx.text(bin)
-            }
-            Ok(ws::Message::Close(reason)) => {
-                ctx.close(reason);
-                ctx.stop();
-            }
-            Ok(ws::Message::Continuation(_)) => {
-                ctx.stop();
-            }
-            Ok(ws::Message::Nop) => (),
-            Ok(ws::Message::Binary(s)) => {
-                let request: Result<ClientRequest, _> = MsgpackSerdeCodec::decode(&s);
-                if let Ok(request) = request {
-                    let pool = self.pool.clone();
-                    let lobby = self.wss_addr.clone();
-                    let user_id = self.user_uid;
-                    let username = self.username.clone();
-                    let user = SimpleUser {
-                        user_id,
-                        username: username.clone(),
-                        authed: self.authed,
-                        admin: self.admin,
-                    };
-                    let addr = ctx.address().recipient();
-                    let data = Arc::clone(&self.data);
-                    let future = async move {
-                        let handler = RequestHandler::new(request.clone(), data, addr, user, pool);
-                        let handler_result = handler.handle().await;
-                        match handler_result {
-                            Ok(messages) => {
-                                for message in messages {
-                                    let serialized = ServerResult::Ok(Box::new(message.message));
-                                    if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
-                                        let cam = ClientActorMessage {
-                                            destination: message.destination,
-                                            serialized,
-                                            from: Some(user_id),
-                                        };
-                                        lobby.do_send(cam);
-                                    };
-                                }
-                            }
-                            Err(err) => {
-                                let status_code = match &err {
-                                    RequestHandlerError::AuthError(_) => {
-                                        http::StatusCode::UNAUTHORIZED
-                                    }
-                                    RequestHandlerError::Forbidden(_) => {
-                                        http::StatusCode::FORBIDDEN
-                                    }
-                                    _ => http::StatusCode::INTERNAL_SERVER_ERROR,
-                                };
-                                printdoc! {r#"
-                                    -----------------ERROR-----------------
-                                      Request: {:?}
-                                      Error:   {:?}
-                                      User:    {} {}
-                                    ------------------END------------------
-                                    "#,
-                                    request, err, username, user_id
-                                };
-                                let message = ServerResult::Err(ExternalServerError {
-                                    user_id,
-                                    field: request.error_field(),
-                                    reason: err.user_safe_reason(),
-                                    status_code,
-                                });
-                                if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
-                                    let cam = ClientActorMessage {
-                                        destination: MessageDestination::User(user_id),
-                                        serialized,
-                                        from: Some(user_id),
-                                    };
-                                    lobby.do_send(cam);
-                                };
-                            }
-                        }
-                    };
+async fn handle_binary(
+    bytes: &[u8],
+    hub: &Arc<WsHub>,
+    socket: &SocketTx,
+    data: &Arc<WebsocketData>,
+    pool: &DbPool,
+    user_id: Uuid,
+    username: &str,
+    admin: bool,
+    authed: bool,
+) {
+    data.telemetry.record_message_received(bytes.len());
 
-                    let actor_future = future.into_actor(self);
-                    ctx.wait(actor_future);
+    let request: Result<ClientRequest, _> = MsgpackSerdeCodec::decode(bytes);
+    let Ok(request) = request else {
+        return;
+    };
+
+    // Unwatch needs hub access and no DB — handle it here before RequestHandler.
+    if let ClientRequest::Game {
+        ref game_id,
+        action: GameAction::Unwatch,
+    } = request
+    {
+        hub.unsubscribe_game(user_id, socket.socket_id, game_id);
+        return;
+    }
+
+    let user = SimpleUser {
+        user_id,
+        username: username.to_owned(),
+        authed,
+        admin,
+    };
+    let handler = RequestHandler::new(
+        request.clone(),
+        data.clone(),
+        hub.clone(),
+        socket.clone(),
+        user,
+        pool.clone(),
+    );
+
+    match handler.handle().await {
+        Ok(output) => {
+            let from = Some((user_id, socket.socket_id));
+            for subscription in output.subscriptions {
+                match subscription {
+                    GameSubscription::Fanout(game_id) => {
+                        hub.subscribe_game_fanout(user_id, socket.socket_id, &game_id);
+                    }
+                    GameSubscription::Heartbeat(game_id) => {
+                        hub.subscribe_game_heartbeat(user_id, socket.socket_id, &game_id);
+                    }
                 }
             }
-            Err(e) => {
-                println!("Got error in WS parsing");
-                std::panic::panic_any(e)
+            for message in output.messages {
+                let serialized = ServerResult::Ok(Box::new(message.message));
+                if let Ok(serialized) = MsgpackSerdeCodec::encode(&serialized) {
+                    hub.dispatch(&message.destination, Bytes::from(serialized), from)
+                        .await;
+                }
+            }
+            // Reactions: one serialize, one Bytes allocation, refcount-cloned
+            // across the three fanouts (both players + spectators). Dispatch
+            // after `messages` so urgent state updates land first.
+            for reaction in output.reactions {
+                hub.dispatch_reaction(reaction, from).await;
+            }
+            // Finalize after dispatch so the opponent received the final
+            // move/control via still-populated membership.
+            for finalize in output.finalize_games {
+                hub.finalize_game(&finalize.game_id, finalize.white_id, finalize.black_id);
             }
         }
-    }
-}
-
-impl Handler<WsMessage> for WsConnection {
-    type Result = ();
-
-    fn handle(&mut self, msg: WsMessage, ctx: &mut Self::Context) {
-        ctx.binary(msg.0);
+        Err(err) => {
+            let status_code = match &err {
+                RequestHandlerError::AuthError(_) => http::StatusCode::UNAUTHORIZED,
+                RequestHandlerError::Forbidden(_) => http::StatusCode::FORBIDDEN,
+                RequestHandlerError::InternalError(_) => http::StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            printdoc! {r#"
+                -----------------ERROR-----------------
+                  Request: {:?}
+                  Error:   {:?}
+                  User:    {} {}
+                ------------------END------------------
+                "#,
+                request, err, username, user_id
+            };
+            let message = ServerResult::Err(ExternalServerError {
+                user_id,
+                field: request.error_field(),
+                reason: err.user_safe_reason(),
+                status_code,
+            });
+            if let Ok(serialized) = MsgpackSerdeCodec::encode(&message) {
+                hub.dispatch(
+                    &MessageDestination::User(user_id),
+                    Bytes::from(serialized),
+                    Some((user_id, socket.socket_id)),
+                )
+                .await;
+            }
+        }
     }
 }

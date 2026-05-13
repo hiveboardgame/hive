@@ -22,7 +22,7 @@ use leptos::{
     task::spawn_local,
 };
 use leptos_router::{
-    components::{A, Outlet, Redirect},
+    components::{Outlet, Redirect, A},
     hooks::{use_location, use_params_map},
     NavigateOptions,
 };
@@ -212,9 +212,15 @@ where
 {
     let render_ready = StoredValue::new(render_ready);
     move || match state.get() {
-        None => EitherOf3::A(view! { <MessagesStatusFrame title=loading_title message=loading_message /> }),
-        Some(state) if current_key.get().as_ref() != state.key() => EitherOf3::A(view! { <MessagesStatusFrame title=loading_title message=loading_message /> }),
-        Some(ResolveState::Missing(_)) => EitherOf3::B(view! { <MessagesStatusFrame title=missing_title message=missing_message /> }),
+        None => EitherOf3::A(
+            view! { <MessagesStatusFrame title=loading_title message=loading_message /> },
+        ),
+        Some(state) if current_key.get().as_ref() != state.key() => EitherOf3::A(
+            view! { <MessagesStatusFrame title=loading_title message=loading_message /> },
+        ),
+        Some(ResolveState::Missing(_)) => EitherOf3::B(
+            view! { <MessagesStatusFrame title=missing_title message=missing_message /> },
+        ),
         Some(ResolveState::Ready(key, value)) => {
             EitherOf3::C(render_ready.with_value(|render_ready| render_ready(key, value)))
         }

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use anyhow::{Context, Result};
 
@@ -10,8 +10,14 @@ use crate::{
         WebsocketData,
     },
 };
-use db_lib::{get_conn, helpers::insert_chat_message, models::Game, DbPool};
-use shared_types::{ChatDestination, ChatMessageContainer, PersistentChannelKey};
+use db_lib::{
+    get_conn,
+    helpers::{get_user_ids_who_muted_tournament, insert_chat_message},
+    models::{Game, Tournament},
+    DbPool,
+};
+use shared_types::{ChatDestination, ChatMessageContainer, PersistentChannelKey, TournamentId};
+use uuid::Uuid;
 
 pub struct ChatHandler {
     container: ChatMessageContainer,
@@ -45,10 +51,12 @@ impl ChatHandler {
         let mut messages = Vec::new();
         match &self.container.destination {
             ChatDestination::TournamentLobby(tournament_id) => {
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::Tournament(tournament_id.clone()),
-                    message: ServerMessage::Chat(vec![self.container.to_owned()]),
-                })
+                for user_id in self.tournament_chat_recipients(tournament_id).await? {
+                    messages.push(InternalServerMessage {
+                        destination: MessageDestination::User(user_id),
+                        message: ServerMessage::Chat(vec![self.container.to_owned()]),
+                    });
+                }
             }
             ChatDestination::GamePlayers(game_id) => {
                 let mut conn = get_conn(&self.pool)
@@ -129,5 +137,40 @@ impl ChatHandler {
         );
 
         Ok(messages)
+    }
+
+    async fn tournament_chat_recipients(&self, tournament_id: &TournamentId) -> Result<Vec<Uuid>> {
+        let mut conn = get_conn(&self.pool)
+            .await
+            .context("loading DB connection for tournament chat fanout")?;
+        let tournament = Tournament::from_nanoid(&tournament_id.0, &mut conn)
+            .await
+            .context("loading tournament for chat fanout")?;
+        let muted_ids = get_user_ids_who_muted_tournament(&mut conn, tournament.id)
+            .await
+            .context("loading tournament chat mutes")?;
+        let sender_id = self.container.message.user_id;
+        let mut user_ids = HashSet::new();
+
+        for player in tournament
+            .players(&mut conn)
+            .await
+            .context("loading tournament players for chat fanout")?
+        {
+            user_ids.insert(player.id);
+        }
+        for organizer in tournament
+            .organizers(&mut conn)
+            .await
+            .context("loading tournament organizers for chat fanout")?
+        {
+            user_ids.insert(organizer.id);
+        }
+        user_ids.insert(sender_id);
+
+        Ok(user_ids
+            .into_iter()
+            .filter(|user_id| *user_id == sender_id || !muted_ids.contains(user_id))
+            .collect())
     }
 }

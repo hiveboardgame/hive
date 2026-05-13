@@ -1,4 +1,5 @@
 {
+    "learn_to_play": "Учиться играть",
     "create_game": "Создать игру",
     "search_players": "Поиск игроков",
     "online_players_one": "Игроков онлайн: {{count}}",

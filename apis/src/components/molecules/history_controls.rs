@@ -52,17 +52,16 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
         }
     });
 
-    let go_to_end = Callback::new(move |()| {
+    let scroll_to_end = Callback::new(move |()| {
         if let Some(parent) = parent.get() {
             let parent = parent.get_untracked().expect("div to be loaded");
             parent.set_scroll_top(parent.scroll_height());
         }
-        game_state.show_history_turn(game_state.signal.with_untracked(|gs| gs.state.turn - 1));
     });
     let if_last_go_to_end = Callback::new(move |()| {
         focus.run(());
         if game_state.signal.with_untracked(|gs| gs.is_last_turn()) {
-            go_to_end.run(());
+            scroll_to_end.run(());
         }
     });
     view! {
@@ -79,7 +78,7 @@ pub fn HistoryControls(#[prop(optional)] parent: MaybeProp<NodeRef<html::Div>>) 
                     action=HistoryNavigation::Next
                     post_action=if_last_go_to_end
                 />
-                <HistoryButton action=HistoryNavigation::Last post_action=go_to_end />
+                <HistoryButton action=HistoryNavigation::Last post_action=scroll_to_end />
             </div>
             <div class="flex p-2">
                 <Reserve alignment=Alignment::DoubleRow color=Color::White />

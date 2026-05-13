@@ -246,10 +246,8 @@ impl Standings {
                             points += 1.0;
                         }
                     }
-                    TournamentGameResult::Winner(Color::Black) => {
-                        if pairing.black_uuid == player {
-                            points += 1.0;
-                        }
+                    TournamentGameResult::Winner(Color::Black) if pairing.black_uuid == player => {
+                        points += 1.0;
                     }
                     _ => {}
                 }

@@ -90,6 +90,15 @@ impl PartialOrd for GameResponse {
 impl Eq for GameResponse {}
 
 impl GameResponse {
+    pub fn recorded_time_left(&self, turn: usize) -> Option<Duration> {
+        self.move_times
+            .get(turn)
+            .copied()
+            .flatten()
+            .and_then(|nanos| u64::try_from(nanos).ok())
+            .map(Duration::from_nanos)
+    }
+
     pub fn white_rating(&self) -> u64 {
         self.white_player.rating_for_speed(&self.speed)
     }
@@ -112,6 +121,19 @@ impl GameResponse {
             self.game_type,
         ))
         .expect("State to be valid, as game was")
+    }
+
+    pub fn organizer_can_adjudicate(&self) -> bool {
+        matches!(
+            self.conclusion,
+            Conclusion::Unknown | Conclusion::Committee | Conclusion::Forfeit
+        ) && self.turn == 0
+            && self.history.is_empty()
+            && self.game_start == GameStart::Ready
+            && matches!(
+                self.game_status,
+                GameStatus::NotStarted | GameStatus::Adjudicated
+            )
     }
 
     pub fn time_left(&self) -> Result<std::time::Duration> {

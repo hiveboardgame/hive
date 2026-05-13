@@ -1,10 +1,10 @@
 {
+    "learn_to_play": "Spielen lernen",
     "create_game": "Ein Spiel erstellen",
     "search_players": "Spieler*innen suchen",
     "found_players": "Gefunden:",
     "online_players_one": "{{count}} Online-Spieler*in",
     "online_players_other": "{{count}} Online-Spieler*innen",
-
     "custom_game": {
         "button": "Benutzerdefiniert",
         "title": "Ein Spiel erstellen:",

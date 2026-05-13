@@ -23,10 +23,9 @@ COPY . .
 RUN LEPTOS_HASH_FILES=true cargo leptos build -r -P -vv
 
 FROM debian:bookworm-slim AS runner
-# Copy the server binary to the /app directory
-COPY --from=builder /app/target/ /app/
-COPY --from=builder /app/.cargo/target/release/apis /app/
-COPY --from=builder /app/.cargo/target/release/hash.txt /app/
+# Copy only the runtime artifacts from the builder stage.
+COPY --from=builder /app/.cargo/target/release/apis /app/apis
+COPY --from=builder /app/.cargo/target/release/hash.txt /app/hash.txt
 # /target/site contains our JS/WASM/CSS, etc.
 COPY --from=builder /app/target/site /app/site
 # Copy Cargo.toml if it’s needed at runtime
@@ -34,7 +33,7 @@ COPY --from=builder /app/Cargo.toml /app/
 WORKDIR /app
 # Install dependencies pinned to a certain version and delete lists
 RUN apt-get update && \
-    apt-get install --no-install-recommends libpq5 -y && \
+    apt-get install --no-install-recommends libpq5 ca-certificates -y && \
     rm -rf /var/lib/apt/lists/*
 
 # Set any required env variables

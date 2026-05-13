@@ -1,5 +1,6 @@
 pub mod abandon;
 pub mod adjudicate_result;
+pub mod bulk_adjudicate;
 pub mod create;
 pub mod delete;
 pub mod finish;

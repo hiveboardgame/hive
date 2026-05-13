@@ -40,7 +40,7 @@ impl Hasher {
         }
         let index = if let Some(index) = index {
             index as u64
-        } else if let Some(index) = bug_stack.index[revolution as usize] {
+        } else if let Some(index) = bug_stack.index(revolution) {
             index as u64
         } else {
             panic!("We need an index");

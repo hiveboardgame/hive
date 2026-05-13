@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
 use crate::{
-    common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
-    responses::GameResponse,
+    common::{GameActionResponse, GameReaction},
     websocket::{
-        messages::{InternalServerMessage, MessageDestination},
+        messages::{HandlerOutput, Reaction},
         WebsocketData,
     },
 };
@@ -44,9 +43,9 @@ impl StartHandler {
         }
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self) -> Result<HandlerOutput> {
         let mut conn = get_conn(&self.pool).await?;
-        let mut messages = Vec::new();
+        let mut reactions = Vec::new();
         if let Ok(should_start) = self.data.game_start.should_start(&self.game, self.user_id) {
             if should_start {
                 let game = conn
@@ -67,50 +66,43 @@ impl StartHandler {
                         .scope_boxed()
                     })
                     .await?;
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
-                    message: ServerMessage::Game(Box::new(GameUpdate::Reaction(
-                        GameActionResponse {
-                            game_id: GameId(game.nanoid.to_owned()),
-                            game: GameResponse::from_model(&game, &mut conn).await?,
-                            game_action: GameReaction::Started,
-                            user_id: self.user_id.to_owned(),
-                            username: self.username.to_owned(),
-                        },
-                    ))),
+                let game_response = self.data.get_or_build_response(&game, &mut conn).await?;
+                reactions.push(Reaction {
+                    game_id: GameId(game.nanoid.to_owned()),
+                    white_id: game.white_id,
+                    black_id: game.black_id,
+                    gar: GameActionResponse {
+                        game_id: GameId(game.nanoid.to_owned()),
+                        game: (*game_response).clone(),
+                        game_action: GameReaction::Started,
+                        user_id: self.user_id.to_owned(),
+                        username: self.username.to_owned(),
+                    },
                 });
             } else {
-                let game_response = GameResponse::from_model(&self.game, &mut conn).await?;
-                let game_action_response = GameActionResponse {
-                    game_id: GameId(self.game.nanoid.to_owned()),
-                    game: game_response,
-                    game_action: GameReaction::Ready,
-                    user_id: self.user_id.to_owned(),
-                    username: self.username.to_owned(),
-                };
-
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
-                    message: ServerMessage::Game(Box::new(GameUpdate::Reaction(
-                        game_action_response.clone(),
-                    ))),
-                });
-
-                // Also send Ready message to the opponent user (for popup notification)
-                let opponent_id = if self.game.white_id == self.user_id {
-                    self.game.black_id
-                } else {
-                    self.game.white_id
-                };
-
-                messages.push(InternalServerMessage {
-                    destination: MessageDestination::User(opponent_id),
-                    message: ServerMessage::Game(Box::new(GameUpdate::Reaction(
-                        game_action_response,
-                    ))),
+                let game_response = self
+                    .data
+                    .get_or_build_response(&self.game, &mut conn)
+                    .await?;
+                reactions.push(Reaction {
+                    game_id: GameId(self.game.nanoid.clone()),
+                    white_id: self.game.white_id,
+                    black_id: self.game.black_id,
+                    gar: GameActionResponse {
+                        game_id: GameId(self.game.nanoid.to_owned()),
+                        game: (*game_response).clone(),
+                        game_action: GameReaction::Ready,
+                        user_id: self.user_id.to_owned(),
+                        username: self.username.to_owned(),
+                    },
                 });
             }
         }
-        Ok(messages)
+        Ok(HandlerOutput {
+            messages: Vec::new(),
+            reactions,
+            finalize_games: Vec::new(),
+            subscriptions: Vec::new(),
+        })
     }
 }

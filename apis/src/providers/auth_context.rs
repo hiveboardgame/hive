@@ -10,6 +10,8 @@ pub struct AuthContext {
     pub user: Signal<Option<AccountResponse>>,
     /// Used to avoid redirecting to login while auth is still loading (e.g. on refresh).
     pub action: Action<(), Result<Option<AccountResponse>, ServerFnError>>,
+    pub logged_in: Signal<Option<bool>>,
+    pub admin: Signal<Option<bool>>,
     ws_refresh: StoredValue<bool>,
 }
 
@@ -30,10 +32,25 @@ pub fn provide_auth() {
     action.dispatch(());
 
     let user = Signal::derive(move || action.value().get().and_then(|v| v.ok().flatten()));
+    let account = action.value();
+    let logged_in = Signal::derive(move || match account.get() {
+        Some(Ok(Some(_))) => Some(true),
+        Some(Ok(None)) => Some(false),
+        Some(Err(_)) => Some(false),
+        None => None,
+    });
+    let account = action.value();
+    let admin = Signal::derive(move || match account.get() {
+        Some(Ok(Some(account))) => Some(account.user.admin),
+        Some(Ok(None)) | Some(Err(_)) => Some(false),
+        None => None,
+    });
     let ws_refresh = StoredValue::new(false);
 
     provide_context(AuthContext {
         user,
+        logged_in,
+        admin,
         logout,
         ws_refresh,
         action,

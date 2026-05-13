@@ -371,8 +371,10 @@ fn MessageRowView(
     let expanded_key = id.clone();
     let expand_callback_key = id.clone();
     let blocked_user_id = message.user_id;
-    let sender_blocked =
-        Signal::derive(move || chat.blocked_user_ids.with(|blocked| blocked.contains(&blocked_user_id)));
+    let sender_blocked = Signal::derive(move || {
+        chat.blocked_user_ids
+            .with(|blocked| blocked.contains(&blocked_user_id))
+    });
     let expanded_signal =
         Signal::derive(move || expanded_hidden_messages.with(|set| set.contains(&expanded_key)));
     let on_expand = Callback::new(move |()| {

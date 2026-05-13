@@ -1,6 +1,6 @@
 use crate::{
     common::{ServerMessage, TournamentUpdate},
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::messages::{GameFinalize, HandlerOutput, InternalServerMessage, MessageDestination},
 };
 use anyhow::Result;
 use db_lib::{
@@ -34,13 +34,14 @@ impl AdjudicateResultHandler {
         })
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self) -> Result<HandlerOutput> {
         let mut conn = get_conn(&self.pool).await?;
-        let tournament = conn
+        let (tournament, finalized_game) = conn
             .transaction::<_, anyhow::Error, _>(move |tc| {
                 async move {
                     let game = Game::find_by_game_id(&self.game_id, tc).await?;
-                    game.adjudicate_tournament_result(&self.user_id, &self.new_result, tc)
+                    let game = game
+                        .adjudicate_tournament_result(&self.user_id, &self.new_result, tc)
                         .await?;
 
                     if let Err(e) = Schedule::delete_all_for_game(game.id, tc).await {
@@ -48,17 +49,37 @@ impl AdjudicateResultHandler {
                     }
 
                     let id = game.tournament_id.expect("Have a tournament_id");
-                    Ok(Tournament::find(id, tc).await?)
+                    Ok((Tournament::find(id, tc).await?, game))
                 }
                 .scope_boxed()
             })
             .await?;
 
-        Ok(vec![InternalServerMessage {
+        let finalize_games = if finalized_game.finished {
+            vec![GameFinalize {
+                game_id: GameId(finalized_game.nanoid.clone()),
+                white_id: finalized_game.white_id,
+                black_id: finalized_game.black_id,
+            }]
+        } else {
+            Vec::new()
+        };
+        let mut messages = Vec::new();
+        for finalize in &finalize_games {
+            messages.extend(finalize.own_game_removed_messages());
+        }
+        messages.push(InternalServerMessage {
             destination: MessageDestination::Global,
             message: ServerMessage::Tournament(TournamentUpdate::Adjudicated(TournamentId(
                 tournament.nanoid.clone(),
             ))),
-        }])
+        });
+
+        Ok(HandlerOutput {
+            messages,
+            reactions: Vec::new(),
+            finalize_games,
+            subscriptions: Vec::new(),
+        })
     }
 }

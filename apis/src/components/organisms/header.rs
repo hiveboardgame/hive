@@ -29,7 +29,7 @@ pub fn Header() -> impl IntoView {
     let auth_context = expect_context::<AuthContext>();
     let i18n = use_i18n();
     view! {
-        <header class="flex fixed top-0 z-50 justify-between items-center w-full bg-gray-300 select-none max-w-[100vw] dark:bg-header-twilight">
+        <header class="flex fixed top-0 z-50 justify-between items-center w-full h-10 bg-gray-300 select-none max-w-[100vw] dark:bg-header-twilight">
             <div class="flex gap-1 items-center">
                 <MobileDropdown />
                 <div class="hidden lg:flex lg:gap-1 lg:items-center">

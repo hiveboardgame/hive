@@ -8,8 +8,9 @@ use super::{
 use crate::{
     common::GameAction,
     websocket::{
-        messages::{InternalServerMessage, WsMessage},
+        messages::{HandlerOutput, SocketTx},
         WebsocketData,
+        WsHub,
     },
 };
 use anyhow::Result;
@@ -24,8 +25,9 @@ pub struct GameActionHandler {
     game: Game,
     pool: DbPool,
     user_id: Uuid,
-    received_from: actix::Recipient<WsMessage>,
+    received_from: SocketTx,
     data: Arc<WebsocketData>,
+    hub: Arc<WsHub>,
     username: String,
 }
 
@@ -33,9 +35,10 @@ impl GameActionHandler {
     pub async fn new(
         game_id: &GameId,
         game_action: GameAction,
-        received_from: actix::Recipient<WsMessage>,
+        received_from: SocketTx,
         user_details: (&str, Uuid),
         data: Arc<WebsocketData>,
+        hub: Arc<WsHub>,
         pool: &DbPool,
     ) -> Result<Self> {
         let (username, user_id) = user_details;
@@ -51,6 +54,7 @@ impl GameActionHandler {
         Ok(Self {
             pool: pool.clone(),
             data,
+            hub,
             game,
             received_from,
             username: username.to_owned(),
@@ -59,12 +63,18 @@ impl GameActionHandler {
         })
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
-        let messages = match self.game_action.clone() {
+    pub async fn handle(&self) -> Result<HandlerOutput> {
+        let output = match self.game_action.clone() {
             GameAction::CheckTime => {
-                TimeoutHandler::new(&self.game, &self.username, self.user_id, &self.pool)
-                    .handle()
-                    .await?
+                TimeoutHandler::new(
+                    &self.game,
+                    &self.username,
+                    self.user_id,
+                    self.data.clone(),
+                    &self.pool,
+                )
+                .handle()
+                .await?
             }
             GameAction::Turn(turn) => {
                 self.ensure_not_finished()?;
@@ -75,6 +85,7 @@ impl GameActionHandler {
                     &self.username,
                     self.user_id,
                     self.data.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .handle()
@@ -88,6 +99,8 @@ impl GameActionHandler {
                     &self.game,
                     &self.username,
                     self.user_id,
+                    self.data.clone(),
+                    self.hub.clone(),
                     &self.pool,
                 )
                 .handle()
@@ -99,6 +112,7 @@ impl GameActionHandler {
                     &self.username,
                     self.user_id,
                     self.received_from.clone(),
+                    self.data.clone(),
                     &self.pool,
                 )
                 .handle()
@@ -117,8 +131,11 @@ impl GameActionHandler {
                 .handle()
                 .await?
             }
+            GameAction::Unwatch => {
+                unreachable!("Unwatch is intercepted in handle_binary before GameActionHandler")
+            }
         };
-        Ok(messages)
+        Ok(output)
     }
 
     fn ensure_not_finished(&self) -> Result<()> {

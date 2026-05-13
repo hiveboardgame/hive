@@ -136,6 +136,37 @@ docker compose logs -f app
 ```
 This shows the incremental build output and prints when the server binds to the port.
 
+### WebSocket telemetry
+
+The server publishes a snapshot of WebSocket-related counters and gauges
+(connections, dispatches, drops, queue depth, chat sizes, process memory,
+etc.) on a fixed interval. Each snapshot is written to the log and, if a
+CSV file path is configured, appended as one row to that file.
+
+**Defaults**
+
+- **Release builds**: telemetry is on. Default interval `30s`. Default CSV
+  path `./ws_metrics.csv` (relative to the server's working directory).
+- **Debug builds**: opt-in. The job only runs if `WS_TELEMETRY_INTERVAL_SECS`
+  is set; the CSV is only written if `WS_METRICS_LOG_FILE` is set.
+
+**Environment variables**
+
+- `WS_TELEMETRY_INTERVAL_SECS`
+  - Set to `0` to disable the snapshot job entirely.
+  - Set to a positive integer to override the interval. Values below 10s
+    are accepted but log a warning — the snapshot walks every chat channel
+    and contends with WS traffic for chat locks at sub-10s intervals.
+- `WS_METRICS_LOG_FILE`
+  - Set to an empty string to keep snapshots running but skip CSV writing.
+  - Set to a path to override the default CSV location.
+
+**Admin dashboard**
+
+Admins can view the data as graphs at `/admin/telemetry`. The page reads the
+configured CSV file, supports a time-range selector (last hour / 24h / 7d /
+all), a manual refresh button, and auto-refreshes every 30s.
+
 ### Troubleshooting
 
 If you get an error of the form

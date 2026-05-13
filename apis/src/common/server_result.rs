@@ -50,6 +50,7 @@ pub enum ServerMessage {
     Schedule(ScheduleUpdate),
     Tournament(TournamentUpdate),
     UserStatus(UserUpdate),
+    UserStatusBatch(Vec<UserResponse>),
     RedirectLink(String),
 }
 
@@ -72,6 +73,7 @@ pub enum TournamentUpdate {
 pub enum GameUpdate {
     Reaction(GameActionResponse),
     Urgent(Vec<GameResponse>),
+    OwnGameRemoved(GameId),
     Tv(GameResponse),
     Heartbeat(HeartbeatResponse),
 }

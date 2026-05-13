@@ -1,9 +1,14 @@
-use crate::websocket::{busybee::Busybee, WebsocketData};
+use crate::websocket::{busybee::Busybee, WebsocketData, WsHub};
 
 use crate::{
     common::{GameActionResponse, GameReaction, GameUpdate, ServerMessage},
-    responses::GameResponse,
-    websocket::messages::{InternalServerMessage, MessageDestination},
+    websocket::messages::{
+        GameFinalize,
+        HandlerOutput,
+        InternalServerMessage,
+        MessageDestination,
+        Reaction,
+    },
 };
 use anyhow::Result;
 use db_lib::{
@@ -24,6 +29,7 @@ pub struct TurnHandler {
     username: String,
     game: Game,
     data: Arc<WebsocketData>,
+    hub: Arc<WsHub>,
 }
 
 impl TurnHandler {
@@ -33,6 +39,7 @@ impl TurnHandler {
         username: &str,
         user_id: Uuid,
         data: Arc<WebsocketData>,
+        hub: Arc<WsHub>,
         pool: &DbPool,
     ) -> Self {
         Self {
@@ -42,10 +49,11 @@ impl TurnHandler {
             pool: pool.clone(),
             turn,
             data,
+            hub,
         }
     }
 
-    pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
+    pub async fn handle(&self) -> Result<HandlerOutput> {
         let mut conn = get_conn(&self.pool).await?;
         self.users_turn()?;
         let (piece, position) = match self.turn {
@@ -111,33 +119,64 @@ impl TurnHandler {
         let mut messages = Vec::new();
         let next_to_move = User::find_by_uuid(&game.current_player_id, &mut conn).await?;
         let games = next_to_move.get_games_with_notifications(&mut conn).await?;
-        let mut game_responses = Vec::new();
-        for game in games {
-            game_responses.push(GameResponse::from_model(&game, &mut conn).await?);
+        // Batch-construct responses for the urgent list — each call is a
+        // full state replay, so use the cache to share the per-game
+        // allocation across this fanout and any others on the same tick.
+        let mut game_responses = Vec::with_capacity(games.len());
+        for g in &games {
+            let resp = self.data.get_or_build_response(g, &mut conn).await?;
+            game_responses.push((*resp).clone());
         }
         messages.push(InternalServerMessage {
             destination: MessageDestination::User(game.current_player_id),
             message: ServerMessage::Game(Box::new(GameUpdate::Urgent(game_responses))),
         });
-        let response = GameResponse::from_model(&game, &mut conn).await?;
-        messages.push(InternalServerMessage {
-            destination: MessageDestination::Game(GameId(self.game.nanoid.clone())),
-            message: ServerMessage::Game(Box::new(GameUpdate::Reaction(GameActionResponse {
+        let response = self.data.get_or_build_response(&game, &mut conn).await?;
+        let reactions = vec![Reaction {
+            game_id: GameId(game.nanoid.to_owned()),
+            white_id: game.white_id,
+            black_id: game.black_id,
+            gar: GameActionResponse {
                 game_id: GameId(game.nanoid.to_owned()),
-                game: response.clone(),
+                game: (*response).clone(),
                 game_action: GameReaction::Turn(self.turn.clone()),
                 user_id: self.user_id.to_owned(),
                 username: self.username.to_owned(),
-            }))),
-        });
+            },
+        }];
         // TODO: Just add the few top games and keep them rated
-        if response.time_mode == TimeMode::RealTime {
+        if response.time_mode == TimeMode::RealTime
+            && self
+                .hub
+                .should_send_tv(&GameId(self.game.nanoid.clone()), game.finished)
+        {
+            self.data.telemetry.inc_tv_broadcast();
             messages.push(InternalServerMessage {
                 destination: MessageDestination::Global,
-                message: ServerMessage::Game(Box::new(GameUpdate::Tv(response))),
+                message: ServerMessage::Game(Box::new(GameUpdate::Tv((*response).clone()))),
             });
         };
-        Ok(messages)
+        // If this turn finalized the game, signal the dispatcher to run
+        // the cleanup hook *after* the messages above have been dispatched.
+        // Eviction must happen post-dispatch so the dispatch_reaction fanout
+        // above still reaches the opponent for the final move.
+        let finalize_games = if game.finished {
+            let finalize = GameFinalize {
+                game_id: GameId(self.game.nanoid.clone()),
+                white_id: game.white_id,
+                black_id: game.black_id,
+            };
+            messages.extend(finalize.own_game_removed_messages());
+            vec![finalize]
+        } else {
+            Vec::new()
+        };
+        Ok(HandlerOutput {
+            messages,
+            reactions,
+            finalize_games,
+            subscriptions: Vec::new(),
+        })
     }
 
     fn users_turn(&self) -> Result<()> {

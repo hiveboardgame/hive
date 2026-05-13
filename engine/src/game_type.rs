@@ -53,6 +53,15 @@ impl FromStr for GameType {
 }
 
 impl GameType {
+    pub(crate) fn max_played(self) -> usize {
+        match self {
+            GameType::Base => 22,
+            GameType::M | GameType::L | GameType::P => 24,
+            GameType::ML | GameType::LP | GameType::MP => 26,
+            GameType::MLP => 28,
+        }
+    }
+
     pub(crate) fn add_m(self) -> Self {
         match self {
             GameType::Base => GameType::M,

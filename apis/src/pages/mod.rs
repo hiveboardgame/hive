@@ -1,5 +1,6 @@
 pub mod account;
 pub mod admin;
+pub mod admin_telemetry;
 pub mod analysis;
 pub mod challenge_bot;
 pub mod challenge_create;

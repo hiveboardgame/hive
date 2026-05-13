@@ -132,12 +132,65 @@ pub fn Play() -> impl IntoView {
         false,
     );
 
+    let timer_display_key = create_read_slice(game_state.signal, |gs| {
+        let history_turn = gs.history_turn;
+        let gs_view = gs.view.clone();
+        let response = gs.game_response.as_ref().map(|response| {
+            (
+                response.game_id.clone(),
+                response.updated_at,
+                response.conclusion.clone(),
+                response.game_status.clone(),
+                response.time_mode,
+            )
+        });
+        (gs_view, history_turn, response)
+    });
+
+    Effect::watch(
+        timer_display_key,
+        move |_, _, _| {
+            game_state.signal.with_untracked(|gs| {
+                if !matches!(
+                    gs.state.game_status,
+                    GameStatus::Finished(_) | GameStatus::Adjudicated
+                ) {
+                    return;
+                }
+                if let Some(response) = gs.game_response.as_ref() {
+                    timer.signal.update(|timer| {
+                        timer.update_for_view(response, &gs.view, gs.history_turn);
+                    });
+                }
+            });
+        },
+        true,
+    );
+
+    // Unsubscribe this socket from the game when the component unmounts
+    // (route change away from the game page). Without this, the socket stays
+    // in games_sockets for the lifetime of the WebSocket session.
+    on_cleanup(move || {
+        let current_game_id = game_id.get_untracked();
+        if !current_game_id.0.is_empty() {
+            api.0.get().unwatch(current_game_id);
+        }
+    });
+
     Effect::watch(
         move || {
             ws_ready();
             game_id()
         },
-        move |game_id, _, _| {
+        move |game_id, prev_game_id, _| {
+            // Route param can change in place (e.g. /game/A → /game/B reuses
+            // the same component), so on_cleanup won't fire. Drop the prior
+            // subscription before joining the new game.
+            if let Some(prev) = prev_game_id {
+                if !prev.0.is_empty() && prev != game_id {
+                    api.0.get().unwatch(prev.clone());
+                }
+            }
             let game_id = game_id.clone();
             api.0.get().join(game_id.clone());
             spawn_local(async move {
@@ -269,7 +322,7 @@ pub fn Play() -> impl IntoView {
         <div
             class=move || {
                 format!(
-                    "max-h-[100dvh] min-h-[100dvh] pt-10 select-none {}",
+                    "h-[100dvh] standalone:h-[var(--app-height)] pt-10 select-none {}",
                     parent_container_style(),
                 )
             }

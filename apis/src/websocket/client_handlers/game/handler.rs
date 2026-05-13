@@ -20,6 +20,10 @@ pub fn handle_game(game_update: GameUpdate) {
         GameUpdate::Urgent(games) => {
             games_signal.own_games_set(games);
         }
+        GameUpdate::OwnGameRemoved(game_id) => {
+            games_signal.own_games_remove(&game_id);
+            games_signal.live_games_remove(&game_id);
+        }
         GameUpdate::Heartbeat(hb) => {
             game_updater.heartbeat.set(hb);
         }
@@ -43,8 +47,13 @@ fn handle_reaction(gar: GameActionResponse) {
             update_notifier.game_response.set(Some(gar.clone()));
         }
         GameReaction::Turn(_) => {
-            games.own_games_add(gar.game.clone());
             update_notifier.game_response.set(Some(gar.clone()));
+            if gar.game.finished {
+                games.own_games_remove(&gar.game.game_id);
+                games.live_games_remove(&gar.game.game_id);
+            } else {
+                games.own_games_add(gar.game.clone());
+            }
         }
 
         GameReaction::Join => {

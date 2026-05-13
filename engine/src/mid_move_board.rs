@@ -1,4 +1,4 @@
-use crate::{board::Board, bug_stack::BugStack, position::Position, torus_array::TorusArray};
+use crate::{board::Board, position::Position, torus_array::TorusArray};
 
 pub struct MidMoveBoard<'this> {
     pub board: &'this Board,
@@ -23,24 +23,30 @@ impl<'this> MidMoveBoard<'this> {
     }
 
     pub fn is_negative_space(&self, position: Position) -> bool {
-        *self.neighbor_count.get(position) > 0 && self.get(position).size == 0
+        *self.neighbor_count.get(position) > 0 && self.level(position) == 0
     }
 
     pub fn gated(&self, level: usize, from: Position, to: Position) -> bool {
         let (pos1, pos2) = from.common_adjacent_positions(to);
-        let p1 = self.get(pos1);
-        let p2 = self.get(pos2);
-        if p1.is_empty() || p2.is_empty() {
+        let level1 = self.level(pos1);
+        let level2 = self.level(pos2);
+        if level1 == 0 || level2 == 0 {
             return false;
         }
-        p1.len() >= level && p2.len() >= level
+        level1 >= level && level2 >= level
     }
 
-    pub fn get(&self, position: Position) -> BugStack {
-        let mut bug_stack = self.board.board.get(position).clone();
+    pub fn occupied(&self, position: Position) -> bool {
+        self.level(position) > 0
+    }
+
+    fn level(&self, position: Position) -> usize {
+        let mut level = self.board.level(position);
         if position == self.position_in_flight {
-            bug_stack.pop_piece();
+            level = level
+                .checked_sub(1)
+                .expect("Position in flight must contain a piece");
         }
-        bug_stack
+        level
     }
 }

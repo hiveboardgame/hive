@@ -71,9 +71,9 @@ pub fn Analysis(#[prop(optional)] extend_tw_classes: &'static str) -> impl IntoV
             format!(
                 "pt-10 bg-board-dawn dark:bg-board-twilight {} {extend_tw_classes}",
                 if vertical() {
-                    "flex flex-col h-full"
+                    "flex flex-col h-full standalone:min-h-[var(--app-height)]"
                 } else {
-                    "max-h-[100dvh] min-h-[100dvh] grid grid-cols-10  grid-rows-6 pr-1"
+                    "max-h-[100dvh] min-h-[100dvh] standalone:max-h-[var(--app-height)] standalone:min-h-[var(--app-height)] grid grid-cols-10  grid-rows-6 pr-1"
                 },
             )
         }>
