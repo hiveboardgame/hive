@@ -450,14 +450,14 @@ impl WsHub {
 
         // chat
         let chat = self.data.chat_storage.snapshot_counts();
-        snap.chat_tournament_channels = chat.tournament_channels;
-        snap.chat_tournament_msgs = chat.tournament_messages;
-        snap.chat_games_public_channels = chat.game_spectator_channels;
-        snap.chat_games_public_msgs = chat.game_spectator_messages;
-        snap.chat_games_private_channels = chat.game_player_channels;
-        snap.chat_games_private_msgs = chat.game_player_messages;
-        snap.chat_direct_pairs = chat.direct_channels;
-        snap.chat_direct_msgs = chat.direct_messages;
+        snap.chat_recent_tournament_channels = chat.tournament_channels;
+        snap.chat_recent_tournament_msgs = chat.tournament_messages;
+        snap.chat_recent_game_spectator_channels = chat.game_spectator_channels;
+        snap.chat_recent_game_spectator_msgs = chat.game_spectator_messages;
+        snap.chat_recent_game_player_channels = chat.game_player_channels;
+        snap.chat_recent_game_player_msgs = chat.game_player_messages;
+        snap.chat_recent_direct_channels = chat.direct_channels;
+        snap.chat_recent_direct_msgs = chat.direct_messages;
 
         // caches
         snap.game_response_cache_len = self.data.game_response_cache.len() as u64;

@@ -1,3 +1,3 @@
 pub mod handler;
-mod metrics;
+pub(crate) mod metrics;
 mod persist;
