@@ -11,14 +11,21 @@ use uuid::Uuid;
 pub struct DeleteHandler {
     challenge_id: ChallengeId,
     user_id: Uuid,
+    admin: bool,
     pool: DbPool,
 }
 
 impl DeleteHandler {
-    pub async fn new(challenge_id: ChallengeId, user_id: Uuid, pool: &DbPool) -> Result<Self> {
+    pub async fn new(
+        challenge_id: ChallengeId,
+        user_id: Uuid,
+        admin: bool,
+        pool: &DbPool,
+    ) -> Result<Self> {
         Ok(Self {
             challenge_id,
             user_id,
+            admin,
             pool: pool.clone(),
         })
     }
@@ -26,7 +33,10 @@ impl DeleteHandler {
     pub async fn handle(&self) -> Result<Vec<InternalServerMessage>> {
         let mut conn = get_conn(&self.pool).await?;
         let challenge = Challenge::find_by_challenge_id(&self.challenge_id, &mut conn).await?;
-        if challenge.challenger_id != self.user_id && challenge.opponent_id != Some(self.user_id) {
+        if !self.admin
+            && challenge.challenger_id != self.user_id
+            && challenge.opponent_id != Some(self.user_id)
+        {
             return Err(ChallengeError::NotUserChallenge.into());
         }
         let challenge_response = ChallengeResponse::from_model(&challenge, &mut conn).await?;
