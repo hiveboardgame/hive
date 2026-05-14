@@ -139,11 +139,17 @@ impl RequestHandler {
             }
             ClientRequest::Challenge(challenge_action) => {
                 self.ensure_auth()?;
-                ChallengeHandler::new(challenge_action, &self.username, self.user_id, &self.pool)
-                    .await?
-                    .handle()
-                    .await?
-                    .into()
+                ChallengeHandler::new(
+                    challenge_action,
+                    &self.username,
+                    self.user_id,
+                    self.admin,
+                    &self.pool,
+                )
+                .await?
+                .handle()
+                .await?
+                .into()
             }
             ClientRequest::Away => UserStatusHandler::new().await?.handle().await?.into(),
             ClientRequest::Schedule(action) => {

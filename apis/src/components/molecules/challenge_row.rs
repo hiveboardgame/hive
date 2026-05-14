@@ -5,7 +5,7 @@ use crate::{
             profile_link::ProfileLink,
             status_indicator::StatusIndicator,
         },
-        molecules::time_row::TimeRow,
+        molecules::{modal::Modal, time_row::TimeRow},
     },
     functions::hostname::hostname_and_port,
     i18n::*,
@@ -13,7 +13,7 @@ use crate::{
     responses::ChallengeResponse,
 };
 use hive_lib::ColorChoice;
-use leptos::{either::Either, prelude::*};
+use leptos::{either::Either, html::Dialog, prelude::*};
 use leptos_icons::*;
 use leptos_use::{use_interval_fn_with_options, use_window, UseIntervalFnOptions};
 use shared_types::{ChallengeId, ChallengeVisibility, TimeInfo};
@@ -47,6 +47,7 @@ pub fn ChallengeRow(
     let api = expect_context::<ApiRequestsProvider>().0;
     let user = expect_context::<AuthContext>().user;
     let challenger_id = challenger.uid;
+    let opponent_id = opponent.as_ref().map(|o| o.uid);
     let has_opponent = opponent.is_some();
     let challenge_id = StoredValue::new(challenge_id);
     let visibility = StoredValue::new(visibility);
@@ -154,6 +155,25 @@ pub fn ChallengeRow(
     });
     let viewer_is_challenger =
         move || user.with(|a| a.as_ref().map(|user| user.id)) == Some(challenger_id);
+    let viewer_is_opponent = move || {
+        opponent_id.is_some()
+            && user.with(|a| a.as_ref().map(|user| user.id)) == opponent_id
+    };
+    let viewer_is_admin =
+        move || user.with(|a| a.as_ref().is_some_and(|v| v.user.admin));
+    let show_admin_cancel = move || {
+        viewer_is_admin() && !viewer_is_challenger() && !viewer_is_opponent()
+    };
+    let admin_cancel_dialog = NodeRef::<Dialog>::new();
+    let admin_cancel_button_classes = StoredValue::new(format!(
+        "{BUTTON_BASE_CLASSES} bg-orange-500 hover:bg-orange-400"
+    ));
+    let admin_confirm_button_classes = StoredValue::new(format!(
+        "{BUTTON_BASE_CLASSES} bg-ladybug-red hover:bg-red-400"
+    ));
+    let admin_dismiss_button_classes = StoredValue::new(format!(
+        "{BUTTON_BASE_CLASSES} bg-blue-600 hover:bg-blue-700"
+    ));
 
     let time_info = TimeInfo {
         mode: time_mode,
@@ -232,6 +252,57 @@ pub fn ChallengeRow(
             </td>
             <td class=td_class>
                 <div class="flex justify-center items-center">
+                    <Show when=show_admin_cancel>
+                        <Modal dialog_el=admin_cancel_dialog>
+                            <div class="flex flex-col items-center p-4 max-w-xs">
+                                <p class="mb-4 text-center">
+                                    {t!(i18n, home.challenge_details.admin_cancel_confirm)}
+                                </p>
+                                <div class="flex gap-2">
+                                    <button
+                                        class=admin_confirm_button_classes.get_value()
+                                        on:click=move |_| {
+                                            let ids = all_challenge_ids.get_value();
+                                            let ids_to_cancel = if ids.is_empty() {
+                                                vec![challenge_id.get_value()]
+                                            } else {
+                                                ids
+                                            };
+                                            api.get().challenges_cancel(ids_to_cancel);
+                                            if let Some(dialog) = admin_cancel_dialog.get() {
+                                                dialog.close();
+                                            }
+                                        }
+                                    >
+                                        {t!(i18n, home.challenge_details.admin_cancel_confirm_button)}
+                                    </button>
+                                    <button
+                                        class=admin_dismiss_button_classes.get_value()
+                                        on:click=move |_| {
+                                            if let Some(dialog) = admin_cancel_dialog.get() {
+                                                dialog.close();
+                                            }
+                                        }
+                                    >
+                                        {t!(i18n, home.challenge_details.admin_cancel_dismiss_button)}
+                                    </button>
+                                </div>
+                            </div>
+                        </Modal>
+                        <button
+                            title=move || {
+                                t_string!(i18n, home.challenge_details.admin_cancel_title)
+                            }
+                            on:click=move |_| {
+                                if let Some(dialog) = admin_cancel_dialog.get() {
+                                    let _ = dialog.show_modal();
+                                }
+                            }
+                            class=admin_cancel_button_classes.get_value()
+                        >
+                            <Icon icon=icondata_io::IoCloseSharp attr:class="size-6" />
+                        </button>
+                    </Show>
                     <Show
                         when=move || { !viewer_is_challenger() }
 
