@@ -211,6 +211,23 @@ impl Tournament {
         Ok(())
     }
 
+    pub async fn delete_old_and_unstarted(conn: &mut DbConn<'_>) -> Result<(), DbError> {
+        use std::time::Duration;
+        let cutoff = Utc::now() - Duration::from_secs(60 * 60 * 24 * 60);
+        let now = Utc::now();
+        diesel::delete(
+            tournaments::table.filter(
+                status_column
+                    .eq(TournamentStatus::NotStarted.to_string())
+                    .and(updated_at.lt(cutoff))
+                    .and(starts_at.is_null().or(starts_at.lt(now))),
+            ),
+        )
+        .execute(conn)
+        .await?;
+        Ok(())
+    }
+
     async fn ensure_not_invite_only(
         &self,
         user_id: &Uuid,
