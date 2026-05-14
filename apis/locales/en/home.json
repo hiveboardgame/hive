@@ -36,7 +36,11 @@
             "title": "Rated",
             "yes": "Yes",
             "no": "No"
-        }
+        },
+        "admin_cancel_title": "Cancel this challenge (admin)",
+        "admin_cancel_confirm": "Cancel this player's challenge?",
+        "admin_cancel_confirm_button": "Yes, delete",
+        "admin_cancel_dismiss_button": "No, abort"
     },
     "challenge_tabs": {
         "humans": "Humans",
